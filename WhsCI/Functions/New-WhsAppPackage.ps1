@@ -12,8 +12,23 @@ function New-WhsAppPackage
     param(
         [Parameter(Mandatory=$true)]
         [string]
-        # The path to the package file.
-        $OutputFile,
+        # The name of the package being created.
+        $Name,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        # A description of the package.
+        $Description,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        # The package's version.
+        $Version,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        # The directory where the package file should be saved. This directory will be created if it doesn't exist.
+        $OutputDirectory,
 
         [Parameter(Mandatory=$true)]
         [string[]]
@@ -23,27 +38,37 @@ function New-WhsAppPackage
         [Parameter(Mandatory=$true)]
         [string[]]
         # The whitelist of files to include in the artifact.
-        $Whitelist
+        $Whitelist        
     )
 
     Set-StrictMode -Version 'Latest'
 
-    $packageFileName = $OutputFile | Split-Path -Leaf
+    $fileName = '{0}.{1}.upack' -f $Name,$Version
+    $outFile = Join-Path -Path $OutputDirectory -ChildPath $fileName
+    Install-Directory -Path $OutputDirectory
+
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $packageFileName
+    $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $Name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+    @{
+        name = $Name;
+        version = $Version;
+        title = $Name;
+        description = $Description
+    } | ConvertTo-Json | Set-Content -Path $upackJsonPath
     try
     {
         foreach( $item in $Path )
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempRoot -ChildPath $itemName
-            robocopy $item $destination /MIR $Whitelist | Write-Debug
+            robocopy $item $destination /MIR $Whitelist 'upack.json' | Write-Debug
         }
 
-        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $OutputFile
+        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
     }
     finally
     {

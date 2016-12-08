@@ -2,11 +2,21 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
 
+$defaultPackageName = 'WhsCITest'
+$defaultVersion = '1.2.3-final'
+$defaultDescription = 'A package created to test the New-WhsAppPackage function in the WhsCI module.'
+
 function Assert-Package
 {
     param(
         [string]
         $At,
+        [string]
+        $Name = $defaultPackageName,
+        [string]
+        $Description = $defaultDescription,
+        [string]
+        $Version = $defaultVersion,
         [string[]]
         $ContainsDirectories,
         [string[]]
@@ -15,12 +25,14 @@ function Assert-Package
         $WithoutFiles
    )
 
+    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
+
     Context 'the package' {
         It 'should exist' {
             $At | Should Exist
         }
 
-        $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
         Expand-Item -Path $At -OutDirectory $expandPath
 
         foreach( $dirName in $ContainsDirectories )
@@ -45,6 +57,34 @@ function Assert-Package
                     Get-ChildItem -Path $expandPath -Filter $item -Recurse | Should BeNullOrEmpty
                 }
             }
+        }
+
+        It 'should include ProGet universal package metadata (upack.json)' {
+            $upackJsonPath | Should Exist
+        }
+    }
+
+    Context 'upack.json' {
+        Expand-Item -Path $At -OutDirectory $expandPath
+        $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
+        It 'should be valid json' {
+            $upackInfo | Should Not BeNullOrEmpty
+        }
+
+        It 'should contain name' {
+            $upackInfo.Name | Should Be $Name
+        }
+
+        It 'should contain title' {
+            $upackInfo.title | Should Be $Name
+        }
+
+        It 'should contain version' {
+            $upackInfo.Version | Should Be $Version
+        }
+
+        It 'should contain description' {
+            $upackInfo.Description | Should Be $Description
         }
     }
 
@@ -83,6 +123,12 @@ function Initialize-Test
 function Invoke-NewWhsAppPackage
 {
     param(
+        [string]
+        $Name = $defaultPackageName,
+        [string]
+        $Description = $defaultDescription,
+        [string]
+        $Version = $defaultVersion,
         [string[]]
         $Path,
         [string[]]
@@ -92,7 +138,12 @@ function Invoke-NewWhsAppPackage
     $outFile = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.upack'
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
-    New-WhsAppPackage -OutputFile $outFile -Path $Path -Whitelist $Whitelist
+    New-WhsAppPackage -OutputDirectory $TestDrive.FullName `
+                      -Name $Name `
+                      -Description $Description `
+                      -Version $Version `
+                      -Path $Path `
+                      -Whitelist $Whitelist
 }
 
 Describe 'New-WhsAppPackage when packaging everything in a directory' {
