@@ -30,15 +30,24 @@ function New-WhsAppPackage
 
     $packageFileName = $OutputFile | Split-Path -Leaf
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempRoot = 'WhsCI+New-WhsAppPackage+{0}+{1}' -f $packageFileName,$tempRoot
+    $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $packageFileName
+    $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
     try
     {
-        Get-Item -Path $Path | Compress-Item -OutFile $OutputFile
+        foreach( $item in $Path )
+        {
+            $itemName = $item | Split-Path -Leaf
+            $destination = Join-Path -Path $tempRoot -ChildPath $itemName
+            robocopy $item $destination /MIR $Whitelist | Write-Debug
+        }
+
+        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $OutputFile
     }
     finally
     {
-        Remove-Item -Path $tempRoot -Recurse -Force
+        Get-ChildItem -Path $env:TEMP -Filter ('{0}+*' -f $tempBaseName) |
+            Remove-Item -Recurse -Force 
     }
 }

@@ -1,6 +1,6 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Carbon\Import-Carbon.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
 
 function Assert-Package
 {
@@ -39,10 +39,18 @@ function Assert-Package
 
         if( $WithoutFiles )
         {
-            It ('should exclude {0} files' -f ($WithoutFiles -join ', ') ) {
-                Get-ChildItem -Path $expandPath -Filter $WithoutFiles | Should BeNullOrEmpty
+            foreach( $item in $WithoutFiles )
+            {
+                It ('should exclude {0} files' -f $item ) {
+                    Get-ChildItem -Path $expandPath -Filter $item -Recurse | Should BeNullOrEmpty
+                }
             }
         }
+    }
+
+    It 'should cleanup temporary directories' {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsAppPackage+*' |
+            Should BeNullOrEmpty
     }
 }
 
@@ -85,10 +93,9 @@ function Invoke-NewWhsAppPackage
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     New-WhsAppPackage -OutputFile $outFile -Path $Path -Whitelist $Whitelist
-    #return $outFile
 }
 
-Describe 'New-WhsAppPackage when packaging a directory' {
+Describe 'New-WhsAppPackage when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -99,4 +106,32 @@ Describe 'New-WhsAppPackage when packaging a directory' {
     Assert-Package -At $packagePath.FullName `
                    -ContainsDirectories $dirNames `
                    -WithFiles 'html.html'
+}
+
+Describe 'New-WhsAppPackage when packaging whitelisted files in a directory' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html', 'code.cs' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames
+
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Whitelist '*.html'
+
+    Assert-Package -At $packagePath.FullName `
+                   -ContainsDirectories $dirNames `
+                   -WithFiles 'html.html' `
+                   -WithoutFiles 'code.cs'
+}
+
+Describe 'New-WhsAppPackage when packaging multiple directories' {
+    $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
+    $fileNames = @( 'html.html', 'code.cs' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames
+
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Whitelist '*.html'
+
+    Assert-Package -At $packagePath.FullName `
+                   -ContainsDirectories $dirNames `
+                   -WithFiles 'html.html' `
+                   -WithoutFiles 'code.cs'    
 }
