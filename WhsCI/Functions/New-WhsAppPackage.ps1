@@ -38,7 +38,7 @@ function New-WhsAppPackage
         [Parameter(Mandatory=$true)]
         [string[]]
         # The whitelist of files to include in the artifact.
-        $Whitelist        
+        $Include        
     )
 
     Set-StrictMode -Version 'Latest'
@@ -59,13 +59,14 @@ function New-WhsAppPackage
         title = $Name;
         description = $Description
     } | ConvertTo-Json | Set-Content -Path $upackJsonPath
+
     try
     {
         foreach( $item in $Path )
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempRoot -ChildPath $itemName
-            robocopy $item $destination /MIR $Whitelist 'upack.json' | Write-Debug
+            robocopy $item $destination /MIR $Include 'upack.json' | Write-Debug
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile

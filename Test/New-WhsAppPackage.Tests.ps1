@@ -11,16 +11,22 @@ function Assert-Package
     param(
         [string]
         $At,
+
         [string]
         $Name = $defaultPackageName,
+
         [string]
         $Description = $defaultDescription,
+
         [string]
         $Version = $defaultVersion,
+
         [string[]]
         $ContainsDirectories,
+
         [string[]]
         $WithFiles,
+
         [string[]]
         $WithoutFiles
    )
@@ -132,7 +138,7 @@ function Invoke-NewWhsAppPackage
         [string[]]
         $Path,
         [string[]]
-        $Whitelist
+        $Include
     )
 
     $outFile = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.upack'
@@ -143,7 +149,7 @@ function Invoke-NewWhsAppPackage
                       -Description $Description `
                       -Version $Version `
                       -Path $Path `
-                      -Whitelist $Whitelist
+                      -Include $Include
 }
 
 Describe 'New-WhsAppPackage when packaging everything in a directory' {
@@ -152,7 +158,7 @@ Describe 'New-WhsAppPackage when packaging everything in a directory' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Whitelist '*.html'
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
 
     Assert-Package -At $packagePath.FullName `
                    -ContainsDirectories $dirNames `
@@ -165,7 +171,7 @@ Describe 'New-WhsAppPackage when packaging whitelisted files in a directory' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Whitelist '*.html'
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
 
     Assert-Package -At $packagePath.FullName `
                    -ContainsDirectories $dirNames `
@@ -179,7 +185,7 @@ Describe 'New-WhsAppPackage when packaging multiple directories' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Whitelist '*.html'
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Include '*.html'
 
     Assert-Package -At $packagePath.FullName `
                    -ContainsDirectories $dirNames `
