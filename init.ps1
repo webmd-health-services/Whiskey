@@ -16,3 +16,8 @@ param(
 
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
+
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon\Import-Carbon.ps1' -Resolve)
+
+Install-Junction -Link (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') `
+                 -Target (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon')
