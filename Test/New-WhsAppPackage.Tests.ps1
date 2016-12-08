@@ -32,15 +32,15 @@ function Assert-Package
    )
 
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    It 'should create a package' {
+        $At | Should Exist
+    }
+
+    Expand-Item -Path $At -OutDirectory $expandPath
+
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
     Context 'the package' {
-        It 'should exist' {
-            $At | Should Exist
-        }
-
-        Expand-Item -Path $At -OutDirectory $expandPath
-
         foreach( $dirName in $ContainsDirectories )
         {
             $dirPath = Join-Path -Path $expandPath -ChildPath $dirName
@@ -68,10 +68,52 @@ function Assert-Package
         It 'should include ProGet universal package metadata (upack.json)' {
             $upackJsonPath | Should Exist
         }
+
+        $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
+        $arcPath = Join-Path -Path $expandPath -ChildPath 'Arc'
+
+        It 'should include Arc' {
+            $arcPath | Should Exist
+        }
+
+        $arcComponentsToExclude = @(
+                                        'BitbucketServerAutomation', 
+                                        'Blade', 
+                                        'LibGit2', 
+                                        'LibGit2Adapter', 
+                                        'MSBuild',
+                                        'Pester', 
+                                        'PsHg',
+                                        'ReleaseTrain',
+                                        'WhsArtifacts',
+                                        'WhsHg',
+                                        'WhsPipeline'
+                                    )
+        It ('should exclude Arc CI components' -f $item) {
+            foreach( $name in $arcComponentsToExclude )
+            {
+                Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
+            }
+
+            foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
+            {
+                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                $itemPath | Should Not Exist
+            }
+        }
+
+        It ('should include Arc installation components') {
+            foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
+            {
+                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                $itemPath | Should Exist
+            }
+        }
     }
 
     Context 'upack.json' {
-        Expand-Item -Path $At -OutDirectory $expandPath
         $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
         It 'should be valid json' {
             $upackInfo | Should Not BeNullOrEmpty
@@ -107,11 +149,21 @@ function Initialize-Test
         $DirectoryName,
 
         [string[]]
-        $FileName
+        $FileName,
+
+        [Switch]
+        $WithoutArc
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     Install-Directory -Path $repoRoot
+
+    if( -not $WithoutArc )
+    {
+        $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
+        $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
+        robocopy $arcSourcePath $arcDestinationPath '/MIR'
+    }
 
     $DirectoryName | ForEach-Object { 
         $dirPath = $_
@@ -152,7 +204,8 @@ function Invoke-NewWhsAppPackage
     $outFile = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.upack'
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
-    New-WhsAppPackage -OutputDirectory $TestDrive.FullName `
+    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    New-WhsAppPackage -RepositoryRoot $repoRoot `
                       -Name $Name `
                       -Description $Description `
                       -Version $Version `
@@ -243,4 +296,24 @@ Describe 'New-WhsAppPackage when path contains known directories to exclude' {
                    -ContainsDirectories 'dir1' `
                    -WithFiles 'html.html' `
                    -WithoutFiles '.git','.hg','obj'
+}
+
+Describe 'New-WhsAppPackage when repository doesn''t use Arc' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'index.aspx' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
+
+    $Global:Error.Clear()
+
+    $packagePath = Invoke-NewWhsAppPackage -Path $dirNames -Include $fileNames -ErrorAction SilentlyContinue
+
+    it 'should write an error' {
+        $Global:Error.Count | Should Be 1
+        $Global:Error | Should Match 'does not exist'
+    }
+
+    It 'should return nothing' {
+        $packagePath | Should BeNullOrEmpty
+    }
+
 }

@@ -22,6 +22,11 @@ function New-WhsAppPackage
     param(
         [Parameter(Mandatory=$true)]
         [string]
+        # The path to the root of the repository the application lives in.
+        $RepositoryRoot,
+
+        [Parameter(Mandatory=$true)]
+        [string]
         # The name of the package being created.
         $Name,
 
@@ -34,11 +39,6 @@ function New-WhsAppPackage
         [string]
         # The package's version.
         $Version,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The directory where the package file should be saved. This directory will be created if it doesn't exist.
-        $OutputDirectory,
 
         [Parameter(Mandatory=$true)]
         [string[]]
@@ -71,9 +71,18 @@ function New-WhsAppPackage
         return
     }
 
+    $arcPath = Join-Path -Path $RepositoryRoot -ChildPath 'Arc'
+    if( -not (Test-Path -Path $arcPath -PathType Container) )
+    {
+        Write-Error -Message ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
+        return
+    }
+
     $fileName = '{0}.{1}.upack' -f $Name,$Version
-    $outFile = Join-Path -Path $OutputDirectory -ChildPath $fileName
-    Install-Directory -Path $OutputDirectory
+    $outDirectory = Join-Path -Path $RepositoryRoot -ChildPath '.output'
+    Install-Directory -Path $outDirectory
+
+    $outFile = Join-Path -Path $RepositoryRoot -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
     $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $Name
@@ -83,6 +92,25 @@ function New-WhsAppPackage
 
     try
     {
+        $ciComponents = @(
+                            'BitbucketServerAutomation', 
+                            'Blade', 
+                            'LibGit2', 
+                            'LibGit2Adapter', 
+                            'MSBuild',
+                            'Pester', 
+                            'PsHg',
+                            'ReleaseTrain',
+                            'WhsArtifacts',
+                            'WhsHg',
+                            'WhsPipeline'
+                        )
+        $arcDestination = Join-Path -Path $tempRoot -ChildPath 'Arc'
+        $excludedFiles = Get-ChildItem -Path $arcPath -File | 
+                            ForEach-Object { '/XF'; $_.FullName }
+        $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
+        robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
             name = $Name;
