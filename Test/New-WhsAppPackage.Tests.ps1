@@ -138,9 +138,16 @@ function Invoke-NewWhsAppPackage
         [string[]]
         $Path,
         [string[]]
-        $Include
+        $Include,
+        [string[]]
+        $Exclude
     )
 
+    $excludeParam = @{ }
+    if( $Exclude )
+    {
+        $excludeParam['Exclude'] = $Exclude
+    }
     $outFile = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.upack'
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
@@ -149,7 +156,8 @@ function Invoke-NewWhsAppPackage
                       -Description $Description `
                       -Version $Version `
                       -Path $Path `
-                      -Include $Include
+                      -Include $Include `
+                      @excludeParam
 }
 
 Describe 'New-WhsAppPackage when packaging everything in a directory' {
@@ -191,4 +199,18 @@ Describe 'New-WhsAppPackage when packaging multiple directories' {
                    -ContainsDirectories $dirNames `
                    -WithFiles 'html.html' `
                    -WithoutFiles 'code.cs'    
+}
+
+Describe 'New-WhsAppPackage when whitelist includes items that need to be excluded' {    
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html', 'html2.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames
+
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html' -Exclude 'html2.html','sub'
+
+    Assert-Package -At $packagePath.FullName `
+                   -ContainsDirectories 'dir1' `
+                   -WithFiles 'html.html' `
+                   -WithoutFiles 'html2.html','sub'
 }

@@ -37,8 +37,12 @@ function New-WhsAppPackage
 
         [Parameter(Mandatory=$true)]
         [string[]]
-        # The whitelist of files to include in the artifact.
-        $Include        
+        # The whitelist of files to include in the artifact. Wildcards supported. Only files that match entries in this list are included in the package.
+        $Include,
+        
+        [string[]]
+        # A list of files and/or directories to exclude. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
+        $Exclude
     )
 
     Set-StrictMode -Version 'Latest'
@@ -66,7 +70,8 @@ function New-WhsAppPackage
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempRoot -ChildPath $itemName
-            robocopy $item $destination /MIR $Include 'upack.json' | Write-Debug
+            $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+            robocopy $item $destination /MIR $Include 'upack.json' $excludeParams | Write-Debug
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
