@@ -12,12 +12,11 @@ function New-WhsAppPackage
 
     Packages are only allowed to have whitelisted files, i.e. you can't include all files by default. You must supply a value for the `Include` parameter that lists the file names or wildcards that match the files you want in your application.
 
-    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. By default, `New-WhsAppPackage` excludes the following directories:
+    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `New-WhsAppPackage` *always* excludes directories named:
 
      * `obj`
      * `.git`
      * `.hg`
-
     #>
     [CmdletBinding()]
     param(
@@ -43,7 +42,7 @@ function New-WhsAppPackage
 
         [Parameter(Mandatory=$true)]
         [string[]]
-        # The paths to include in the artifact.
+        # The paths to include in the artifact. All items under directories are included.
         $Path,
 
         [Parameter(Mandatory=$true)]
@@ -52,7 +51,13 @@ function New-WhsAppPackage
         $Include,
         
         [string[]]
-        # A list of files and/or directories to exclude. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
+        # A list of files and/or directories to exclude. Wildcards supported. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
+        # 
+        # `New-WhsAppPackage` will *always* exclude directories named:
+        #
+        # * .git
+        # * .hg
+        # * obj
         $Exclude
     )
 
@@ -91,7 +96,7 @@ function New-WhsAppPackage
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempRoot -ChildPath $itemName
             $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            robocopy $item $destination /MIR $Include 'upack.json' $excludeParams | Write-Debug
+            robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile

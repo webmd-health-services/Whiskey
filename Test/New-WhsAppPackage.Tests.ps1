@@ -231,3 +231,16 @@ Describe 'New-WhsAppPackage when paths don''t exist' {
         $packagePath | Should BeNullOrEmpty
     }
 }
+
+Describe 'New-WhsAppPackage when path contains known directories to exclude' {
+    $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
+    $filenames = 'html.html'
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
+    
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
+
+    Assert-Package -At $packagePath `
+                   -ContainsDirectories 'dir1' `
+                   -WithFiles 'html.html' `
+                   -WithoutFiles '.git','.hg','obj'
+}
