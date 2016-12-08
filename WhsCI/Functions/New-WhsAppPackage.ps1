@@ -6,7 +6,18 @@ function New-WhsAppPackage
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIArtifact` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    The `New-WhsAppPackage` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+
+    It returns an `IO.FileInfo` object for the created package.
+
+    Packages are only allowed to have whitelisted files, i.e. you can't include all files by default. You must supply a value for the `Include` parameter that lists the file names or wildcards that match the files you want in your application.
+
+    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. By default, `New-WhsAppPackage` excludes the following directories:
+
+     * `obj`
+     * `.git`
+     * `.hg`
+
     #>
     [CmdletBinding()]
     param(
@@ -46,6 +57,14 @@ function New-WhsAppPackage
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $resolveErrors = @()
+    $Path = $Path | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
+    if( $resolveErrors )
+    {
+        return
+    }
 
     $fileName = '{0}.{1}.upack' -f $Name,$Version
     $outFile = Join-Path -Path $OutputDirectory -ChildPath $fileName
@@ -56,16 +75,17 @@ function New-WhsAppPackage
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
-    $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-    @{
-        name = $Name;
-        version = $Version;
-        title = $Name;
-        description = $Description
-    } | ConvertTo-Json | Set-Content -Path $upackJsonPath
 
     try
     {
+        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+        @{
+            name = $Name;
+            version = $Version;
+            title = $Name;
+            description = $Description
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath
+
         foreach( $item in $Path )
         {
             $itemName = $item | Split-Path -Leaf

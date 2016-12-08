@@ -128,6 +128,7 @@ function Initialize-Test
 
 function Invoke-NewWhsAppPackage
 {
+    [CmdletBinding()]
     param(
         [string]
         $Name = $defaultPackageName,
@@ -213,4 +214,20 @@ Describe 'New-WhsAppPackage when whitelist includes items that need to be exclud
                    -ContainsDirectories 'dir1' `
                    -WithFiles 'html.html' `
                    -WithoutFiles 'html2.html','sub'
+}
+
+Describe 'New-WhsAppPackage when paths don''t exist' {
+
+    $Global:Error.Clear()
+
+    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Include '*' -ErrorAction SilentlyContinue
+
+    It 'should write an error' {
+        $Global:Error.Count | Should Be 2
+        $Global:Error | Should Match 'does not exist'
+    }
+
+    It 'should not return anything' {
+        $packagePath | Should BeNullOrEmpty
+    }
 }
