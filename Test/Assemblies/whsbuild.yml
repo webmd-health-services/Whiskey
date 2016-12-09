@@ -1,0 +1,10 @@
+Version: 1.2.3-final
+BuildTasks:
+- MSBuild:
+    Path:
+    - NUnit2FailingTest\*.sln
+    - NUnit2PassingTest\*.sln
+- NuGetPack:
+    Path: 
+    - NUnit2PassingTest\NUnit2PassingTest.csproj
+    - NUnit2FailingTest\NUnit2FailingTest.csproj

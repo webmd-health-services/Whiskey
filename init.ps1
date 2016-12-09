@@ -19,5 +19,13 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon\Import-Carbon.ps1' -Resolve)
 
-Install-Junction -Link (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') `
-                 -Target (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon')
+$junctions = @( 
+                    'Carbon',
+                    'Pester'
+              )
+foreach( $junctionName in $junctions )
+{
+    $linkPath = Join-Path -Path $PSScriptRoot -ChildPath $junctionName
+    $targetPath = Join-Path -Path $PSScriptRoot -ChildPath ('Arc\{0}' -f $junctionName)
+    Install-Junction -Link $linkPath -Target $targetPath
+}
