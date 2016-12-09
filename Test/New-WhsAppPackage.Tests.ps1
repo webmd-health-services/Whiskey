@@ -89,7 +89,7 @@ function Assert-Package
                                         'WhsHg',
                                         'WhsPipeline'
                                     )
-        It ('should exclude Arc CI components' -f $item) {
+        It ('should exclude Arc CI components') {
             foreach( $name in $arcComponentsToExclude )
             {
                 Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
