@@ -9,6 +9,10 @@ Set-StrictMode -Version 'Latest'
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\powershell-yaml' -Resolve) -Force
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
+$downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
+$packageDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'packages'
+$moduleDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'Modules'
+
 #region Assertions
 function Assert-AssemblyVersionSet
 {
@@ -261,18 +265,54 @@ function Assert-NUnitTestsRun
         $ExpectedBinRoot
     )
 
-    $expectedNUnitRoot = '{0}\WebMD Health Services\packages\NUnit.Runners.2.6.4\tools\nunit-console.exe' -f $env:LOCALAPPDATA
-    if( -not $ExpectedBinRoot )
-    {
-        $expectedBinRoot = Split-Path -Path $ConfigurationPath -Parent
-    }
-
     It 'should run NUnit tests' {
         $ConfigurationPath | Split-Path | Join-Path -ChildPath '.output' | Get-ChildItem -Filter 'nunit2*.xml' | Should Not BeNullOrEmpty
     }
+}
 
-    It 'should download NUnit ConsoleRunner' {
-        $expectedNUnitRoot | Should Exist
+function Assert-PesterRan
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]
+        $FailureCount,
+            
+        [Parameter(Mandatory=$true)]
+        [int]
+        $PassingCount
+    )
+
+    $pesterOutput = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\.output'
+    $testReports = Get-ChildItem -Path $pesterOutput -Filter 'pester-*.xml'
+    It 'should run pester tests' {
+            $testReports | Should Not BeNullOrEmpty
+    }
+
+    $total = 0
+    $failed = 0
+    $passed = 0
+    foreach( $testReport in $testReports )
+    {
+        $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
+        $thisTotal = [int]($xml.'test-results'.'total')
+        $thisFailed = [int]($xml.'test-results'.'failures')
+        $thisPassed = ($thisTotal - $thisFailed)
+        $total += $thisTotal
+        $failed += $thisFailed
+        $passed += $thisPassed
+    }
+
+    $expectedTotal = $FailureCount + $PassingCount
+    It ('should run {0} tests' -f $expectedTotal) {
+        $total | Should Be $expectedTotal
+    }
+
+    It ('should have {0} failed tests' -f $FailureCount) {
+        $failed | Should Be $FailureCount
+    }
+
+    It ('should run {0} passing tests' -f $PassingCount) {
+        $passed | Should Be $PassingCount
     }
 }
 
@@ -354,7 +394,10 @@ function Invoke-Build
         $WithConfig,
 
         [Switch]
-        $ThatFails
+        $ThatFails,
+
+        [string]
+        $DownloadRoot
     )
 
     $runningUnderABuildServer = $false
@@ -380,12 +423,19 @@ function Invoke-Build
         $devParams['BBServerUri'] = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerBaseUri'
     }
 
+    $downloadRootParam = @{ }
+    if( $DownloadRoot )
+    {
+        $downloadRootParam['DownloadRoot'] = $DownloadRoot
+    }
+
     $failed = $false
     try
     {
         Invoke-WhsCIBuild -ConfigurationPath $WithConfig `
                           -BuildConfiguration $configuration `
-                          @devParams
+                          @devParams `
+                          @downloadRootParam
     }
     catch
     {
@@ -578,11 +628,6 @@ function New-MSBuildProject
     }
 }
 
-function New-PesterMock
-{
-    Mock -CommandName 'Invoke-Pester' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ FailedCount = 0 } }
-}
-
 function New-TestWhsBuildFile
 {
     param(
@@ -720,54 +765,23 @@ Version: 1
     }
 }
 
-Describe 'Invoke-WhsCIBuild when running Pester tests' {
-    $buildJsonPath = New-TestWhsBuildFile -Yaml @'
-BuildTasks:
-- Pester:
-    Path: Fubar
-- Pester:
-    Path: Snafu
-'@
-  
-    $root = Split-Path -Path $buildJsonPath -Parent
-    $fubarPath = Join-Path -Path $root -ChildPath 'Fubar'
-    $snafuPath = Join-Path -Path $root -ChildPath 'Snafu'
-    $root = Split-Path -Path $buildJsonpath -Parent
-    Install-Directory -Path $fubarPath
-    Install-Directory -Path $snafuPath
+$pesterPassingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_passing.yml' -Resolve
+$pesterFailingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_failing.yml' -Resolve
+Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
+    $downloadRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'downloads'
+    Invoke-Build -ByJenkins -WithConfig $pesterPassingConfig -DownloadRoot $downloadRoot
 
-    New-PesterMock
- 
-    Invoke-Build -ByJenkins -WithConfig $buildJsonPath
+    Assert-PesterRan -FailureCount 0 -PassingCount 4
 
-    function Assert-PesterTestsRun
-    {
-        param(
-            $ExpectedScript,
-            [int]
-            $ExpectedPesterResultNumber
-        )
-
-        It 'should run Pester tests' {
-            Assert-MockCalled -CommandName 'Invoke-Pester' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { 
-                $outputRoot = Join-Path -Path $root -ChildPath '.output'
-
-                #$DebugPreference = 'Continue'
-
-                Write-Debug -Message ('Script     expected  {0}' -f $ExpectedScript)
-                Write-Debug -Message ('           actual    {0}' -f $Script)
-
-                $expectdOutputXml = '^{0}\\pester-{1:00}\.xml$' -f [regex]::Escape($outputRoot),$ExpectedPesterResultNumber
-                Write-Debug -Message ('OutputXml  expected  {0}' -f $expectdOutputXml)
-                Write-Debug -Message ('           actual    {0}' -f $OutputXml)
-
-                $Script -eq $ExpectedScript -and $OutputXml -match $expectdOutputXml
-            }
-        }
+    It 'should download Pester' {
+        Join-Path -Path $downloadRoot -ChildPath 'Modules\Pester' | Should Exist
     }
+}
 
-    Assert-PesterTestsRun -ExpectedScript $fubarPath -ExpectedPesterResultNumber 0
-    Assert-PesterTestsRun -ExpectedScript $snafuPath -ExpectedPesterResultNumber 1
+Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
+    Invoke-Build -ByJenkins -WithConfig $pesterFailingConfig -ThatFails
+    
+    Assert-PesterRan -FailureCount 4 -PassingCount 4
 }
 
 Describe 'Invoke-WhsCIBuild when building .NET assemblies.' {
@@ -877,7 +891,6 @@ exit 0
 Describe 'Invoke-WhsCIBuild when a task path does not exist' {
     $path = 'FubarSnafu'
     $configPath = New-TestWhsBuildFile -TaskName 'Pester' -Path $path
-    New-PesterMock
     
     $Global:Error.Clear()
 
@@ -890,7 +903,6 @@ Describe 'Invoke-WhsCIBuild when a task path does not exist' {
 
 Describe 'Invoke-WhsCIBuild when a task path is absolute' {
     $configPath = New-TestWhsBuildFile -TaskName 'Pester' -Path 'C:\FubarSnafu'
-    New-PesterMock
     
     $Global:Error.Clear()
 
@@ -908,8 +920,6 @@ BuildTasks:
     Pith: fubar
 '@
     
-    New-PesterMock
-    
     $Global:Error.Clear()
 
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
@@ -925,8 +935,6 @@ Describe 'Invoke-WhsCIBuild when a task has no properties' {
 BuildTasks:
 - Pester:
 '@
-    
-    New-PesterMock
     
     $Global:Error.Clear()
 
@@ -990,17 +998,17 @@ Describe 'Invoke-WhsCIBuild when running NUnit tests' {
     $assemblyNames = 'assembly.dll','assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
-    $nunitRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\packages\NUnit*' 
-    if( (Test-Path -Path $nunitRoot -PathType Container) )
-    {
-        Remove-Item -Path $nunitRoot -Recurse
-    }
-
     New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
 
-    Invoke-Build -ByJenkins -WithConfig $configPath
+    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
+    Invoke-Build -ByJenkins -WithConfig $configPath -DownloadRoot $downloadroot
 
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly $assemblyNames
+    Assert-NUnitTestsRun -ConfigurationPath $configPath `
+                         -ExpectedAssembly $assemblyNames
+
+    It 'should download NUnitRunners' {
+        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
+    }
 }
 
 Describe 'Invoke-WhsCIBuild when running failing NUnit2 tests' {

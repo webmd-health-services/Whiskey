@@ -6,7 +6,90 @@ function Invoke-WhsCIBuild
     Runs a build using settings from a `whsbuild.yml` file.
 
     .DESCRIPTION
-    The `Invoke-WhsCIBuild` function runs a build based on the settings from a `whsbuild.yml` file.
+    The `Invoke-WhsCIBuild` function runs a build based on the settings from a `whsbuild.yml` file. A minimal `whsbuild.yml` file should contain a `BuildTasks` element that is a list of the build tasks to perform. `Invoke-WhsCIBuild` supports the following tasks:
+    
+    * MSBuild
+    * NuGetPack
+    * NUnit2
+    * Pester
+    * PowerShell
+    
+    Each task's elements are defined below.
+    
+    All paths used by a task must be relative to the `whsbuild.yml` file. Absolute paths will be rejected. Wildcards are allowed.
+    
+    All output from tasks (test reports, packages, etc.) are put in a directory named `.output` in the same directory as the `whsbuild.yml` file. This directory is removed and re-created every build. 
+    
+    You may also specify the semantic version of your application via a `Version` element.
+    
+    When run under a build server, the build status is reported to Bitbucket Server, which you can see on the repository's commits tab on the branch being built or on the branches tab in the Bitbucket Server web interface.
+    
+    When a build fails, `Invoke-WhsCIBuild` throws a terminating error. If `Invoke-WhsCIBuild` returns, you can assume a build passed.
+    
+    This function doesn't return anything useful, so don't try to capture output. We reserve the right to change what gets output at anytime.
+    
+    
+    
+    ## MSBuild
+    
+    The MSBuild task is used to build .NET projects with MSBuild from the version of .NET 4 that is installed. Items are built by running the `clean` and `build` target against each file. The task should contain a `Paths` element that is a list of projects, solutions, or other files to build.  The build fails if any MSBuild target fails. If your `whsbuild.yml` file defines a `Version` element and the build is running under a build server, all AssemblyInfo.cs files under each path is updated with appropriate `AssemblyVersion`, `AssemblyFileVersion`, and `AssemblyInformationalVersion` attributes. The `AssemblyInformationalVersion` attribute will contain the full semantic version from `whsbuild.yml` plus some build metadata: the build server's build number, the Git branch, and the Git commit ID.
+    
+        Version: 1.3.2-rc.1
+        BuildTasks:
+        - MSBuild:
+            Paths: 
+            - MySolution.sln
+            - MyOtherSolution.sln
+    
+    ## NuGetPack
+    
+    The NuGetPack task creates NuGet package from a `.csproj` or `.nuspec` file. It runs the `nuget.exe pack` command. The task should have a `Path` element that is a list of paths to run the task against. Each path is packaged separately. The build fails if no packages are created.
+    
+        BuildTasks:
+        - NuGetPack:
+            Paths:
+            - MyProject.csproj
+            - MyNuspec.csproj
+            
+    ## NUnit2
+    
+    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\packages`). The task should have a `Paths` list which should be a list of assemblies whose tests to run. The build will fail if any of the tests fail (i.e. if the NUnit console returns a non-zero exit code).
+    
+        BuildTasks:
+        - NUnit2:
+            Paths:
+            - Assembly.dll
+            - OtherAssembly.dll
+    
+    ## Pester
+    
+    The Pester task runs Pester tests. The latest version of Pester is downloaded from the PowerShell Gallery for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`). The task should have a `Paths` list which should be a list of Pester test files or directories containing Pester tests. (The paths are passed to `Invoke-Pester` function's `Script` parameter.) The build will fail if any of the tests fail.
+    
+        BuildTasks:
+        - Pester:
+            Paths:
+            - My.Tests.ps1
+            - Tests
+            
+    ## PowerShell
+    
+    The PowerShell task runs PowerShell scripts. The task should have a `Paths` list which is a list of script to run. The build fails if any script exits with a non-zero exit code.
+    
+        BuildTasks:
+        - PowerShell:
+            Paths:
+            - myscript.ps1
+            - myotherscript.ps1
+    
+    .EXAMPLE
+    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Debug'
+    
+    Demonstrates the simplest way to call `Invoke-WhsCIBuild`. In this case, all the tasks in `whsbuild.yml` are run. If any code is compiled, it is compiled with the `Debug` configuration.
+    
+    .EXAMPLE
+    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Release' -BBServerCredential $credential -BBServerUri $bbserverUri
+    
+    Demonstrates how to get `Invoke-WhsCIBuild` build status to Bitbucket Server, when run under a build server.
     #>
     [CmdletBinding()]
     param(
@@ -26,7 +109,11 @@ function Invoke-WhsCIBuild
 
         [string]
         # The URI to your Bitbucket Server installation.
-        $BBServerUri
+        $BBServerUri,
+
+        [string]
+        # The place where downloaded tools should be saved. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
+        $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -55,6 +142,11 @@ function Invoke-WhsCIBuild
                 $InputObject | Write-Host
             }
         }
+    }
+
+    if( -not ($DownloadRoot) )
+    {
+        $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
     }
 
     $runningUnderBuildServer = Test-Path -Path 'env:JENKINS_URL'
@@ -137,7 +229,7 @@ function Invoke-WhsCIBuild
                 $task = $task[$taskName]
                 if( $task -isnot [hashtable] )
                 {
-                    throw -Message ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
+                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
                 }
 
                 $errors = @()
@@ -145,7 +237,7 @@ function Invoke-WhsCIBuild
                 $pathIdx = -1
                 if( -not $task.ContainsKey('Path') )
                 {
-                    throw -Message ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
+                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
                 }
 
                 $foundInvalidTaskPath = $false
@@ -230,7 +322,7 @@ function Invoke-WhsCIBuild
                     }
 
                     'NUnit2' {
-                        $packagesRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\packages'
+                        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
                         $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
                         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
                         {
@@ -260,8 +352,48 @@ function Invoke-WhsCIBuild
                     }
 
                     'Pester' {
-                        #Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Pester')
-                        $result = Invoke-Pester -Script $taskPaths -OutputXml (Join-Path -Path $outputRoot -ChildPath ('pester-{0:00}.xml' -f $taskIdx)) -PassThru
+                        $moduleDownloadRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
+                        $pesterRoot = Join-Path -Path $moduleDownloadRoot -ChildPath 'Pester'
+                        $downloadPester = $false
+                        if( (Test-Path -Path $pesterRoot -PathType Container) )
+                        {
+                            $pesterInfo = Get-Module -Name $pesterRoot -ListAvailable
+                            if( $pesterInfo.Version -lt [version]'3.0' -or $pesterInfo.Version -ge '4.0' )
+                            {
+                                $downloadPester = $true
+                            }
+                        }
+                        else
+                        {
+                            $downloadPester = $true
+                        }
+
+                        if( $downloadPester )
+                        {
+                            if( -not (Test-Path -Path $moduleDownloadRoot -PathType Container) )
+                            {
+                                New-Item -Path $moduleDownloadRoot -ItemType 'Directory'
+                            }
+                            Save-Module -Name 'Pester' `
+                                        -MinimumVersion '3.0' `
+                                        -MaximumVersion ('3.{0}' -f [int16]::MaxValue) `
+                                        -Repository 'PSGallery' `
+                                        -Path $moduleDownloadRoot
+                        }
+
+                        # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
+                        $result = Start-Job -ScriptBlock {
+                            $myScriptRoot = $using:PSScriptRoot
+                            $script = $using:taskpaths
+                            $outputRoot = $using:outputRoot
+                            $taskIdx = $using:taskIdx
+                            $pesterRoot = $using:pesterRoot
+
+                            Import-Module -Name $pesterRoot
+                            $outputFile = Join-Path -Path $outputRoot -ChildPath ('pester-{0:00}.xml' -f $taskIdx)
+                            Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
+                        } | Wait-Job | Receive-Job
+
                         if( $result.FailedCount )
                         {
                             throw ('Pester tests failed.')
