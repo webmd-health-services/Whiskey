@@ -11,7 +11,7 @@ function Invoke-WhsCIBuild
     * MSBuild
     * NuGetPack
     * NUnit2
-    * Pester
+    * Pester2
     * PowerShell
     
     Each task's elements are defined below.
@@ -27,8 +27,6 @@ function Invoke-WhsCIBuild
     When a build fails, `Invoke-WhsCIBuild` throws a terminating error. If `Invoke-WhsCIBuild` returns, you can assume a build passed.
     
     This function doesn't return anything useful, so don't try to capture output. We reserve the right to change what gets output at anytime.
-    
-    
     
     ## MSBuild
     
@@ -61,12 +59,12 @@ function Invoke-WhsCIBuild
             - Assembly.dll
             - OtherAssembly.dll
     
-    ## Pester
+    ## Pester3
     
-    The Pester task runs Pester tests. The latest version of Pester is downloaded from the PowerShell Gallery for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`). The task should have a `Paths` list which should be a list of Pester test files or directories containing Pester tests. (The paths are passed to `Invoke-Pester` function's `Script` parameter.) The build will fail if any of the tests fail.
+    The Pester3 task runs Pester tests using Pester 3. The latest version of Pester 3 is downloaded from the PowerShell Gallery for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`). The task should have a `Paths` list which should be a list of Pester test files or directories containing Pester tests. (The paths are passed to `Invoke-Pester` function's `Script` parameter.) The build will fail if any of the tests fail.
     
         BuildTasks:
-        - Pester:
+        - Pester3:
             Paths:
             - My.Tests.ps1
             - Tests
@@ -351,7 +349,7 @@ function Invoke-WhsCIBuild
                         }
                     }
 
-                    'Pester' {
+                    'Pester3' {
                         $moduleDownloadRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
                         $pesterRoot = Join-Path -Path $moduleDownloadRoot -ChildPath 'Pester'
                         $downloadPester = $false

@@ -890,7 +890,7 @@ exit 0
 
 Describe 'Invoke-WhsCIBuild when a task path does not exist' {
     $path = 'FubarSnafu'
-    $configPath = New-TestWhsBuildFile -TaskName 'Pester' -Path $path
+    $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path $path
     
     $Global:Error.Clear()
 
@@ -902,7 +902,7 @@ Describe 'Invoke-WhsCIBuild when a task path does not exist' {
 }
 
 Describe 'Invoke-WhsCIBuild when a task path is absolute' {
-    $configPath = New-TestWhsBuildFile -TaskName 'Pester' -Path 'C:\FubarSnafu'
+    $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path 'C:\FubarSnafu'
     
     $Global:Error.Clear()
 
@@ -916,7 +916,7 @@ Describe 'Invoke-WhsCIBuild when a task path is absolute' {
 Describe 'Invoke-WhsCIBuild when a task path is missing' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
-- Pester:
+- Pester3:
     Pith: fubar
 '@
     
@@ -933,7 +933,7 @@ BuildTasks:
 Describe 'Invoke-WhsCIBuild when a task has no properties' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
-- Pester:
+- Pester3:
 '@
     
     $Global:Error.Clear()

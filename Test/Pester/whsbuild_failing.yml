@@ -1,5 +1,5 @@
 BuildTasks:
-- Pester:
+- Pester3:
     Path: 
     - PassingTests
     - FailingTests

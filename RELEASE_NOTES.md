@@ -1,6 +1,7 @@
 # 0.2.0
 
  * Created `Invoke-WhsCIBuild` function for running a build as specified in a `whsbuild.yml` file.
+ * Renamed `Pester` task to `Pester3`.
 
 
 # 0.1.0
