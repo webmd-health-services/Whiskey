@@ -321,58 +321,14 @@ function Assert-WhsAppPackageCreated
     param(
         $ConfigurationPath,
         $Version,
-        $Name,
-        $ExpectedDir,
-        $ExpectedWhitelist
+        $Name
     )
 
     It 'should create package' {
-        Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $root = $ConfigurationPath | Split-Path
-            $expectedOutputFile = Join-Path -Path $root -ChildPath ('.output\{0}.{1}.upack' -f $Name,$Version)
-            $expectedPath = $ExpectedDir | ForEach-Object { Join-Path -Path $root -ChildPath $_ }
-
-            #$DebugPreference = 'Continue'
-
-            Write-Debug -Message ('Path.Count  expected  {0}' -f $expectedPath.Count)
-            Write-Debug -Message ('            actual    {0}' -f $Path.Count)
-
-            if( ($Path.Count -ne $expectedPath.Count) )
-            {
-                return $false
-            }
-
-            for( $idx = 0; $idx -lt $Path.Count; ++$idx )
-            {
-                Write-Debug -Message ('Path[{0}]   expected  {1}' -f $idx,$expectedPath[$idx])
-                Write-Debug -Message ('          actual    {0}' -f $Path[$idx])
-                if( $Path[$idx] -ne $expectedPath[$idx] )
-                {
-                    return $false
-                }
-            }
-
-            Write-Debug -Message ('Whitelist.Count  expected  {0}' -f $expectedWhitelist.Count)
-            Write-Debug -Message ('                 actual    {0}' -f $Whitelist.Count)
-
-            if( ($Whitelist.Count -ne $expectedWhitelist.Count) )
-            {
-                return $false
-            }
-            for( $idx = 0; $idx -lt $Whitelist.Count; ++$idx )
-            {
-                Write-Debug -Message ('Whitelist[{0}]   expected  {1}' -f $idx,$expectedWhitelist[$idx])
-                Write-Debug -Message ('               actual    {0}' -f $Whitelist[$idx])
-                if( $Whitelist[$idx] -ne $expectedWhitelist[$idx] )
-                {
-                    return $false
-                }
-            }
-
-            Write-Debug -Message ('OutputFile  expected  {0}' -f $expectedOutputFile)
-            Write-Debug -Message ('            actual    {0}' -f $OutputFile)
-            return $OutputFile -eq $expectedOutputFile
-        }
+        $root = $ConfigurationPath | Split-Path
+        $packageFileName = '.output\{0}.{1}.upack' -f $Name,$Version
+        $packagePath = Join-Path -Path $root -ChildPath $packageFileName
+        $packagePath | Should Exist
     }
 }
 #endregion
@@ -440,6 +396,7 @@ function Invoke-Build
     catch
     {
         $failed = $true
+        Write-Error $_
     }    
 
     if( $runningUnderABuildServer )
@@ -635,54 +592,37 @@ function New-TestWhsBuildFile
         [string]
         $Yaml,
 
-        [Parameter(ParameterSetName='PackageTask')]
-        [string]
-        $PackageName,
-
-        [Parameter(ParameterSetName='PackageTask')]
-        [string[]]
-        $Whitelist,
+        [Parameter(ParameterSetName='SingleTask')]
+        [SemVersion.SemanticVersion]
+        $Version,
 
         [Parameter(ParameterSetName='SingleTask')]
         [string]
         $TaskName,
 
-        [Parameter(ParameterSetName='PackageTask')]
         [Parameter(ParameterSetName='SingleTask')]
         [string[]]
         $Path,
 
-        [Parameter(ParameterSetName='PackageTask')]
-        [Parameter(ParameterSetName='SingleTask')]
-        [SemVersion.SemanticVersion]
-        $Version
+        [Parameter(ParameterSetname='SingleTask')]
+        [hashtable]
+        $TaskProperty
     )
 
     $config = $null
     if( $PSCmdlet.ParameterSetName -eq 'SingleTask' )
     {
+        if( -not $TaskProperty )
+        {
+            $TaskProperty = @{}
+        }
+        $TaskProperty['Path'] = $Path
         $config = @{
                         BuildTasks = @(
                                     @{
-                                        $TaskName = @{
-                                                        Path = $Path 
-                                                     }
+                                        $TaskName = $TaskProperty
                                      }
                                  )
-                   }
-    }
-    elseif( $PSCmdlet.ParameterSetName -eq 'PackageTask' )
-    {
-        $config = @{
-                        BuildTasks = @(
-                                        @{
-                                            'WhsAppPackage' = @{
-                                                                    Name = $PackageName;
-                                                                    Path = $Path;
-                                                                    Whitelist = $Whitelist;
-                                                                }
-                                        }
-                                    )
                    }
     }
 
@@ -1128,26 +1068,132 @@ Version: 2.13.80
         $Global:Error | Should Not Match 'is not a valid semantic version' 
     }
 }
-<#
-Describe 'Invoke-WhsCIBuild when creating a WHS package' {
-    $version = '4.23.80'
-    $dirs = 'dir1','dir2'
-    $whitelist = '*.html','*.txt'
-    $configPath = New-TestWhsBuildFile -PackageName 'MyPack' -Whitelist $whitelist -Path $dirs -Version $version
+
+Describe 'Invoke-WhsCIBuild when running the WhsAppPackage task' {
+    $packageVersion = '4.23.80'
+    $dirs = 'dir1'
+    $whitelist = 'html.html'
+    $packageName = 'MyPackage'
+    $packageDescription = 'description'
+    $properties = @{
+                        Include = $whitelist;
+                        Description = $packageDescription;
+                        Name = $packageName;
+                   }
+    $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
+    $arcSource = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
+    $arcDestination = Join-Path -Path ($configPath | Split-Path) -ChildPath 'Arc'
+    robocopy $arcSource $arcDestination /MIR
     $root = $configPath | Split-Path 
-    $dir1Path = Join-Path -Path $root -ChildPath 'dir1'
-    $dir2Path = Join-Path -Path $root -ChildPath 'dir2'
-    $dir1Path,$dir2Path | ForEach-Object { 
-        $dirPath = $_
-        Install-Directory -Path $dirPath
+    $dirPath = Join-Path -Path $root -ChildPath $dirs
+    Install-Directory -Path $dirPath
+    '' | Set-Content -Path (Join-Path -Path $dirPath -ChildPath $whitelist)
+
+    Context 'really packaging' {
+        Invoke-Build -ByJenkins -WithConfig $configPath
+
+        Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $packageVersion
     }
 
+    Context 'mock packager' {
+        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+
+        Invoke-Build -ByJenkins -WithConfig $configPath
+
+        Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $root = $configPath | Split-Path
+            $fullDirs = Join-Path -Path $root -ChildPath $dirs
+            #$DebugPreference = 'Continue'
+
+            Write-Debug -Message ('RepositoryRoot  expected  {0}' -f $RepositoryRoot)
+            Write-Debug -Message ('                actual    {0}' -f $root)
+            Write-Debug -Message ('Description     expected  {0}' -f $Description)
+            Write-Debug -Message ('                actual    {0}' -f $packageDescription)
+            Write-Debug -Message ('Name            expected  {0}' -f $Name)
+            Write-Debug -Message ('                actual    {0}' -f $packageName)
+            Write-Debug -Message ('Version         expected  {0}' -f $Version)
+            Write-Debug -Message ('                actual    {0}' -f $packageVersion)
+            Write-Debug -Message ('Path            expected  {0}' -f $fullDirs)
+            Write-Debug -Message ('                actual    {0}' -f $Path[0])
+            Write-Debug -Message ('Include         expected  {0}' -f $whitelist)
+            Write-Debug -Message ('                actual    {0}' -f $Include[0])
+            Write-Debug -Message ('Exclude         expected  {0}' -f $true)
+            Write-Debug -Message ('                actual    {0}' -f ($Exclude -eq $null))
+            return $RepositoryRoot -eq $root -and 
+                   $Description -eq $packageDescription -and
+                   $Name -eq $packageName -and
+                   $Version -eq $packageVersion -and
+                   $Path[0] -eq $fullDirs -and
+                   $Include[0] -eq $whitelist -and
+                   $Exclude -eq $null
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIBuild when running WhsAppPackage task and excluding items' {
+    $packageVersion = '4.23.80'
+    $dirs = 'dir1'
+    $whitelist = 'html.html'
+    $packageName = 'MyPackage'
+    $packageDescription = 'description'
+    $packageExclude = 'fubar'
+    $properties = @{
+                        Include = $whitelist;
+                        Description = $packageDescription;
+                        Name = $packageName;
+                        Exclude = $packageExclude;
+                   }
+    $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
     Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+    New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
 
     Invoke-Build -ByJenkins -WithConfig $configPath
 
-    $expectedWhitelist = $whitelist
-
-    Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name 'MyPack' -Version $version -ExpectedDir $dirs -ExpectedWhitelist $whitelist
+    Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        $DebugPreference = 'Continue'
+        return $Exclude.Count -eq 1 -and $Exclude[0] -eq $packageExclude
+    }
 }
-#>
+
+foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
+{
+    Describe ('Invoke-WhsCIBuild when running WhsAppPackage and missing {0} element' -f $propertyName) {
+        $packageVersion = '4.23.80'
+        $dirs = 'dir1'
+        $whitelist = 'html.html'
+        $packageName = 'MyPackage'
+        $packageDescription = 'description'
+        $packageExclude = 'fubar'
+        $properties = @{
+                            Include = $whitelist;
+                            Description = $packageDescription;
+                            Name = $packageName;
+                            Exclude = $packageExclude;
+                       }
+        if( $properties.ContainsKey($propertyName) )
+        {
+            $properties.Remove($propertyName)
+        }
+        else
+        {
+            $dirs = @()
+        }
+
+        $Global:Error.Clear()
+
+        $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
+        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+        New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
+
+        Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
+
+        It 'should not create package' {
+            Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 0
+        }
+
+        it 'should write an error' {
+            $Global:Error.Count | Should BeGreaterThan 0
+            $Global:Error[0] | Should Match ('\b{0}\b.*\bmandatory' -f $propertyName)
+        }
+    }
+}

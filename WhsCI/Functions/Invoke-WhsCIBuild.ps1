@@ -13,6 +13,7 @@ function Invoke-WhsCIBuild
     * NUnit2
     * Pester2
     * PowerShell
+    * WhsAppPackage
     
     Each task's elements are defined below.
     
@@ -78,6 +79,34 @@ function Invoke-WhsCIBuild
             Paths:
             - myscript.ps1
             - myotherscript.ps1
+            
+    ## WhsAppPackage
+    
+    The WhsAppPackage task creates a WHS application deployment package. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
+    
+    * `Paths`: mandatory; the directories and files to include in the package. They will be added to the root of the package using the item's name.
+    * `Name`: mandatory; the name of the package. Usually, this is the name of your application.
+    * `Description`: mandatory; a description of your application.
+    * `Include`: mandatory; a whitelist of file names to include in the package. Wildcards supported. This must have at least one item. Only files that match an item in this list will be in the package. All other files are excluded.
+    * `Exclude`: optional; an extra filter against `Include` any file or directory included by `Include` that matches an item in `Exclude` is ommitted from the package.
+ 
+    The version of the package is taken from the `Version` element in the `whsbuild.yml` file.
+    
+    The task excludes `.hg`, `.git`, and `obj` directories for you.
+    
+        Version: 1.5.5
+        BuildTasks:
+        - WhsAppPackage:
+            Name: MyApplication
+            Description: The MyApplication is responsible for all the cool things.
+            Include: 
+            - *.aspx
+            - *.css
+            - *.js
+            Exclude:
+            - test
+            - backdoor
+            
     
     .EXAMPLE
     Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Debug'
@@ -225,6 +254,9 @@ function Invoke-WhsCIBuild
                 $taskIdx++
                 $taskName = $task.Keys | Select-Object -First 1
                 $task = $task[$taskName]
+
+                $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $ConfigurationPath,$taskIdx,$taskName
+
                 if( $task -isnot [hashtable] )
                 {
                     throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
@@ -409,12 +441,18 @@ function Invoke-WhsCIBuild
                         }
                     }
 
-                    <#
                     'WhsAppPackage' {
                         $excludeParam = @{}
+                        foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
+                        {
+                            if( -not $task.ContainsKey($mandatoryName) )
+                            {
+                                throw ('{0}Element ''{1}'' is mandatory.' -f $errorPrefix,$mandatoryName)
+                            }
+                        }
                         if( $task['Exclude'] )
                         {
-                            $excludeParam = $task['Exclude']
+                            $excludeParam['Exclude'] = $task['Exclude']
                         }
 
                         New-WhsAppPackage -RepositoryRoot $root `
@@ -425,10 +463,9 @@ function Invoke-WhsCIBuild
                                           -Include $task['Include'] `
                                           @excludeParam
                     }
-                    #>
 
                     default {
-                        $knownTasks = @( 'MSBuild','NuGetPack','NUNit2', 'Pester', 'PowerShell' ) | Sort-Object
+                        $knownTasks = @( 'MSBuild','NuGetPack','NUNit2', 'Pester', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
                         throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                     }
                 }
