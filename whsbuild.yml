@@ -1,0 +1,7 @@
+Version: 0.1.0
+Tasks:
+- PowerShell:
+    Path: init.ps1
+- Pester:
+    Path: Test
+    

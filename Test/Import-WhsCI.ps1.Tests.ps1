@@ -1,4 +1,5 @@
 
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
 Describe 'Import-WhsCIPs1 when WhsCI is not loaded' {
     if( (Get-Module -Name 'WhsCI') )

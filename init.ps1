@@ -17,26 +17,7 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-foreach( $moduleName in @( 'Pester', 'Carbon' ) )
-{
-    $modulePath = Join-Path -Path $PSScriptRoot -ChildPath $moduleName
-    if( (Test-Path -Path $modulePath -PathType Container) )
-    {
-        if( $Clean )
-        {
-            Remove-Item -Path $modulePath -Recurse -Force
-        }
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon\Import-Carbon.ps1' -Resolve)
 
-        continue
-    }
-
-    Save-Module -Name $moduleName -Path $PSScriptRoot
-
-    $versionDir = Join-Path -Path $modulePath -ChildPath '*.*.*'
-    if( (Test-Path -Path $versionDir -PathType Container) )
-    {
-        $versionDir = Get-Item -Path $versionDir
-        Get-ChildItem -Path $versionDir -Force | Move-Item -Destination $modulePath -Verbose
-        Remove-Item -Path $versionDir
-    }
-}
+Install-Junction -Link (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') `
+                 -Target (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon')
