@@ -1,4 +1,6 @@
 
+& (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
+
 if( (Get-Module -Name 'WhsCI') )
 {
     Remove-Module -Name 'WhsCI' -Force
