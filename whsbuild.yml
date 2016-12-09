@@ -3,5 +3,5 @@ Tasks:
 - PowerShell:
     Path: init.ps1
 - Pester:
-    Path: Test
+    Path: Test\*.Tests.ps1
     
