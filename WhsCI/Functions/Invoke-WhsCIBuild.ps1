@@ -240,7 +240,7 @@ function Invoke-WhsCIBuild
             {
                 $buildID = (Get-Item -Path 'env:BUILD_ID').Value
                 $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-                $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
+                $commitID = 'fubarsnafu' # (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
                 $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
                 $semVersion = New-Object -TypeName 'SemVersion.SemanticVersion' ($semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease,$buildInfo)
             }
