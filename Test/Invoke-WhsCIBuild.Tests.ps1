@@ -13,10 +13,6 @@ $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Servi
 $packageDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'packages'
 $moduleDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'Modules'
 
-Write-Verbose '#16' -Verbose
-Get-Variable -Name 'CommitID' | Format-List | Out-String | Write-Verbose -Verbose
-
-
 #region Assertions
 function Assert-AssemblyVersionSet
 {
@@ -97,12 +93,12 @@ function Assert-CommitStatusSetTo
         $ExpectedStatus
     )
 
-    Write-Verbose '#100' -Verbose
-    Get-Variable -Name 'CommitID' | Format-List | Out-String | Write-Verbose -Verbose
-
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
-    Write-Verbose '#103' -Verbose
-        Get-Variable -Name 'CommitID' | Format-List | Out-String | Write-Verbose -Verbose
+        
+        if( (Test-Path -Path 'variable:CommitID') )
+        {
+            Remove-Variable -Name 'commitID' -Force
+        }
 
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $expectedUri = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerBaseUri')
@@ -110,8 +106,6 @@ function Assert-CommitStatusSetTo
             $expectedPassword = Get-WhsSecret -Environment 'Dev' -Name $expectedUsername
 
             $DebugPreference = 'Continue'
-
-            Get-Variable -Name 'CommitID' | Format-List | Out-String | Write-Debug
 
             Write-Debug -Message ('Status                          expected  {0}' -f $ExpectedStatus)
             Write-Debug -Message ('                                actual    {0}' -f $Status)
