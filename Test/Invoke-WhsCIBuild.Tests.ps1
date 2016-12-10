@@ -99,7 +99,7 @@ function Assert-CommitStatusSetTo
             $expectedUsername = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerRestApiUsername')
             $expectedPassword = Get-WhsSecret -Environment 'Dev' -Name $expectedUsername
 
-            #$DebugPreference = 'Continue'
+            $DebugPreference = 'Continue'
 
             Write-Debug -Message ('Status                          expected  {0}' -f $ExpectedStatus)
             Write-Debug -Message ('                                actual    {0}' -f $Status)
