@@ -95,11 +95,6 @@ function Assert-CommitStatusSetTo
 
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
         
-        if( (Test-Path -Path 'variable:CommitID') )
-        {
-            Remove-Variable -Name 'commitID' -Force -Scope Global
-        }
-
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $expectedUri = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerBaseUri')
             $expectedUsername = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerRestApiUsername')
@@ -116,6 +111,7 @@ function Assert-CommitStatusSetTo
             Write-Debug -Message ('Connection.Credential.UserName  expected  {0}' -f $expectedUsername)
             Write-Debug -Message ('                                actual    {0}' -f $Connection.Credential.UserName)
 
+            $CommitID = $PSBoundParameters['CommitID']
             Write-Debug -Message ('CommitID                        expected  $null')
             Write-Debug -Message ('                                actual    {0}' -f $CommitID)
 
