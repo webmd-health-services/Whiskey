@@ -293,7 +293,7 @@ function Assert-PesterRan
     $pesterOutput = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\.output'
     $testReports = Get-ChildItem -Path $pesterOutput -Filter 'pester-*.xml'
     It 'should run pester tests' {
-            $testReports | Should Not BeNullOrEmpty
+        $testReports | Should Not BeNullOrEmpty
     }
 
     $total = 0
@@ -732,7 +732,7 @@ Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
     Assert-PesterRan -FailureCount 4 -PassingCount 4
 }
 
-Describe 'Invoke-WhsCIBuild when building .NET assemblies.' {
+Describe 'Invoke-WhsCIBuild when building NET assemblies.' {
     $version = '3.2.1-rc.1'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path 'FubarSnafu.csproj' -Version $version
 
@@ -905,7 +905,7 @@ Describe 'Invoke-WhsCIBuild when a task has no properties' {
     Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion $version -ProjectName $project
 }
 
-Describe 'Invoke-WhsCIBuild when compiling a .NET project on the build server' {
+Describe 'Invoke-WhsCIBuild when compiling a NET project on the build server' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
     
