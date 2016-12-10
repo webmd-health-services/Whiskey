@@ -97,7 +97,7 @@ function Assert-CommitStatusSetTo
         
         if( (Test-Path -Path 'variable:CommitID') )
         {
-            Remove-Variable -Name 'commitID' -Force
+            Remove-Variable -Name 'commitID' -Force -Scope Global
         }
 
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
