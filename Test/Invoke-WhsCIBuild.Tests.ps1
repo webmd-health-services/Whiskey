@@ -111,7 +111,13 @@ function Assert-CommitStatusSetTo
             Write-Debug -Message ('Connection.Credential.UserName  expected  {0}' -f $expectedUsername)
             Write-Debug -Message ('                                actual    {0}' -f $Connection.Credential.UserName)
 
-            $CommitID = $PSBoundParameters['CommitID']
+            # For some reason, when run under Jenkins, there is a global $commitID variable 
+            # that hides the parameter, so we need to explicitly set the parameter.
+            $CommitID = $null
+            if( $PSBoundParameters.ContainsKey('CommitID') )
+            {
+                $CommitID = $PSBoundParameters['CommitID']
+            }
             Write-Debug -Message ('CommitID                        expected  $null')
             Write-Debug -Message ('                                actual    {0}' -f $CommitID)
 
