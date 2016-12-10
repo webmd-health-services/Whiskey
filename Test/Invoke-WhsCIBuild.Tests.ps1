@@ -101,6 +101,8 @@ function Assert-CommitStatusSetTo
 
             $DebugPreference = 'Continue'
 
+            Get-Variable -Name 'CommitID' | Format-List | Out-String | Write-Debug
+
             Write-Debug -Message ('Status                          expected  {0}' -f $ExpectedStatus)
             Write-Debug -Message ('                                actual    {0}' -f $Status)
 
