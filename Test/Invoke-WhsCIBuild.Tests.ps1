@@ -522,6 +522,7 @@ function New-MockBuildServer
 function New-MockDeveloperEnvironment
 {
     Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-Path' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
 }
 
 function New-NUnitTestAssembly
@@ -893,7 +894,7 @@ BuildTasks:
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a task has no properties' {
+Describe 'Invoke-WhsCIBuild when a developer is compiling dotNET project' {
     $project = 'developer.csproj'
     $version = '45.4.3-beta.1'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project -Version $version
@@ -905,7 +906,7 @@ Describe 'Invoke-WhsCIBuild when a task has no properties' {
     Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion $version -ProjectName $project
 }
 
-Describe 'Invoke-WhsCIBuild when compiling a NET project on the build server' {
+Describe 'Invoke-WhsCIBuild when compiling a dotNET project on the build server' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
     
