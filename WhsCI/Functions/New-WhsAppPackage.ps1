@@ -82,7 +82,7 @@ function New-WhsAppPackage
     $outDirectory = Join-Path -Path $RepositoryRoot -ChildPath '.output'
     Install-Directory -Path $outDirectory
 
-    $outFile = Join-Path -Path $RepositoryRoot -ChildPath $fileName
+    $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
     $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $Name

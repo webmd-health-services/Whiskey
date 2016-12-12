@@ -1,3 +1,6 @@
-.output/**
+**/.output/**
 Pester/**
 Carbon/**
+Test/Assemblies/**/obj/**
+Test/Assemblies/**/bin/**
+Test/Assemblies/**/packages/**

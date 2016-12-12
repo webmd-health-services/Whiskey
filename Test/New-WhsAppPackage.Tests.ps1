@@ -32,8 +32,11 @@ function Assert-Package
    )
 
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    $packageName = '{0}.{1}.upack' -f $Name,$Version
+    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('Repo\.output\{0}' -f $packageName)
+
     It 'should create a package' {
-        $At | Should Exist
+        $packagePath | Should Exist
     }
 
     Expand-Item -Path $At -OutDirectory $expandPath
@@ -201,7 +204,6 @@ function Invoke-NewWhsAppPackage
     {
         $excludeParam['Exclude'] = $Exclude
     }
-    $outFile = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.upack'
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
