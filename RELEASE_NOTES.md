@@ -4,6 +4,7 @@
  * Renamed `Pester` task to `Pester3`.
  * Fixed: `New-WhsAppPackage` puts packages in the root of the repository, not the `.output` directory.
  * Added `WhsAppPackage` task to `whsbuild.yml` schema and `Invoke-WhsCIBuild`. This task creates application deployment packages.
+ * Created `Install-WhsCITool` function for installing tools (currently only PowerShell modules) needed by WhsCI functions.
 
 
 # 0.1.0
