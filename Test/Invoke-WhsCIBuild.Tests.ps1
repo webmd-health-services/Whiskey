@@ -278,52 +278,6 @@ function Assert-NUnitTestsRun
     }
 }
 
-function Assert-PesterRan
-{
-    param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
-            
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
-    )
-
-    $pesterOutput = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\.output'
-    $testReports = Get-ChildItem -Path $pesterOutput -Filter 'pester-*.xml'
-    It 'should run pester tests' {
-        $testReports | Should Not BeNullOrEmpty
-    }
-
-    $total = 0
-    $failed = 0
-    $passed = 0
-    foreach( $testReport in $testReports )
-    {
-        $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
-        $thisTotal = [int]($xml.'test-results'.'total')
-        $thisFailed = [int]($xml.'test-results'.'failures')
-        $thisPassed = ($thisTotal - $thisFailed)
-        $total += $thisTotal
-        $failed += $thisFailed
-        $passed += $thisPassed
-    }
-
-    $expectedTotal = $FailureCount + $PassingCount
-    It ('should run {0} tests' -f $expectedTotal) {
-        $total | Should Be $expectedTotal
-    }
-
-    It ('should have {0} failed tests' -f $FailureCount) {
-        $failed | Should Be $FailureCount
-    }
-
-    It ('should run {0} passing tests' -f $PassingCount) {
-        $passed | Should Be $PassingCount
-    }
-}
-
 function Assert-WhsAppPackageCreated
 {
     param(
@@ -715,22 +669,15 @@ Version: 1
 }
 
 $pesterPassingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_passing.yml' -Resolve
-$pesterFailingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_failing.yml' -Resolve
-Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
+Describe 'Invoke-WhsCIBuild when running Pester task' {
     $downloadRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'downloads'
     Invoke-Build -ByJenkins -WithConfig $pesterPassingConfig -DownloadRoot $downloadRoot
 
-    Assert-PesterRan -FailureCount 0 -PassingCount 4
-
-    It 'should download Pester' {
-        Join-Path -Path $downloadRoot -ChildPath 'Modules\Pester' | Should Exist
+    $pesterOutput = Join-Path -Path ($pesterPassingConfig | Split-Path) -ChildPath '.output'
+    $testReports = Get-ChildItem -Path $pesterOutput -Filter 'pester-*.xml'
+    It 'should run pester tests' {
+        $testReports | Should Not BeNullOrEmpty
     }
-}
-
-Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
-    Invoke-Build -ByJenkins -WithConfig $pesterFailingConfig -ThatFails
-    
-    Assert-PesterRan -FailureCount 4 -PassingCount 4
 }
 
 Describe 'Invoke-WhsCIBuild when building NET assemblies.' {

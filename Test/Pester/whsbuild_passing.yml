@@ -1,3 +1,4 @@
 BuildTasks:
 - Pester3:
+    Version: 3.4.3
     Path: PassingTests

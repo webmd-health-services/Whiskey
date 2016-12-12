@@ -1,5 +1,12 @@
 # 0.2.0
 
+# Upgrade Instructions:
+
+ * Rename any `Pester` tasks to `Pester3` in your `whsbuild.yml` file(s).
+ * The `Pester3` task now requires the version of Pester to use. Add a `Version` property to any `Pester3` sections in your `whsbuild.yml` file(s). The latest version of Pester is 3.4.3 (as of this writing).
+
+# What's Changed
+
  * Created `Invoke-WhsCIBuild` function for running a build as specified in a `whsbuild.yml` file.
  * Renamed `Pester` task to `Pester3`.
  * Fixed: `New-WhsAppPackage` puts packages in the root of the repository, not the `.output` directory.

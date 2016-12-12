@@ -145,7 +145,7 @@ function Invoke-WhsCIBuild
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     function Write-CommandOutput
     {
         param(
@@ -214,21 +214,8 @@ function Invoke-WhsCIBuild
         $nugetVersion = $null
         if( ($config.ContainsKey('Version')) )
         {
-            $rawVersion = $config['Version']
-            if( $rawVersion -is [datetime] )
-            {
-                $patch = $rawVersion.Year
-                if( $patch -ge 2000 )
-                {
-                    $patch -= 2000
-                }
-                elseif( $patch -ge 1900 )
-                {
-                    $patch -= 1900
-                }
-                $rawVersion = '{0}.{1}.{2}' -f $rawVersion.Month,$rawVersion.Day,$patch
-            }
-            if( -not ([SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semVersion)) )
+            $semVersion = $config['Version'] | ConvertTo-SemanticVersion
+            if( -not $semVersion )
             {
                 throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
                 return $false
@@ -382,51 +369,13 @@ function Invoke-WhsCIBuild
                     }
 
                     'Pester3' {
-                        $moduleDownloadRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
-                        $pesterRoot = Join-Path -Path $moduleDownloadRoot -ChildPath 'Pester'
-                        $downloadPester = $false
-                        if( (Test-Path -Path $pesterRoot -PathType Container) )
+                        try
                         {
-                            $pesterInfo = Get-Module -Name $pesterRoot -ListAvailable
-                            if( $pesterInfo.Version -lt [version]'3.0' -or $pesterInfo.Version -ge '4.0' )
-                            {
-                                $downloadPester = $true
-                            }
+                            Invoke-WhsCIPester3Task -OutputRoot $outputRoot -Path $taskPaths -Config $task
                         }
-                        else
+                        catch
                         {
-                            $downloadPester = $true
-                        }
-
-                        if( $downloadPester )
-                        {
-                            if( -not (Test-Path -Path $moduleDownloadRoot -PathType Container) )
-                            {
-                                New-Item -Path $moduleDownloadRoot -ItemType 'Directory'
-                            }
-                            Save-Module -Name 'Pester' `
-                                        -MinimumVersion '3.0' `
-                                        -MaximumVersion ('3.{0}' -f [int16]::MaxValue) `
-                                        -Repository 'PSGallery' `
-                                        -Path $moduleDownloadRoot
-                        }
-
-                        # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
-                        $result = Start-Job -ScriptBlock {
-                            $myScriptRoot = $using:PSScriptRoot
-                            $script = $using:taskpaths
-                            $outputRoot = $using:outputRoot
-                            $taskIdx = $using:taskIdx
-                            $pesterRoot = $using:pesterRoot
-
-                            Import-Module -Name $pesterRoot
-                            $outputFile = Join-Path -Path $outputRoot -ChildPath ('pester-{0:00}.xml' -f $taskIdx)
-                            Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
-                        } | Wait-Job | Receive-Job
-
-                        if( $result.FailedCount )
-                        {
-                            throw ('Pester tests failed.')
+                            throw ('{0}{1}' -f $errorPrefix,$_.Exception.Message)
                         }
                     }
 
@@ -465,7 +414,7 @@ function Invoke-WhsCIBuild
                     }
 
                     default {
-                        $knownTasks = @( 'MSBuild','NuGetPack','NUNit2', 'Pester', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
+                        $knownTasks = @( 'MSBuild','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
                         throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                     }
                 }
