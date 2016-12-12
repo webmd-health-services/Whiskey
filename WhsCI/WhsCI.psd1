@@ -68,6 +68,7 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'Install-WhsCITool',
+                            'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCiBuild',
                             'New-WhsAppPackage' 
                          );
