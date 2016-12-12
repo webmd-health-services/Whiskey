@@ -114,6 +114,17 @@ Describe 'Install-WhsCITool.when run by developer/build server' {
     Invoke-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
 }
 
+Describe 'Install-WhsCITool.when installing an already installed module' {
+    $Global:Error.Clear()
+
+    Invoke-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+
+    it 'should not write any errors' {
+        $Global:Error | Should BeNullOrEmpty
+    }
+}
+
 Describe 'Install-WhsCITool.when omitting BUILD number' {
     Invoke-Install -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
 }
@@ -151,6 +162,6 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
 
     It 'should write an error' {
         $Global:Error.Count | Should Be 2
-        $Global:Error[0] | Should Match 'does not exist'
+        $Global:Error[0] | Should Match 'failed to download'
     }
 }

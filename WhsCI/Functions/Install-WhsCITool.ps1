@@ -57,14 +57,20 @@ function Install-WhsCITool
     $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
     New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
 
-    $errors = @()
-    Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
-    if( $errors )
+    $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
+    if( $PSVersionTable.PSVersion -lt [version]'5.0' )
     {
-        Write-Error -Message ('PowerShell module {0} {1} does not exist on the PowerShell Gallery. Either the module {0} does not exist, or it exists but version {1} doesn''t. Go to https://powershellgallery.com to view available modules.' -f $ModuleName,$Version)
+        $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}.{1}\*.psd1' -f $ModuleName,$Version)
+    }
+
+    if( (Test-Path -Path $expectedPath -PathType Leaf) )
+    {
+        Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
         return
     }
 
+    Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
+ 
     $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
     if( (Test-Path -Path $moduleRoot -PathType Leaf) )
     {
@@ -75,7 +81,7 @@ function Install-WhsCITool
     $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $ModuleName
     if( -not (Test-Path -Path $moduleRoot -PathType Container) )
     {
-        Write-Error -Message ('Failed to install {0} {1}: it downloaded successfully, but we couldn''t find it after the download.' -f $ModuleName,$Version)
+        Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
         return
     }
 
