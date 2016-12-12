@@ -97,7 +97,7 @@ function Invoke-Install
         }
 
         It 'should put it in the right place' {
-            if( $LikePowerShell4 )
+            if( $LikePowerShell4 -or ($ForRealsies -and $PSVersionTable.PSVersion -lt [version]'5.0'))
             {
                 $expectedRegex = 'Modules\\{0}\.{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
@@ -153,6 +153,12 @@ Describe 'Install-WhsCITool.when using default DownloadRoot' {
 
 Describe 'Install-WhsCITool.when version doesn''t exist' {
     $Global:Error.Clear()
+
+    $pesterRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\Modules\Pester'
+    '.3.0.0','\3.0.0' | 
+        ForEach-Object { '{0}{1}' -f $pesterRoot,$_ } | 
+        Where-Object { Test-Path -Path $_ -PathType Container } |
+        Remove-Item -Recurse -Force 
 
     $result = Install-WhsCITool -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
     
