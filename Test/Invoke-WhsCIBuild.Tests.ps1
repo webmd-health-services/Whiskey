@@ -579,7 +579,10 @@ function New-TestWhsBuildFile
         {
             $TaskProperty = @{}
         }
-        $TaskProperty['Path'] = $Path
+        if( $Path )
+        {
+            $TaskProperty['Path'] = $Path
+        }
         $config = @{
                         BuildTasks = @(
                                     @{
@@ -1152,4 +1155,44 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
             $Global:Error[0] | Should Match ('\b{0}\b.*\bmandatory' -f $propertyName)
         }
     }
+}
+
+Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
+
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath
+
+    It 'should run Node targets' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $WorkingDirectory -eq $repoRoot -and $NpmTarget[0] -eq 'build' -and $NpmTarget[1] -eq 'test'
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ }
+
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
+
+    $warnings = @()
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -WarningVariable 'warnings' -WarningAction SilentlyContinue
+
+    It 'should warn that nothing happened' {
+        $warnings | Should Match 'missing or not defined'
+    }
+
+    It 'should not run Node task' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 0 
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when Node task fails' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
+
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -ThatFails -ErrorAction SilentlyContinue
 }

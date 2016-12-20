@@ -14,6 +14,7 @@
  * Created `Install-WhsCITool` function for installing tools (currently only PowerShell modules) needed by WhsCI functions.
  * Created `Invoke-WhsCIPester3Task` function for running tests with Pester 3.
  * Created `Invoke-WhsCINodeTask` function for running Node.js builds.
+ * Added `Node` task for running Node.js builds.
 
 
 # 0.1.0
