@@ -9,6 +9,7 @@ function Invoke-WhsCIBuild
     The `Invoke-WhsCIBuild` function runs a build based on the settings from a `whsbuild.yml` file. A minimal `whsbuild.yml` file should contain a `BuildTasks` element that is a list of the build tasks to perform. `Invoke-WhsCIBuild` supports the following tasks:
     
     * MSBuild
+    * Node
     * NuGetPack
     * NUnit2
     * Pester2
@@ -39,6 +40,16 @@ function Invoke-WhsCIBuild
             Paths: 
             - MySolution.sln
             - MyOtherSolution.sln
+
+    ## Node
+
+    The Node task is used to run Node.js builds. It runs npm targets, e.g. `npm run <targets>`. If any target fails, the build fails. It also runs `npm install` before running any targets.
+
+        BuildTasks:
+        - Node:
+            NpmTargets:
+            - build
+            - test
     
     ## NuGetPack
     
@@ -252,35 +263,33 @@ function Invoke-WhsCIBuild
                 $errors = @()
                 $taskPaths = New-Object 'Collections.Generic.List[string]' 
                 $pathIdx = -1
-                if( -not $task.ContainsKey('Path') )
+                if( $task.ContainsKey('Path') )
                 {
-                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
-                }
-
-                $foundInvalidTaskPath = $false
-                foreach( $taskPath in $task.Path )
-                {
-                    $pathIdx++
-                    if( [IO.Path]::IsPathRooted($taskPath) )
+                    $foundInvalidTaskPath = $false
+                    foreach( $taskPath in $task.Path )
                     {
-                        Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' is absolute but must be relative to the whsbuild.yml file.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                        $foundInvalidTaskPath = $true
-                        continue
+                        $pathIdx++
+                        if( [IO.Path]::IsPathRooted($taskPath) )
+                        {
+                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' is absolute but must be relative to the whsbuild.yml file.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
+                            $foundInvalidTaskPath = $true
+                            continue
+                        }
+
+                        $taskPath = Join-Path -Path $root -ChildPath $taskPath
+                        if( -not (Test-Path -Path $taskPath) )
+                        {
+                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' does not exist.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
+                            $foundInvalidTaskPath = $true
+                        }
+
+                        Resolve-Path -Path $taskPath | ForEach-Object { $taskPaths.Add($_.ProviderPath) }
                     }
 
-                    $taskPath = Join-Path -Path $root -ChildPath $taskPath
-                    if( -not (Test-Path -Path $taskPath) )
+                    if( $foundInvalidTaskPath )
                     {
-                        Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' does not exist.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                        $foundInvalidTaskPath = $true
+                        throw ('{0}: BuildTasks[{1}]: {2}: One or more of the task''s paths do not exist or are absolute.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
                     }
-
-                    Resolve-Path -Path $taskPath | ForEach-Object { $taskPaths.Add($_.ProviderPath) }
-                }
-
-                if( $foundInvalidTaskPath )
-                {
-                    throw ('{0}: BuildTasks[{1}]: {2}: One or more of the task''s paths do not exist or are absolute.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
                 }
 
                 switch( $taskName )
@@ -317,6 +326,18 @@ function Invoke-WhsCIBuild
                             {
                                 throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$BuildConfiguration)
                             }
+                        }
+                    }
+
+                    'Node' {
+                        $npmTargets = $task['NpmTargets']
+                        if( $npmTargets )
+                        {
+                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmTarget $task['NpmTargets']
+                        }
+                        else
+                        {
+                            Write-Warning -Message ('{0}NpmTargets is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
                         }
                     }
 
@@ -414,7 +435,7 @@ function Invoke-WhsCIBuild
                     }
 
                     default {
-                        $knownTasks = @( 'MSBuild','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
+                        $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
                         throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                     }
                 }

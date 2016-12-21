@@ -579,7 +579,10 @@ function New-TestWhsBuildFile
         {
             $TaskProperty = @{}
         }
-        $TaskProperty['Path'] = $Path
+        if( $Path )
+        {
+            $TaskProperty['Path'] = $Path
+        }
         $config = @{
                         BuildTasks = @(
                                     @{
@@ -610,7 +613,7 @@ $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assem
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 $nunitWhsBuildYmlFile = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml'
 
-Describe 'Invoke-WhsCIBuild when building real projects' {
+Describe 'Invoke-WhsCIBuild.when building real projects' {
     # Get rid of any existing packages directories.
     Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
     
@@ -657,7 +660,7 @@ Describe 'Invoke-WhsCIBuild when building real projects' {
 Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Properties\AssemblyInfo.cs') |
     ForEach-Object { git checkout HEAD $_.FullName }
 #>
-Describe 'Invoke-WhsCIBuild when Version in configuration file is invalid' {
+Describe 'Invoke-WhsCIBuild.when Version in configuration file is invalid' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 Version: 1
 '@
@@ -669,7 +672,7 @@ Version: 1
 }
 
 $pesterPassingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_passing.yml' -Resolve
-Describe 'Invoke-WhsCIBuild when running Pester task' {
+Describe 'Invoke-WhsCIBuild.when running Pester task' {
     $downloadRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'downloads'
     Invoke-Build -ByJenkins -WithConfig $pesterPassingConfig -DownloadRoot $downloadRoot
 
@@ -680,7 +683,7 @@ Describe 'Invoke-WhsCIBuild when running Pester task' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when building NET assemblies.' {
+Describe 'Invoke-WhsCIBuild.when building NET assemblies.' {
     $version = '3.2.1-rc.1'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path 'FubarSnafu.csproj' -Version $version
 
@@ -691,7 +694,7 @@ Describe 'Invoke-WhsCIBuild when building NET assemblies.' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'FubarSnafu.csproj' -AtVersion $version
 }
 
-Describe 'Invoke-WhsCIBuild when building multiple projects' {
+Describe 'Invoke-WhsCIBuild.when building multiple projects' {
     $projects = @( 'FubarSnafu.csproj','SnafuFubar.csproj' )
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $projects
 
@@ -702,7 +705,7 @@ Describe 'Invoke-WhsCIBuild when building multiple projects' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $projects
 }
 
-Describe 'Invoke-WhsCIBuild when compilation fails' {
+Describe 'Invoke-WhsCIBuild.when compilation fails' {
     $project = 'FubarSnafu.csproj' 
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
     
@@ -713,7 +716,7 @@ Describe 'Invoke-WhsCIBuild when compilation fails' {
     Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName $project
 }
 
-Describe 'Invoke-WhsCIBuild when multiple AssemblyInfoCs files' {
+Describe 'Invoke-WhsCIBuild.when multiple AssemblyInfoCs files' {
     $version = '4.3.2-fubar'
     $project = 'FubarSnafu.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project -Version $version
@@ -729,7 +732,7 @@ Describe 'Invoke-WhsCIBuild when multiple AssemblyInfoCs files' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $project -AtVersion $version
 }
 
-Describe 'Invoke-WhsCIBuild when running a PowerShell task' {
+Describe 'Invoke-WhsCIBuild.when running a PowerShell task' {
     $script = 'task.ps1'
     $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
 
@@ -746,7 +749,7 @@ exit 0
     }
 }
 
-Describe 'Invoke-WhsCIBuild when running a PowerShell task fails' {
+Describe 'Invoke-WhsCIBuild.when running a PowerShell task fails' {
     $script = 'task.ps1'
     $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
 
@@ -758,7 +761,7 @@ exit 1
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
 }
 
-Describe 'Invoke-WhsCIBuild when running multiple PowerShell scripts' {
+Describe 'Invoke-WhsCIBuild.when running multiple PowerShell scripts' {
     $fileNames = @( 'task1.ps1', 'task2.ps1' )
     $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileNames
 
@@ -784,7 +787,7 @@ exit 0
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a task path does not exist' {
+Describe 'Invoke-WhsCIBuild.when a task path does not exist' {
     $path = 'FubarSnafu'
     $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path $path
     
@@ -797,7 +800,7 @@ Describe 'Invoke-WhsCIBuild when a task path does not exist' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a task path is absolute' {
+Describe 'Invoke-WhsCIBuild.when a task path is absolute' {
     $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path 'C:\FubarSnafu'
     
     $Global:Error.Clear()
@@ -809,24 +812,7 @@ Describe 'Invoke-WhsCIBuild when a task path is absolute' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a task path is missing' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
-BuildTasks:
-- Pester3:
-    Pith: fubar
-'@
-    
-    $Global:Error.Clear()
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the path is mandatory' {
-        $Global:Error[0] | Should Match 'is mandatory'
-    }
-}
-
-
-Describe 'Invoke-WhsCIBuild when a task has no properties' {
+Describe 'Invoke-WhsCIBuild.when a task has no properties' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
 - Pester3:
@@ -841,7 +827,7 @@ BuildTasks:
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a developer is compiling dotNET project' {
+Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
     $project = 'developer.csproj'
     $version = '45.4.3-beta.1'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project -Version $version
@@ -853,7 +839,7 @@ Describe 'Invoke-WhsCIBuild when a developer is compiling dotNET project' {
     Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion $version -ProjectName $project
 }
 
-Describe 'Invoke-WhsCIBuild when compiling a dotNET project on the build server' {
+Describe 'Invoke-WhsCIBuild.when compiling a dotNET project on the build server' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
     
@@ -865,7 +851,7 @@ Describe 'Invoke-WhsCIBuild when compiling a dotNET project on the build server'
     Assert-DotNetProjectBuildConfiguration 'Release'
 }
 
-Describe 'Invoke-WhsCIBuild when running an unknown task' {
+Describe 'Invoke-WhsCIBuild.when running an unknown task' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
     - FubarSnafu:
@@ -881,7 +867,7 @@ BuildTasks:
     }
 }
 
-Describe 'Invoke-WhsCIBuild when path contains wildcards' {
+Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path '*.csproj'
     New-MSBuildProject -FileName 'developer.csproj','developer2.csproj'
 
@@ -890,7 +876,7 @@ Describe 'Invoke-WhsCIBuild when path contains wildcards' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
 }
 
-Describe 'Invoke-WhsCIBuild when running NUnit tests' {
+Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
     $assemblyNames = 'assembly.dll','assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
@@ -907,7 +893,7 @@ Describe 'Invoke-WhsCIBuild when running NUnit tests' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when running failing NUnit2 tests' {
+Describe 'Invoke-WhsCIBuild.when running failing NUnit2 tests' {
     $assemblyNames = 'assembly.dll','assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
@@ -918,7 +904,7 @@ Describe 'Invoke-WhsCIBuild when running failing NUnit2 tests' {
     Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly $assemblyNames
 }
 
-Describe 'Invoke-WhsCIBuild when running NUnit2 tests from multiple bin directories' {
+Describe 'Invoke-WhsCIBuild.when running NUnit2 tests from multiple bin directories' {
     $assemblyNames = 'BinOne\assembly.dll','BinTwo\assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
@@ -931,7 +917,7 @@ Describe 'Invoke-WhsCIBuild when running NUnit2 tests from multiple bin director
     Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly2.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinTwo')
 }
 
-Describe 'Invoke-WhsCIBuild when output exists from a previous build' {
+Describe 'Invoke-WhsCIBuild.when output exists from a previous build' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
     New-MSBuildProject -FileName $project
@@ -953,7 +939,7 @@ Describe 'Invoke-WhsCIBuild when output exists from a previous build' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when a task fails' {
+Describe 'Invoke-WhsCIBuild.when a task fails' {
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
     $configPath = New-TestWhsBuildFile -Yaml @'
@@ -973,7 +959,7 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild when creating a NuGet package with an invalid project' {
+Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid project' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $project
     New-MSBuildProject -FileName $project
@@ -997,7 +983,7 @@ Describe 'Invoke-WhsCIBuild when creating a NuGet package with an invalid projec
     Assert-NuGetPackagesNotCreated -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild when version looks like a date after 2000 and isn''t quoted' {
+Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 Version: 2.13.1
 '@
@@ -1011,7 +997,7 @@ Version: 2.13.1
     }
 }
 
-Describe 'Invoke-WhsCIBuild when version looks like a date before 1900 and isn''t quoted' {
+Describe 'Invoke-WhsCIBuild.when version looks like a date before 1900 and isn''t quoted' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 Version: 2.13.80
 '@
@@ -1025,7 +1011,7 @@ Version: 2.13.80
     }
 }
 
-Describe 'Invoke-WhsCIBuild when running the WhsAppPackage task' {
+Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
     $packageVersion = '4.23.80'
     $dirs = 'dir1'
     $whitelist = 'html.html'
@@ -1086,7 +1072,7 @@ Describe 'Invoke-WhsCIBuild when running the WhsAppPackage task' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when running WhsAppPackage task and excluding items' {
+Describe 'Invoke-WhsCIBuild.when running WhsAppPackage task and excluding items' {
     $packageVersion = '4.23.80'
     $dirs = 'dir1'
     $whitelist = 'html.html'
@@ -1113,7 +1099,7 @@ Describe 'Invoke-WhsCIBuild when running WhsAppPackage task and excluding items'
 
 foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
 {
-    Describe ('Invoke-WhsCIBuild when running WhsAppPackage and missing {0} element' -f $propertyName) {
+    Describe ('Invoke-WhsCIBuild.when running WhsAppPackage and missing {0} element' -f $propertyName) {
         $packageVersion = '4.23.80'
         $dirs = 'dir1'
         $whitelist = 'html.html'
@@ -1152,4 +1138,44 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
             $Global:Error[0] | Should Match ('\b{0}\b.*\bmandatory' -f $propertyName)
         }
     }
+}
+
+Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
+
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath
+
+    It 'should run Node targets' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $WorkingDirectory -eq $repoRoot -and $NpmTarget[0] -eq 'build' -and $NpmTarget[1] -eq 'test'
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ }
+
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
+
+    $warnings = @()
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -WarningVariable 'warnings' -WarningAction SilentlyContinue
+
+    It 'should warn that nothing happened' {
+        $warnings | Should Match 'missing or not defined'
+    }
+
+    It 'should not run Node task' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 0 
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when Node task fails' {
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $repoRoot = $whsbuildPath | Split-Path
+    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
+
+    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -ThatFails -ErrorAction SilentlyContinue
 }
