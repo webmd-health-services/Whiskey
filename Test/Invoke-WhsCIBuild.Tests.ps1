@@ -812,23 +812,6 @@ Describe 'Invoke-WhsCIBuild.when a task path is absolute' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when a task path is missing' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
-BuildTasks:
-- Pester3:
-    Pith: fubar
-'@
-    
-    $Global:Error.Clear()
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the path is mandatory' {
-        $Global:Error[0] | Should Match 'is mandatory'
-    }
-}
-
-
 Describe 'Invoke-WhsCIBuild.when a task has no properties' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
