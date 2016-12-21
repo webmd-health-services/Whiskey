@@ -35,7 +35,7 @@ function Invoke-WhsCINodeTask
     Push-Location -Path $WorkingDirectory
     try
     {
-        npm install
+        npm install --production=false
         if( $LASTEXITCODE )
         {
             throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)

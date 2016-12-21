@@ -3,6 +3,18 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
+$originalNodeEnv = $env:NODE_ENV
+
+function Assert-SuccessfulBuild
+{
+    foreach( $taskName in @( 'build', 'test' ) )
+    {
+        It ('should run the {0} task' -f $taskName) {
+            (Join-Path -Path $TEstDRive.Fullname -ChildPath $taskName) | Should Exist
+        }
+    }
+}
+
 function Initialize-NodeProject
 {
     param(
@@ -85,15 +97,8 @@ function Invoke-FailingBuild
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
     Initialize-NodeProject
-
     Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmTarget 'build','test'
-
-    foreach( $taskName in @( 'build', 'test' ) )
-    {
-        It ('should run the {0} task' -f $taskName) {
-            (Join-Path -Path $TEstDRive.Fullname -ChildPath $taskName) | Should Exist
-        }
-    }
+    Assert-SuccessfulBuild
 }
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
@@ -106,3 +111,14 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
     Invoke-FailingBuild -ThatFailsWithMessage 'npm\ install\b.*failed'   
 }
 
+Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
+    $env:NODE_ENV = 'production'
+    Initialize-NodeProject
+    Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmTarget 'build','test'
+    Assert-SuccessfulBuild
+}
+
+if( $originalNodeEnv )
+{
+    $env:NODE_ENV = $originalNodeEnv
+}
