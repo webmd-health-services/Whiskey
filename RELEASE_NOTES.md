@@ -17,6 +17,7 @@
  * Added `Node` task for running Node.js builds.
  * Added a `Test-WhsCIRunByBuildServer` function to test if a build is being run by/under a build server. Currently, only Jenkins detection is supported.
  * Created `Invoke-WhsCIPowerShellTask` function for running PowerShell scripts.
+ * Created `Install-WhsCINodeJs` function for installing NVM and using it to install a version of Node and its version of NPM.
 
 
 # 0.1.0
