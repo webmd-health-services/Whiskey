@@ -333,7 +333,7 @@ function Invoke-Build
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
     $devParams = @{ }
-    if( (Test-Path -Path 'env:JENKINS_URL') )
+    if( (Test-WhsCIRunByBuildServer) )
     {
         $bbServerCredUsername = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerRestApiUsername'
         $devParams['BBServerCredential'] = Get-WhsSecret -Environment $Environment -Name $bbServerCredUsername -AsCredential 
@@ -445,7 +445,7 @@ using System.Runtime.InteropServices;
 
 function New-BuildMetadata
 {
-    if( (Test-Path -Path 'env:JENKINS_URL') )
+    if( (Test-WhsCIRunByBuildServer) )
     {
         # * If on build server, add $(BUILD_ID).$(GIT_BRANCH).$(GIT_COMMIT). Remove "origin/" from branch name. Replace other non-alphanumeric characters with '-'; Shrink GIT_COMMIT to short commit id.
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
