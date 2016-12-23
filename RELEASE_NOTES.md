@@ -4,12 +4,14 @@
 
  * Rename any `Pester` tasks to `Pester3` in your `whsbuild.yml` file(s).
  * The `Pester3` task now requires the version of Pester to use. Add a `Version` property to any `Pester3` sections in your `whsbuild.yml` file(s). The latest version of Pester is 3.4.3 (as of this writing).
+ * Change any usages of `New-WhsAppPackage` to `New-WhsCIAppPackage`.
 
 # What's Changed
 
  * Created `Invoke-WhsCIBuild` function for running a build as specified in a `whsbuild.yml` file.
  * Renamed `Pester` task to `Pester3`.
- * Fixed: `New-WhsAppPackage` puts packages in the root of the repository, not the `.output` directory.
+ * Renamed `New-WhsAppPackage` to `New-WhsCIAppPackage`.
+ * Fixed: `New-WhsCIAppPackage` puts packages in the root of the repository, not the `.output` directory.
  * Added `WhsAppPackage` task to `whsbuild.yml` schema and `Invoke-WhsCIBuild`. This task creates application deployment packages.
  * Created `Install-WhsCITool` function for installing tools (currently only PowerShell modules) needed by WhsCI functions.
  * Created `Invoke-WhsCIPester3Task` function for running tests with Pester 3.

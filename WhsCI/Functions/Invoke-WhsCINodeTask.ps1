@@ -32,6 +32,13 @@ function Invoke-WhsCINodeTask
 
     Set-StrictMode -Version 'Latest'
 
+    # If NVM isn't installed
+    # Download it from GitHub https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip
+    # Create settings.txt
+    # nvm list to see if version is installed
+    # nvm install to install that version
+    # nvm root to get directory where installed
+    # use path to correct version of npm
     Push-Location -Path $WorkingDirectory
     try
     {
