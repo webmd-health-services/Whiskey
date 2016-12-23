@@ -444,13 +444,13 @@ function Invoke-WhsCIBuild
                             $excludeParam['Exclude'] = $task['Exclude']
                         }
 
-                        New-WhsAppPackage -RepositoryRoot $root `
-                                          -Name $task['Name'] `
-                                          -Description $task['Description'] `
-                                          -Version $nugetVersion `
-                                          -Path $taskPaths `
-                                          -Include $task['Include'] `
-                                          @excludeParam
+                        New-WhsCIAppPackage -RepositoryRoot $root `
+                                            -Name $task['Name'] `
+                                            -Description $task['Description'] `
+                                            -Version $nugetVersion `
+                                            -Path $taskPaths `
+                                            -Include $task['Include'] `
+                                            @excludeParam
                     }
 
                     default {

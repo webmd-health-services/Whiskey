@@ -72,7 +72,7 @@
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
-                            'New-WhsAppPackage',
+                            'New-WhsCIAppPackage',
                             'Test-WhsCIRunByBuildServer'
                          );
 

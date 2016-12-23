@@ -1029,11 +1029,11 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
     }
 
     Context 'mock packager' {
-        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
 
         Invoke-Build -ByJenkins -WithConfig $configPath
 
-        Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
             #$DebugPreference = 'Continue'
@@ -1077,12 +1077,12 @@ Describe 'Invoke-WhsCIBuild.when running WhsAppPackage task and excluding items'
                         Exclude = $packageExclude;
                    }
     $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-    Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
     New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
 
     Invoke-Build -ByJenkins -WithConfig $configPath
 
-    Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+    Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
         $DebugPreference = 'Continue'
         return $Exclude.Count -eq 1 -and $Exclude[0] -eq $packageExclude
     }
@@ -1115,13 +1115,13 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
         $Global:Error.Clear()
 
         $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
         New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
 
         Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
 
         It 'should not create package' {
-            Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 0
         }
 
         it 'should write an error' {
