@@ -83,13 +83,14 @@ function Invoke-WhsCIBuild
             
     ## PowerShell
     
-    The PowerShell task runs PowerShell scripts. The task should have a `Paths` list which is a list of script to run. The build fails if any script exits with a non-zero exit code.
+    The PowerShell task runs PowerShell scripts. The task should have a `Path` list which is a list of scripts to run. The build fails if any script exits with a non-zero exit code. Scripts are executed in the current working directory. Specify an explicit working directory with a `WorkingDirectory` element.
     
         BuildTasks:
         - PowerShell:
             Paths:
             - myscript.ps1
             - myotherscript.ps1
+            WorkingDirectory: bin
             
     ## WhsAppPackage
     
