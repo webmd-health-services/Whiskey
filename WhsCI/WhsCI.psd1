@@ -69,7 +69,8 @@
     FunctionsToExport = @( 
                             'Install-WhsCITool',
                             'Invoke-WhsCINodeTask',
-                            'Invoke-WhsCIPester3Task'
+                            'Invoke-WhsCIPester3Task',
+                            'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsAppPackage',
                             'Test-WhsCIRunByBuildServer'

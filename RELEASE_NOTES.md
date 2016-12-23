@@ -16,6 +16,7 @@
  * Created `Invoke-WhsCINodeTask` function for running Node.js builds.
  * Added `Node` task for running Node.js builds.
  * Added a `Test-WhsCIRunByBuildServer` function to test if a build is being run by/under a build server. Currently, only Jenkins detection is supported.
+ * Created `Invoke-WhsCIPowerShellTask` function for running PowerShell scripts.
 
 
 # 0.1.0
