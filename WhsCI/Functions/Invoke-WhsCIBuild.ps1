@@ -157,6 +157,47 @@ function Invoke-WhsCIBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    function Resolve-TaskPath
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory=$true)]
+            [string[]]
+            $Path,
+
+            [Parameter(Mandatory=$true)]
+            [string]
+            $PropertyName
+        )
+
+        $errPrefix = $propertyName
+        $foundInvalidTaskPath = $false
+        foreach( $taskPath in $Path )
+        {
+            $pathIdx++
+            if( [IO.Path]::IsPathRooted($taskPath) )
+            {
+                Write-Error -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the whsbuild.yml file.' -f $errPrefix,$pathIdx,$taskPath)
+                $foundInvalidTaskPath = $true
+                continue
+            }
+
+            $taskPath = Join-Path -Path $root -ChildPath $taskPath
+            if( -not (Test-Path -Path $taskPath) )
+            {
+                Write-Error -Message ('{0}[{1}] ''{2}'' does not exist.' -f $errPrefix,$pathIdx,$taskPath)
+                $foundInvalidTaskPath = $true
+            }
+
+            Resolve-Path -Path $taskPath | Select-Object -ExpandProperty 'ProviderPath'
+        }
+
+        if( $foundInvalidTaskPath )
+        {
+            throw ('{0}: One or more paths do not exist or are absolute.' -f $errPrefix)
+        }
+    }
+
     function Write-CommandOutput
     {
         param(
@@ -261,35 +302,10 @@ function Invoke-WhsCIBuild
                 }
 
                 $errors = @()
-                $taskPaths = New-Object 'Collections.Generic.List[string]' 
                 $pathIdx = -1
                 if( $task.ContainsKey('Path') )
                 {
-                    $foundInvalidTaskPath = $false
-                    foreach( $taskPath in $task.Path )
-                    {
-                        $pathIdx++
-                        if( [IO.Path]::IsPathRooted($taskPath) )
-                        {
-                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' is absolute but must be relative to the whsbuild.yml file.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                            $foundInvalidTaskPath = $true
-                            continue
-                        }
-
-                        $taskPath = Join-Path -Path $root -ChildPath $taskPath
-                        if( -not (Test-Path -Path $taskPath) )
-                        {
-                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' does not exist.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                            $foundInvalidTaskPath = $true
-                        }
-
-                        Resolve-Path -Path $taskPath | ForEach-Object { $taskPaths.Add($_.ProviderPath) }
-                    }
-
-                    if( $foundInvalidTaskPath )
-                    {
-                        throw ('{0}: BuildTasks[{1}]: {2}: One or more of the task''s paths do not exist or are absolute.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                    }
+                    $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                 }
 
                 switch( $taskName )
@@ -401,13 +417,15 @@ function Invoke-WhsCIBuild
                     }
 
                     'PowerShell' {
+                        $workingDirParam = @{ }
+                        if( $task.ContainsKey('WorkingDirectory') )
+                        {
+                            $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
+                        }
+
                         foreach( $scriptPath in $taskPaths )
                         {
-                            & $scriptPath
-                            if( $LastExitCode )
-                            {
-                                throw ('PowerShell script ''{0}'' failed, exiting with code {1}.' -F $scriptPath,$LastExitCode)
-                            }
+                            Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
                         }
                     }
 

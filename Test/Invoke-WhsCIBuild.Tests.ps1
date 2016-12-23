@@ -732,36 +732,7 @@ Describe 'Invoke-WhsCIBuild.when multiple AssemblyInfoCs files' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $project -AtVersion $version
 }
 
-Describe 'Invoke-WhsCIBuild.when running a PowerShell task' {
-    $script = 'task.ps1'
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
-
-    $root = Split-Path -Path $configPath -Parent
-    @"
-'' | Set-Content -Path (Join-Path -Path `$PSScriptRoot -ChildPath '$script.output')
-exit 0
-"@ | Set-Content -Path (Join-Path -Path $root -ChildPath $script)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    It 'should run PowerShell script' {
-        (Join-Path -Path $root -ChildPath ('{0}.output' -f $script)) | Should Exist
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when running a PowerShell task fails' {
-    $script = 'task.ps1'
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
-
-    $root = Split-Path -Path $configPath -Parent
-    @'
-exit 1
-'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $script)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
-}
-
-Describe 'Invoke-WhsCIBuild.when running multiple PowerShell scripts' {
+Describe 'Invoke-WhsCIBuild.when running PowerShell task' {
     $fileNames = @( 'task1.ps1', 'task2.ps1' )
     $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileNames
 
@@ -784,6 +755,26 @@ exit 0
         It ('should run {0} PowerShell script' -f $fileNames) {
             (Join-Path -Path $root -ChildPath ('{0}.output' -f $fileName)) | Should Exist
         }
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a working directory' {
+    $fileName = 'task1.ps1'
+
+    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileName -TaskProperty @{ 'WorkingDirectory' = 'bin' }
+
+    $root = Split-Path -Path $configPath -Parent
+    $binRoot = Join-Path -Path $root -ChildPath 'bin'
+    New-Item -Path $binRoot -ItemType 'Directory'
+
+    @'
+'' | Set-Content -Path 'ran'
+'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $fileName)
+
+    Invoke-Build -ByJenkins -WithConfig $configPath 
+
+    It ('should run PowerShell script in the working directory') {
+        Join-Path -Path $binRoot -ChildPath 'ran' | Should Exist
     }
 }
 
