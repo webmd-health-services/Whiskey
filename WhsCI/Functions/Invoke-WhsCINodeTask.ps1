@@ -6,7 +6,9 @@ function Invoke-WhsCINodeTask
     Runs a Node build.
     
     .DESCRIPTION
-    The `Invoke-WhsCINodeTask` function runs Node builds. It uses NPM's `run` command to run a list of targets. These targets are defined in your package.json file's `scripts` properties. If any task fails, the build will fail. This function checks if a task fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
+    The `Invoke-WhsCINodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `scripts` properties. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
+
+    You are required to specify what version of Node you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
     This task also does the following as part of each Node build:
 
@@ -37,7 +39,17 @@ function Invoke-WhsCINodeTask
     try
     {
         $packageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
+        if( -not $packageJsonPath )
+        {
+            throw ('Package.json file ''{0}'' does not exist. This file is mandatory when using the Node build task.' -f (Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'))
+        }
+
         $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
+        if( -not $packageJson )
+        {
+            throw ('Package.json file ''{0}'' contains invalid JSON. Please see previous errors for more information.' -f $packageJsonPath)
+        }
+
         if( -not ($packageJson | Get-Member -Name 'engines') -or -not ($packageJson.engines | Get-Member -Name 'node') )
         {
             throw ('Node version is not defined or is missing from the package.json file ''{0}''. Please ensure the Node version to use is defined using the package.json''s engines field, e.g. `"engines": {{ node: "VERSION" }}`. See https://docs.npmjs.com/files/package.json#engines for more information.' -f $packageJsonPath)
