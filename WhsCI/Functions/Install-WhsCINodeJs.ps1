@@ -103,8 +103,12 @@ path: $($nvmSymlink)
                 ForEach-Object { Write-Progress -Activity $activity -Status $_; $_ }
     Write-Progress -Activity $activity -Completed
 
-    $nodePath = Join-Path -Path $nvmRoot -ChildPath ('v{0}\node64.exe' -f $Version)
-    if( (Test-Path -Path $nodePath -PathType Leaf) )
+    $versionRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $Version)
+    $nodePath = @('node.exe','node64.exe') | 
+                    ForEach-Object { Join-Path -Path $versionRoot -ChildPath $_ } | 
+                    Where-Object { Test-Path -Path $_ -PathType Leaf } | 
+                    Select-Object -First 1
+    if( $nodePath )
     {
         return $nodePath
     }

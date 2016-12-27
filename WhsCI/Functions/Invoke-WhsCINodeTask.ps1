@@ -31,27 +31,51 @@ function Invoke-WhsCINodeTask
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    # If NVM isn't installed
-    # Download it from GitHub https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip
-    # Create settings.txt
-    # nvm list to see if version is installed
-    # nvm install to install that version
-    # nvm root to get directory where installed
-    # use path to correct version of npm
     Push-Location -Path $WorkingDirectory
     try
     {
-        npm install --production=false
+        $packageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
+        $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
+        if( -not ($packageJson | Get-Member -Name 'engines') -or -not ($packageJson.engines | Get-Member -Name 'node') )
+        {
+            throw ('Node version is not defined or is missing from the package.json file ''{0}''. Please ensure the Node version to use is defined using the package.json''s engines field, e.g. `"engines": {{ node: "VERSION" }}`. See https://docs.npmjs.com/files/package.json#engines for more information.' -f $packageJsonPath)
+            return
+        }
+
+        if( $packageJson.engines.node -notmatch '(\d+\.\d+\.\d+)' )
+        {
+            throw ('Node version ''{0}'' is invalid. The Node version must be a valid semantic version. Package.json file ''{1}'', engines field:{2}{3}' -f $packageJson.engines.node,$packageJsonPath,[Environment]::NewLine,($packageJson.engines | ConvertTo-Json -Depth 50))
+        }
+
+        $version = $Matches[1]
+        $nodePath = Install-WhsCINodeJs -Version $version
+        if( -not $nodePath )
+        {
+            throw ('Node version ''{0}'' failed to install. Please see previous errors for details.' -f $version)
+        }
+
+        $nodeRoot = $nodePath | Split-Path
+        $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+        if( -not $npmPath )
+        {
+            throw ('NPM didn''t get installed by NVM when installing Node {0}. Please use NVM to uninstall this version of Node.' -f $version)
+        }
+
+        & $nodePath $npmPath install --production=false --no-color
         if( $LASTEXITCODE )
         {
             throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
-        npm run $NpmScript
-        if( $LASTEXITCODE )
+        foreach( $script in $npmScript )
         {
-            throw ('Node command `npm run {0}` failed with exit code {1}.' -f ($NpmScript -join ' '),$LASTEXITCODE)
+            & $nodePath $npmPath run $script --no-color
+            if( $LASTEXITCODE )
+            {
+                throw ('Node command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
+            }
         }
     }
     finally
