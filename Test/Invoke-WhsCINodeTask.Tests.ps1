@@ -212,6 +212,8 @@ Describe 'Invoke-WhsCiNodeTask.when NODE_PATH is defined' {
         Set-Item -Path 'env:NODE_PATH' -Value 'fubarsnafu'
     }
 
+    $expectedNodePath = $env:NODE_PATH
+
     try
     {
         $workingDir = Initialize-NodeProject
@@ -219,7 +221,7 @@ Describe 'Invoke-WhsCiNodeTask.when NODE_PATH is defined' {
         Assert-SuccessfulBuild -ThatRanIn $workingDir -ThatRan 'envars'
 
         It 'should put original NODE_PATH back' {
-            $env:NODE_PATH | Should Be 'fubarsnafu'
+            $env:NODE_PATH | Should Be $expectedNodePath
         }
     }
     finally
