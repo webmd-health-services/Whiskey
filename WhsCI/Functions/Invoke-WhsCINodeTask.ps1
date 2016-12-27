@@ -35,6 +35,13 @@ function Invoke-WhsCINodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $originalNodePath = $env:NODE_PATH
+    $putNodePathBack = $false
+    if( (Test-Path -Path 'env:NODE_PATH') )
+    {
+        $putNodePathBack = $true
+    }
+
     Push-Location -Path $WorkingDirectory
     try
     {
@@ -75,6 +82,11 @@ function Invoke-WhsCINodeTask
             throw ('NPM didn''t get installed by NVM when installing Node {0}. Please use NVM to uninstall this version of Node.' -f $version)
         }
 
+        if( $putNodePathBack )
+        {
+            Remove-Item -Path 'env:NODE_PATH'
+        }
+
         & $nodePath $npmPath install --production=false --no-color
         if( $LASTEXITCODE )
         {
@@ -92,6 +104,11 @@ function Invoke-WhsCINodeTask
     }
     finally
     {
+        if( $putNodePathBack )
+        {
+            Set-Item -Path 'env:NODE_PATH' -Value $originalNodePath
+        }
+
         Pop-Location
     }
 }

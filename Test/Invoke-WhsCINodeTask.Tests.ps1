@@ -8,10 +8,12 @@ $originalNodeEnv = $env:NODE_ENV
 function Assert-SuccessfulBuild
 {
     param(
-        $ThatRanIn
+        $ThatRanIn,
+        [string[]]
+        $ThatRan = @( 'build', 'test' )
     )
 
-    foreach( $taskName in @( 'build', 'test' ) )
+    foreach( $taskName in $ThatRan )
     {
         It ('should run the {0} task' -f $taskName) {
             (Join-Path -Path $ThatRanIn -ChildPath $taskName) | Should Exist
@@ -76,6 +78,7 @@ function Initialize-NodeProject
     $($nodeEngine)
     "private": true,
     "scripts": {
+        "envars": "grunt envars",
         "build": "grunt build",
         "test": "grunt test",
         "fail": "grunt fail"
@@ -103,6 +106,14 @@ module.exports = function(grunt) {
 
     grunt.registerTask('fail', '', function(){
         grunt.fail.fatal('I failed!');
+    });
+
+    grunt.registerTask('envars', '', function(){
+        grunt.file.write('envars', '');
+        if( ('NODE_PATH' in process.env) )
+        {
+            grunt.fail.fatal(('NODE_PATH exists and is set to ' + process.env['NODE_PATH']));
+        }
     });
 }
 '@ | Set-Content -Path $gruntfilePath
@@ -188,8 +199,43 @@ Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
+Describe 'Invoke-WhsCiNodeTask.when NODE_PATH is defined' {
+    $originalNodePath = $null
+    $removeNodePath = $true
+    if( (Test-Path -Path 'env:NODE_PATH') )
+    {
+        $originalNodePath = $env:NODE_PATH
+        $removeNodePath = $false
+    }
+    else
+    {
+        Set-Item -Path 'env:NODE_PATH' -Value 'fubarsnafu'
+    }
+
+    try
+    {
+        $workingDir = Initialize-NodeProject
+        Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'envars' | Write-Verbose
+        Assert-SuccessfulBuild -ThatRanIn $workingDir -ThatRan 'envars'
+
+        It 'should put original NODE_PATH back' {
+            $env:NODE_PATH | Should Be 'fubarsnafu'
+        }
+    }
+    finally
+    {
+        if( $removeNodePath )
+        {
+            Remove-Item -Path 'env:NODE_PATH'
+        }
+        else
+        {
+            Set-Item -Path 'env:NODE_PATH' -Value $originalNodePath
+        }
+    }
+}
+
 if( $originalNodeEnv )
 {
     $env:NODE_ENV = $originalNodeEnv
 }
-    
