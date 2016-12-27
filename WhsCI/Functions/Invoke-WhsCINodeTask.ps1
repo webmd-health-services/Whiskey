@@ -42,6 +42,8 @@ function Invoke-WhsCINodeTask
         $putNodePathBack = $true
     }
 
+    $originalPath = $env:PATH
+
     Push-Location -Path $WorkingDirectory
     try
     {
@@ -87,6 +89,8 @@ function Invoke-WhsCINodeTask
             Remove-Item -Path 'env:NODE_PATH'
         }
 
+        Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:PATH)
+
         & $nodePath $npmPath install --production=false --no-color
         if( $LASTEXITCODE )
         {
@@ -108,6 +112,8 @@ function Invoke-WhsCINodeTask
         {
             Set-Item -Path 'env:NODE_PATH' -Value $originalNodePath
         }
+
+        Set-Item -Path 'env:PATH' -Value $originalPath
 
         Pop-Location
     }
