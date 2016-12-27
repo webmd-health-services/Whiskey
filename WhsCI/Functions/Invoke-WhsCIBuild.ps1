@@ -47,7 +47,7 @@ function Invoke-WhsCIBuild
 
         BuildTasks:
         - Node:
-            NpmTargets:
+            NpmScripts:
             - build
             - test
     
@@ -347,14 +347,14 @@ function Invoke-WhsCIBuild
                     }
 
                     'Node' {
-                        $npmTargets = $task['NpmTargets']
-                        if( $npmTargets )
+                        $NpmScripts = $task['NpmScripts']
+                        if( $NpmScripts )
                         {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmTarget $task['NpmTargets']
+                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
                         }
                         else
                         {
-                            Write-Warning -Message ('{0}NpmTargets is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
+                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
                         }
                     }
 

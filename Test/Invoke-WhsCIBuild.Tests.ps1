@@ -1132,7 +1132,7 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
 }
 
 Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
     $repoRoot = $whsbuildPath | Split-Path
     Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
 
@@ -1140,7 +1140,7 @@ Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
 
     It 'should run Node targets' {
         Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $WorkingDirectory -eq $repoRoot -and $NpmTarget[0] -eq 'build' -and $NpmTarget[1] -eq 'test'
+            $WorkingDirectory -eq $repoRoot -and $NpmScript[0] -eq 'build' -and $NpmScript[1] -eq 'test'
         }
     }
 }
@@ -1164,7 +1164,7 @@ Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
 }
 
 Describe 'Invoke-WhsCIBuild.when Node task fails' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
     $repoRoot = $whsbuildPath | Split-Path
     Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
 

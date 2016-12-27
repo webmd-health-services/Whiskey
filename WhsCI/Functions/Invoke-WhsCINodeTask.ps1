@@ -13,7 +13,7 @@ function Invoke-WhsCINodeTask
     * Runs `npm install` to install your dependencies.
 
     .EXAMPLE
-    Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmTarget 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
 
     Demonstrates how to run the `build` and `test` NPM targets in the `C:\Projects\ui-cm` directory. The function would run `npm run build test`.
     #>
@@ -27,7 +27,7 @@ function Invoke-WhsCINodeTask
         [Parameter(Mandatory=$true)]
         [string[]]
         # The NPM commands to run as part of the build.
-        $NpmTarget
+        $NpmScript
     )
 
     Set-StrictMode -Version 'Latest'
@@ -48,10 +48,10 @@ function Invoke-WhsCINodeTask
             throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
-        npm run $NpmTarget
+        npm run $NpmScript
         if( $LASTEXITCODE )
         {
-            throw ('Node command `npm run {0}` failed with exit code {1}.' -f ($NpmTarget -join ' '),$LASTEXITCODE)
+            throw ('Node command `npm run {0}` failed with exit code {1}.' -f ($NpmScript -join ' '),$LASTEXITCODE)
         }
     }
     finally

@@ -80,7 +80,7 @@ function Invoke-FailingBuild
     $failure = $null
     try
     {
-        Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmTarget 'fail','build','test'
+        Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmScript 'fail','build','test'
     }
     catch
     {
@@ -97,7 +97,7 @@ function Invoke-FailingBuild
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
     Initialize-NodeProject
-    Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmTarget 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmScript 'build','test'
     Assert-SuccessfulBuild
 }
 
@@ -114,7 +114,7 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     Initialize-NodeProject
-    Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmTarget 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory $TestDrive.FullName -NpmScript 'build','test'
     Assert-SuccessfulBuild
 }
 
