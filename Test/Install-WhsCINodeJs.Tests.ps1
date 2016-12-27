@@ -23,8 +23,13 @@ function Assert-ThatInstallNodeJs
         $OnDeveloperComputer,
 
         [Switch]
-        $WhenUsingDefaultInstallDirectory
+        $WhenUsingDefaultInstallDirectory,
+
+        [Switch]
+        $PreserveInstall
     )
+
+    $Global:Error.Clear()
 
     if( $OnDeveloperComputer )
     {
@@ -45,8 +50,7 @@ function Assert-ThatInstallNodeJs
 
     try
     {
-        $errors = @()
-        $nodePath = Install-WhsCINodeJs -Version $InstallsVersion @installDirParam -ErrorVariable 'errors'
+        $nodePath = Install-WhsCINodeJs -Version $InstallsVersion @installDirParam
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
@@ -55,7 +59,7 @@ function Assert-ThatInstallNodeJs
         if( $OnDeveloperComputer )
         {
             It 'should write an error' {
-                $errors | Should Match 'is not installed'
+                $Global:Error | Should Match 'is not installed'
             }
 
             It 'should not install Node.js' {
@@ -70,7 +74,7 @@ function Assert-ThatInstallNodeJs
         else
         {
             It 'should write no errors' {
-                $errors | Should BeNullOrEmpty
+                $Global:Error | Should BeNullOrEmpty
             }
 
             It ('should install Node.js {0}' -f $InstallsVersion) {
@@ -95,11 +99,14 @@ function Assert-ThatInstallNodeJs
     }
     finally
     {
-        while( (Test-Path -Path $installDir) )
+        if( -not $PreserveInstall )
         {
-            Start-Sleep -Milliseconds 100
-            Write-Verbose ('Removing {0}' -f $installDir) 
-            Remove-Item -Path $installDir -Recurse -Force -ErrorAction Ignore
+            while( (Test-Path -Path $installDir) )
+            {
+                Start-Sleep -Milliseconds 100
+                Write-Verbose ('Removing {0}' -f $installDir) 
+                Remove-Item -Path $installDir -Recurse -Force -ErrorAction Ignore
+            }
         }
 
         if( (Test-Path -Path 'env:NVM_HOME') )
@@ -110,7 +117,10 @@ function Assert-ThatInstallNodeJs
 }
 
 Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed' {
-  Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer
+  Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -PreserveInstall
+  Context 'now its installed' {
+    Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer
+  }
 }
 
 Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed' {
