@@ -102,17 +102,20 @@ path: $($nvmSymlink)
     $nvmPath = Join-Path -Path $nvmRoot -ChildPath 'nvm.exe'
     $activity = 'Installing Node.js {0}' -f $Version
     Write-Progress -Activity $activity
-    $output = & $nvmPath install $Version | 
+    $output = & $nvmPath install $Version 64 | 
                 Where-Object { $_ } |
                 ForEach-Object { Write-Progress -Activity $activity -Status $_; $_ }
     Write-Progress -Activity $activity -Completed
 
     $versionRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $Version)
-    $nodePath = @('node.exe','node64.exe') | 
-                    ForEach-Object { Join-Path -Path $versionRoot -ChildPath $_ } | 
-                    Where-Object { Test-Path -Path $_ -PathType Leaf } | 
-                    Select-Object -First 1
-    if( $nodePath )
+    $node64Path = Join-Path -Path $versionRoot -ChildPath 'node64.exe'
+    $nodePath = Join-Path -Path $versionRoot -ChildPath 'node.exe'
+    if( (Test-Path -Path $node64Path -PathType Leaf) )
+    {
+        Move-Item -Path $node64Path -Destination $nodePath -Force
+    }
+
+    if( (Test-Path -Path $nodePath -PathType Leaf) )
     {
         return $nodePath
     }

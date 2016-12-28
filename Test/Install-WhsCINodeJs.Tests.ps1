@@ -54,7 +54,7 @@ function Assert-ThatInstallNodeJs
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
-        $expectedNodePath = Join-Path -Path $nodeRoot -ChildPath 'node64.exe'
+        $expectedNodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
         $expectdNpmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
         if( $OnDeveloperComputer )
         {
