@@ -13,6 +13,9 @@ $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Servi
 $packageDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'packages'
 $moduleDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'Modules'
 
+# Any directories the build should cleanup when its done.
+$cleanupTargets = @( 'node_modules' )
+
 #region Assertions
 function Assert-AssemblyVersionSet
 {
@@ -318,6 +321,8 @@ function Invoke-Build
         $DownloadRoot
     )
 
+    $root = $WithConfig | Split-Path
+
     $runningUnderABuildServer = $false
     $environment = $PSCmdlet.ParameterSetName
     if( $PSCmdlet.ParameterSetName -eq 'Developer' )
@@ -330,6 +335,31 @@ function Invoke-Build
         New-MockBuildServer
     }
     New-MockBitbucketServer
+
+    $tempRoot = Join-Path -Path ($root | Split-Path -Qualifier) -ChildPath ([IO.Path]::GetRandomFileName())
+    New-Item -Path $tempRoot -ItemType 'Directory' | Out-Null
+    try
+    {
+        $rootLength = $root.Length
+    
+        foreach( $cleanupTargetName in $cleanupTargets )
+        {
+            $cleanupTarget = Join-Path -Path $root -ChildPath $cleanupTargetName
+            $filename = 'f' * 12
+            $dirNameLength = 248 - $rootLength - $cleanupTargetName.Length - 3
+            $dirName = 'd' * $dirNameLength
+            $dirPath  = Join-Path -Path $tempRoot -ChildPath $cleanupTargetName
+            $fileRoot = Join-Path -Path $dirPath -ChildPath $dirName
+            $filePath = Join-Path -Path $fileRoot -ChildPath $filename
+            New-Item -Path $fileRoot -ItemType 'Directory' -Force | Out-Null
+            New-Item -Path $filePath -ItemType 'File' -Force | Out-Null
+            robocopy $dirPath (Join-Path -Path $root -ChildPath $cleanupTargetName) /MIR | Write-Verbose
+        }
+    }
+    finally
+    {
+        Remove-Item -Path $tempRoot -Recurse -Force
+    }
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
     $devParams = @{ }
@@ -392,6 +422,28 @@ function Invoke-Build
     if( $PSCmdlet.ParameterSetName -eq 'Developer' )
     {
         Assert-BitbucketServerNotContacted
+
+        $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+        New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
+        foreach( $cleanupTarget in $cleanupTargets ) 
+        {
+            It ('should not cleanup contents of {0} directory' -f $cleanupTarget) {
+                $cleanupTarget = Join-Path -Path $root -ChildPath $cleanupTarget
+                Get-ChildItem -Path $cleanupTarget | Should Not BeNullOrEmpty
+                robocopy $emptyDir $cleanupTarget /MIR
+                Remove-Item -Path $cleanupTarget -Recurse
+            }
+        }
+    }
+    else
+    {
+        foreach( $cleanupTarget in $cleanupTargets ) 
+        {
+            It ('should cleanup contents of {0} directory' -f $cleanupTarget) {
+                $cleanupTarget = Join-Path -Path $root -ChildPath $cleanupTarget
+                Get-ChildItem -Path $cleanupTarget | Should BeNullOrEmpty
+            }
+        }
     }
 }
 
