@@ -10,13 +10,28 @@ function Assert-SuccessfulBuild
     param(
         $ThatRanIn,
         [string[]]
-        $ThatRan = @( 'build', 'test' )
+        $ThatRan = @( 'build', 'test' ),
+        [string]
+        $ForVersion = '4.4.7'
     )
 
     foreach( $taskName in $ThatRan )
     {
         It ('should run the {0} task' -f $taskName) {
             (Join-Path -Path $ThatRanIn -ChildPath $taskName) | Should Exist
+        }
+    }
+
+    $versionRoot = Join-Path -Path $env:APPDATA -ChildPath ('nvm\v{0}' -f $ForVersion)
+    It ('should prepend path to Node version to path environment variable') {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $Path -eq 'env:Path' -and $Value -like ('{0};*' -f $versionRoot)
+        }
+    }
+
+    It ('should remove Node version path from path environment variable') {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $Path -eq 'env:Path' -and $Value -notlike ('*{0}*' -f $versionRoot)
         }
     }
 }
@@ -53,6 +68,8 @@ function Initialize-NodeProject
     }
     New-Item -Path $workingDir -ItemType 'Directory' | Out-Null
 
+    Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -Verifiable
+
     if( -not $DevDependency )
     {
         $DevDependency = @(
@@ -78,7 +95,6 @@ function Initialize-NodeProject
     $($nodeEngine)
     "private": true,
     "scripts": {
-        "envars": "grunt envars",
         "build": "grunt build",
         "test": "grunt test",
         "fail": "grunt fail"
@@ -106,14 +122,6 @@ module.exports = function(grunt) {
 
     grunt.registerTask('fail', '', function(){
         grunt.fail.fatal('I failed!');
-    });
-
-    grunt.registerTask('envars', '', function(){
-        grunt.file.write('envars', '');
-        if( ('NODE_PATH' in process.env) )
-        {
-            grunt.fail.fatal(('NODE_PATH exists and is set to ' + process.env['NODE_PATH']));
-        }
     });
 }
 '@ | Set-Content -Path $gruntfilePath
@@ -197,44 +205,6 @@ Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
     $workingDir = Initialize-NodeProject -UsingNodeVersion "438.4393.329"
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
-}
-
-Describe 'Invoke-WhsCiNodeTask.when NODE_PATH is defined' {
-    $originalNodePath = $null
-    $removeNodePath = $true
-    if( (Test-Path -Path 'env:NODE_PATH') )
-    {
-        $originalNodePath = $env:NODE_PATH
-        $removeNodePath = $false
-    }
-    else
-    {
-        Set-Item -Path 'env:NODE_PATH' -Value 'fubarsnafu'
-    }
-
-    $expectedNodePath = $env:NODE_PATH
-
-    try
-    {
-        $workingDir = Initialize-NodeProject
-        Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'envars' | Write-Verbose
-        Assert-SuccessfulBuild -ThatRanIn $workingDir -ThatRan 'envars'
-
-        It 'should put original NODE_PATH back' {
-            $env:NODE_PATH | Should Be $expectedNodePath
-        }
-    }
-    finally
-    {
-        if( $removeNodePath )
-        {
-            Remove-Item -Path 'env:NODE_PATH'
-        }
-        else
-        {
-            Set-Item -Path 'env:NODE_PATH' -Value $originalNodePath
-        }
-    }
 }
 
 if( $originalNodeEnv )
