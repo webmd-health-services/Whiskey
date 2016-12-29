@@ -79,7 +79,15 @@ function Invoke-WhsCINodeTask
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
-        & $nodePath $npmPath install --production=false --no-color
+        $installNoColorArg = @()
+        $runNoColorArgs = @()
+        if( (Test-WhsCIRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
+        {
+            $installNoColorArg = '--no-color'
+            $runNoColorArgs = @( '--', '--no-color' )
+        }
+
+        & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
         if( $LASTEXITCODE )
         {
             throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
@@ -87,7 +95,7 @@ function Invoke-WhsCINodeTask
 
         foreach( $script in $npmScript )
         {
-            & $nodePath $npmPath run $script --no-color
+            & $nodePath $npmPath 'run' $script $runNoColorArgs
             if( $LASTEXITCODE )
             {
                 throw ('Node command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
