@@ -116,9 +116,9 @@ function Invoke-WhsCINodeTask
             throw ('NSP module failed to install to ''{0}\node_modules''.' -f $nodeRoot)
         }
 
-        $results = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
-                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } |
-                        ConvertFrom-Json
+        $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
+                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
+        $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
         {
             $summary = $results | Format-List | Out-String
