@@ -476,30 +476,6 @@ function Invoke-WhsCIBuild
             }
 
             Set-BBServerCommitBuildStatus -Connection $conn -Status $status
-
-            # NPM's node_modules directories can get longer than 259 characters, which causes source control polling to fail.
-            # Use robocopy to delete the contents of any of these dangerous directories
-            if( $ConfigurationPath )
-            {
-                $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
-                New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
-                $root = $ConfigurationPath | Split-Path
-                try
-                {
-                    foreach( $dirName in @( 'node_modules' ) )
-                    {
-                        $dirPath = Join-Path -Path $root -ChildPath $dirName
-                        if( (Test-Path -Path $dirPath -PathType Container) )
-                        {
-                            robocopy $emptyDir $dirPath /MIR | Write-Verbose
-                        }
-                    }
-                }
-                finally
-                {
-                    Remove-Item -Recurse -Path $emptyDir -ErrorAction Ignore
-                }
-            }
         }
     }
 }
