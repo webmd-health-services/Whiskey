@@ -56,6 +56,21 @@ function Assert-ThatInstallNodeJs
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
         $expectedNodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
         $expectdNpmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+
+        if( $OnBuildServer )
+        {
+            $npmCliJsPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+            $expectedLatest = & $nodePath $npmCliJsPath 'view' 'npm@3' 'version' |
+                                    Where-Object { $_ -match 'npm@(\d+\.\d+\.\d+)' } |
+                                    ForEach-Object { [version]$Matches[1] } |
+                                    Sort-Object -Descending | 
+                                    Select-Object -First 1
+            It 'should upgrade to NPM 3' {
+                [version]$version = & $nodePath $npmCliJsPath '--version'
+                $version | Should Be $expectedLatest
+            }
+        }
+
         if( $OnDeveloperComputer )
         {
             It 'should write an error' {
@@ -123,7 +138,7 @@ Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed'
   }
 }
 
-Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed' {
+Describe 'Install-WhsCINodeJs.when run on developer computer and NVM isn''t installed' {
   Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnDeveloperComputer -ErrorAction SilentlyContinue
 }
 

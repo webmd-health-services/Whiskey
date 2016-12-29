@@ -117,6 +117,16 @@ path: $($nvmSymlink)
 
     if( (Test-Path -Path $nodePath -PathType Leaf) )
     {
+        $npmPath = Join-Path -Path $versionRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+        [version]$version = & $nodePath $npmPath '--version'
+        if( $version -lt [version]'3.0' )
+        {
+            $activity = 'Upgrading NPM to version 3.'
+            & $nodePath $npmPath 'install' 'npm@3' '-g' | 
+                Where-Object { $_ } |
+                ForEach-Object { Write-Progress -Activity $activity -Status $_ ; }
+            Write-Progress -Activity $activity -Completed
+        }
         return $nodePath
     }
 
