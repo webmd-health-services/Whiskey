@@ -61,7 +61,7 @@ function Assert-ThatInstallNodeJs
         {
             $npmCliJsPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
             $expectedLatest = & $nodePath $npmCliJsPath 'view' 'npm@3' 'version' |
-                                    Where-Object { $_ -match 'npm@(\d+\.\d+\.\d+)' } |
+                                    Where-Object { $_ -match '@(\d+\.\d+\.\d+)' } |
                                     ForEach-Object { [version]$Matches[1] } |
                                     Sort-Object -Descending | 
                                     Select-Object -First 1
