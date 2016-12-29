@@ -1,18 +1,18 @@
 
-function New-WhsAppPackage
+function New-WhsCIAppPackage
 {
     <#
     .SYNOPSIS
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsAppPackage` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    The `New-WhsCIAppPackage` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
 
     It returns an `IO.FileInfo` object for the created package.
 
     Packages are only allowed to have whitelisted files, i.e. you can't include all files by default. You must supply a value for the `Include` parameter that lists the file names or wildcards that match the files you want in your application.
 
-    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `New-WhsAppPackage` *always* excludes directories named:
+    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `New-WhsCIAppPackage` *always* excludes directories named:
 
      * `obj`
      * `.git`
@@ -53,7 +53,7 @@ function New-WhsAppPackage
         [string[]]
         # A list of files and/or directories to exclude. Wildcards supported. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
         # 
-        # `New-WhsAppPackage` will *always* exclude directories named:
+        # `New-WhsCIAppPackage` will *always* exclude directories named:
         #
         # * .git
         # * .hg
@@ -85,7 +85,7 @@ function New-WhsAppPackage
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+New-WhsAppPackage+{0}' -f $Name
+    $tempBaseName = 'WhsCI+New-WhsCIAppPackage+{0}' -f $Name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose

@@ -333,7 +333,7 @@ function Invoke-Build
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
     $devParams = @{ }
-    if( (Test-Path -Path 'env:JENKINS_URL') )
+    if( (Test-WhsCIRunByBuildServer) )
     {
         $bbServerCredUsername = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerRestApiUsername'
         $devParams['BBServerCredential'] = Get-WhsSecret -Environment $Environment -Name $bbServerCredUsername -AsCredential 
@@ -445,7 +445,7 @@ using System.Runtime.InteropServices;
 
 function New-BuildMetadata
 {
-    if( (Test-Path -Path 'env:JENKINS_URL') )
+    if( (Test-WhsCIRunByBuildServer) )
     {
         # * If on build server, add $(BUILD_ID).$(GIT_BRANCH).$(GIT_COMMIT). Remove "origin/" from branch name. Replace other non-alphanumeric characters with '-'; Shrink GIT_COMMIT to short commit id.
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
@@ -732,36 +732,7 @@ Describe 'Invoke-WhsCIBuild.when multiple AssemblyInfoCs files' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $project -AtVersion $version
 }
 
-Describe 'Invoke-WhsCIBuild.when running a PowerShell task' {
-    $script = 'task.ps1'
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
-
-    $root = Split-Path -Path $configPath -Parent
-    @"
-'' | Set-Content -Path (Join-Path -Path `$PSScriptRoot -ChildPath '$script.output')
-exit 0
-"@ | Set-Content -Path (Join-Path -Path $root -ChildPath $script)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    It 'should run PowerShell script' {
-        (Join-Path -Path $root -ChildPath ('{0}.output' -f $script)) | Should Exist
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when running a PowerShell task fails' {
-    $script = 'task.ps1'
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $script
-
-    $root = Split-Path -Path $configPath -Parent
-    @'
-exit 1
-'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $script)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
-}
-
-Describe 'Invoke-WhsCIBuild.when running multiple PowerShell scripts' {
+Describe 'Invoke-WhsCIBuild.when running PowerShell task' {
     $fileNames = @( 'task1.ps1', 'task2.ps1' )
     $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileNames
 
@@ -784,6 +755,26 @@ exit 0
         It ('should run {0} PowerShell script' -f $fileNames) {
             (Join-Path -Path $root -ChildPath ('{0}.output' -f $fileName)) | Should Exist
         }
+    }
+}
+
+Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a working directory' {
+    $fileName = 'task1.ps1'
+
+    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileName -TaskProperty @{ 'WorkingDirectory' = 'bin' }
+
+    $root = Split-Path -Path $configPath -Parent
+    $binRoot = Join-Path -Path $root -ChildPath 'bin'
+    New-Item -Path $binRoot -ItemType 'Directory'
+
+    @'
+'' | Set-Content -Path 'ran'
+'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $fileName)
+
+    Invoke-Build -ByJenkins -WithConfig $configPath 
+
+    It ('should run PowerShell script in the working directory') {
+        Join-Path -Path $binRoot -ChildPath 'ran' | Should Exist
     }
 }
 
@@ -1038,11 +1029,11 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
     }
 
     Context 'mock packager' {
-        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
 
         Invoke-Build -ByJenkins -WithConfig $configPath
 
-        Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
             #$DebugPreference = 'Continue'
@@ -1086,12 +1077,12 @@ Describe 'Invoke-WhsCIBuild.when running WhsAppPackage task and excluding items'
                         Exclude = $packageExclude;
                    }
     $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-    Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
     New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
 
     Invoke-Build -ByJenkins -WithConfig $configPath
 
-    Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+    Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
         $DebugPreference = 'Continue'
         return $Exclude.Count -eq 1 -and $Exclude[0] -eq $packageExclude
     }
@@ -1124,13 +1115,13 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
         $Global:Error.Clear()
 
         $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-        Mock -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
         New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
 
         Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
 
         It 'should not create package' {
-            Assert-MockCalled -CommandName 'New-WhsAppPackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 0
         }
 
         it 'should write an error' {
@@ -1141,7 +1132,7 @@ foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
 }
 
 Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
     $repoRoot = $whsbuildPath | Split-Path
     Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
 
@@ -1149,7 +1140,7 @@ Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
 
     It 'should run Node targets' {
         Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $WorkingDirectory -eq $repoRoot -and $NpmTarget[0] -eq 'build' -and $NpmTarget[1] -eq 'test'
+            $WorkingDirectory -eq $repoRoot -and $NpmScript[0] -eq 'build' -and $NpmScript[1] -eq 'test'
         }
     }
 }
@@ -1173,7 +1164,7 @@ Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
 }
 
 Describe 'Invoke-WhsCIBuild.when Node task fails' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmTargets' = 'build','test'  }
+    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
     $repoRoot = $whsbuildPath | Split-Path
     Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
 

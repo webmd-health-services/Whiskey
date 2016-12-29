@@ -32,22 +32,24 @@ function Invoke-WhsCIBuild
     
     ## MSBuild
     
-    The MSBuild task is used to build .NET projects with MSBuild from the version of .NET 4 that is installed. Items are built by running the `clean` and `build` target against each file. The task should contain a `Paths` element that is a list of projects, solutions, or other files to build.  The build fails if any MSBuild target fails. If your `whsbuild.yml` file defines a `Version` element and the build is running under a build server, all AssemblyInfo.cs files under each path is updated with appropriate `AssemblyVersion`, `AssemblyFileVersion`, and `AssemblyInformationalVersion` attributes. The `AssemblyInformationalVersion` attribute will contain the full semantic version from `whsbuild.yml` plus some build metadata: the build server's build number, the Git branch, and the Git commit ID.
+    The MSBuild task is used to build .NET projects with MSBuild from the version of .NET 4 that is installed. Items are built by running the `clean` and `build` target against each file. The task should contain a `Path` element that is a list of projects, solutions, or other files to build.  The build fails if any MSBuild target fails. If your `whsbuild.yml` file defines a `Version` element and the build is running under a build server, all AssemblyInfo.cs files under each path is updated with appropriate `AssemblyVersion`, `AssemblyFileVersion`, and `AssemblyInformationalVersion` attributes. The `AssemblyInformationalVersion` attribute will contain the full semantic version from `whsbuild.yml` plus some build metadata: the build server's build number, the Git branch, and the Git commit ID.
     
         Version: 1.3.2-rc.1
         BuildTasks:
         - MSBuild:
-            Paths: 
+            Path: 
             - MySolution.sln
             - MyOtherSolution.sln
 
     ## Node
 
-    The Node task is used to run Node.js builds. It runs npm targets, e.g. `npm run <targets>`. If any target fails, the build fails. It also runs `npm install` before running any targets.
+    The Node task is used to run Node.js builds. It runs npm scripts, e.g. `npm run <scripts>`. If any scripts fails, the build fails. It also runs `npm install` before running any scripts.
+
+    You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
         BuildTasks:
         - Node:
-            NpmTargets:
+            NpmScripts:
             - build
             - test
     
@@ -57,45 +59,46 @@ function Invoke-WhsCIBuild
     
         BuildTasks:
         - NuGetPack:
-            Paths:
+            Path:
             - MyProject.csproj
             - MyNuspec.csproj
             
     ## NUnit2
     
-    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\packages`). The task should have a `Paths` list which should be a list of assemblies whose tests to run. The build will fail if any of the tests fail (i.e. if the NUnit console returns a non-zero exit code).
+    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\packages`). The task should have a `Path` list which should be a list of assemblies whose tests to run. The build will fail if any of the tests fail (i.e. if the NUnit console returns a non-zero exit code).
     
         BuildTasks:
         - NUnit2:
-            Paths:
+            Path:
             - Assembly.dll
             - OtherAssembly.dll
     
     ## Pester3
     
-    The Pester3 task runs Pester tests using Pester 3. The latest version of Pester 3 is downloaded from the PowerShell Gallery for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`). The task should have a `Paths` list which should be a list of Pester test files or directories containing Pester tests. (The paths are passed to `Invoke-Pester` function's `Script` parameter.) The build will fail if any of the tests fail.
+    The Pester3 task runs Pester tests using Pester 3. The latest version of Pester 3 is downloaded from the PowerShell Gallery for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`). The task should have a `Path` list which should be a list of Pester test files or directories containing Pester tests. (The paths are passed to `Invoke-Pester` function's `Script` parameter.) The build will fail if any of the tests fail.
     
         BuildTasks:
         - Pester3:
-            Paths:
+            Path:
             - My.Tests.ps1
             - Tests
             
     ## PowerShell
     
-    The PowerShell task runs PowerShell scripts. The task should have a `Paths` list which is a list of script to run. The build fails if any script exits with a non-zero exit code.
+    The PowerShell task runs PowerShell scripts. The task should have a `Path` list which is a list of scripts to run. The build fails if any script exits with a non-zero exit code. Scripts are executed in the current working directory. Specify an explicit working directory with a `WorkingDirectory` element.
     
         BuildTasks:
         - PowerShell:
-            Paths:
+            Path:
             - myscript.ps1
             - myotherscript.ps1
+            WorkingDirectory: bin
             
     ## WhsAppPackage
     
     The WhsAppPackage task creates a WHS application deployment package. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
     
-    * `Paths`: mandatory; the directories and files to include in the package. They will be added to the root of the package using the item's name.
+    * `Path`: mandatory; the directories and files to include in the package. They will be added to the root of the package using the item's name.
     * `Name`: mandatory; the name of the package. Usually, this is the name of your application.
     * `Description`: mandatory; a description of your application.
     * `Include`: mandatory; a whitelist of file names to include in the package. Wildcards supported. This must have at least one item. Only files that match an item in this list will be in the package. All other files are excluded.
@@ -156,6 +159,47 @@ function Invoke-WhsCIBuild
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    function Resolve-TaskPath
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory=$true)]
+            [string[]]
+            $Path,
+
+            [Parameter(Mandatory=$true)]
+            [string]
+            $PropertyName
+        )
+
+        $errPrefix = $propertyName
+        $foundInvalidTaskPath = $false
+        foreach( $taskPath in $Path )
+        {
+            $pathIdx++
+            if( [IO.Path]::IsPathRooted($taskPath) )
+            {
+                Write-Error -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the whsbuild.yml file.' -f $errPrefix,$pathIdx,$taskPath)
+                $foundInvalidTaskPath = $true
+                continue
+            }
+
+            $taskPath = Join-Path -Path $root -ChildPath $taskPath
+            if( -not (Test-Path -Path $taskPath) )
+            {
+                Write-Error -Message ('{0}[{1}] ''{2}'' does not exist.' -f $errPrefix,$pathIdx,$taskPath)
+                $foundInvalidTaskPath = $true
+            }
+
+            Resolve-Path -Path $taskPath | Select-Object -ExpandProperty 'ProviderPath'
+        }
+
+        if( $foundInvalidTaskPath )
+        {
+            throw ('{0}: One or more paths do not exist or are absolute.' -f $errPrefix)
+        }
+    }
 
     function Write-CommandOutput
     {
@@ -261,35 +305,10 @@ function Invoke-WhsCIBuild
                 }
 
                 $errors = @()
-                $taskPaths = New-Object 'Collections.Generic.List[string]' 
                 $pathIdx = -1
                 if( $task.ContainsKey('Path') )
                 {
-                    $foundInvalidTaskPath = $false
-                    foreach( $taskPath in $task.Path )
-                    {
-                        $pathIdx++
-                        if( [IO.Path]::IsPathRooted($taskPath) )
-                        {
-                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' is absolute but must be relative to the whsbuild.yml file.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                            $foundInvalidTaskPath = $true
-                            continue
-                        }
-
-                        $taskPath = Join-Path -Path $root -ChildPath $taskPath
-                        if( -not (Test-Path -Path $taskPath) )
-                        {
-                            Write-Error -Message ('{0}: BuildTasks[{1}]: {2}: Path[{3}] ''{4}'' does not exist.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                            $foundInvalidTaskPath = $true
-                        }
-
-                        Resolve-Path -Path $taskPath | ForEach-Object { $taskPaths.Add($_.ProviderPath) }
-                    }
-
-                    if( $foundInvalidTaskPath )
-                    {
-                        throw ('{0}: BuildTasks[{1}]: {2}: One or more of the task''s paths do not exist or are absolute.' -f $ConfigurationPath,$taskIdx,$taskName,$pathIdx,$taskPath)
-                    }
+                    $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                 }
 
                 switch( $taskName )
@@ -330,14 +349,14 @@ function Invoke-WhsCIBuild
                     }
 
                     'Node' {
-                        $npmTargets = $task['NpmTargets']
-                        if( $npmTargets )
+                        $NpmScripts = $task['NpmScripts']
+                        if( $NpmScripts )
                         {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmTarget $task['NpmTargets']
+                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
                         }
                         else
                         {
-                            Write-Warning -Message ('{0}NpmTargets is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
+                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
                         }
                     }
 
@@ -401,13 +420,15 @@ function Invoke-WhsCIBuild
                     }
 
                     'PowerShell' {
+                        $workingDirParam = @{ }
+                        if( $task.ContainsKey('WorkingDirectory') )
+                        {
+                            $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
+                        }
+
                         foreach( $scriptPath in $taskPaths )
                         {
-                            & $scriptPath
-                            if( $LastExitCode )
-                            {
-                                throw ('PowerShell script ''{0}'' failed, exiting with code {1}.' -F $scriptPath,$LastExitCode)
-                            }
+                            Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
                         }
                     }
 
@@ -425,13 +446,13 @@ function Invoke-WhsCIBuild
                             $excludeParam['Exclude'] = $task['Exclude']
                         }
 
-                        New-WhsAppPackage -RepositoryRoot $root `
-                                          -Name $task['Name'] `
-                                          -Description $task['Description'] `
-                                          -Version $nugetVersion `
-                                          -Path $taskPaths `
-                                          -Include $task['Include'] `
-                                          @excludeParam
+                        New-WhsCIAppPackage -RepositoryRoot $root `
+                                            -Name $task['Name'] `
+                                            -Description $task['Description'] `
+                                            -Version $nugetVersion `
+                                            -Path $taskPaths `
+                                            -Include $task['Include'] `
+                                            @excludeParam
                     }
 
                     default {

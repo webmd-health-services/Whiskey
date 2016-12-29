@@ -4,7 +4,7 @@
 
 $defaultPackageName = 'WhsCITest'
 $defaultVersion = '1.2.3-final'
-$defaultDescription = 'A package created to test the New-WhsAppPackage function in the WhsCI module.'
+$defaultDescription = 'A package created to test the New-WhsCIAppPackage function in the WhsCI module.'
 
 function Assert-Package
 {
@@ -140,7 +140,7 @@ function Assert-Package
     }
 
     It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsAppPackage+*' |
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsCIAppPackage+*' |
             Should BeNullOrEmpty
     }
 }
@@ -207,16 +207,16 @@ function Invoke-NewWhsAppPackage
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    New-WhsAppPackage -RepositoryRoot $repoRoot `
-                      -Name $Name `
-                      -Description $Description `
-                      -Version $Version `
-                      -Path $Path `
-                      -Include $Include `
-                      @excludeParam
+    New-WhsCIAppPackage -RepositoryRoot $repoRoot `
+                        -Name $Name `
+                        -Description $Description `
+                        -Version $Version `
+                        -Path $Path `
+                        -Include $Include `
+                        @excludeParam
 }
 
-Describe 'New-WhsAppPackage when packaging everything in a directory' {
+Describe 'New-WhsCIAppPackage when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -229,7 +229,7 @@ Describe 'New-WhsAppPackage when packaging everything in a directory' {
                    -WithFiles 'html.html'
 }
 
-Describe 'New-WhsAppPackage when packaging whitelisted files in a directory' {
+Describe 'New-WhsCIAppPackage when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -243,7 +243,7 @@ Describe 'New-WhsAppPackage when packaging whitelisted files in a directory' {
                    -WithoutFiles 'code.cs'
 }
 
-Describe 'New-WhsAppPackage when packaging multiple directories' {
+Describe 'New-WhsCIAppPackage when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -257,7 +257,7 @@ Describe 'New-WhsAppPackage when packaging multiple directories' {
                    -WithoutFiles 'code.cs'    
 }
 
-Describe 'New-WhsAppPackage when whitelist includes items that need to be excluded' {    
+Describe 'New-WhsCIAppPackage when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -271,7 +271,7 @@ Describe 'New-WhsAppPackage when whitelist includes items that need to be exclud
                    -WithoutFiles 'html2.html','sub'
 }
 
-Describe 'New-WhsAppPackage when paths don''t exist' {
+Describe 'New-WhsCIAppPackage when paths don''t exist' {
 
     $Global:Error.Clear()
 
@@ -287,7 +287,7 @@ Describe 'New-WhsAppPackage when paths don''t exist' {
     }
 }
 
-Describe 'New-WhsAppPackage when path contains known directories to exclude' {
+Describe 'New-WhsCIAppPackage when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
@@ -300,7 +300,7 @@ Describe 'New-WhsAppPackage when path contains known directories to exclude' {
                    -WithoutFiles '.git','.hg','obj'
 }
 
-Describe 'New-WhsAppPackage when repository doesn''t use Arc' {
+Describe 'New-WhsCIAppPackage when repository doesn''t use Arc' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'index.aspx' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc

@@ -40,10 +40,11 @@ function Convert-ValueToProperType {
         }
         $types = @([int], [long], [double], [boolean], [datetime])
         foreach($i in $types){
-            try {
-                return $i::Parse($Value)
-            } catch {
-                continue
+            $parsedValue = New-Object -TypeName $i.FullName
+            Write-Debug -Message ('Trying to parse {0} as a {1}.' -f $Value,$parsedValue.GetType().FullName)
+            if( $i::TryParse($Value,[ref]$parsedValue) )
+            {
+                return $parsedValue
             }
         }
         return $Value

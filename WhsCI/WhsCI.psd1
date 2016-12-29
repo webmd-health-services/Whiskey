@@ -67,11 +67,14 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Install-WhsCINodeJs',
                             'Install-WhsCITool',
                             'Invoke-WhsCINodeTask',
                             'Invoke-WhsCIPester3Task',
+                            'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
-                            'New-WhsAppPackage' 
+                            'New-WhsCIAppPackage',
+                            'Test-WhsCIRunByBuildServer'
                          );
 
     # Cmdlets to export from this module
