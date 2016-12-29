@@ -43,7 +43,10 @@ function Invoke-WhsCIBuild
 
     ## Node
 
-    The Node task is used to run Node.js builds. It runs npm scripts, e.g. `npm run <scripts>`. If any scripts fails, the build fails. It also runs `npm install` before running any scripts.
+    The Node task is used to run Node.js builds. It runs npm scripts, e.g. `npm run <scripts>`. If any scripts fails, the build fails. The Node task also:
+    
+    * runs `npm install` before running any scripts
+    * scans for security vulnerabilities using NSP, the Node Security Platform
 
     You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
