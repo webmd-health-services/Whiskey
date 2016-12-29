@@ -42,11 +42,17 @@ function Initialize-NodeProject
         [string[]]
         $DevDependency,
 
+        [string[]]
+        $Dependency,
+
         [switch]
         $WithNoNodeEngine,
 
         [string]
-        $UsingNodeVersion = '^4.4.7'
+        $UsingNodeVersion = '^4.4.7',
+
+        [Switch]
+        $WithNoName
     )
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
@@ -89,15 +95,25 @@ function Initialize-NodeProject
         $nodeEngine = ''
     }
     $packageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
+    $name = '"name": "fubar",'
+    if( $WithNoName )
+    {
+        $name = ''
+    }
 
     @"
 {
+    $($name)
     $($nodeEngine)
     "private": true,
     "scripts": {
         "build": "grunt build",
         "test": "grunt test",
         "fail": "grunt fail"
+    },
+
+    "dependencies": {
+        $( $Dependency -join ',' )
     },
 
     "devDependencies": {
@@ -140,7 +156,10 @@ function Invoke-FailingBuild
         $ThatFailsWithMessage,
 
         [string[]]
-        $NpmScript = @( 'fail', 'build', 'test' )
+        $NpmScript = @( 'fail', 'build', 'test' ),
+
+        [Switch]
+        $WhoseScriptsPass
     )
 
     $failed = $false
@@ -163,8 +182,17 @@ function Invoke-FailingBuild
 
     foreach( $script in $NpmScript )
     {
-        It ('should not run ''{0}'' NPM script' -f $script) {
-            Join-Path -Path $InDirectory -ChildPath $script | Should Not Exist
+        if( $WhoseScriptsPass )
+        {
+            It ('should run ''{0}'' NPM script' -f $script) {
+                Join-Path -Path $InDirectory -ChildPath $script | Should Exist
+            }
+        }
+        else
+        {
+            It ('should not run ''{0}'' NPM script' -f $script) {
+                Join-Path -Path $InDirectory -ChildPath $script | Should Not Exist
+            }
         }
     }
 }
@@ -205,6 +233,16 @@ Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
     $workingDir = Initialize-NodeProject -UsingNodeVersion "438.4393.329"
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
+    $workingDir = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass
+}
+
+Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
+    $workingDir = Initialize-NodeProject -WithNoName
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' ) 
 }
 
 if( $originalNodeEnv )

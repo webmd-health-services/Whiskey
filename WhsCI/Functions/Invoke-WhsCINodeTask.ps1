@@ -13,6 +13,7 @@ function Invoke-WhsCINodeTask
     This task also does the following as part of each Node build:
 
     * Runs `npm install` to install your dependencies.
+    * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
@@ -52,6 +53,11 @@ function Invoke-WhsCINodeTask
             throw ('Package.json file ''{0}'' contains invalid JSON. Please see previous errors for more information.' -f $packageJsonPath)
         }
 
+        if( -not ($packageJson | Get-Member -Name 'name') -or -not $packageJson.name )
+        {
+            throw ('Package name is missing or doesn''t have a value. Please ensure ''{0}'' contains a ''name'' field., e.g. `"name": "fubarsnafu"`. A package name is required by NSP, the Node Security Platform, when scanning for security vulnerabilities.' -f $packageJsonPath)
+        }
+
         if( -not ($packageJson | Get-Member -Name 'engines') -or -not ($packageJson.engines | Get-Member -Name 'node') )
         {
             throw ('Node version is not defined or is missing from the package.json file ''{0}''. Please ensure the Node version to use is defined using the package.json''s engines field, e.g. `"engines": {{ node: "VERSION" }}`. See https://docs.npmjs.com/files/package.json#engines for more information.' -f $packageJsonPath)
@@ -79,7 +85,15 @@ function Invoke-WhsCINodeTask
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
-        & $nodePath $npmPath install --production=false --no-color
+        $installNoColorArg = @()
+        $runNoColorArgs = @()
+        if( (Test-WhsCIRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
+        {
+            $installNoColorArg = '--no-color'
+            $runNoColorArgs = @( '--', '--no-color' )
+        }
+
+        & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
         if( $LASTEXITCODE )
         {
             throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
@@ -87,11 +101,28 @@ function Invoke-WhsCINodeTask
 
         foreach( $script in $npmScript )
         {
-            & $nodePath $npmPath run $script --no-color
+            & $nodePath $npmPath 'run' $script $runNoColorArgs
             if( $LASTEXITCODE )
             {
                 throw ('Node command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
             }
+        }
+
+        & $nodePath $npmPath 'install' 'nsp@latest' '-g'
+
+        $nspPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\nsp\bin\nsp' -Resolve
+        if( -not $nspPath )
+        {
+            throw ('NSP module failed to install to ''{0}\node_modules''.' -f $nodeRoot)
+        }
+
+        $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
+                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
+        $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+        if( $LASTEXITCODE )
+        {
+            $summary = $results | Format-List | Out-String
+            throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
     }
     finally
