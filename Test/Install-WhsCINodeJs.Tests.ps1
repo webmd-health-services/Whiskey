@@ -116,11 +116,14 @@ function Assert-ThatInstallNodeJs
     {
         if( -not $PreserveInstall )
         {
+            $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+            New-Item -Path $emptyDir -ItemType 'Directory'
+            robocopy $emptyDir $installDir /MIR | Write-Verbose
             while( (Test-Path -Path $installDir) )
             {
                 Start-Sleep -Milliseconds 100
                 Write-Verbose ('Removing {0}' -f $installDir) 
-                Remove-Item -Path $installDir -Recurse -Force -ErrorAction Ignore
+                Remove-Item -Path $installDir -Recurse -Force
             }
         }
 
