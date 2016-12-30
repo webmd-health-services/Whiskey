@@ -5,6 +5,8 @@ Set-StrictMode -Version 'Latest'
 
 $originalNodeEnv = $env:NODE_ENV
 
+$defaultPackageName = 'fubarsnafu'
+
 function Assert-SuccessfulBuild
 {
     param(
@@ -33,6 +35,10 @@ function Assert-SuccessfulBuild
         Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $Path -eq 'env:Path' -and $Value -notlike ('*{0}*' -f $versionRoot)
         }
+    }
+
+    It 'should check module licenses' {
+        Join-Path -Path $TestDrive.FullName -ChildPath ('{0}.licenses.json' -f $defaultPackageName) | Should Exist
     }
 }
 
@@ -95,7 +101,7 @@ function Initialize-NodeProject
         $nodeEngine = ''
     }
     $packageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
-    $name = '"name": "fubar",'
+    $name = '"name": "{0}",' -f $defaultPackageName
     if( $WithNoName )
     {
         $name = ''
@@ -166,12 +172,13 @@ function Invoke-FailingBuild
     $failure = $null
     try
     {
-        Invoke-WhsCINodeTask -WorkingDirectory $InDirectory -NpmScript $NpmScript
+        Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $InDirectory -NpmScript $NpmScript
     }
     catch
     {
         $failed = $true
         $failure = $_
+        Write-Error -ErrorRecord $_
     }
 
     It 'should throw an exception' {
@@ -199,7 +206,7 @@ function Invoke-FailingBuild
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
     $workingDir = Initialize-NodeProject
-    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
     Assert-SuccessfulBuild -ThatRanIn $workingDir
 }
 
@@ -216,7 +223,7 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $workingDir = Initialize-NodeProject
-    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
     Assert-SuccessfulBuild -ThatRanIn $workingDir
 }
 
@@ -243,6 +250,12 @@ Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
 Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     $workingDir = Initialize-NodeProject -WithNoName
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' ) 
+}
+
+Describe 'Invoke-WhsCINodeTask.when a dependent module''s license is prohibited' {
+    
+    $workingDir = Initialize-NodeProject -Dependency '"7zip": "latest"'
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'prohibited license' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
 if( $originalNodeEnv )

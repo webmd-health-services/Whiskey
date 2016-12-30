@@ -14,6 +14,7 @@ function Invoke-WhsCINodeTask
 
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
+    * Checks dependencies for prohibite licenses.
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
@@ -30,7 +31,12 @@ function Invoke-WhsCINodeTask
         [Parameter(Mandatory=$true)]
         [string[]]
         # The NPM commands to run as part of the build.
-        $NpmScript
+        $NpmScript,
+
+        [Parameter(Mandatory=$true)]
+        # The path where the license report should be saved. This directory will be created if it doesn't exist.
+        [string]
+        $LicenseReportDirectory
     )
 
     Set-StrictMode -Version 'Latest'
@@ -110,10 +116,11 @@ function Invoke-WhsCINodeTask
 
         & $nodePath $npmPath 'install' 'nsp@latest' '-g'
 
-        $nspPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\nsp\bin\nsp' -Resolve
+        $nodeModulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+        $nspPath = Join-Path -Path $nodeModulesRoot -ChildPath 'nsp\bin\nsp' -Resolve
         if( -not $nspPath )
         {
-            throw ('NSP module failed to install to ''{0}\node_modules''.' -f $nodeRoot)
+            throw ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
         $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
@@ -124,6 +131,33 @@ function Invoke-WhsCINodeTask
             $summary = $results | Format-List | Out-String
             throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
+
+        & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
+        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+        if( -not $licenseCheckerPath )
+        {
+            throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+        }
+
+        New-Item -Path $LicenseReportDirectory -ItemType 'Directory' -Force -ErrorAction Ignore
+        $licensePath = '{0}.licenses.json' -f $packageJson.name
+        $licensePath = Join-Path -Path $LicenseReportDirectory -ChildPath $licensePath
+
+        & $nodePath $licenseCheckerPath '--json' | Set-Content -Path $licensePath
+
+        $licenses = Get-Content -Path $licensePath -Raw | ConvertFrom-Json
+        $badLicenses = $licenses | 
+                            Get-Member -MemberType NoteProperty | 
+                            Select-Object -ExpandProperty 'Name' |
+                            ForEach-Object { $licenses.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru } |
+                            Where-Object { $_.licenses | Where-Object { $_ -match 'GPL' } } |
+                            Format-Table -Property 'name','licenses' -AutoSize |
+                            Out-String
+        if( $badLicenses )
+        {
+            throw ('License Checker found the following modules that use prohibited licenses:{0}{0}{1}' -f [Environment]::NewLine,($badLicenses -join [Environment]::NewLine))
+        }
+
     }
     finally
     {
