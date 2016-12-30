@@ -14,7 +14,7 @@ function Invoke-WhsCINodeTask
 
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
-    * Checks dependencies for prohibite licenses.
+    * Saves a report on each dependency's license to `$LicenseReportDirectory`.
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'

@@ -47,7 +47,7 @@ function Invoke-WhsCIBuild
     
     * runs `npm install` before running any scripts
     * scans for security vulnerabilities using NSP, the Node Security Platform, and fails the build if any are found
-    * checks dependencies for prohibited licenses, and fails the build if any are found
+    * generates a report on each dependency's licenses (put in the `$LicenseReportDirectory`).
 
     You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
