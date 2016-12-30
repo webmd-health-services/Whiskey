@@ -41,10 +41,11 @@ function Install-WhsCINodeJs
 
     if( (Test-Path -Path 'env:NVM_HOME') )
     {
-        $nvmRoot = $env:NVM_HOME
+        $nvmRoot = (Get-Item -Path 'env:NVM_HOME').Value
     }
     else
     {
+        # On developer computers, NVM should be installed by default. If not, make the dev install it.
         if( -not (Test-WhsCIRunByBuildServer) )
         {
             Write-Error -Message (@"
@@ -70,36 +71,41 @@ NVM for Windows is not installed. To install it:
         }
 
         $nvmRoot = Join-Path -Path $NvmInstallDirectory -ChildPath 'nvm'
-        $nvmPath = Join-Path -Path $nvmRoot -ChildPath 'nvm.exe'
-
-        if( -not (Test-Path -Path $nvmPath -PathType Leaf) )
-        {
-            $tempZipFile = 'WhsCI+Install-WhsCINodeJs+nvm-setup.zip+{0}' -f [IO.Path]::GetRandomFileName()
-            $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
-
-            $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'
-            Invoke-WebRequest -UseBasicParsing -Uri $nvmUri -OutFile $tempZipFile
-            if( -not (Test-Path -Path $tempZipFile -PathType Leaf) )
-            {
-                Write-Error -Message ('Failed to download NVM from {0}' -f $nvmUri)
-                return
-            }
-
-            $nvmSymlink = Join-Path -Path $env:ProgramFiles -ChildPath 'nodejs'
-
-            Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
-            [IO.Compression.ZipFile]::ExtractToDirectory($tempZipFile,$nvmRoot)
-
-            @"
-root: $($nvmRoot)
-path: $($nvmSymlink)
-"@ | Set-Content -Path (Join-Path -Path $nvmRoot -ChildPath 'settings.txt')
-        }
-
         Set-Item -Path 'env:NVM_HOME' -Value $nvmRoot
     }
 
     $nvmPath = Join-Path -Path $nvmRoot -ChildPath 'nvm.exe'
+
+    if( -not (Test-Path -Path $nvmPath -PathType Leaf) )
+    {
+        $tempZipFile = 'WhsCI+Install-WhsCINodeJs+nvm-setup.zip+{0}' -f [IO.Path]::GetRandomFileName()
+        $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
+
+        $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'
+        Invoke-WebRequest -UseBasicParsing -Uri $nvmUri -OutFile $tempZipFile
+        if( -not (Test-Path -Path $tempZipFile -PathType Leaf) )
+        {
+            Write-Error -Message ('Failed to download NVM from {0}' -f $nvmUri)
+            return
+        }
+
+        $nvmSymlink = Join-Path -Path $env:ProgramFiles -ChildPath 'nodejs'
+
+        Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+        [IO.Compression.ZipFile]::ExtractToDirectory($tempZipFile,$nvmRoot)
+
+        @"
+root: $($nvmRoot)
+path: $($nvmSymlink)
+"@ | Set-Content -Path (Join-Path -Path $nvmRoot -ChildPath 'settings.txt')
+    }
+
+    if( -not (Test-Path -Path $nvmPath -PathType Leaf) )
+    {
+        Write-Error -Message ('Failed to install NVM to {0}.' -f $nvmRoot)
+        return
+    }
+
     $activity = 'Installing Node.js {0}' -f $Version
     Write-Progress -Activity $activity
     $output = & $nvmPath install $Version 64 | 
