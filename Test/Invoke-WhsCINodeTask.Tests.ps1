@@ -249,12 +249,12 @@ Describe 'Invoke-WhsCINodeTask.when run by build server' {
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
     $workingDir = Initialize-NodeProject
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ run\b.*\bfailed'
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when a install fails' {
     $workingDir = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"'
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ install\b.*failed'   
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
@@ -266,12 +266,12 @@ Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
     $workingDir = Initialize-NodeProject -WithNoNodeEngine
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' )
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
     $workingDir = Initialize-NodeProject -UsingNodeVersion "fubarsnafu"
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' )
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
@@ -281,12 +281,12 @@ Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
     $workingDir = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     $workingDir = Initialize-NodeProject -WithNoName
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' ) 
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 
 if( $originalNodeEnv )
