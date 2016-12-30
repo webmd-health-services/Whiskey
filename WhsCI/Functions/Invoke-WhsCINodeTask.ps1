@@ -37,11 +37,32 @@ function Invoke-WhsCINodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $numSteps = 5 + $NpmScript.Count
+    $stepNum = 0
+
     $originalPath = $env:PATH
+    $activity = 'Running Node Task'
+
+    function Update-Progress
+    {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]
+            $Status,
+
+            [int]
+            $Step
+        )
+
+        Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
+    }
+
 
     Push-Location -Path $WorkingDirectory
     try
     {
+        Update-Progress -Status 'Validating package.json' -Step ($stepNum++)
+
         $packageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
         if( -not $packageJsonPath )
         {
@@ -71,6 +92,7 @@ function Invoke-WhsCINodeTask
         }
 
         $version = $Matches[1]
+        Update-Progress -Status ('Installing Node.js {0}' -f $version) -Step ($stepNum++)
         $nodePath = Install-WhsCINodeJs -Version $version
         if( -not $nodePath )
         {
@@ -94,6 +116,7 @@ function Invoke-WhsCINodeTask
             $runNoColorArgs = @( '--', '--no-color' )
         }
 
+        Update-Progress -Status ('npm install') -Step ($stepNum++)
         & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
         if( $LASTEXITCODE )
         {
@@ -102,6 +125,7 @@ function Invoke-WhsCINodeTask
 
         foreach( $script in $npmScript )
         {
+            Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             & $nodePath $npmPath 'run' $script $runNoColorArgs
             if( $LASTEXITCODE )
             {
@@ -109,11 +133,16 @@ function Invoke-WhsCINodeTask
             }
         }
 
-        & $nodePath $npmPath 'install' 'nsp@latest' '-g'
-
+        Update-Progress -Status ('nsp check') -Step ($stepNum++)
         $nodeModulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
-        $nspPath = Join-Path -Path $nodeModulesRoot -ChildPath 'nsp\bin\nsp' -Resolve
-        if( -not $nspPath )
+        $nspPath = Join-Path -Path $nodeModulesRoot -ChildPath 'nsp\bin\nsp'
+        $npmCmd = 'install'
+        if( (Test-Path -Path $nspPath -PathType Leaf) )
+        {
+            $npmCmd = 'update'
+        }
+        & $nodePath $npmPath $npmCmd 'nsp@latest' '-g'
+        if( -not (Test-Path -Path $nspPath -PathType Leaf) )
         {
             throw ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
@@ -127,9 +156,15 @@ function Invoke-WhsCINodeTask
             throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
 
-        & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
+        Update-Progress -Status ('license-checker') -Step ($stepNum++)
         $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
-        if( -not $licenseCheckerPath )
+        $npmCmd = 'install'
+        if( (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
+        {
+            $npmCmd = 'update'
+        }
+        & $nodePath $npmPath $npmCmd 'license-checker@latest' '-g'
+        if( -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
             throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
@@ -143,10 +178,13 @@ function Invoke-WhsCINodeTask
 
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
-        [object[]]$newReport = $report | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+        [object[]]$newReport = $report | 
+                                    Get-Member -MemberType NoteProperty | 
+                                    Select-Object -ExpandProperty 'Name' | 
+                                    ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
         # show the report
-        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -AutoSize
+        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
 
         $outputDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $WorkingDirectory
         $licensePath = 'node-license-checker-report.json'
@@ -158,5 +196,7 @@ function Invoke-WhsCINodeTask
         Set-Item -Path 'env:PATH' -Value $originalPath
 
         Pop-Location
+
+        Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }
