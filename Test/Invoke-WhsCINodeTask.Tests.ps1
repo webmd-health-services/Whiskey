@@ -14,7 +14,11 @@ function Assert-SuccessfulBuild
         [string[]]
         $ThatRan = @( 'build', 'test' ),
         [string]
-        $ForVersion = '4.4.7'
+        $ForVersion = '4.4.7',
+        [Switch]
+        $ByDeveloper,
+        [Switch]
+        $ByBuildServer
     )
 
     foreach( $taskName in $ThatRan )
@@ -37,9 +41,21 @@ function Assert-SuccessfulBuild
         }
     }
 
-    It 'should check module licenses' {
-        Join-Path -Path $TestDrive.FullName -ChildPath ('{0}.licenses.json' -f $defaultPackageName) | Should Exist
+    $licensePath = Join-Path -Path $TestDrive.FullName -ChildPath ('{0}.licenses.json' -f $defaultPackageName)
+    if( $ByDeveloper )
+    {
+        It 'should not generate module licenses report' {
+            $licensePath | Should Not Exist
+        }
     }
+
+    if( $ByBuildServer )
+    {
+        It 'should generate module licenses report' {
+            $licensePath | Should Exist
+        }
+    }
+
 }
 
 function Initialize-NodeProject
@@ -58,8 +74,22 @@ function Initialize-NodeProject
         $UsingNodeVersion = '^4.4.7',
 
         [Switch]
-        $WithNoName
+        $WithNoName,
+
+        [Switch]
+        $ByDeveloper,
+
+        [Switch]
+        $ByBuildServer
     )
+
+    $mock = { return $true }
+    if( $ByDeveloper )
+    {
+        $mock = { return $false }
+    }
+
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -205,9 +235,15 @@ function Invoke-FailingBuild
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
-    $workingDir = Initialize-NodeProject
+    $workingDir = Initialize-NodeProject -ByDeveloper
     Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByDeveloper
+}
+
+Describe 'Invoke-WhsCINodeTask.when run by build server' {
+    $workingDir = Initialize-NodeProject -ByBuildServer
+    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
 }
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
@@ -250,12 +286,6 @@ Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
 Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     $workingDir = Initialize-NodeProject -WithNoName
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' ) 
-}
-
-Describe 'Invoke-WhsCINodeTask.when a dependent module''s license is prohibited' {
-    
-    $workingDir = Initialize-NodeProject -Dependency '"7zip": "latest"'
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'prohibited license' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
 if( $originalNodeEnv )

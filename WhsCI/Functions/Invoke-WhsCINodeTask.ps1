@@ -132,32 +132,21 @@ function Invoke-WhsCINodeTask
             throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
 
-        & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
-        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
-        if( -not $licenseCheckerPath )
+        if( (Test-WhsCIRunByBuildServer) )
         {
-            throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+            & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
+            $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+            if( -not $licenseCheckerPath )
+            {
+                throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+            }
+
+            New-Item -Path $LicenseReportDirectory -ItemType 'Directory' -Force -ErrorAction Ignore
+            $licensePath = '{0}.licenses.json' -f $packageJson.name
+            $licensePath = Join-Path -Path $LicenseReportDirectory -ChildPath $licensePath
+
+            & $nodePath $licenseCheckerPath '--json' | Set-Content -Path $licensePath
         }
-
-        New-Item -Path $LicenseReportDirectory -ItemType 'Directory' -Force -ErrorAction Ignore
-        $licensePath = '{0}.licenses.json' -f $packageJson.name
-        $licensePath = Join-Path -Path $LicenseReportDirectory -ChildPath $licensePath
-
-        & $nodePath $licenseCheckerPath '--json' | Set-Content -Path $licensePath
-
-        $licenses = Get-Content -Path $licensePath -Raw | ConvertFrom-Json
-        $badLicenses = $licenses | 
-                            Get-Member -MemberType NoteProperty | 
-                            Select-Object -ExpandProperty 'Name' |
-                            ForEach-Object { $licenses.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru } |
-                            Where-Object { $_.licenses | Where-Object { $_ -match 'GPL' } } |
-                            Format-Table -Property 'name','licenses' -AutoSize |
-                            Out-String
-        if( $badLicenses )
-        {
-            throw ('License Checker found the following modules that use prohibited licenses:{0}{0}{1}' -f [Environment]::NewLine,($badLicenses -join [Environment]::NewLine))
-        }
-
     }
     finally
     {
