@@ -257,7 +257,7 @@ function Assert-NUnitTestsNotRun
     )
 
     It 'should not run NUnit tests' {
-        $ConfigurationPath | Split-Path | Join-Path -ChildPath '.output' | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 
@@ -274,7 +274,7 @@ function Assert-NUnitTestsRun
     )
 
     It 'should run NUnit tests' {
-        $ConfigurationPath | Split-Path | Join-Path -ChildPath '.output' | Get-ChildItem -Filter 'nunit2*.xml' | Should Not BeNullOrEmpty
+        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should Not BeNullOrEmpty
     }
 }
 
@@ -288,8 +288,9 @@ function Assert-WhsAppPackageCreated
 
     It 'should create package' {
         $root = $ConfigurationPath | Split-Path
-        $packageFileName = '.output\{0}.{1}.upack' -f $Name,$Version
-        $packagePath = Join-Path -Path $root -ChildPath $packageFileName
+        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root
+        $packageFileName = '{0}.{1}.upack' -f $Name,$Version
+        $packagePath = Join-Path -Path $outputRoot -ChildPath $packageFileName
         $packagePath | Should Exist
     }
 }
@@ -645,14 +646,16 @@ Describe 'Invoke-WhsCIBuild.when building real projects' {
         }
     }
 
+    $outputRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies'
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $outputRoot
     foreach( $name in @( 'Passing', 'Failing' ) )
     {
         It ('should create NuGet package for NUnit2{0}Test' -f $name) {
-            (Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\.output\NUnit2{0}Test.1.2.3-final.nupkg' -f $name)) | Should Exist
+            (Join-Path -Path $outputRoot -ChildPath ('NUnit2{0}Test.1.2.3-final.nupkg' -f $name)) | Should Exist
         }
 
         It ('should create a NuGet symbols package for NUnit2{0}Test' -f $name) {
-            (Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\.output\NUnit2{0}Test.1.2.3-final.symbols.nupkg' -f $name)) | Should Exist
+            (Join-Path -Path $outputRoot -ChildPath ('NUnit2{0}Test.1.2.3-final.symbols.nupkg' -f $name)) | Should Exist
         }
     }
 }
@@ -677,7 +680,7 @@ Describe 'Invoke-WhsCIBuild.when running Pester task' {
     $downloadRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'downloads'
     Invoke-Build -ByJenkins -WithConfig $pesterPassingConfig -DownloadRoot $downloadRoot
 
-    $pesterOutput = Join-Path -Path ($pesterPassingConfig | Split-Path) -ChildPath '.output'
+    $pesterOutput = Get-WhsCIOutputDirectory -WorkingDirectory ($pesterPassingConfig | Split-Path)
     $testReports = Get-ChildItem -Path $pesterOutput -Filter 'pester-*.xml'
     It 'should run pester tests' {
         $testReports | Should Not BeNullOrEmpty
@@ -915,7 +918,7 @@ Describe 'Invoke-WhsCIBuild.when output exists from a previous build' {
     New-MSBuildProject -FileName $project
 
     $root = $configPath | Split-Path -Parent
-    $output = Join-Path -Path $root -ChildPath '.output'
+    $output = Get-WhsCIOutputDirectory -WorkingDirectory $root
     Install-Directory -Path $output
 
     $outputSubDir = Join-Path -Path $output -ChildPath 'fubar'
@@ -968,8 +971,9 @@ Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid projec
             $Global:Error[0] | Should Match 'pack command failed'
         }
 
+        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory ($ConfigurationPath | Split-Path)
         It 'should not create any .nupkg files' {
-            (Join-Path -Path ($ConfigurationPath | Split-Path) -ChildPath '.output\*.nupkg') | Should Not Exist
+            (Join-Path -Path $outputRoot -ChildPath '*.nupkg') | Should Not Exist
         }
     }
     Assert-NuGetPackagesNotCreated -ConfigurationPath $configPath

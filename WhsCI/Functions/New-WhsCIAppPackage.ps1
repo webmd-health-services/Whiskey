@@ -79,8 +79,7 @@ function New-WhsCIAppPackage
     }
 
     $fileName = '{0}.{1}.upack' -f $Name,$Version
-    $outDirectory = Join-Path -Path $RepositoryRoot -ChildPath '.output'
-    Install-Directory -Path $outDirectory
+    $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 

@@ -33,7 +33,9 @@ function Assert-Package
 
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageName = '{0}.{1}.upack' -f $Name,$Version
-    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('Repo\.output\{0}' -f $packageName)
+    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
+    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
     It 'should create a package' {
         $packagePath | Should Exist

@@ -260,16 +260,7 @@ function Invoke-WhsCIBuild
         # Do the build
         $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
         $root = Split-Path -Path $ConfigurationPath -Parent
-        $outputRoot = Join-Path -Path $root -ChildPath '.output'
-        if( (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            Remove-Item -Path $outputRoot -Force -Recurse
-        }
-
-        if( -not (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            New-Item -Path $outputRoot -ItemType 'Directory' | Out-String | Write-Verbose
-        }
+        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
 
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 

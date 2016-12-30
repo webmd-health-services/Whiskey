@@ -20,6 +20,7 @@
  * Added a `Test-WhsCIRunByBuildServer` function to test if a build is being run by/under a build server. Currently, only Jenkins detection is supported.
  * Created `Invoke-WhsCIPowerShellTask` function for running PowerShell scripts.
  * Created `Install-WhsCINodeJs` function for installing NVM and using it to install a version of Node and its version of NPM.
+ * Created `Get-WhsCIOutputDirectory` function for getting the path to the current build's output directory.
 
 
 # 0.1.0
