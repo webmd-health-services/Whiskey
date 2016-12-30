@@ -41,21 +41,24 @@ function Assert-SuccessfulBuild
         }
     }
 
-    $licensePath = Join-Path -Path $TestDrive.FullName -ChildPath ('{0}.licenses.json' -f $defaultPackageName)
-    if( $ByDeveloper )
-    {
-        It 'should not generate module licenses report' {
-            $licensePath | Should Not Exist
-        }
-    }
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $ThatRanIn
+    $licensePath = Join-Path -Path $outputRoot -ChildPath ('node-license-checker-report.json' -f $defaultPackageName)
 
-    if( $ByBuildServer )
-    {
-        It 'should generate module licenses report' {
+    Context 'the licenses report' {
+        It 'should exist' {
             $licensePath | Should Exist
         }
-    }
 
+        $json = Get-Content -Raw -Path $licensePath | ConvertFrom-Json
+        It 'should be parsable JSON' {
+            $json | Should Not BeNullOrEmpty
+        }
+
+        It 'should be transformed from license-checker''s format' {
+            $json | Select-Object -ExpandProperty 'name' | Should Not BeNullOrEmpty
+            $json | Select-Object -ExpandProperty 'licenses' | Should Not BeNullOrEmpty
+        }
+    }
 }
 
 function Initialize-NodeProject
@@ -86,16 +89,8 @@ function Initialize-NodeProject
     $mock = { return $true }
     if( $ByDeveloper )
     {
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = (Join-Path -Path $env:APPDATA -ChildPath 'nvm') } } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
         $mock = { return $false }
     }
-    else
-    {
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false } -ParameterFilter { $Path -eq 'env:HOME' }
-    }
-
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -208,7 +203,7 @@ function Invoke-FailingBuild
     $failure = $null
     try
     {
-        Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $InDirectory -NpmScript $NpmScript
+        Invoke-WhsCINodeTask -WorkingDirectory $InDirectory -NpmScript $NpmScript
     }
     catch
     {
@@ -242,13 +237,13 @@ function Invoke-FailingBuild
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
     $workingDir = Initialize-NodeProject -ByDeveloper
-    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
     Assert-SuccessfulBuild -ThatRanIn $workingDir -ByDeveloper
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by build server' {
     $workingDir = Initialize-NodeProject -ByBuildServer
-    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
     Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
 }
 
@@ -265,7 +260,7 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $workingDir = Initialize-NodeProject
-    Invoke-WhsCINodeTask -LicenseReportDirectory $TestDrive.FullName -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
     Assert-SuccessfulBuild -ThatRanIn $workingDir
 }
 

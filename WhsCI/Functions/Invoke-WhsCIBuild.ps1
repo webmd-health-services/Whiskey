@@ -47,7 +47,7 @@ function Invoke-WhsCIBuild
     
     * runs `npm install` before running any scripts
     * scans for security vulnerabilities using NSP, the Node Security Platform, and fails the build if any are found
-    * generates a report on each dependency's licenses (put in the `$LicenseReportDirectory`).
+    * generates a report on each dependency's licenses
 
     You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
@@ -132,7 +132,7 @@ function Invoke-WhsCIBuild
     Demonstrates the simplest way to call `Invoke-WhsCIBuild`. In this case, all the tasks in `whsbuild.yml` are run. If any code is compiled, it is compiled with the `Debug` configuration.
     
     .EXAMPLE
-    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Release' -LicenseReportDirectory 'D:\ThirdPartyLicenses' -BBServerCredential $credential -BBServerUri $bbserverUri
+    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Release' --BBServerCredential $credential -BBServerUri $bbserverUri
     
     Demonstrates how to get `Invoke-WhsCIBuild` build status to Bitbucket Server, when run under a build server.
     #>
@@ -147,11 +147,6 @@ function Invoke-WhsCIBuild
         [string]
         # The build configuration to use if you're compiling code, e.g. `Debug`, `Release`.
         $BuildConfiguration,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The directory where any third-party license reports should go. Only used for Node builds.
-        $LicenseReportDirectory,
 
         [pscredential]
         # The connection to use to contact Bitbucket Server. Required if running under a build server.
@@ -352,7 +347,7 @@ function Invoke-WhsCIBuild
                         $NpmScripts = $task['NpmScripts']
                         if( $NpmScripts )
                         {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts'] -LicenseReportDirectory $LicenseReportDirectory
+                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
                         }
                         else
                         {

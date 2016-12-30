@@ -353,7 +353,6 @@ function Invoke-Build
     {
         Invoke-WhsCIBuild -ConfigurationPath $WithConfig `
                           -BuildConfiguration $configuration `
-                          -LicenseReportDirectory $TestDrive.FullName `
                           @devParams `
                           @downloadRootParam
     }

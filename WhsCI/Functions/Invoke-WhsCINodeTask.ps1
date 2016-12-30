@@ -14,7 +14,7 @@ function Invoke-WhsCINodeTask
 
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
-    * Saves a report on each dependency's license to `$LicenseReportDirectory`.
+    * Saves a report on each dependency's license.
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
@@ -31,12 +31,7 @@ function Invoke-WhsCINodeTask
         [Parameter(Mandatory=$true)]
         [string[]]
         # The NPM commands to run as part of the build.
-        $NpmScript,
-
-        [Parameter(Mandatory=$true)]
-        # The path where the license report should be saved. This directory will be created if it doesn't exist.
-        [string]
-        $LicenseReportDirectory
+        $NpmScript
     )
 
     Set-StrictMode -Version 'Latest'
@@ -132,21 +127,31 @@ function Invoke-WhsCINodeTask
             throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
 
-        if( (Test-WhsCIRunByBuildServer) )
+        & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
+        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+        if( -not $licenseCheckerPath )
         {
-            & $nodePath $npmPath 'install' 'license-checker@latest' '-g'
-            $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
-            if( -not $licenseCheckerPath )
-            {
-                throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
-            }
-
-            New-Item -Path $LicenseReportDirectory -ItemType 'Directory' -Force -ErrorAction Ignore
-            $licensePath = '{0}.licenses.json' -f $packageJson.name
-            $licensePath = Join-Path -Path $LicenseReportDirectory -ChildPath $licensePath
-
-            & $nodePath $licenseCheckerPath '--json' | Set-Content -Path $licensePath
+            throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
+
+        $reportJson = & $nodePath $licenseCheckerPath '--json'
+        $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
+        if( -not $report )
+        {
+            throw ('License Checker failed to output a valid JSON report.')
+        }
+
+        # The default license checker report has a crazy format. It is an object with properties for each module.
+        # Let's transform it to a more sane format: an array of objects.
+        [object[]]$newReport = $report | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+
+        # show the report
+        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -AutoSize
+
+        $outputDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $WorkingDirectory
+        $licensePath = 'node-license-checker-report.json'
+        $licensePath = Join-Path -Path $outputDirectory -ChildPath $licensePath
+        ConvertTo-Json -InputObject $newReport -Depth ([int32]::MaxValue) | Set-Content -Path $licensePath
     }
     finally
     {
