@@ -14,6 +14,7 @@ function Invoke-WhsCINodeTask
 
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
+    * Saves a report on each dependency's license.
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
@@ -36,11 +37,32 @@ function Invoke-WhsCINodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $numSteps = 5 + $NpmScript.Count
+    $stepNum = 0
+
     $originalPath = $env:PATH
+    $activity = 'Running Node Task'
+
+    function Update-Progress
+    {
+        param(
+            [Parameter(Mandatory=$true)]
+            [string]
+            $Status,
+
+            [int]
+            $Step
+        )
+
+        Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
+    }
+
 
     Push-Location -Path $WorkingDirectory
     try
     {
+        Update-Progress -Status 'Validating package.json' -Step ($stepNum++)
+
         $packageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
         if( -not $packageJsonPath )
         {
@@ -70,6 +92,7 @@ function Invoke-WhsCINodeTask
         }
 
         $version = $Matches[1]
+        Update-Progress -Status ('Installing Node.js {0}' -f $version) -Step ($stepNum++)
         $nodePath = Install-WhsCINodeJs -Version $version
         if( -not $nodePath )
         {
@@ -93,6 +116,7 @@ function Invoke-WhsCINodeTask
             $runNoColorArgs = @( '--', '--no-color' )
         }
 
+        Update-Progress -Status ('npm install') -Step ($stepNum++)
         & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
         if( $LASTEXITCODE )
         {
@@ -101,6 +125,7 @@ function Invoke-WhsCINodeTask
 
         foreach( $script in $npmScript )
         {
+            Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             & $nodePath $npmPath 'run' $script $runNoColorArgs
             if( $LASTEXITCODE )
             {
@@ -108,12 +133,18 @@ function Invoke-WhsCINodeTask
             }
         }
 
-        & $nodePath $npmPath 'install' 'nsp@latest' '-g'
-
-        $nspPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\nsp\bin\nsp' -Resolve
-        if( -not $nspPath )
+        Update-Progress -Status ('nsp check') -Step ($stepNum++)
+        $nodeModulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+        $nspPath = Join-Path -Path $nodeModulesRoot -ChildPath 'nsp\bin\nsp'
+        $npmCmd = 'install'
+        if( (Test-Path -Path $nspPath -PathType Leaf) )
         {
-            throw ('NSP module failed to install to ''{0}\node_modules''.' -f $nodeRoot)
+            $npmCmd = 'update'
+        }
+        & $nodePath $npmPath $npmCmd 'nsp@latest' '-g'
+        if( -not (Test-Path -Path $nspPath -PathType Leaf) )
+        {
+            throw ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
         $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
@@ -124,11 +155,48 @@ function Invoke-WhsCINodeTask
             $summary = $results | Format-List | Out-String
             throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
+
+        Update-Progress -Status ('license-checker') -Step ($stepNum++)
+        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+        $npmCmd = 'install'
+        if( (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
+        {
+            $npmCmd = 'update'
+        }
+        & $nodePath $npmPath $npmCmd 'license-checker@latest' '-g'
+        if( -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
+        {
+            throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+        }
+
+        $reportJson = & $nodePath $licenseCheckerPath '--json'
+        $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
+        if( -not $report )
+        {
+            throw ('License Checker failed to output a valid JSON report.')
+        }
+
+        # The default license checker report has a crazy format. It is an object with properties for each module.
+        # Let's transform it to a more sane format: an array of objects.
+        [object[]]$newReport = $report | 
+                                    Get-Member -MemberType NoteProperty | 
+                                    Select-Object -ExpandProperty 'Name' | 
+                                    ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+
+        # show the report
+        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
+
+        $outputDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $WorkingDirectory
+        $licensePath = 'node-license-checker-report.json'
+        $licensePath = Join-Path -Path $outputDirectory -ChildPath $licensePath
+        ConvertTo-Json -InputObject $newReport -Depth ([int32]::MaxValue) | Set-Content -Path $licensePath
     }
     finally
     {
         Set-Item -Path 'env:PATH' -Value $originalPath
 
         Pop-Location
+
+        Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }

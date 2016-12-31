@@ -46,7 +46,8 @@ function Invoke-WhsCIBuild
     The Node task is used to run Node.js builds. It runs npm scripts, e.g. `npm run <scripts>`. If any scripts fails, the build fails. The Node task also:
     
     * runs `npm install` before running any scripts
-    * scans for security vulnerabilities using NSP, the Node Security Platform
+    * scans for security vulnerabilities using NSP, the Node Security Platform, and fails the build if any are found
+    * generates a report on each dependency's licenses
 
     You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
@@ -131,7 +132,7 @@ function Invoke-WhsCIBuild
     Demonstrates the simplest way to call `Invoke-WhsCIBuild`. In this case, all the tasks in `whsbuild.yml` are run. If any code is compiled, it is compiled with the `Debug` configuration.
     
     .EXAMPLE
-    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Release' -BBServerCredential $credential -BBServerUri $bbserverUri
+    Invoke-WhsCIBuild -ConfigurationPath 'whsbuild.yml' -BuildConfiguration 'Release' --BBServerCredential $credential -BBServerUri $bbserverUri
     
     Demonstrates how to get `Invoke-WhsCIBuild` build status to Bitbucket Server, when run under a build server.
     #>
@@ -254,16 +255,7 @@ function Invoke-WhsCIBuild
         # Do the build
         $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
         $root = Split-Path -Path $ConfigurationPath -Parent
-        $outputRoot = Join-Path -Path $root -ChildPath '.output'
-        if( (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            Remove-Item -Path $outputRoot -Force -Recurse
-        }
-
-        if( -not (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            New-Item -Path $outputRoot -ItemType 'Directory' | Out-String | Write-Verbose
-        }
+        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
 
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 

@@ -69,7 +69,7 @@ function Invoke-PesterTest
     )
 
     Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -Verifiable -MockWith { Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Pester\Pester.psd1' -Resolve }.GetNewClosure()
-    $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
     if( -not (Test-Path -Path $outputRoot -PathType Container) )
     {
         New-Item -Path $outputRoot -ItemType 'Directory'
@@ -140,7 +140,7 @@ Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 4
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 8
 
-    $outputRoot = Join-Path -Path $TestDrive.FullName '.output'
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
     It 'should create multiple report files' {
         Join-Path -Path $outputRoot -ChildPath 'pester-00.xml' | Should Exist
         Join-Path -Path $outputRoot -ChildPath 'pester-01.xml' | Should Exist

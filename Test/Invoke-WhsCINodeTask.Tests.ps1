@@ -5,6 +5,8 @@ Set-StrictMode -Version 'Latest'
 
 $originalNodeEnv = $env:NODE_ENV
 
+$defaultPackageName = 'fubarsnafu'
+
 function Assert-SuccessfulBuild
 {
     param(
@@ -12,7 +14,11 @@ function Assert-SuccessfulBuild
         [string[]]
         $ThatRan = @( 'build', 'test' ),
         [string]
-        $ForVersion = '4.4.7'
+        $ForVersion = '4.4.7',
+        [Switch]
+        $ByDeveloper,
+        [Switch]
+        $ByBuildServer
     )
 
     foreach( $taskName in $ThatRan )
@@ -34,6 +40,25 @@ function Assert-SuccessfulBuild
             $Path -eq 'env:Path' -and $Value -notlike ('*{0}*' -f $versionRoot)
         }
     }
+
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $ThatRanIn
+    $licensePath = Join-Path -Path $outputRoot -ChildPath ('node-license-checker-report.json' -f $defaultPackageName)
+
+    Context 'the licenses report' {
+        It 'should exist' {
+            $licensePath | Should Exist
+        }
+
+        $json = Get-Content -Raw -Path $licensePath | ConvertFrom-Json
+        It 'should be parsable JSON' {
+            $json | Should Not BeNullOrEmpty
+        }
+
+        It 'should be transformed from license-checker''s format' {
+            $json | Select-Object -ExpandProperty 'name' | Should Not BeNullOrEmpty
+            $json | Select-Object -ExpandProperty 'licenses' | Should Not BeNullOrEmpty
+        }
+    }
 }
 
 function Initialize-NodeProject
@@ -52,8 +77,20 @@ function Initialize-NodeProject
         $UsingNodeVersion = '^4.4.7',
 
         [Switch]
-        $WithNoName
+        $WithNoName,
+
+        [Switch]
+        $ByDeveloper,
+
+        [Switch]
+        $ByBuildServer
     )
+
+    $mock = { return $true }
+    if( $ByDeveloper )
+    {
+        $mock = { return $false }
+    }
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -95,7 +132,7 @@ function Initialize-NodeProject
         $nodeEngine = ''
     }
     $packageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
-    $name = '"name": "fubar",'
+    $name = '"name": "{0}",' -f $defaultPackageName
     if( $WithNoName )
     {
         $name = ''
@@ -172,6 +209,7 @@ function Invoke-FailingBuild
     {
         $failed = $true
         $failure = $_
+        Write-Error -ErrorRecord $_
     }
 
     It 'should throw an exception' {
@@ -198,19 +236,25 @@ function Invoke-FailingBuild
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
-    $workingDir = Initialize-NodeProject
+    $workingDir = Initialize-NodeProject -ByDeveloper
     Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByDeveloper
+}
+
+Describe 'Invoke-WhsCINodeTask.when run by build server' {
+    $workingDir = Initialize-NodeProject -ByBuildServer
+    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
 }
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
     $workingDir = Initialize-NodeProject
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ run\b.*\bfailed'
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when a install fails' {
     $workingDir = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"'
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ install\b.*failed'   
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
@@ -222,12 +266,12 @@ Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
     $workingDir = Initialize-NodeProject -WithNoNodeEngine
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' )
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
     $workingDir = Initialize-NodeProject -UsingNodeVersion "fubarsnafu"
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' )
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
@@ -237,12 +281,12 @@ Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
     $workingDir = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     $workingDir = Initialize-NodeProject -WithNoName
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' ) 
+    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 
 if( $originalNodeEnv )

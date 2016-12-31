@@ -67,6 +67,7 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
                             'Invoke-WhsCINodeTask',
