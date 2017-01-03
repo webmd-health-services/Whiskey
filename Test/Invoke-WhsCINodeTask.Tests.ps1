@@ -21,6 +21,11 @@ function Assert-SuccessfulBuild
         $ByBuildServer
     )
 
+    if( -not $ByDeveloper -and -not $ByBuildServer )
+    {
+        throw ('You must provide either the ByDeveloper or ByBuildServer switch when calling Assert-SuccessfulBuild.')
+    }
+
     foreach( $taskName in $ThatRan )
     {
         It ('should run the {0} task' -f $taskName) {
@@ -59,6 +64,27 @@ function Assert-SuccessfulBuild
             $json | Select-Object -ExpandProperty 'licenses' | Should Not BeNullOrEmpty
         }
     }
+
+    $devDependencyPaths = Join-Path -Path $ThatRanIn -ChildPath 'package.json' | 
+                            ForEach-Object { Get-Content -Raw -Path $_ } | 
+                            ConvertFrom-Json |
+                            Select-Object -ExpandProperty 'devDependencies' |
+                            Get-Member -MemberType NoteProperty |
+                            Select-Object -ExpandProperty 'Name' |
+                            ForEach-Object { Join-Path -Path $ThatRanIn -ChildPath ('node_modules\{0}' -f $_)  }
+    if( $ByBuildServer )
+    {
+        It 'should prune dev dependencies' {
+            $devDependencyPaths | Should Not Exist
+        }
+    }
+    
+    if( $ByDeveloper )
+    {
+        It 'should not prune dev dependencies' {
+            $devDependencyPaths | Should Exist
+        }
+    }
 }
 
 function Initialize-NodeProject
@@ -91,6 +117,8 @@ function Initialize-NodeProject
     {
         $mock = { return $false }
     }
+
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -259,9 +287,9 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
-    $workingDir = Initialize-NodeProject
+    $workingDir = Initialize-NodeProject -ByBuildServer
     Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
 }
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
