@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
 $originalNodeEnv = $env:NODE_ENV
+$startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
 
 $defaultPackageName = 'fubarsnafu'
 
@@ -117,11 +118,13 @@ function Initialize-NodeProject
         Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = (Join-Path -Path $env:APPDATA -ChildPath 'nvm') } } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
         $mock = { return $false }
+        Set-Item -Path 'env:NODE_ENV' -Value 'developer'
     }
     else
     {
         $mock = { return $true }
         Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false } -ParameterFilter { $Path -eq 'env:HOME' }
+        Set-Item -Path 'env:NODE_ENV' -Value 'production'
     }
 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
@@ -323,7 +326,11 @@ Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 
-if( $originalNodeEnv )
+if( $startedWithNodeEnv )
 {
     $env:NODE_ENV = $originalNodeEnv
+}
+elseif( (Test-Path -Path 'env:NODE_ENV') )
+{
+    Remove-Item -Path 'env:NODE_ENV'
 }
