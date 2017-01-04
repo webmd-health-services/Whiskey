@@ -289,7 +289,7 @@ function Assert-WhsAppPackageCreated
     It 'should create package' {
         $root = $ConfigurationPath | Split-Path
         $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root
-        $packageFileName = '{0}.{1}.upack' -f $Name,$Version
+        $packageFileName = '{0}.{1}+*.upack' -f $Name,$Version
         $packagePath = Join-Path -Path $outputRoot -ChildPath $packageFileName
         $packagePath | Should Exist
     }
@@ -665,7 +665,7 @@ Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Prop
 #>
 Describe 'Invoke-WhsCIBuild.when Version in configuration file is invalid' {
     $configPath = New-TestWhsBuildFile -Yaml @'
-Version: 1
+Version: fubar
 '@
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
 
@@ -1040,7 +1040,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
-            #$DebugPreference = 'Continue'
+            $DebugPreference = 'Continue'
 
             Write-Debug -Message ('RepositoryRoot  expected  {0}' -f $RepositoryRoot)
             Write-Debug -Message ('                actual    {0}' -f $root)
@@ -1059,7 +1059,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             return $RepositoryRoot -eq $root -and 
                    $Description -eq $packageDescription -and
                    $Name -eq $packageName -and
-                   $Version -eq $packageVersion -and
+                   $Version -like ('{0}+*' -f $packageVersion) -and
                    $Path[0] -eq $fullDirs -and
                    $Include[0] -eq $whitelist -and
                    $Exclude -eq $null

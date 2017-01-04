@@ -272,7 +272,8 @@ function Invoke-WhsCIBuild
             }
 
             $version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-            $nugetVersion = $semVersion
+            # NuGet doesn't support build metadata. Make sure it isn't there.
+            $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
         }
 
         if( $config.ContainsKey('BuildTasks') )
