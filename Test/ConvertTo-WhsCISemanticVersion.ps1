@@ -24,24 +24,24 @@ foreach( $key in $testCases.Keys )
         $withBuildMetadata = [SemVersion.SemanticVersion]$key
     }
 
-    Describe ('ConvertTo-SemanticVersion.when converting ''[{0}]{1}'' by a developer' -f $key.GetType().Name.ToLowerInvariant(),$key) {
+    Describe ('ConvertTo-WhsCISemanticVersion.when converting ''[{0}]{1}'' by a developer' -f $key.GetType().Name.ToLowerInvariant(),$key) {
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
         $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
         $expectedSemVer = New-Object 'SemVersion.SemanticVersion' $semanticVersion.Major,$semanticVersion.Minor,$semanticVersion.Patch,$semanticVersion.Prerelease,$buildInfo
         It ('should be ''{0}''' -f $expectedSemVer) {
-            $key | ConvertTo-SemanticVersion | Should Be $expectedSemVer
+            $key | ConvertTo-WhsCISemanticVersion | Should Be $expectedSemVer
         }
 
         It 'should include build information' {
-            $key | ConvertTo-SemanticVersion | ForEach-Object { $_.ToString() } | Should Be $expectedSemVer.ToString()
+            $key | ConvertTo-WhsCISemanticVersion | ForEach-Object { $_.ToString() } | Should Be $expectedSemVer.ToString()
         }
 
         It 'should preserve build information' {
-            $key | ConvertTo-SemanticVersion -PreserveBuildMetadata | ForEach-Object { $_.ToString() } | Should Be $withBuildMetadata.ToString()
+            $key | ConvertTo-WhsCISemanticVersion -PreserveBuildMetadata | ForEach-Object { $_.ToString() } | Should Be $withBuildMetadata.ToString()
         }
     }
 
-    Describe ('ConvertTo-SemanticVersion.when converting ''[{0}]{1}'' by build server' -f $key.GetType().Name.ToLowerInvariant(),$key) {
+    Describe ('ConvertTo-WhsCISemanticVersion.when converting ''[{0}]{1}'' by build server' -f $key.GetType().Name.ToLowerInvariant(),$key) {
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
         $buildID = '80'
         $branch = 'origin/develop'
@@ -53,15 +53,15 @@ foreach( $key in $testCases.Keys )
         $buildInfo = '{0}.develop.{2}' -f $buildID,'develop',$commitID.Substring(0,7)
         $expectedSemVer = New-Object 'SemVersion.SemanticVersion' $semanticVersion.Major,$semanticVersion.Minor,$semanticVersion.Patch,$semanticVersion.Prerelease,$buildInfo
         It ('should be ''{0}''' -f $expectedSemVer) {
-            $key | ConvertTo-SemanticVersion | Should Be $expectedSemVer
+            $key | ConvertTo-WhsCISemanticVersion | Should Be $expectedSemVer
         }
 
         It 'should include build information' {
-            $key | ConvertTo-SemanticVersion | ForEach-Object { $_.ToString() } | Should Be $expectedSemVer.ToString()
+            $key | ConvertTo-WhsCISemanticVersion | ForEach-Object { $_.ToString() } | Should Be $expectedSemVer.ToString()
         }
 
         It 'should preserve build information' {
-            $key | ConvertTo-SemanticVersion -PreserveBuildMetadata | ForEach-Object { $_.ToString() } | Should Be $withBuildMetadata.ToString()
+            $key | ConvertTo-WhsCISemanticVersion -PreserveBuildMetadata | ForEach-Object { $_.ToString() } | Should Be $withBuildMetadata.ToString()
         }
     }
 }

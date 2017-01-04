@@ -67,7 +67,7 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
-                            'ConvertTo-SemanticVersion',
+                            'ConvertTo-WhsCISemanticVersion',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',

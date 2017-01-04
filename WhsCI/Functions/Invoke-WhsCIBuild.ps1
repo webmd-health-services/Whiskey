@@ -264,7 +264,7 @@ function Invoke-WhsCIBuild
         $nugetVersion = $null
         if( ($config.ContainsKey('Version')) )
         {
-            $semVersion = $config['Version'] | ConvertTo-SemanticVersion
+            $semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion
             if( -not $semVersion )
             {
                 throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
@@ -273,14 +273,6 @@ function Invoke-WhsCIBuild
 
             $version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
             $nugetVersion = $semVersion
-            if( $runningUnderBuildServer )
-            {
-                $buildID = (Get-Item -Path 'env:BUILD_ID').Value
-                $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-                $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
-                $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
-                $semVersion = New-Object -TypeName 'SemVersion.SemanticVersion' ($semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease,$buildInfo)
-            }
         }
 
         if( $config.ContainsKey('BuildTasks') )
