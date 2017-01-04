@@ -289,7 +289,7 @@ function Assert-WhsAppPackageCreated
     It 'should create package' {
         $root = $ConfigurationPath | Split-Path
         $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root
-        $packageFileName = '{0}.{1}+*.upack' -f $Name,$Version
+        $packageFileName = '{0}.{1}.upack' -f $Name,$Version
         $packagePath = Join-Path -Path $outputRoot -ChildPath $packageFileName
         $packagePath | Should Exist
     }
@@ -1059,7 +1059,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             return $RepositoryRoot -eq $root -and 
                    $Description -eq $packageDescription -and
                    $Name -eq $packageName -and
-                   $Version -like ('{0}+*' -f $packageVersion) -and
+                   $Version -eq $packageVersion -and
                    $Path[0] -eq $fullDirs -and
                    $Include[0] -eq $whitelist -and
                    $Exclude -eq $null
