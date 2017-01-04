@@ -41,6 +41,19 @@ function ConvertTo-SemanticVersion
             }
             $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$patch
         }
+        elseif( $InputObject -is [double] )
+        {
+            $major,$minor = $InputObject.ToString('g') -split '\.'
+            if( -not $minor )
+            {
+                $minor = '0'
+            }
+            $InputObject = '{0}.{1}.0' -f $major,$minor
+        }
+        elseif( $InputObject -is [int] )
+        {
+            $InputObject = '{0}.0.0' -f $InputObject
+        }
 
         $semVersion = $null
         if( ([SemVersion.SemanticVersion]::TryParse($InputObject,[ref]$semVersion)) )
