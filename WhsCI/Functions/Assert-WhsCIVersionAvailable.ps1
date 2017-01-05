@@ -25,13 +25,13 @@ function Assert-WhsCIVersionAvailable
 
     Set-StrictMode -Version 'Latest'
 
-    $currentBranch = Get-GitBranch -Current
+    $currentBranch = Get-GitBranch -Current -ErrorAction Stop
     if( $currentBranch.Name -like 'release/*' -or $currentBranch.Name -eq 'master' )
     {
         return $Version
     }
 
-    $branchExists = Get-GitBranch |
+    $branchExists = Get-GitBranch -ErrorAction Stop |
                         Where-Object { $_.Name -match '^release/(.+)$' } |
                         Where-Object { 
                                 $rawVersion = $Matches[1]

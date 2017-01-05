@@ -235,6 +235,17 @@ function Invoke-WhsCIBuild
         $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
     }
 
+    $ConfigurationPath = Resolve-Path -LiteralPath $ConfigurationPath
+    if( -not $ConfigurationPath )
+    {
+        throw ('Configuration file path ''{0}'' does not exist.' -f $PSBoundParameters['ConfigurationPath'])
+    }
+
+    # Do the build
+    $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
+    $root = Split-Path -Path $ConfigurationPath -Parent
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
+
     $runningUnderBuildServer = Test-Path -Path 'env:JENKINS_URL'
 
     if( $runningUnderBuildServer )
@@ -244,19 +255,9 @@ function Invoke-WhsCIBuild
     }
 
     $succeeded = $false
+    Push-Location -Path $root
     try
     {
-        $ConfigurationPath = Resolve-Path -LiteralPath $ConfigurationPath
-        if( -not $ConfigurationPath )
-        {
-            throw ('Configuration file path ''{0}'' does not exist.' -f $PSBoundParameters['ConfigurationPath'])
-        }
-
-        # Do the build
-        $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
-        $root = Split-Path -Path $ConfigurationPath -Parent
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
-
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
         [SemVersion.SemanticVersion]$semVersion = $null
@@ -264,7 +265,7 @@ function Invoke-WhsCIBuild
         $nugetVersion = $null
         if( ($config.ContainsKey('Version')) )
         {
-            $semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion
+            $semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
             if( -not $semVersion )
             {
                 throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
@@ -379,20 +380,12 @@ function Invoke-WhsCIBuild
                         $binRoots = $taskPaths | Group-Object -Property { Split-Path -Path $_ -Parent } 
                         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
 
-                        Push-Location -Path $root
-                        try
+                        $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
+                        $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
+                        & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
+                        if( $LastExitCode )
                         {
-                            $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
-                            $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                            & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
-                            if( $LastExitCode )
-                            {
-                                throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
-                            }
-                        }
-                        finally
-                        {
-                            Pop-Location
+                            throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
                         }
                     }
 
@@ -455,6 +448,8 @@ function Invoke-WhsCIBuild
     }
     finally
     {
+        Pop-Location
+
         if( $runningUnderBuildServer )
         {
             $status = 'Failed'
