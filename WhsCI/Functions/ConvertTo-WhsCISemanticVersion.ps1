@@ -8,6 +8,8 @@ function ConvertTo-WhsCISemanticVersion
     .DESCRIPTION
     The `ConvertTo-WhsCISemanticVersion` function converts strings, numbers, and date/time objects to semantic versions. If the conversion fails, it writes an error and you get nothing back. It also adds build metadata. If run by a developer, the build metadata will be `$env:USERNAME@$env:COMPUTERNAME`. If run by a build server, the build metadata will be the build number, branch (from source control), and short commit ID (also from source control), separated by spaces, e.g. `80.develop.deadbee`. If the object passed in contains build information, it will be overwritten by the generated build information. To leave the original build metadata intact, use the `-PreserveBuildMetadata` switch.
 
+    If the version doesn't have a patch number (e.g, `2`, `3.1`) and this function is running under a build server, the patch number will be set using the build server's build number/ID. Otherwise it will be set to `0`. 
+
     This function is designed to handle objects converted by YAML parsers. When some version numbers aren't surrounded by quotes, they are parsed as dates or numbers. For example, YAML parsers see
 
         Version: 1.2.3
@@ -28,9 +30,11 @@ function ConvertTo-WhsCISemanticVersion
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [object]
+        # The object to convert to a semantic version. Can be a version string, number, or date/time.
         $InputObject,
 
         [Switch]
+        # Use the build metadata from the original object, even if it doesn't exist. This stops `ConvertTo-WhsCISemanticVersion` from setting the build metadata based on the current build.
         $PreserveBuildMetadata
     )
 
@@ -38,6 +42,31 @@ function ConvertTo-WhsCISemanticVersion
     {
         Set-StrictMode -Version 'Latest'
 
+        $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
+        $patch = '0'
+        if( (Test-WhsCIRunByBuildServer) )
+        {
+            $buildID = (Get-Item -Path 'env:BUILD_ID').Value
+            $patch = $buildID
+            $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+            $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
+            $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
+        }
+
+        if( $InputObject -is [string] )
+        {
+            [int]$asInt = 0
+            [double]$asDouble = 0.0
+            if( [int]::TryParse($InputObject,[ref]$asInt) )
+            {
+                $InputObject = $asInt
+            }
+            elseif( [double]::TryParse($InputObject,[ref]$asDouble) )
+            {
+                $InputObject = $asDouble
+            }
+        }
+        
         if( $InputObject -is [datetime] )
         {
             $patch = $InputObject.Year
@@ -58,11 +87,11 @@ function ConvertTo-WhsCISemanticVersion
             {
                 $minor = '0'
             }
-            $InputObject = '{0}.{1}.0' -f $major,$minor
+            $InputObject = '{0}.{1}.{2}' -f $major,$minor,$patch
         }
         elseif( $InputObject -is [int] )
         {
-            $InputObject = '{0}.0.0' -f $InputObject
+            $InputObject = '{0}.0.{1}' -f $InputObject,$patch
         }
 
         $semVersion = $null
@@ -73,18 +102,9 @@ function ConvertTo-WhsCISemanticVersion
                 return $semVersion
             }
 
-            $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
-            if( (Test-WhsCIRunByBuildServer) )
-            {
-                $buildID = (Get-Item -Path 'env:BUILD_ID').Value
-                $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-                $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
-                $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
-            }
             return (New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList ($semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease,$buildInfo))
         }
 
         Write-Error -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName)
     }
 }
-    
