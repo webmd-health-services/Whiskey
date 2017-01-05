@@ -48,6 +48,7 @@ function Invoke-WhsCIBuild
     * runs `npm install` before running any scripts
     * scans for security vulnerabilities using NSP, the Node Security Platform, and fails the build if any are found
     * generates a report on each dependency's licenses
+    * removes developer dependencies from node_modules directory (i.e. runs the `npm prune` command) (this only happens when running under a build server)
 
     You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 

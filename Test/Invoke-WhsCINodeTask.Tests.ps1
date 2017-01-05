@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
 $originalNodeEnv = $env:NODE_ENV
+$startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
 
 $defaultPackageName = 'fubarsnafu'
 
@@ -20,6 +21,11 @@ function Assert-SuccessfulBuild
         [Switch]
         $ByBuildServer
     )
+
+    if( -not $ByDeveloper -and -not $ByBuildServer )
+    {
+        throw ('You must provide either the ByDeveloper or ByBuildServer switch when calling Assert-SuccessfulBuild.')
+    }
 
     foreach( $taskName in $ThatRan )
     {
@@ -59,6 +65,27 @@ function Assert-SuccessfulBuild
             $json | Select-Object -ExpandProperty 'licenses' | Should Not BeNullOrEmpty
         }
     }
+
+    $devDependencyPaths = Join-Path -Path $ThatRanIn -ChildPath 'package.json' | 
+                            ForEach-Object { Get-Content -Raw -Path $_ } | 
+                            ConvertFrom-Json |
+                            Select-Object -ExpandProperty 'devDependencies' |
+                            Get-Member -MemberType NoteProperty |
+                            Select-Object -ExpandProperty 'Name' |
+                            ForEach-Object { Join-Path -Path $ThatRanIn -ChildPath ('node_modules\{0}' -f $_)  }
+    if( $ByBuildServer )
+    {
+        It 'should prune dev dependencies' {
+            $devDependencyPaths | Should Not Exist
+        }
+    }
+    
+    if( $ByDeveloper )
+    {
+        It 'should not prune dev dependencies' {
+            $devDependencyPaths | Should Exist
+        }
+    }
 }
 
 function Initialize-NodeProject
@@ -86,11 +113,21 @@ function Initialize-NodeProject
         $ByBuildServer
     )
 
-    $mock = { return $true }
     if( $ByDeveloper )
     {
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = (Join-Path -Path $env:APPDATA -ChildPath 'nvm') } } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
         $mock = { return $false }
+        Set-Item -Path 'env:NODE_ENV' -Value 'developer'
     }
+    else
+    {
+        $mock = { return $true }
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false } -ParameterFilter { $Path -eq 'env:HOME' }
+        Set-Item -Path 'env:NODE_ENV' -Value 'production'
+    }
+
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -259,9 +296,9 @@ Describe 'Invoke-WhsCINodeTask.when a install fails' {
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
-    $workingDir = Initialize-NodeProject
+    $workingDir = Initialize-NodeProject -ByBuildServer
     Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir
+    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
 }
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
@@ -289,7 +326,11 @@ Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
     Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 
-if( $originalNodeEnv )
+if( $startedWithNodeEnv )
 {
     $env:NODE_ENV = $originalNodeEnv
+}
+elseif( (Test-Path -Path 'env:NODE_ENV') )
+{
+    Remove-Item -Path 'env:NODE_ENV'
 }

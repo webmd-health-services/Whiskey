@@ -15,6 +15,7 @@ function Invoke-WhsCINodeTask
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
     * Saves a report on each dependency's license.
+    * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
     Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
@@ -109,10 +110,11 @@ function Invoke-WhsCINodeTask
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
         $installNoColorArg = @()
+        $pruneNoColorArg = @()
         $runNoColorArgs = @()
         if( (Test-WhsCIRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
         {
-            $installNoColorArg = '--no-color'
+            $pruneNoColorArg = $installNoColorArg = '--no-color'
             $runNoColorArgs = @( '--', '--no-color' )
         }
 
@@ -120,7 +122,7 @@ function Invoke-WhsCINodeTask
         & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
         if( $LASTEXITCODE )
         {
-            throw ('Node command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
+            throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
         foreach( $script in $npmScript )
@@ -129,7 +131,7 @@ function Invoke-WhsCINodeTask
             & $nodePath $npmPath 'run' $script $runNoColorArgs
             if( $LASTEXITCODE )
             {
-                throw ('Node command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
+                throw ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
             }
         }
 
@@ -190,6 +192,21 @@ function Invoke-WhsCINodeTask
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $outputDirectory -ChildPath $licensePath
         ConvertTo-Json -InputObject $newReport -Depth ([int32]::MaxValue) | Set-Content -Path $licensePath
+
+        $productionArg = ''
+        $productionArgDisplay = ''
+        if( (Test-WhsCIRunByBuildServer) )
+        {
+            $productionArg = '--production'
+            $productionArgDisplay = ' --production'
+        }
+
+        Update-Progress -Status ('npm prune{0}' -f $productionArgDisplay) -Step ($stepNum++)
+        & $nodePath $npmPath 'prune' $productionArg $pruneNoColorArg
+        if( $LASTEXITCODE )
+        {
+            throw ('NPM command `npm prune{0}` failed, returning exist code {1}.' -f $productionArgDisplay,$LASTEXITCODE)
+        }
     }
     finally
     {
