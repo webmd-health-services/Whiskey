@@ -3,5 +3,6 @@ BuildTasks:
 - PowerShell:
     Path: init.ps1
 - Pester3:
+    Version: 3.4.3
     Path: Test\*.Tests.ps1
     
