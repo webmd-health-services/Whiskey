@@ -3,9 +3,9 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
-$defaultVersion = '1.2.3-final'
 $defaultDescription = 'A package created to test the New-WhsCIAppPackage function in the WhsCI module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
@@ -36,7 +36,7 @@ function Assert-NewWhsCIAppPackage
         $Description = $defaultDescription,
 
         [string]
-        $Version = $defaultVersion,
+        $Version,
 
         [string[]]
         $HasDirectories,
@@ -51,14 +51,42 @@ function Assert-NewWhsCIAppPackage
         $ShouldFailWithErrorMessage,
         
         [Switch]
-        $ShouldNotCreatePackage
+        $ShouldNotCreatePackage,
+
+        [Switch]
+        $ShouldReallyUploadToProGet
     )
+
+    if( -not $Version )
+    {
+        $now = [DateTime]::Now
+        $midnight = [DateTime]::Today
+
+        $Version = '{0}.{1}.{2}-final' -f $now.Year,$now.DayOfYear,($now - $midnight).TotalMilliseconds.ToInt32($null)
+        Start-Sleep -Milliseconds 1
+    }
 
     $Global:Error.Clear()
     $excludeParam = @{ }
     if( $ThatExcludes )
     {
         $excludeParam['Exclude'] = $ThatExcludes
+    }
+
+    $packagesAtStart = @()
+    if( $ShouldReallyUploadToProGet )
+    {
+        $UploadedTo = 'http://pgt01d-whs-04.dev.webmd.com:81/upack/Test'
+        $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $packagesAtStart = @()
+        try
+        {
+            $packagesAtStart = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/Test/packages?name={0}' -f $Name) -ErrorAction Ignore
+        }
+        catch
+        {
+            $packagesAtStart = @()
+        }
     }
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -214,26 +242,36 @@ function Assert-NewWhsCIAppPackage
     }
 
     It 'should upload package to ProGet' {
-        Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
-            #$DebugPreference = 'Continue'
+        if( $ShouldReallyUploadToProGet )
+        {
+            $packageInfo = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/test/packages?name={0}' -f $Name)
+            $packageInfo | Should Not BeNullOrEmpty
+            $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
+            $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
+        }
+        else
+        {
+            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
 
-            $expectedMethod = 'Put'
-            Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
-            Write-Debug -Message ('               actual    {0}' -f $Method)
+                $expectedMethod = 'Put'
+                Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
+                Write-Debug -Message ('               actual    {0}' -f $Method)
 
-            Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
-            Write-Debug -Message ('               actual    {0}' -f $Uri)
+                Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
+                Write-Debug -Message ('               actual    {0}' -f $Uri)
 
-            $expectedContentType = 'application/octet-stream'
-            Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
-            Write-Debug -Message ('               actual    {0}' -f $ContentType)
+                $expectedContentType = 'application/octet-stream'
+                Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
+                Write-Debug -Message ('               actual    {0}' -f $ContentType)
 
-            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $UploadedBy.UserName,$UploadedBy.GetNetworkCredential().Password))
-            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-            Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
-            Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
+                $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $UploadedBy.UserName,$UploadedBy.GetNetworkCredential().Password))
+                $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+                Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
+                Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
 
-            return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+                return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+            }
         }
     }
 
@@ -264,7 +302,7 @@ function Assert-NewWhsCIAppPackage
 
 function Initialize-Test
 {
-    param(
+    param( 
         [string[]]
         $DirectoryName,
 
@@ -275,7 +313,10 @@ function Initialize-Test
         $WithoutArc,
 
         [Switch]
-        $WhenUploadFails
+        $WhenUploadFails,
+
+        [Switch]
+        $WhenReallyUploading
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -298,12 +339,15 @@ function Initialize-Test
         }
     }
 
-    $result = 201
-    if( $WhenUploadFails )
+    if( -not $WhenReallyUploading )
     {
-        $result = 1
+        $result = 201
+        if( $WhenUploadFails )
+        {
+            $result = 1
+        }
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
 
     return $repoRoot
 }
@@ -408,4 +452,16 @@ Describe 'New-WhsCIAppPackage when package upload fails' {
                               -HasFiles 'html.html' `
                               -ShouldFailWithErrorMessage 'failed to upload' `
                               -ErrorAction SilentlyContinue
+}
+
+Describe 'New-WhsCIAppPackage when really uploading package' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldReallyUploadToProGet 
 }
