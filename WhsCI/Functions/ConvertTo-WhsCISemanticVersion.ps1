@@ -41,6 +41,7 @@ function ConvertTo-WhsCISemanticVersion
     process
     {
         Set-StrictMode -Version 'Latest'
+        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
         $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
         $patch = '0'
