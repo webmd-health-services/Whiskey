@@ -88,6 +88,8 @@ function New-WhsCIAppPackage
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
 
     try
     {
@@ -104,7 +106,7 @@ function New-WhsCIAppPackage
                             'WhsHg',
                             'WhsPipeline'
                         )
-        $arcDestination = Join-Path -Path $tempRoot -ChildPath 'Arc'
+        $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
         $excludedFiles = Get-ChildItem -Path $arcPath -File | 
                             ForEach-Object { '/XF'; $_.FullName }
         $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
@@ -121,7 +123,7 @@ function New-WhsCIAppPackage
         foreach( $item in $Path )
         {
             $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempRoot -ChildPath $itemName
+            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
             $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
             robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
         }
