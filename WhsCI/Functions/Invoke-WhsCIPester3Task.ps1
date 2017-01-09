@@ -45,7 +45,7 @@ function Invoke-WhsCIPester3Task
         throw ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
     }
 
-    $version = $Config['Version'] | ConvertTo-SemanticVersion
+    $version = $Config['Version'] | ConvertTo-WhsCISemanticVersion
     if( -not $version )
     {
         throw ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')

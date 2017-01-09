@@ -21,7 +21,8 @@ Set-StrictMode -Version 'Latest'
 
 $junctions = @( 
                     'Carbon',
-                    'Pester'
+                    'Pester',
+                    'LibGit2'
               )
 foreach( $junctionName in $junctions )
 {

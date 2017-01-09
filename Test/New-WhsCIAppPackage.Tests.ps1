@@ -32,6 +32,7 @@ function Assert-Package
    )
 
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,$Version
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
@@ -48,7 +49,7 @@ function Assert-Package
     Context 'the package' {
         foreach( $dirName in $ContainsDirectories )
         {
-            $dirPath = Join-Path -Path $expandPath -ChildPath $dirName
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
             It ('should include {0} directory' -f $dirName) {
                  $dirpath | Should Exist
             }
@@ -65,7 +66,7 @@ function Assert-Package
             foreach( $item in $WithoutFiles )
             {
                 It ('should exclude {0} files' -f $item ) {
-                    Get-ChildItem -Path $expandPath -Filter $item -Recurse | Should BeNullOrEmpty
+                    Get-ChildItem -Path $packageContentsPath -Filter $item -Recurse | Should BeNullOrEmpty
                 }
             }
         }
@@ -75,7 +76,7 @@ function Assert-Package
         }
 
         $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
-        $arcPath = Join-Path -Path $expandPath -ChildPath 'Arc'
+        $arcPath = Join-Path -Path $packageContentsPath -ChildPath 'Arc'
 
         It 'should include Arc' {
             $arcPath | Should Exist

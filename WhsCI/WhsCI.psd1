@@ -67,6 +67,8 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Assert-WhsCIVersionAvailable',
+                            'ConvertTo-WhsCISemanticVersion',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
