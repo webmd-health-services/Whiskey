@@ -1,16 +1,33 @@
 
+Set-StrictMode -Version 'Latest'
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
 $defaultVersion = '1.2.3-final'
 $defaultDescription = 'A package created to test the New-WhsCIAppPackage function in the WhsCI module.'
+$feedUri = 'snafufurbar'
+$feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 
-function Assert-Package
+function Assert-NewWhsCIAppPackage
 {
+    [CmdletBinding()]
     param(
+        [string[]]
+        $ForPath,
+
+        [string[]]
+        $ThatIncludes,
+
+        [string[]]
+        $ThatExcludes,
+
         [string]
-        $At,
+        $UploadedTo = $feedUri,
+
+        [pscredential]
+        $UploadedBy = $feedCredential,
 
         [string]
         $Name = $defaultPackageName,
@@ -22,15 +39,76 @@ function Assert-Package
         $Version = $defaultVersion,
 
         [string[]]
-        $ContainsDirectories,
+        $HasDirectories,
 
         [string[]]
-        $WithFiles,
+        $HasFiles,
 
         [string[]]
-        $WithoutFiles
-   )
+        $NotHasFiles,
 
+        [string]
+        $ShouldFailWithErrorMessage,
+        
+        [Switch]
+        $ShouldNotCreatePackage
+    )
+
+    $Global:Error.Clear()
+    $excludeParam = @{ }
+    if( $ThatExcludes )
+    {
+        $excludeParam['Exclude'] = $ThatExcludes
+    }
+
+    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    $ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
+    $failed = $false
+    $At = $null
+    try
+    {
+        $At = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
+                                  -Name $Name `
+                                  -Description $Description `
+                                  -Version $Version `
+                                  -Path $ForPath `
+                                  -Include $ThatIncludes `
+                                  -ProGetPackageUri $UploadedTo `
+                                  -ProGetCredential $UploadedBy `
+                                  @excludeParam
+    }
+    catch
+    {
+        $failed = $true
+        Write-Error -ErrorRecord $_
+    }
+
+    if( $ShouldFailWithErrorMessage )
+    {
+        It 'should fail with a terminating error' {
+            $failed | Should Be $true
+        }
+
+        It ('should fail with error message that matches ''{0}''' -f $ShouldFailWithErrorMessage) {
+            $Global:Error | Should Match $ShouldFailWithErrorMessage
+        }
+
+        It 'should not return package info' {
+            $At | Should BeNullOrEmpty
+        }
+    }
+    else
+    {
+        It 'should not fail' {
+            $failed | Should Be $false
+        }
+
+        It 'should return package info' {
+            $At | Should Exist
+        }
+    }
+
+    #region
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,$Version
@@ -38,22 +116,38 @@ function Assert-Package
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
-    It 'should create a package' {
-        $packagePath | Should Exist
+
+    It 'should cleanup temporary directories' {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsCIAppPackage+*' |
+            Should BeNullOrEmpty
     }
 
-    Expand-Item -Path $At -OutDirectory $expandPath
+    if( $ShouldNotCreatePackage )
+    {
+        It 'should not create a package' {
+            $packagePath | Should Not Exist
+        }
+        return
+    }
+    else
+    {
+        It 'should create a package' {
+            $packagePath | Should Exist
+        }
+    }
+
+    Expand-Item -Path $packagePath -OutDirectory $expandPath
 
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
     Context 'the package' {
-        foreach( $dirName in $ContainsDirectories )
+        foreach( $dirName in $HasDirectories )
         {
             $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
             It ('should include {0} directory' -f $dirName) {
                  $dirpath | Should Exist
             }
-            foreach( $fileName in $WithFiles )
+            foreach( $fileName in $HasFiles )
             {
                 It ('should include {0}\{1} file' -f $dirName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
@@ -61,9 +155,9 @@ function Assert-Package
             }
         }
 
-        if( $WithoutFiles )
+        if( $NotHasFiles )
         {
-            foreach( $item in $WithoutFiles )
+            foreach( $item in $NotHasFiles )
             {
                 It ('should exclude {0} files' -f $item ) {
                     Get-ChildItem -Path $packageContentsPath -Filter $item -Recurse | Should BeNullOrEmpty
@@ -119,6 +213,30 @@ function Assert-Package
         }
     }
 
+    It 'should upload package to ProGet' {
+        Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+
+            $expectedMethod = 'Put'
+            Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
+            Write-Debug -Message ('               actual    {0}' -f $Method)
+
+            Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
+            Write-Debug -Message ('               actual    {0}' -f $Uri)
+
+            $expectedContentType = 'application/octet-stream'
+            Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
+            Write-Debug -Message ('               actual    {0}' -f $ContentType)
+
+            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $UploadedBy.UserName,$UploadedBy.GetNetworkCredential().Password))
+            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+            Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
+            Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
+
+            return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+        }
+    }
+
     Context 'upack.json' {
         $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
         It 'should be valid json' {
@@ -141,11 +259,7 @@ function Assert-Package
             $upackInfo.Description | Should Be $Description
         }
     }
-
-    It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsCIAppPackage+*' |
-            Should BeNullOrEmpty
-    }
+    #endregion
 }
 
 function Initialize-Test
@@ -158,7 +272,10 @@ function Initialize-Test
         $FileName,
 
         [Switch]
-        $WithoutArc
+        $WithoutArc,
+
+        [Switch]
+        $WhenUploadFails
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -181,42 +298,14 @@ function Initialize-Test
         }
     }
 
-    return $repoRoot
-}
-
-function Invoke-NewWhsAppPackage
-{
-    [CmdletBinding()]
-    param(
-        [string]
-        $Name = $defaultPackageName,
-        [string]
-        $Description = $defaultDescription,
-        [string]
-        $Version = $defaultVersion,
-        [string[]]
-        $Path,
-        [string[]]
-        $Include,
-        [string[]]
-        $Exclude
-    )
-
-    $excludeParam = @{ }
-    if( $Exclude )
+    $result = 201
+    if( $WhenUploadFails )
     {
-        $excludeParam['Exclude'] = $Exclude
+        $result = 1
     }
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    $Path = $Path | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    New-WhsCIAppPackage -RepositoryRoot $repoRoot `
-                        -Name $Name `
-                        -Description $Description `
-                        -Version $Version `
-                        -Path $Path `
-                        -Include $Include `
-                        @excludeParam
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
+
+    return $repoRoot
 }
 
 Describe 'New-WhsCIAppPackage when packaging everything in a directory' {
@@ -225,11 +314,10 @@ Describe 'New-WhsCIAppPackage when packaging everything in a directory' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
-
-    Assert-Package -At $packagePath.FullName `
-                   -ContainsDirectories $dirNames `
-                   -WithFiles 'html.html'
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html'
 }
 
 Describe 'New-WhsCIAppPackage when packaging whitelisted files in a directory' {
@@ -238,12 +326,11 @@ Describe 'New-WhsCIAppPackage when packaging whitelisted files in a directory' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
-
-    Assert-Package -At $packagePath.FullName `
-                   -ContainsDirectories $dirNames `
-                   -WithFiles 'html.html' `
-                   -WithoutFiles 'code.cs'
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -NotHasFiles 'code.cs'
 }
 
 Describe 'New-WhsCIAppPackage when packaging multiple directories' {
@@ -252,12 +339,11 @@ Describe 'New-WhsCIAppPackage when packaging multiple directories' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Include '*.html'
-
-    Assert-Package -At $packagePath.FullName `
-                   -ContainsDirectories $dirNames `
-                   -WithFiles 'html.html' `
-                   -WithoutFiles 'code.cs'    
+    Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -NotHasFiles 'code.cs'    
 }
 
 Describe 'New-WhsCIAppPackage when whitelist includes items that need to be excluded' {    
@@ -266,28 +352,23 @@ Describe 'New-WhsCIAppPackage when whitelist includes items that need to be excl
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html' -Exclude 'html2.html','sub'
-
-    Assert-Package -At $packagePath.FullName `
-                   -ContainsDirectories 'dir1' `
-                   -WithFiles 'html.html' `
-                   -WithoutFiles 'html2.html','sub'
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -ThatExcludes 'html2.html','sub' `
+                              -HasDirectories 'dir1' `
+                              -HasFiles 'html.html' `
+                              -NotHasFiles 'html2.html','sub'
 }
 
 Describe 'New-WhsCIAppPackage when paths don''t exist' {
 
     $Global:Error.Clear()
 
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1','dir2' -Include '*' -ErrorAction SilentlyContinue
-
-    It 'should write an error' {
-        $Global:Error.Count | Should Be 2
-        $Global:Error | Should Match 'does not exist'
-    }
-
-    It 'should not return anything' {
-        $packagePath | Should BeNullOrEmpty
-    }
+    Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
+                              -ThatIncludes '*' `
+                              -ShouldFailWithErrorMessage '(don''t|does not) exist' `
+                              -ShouldNotCreatePackage `
+                              -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhsCIAppPackage when path contains known directories to exclude' {
@@ -295,12 +376,11 @@ Describe 'New-WhsCIAppPackage when path contains known directories to exclude' {
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
     
-    $packagePath = Invoke-NewWhsAppPackage -Path 'dir1' -Include '*.html'
-
-    Assert-Package -At $packagePath `
-                   -ContainsDirectories 'dir1' `
-                   -WithFiles 'html.html' `
-                   -WithoutFiles '.git','.hg','obj'
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories 'dir1' `
+                              -HasFiles 'html.html' `
+                              -NotHasFiles '.git','.hg','obj'
 }
 
 Describe 'New-WhsCIAppPackage when repository doesn''t use Arc' {
@@ -310,15 +390,22 @@ Describe 'New-WhsCIAppPackage when repository doesn''t use Arc' {
 
     $Global:Error.Clear()
 
-    $packagePath = Invoke-NewWhsAppPackage -Path $dirNames -Include $fileNames -ErrorAction SilentlyContinue
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes $fileNames `
+                              -ShouldFailWithErrorMessage 'does not exist' `
+                              -ShouldNotCreatePackage `
+                              -ErrorAction SilentlyContinue
+}
 
-    it 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error | Should Match 'does not exist'
-    }
+Describe 'New-WhsCIAppPackage when package upload fails' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
 
-    It 'should return nothing' {
-        $packagePath | Should BeNullOrEmpty
-    }
-
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldFailWithErrorMessage 'failed to upload' `
+                              -ErrorAction SilentlyContinue
 }

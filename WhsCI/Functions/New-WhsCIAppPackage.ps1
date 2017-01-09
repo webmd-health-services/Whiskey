@@ -6,7 +6,7 @@ function New-WhsCIAppPackage
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIAppPackage` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    The `New-WhsCIAppPackage` function creates a universal ProGet package for a WHS application and uploads it to ProGet. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
 
     It returns an `IO.FileInfo` object for the created package.
 
@@ -49,6 +49,16 @@ function New-WhsCIAppPackage
         [string[]]
         # The whitelist of files to include in the artifact. Wildcards supported. Only files that match entries in this list are included in the package.
         $Include,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        # The URI to the package's feed in ProGet. The package will be uploaded to this feed.
+        $ProGetPackageUri,
+
+        [Parameter(Mandatory=$true)]
+        [pscredential]
+        # The credential to use to upload the package to ProGet.
+        $ProGetCredential,
         
         [string[]]
         # A list of files and/or directories to exclude. Wildcards supported. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
@@ -68,13 +78,14 @@ function New-WhsCIAppPackage
     $Path = $Path | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
     if( $resolveErrors )
     {
+        throw ('Unable to create ''{0}'' package. One or more of the paths to include in the package don''t exist.'-f $Name)
         return
     }
 
     $arcPath = Join-Path -Path $RepositoryRoot -ChildPath 'Arc'
     if( -not (Test-Path -Path $arcPath -PathType Container) )
     {
-        Write-Error -Message ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
+        throw ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
         return
     }
 
@@ -129,6 +140,25 @@ function New-WhsCIAppPackage
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
+
+        # Upload to ProGet
+        $headers = @{ }
+        $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))
+        $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+        $headers.Add('Authorization', $creds)
+    
+        $result = Invoke-RestMethod -Method Put `
+                                    -Uri $ProGetPackageUri `
+                                    -ContentType 'application/octet-stream' `
+                                    -Body ([IO.File]::ReadAllBytes($outFile)) `
+                                    -Headers $headers
+
+        if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+        {
+            throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+        }
+
+        $outFile
     }
     finally
     {
