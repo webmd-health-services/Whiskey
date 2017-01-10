@@ -121,7 +121,12 @@ function New-WhsCIAppPackage
         $excludedFiles = Get-ChildItem -Path $arcPath -File | 
                             ForEach-Object { '/XF'; $_.FullName }
         $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
-        robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+        $operationDescription = 'adding Arc to package'
+        $shouldProcessCaption = ('creating {0} package' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+        {
+            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+        }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
@@ -136,7 +141,11 @@ function New-WhsCIAppPackage
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
             $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+            $operationDescription = 'adding {0}\**\({1}) to package' -f $itemName,($Include -join '|')
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            {
+                robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+            }
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
@@ -149,7 +158,8 @@ function New-WhsCIAppPackage
             $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
             $headers.Add('Authorization', $creds)
     
-            if( $PSCmdlet.ShouldProcess('upload package to ProGet', 'upload package to ProGet', 'upload package to ProGet') )
+            $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
                 $result = Invoke-RestMethod -Method Put `
                                             -Uri $ProGetPackageUri `
@@ -163,8 +173,8 @@ function New-WhsCIAppPackage
             }
         }
 
-        $shouldProcessDescription = ('creating package ''{0}''' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessDescription) )
+        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
         {
             $outFile
         }
