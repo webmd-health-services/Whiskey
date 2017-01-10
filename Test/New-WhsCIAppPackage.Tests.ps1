@@ -70,7 +70,7 @@ function Assert-NewWhsCIAppPackage
         $now = [DateTime]::Now
         $midnight = [DateTime]::Today
 
-        $Version = '{0}.{1}.{2}-final' -f $now.Year,$now.DayOfYear,($now - $midnight).TotalMilliseconds.ToInt32($null)
+        $Version = '{0}.{1}.{2}-final+80.feature-fubarsnafu.deadbee' -f $now.Year,$now.DayOfYear,($now - $midnight).TotalMilliseconds.ToInt32($null)
         Start-Sleep -Milliseconds 1
     }
 
@@ -155,7 +155,7 @@ function Assert-NewWhsCIAppPackage
     #region
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
-    $packageName = '{0}.{1}.upack' -f $Name,$Version
+    $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName

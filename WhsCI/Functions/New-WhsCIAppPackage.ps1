@@ -36,7 +36,7 @@ function New-WhsCIAppPackage
         $Description,
 
         [Parameter(Mandatory=$true)]
-        [string]
+        [SemVersion.SemanticVersion]
         # The package's version.
         $Version,
 
@@ -89,7 +89,9 @@ function New-WhsCIAppPackage
         return
     }
 
-    $fileName = '{0}.{1}.upack' -f $Name,$Version
+    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+    $fixRegex = '[{0}]' -f ($badChars -join '')
+    $fileName = '{0}.{1}.upack' -f $Name,($Version -replace $fixRegex,'-')
     $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot -WhatIf:$false
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
@@ -131,7 +133,7 @@ function New-WhsCIAppPackage
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
             name = $Name;
-            version = $Version;
+            version = $Version.ToString();
             title = $Name;
             description = $Description
         } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
