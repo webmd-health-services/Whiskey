@@ -151,7 +151,8 @@ function New-WhsCIAppPackage
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
         # Upload to ProGet
-        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' )
+        $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' -and $branch -match '^(release/.+|master|develop)$' )
         {
             $headers = @{ }
             $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))

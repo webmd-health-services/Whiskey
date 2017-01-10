@@ -56,7 +56,13 @@ function Assert-NewWhsCIAppPackage
         $ShouldNotCreatePackage,
 
         [Switch]
-        $ShouldReallyUploadToProGet
+        $ShouldReallyUploadToProGet,
+
+        [Switch]
+        $ShouldNotUploadPackage,
+
+        [Switch]
+        $ShouldUploadPackage
     )
 
     if( -not $Version )
@@ -251,13 +257,14 @@ function Assert-NewWhsCIAppPackage
         }
     }
 
-    if( $WithNoProGetParameters )
+    if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
         }
     }
-    else
+
+    if( $ShouldUploadPackage )
     {
         It 'should upload package to ProGet' {
             if( $ShouldReallyUploadToProGet )
@@ -335,7 +342,25 @@ function Initialize-Test
         $WhenUploadFails,
 
         [Switch]
-        $WhenReallyUploading
+        $WhenReallyUploading,
+
+        [Switch]
+        $OnFeatureBranch,
+
+        [Switch]
+        $OnMasterBranch,
+
+        [Switch]
+        $OnReleaseBranch,
+
+        [Switch]
+        $OnDevelopBranch,
+
+        [Switch]
+        $OnHotFixBranch,
+
+        [Switch]
+        $OnBugFixBranch
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -368,6 +393,30 @@ function Initialize-Test
         Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
 
+    $gitBranch = 'origin/develop'
+    if( $OnFeatureBranch )
+    {
+        $gitBranch = 'origin/feature/fubar'
+    }
+    if( $OnMasterBranch )
+    {
+        $gitBranch = 'origin/master'
+    }
+    if( $OnReleaseBranch )
+    {
+        $gitBranch = 'origin/release/5.1'
+    }
+    if( $OnHotFixBranch )
+    {
+        $gitBranch = 'origin/hotfix/snafu'
+    }
+    if( $OnBugFixBranch )
+    {
+        $gitBranch = 'origin/bugfix/fubarnsafu'
+    }
+
+    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+
     return $repoRoot
 }
 
@@ -380,7 +429,8 @@ Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
-                              -HasFiles 'html.html'
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage
 }
 
 Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
@@ -393,7 +443,8 @@ Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
-                              -NotHasFiles 'code.cs'
+                              -NotHasFiles 'code.cs' `
+                              -ShouldUploadPackage
 }
 
 Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
@@ -406,7 +457,8 @@ Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
-                              -NotHasFiles 'code.cs'    
+                              -NotHasFiles 'code.cs' `
+                              -ShouldUploadPackage 
 }
 
 Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excluded' {    
@@ -420,7 +472,8 @@ Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excl
                               -ThatExcludes 'html2.html','sub' `
                               -HasDirectories 'dir1' `
                               -HasFiles 'html.html' `
-                              -NotHasFiles 'html2.html','sub'
+                              -NotHasFiles 'html2.html','sub' `
+                              -ShouldUploadPackage
 }
 
 Describe 'New-WhsCIAppPackage.when paths don''t exist' {
@@ -431,6 +484,7 @@ Describe 'New-WhsCIAppPackage.when paths don''t exist' {
                               -ThatIncludes '*' `
                               -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                               -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
                               -ErrorAction SilentlyContinue
 }
 
@@ -443,7 +497,8 @@ Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
                               -ThatIncludes '*.html' `
                               -HasDirectories 'dir1' `
                               -HasFiles 'html.html' `
-                              -NotHasFiles '.git','.hg','obj'
+                              -NotHasFiles '.git','.hg','obj' `
+                              -ShouldUploadPackage
 }
 
 Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
@@ -457,6 +512,7 @@ Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
                               -ThatIncludes $fileNames `
                               -ShouldFailWithErrorMessage 'does not exist' `
                               -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
                               -ErrorAction SilentlyContinue
 }
 
@@ -494,7 +550,8 @@ Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
-                              -WithNoProGetParameters 
+                              -WithNoProGetParameters `
+                              -ShouldNotUploadPackage
 }
 
 Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
@@ -528,4 +585,76 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     It 'should not upload to ProGet' {
         Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
     }
+}
+
+Describe 'New-WhsCIAppPackage.when building on master branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnMasterBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on feature branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnFeatureBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldNotUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on release branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on develop branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnDevelopBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on hot fix branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnHotFixBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldNotUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnBugFixBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldNotUploadPackage
 }
