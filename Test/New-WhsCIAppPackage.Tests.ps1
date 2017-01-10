@@ -371,7 +371,7 @@ function Initialize-Test
     return $repoRoot
 }
 
-Describe 'New-WhsCIAppPackage when packaging everything in a directory' {
+Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -383,7 +383,7 @@ Describe 'New-WhsCIAppPackage when packaging everything in a directory' {
                               -HasFiles 'html.html'
 }
 
-Describe 'New-WhsCIAppPackage when packaging whitelisted files in a directory' {
+Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -396,7 +396,7 @@ Describe 'New-WhsCIAppPackage when packaging whitelisted files in a directory' {
                               -NotHasFiles 'code.cs'
 }
 
-Describe 'New-WhsCIAppPackage when packaging multiple directories' {
+Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -409,7 +409,7 @@ Describe 'New-WhsCIAppPackage when packaging multiple directories' {
                               -NotHasFiles 'code.cs'    
 }
 
-Describe 'New-WhsCIAppPackage when whitelist includes items that need to be excluded' {    
+Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -423,7 +423,7 @@ Describe 'New-WhsCIAppPackage when whitelist includes items that need to be excl
                               -NotHasFiles 'html2.html','sub'
 }
 
-Describe 'New-WhsCIAppPackage when paths don''t exist' {
+Describe 'New-WhsCIAppPackage.when paths don''t exist' {
 
     $Global:Error.Clear()
 
@@ -434,7 +434,7 @@ Describe 'New-WhsCIAppPackage when paths don''t exist' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage when path contains known directories to exclude' {
+Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
@@ -446,7 +446,7 @@ Describe 'New-WhsCIAppPackage when path contains known directories to exclude' {
                               -NotHasFiles '.git','.hg','obj'
 }
 
-Describe 'New-WhsCIAppPackage when repository doesn''t use Arc' {
+Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'index.aspx' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
@@ -460,7 +460,7 @@ Describe 'New-WhsCIAppPackage when repository doesn''t use Arc' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage when package upload fails' {
+Describe 'New-WhsCIAppPackage.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
@@ -473,7 +473,7 @@ Describe 'New-WhsCIAppPackage when package upload fails' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage when really uploading package' {
+Describe 'New-WhsCIAppPackage.when really uploading package' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
