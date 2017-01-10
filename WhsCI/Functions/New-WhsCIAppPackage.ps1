@@ -121,7 +121,7 @@ function New-WhsCIAppPackage
         $excludedFiles = Get-ChildItem -Path $arcPath -File | 
                             ForEach-Object { '/XF'; $_.FullName }
         $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
-        $operationDescription = 'adding Arc to package'
+        $operationDescription = 'packaging Arc'
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
         {
@@ -141,7 +141,7 @@ function New-WhsCIAppPackage
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
             $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            $operationDescription = 'adding {0}\**\({1}) to package' -f $itemName,($Include -join '|')
+            $operationDescription = 'packaging {0}' -f $itemName
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
                 robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
