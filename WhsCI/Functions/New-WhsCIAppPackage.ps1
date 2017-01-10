@@ -6,7 +6,7 @@ function New-WhsCIAppPackage
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIAppPackage` function creates a universal ProGet package for a WHS application and uploads it to ProGet. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    The `New-WhsCIAppPackage` function creates a universal ProGet package for a WHS application and optionally uploads it to ProGet. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively.
 
     It returns an `IO.FileInfo` object for the created package.
 
@@ -18,7 +18,7 @@ function New-WhsCIAppPackage
      * `.git`
      * `.hg`
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='NoUpload')]
     param(
         [Parameter(Mandatory=$true)]
         [string]
@@ -50,12 +50,12 @@ function New-WhsCIAppPackage
         # The whitelist of files to include in the artifact. Wildcards supported. Only files that match entries in this list are included in the package.
         $Include,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='WithUpload')]
         [string]
         # The URI to the package's feed in ProGet. The package will be uploaded to this feed.
         $ProGetPackageUri,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='WithUpload')]
         [pscredential]
         # The credential to use to upload the package to ProGet.
         $ProGetCredential,
@@ -142,20 +142,23 @@ function New-WhsCIAppPackage
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
         # Upload to ProGet
-        $headers = @{ }
-        $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))
-        $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-        $headers.Add('Authorization', $creds)
-    
-        $result = Invoke-RestMethod -Method Put `
-                                    -Uri $ProGetPackageUri `
-                                    -ContentType 'application/octet-stream' `
-                                    -Body ([IO.File]::ReadAllBytes($outFile)) `
-                                    -Headers $headers
-
-        if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' )
         {
-            throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+            $headers = @{ }
+            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))
+            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+            $headers.Add('Authorization', $creds)
+    
+            $result = Invoke-RestMethod -Method Put `
+                                        -Uri $ProGetPackageUri `
+                                        -ContentType 'application/octet-stream' `
+                                        -Body ([IO.File]::ReadAllBytes($outFile)) `
+                                        -Headers $headers
+
+            if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+            {
+                throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+            }
         }
 
         $outFile

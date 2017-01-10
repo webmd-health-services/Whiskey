@@ -1,4 +1,3 @@
-
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
@@ -37,6 +36,9 @@ function Assert-NewWhsCIAppPackage
 
         [string]
         $Version,
+
+        [Switch]
+        $WithNoProGetParameters,
 
         [string[]]
         $HasDirectories,
@@ -93,6 +95,15 @@ function Assert-NewWhsCIAppPackage
     $ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     $failed = $false
     $At = $null
+
+    $progetParams = @{
+                        ProGetPackageUri = $UploadedTo;
+                        ProGetCredential = $UploadedBy;
+                     }
+    if( $WithNoProGetParameters )
+    {
+        $progetParams = @{}
+    }
     try
     {
         $At = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
@@ -101,8 +112,7 @@ function Assert-NewWhsCIAppPackage
                                   -Version $Version `
                                   -Path $ForPath `
                                   -Include $ThatIncludes `
-                                  -ProGetPackageUri $UploadedTo `
-                                  -ProGetCredential $UploadedBy `
+                                  @progetParams `
                                   @excludeParam
     }
     catch
@@ -241,36 +251,45 @@ function Assert-NewWhsCIAppPackage
         }
     }
 
-    It 'should upload package to ProGet' {
-        if( $ShouldReallyUploadToProGet )
-        {
-            $packageInfo = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/test/packages?name={0}' -f $Name)
-            $packageInfo | Should Not BeNullOrEmpty
-            $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
-            $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
+    if( $WithNoProGetParameters )
+    {
+        It 'should not upload package to ProGet' {
+            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
         }
-        else
-        {
-            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
-                #$DebugPreference = 'Continue'
+    }
+    else
+    {
+        It 'should upload package to ProGet' {
+            if( $ShouldReallyUploadToProGet )
+            {
+                $packageInfo = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/test/packages?name={0}' -f $Name)
+                $packageInfo | Should Not BeNullOrEmpty
+                $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
+                $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
+            }
+            else
+            {
+                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
+                    #$DebugPreference = 'Continue'
 
-                $expectedMethod = 'Put'
-                Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
-                Write-Debug -Message ('               actual    {0}' -f $Method)
+                    $expectedMethod = 'Put'
+                    Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
+                    Write-Debug -Message ('               actual    {0}' -f $Method)
 
-                Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
-                Write-Debug -Message ('               actual    {0}' -f $Uri)
+                    Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
+                    Write-Debug -Message ('               actual    {0}' -f $Uri)
 
-                $expectedContentType = 'application/octet-stream'
-                Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
-                Write-Debug -Message ('               actual    {0}' -f $ContentType)
+                    $expectedContentType = 'application/octet-stream'
+                    Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
+                    Write-Debug -Message ('               actual    {0}' -f $ContentType)
 
-                $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $UploadedBy.UserName,$UploadedBy.GetNetworkCredential().Password))
-                $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-                Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
-                Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
+                    $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $UploadedBy.UserName,$UploadedBy.GetNetworkCredential().Password))
+                    $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+                    Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
+                    Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
 
-                return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+                    return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+                }
             }
         }
     }
@@ -464,4 +483,16 @@ Describe 'New-WhsCIAppPackage when really uploading package' {
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldReallyUploadToProGet 
+}
+
+Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -WithNoProGetParameters 
 }
