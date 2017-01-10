@@ -345,7 +345,7 @@ function Initialize-Test
     {
         $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
         $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
-        robocopy $arcSourcePath $arcDestinationPath '/MIR'
+        robocopy $arcSourcePath $arcDestinationPath '/MIR' | Write-Verbose
     }
 
     $DirectoryName | ForEach-Object { 
@@ -354,7 +354,7 @@ function Initialize-Test
         Install-Directory -Path $dirPath
         foreach( $file in $FileName )
         {
-            New-Item -Path (Join-Path -Path $dirPath -ChildPath $file) -ItemType 'File'
+            New-Item -Path (Join-Path -Path $dirPath -ChildPath $file) -ItemType 'File' | Out-Null
         }
     }
 
@@ -495,4 +495,37 @@ Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
                               -WithNoProGetParameters 
+}
+
+Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
+    $Global:Error.Clear()
+
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+    $result = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
+                                  -Name 'Package' `
+                                  -Description 'Description' `
+                                  -Version '1.2.3' `
+                                  -Path (Join-Path -Path $repoRoot -ChildPath 'dir1') `
+                                  -Include '*.html' `
+                                  -ProGetPackageUri 'fubarsnafu' `
+                                  -ProGetCredential (New-Credential -UserName 'fubar' -Password 'snafu') `
+                                  -WhatIf
+
+    It 'should write no errors' {
+        $Global:Error | Should BeNullOrEmpty
+    }
+
+    It 'should return nothing' {
+        $result | Should BeNullOrEmpty
+    }
+
+    It 'should not create package' {
+        Get-ChildItem -Path $TestDrive.FullName -Filter '*.upack' -Recurse | Should BeNullOrEmpty
+    }
+
+    It 'should not upload to ProGet' {
+        Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
+    }
 }

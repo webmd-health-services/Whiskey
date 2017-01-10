@@ -18,7 +18,7 @@ function New-WhsCIAppPackage
      * `.git`
      * `.hg`
     #>
-    [CmdletBinding(DefaultParameterSetName='NoUpload')]
+    [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
         [Parameter(Mandatory=$true)]
         [string]
@@ -90,7 +90,7 @@ function New-WhsCIAppPackage
     }
 
     $fileName = '{0}.{1}.upack' -f $Name,$Version
-    $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot
+    $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot -WhatIf:$false
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
@@ -98,9 +98,9 @@ function New-WhsCIAppPackage
     $tempBaseName = 'WhsCI+New-WhsCIAppPackage+{0}' -f $Name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
 
     try
     {
@@ -129,7 +129,7 @@ function New-WhsCIAppPackage
             version = $Version;
             title = $Name;
             description = $Description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
 
         foreach( $item in $Path )
         {
@@ -149,23 +149,29 @@ function New-WhsCIAppPackage
             $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
             $headers.Add('Authorization', $creds)
     
-            $result = Invoke-RestMethod -Method Put `
-                                        -Uri $ProGetPackageUri `
-                                        -ContentType 'application/octet-stream' `
-                                        -Body ([IO.File]::ReadAllBytes($outFile)) `
-                                        -Headers $headers
-
-            if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+            if( $PSCmdlet.ShouldProcess('upload package to ProGet', 'upload package to ProGet', 'upload package to ProGet') )
             {
-                throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+                $result = Invoke-RestMethod -Method Put `
+                                            -Uri $ProGetPackageUri `
+                                            -ContentType 'application/octet-stream' `
+                                            -Body ([IO.File]::ReadAllBytes($outFile)) `
+                                            -Headers $headers
+                if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+                {
+                    throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+                }
             }
         }
 
-        $outFile
+        $shouldProcessDescription = ('creating package ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessDescription) )
+        {
+            $outFile
+        }
     }
     finally
     {
         Get-ChildItem -Path $env:TEMP -Filter ('{0}+*' -f $tempBaseName) |
-            Remove-Item -Recurse -Force 
+            Remove-Item -Recurse -Force -WhatIf:$false
     }
 }

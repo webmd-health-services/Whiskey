@@ -17,7 +17,7 @@ function Get-WhsCIOutputDirectory
 
     Demonstrates how to call this function. You pass it the path to the working directory and it returns the path to a directory where you can put build output.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [string]
