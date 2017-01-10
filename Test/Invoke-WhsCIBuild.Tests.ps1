@@ -1039,16 +1039,19 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
 
     $progetUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
     Context 'really packaging by build server' {
+        $semVersion = [SemVersion.SemanticVersion]::Parse(('{0}-prerelease.1+build' -f $packageVersion))
         $testProGetFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test' -ForWrite
         Mock -CommandName 'Get-ProGetUri' -ModuleName 'WhsCI' -MockWith { return $testProGetFeedUri }.GetNewClosure()
-
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
         Invoke-Build -ByJenkins -WithConfig $configPath
 
-        Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $packageVersion
+        Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $semVersion
     }
 
     Context 'mock packager by build server' {
+        $semVersion = [SemVersion.SemanticVersion]::Parse(('{0}-prerelease.1+build' -f $packageVersion))
         Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
 
         Invoke-Build -ByJenkins -WithConfig $configPath
 
@@ -1065,7 +1068,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             Write-Debug -Message ('Name              expected  {0}' -f $Name)
             Write-Debug -Message ('                  actual    {0}' -f $packageName)
             Write-Debug -Message ('Version           expected  {0}' -f $Version)
-            Write-Debug -Message ('                  actual    {0}' -f $packageVersion)
+            Write-Debug -Message ('                  actual    {0}' -f $semVersion)
             Write-Debug -Message ('Path              expected  {0}' -f $fullDirs)
             Write-Debug -Message ('                  actual    {0}' -f $Path[0])
             Write-Debug -Message ('Include           expected  {0}' -f $whitelist)
@@ -1087,7 +1090,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             return $RepositoryRoot -eq $root -and 
                    $Description -eq $packageDescription -and
                    $Name -eq $packageName -and
-                   $Version -eq $packageVersion -and
+                   $Version -eq $semVersion -and
                    $Path[0] -eq $fullDirs -and
                    $Include[0] -eq $whitelist -and
                    $Exclude -eq $null -and

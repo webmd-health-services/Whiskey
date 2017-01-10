@@ -444,7 +444,7 @@ function Invoke-WhsCIBuild
                         New-WhsCIAppPackage -RepositoryRoot $root `
                                             -Name $task['Name'] `
                                             -Description $task['Description'] `
-                                            -Version $nugetVersion `
+                                            -Version $semVersion `
                                             -Path $taskPaths `
                                             -Include $task['Include'] `
                                             @excludeParam `
