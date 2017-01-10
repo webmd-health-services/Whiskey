@@ -1015,10 +1015,13 @@ Version: 2.13.80
 }
 
 Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
-    $packageVersion = '4.23.80'
+    $now = Get-Date
+    $today = [datetime]::Today
+    $packageVersion = '{0}.{1}.{2}' -f $now.Year,$now.DayOfYear,($now - $today).TotalMilliseconds.ToInt32($null)
+    Start-Sleep -Milliseconds 1
     $dirs = 'dir1'
     $whitelist = 'html.html'
-    $packageName = 'MyPackage'
+    $packageName = 'WhsCI WhsAppPackage Task Test Package'
     $packageDescription = 'description'
     $properties = @{
                         Include = $whitelist;
@@ -1034,43 +1037,78 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
     Install-Directory -Path $dirPath
     '' | Set-Content -Path (Join-Path -Path $dirPath -ChildPath $whitelist)
 
-    Context 'really packaging' {
+    $progetUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+    Context 'really packaging by build server' {
+        $testProGetFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test' -ForWrite
+        Mock -CommandName 'Get-ProGetUri' -ModuleName 'WhsCI' -MockWith { return $testProGetFeedUri }.GetNewClosure()
+
         Invoke-Build -ByJenkins -WithConfig $configPath
 
         Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $packageVersion
     }
 
-    Context 'mock packager' {
+    Context 'mock packager by build server' {
         Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
 
         Invoke-Build -ByJenkins -WithConfig $configPath
 
+        $progetCred = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
-            $DebugPreference = 'Continue'
+            #$DebugPreference = 'Continue'
 
-            Write-Debug -Message ('RepositoryRoot  expected  {0}' -f $RepositoryRoot)
-            Write-Debug -Message ('                actual    {0}' -f $root)
-            Write-Debug -Message ('Description     expected  {0}' -f $Description)
-            Write-Debug -Message ('                actual    {0}' -f $packageDescription)
-            Write-Debug -Message ('Name            expected  {0}' -f $Name)
-            Write-Debug -Message ('                actual    {0}' -f $packageName)
-            Write-Debug -Message ('Version         expected  {0}' -f $Version)
-            Write-Debug -Message ('                actual    {0}' -f $packageVersion)
-            Write-Debug -Message ('Path            expected  {0}' -f $fullDirs)
-            Write-Debug -Message ('                actual    {0}' -f $Path[0])
-            Write-Debug -Message ('Include         expected  {0}' -f $whitelist)
-            Write-Debug -Message ('                actual    {0}' -f $Include[0])
-            Write-Debug -Message ('Exclude         expected  {0}' -f $true)
-            Write-Debug -Message ('                actual    {0}' -f ($Exclude -eq $null))
+            Write-Debug -Message ('RepositoryRoot    expected  {0}' -f $RepositoryRoot)
+            Write-Debug -Message ('                  actual    {0}' -f $root)
+            Write-Debug -Message ('Description       expected  {0}' -f $Description)
+            Write-Debug -Message ('                  actual    {0}' -f $packageDescription)
+            Write-Debug -Message ('Name              expected  {0}' -f $Name)
+            Write-Debug -Message ('                  actual    {0}' -f $packageName)
+            Write-Debug -Message ('Version           expected  {0}' -f $Version)
+            Write-Debug -Message ('                  actual    {0}' -f $packageVersion)
+            Write-Debug -Message ('Path              expected  {0}' -f $fullDirs)
+            Write-Debug -Message ('                  actual    {0}' -f $Path[0])
+            Write-Debug -Message ('Include           expected  {0}' -f $whitelist)
+            Write-Debug -Message ('                  actual    {0}' -f $Include[0])
+            Write-Debug -Message ('Exclude           expected  {0}' -f $true)
+            Write-Debug -Message ('                  actual    {0}' -f ($Exclude -eq $null))
+            Write-Debug -Message ('ProGetPackageUri  expected  {0}' -f $progetUri)
+            Write-Debug -Message ('                  actual    {0}' -f $ProgetPackageUri)
+            Write-Debug -Message ('ProGetCredential  expected  {0}' -f $progetCred.UserName)
+            Write-Debug -Message ('                  actual    {0}' -f $ProGetCredential.UserName)
+            $hasher = New-Object -TypeName 'Security.Cryptography.Sha512Managed'
+            $expectedPassword = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($progetCred.GetNetworkCredential().Password))
+            $expectedPassword = [Text.Encoding]::UTF8.GetString($expectedPassword)
+            $password = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($ProGetCredential.GetNetworkCredential().Password))
+            $password = [Text.Encoding]::UTF8.GetString($password)
+            Write-Debug -Message ('ProGetCredential  expected  {0}' -f $expectedPassword)
+            Write-Debug -Message ('                  actual    {0}' -f $password)
+
             return $RepositoryRoot -eq $root -and 
                    $Description -eq $packageDescription -and
                    $Name -eq $packageName -and
                    $Version -eq $packageVersion -and
                    $Path[0] -eq $fullDirs -and
                    $Include[0] -eq $whitelist -and
-                   $Exclude -eq $null
+                   $Exclude -eq $null -and
+                   $ProGetPackageUri -eq $progetUri -and
+                   $password -eq $expectedPassword
+        }
+    }
+
+    Context 'by developer' {
+        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
+
+        Invoke-Build -ByDeveloper -WithConfig $configPath
+
+        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
+            #$DebugPreference = 'Continue'
+
+            Write-Debug -Message ('ProGetPackageUri  expected  {0}' -f '$null')
+            Write-Debug -Message ('                  actual    {0}' -f $ProgetPackageUri)
+            Write-Debug -Message ('ProGetCredential  expected  {0}' -f '$null')
+            Write-Debug -Message ('                  actual    {0}' -f $ProGetCredential)
+            $ProGetPackageUri -eq $null -and $ProGetCredential -eq $null
         }
     }
 }
