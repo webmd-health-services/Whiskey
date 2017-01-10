@@ -430,10 +430,15 @@ function Invoke-WhsCIBuild
                         }
 
                         $proGetParams = @{ }
+                        $whatIfParam = @{}
                         if( $runningUnderBuildServer )
                         {
                             $proGetParams['ProGetPackageUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
                             $proGetParams['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+                        }
+                        else
+                        {
+                            $whatIfParam['WhatIf'] = $true
                         }
 
                         New-WhsCIAppPackage -RepositoryRoot $root `
@@ -443,7 +448,8 @@ function Invoke-WhsCIBuild
                                             -Path $taskPaths `
                                             -Include $task['Include'] `
                                             @excludeParam `
-                                            @proGetParams
+                                            @proGetParams `
+                                            @whatIfParam
                     }
 
                     default {

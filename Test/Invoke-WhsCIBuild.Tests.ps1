@@ -1108,7 +1108,9 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             Write-Debug -Message ('                  actual    {0}' -f $ProgetPackageUri)
             Write-Debug -Message ('ProGetCredential  expected  {0}' -f '$null')
             Write-Debug -Message ('                  actual    {0}' -f $ProGetCredential)
-            $ProGetPackageUri -eq $null -and $ProGetCredential -eq $null
+            Write-Debug -Message ('WhatIfPreference  expected  {0}' -f $true)
+            Write-Debug -Message ('                  actual    {0}' -f $WhatIfPreference)
+            $ProGetPackageUri -eq $null -and $ProGetCredential -eq $null -and $WhatIfPreference -eq $true
         }
     }
 }
