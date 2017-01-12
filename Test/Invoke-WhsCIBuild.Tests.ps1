@@ -316,7 +316,10 @@ function Invoke-Build
         $ThatFails,
 
         [string]
-        $DownloadRoot
+        $DownloadRoot,
+
+        [Switch]
+        $NoGitRepository
     )
 
     $runningUnderABuildServer = $false
@@ -331,6 +334,11 @@ function Invoke-Build
         New-MockBuildServer
     }
     New-MockBitbucketServer
+
+    if( -not ($NoGitRepository) )
+    {
+        Mock -CommandName 'Assert-WhsCIVersionAvailable' -ModuleName 'WhsCI' -MockWith { return $Version }
+    }
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
     $devParams = @{ }
@@ -665,7 +673,7 @@ Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Prop
 #>
 Describe 'Invoke-WhsCIBuild.when Version in configuration file is invalid' {
     $configPath = New-TestWhsBuildFile -Yaml @'
-Version: 1
+Version: fubar
 '@
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
 
@@ -1040,7 +1048,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
-            #$DebugPreference = 'Continue'
+            $DebugPreference = 'Continue'
 
             Write-Debug -Message ('RepositoryRoot  expected  {0}' -f $RepositoryRoot)
             Write-Debug -Message ('                actual    {0}' -f $root)
@@ -1173,4 +1181,21 @@ Describe 'Invoke-WhsCIBuild.when Node task fails' {
     Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
 
     Invoke-Build -ByJenkins -WithConfig $whsbuildPath -ThatFails -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIBuild.when Git repository doesn''t exist' {
+    $Global:Error.Clear()
+    $version = '3.2.1-rc.1'
+    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path 'FubarSnafu.csproj' -Version $version
+
+    New-MSBuildProject -FileName 'FubarSnafu.csproj'
+
+    Invoke-Build -ByJenkins -WithConfig $configPath -NoGitRepository -ThatFails -ErrorAction SilentlyContinue
+
+    # i.e. it doesn't move the build into the repository where the build is happening
+    It 'should fail because a Git repository can''t be found' {
+        $Global:Error | Should Match 'not in a Git repository'
+    }
+
+    Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName 'FubarSnafu.csproj'
 }
