@@ -51,13 +51,13 @@ foreach( $key in $testCases.Keys )
 
     Describe ('ConvertTo-WhsCISemanticVersion.when converting ''[{0}]{1}'' by build server' -f $key.GetType().Name.ToLowerInvariant(),$key) {
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
-        $branch = 'origin/develop'
+        $branch = 'origin/feature/fubar'
         $commitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:BUILD_ID' }
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = $branch } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = $commitID } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
         
-        $buildInfo = '{0}.develop.{2}' -f $buildID,'develop',$commitID.Substring(0,7)
+        $buildInfo = '{0}.feature-fubar.{2}' -f $buildID,'feature-fubar',$commitID.Substring(0,7)
         $expectedSemVer = New-Object 'SemVersion.SemanticVersion' $buildServerSemVer.Major,$buildServerSemVer.Minor,$buildServerSemVer.Patch,$buildServerSemVer.Prerelease,$buildInfo
         It ('should be ''{0}''' -f $expectedSemVer) {
             $key | ConvertTo-WhsCISemanticVersion | Should Be $expectedSemVer

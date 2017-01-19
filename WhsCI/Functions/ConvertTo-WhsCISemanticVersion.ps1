@@ -50,6 +50,7 @@ function ConvertTo-WhsCISemanticVersion
             $buildID = (Get-Item -Path 'env:BUILD_ID').Value
             $patch = $buildID
             $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+            $branch = $branch -replace '[^A-Za-z0-9-]','-'
             $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
             $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
         }

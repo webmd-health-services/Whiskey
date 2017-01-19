@@ -6,7 +6,7 @@ function New-WhsCIAppPackage
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIAppPackage` function creates a package for a WHS application. It creates a universal ProGet package. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    The `New-WhsCIAppPackage` function creates a universal ProGet package for a WHS application and optionally uploads it to ProGet. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively.
 
     It returns an `IO.FileInfo` object for the created package.
 
@@ -18,7 +18,7 @@ function New-WhsCIAppPackage
      * `.git`
      * `.hg`
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
         [Parameter(Mandatory=$true)]
         [string]
@@ -36,7 +36,7 @@ function New-WhsCIAppPackage
         $Description,
 
         [Parameter(Mandatory=$true)]
-        [string]
+        [SemVersion.SemanticVersion]
         # The package's version.
         $Version,
 
@@ -49,6 +49,16 @@ function New-WhsCIAppPackage
         [string[]]
         # The whitelist of files to include in the artifact. Wildcards supported. Only files that match entries in this list are included in the package.
         $Include,
+
+        [Parameter(Mandatory=$true,ParameterSetName='WithUpload')]
+        [string]
+        # The URI to the package's feed in ProGet. The package will be uploaded to this feed.
+        $ProGetPackageUri,
+
+        [Parameter(Mandatory=$true,ParameterSetName='WithUpload')]
+        [pscredential]
+        # The credential to use to upload the package to ProGet.
+        $ProGetCredential,
         
         [string[]]
         # A list of files and/or directories to exclude. Wildcards supported. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
@@ -68,18 +78,21 @@ function New-WhsCIAppPackage
     $Path = $Path | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
     if( $resolveErrors )
     {
+        throw ('Unable to create ''{0}'' package. One or more of the paths to include in the package don''t exist.'-f $Name)
         return
     }
 
     $arcPath = Join-Path -Path $RepositoryRoot -ChildPath 'Arc'
     if( -not (Test-Path -Path $arcPath -PathType Container) )
     {
-        Write-Error -Message ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
+        throw ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
         return
     }
 
-    $fileName = '{0}.{1}.upack' -f $Name,$Version
-    $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot
+    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+    $fixRegex = '[{0}]' -f ($badChars -join '')
+    $fileName = '{0}.{1}.upack' -f $Name,($Version -replace $fixRegex,'-')
+    $outDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $RepositoryRoot -WhatIf:$false
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
@@ -87,9 +100,9 @@ function New-WhsCIAppPackage
     $tempBaseName = 'WhsCI+New-WhsCIAppPackage+{0}' -f $Name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
 
     try
     {
@@ -110,29 +123,68 @@ function New-WhsCIAppPackage
         $excludedFiles = Get-ChildItem -Path $arcPath -File | 
                             ForEach-Object { '/XF'; $_.FullName }
         $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
-        robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+        $operationDescription = 'packaging Arc'
+        $shouldProcessCaption = ('creating {0} package' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+        {
+            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+        }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
             name = $Name;
-            version = $Version;
+            version = $Version.ToString();
             title = $Name;
             description = $Description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
 
         foreach( $item in $Path )
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
             $excludeParams = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+            $operationDescription = 'packaging {0}' -f $itemName
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            {
+                robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+            }
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
+
+        # Upload to ProGet
+        $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' -and $branch -match '^(release/.+|master|develop)$' )
+        {
+            $headers = @{ }
+            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))
+            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+            $headers.Add('Authorization', $creds)
+    
+            $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            {
+                $result = Invoke-RestMethod -Method Put `
+                                            -Uri $ProGetPackageUri `
+                                            -ContentType 'application/octet-stream' `
+                                            -Body ([IO.File]::ReadAllBytes($outFile)) `
+                                            -Headers $headers
+                if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+                {
+                    throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+                }
+            }
+        }
+
+        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
+        {
+            $outFile
+        }
     }
     finally
     {
         Get-ChildItem -Path $env:TEMP -Filter ('{0}+*' -f $tempBaseName) |
-            Remove-Item -Recurse -Force 
+            Remove-Item -Recurse -Force -WhatIf:$false
     }
 }
