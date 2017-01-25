@@ -72,3 +72,10 @@ foreach( $key in $testCases.Keys )
         }
     }
 }
+
+Describe 'ConvertTo-WhsCISemanticVersion.when there is no version' {
+    $version = (@{})['Version'] | ConvertTo-WhsCISemanticVersion
+    It 'should use date-based version number' {
+        $version | Should Match ('^{0}\+' -f [regex]::Escape((Get-Date).ToString('yyyy.Mdd.0')))
+    }
+}

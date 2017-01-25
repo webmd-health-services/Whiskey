@@ -261,23 +261,17 @@ function Invoke-WhsCIBuild
     {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
-        [SemVersion.SemanticVersion]$semVersion = $null
-        [version]$version = $null
-        $nugetVersion = $null
-        if( ($config.ContainsKey('Version')) )
+        [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
+        if( -not $semVersion )
         {
-            $semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
-            if( -not $semVersion )
-            {
-                throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
-                return $false
-            }
-
-            $version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-            # NuGet doesn't support build metadata. Make sure it isn't there.
-            $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
-            Write-Verbose -Message ('Building version {0}/{1}.' -f $semVersion,$nugetVersion)
+            throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
+            return $false
         }
+
+        [version]$version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+        # NuGet doesn't support build metadata. Make sure it isn't there.
+        $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
+        Write-Verbose -Message ('Building version {0}/{1}.' -f $semVersion,$nugetVersion)
 
         if( $config.ContainsKey('BuildTasks') )
         {

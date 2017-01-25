@@ -28,7 +28,7 @@ function ConvertTo-WhsCISemanticVersion
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline=$true)]
         [object]
         # The object to convert to a semantic version. Can be a version string, number, or date/time.
         $InputObject,
@@ -42,6 +42,11 @@ function ConvertTo-WhsCISemanticVersion
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+        if( -not $InputObject )
+        {
+            $InputObject = (Get-Date).ToString('yyyy.MMdd')
+        }
 
         $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
         $patch = '0'
