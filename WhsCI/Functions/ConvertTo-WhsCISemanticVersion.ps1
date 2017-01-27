@@ -48,7 +48,8 @@ function ConvertTo-WhsCISemanticVersion
             $InputObject = (Get-Date).ToString('yyyy.MMdd')
         }
 
-        $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
+        $buildInfo = $buildInfoWithBuildNumber = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
+        
         $patch = '0'
         if( (Test-WhsCIRunByBuildServer) )
         {
@@ -57,7 +58,8 @@ function ConvertTo-WhsCISemanticVersion
             $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
             $branch = $branch -replace '[^A-Za-z0-9-]','-'
             $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
-            $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
+            $buildInfo = '{0}.{1}' -f $branch,$commitID
+            $buildInfoWithBuildNumber = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
         }
 
         if( $InputObject -is [string] )
@@ -86,6 +88,7 @@ function ConvertTo-WhsCISemanticVersion
                 $patch -= 1900
             }
             $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$patch
+            $buildInfo = $buildInfoWithBuildNumber
         }
         elseif( $InputObject -is [double] )
         {
@@ -99,6 +102,10 @@ function ConvertTo-WhsCISemanticVersion
         elseif( $InputObject -is [int] )
         {
             $InputObject = '{0}.0.{1}' -f $InputObject,$patch
+        }
+        else
+        {
+            $buildInfo = $buildInfoWithBuildNumber
         }
 
         $semVersion = $null
