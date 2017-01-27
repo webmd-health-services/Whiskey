@@ -1,3 +1,7 @@
-.output/**
-Pester/**
+**/.output/**
 Carbon/**
+LibGit2/**
+Pester/**
+Test/Assemblies/**/obj/**
+Test/Assemblies/**/bin/**
+Test/Assemblies/**/packages/**
