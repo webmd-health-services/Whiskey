@@ -28,7 +28,7 @@ function ConvertTo-WhsCISemanticVersion
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline=$true)]
         [object]
         # The object to convert to a semantic version. Can be a version string, number, or date/time.
         $InputObject,
@@ -43,7 +43,13 @@ function ConvertTo-WhsCISemanticVersion
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        $buildInfo = '{0}@{1}' -f $env:USERNAME,$env:COMPUTERNAME
+        if( -not $InputObject )
+        {
+            $InputObject = (Get-Date).ToString('yyyy.MMdd')
+        }
+
+        $buildInfo = $buildInfoWithBuildNumber = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
+        
         $patch = '0'
         if( (Test-WhsCIRunByBuildServer) )
         {
@@ -52,7 +58,8 @@ function ConvertTo-WhsCISemanticVersion
             $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
             $branch = $branch -replace '[^A-Za-z0-9-]','-'
             $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
-            $buildInfo = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
+            $buildInfo = '{0}.{1}' -f $branch,$commitID
+            $buildInfoWithBuildNumber = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
         }
 
         if( $InputObject -is [string] )
@@ -81,6 +88,7 @@ function ConvertTo-WhsCISemanticVersion
                 $patch -= 1900
             }
             $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$patch
+            $buildInfo = $buildInfoWithBuildNumber
         }
         elseif( $InputObject -is [double] )
         {
@@ -94,6 +102,10 @@ function ConvertTo-WhsCISemanticVersion
         elseif( $InputObject -is [int] )
         {
             $InputObject = '{0}.0.{1}' -f $InputObject,$patch
+        }
+        else
+        {
+            $buildInfo = $buildInfoWithBuildNumber
         }
 
         $semVersion = $null

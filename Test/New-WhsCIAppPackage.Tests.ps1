@@ -101,10 +101,12 @@ function Assert-NewWhsCIAppPackage
     $ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     $failed = $false
     $At = $null
+    $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
 
     $progetParams = @{
                         ProGetPackageUri = $UploadedTo;
                         ProGetCredential = $UploadedBy;
+                        BuildMasterSession = $bmSession;
                      }
     if( $WithNoProGetParameters )
     {
@@ -261,6 +263,8 @@ function Assert-NewWhsCIAppPackage
     {
         It 'should not upload package to ProGet' {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
         }
     }
 
@@ -297,6 +301,51 @@ function Assert-NewWhsCIAppPackage
 
                     return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
                 }
+            }
+        }
+
+        $expectedReleaseName = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+        $expectedReleaseName = $expectedReleaseName -replace '/.*$',''
+        $expectedAppName = $Name
+
+        It 'should get release from BuildMaster' {
+            
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
+                Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
+                Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
+                Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
+                Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
+                Write-Debug -Message ('                actual    {0}' -f $Application)
+                Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
+                Write-Debug -Message ('                actual    {0}' -f $Name)
+                return $bmSession.Uri -eq $Session.Uri -and `
+                       $bmSession.ApiKey -eq $Session.ApiKey -and `
+                       $expectedAppName -eq $Application -and `
+                       $expectedReleaseName -eq $Name
+            }
+        }
+
+        It 'should create release package in BuildMaster' {
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                Write-Debug -Message ('Release.id                  expected  ^\d+$')
+                Write-Debug -Message ('                            actual    {0}' -f $Release.id)
+                $expectedPackageNumber = '{0}.{1}' -f ([SemVersion.SemanticVersion]$Version).Patch,$expectedReleaseName
+                Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
+                Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
+                Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
+                Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
+                return $bmSession.Uri -eq $Session.Uri -and `
+                       $bmSession.ApiKey -eq $Session.ApiKey -and `
+                       $Release.id -match '^\d+$' -and
+                       $expectedPackageNumber -eq $PackageNumber -and
+                       $Variable['ProGetPackageName'] -eq $Version
             }
         }
     }
@@ -354,6 +403,9 @@ function Initialize-Test
         $OnReleaseBranch,
 
         [Switch]
+        $OnPermanentReleaseBranch,
+
+        [Switch]
         $OnDevelopBranch,
 
         [Switch]
@@ -393,6 +445,9 @@ function Initialize-Test
         Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
 
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ 'id' = 54; } }
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
+
     $gitBranch = 'origin/develop'
     if( $OnFeatureBranch )
     {
@@ -406,6 +461,10 @@ function Initialize-Test
     {
         $gitBranch = 'origin/release/5.1'
     }
+    if( $OnPermanentReleaseBranch )
+    {
+        $gitBranch = 'origin/release'
+    }
     if( $OnHotFixBranch )
     {
         $gitBranch = 'origin/hotfix/snafu'
@@ -415,7 +474,10 @@ function Initialize-Test
         $gitBranch = 'origin/bugfix/fubarnsafu'
     }
 
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+    $filter = { $Path -eq 'env:GIT_BRANCH' }
+    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
 
     return $repoRoot
 }
@@ -568,6 +630,7 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
                                   -Include '*.html' `
                                   -ProGetPackageUri 'fubarsnafu' `
                                   -ProGetCredential (New-Credential -UserName 'fubar' -Password 'snafu') `
+                                  -BuildMasterSession (New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarsnafu') `
                                   -WhatIf
 
     It 'should write no errors' {
@@ -615,6 +678,18 @@ Describe 'New-WhsCIAppPackage.when building on release branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when building on long-lived release branch' {
+    $dirNames = @( 'dir1'  )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnPermanentReleaseBranch
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `

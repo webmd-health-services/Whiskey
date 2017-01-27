@@ -6,7 +6,7 @@ function New-WhsCIAppPackage
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIAppPackage` function creates a universal ProGet package for a WHS application and optionally uploads it to ProGet. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively.
+    The `New-WhsCIAppPackage` function creates an universal ProGet package for a WHS application, and optionally uploads it to ProGet and starts a deploy for the package in BuildMaster. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet and start a deploy, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively and a session to BuildMaster with the `BuildMasterSession` object.
 
     It returns an `IO.FileInfo` object for the created package.
 
@@ -17,6 +17,10 @@ function New-WhsCIAppPackage
      * `obj`
      * `.git`
      * `.hg`
+
+    If the application doesn't exist exist in ProGet, it is created.
+
+    The application must exist in BuildMaster and must have three releases: `develop` for deploying to Dev, `release` for deploying to Test, and `master` for deploying to Staging and Live. `New-WhsCIAppPackage` uses the current Git branch to determine which release to add the package to.
     #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
@@ -59,6 +63,11 @@ function New-WhsCIAppPackage
         [pscredential]
         # The credential to use to upload the package to ProGet.
         $ProGetCredential,
+
+        [Parameter(Mandatory=$true,ParameterSetName='WithUpload')]
+        [object]
+        # An object that represents the instance of BuildMaster to connect to.
+        $BuildMasterSession,
         
         [string[]]
         # A list of files and/or directories to exclude. Wildcards supported. If any file or directory that would match a pattern in the `Include` list matches an item in this list, it is not included in the package.
@@ -154,8 +163,10 @@ function New-WhsCIAppPackage
 
         # Upload to ProGet
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' -and $branch -match '^(release/.+|master|develop)$' )
+        $branch = $branch -replace '/.*$',''
+        if( $PSCmdlet.ParameterSetName -eq 'WithUpload' -and $branch -match '^(release|master|develop)$' )
         {
+            $branch = $Matches[1]
             $headers = @{ }
             $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $ProGetCredential.UserName,$ProGetCredential.GetNetworkCredential().Password))
             $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
@@ -174,6 +185,9 @@ function New-WhsCIAppPackage
                     throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
                 }
             }
+
+            $release = Get-BMRelease -Session $BuildMasterSession -Application $Name -Name $branch
+            New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber ('{0}.{1}' -f $Version.Patch,$branch) -Variable @{ 'ProGetPackageName' = $Version.ToString() }
         }
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)

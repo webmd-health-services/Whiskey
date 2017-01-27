@@ -101,7 +101,7 @@ function Invoke-WhsCIBuild
             
     ## WhsAppPackage
     
-    The WhsAppPackage task creates a WHS application deployment package. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
+    The WhsAppPackage task creates a WHS application deployment package. When run on the build server, under a develop, release, or master branch it also uploads the package to ProGet and starts a deploy in BuildMaster. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
     
     * `Path`: mandatory; the directories and files to include in the package. They will be added to the root of the package using the item's name.
     * `Name`: mandatory; the name of the package. Usually, this is the name of your application.
@@ -261,23 +261,17 @@ function Invoke-WhsCIBuild
     {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
-        [SemVersion.SemanticVersion]$semVersion = $null
-        [version]$version = $null
-        $nugetVersion = $null
-        if( ($config.ContainsKey('Version')) )
+        [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
+        if( -not $semVersion )
         {
-            $semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
-            if( -not $semVersion )
-            {
-                throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
-                return $false
-            }
-
-            $version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-            # NuGet doesn't support build metadata. Make sure it isn't there.
-            $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
-            Write-Verbose -Message ('Building version {0}/{1}.' -f $semVersion,$nugetVersion)
+            throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
+            return $false
         }
+
+        [version]$version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+        # NuGet doesn't support build metadata. Make sure it isn't there.
+        $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
+        Write-Verbose -Message ('Building version {0}/{1}.' -f $semVersion,$nugetVersion)
 
         if( $config.ContainsKey('BuildTasks') )
         {
@@ -435,6 +429,9 @@ function Invoke-WhsCIBuild
                         {
                             $proGetParams['ProGetPackageUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
                             $proGetParams['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+                            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
+                            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+                            $proGetParams['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
                         }
                         else
                         {
