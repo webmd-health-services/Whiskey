@@ -101,7 +101,7 @@ function Invoke-WhsCIBuild
             
     ## WhsAppPackage
     
-    The WhsAppPackage task creates a WHS application deployment package. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
+    The WhsAppPackage task creates a WHS application deployment package. When run on the build server, under a develop, release, or master branch it also uploads the package to ProGet and starts a deploy in BuildMaster. This package is saved in our artifact repository, deployed to servers, and installed. This task has the following elements:
     
     * `Path`: mandatory; the directories and files to include in the package. They will be added to the root of the package using the item's name.
     * `Name`: mandatory; the name of the package. Usually, this is the name of your application.
@@ -429,6 +429,9 @@ function Invoke-WhsCIBuild
                         {
                             $proGetParams['ProGetPackageUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
                             $proGetParams['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+                            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
+                            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+                            $proGetParams['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
                         }
                         else
                         {

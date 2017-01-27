@@ -293,6 +293,11 @@ function Assert-WhsAppPackageCreated
         $packagePath = Join-Path -Path $outputRoot -ChildPath $packageFileName
         $packagePath | Should Exist
     }
+
+    It 'should start deploy in BuildMaster' {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 1
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 1
+    }
 }
 #endregion
 
@@ -1043,6 +1048,8 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         $testProGetFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test' -ForWrite
         Mock -CommandName 'Get-ProGetUri' -ModuleName 'WhsCI' -MockWith { return $testProGetFeedUri }.GetNewClosure()
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
+        Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -MockWith { return [pscustomobject]@{ id = 455 } }
+        Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
         Invoke-Build -ByJenkins -WithConfig $configPath
 
         Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $semVersion
@@ -1056,36 +1063,46 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         Invoke-Build -ByJenkins -WithConfig $configPath
 
         $progetCred = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             $root = $configPath | Split-Path
             $fullDirs = Join-Path -Path $root -ChildPath $dirs
             #$DebugPreference = 'Continue'
 
-            Write-Debug -Message ('RepositoryRoot    expected  {0}' -f $RepositoryRoot)
-            Write-Debug -Message ('                  actual    {0}' -f $root)
-            Write-Debug -Message ('Description       expected  {0}' -f $Description)
-            Write-Debug -Message ('                  actual    {0}' -f $packageDescription)
-            Write-Debug -Message ('Name              expected  {0}' -f $Name)
-            Write-Debug -Message ('                  actual    {0}' -f $packageName)
-            Write-Debug -Message ('Version           expected  {0}' -f $Version)
-            Write-Debug -Message ('                  actual    {0}' -f $semVersion)
-            Write-Debug -Message ('Path              expected  {0}' -f $fullDirs)
-            Write-Debug -Message ('                  actual    {0}' -f $Path[0])
-            Write-Debug -Message ('Include           expected  {0}' -f $whitelist)
-            Write-Debug -Message ('                  actual    {0}' -f $Include[0])
-            Write-Debug -Message ('Exclude           expected  {0}' -f $true)
-            Write-Debug -Message ('                  actual    {0}' -f ($Exclude -eq $null))
-            Write-Debug -Message ('ProGetPackageUri  expected  {0}' -f $progetUri)
-            Write-Debug -Message ('                  actual    {0}' -f $ProgetPackageUri)
-            Write-Debug -Message ('ProGetCredential  expected  {0}' -f $progetCred.UserName)
-            Write-Debug -Message ('                  actual    {0}' -f $ProGetCredential.UserName)
+            Write-Debug -Message ('RepositoryRoot             expected  {0}' -f $RepositoryRoot)
+            Write-Debug -Message ('                           actual    {0}' -f $root)
+            Write-Debug -Message ('Description                expected  {0}' -f $Description)
+            Write-Debug -Message ('                           actual    {0}' -f $packageDescription)
+            Write-Debug -Message ('Name                       expected  {0}' -f $Name)
+            Write-Debug -Message ('                           actual    {0}' -f $packageName)
+            Write-Debug -Message ('Version                    expected  {0}' -f $Version)
+            Write-Debug -Message ('                           actual    {0}' -f $semVersion)
+            Write-Debug -Message ('Path                       expected  {0}' -f $fullDirs)
+            Write-Debug -Message ('                           actual    {0}' -f $Path[0])
+            Write-Debug -Message ('Include                    expected  {0}' -f $whitelist)
+            Write-Debug -Message ('                           actual    {0}' -f $Include[0])
+            Write-Debug -Message ('Exclude                    expected  {0}' -f $true)
+            Write-Debug -Message ('                           actual    {0}' -f ($Exclude -eq $null))
+            Write-Debug -Message ('ProGetPackageUri           expected  {0}' -f $progetUri)
+            Write-Debug -Message ('                           actual    {0}' -f $ProgetPackageUri)
+            Write-Debug -Message ('ProGetCredential           expected  {0}' -f $progetCred.UserName)
+            Write-Debug -Message ('                           actual    {0}' -f $ProGetCredential.UserName)
+            $expectedBMUri = (Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri')
+            Write-Debug -Message ('BuildMasterSession.Uri     expected  {0}' -f $expectedBMUri)
+            Write-Debug -Message ('                           actual    {0}' -f $BuildMasterSession.Uri)
             $hasher = New-Object -TypeName 'Security.Cryptography.Sha512Managed'
+            $expectedApiKey = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($bmApiKey))
+            $expectedApiKey = [Text.Encoding]::UTF8.GetString($expectedApiKey)
+            $actualApiKey = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($BuildMasterSession.ApiKey))
+            $actualApiKey = [Text.Encoding]::UTF8.GetString($actualApiKey)
+            Write-Debug -Message ('BuildMasterSession.ApiKey  expected  {0}' -f $expectedApiKey)
+            Write-Debug -Message ('                           actual    {0}' -f $actualApiKey)
             $expectedPassword = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($progetCred.GetNetworkCredential().Password))
             $expectedPassword = [Text.Encoding]::UTF8.GetString($expectedPassword)
             $password = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($ProGetCredential.GetNetworkCredential().Password))
             $password = [Text.Encoding]::UTF8.GetString($password)
-            Write-Debug -Message ('ProGetCredential  expected  {0}' -f $expectedPassword)
-            Write-Debug -Message ('                  actual    {0}' -f $password)
+            Write-Debug -Message ('ProGetCredential           expected  {0}' -f $expectedPassword)
+            Write-Debug -Message ('                           actual    {0}' -f $password)
 
             return $RepositoryRoot -eq $root -and 
                    $Description -eq $packageDescription -and
@@ -1095,7 +1112,10 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
                    $Include[0] -eq $whitelist -and
                    $Exclude -eq $null -and
                    $ProGetPackageUri -eq $progetUri -and
-                   $password -eq $expectedPassword
+                   $password -eq $expectedPassword -and
+                   $expectedBMUri -eq $BuildMasterSession.Uri -and
+                   $bmApiKey -eq $BuildMasterSession.ApiKey
+
         }
     }
 
@@ -1107,12 +1127,14 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
-            Write-Debug -Message ('ProGetPackageUri  expected  {0}' -f '$null')
-            Write-Debug -Message ('                  actual    {0}' -f $ProgetPackageUri)
-            Write-Debug -Message ('ProGetCredential  expected  {0}' -f '$null')
-            Write-Debug -Message ('                  actual    {0}' -f $ProGetCredential)
-            Write-Debug -Message ('WhatIfPreference  expected  {0}' -f $true)
-            Write-Debug -Message ('                  actual    {0}' -f $WhatIfPreference)
+            Write-Debug -Message ('ProGetPackageUri    expected  {0}' -f '$null')
+            Write-Debug -Message ('                    actual    {0}' -f $ProgetPackageUri)
+            Write-Debug -Message ('ProGetCredential    expected  {0}' -f '$null')
+            Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
+            Write-Debug -Message ('BuildMasterSession  expected  {0}' -f '$null')
+            Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
+            Write-Debug -Message ('WhatIfPreference    expected  {0}' -f $true)
+            Write-Debug -Message ('                    actual    {0}' -f $WhatIfPreference)
             $ProGetPackageUri -eq $null -and $ProGetCredential -eq $null -and $WhatIfPreference -eq $true
         }
     }
@@ -1138,7 +1160,7 @@ Describe 'Invoke-WhsCIBuild.when running WhsAppPackage task and excluding items'
     Invoke-Build -ByJenkins -WithConfig $configPath
 
     Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-        $DebugPreference = 'Continue'
+        #$DebugPreference = 'Continue'
         return $Exclude.Count -eq 1 -and $Exclude[0] -eq $packageExclude
     }
 }
