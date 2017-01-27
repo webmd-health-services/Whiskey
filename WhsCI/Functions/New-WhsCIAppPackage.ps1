@@ -187,7 +187,15 @@ function New-WhsCIAppPackage
             }
 
             $release = Get-BMRelease -Session $BuildMasterSession -Application $Name -Name $branch
-            New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber ('{0}.{1}' -f $Version.Patch,$branch) -Variable @{ 'ProGetPackageName' = $Version.ToString() }
+            $release | Format-List | Out-String | Write-Verbose
+            $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber ('{0}.{1}' -f $Version.Patch,$branch) -Variable @{ 'ProGetPackageName' = $Version.ToString() }
+            $package | Format-List | Out-String | Write-Verbose
+
+            if( $branch -ne 'master' )
+            {
+                $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
+                $deployment | Format-List | Out-String | Write-Verbose
+            }
         }
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)

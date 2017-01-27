@@ -62,7 +62,10 @@ function Assert-NewWhsCIAppPackage
         $ShouldNotUploadPackage,
 
         [Switch]
-        $ShouldUploadPackage
+        $ShouldUploadPackage,
+
+        [Switch]
+        $WithoutDeploying
     )
 
     if( -not $Version )
@@ -265,6 +268,7 @@ function Assert-NewWhsCIAppPackage
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
             Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
             Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
         }
     }
 
@@ -334,7 +338,7 @@ function Assert-NewWhsCIAppPackage
                 Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
                 Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
                 Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Release.id                  expected  ^\d+$')
+                Write-Debug -Message ('Release.id                  expected  get-bmrelease')
                 Write-Debug -Message ('                            actual    {0}' -f $Release.id)
                 $expectedPackageNumber = '{0}.{1}' -f ([SemVersion.SemanticVersion]$Version).Patch,$expectedReleaseName
                 Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
@@ -343,9 +347,31 @@ function Assert-NewWhsCIAppPackage
                 Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
                 return $bmSession.Uri -eq $Session.Uri -and `
                        $bmSession.ApiKey -eq $Session.ApiKey -and `
-                       $Release.id -match '^\d+$' -and
+                       $Release.id -eq 'get-bmrelease' -and
                        $expectedPackageNumber -eq $PackageNumber -and
                        $Variable['ProGetPackageName'] -eq $Version
+            }
+        }
+
+        if( $WithoutDeploying )
+        {
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+        }
+        else
+        {
+            It 'should start deploy in BuildMaster' {
+                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
+                    Write-Debug -Message ('                            actual    {0}' -f $Package.id)
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                           $bmSession.ApiKey -eq $Session.ApiKey -and `
+                           $Package.id -eq 'new-bmreleasepackage'
+                }
             }
         }
     }
@@ -445,8 +471,9 @@ function Initialize-Test
         Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
 
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ 'id' = 54; } }
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ 'id' = 'get-bmrelease'; } }
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ id = 'new-bmreleasepackage'; } }
+    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
 
     $gitBranch = 'origin/develop'
     if( $OnFeatureBranch )
@@ -659,7 +686,8 @@ Describe 'New-WhsCIAppPackage.when building on master branch' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
-                              -ShouldUploadPackage
+                              -ShouldUploadPackage `
+                              -WithoutDeploying
 }
 
 Describe 'New-WhsCIAppPackage.when building on feature branch' {
