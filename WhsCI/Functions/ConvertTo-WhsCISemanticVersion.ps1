@@ -66,7 +66,16 @@ function ConvertTo-WhsCISemanticVersion
         {
             [int]$asInt = 0
             [double]$asDouble = 0.0
-            if( [int]::TryParse($InputObject,[ref]$asInt) )
+            [version]$asVersion = $null
+            if( [version]::TryParse($InputObject,[ref]$asVersion) )
+            {
+                $InputObject = $asVersion.ToString()
+                if( $asVersion.Build -le -1 )
+                {
+                    $InputObject = '{0}.{1}' -f $asVersion,$patch
+                }
+            }
+            elseif( [int]::TryParse($InputObject,[ref]$asInt) )
             {
                 $InputObject = $asInt
             }
