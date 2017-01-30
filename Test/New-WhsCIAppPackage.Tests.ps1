@@ -340,7 +340,8 @@ function Assert-NewWhsCIAppPackage
                 Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
                 Write-Debug -Message ('Release.id                  expected  get-bmrelease')
                 Write-Debug -Message ('                            actual    {0}' -f $Release.id)
-                $expectedPackageNumber = '{0}.{1}' -f ([SemVersion.SemanticVersion]$Version).Patch,$expectedReleaseName
+                $semVersion = [SemVersion.SemanticVersion]$Version
+                $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
                 Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
                 Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
                 Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)

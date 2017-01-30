@@ -188,7 +188,8 @@ function New-WhsCIAppPackage
 
             $release = Get-BMRelease -Session $BuildMasterSession -Application $Name -Name $branch
             $release | Format-List | Out-String | Write-Verbose
-            $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber ('{0}.{1}' -f $Version.Patch,$branch) -Variable @{ 'ProGetPackageName' = $Version.ToString() }
+            $packageName = '{0}.{1}.{2}' -f $Version.Major,$Version.Minor,$Version.Patch
+            $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable @{ 'ProGetPackageName' = $Version.ToString() }
             $package | Format-List | Out-String | Write-Verbose
 
             if( $branch -ne 'master' )
