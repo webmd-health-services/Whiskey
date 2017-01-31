@@ -84,6 +84,8 @@ function New-MSBuildProject
 "@ | Set-Content -Path $name
 
         New-AssemblyInfo -RootPath ($name | Split-Path)
+
+        $name
     }
 }
 

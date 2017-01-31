@@ -2,6 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\Import-WhsCI.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\LibGit2\Import-LibGit2.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Carbon\Import-Carbon.ps1' -Resolve)
@@ -512,7 +513,7 @@ function New-TestWhsBuildFile
         }
         if( $Path )
         {
-            $TaskProperty['Path'] = $Path
+            $TaskProperty['Path'] = ($Path | Split-Path -Leaf)
         }
         $config = @{
                         BuildTasks = @(
@@ -883,29 +884,37 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid project' {
-    $project = 'project.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $project
-    New-MSBuildProject -FileName $project
+Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
+    $project = New-MSBuildProject -FileName 'project.csproj'
+    $project2 = New-MSBuildProject -FileName 'project2.csproj'
+    $projectPaths = $project,$project2
+    $expectedVersion = '1.6.7-rc1'
+    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $projectPaths -Version $expectedVersion
+
+    Mock -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -Verifiable
     
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails 2>&1
+    Invoke-Build -ByJenkins -WithConfig $configPath
 
-    function Assert-NuGetPackagesNotCreated
-    {
-        param(
-            $ConfigurationPath
-        )
+    It 'should call Invoke-WhsCINuGetPackTask' {
+        foreach( $projectPath in $projectPaths )
+        {
+            Assert-MockCalled -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Path               expected  {0}' -f $projectPath)
+                Write-Debug -Message ('                   actual    {0}' -f $Path)
+                $expectedOutputRoot = Join-Path -Path ($configPath | Split-Path) -Child '.output'
+                Write-Debug -Message ('OutputDirectory    expected  {0}' -f $expectedOutputRoot)
+                Write-Debug -Message ('                   actual    {0}' -f $OutputDirectory)
+                Write-Debug -Message ('Version            expected  {0}' -f $expectedVersion)
+                Write-Debug -Message ('                   actual    {0}' -f $Version)
+                $configuration = Get-WhsSetting -Environment 'Dev' -Name '.NETProjectBuildConfiguration'
+                Write-Debug -Message ('BuildConfiguration expected  {0}' -f $configuration)
+                Write-Debug -Message ('                   actual    {0}' -f $BuildConfiguration)
 
-        It 'should write an error' {
-            $Global:Error[0] | Should Match 'pack command failed'
-        }
-
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory ($ConfigurationPath | Split-Path)
-        It 'should not create any .nupkg files' {
-            (Join-Path -Path $outputRoot -ChildPath '*.nupkg') | Should Not Exist
+                $projectPath -eq $Path -and $expectedOutputRoot -eq $OutputDirectory -and $expectedVersion -eq $Version -and $configuration -eq $BuildConfiguration
+            }
         }
     }
-    Assert-NuGetPackagesNotCreated -ConfigurationPath $configPath
 }
 
 Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
