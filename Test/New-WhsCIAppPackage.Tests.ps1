@@ -87,12 +87,12 @@ function Assert-NewWhsCIAppPackage
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
     {
-        $UploadedTo = 'http://pgt01d-whs-04.dev.webmd.com:81/upack/Test'
+        $UploadedTo = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test'
         $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
         $packagesAtStart = @()
         try
         {
-            $packagesAtStart = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/Test/packages?name={0}' -f $Name) -ErrorAction Ignore
+            $packagesAtStart = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $UPloadedTo,$Name) -ErrorAction Ignore
         }
         catch
         {
@@ -277,7 +277,7 @@ function Assert-NewWhsCIAppPackage
         It 'should upload package to ProGet' {
             if( $ShouldReallyUploadToProGet )
             {
-                $packageInfo = Invoke-RestMethod -Uri ('https://proget.dev.webmd.com/upack/test/packages?name={0}' -f $Name)
+                $packageInfo = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $UploadedTo,$Name)
                 $packageInfo | Should Not BeNullOrEmpty
                 $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
                 $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
