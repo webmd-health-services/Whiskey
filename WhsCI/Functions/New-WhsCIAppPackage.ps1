@@ -136,7 +136,7 @@ function New-WhsCIAppPackage
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
         {
-            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Debug
         }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
@@ -155,7 +155,7 @@ function New-WhsCIAppPackage
             $operationDescription = 'packaging {0}' -f $itemName
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+                robocopy $item $destination '/MIR' '/NP' $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
             }
         }
 
@@ -175,6 +175,7 @@ function New-WhsCIAppPackage
             $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
+                Write-Debug -Message ('PUT {0}' -f $ProGetPackageUri)
                 $result = Invoke-RestMethod -Method Put `
                                             -Uri $ProGetPackageUri `
                                             -ContentType 'application/octet-stream' `
