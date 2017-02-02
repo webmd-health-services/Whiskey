@@ -346,49 +346,12 @@ function Invoke-WhsCIBuild
                     }
 
                     'NuGetPack' {
-                        foreach( $path in $taskPaths )
-                        {
-                            $preNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            $versionArgs = @()
-                            if( $nugetVersion )
-                            {
-                                $versionArgs = @( '-Version', $nugetVersion )
-                            }
-                            & $nugetPath pack $versionArgs -OutputDirectory $outputRoot -Symbols -Properties ('Configuration={0}' -f $BuildConfiguration) $path | Write-CommandOutput
-                            $postNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            if( $postNupkgCount -eq $preNupkgCount )
-                            {
-                                throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $outputRoot)
-                            }
-                        }
+                        $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
 
                     'NUnit2' {
-                        #Will need to pass in download root and testResultPath because I don't want to expose taskIdx to my function.
-                        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-                        
-                        $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
-                        
-                        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
-                        {
-                            & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
-                        }
-                        
-                        $nunitRoot = Get-Item -Path $nunitRoot 
-                        
-                        $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
-
-                        
-                        $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
-
-                        $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
-                        #calculate this out here and pass testResult Path in.
                         $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                        & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
-                        if( $LastExitCode )
-                        {
-                            throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
-                        }
+                        Invoke-whsCINUnit2Task -DownloadRoot $DownloadRoot -Path $taskPaths -ReportPath $testResultPath -Root $root
                     }
 
                     'Pester3' {

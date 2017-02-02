@@ -2,6 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\Import-WhsCI.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\LibGit2\Import-LibGit2.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Carbon\Import-Carbon.ps1' -Resolve)
@@ -409,54 +410,6 @@ function Invoke-Build
     }
 }
 
-function New-AssemblyInfo
-{
-    param(
-        [string]
-        $RootPath
-    )
-
-    @'
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-// General Information about an assembly is controlled through the following 
-// set of attributes. Change these attribute values to modify the information
-// associated with an assembly.
-[assembly: AssemblyTitle("NUnit2FailingTest")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("NUnit2FailingTest")]
-[assembly: AssemblyCopyright("Copyright (c) 2016")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
-
-// Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  If you need to access a type in this assembly from 
-// COM, set the ComVisible attribute to true on that type.
-[assembly: ComVisible(false)]
-
-// The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("05b909ba-da71-42f6-836f-f1ec9b96e54d")]
-
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version 
-//      Build Number
-//      Revision
-//
-// You can specify all the values or you can default the Build and Revision Numbers 
-// by using the '*' as shown below:
-// [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0.0.0")]
-'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs') 
-}
-
 function New-BuildMetadata
 {
     if( (Test-WhsCIRunByBuildServer) )
@@ -493,6 +446,7 @@ function New-MockDeveloperEnvironment
     Mock -CommandName 'Test-Path' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
 }
 
+
 function New-NUnitTestAssembly
 {
     param(
@@ -524,41 +478,6 @@ function New-NUnitTestAssembly
         $destinationPath = Join-Path -Path $root -ChildPath $name
         Install-Directory -Path ($destinationPath | Split-Path)
         $sourceAssembly | Copy-Item -Destination $destinationPath
-    }
-}
-
-function New-MSBuildProject
-{
-    param(
-        [string[]]
-        $FileName,
-
-        [Switch]
-        $ThatFails
-    )
-
-    $root = (Get-Item -Path 'TestDrive:').FullName
-
-    foreach( $name in $FileName )
-    {
-        @"
-<?xml version="1.0" encoding="UTF-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
-
-    <Target Name="clean">
-        <Error Condition="'$ThatFails' == 'True'" Text="FAILURE!" />
-        <WriteLinesToFile File="`$(MSBuildThisFileDirectory)\`$(MSBuildProjectFile).clean" />
-    </Target>
-
-    <Target Name="build">
-        <Error Condition="'$ThatFails' == 'True'" Text="FAILURE!" />
-        <WriteLinesToFile File="`$(MSBuildThisFileDirectory)\`$(MSBuildProjectFile).build" />
-    </Target>
-
-</Project>
-"@ | Set-Content -Path (Join-Path -Path $root -ChildPath $name)
-
-        New-AssemblyInfo -RootPath (Join-Path -Path $root -ChildPath ($name | Split-Path))
     }
 }
 
@@ -595,7 +514,7 @@ function New-TestWhsBuildFile
         }
         if( $Path )
         {
-            $TaskProperty['Path'] = $Path
+            $TaskProperty['Path'] = ($Path | Split-Path -Leaf)
         }
         $config = @{
                         BuildTasks = @(
@@ -966,29 +885,37 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid project' {
-    $project = 'project.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $project
-    New-MSBuildProject -FileName $project
+Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
+    $project = New-MSBuildProject -FileName 'project.csproj'
+    $project2 = New-MSBuildProject -FileName 'project2.csproj'
+    $projectPaths = $project,$project2
+    $expectedVersion = '1.6.7-rc1'
+    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $projectPaths -Version $expectedVersion
+
+    Mock -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -Verifiable
     
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails 2>&1
+    Invoke-Build -ByJenkins -WithConfig $configPath
 
-    function Assert-NuGetPackagesNotCreated
-    {
-        param(
-            $ConfigurationPath
-        )
+    It 'should call Invoke-WhsCINuGetPackTask' {
+        foreach( $projectPath in $projectPaths )
+        {
+            Assert-MockCalled -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Path               expected  {0}' -f $projectPath)
+                Write-Debug -Message ('                   actual    {0}' -f $Path)
+                $expectedOutputRoot = Join-Path -Path ($configPath | Split-Path) -Child '.output'
+                Write-Debug -Message ('OutputDirectory    expected  {0}' -f $expectedOutputRoot)
+                Write-Debug -Message ('                   actual    {0}' -f $OutputDirectory)
+                Write-Debug -Message ('Version            expected  {0}' -f $expectedVersion)
+                Write-Debug -Message ('                   actual    {0}' -f $Version)
+                $configuration = Get-WhsSetting -Environment 'Dev' -Name '.NETProjectBuildConfiguration'
+                Write-Debug -Message ('BuildConfiguration expected  {0}' -f $configuration)
+                Write-Debug -Message ('                   actual    {0}' -f $BuildConfiguration)
 
-        It 'should write an error' {
-            $Global:Error[0] | Should Match 'pack command failed'
-        }
-
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory ($ConfigurationPath | Split-Path)
-        It 'should not create any .nupkg files' {
-            (Join-Path -Path $outputRoot -ChildPath '*.nupkg') | Should Not Exist
+                $projectPath -eq $Path -and $expectedOutputRoot -eq $OutputDirectory -and $expectedVersion -eq $Version -and $configuration -eq $BuildConfiguration
+            }
         }
     }
-    Assert-NuGetPackagesNotCreated -ConfigurationPath $configPath
 }
 
 Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {

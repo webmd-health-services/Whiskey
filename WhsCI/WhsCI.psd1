@@ -77,6 +77,8 @@
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
                             'Invoke-WhsCINodeTask',
+                            'Invoke-WhsCINuGetPackTask',
+                            'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',

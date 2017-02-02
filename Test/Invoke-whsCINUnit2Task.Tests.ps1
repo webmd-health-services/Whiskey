@@ -1,61 +1,82 @@
-
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
+$failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
+$passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
+Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml' -Resolve) -BuildConfiguration 'Release'
 
-
-Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {
-    $assemblyNames = 'assembly.dll', 'assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly 
-
+function Assert-NUnitTestsRun
+{
+    param(
+        [string]
+        $ReportPath
+    )
+    It 'should run NUnit tests' {
+        $ReportPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+    }   
 }
 
-<#
-#design tests based on these tests here.
-Instead of calling Invoke-Build, I will want to call my function, but base the assertions on these three.
+function Assert-NUnitTestsNotRun
+{
+    param(
+        [string]
+        $ReportPath
+    )
+    It 'should not run NUnit tests' {
+        $ReportPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+    }
+}
 
-Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
+Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {
+    $assemblyNames = $passingNUnit2TestAssemblyPath
+    $ReportPath = Join-Path -path $TestDrive.FullName -ChildPath 'NUnit.xml'
 
     $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-    Invoke-Build -ByJenkins -WithConfig $configPath -DownloadRoot $downloadroot
+    Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
 
-    Assert-NUnitTestsRun -ConfigurationPath $configPath `
-                         -ExpectedAssembly $assemblyNames
+    Assert-NUnitTestsRun -ReportPath $ReportPath
 
     It 'should download NUnitRunners' {
         (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
     }
+
 }
 
-Describe 'Invoke-WhsCIBuild.when running failing NUnit2 tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames -ThatFail
+Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
+    $assemblyNames = $failingNUnit2TestAssemblyPath
+    $ReportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
 
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
+    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
+
+    $threwException = $false
+
+    try{
+        Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
+    }
+    catch{
+        $threwException = $true
+    }
+    Assert-NUnitTestsNotRun -ReportPath $ReportPath
+    It 'Should Throw an Exception' {
+        $threwException | should be $true
+    }
     
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly $assemblyNames
 }
 
-Describe 'Invoke-WhsCIBuild.when running NUnit2 tests from multiple bin directories' {
-    $assemblyNames = 'BinOne\assembly.dll','BinTwo\assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
 
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
+Describe 'Invoke-WhsCINUnit2Task when running NUnit2 tests from multiple bin directories' {
+    $assemblyNames = $passingNUnit2TestAssemblyPath
+    $ReportPath = Join-Path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
 
-    Invoke-Build -ByJenkins -WithConfig $configPath
+    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
+    Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
 
-    $root = Split-Path -Path $configPath -Parent
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinOne')
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly2.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinTwo')
+    Assert-NUnitTestsRun -ReportPath $ReportPath
+    It 'should download NUnitRunners' {
+        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
+    }
 }
-#>

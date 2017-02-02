@@ -11,13 +11,13 @@ function Invoke-WhsCINUnit2Task
 
     
     .EXAMPLE
-          
+          Invoke-whsCINUnit2Task -DownloadRoot $DownloadRoot -Path $taskPaths -ReportPath $testResultPath -Root $root
     #>
     [CmdletBinding()]
     param(
         [parameter(Mandatory=$true)]
         [string]
-        # The place where downloaded tools should be saved. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
+        # The place where downloaded tools should be saved.
         $DownloadRoot,
 
         [parameter(Mandatory=$true)]
@@ -29,18 +29,19 @@ function Invoke-WhsCINUnit2Task
         [Parameter(Mandatory=$true)]
         [string]
         # The directory where the test results will be saved.
-        $ReportPath
+        $ReportPath,
 
-
+        [Parameter(Mandatory=$true)]
+        [string]
+        #The root directory
+        $Root
     )
-    Begin{
-        
-    }
-
-    Process{
-        
+  
+    Process{        
         Set-StrictMode -version 'latest'
 
+        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
         $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
@@ -48,51 +49,14 @@ function Invoke-WhsCINUnit2Task
            & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
         }
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
-                        
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
-
-        
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
 
-        $assemblyNames = $paths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
-        $testResultPath = Join-Path -Path $OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-        & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
+        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $ReportPath)
         if( $LastExitCode )
         {
             throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
         }
-
-        <#
-        #Code from Build.ps1 for reference.
- #goto packages root dir
-        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
- #goto nunit root dir     
-        $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
- #verify that the nunit root dir is a dir, else install nunit.runners
-        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
-        {
-           & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
-        }
- #get the first object in that dir?
-        $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
- #goto the tools dir
-        $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
- #group the task paths by parent?
-        $binRoots = $taskPaths | Group-Object -Property { Split-Path -Path $_ -Parent } 
- #get the path to nunit-console.exe
-        $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
- #Turns the absolute paths in to relative paths to shorten the command line arguments.
-        $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
- #Calculates the paths to save the results from the tests as xml files and save them in that calculated output path.
-        $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
- #
-        & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
-        if( $LastExitCode )
-        {
-            throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
-        }
-        #>
-
     }
 
 }
