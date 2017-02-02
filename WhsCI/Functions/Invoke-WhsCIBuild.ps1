@@ -364,19 +364,25 @@ function Invoke-WhsCIBuild
                     }
 
                     'NUnit2' {
+                        #Will need to pass in download root and testResultPath because I don't want to expose taskIdx to my function.
                         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+                        
                         $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
+                        
                         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
                         {
                             & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
                         }
-                        $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
+                        
+                        $nunitRoot = Get-Item -Path $nunitRoot 
+                        
                         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
 
-                        $binRoots = $taskPaths | Group-Object -Property { Split-Path -Path $_ -Parent } 
+                        
                         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
 
                         $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
+                        #calculate this out here and pass testResult Path in.
                         $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
                         & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
                         if( $LastExitCode )
