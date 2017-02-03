@@ -42,12 +42,16 @@ function Invoke-WhsCINUnit2Task
 
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
+        $nunitRoot = Install-WhsCITool -ModuleName 'NUnit.Runners' -Version 2.6.4
+
+        <#
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
         $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
            & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
         }
+        #>
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve

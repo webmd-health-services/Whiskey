@@ -24,9 +24,15 @@ function Install-WhsCITool
     param(
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
-        # The name of the NuGet package to download.
+        # The name of the PowerShell module to download.
         $ModuleName,
 
+        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
+        [string]
+        # The name of the NuGet package to download.
+        $NuGetPackageName,
+
+        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [version]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
@@ -53,47 +59,60 @@ function Install-WhsCITool
     {
         $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
     }
-
-    $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
-    New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
-
-    $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
-    if( $PSVersionTable.PSVersion -lt [version]'5.0' )
+   
+    if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}.{1}\*.psd1' -f $ModuleName,$Version)
-    }
+        $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
+        New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
 
-    if( (Test-Path -Path $expectedPath -PathType Leaf) )
-    {
-        Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
-        return
-    }
+        $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
+        if( $PSVersionTable.PSVersion -lt [version]'5.0' )
+        {
+            $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}.{1}\*.psd1' -f $ModuleName,$Version)
+        }
 
-    Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
+        if( (Test-Path -Path $expectedPath -PathType Leaf) )
+        {
+            Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
+            return
+        }
+
+        Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
  
-    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
-    if( (Test-Path -Path $moduleRoot -PathType Leaf) )
-    {
+        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
+        if( (Test-Path -Path $moduleRoot -PathType Leaf) )
+        {
+            return $moduleRoot
+        }
+
+        # Looks like we're on PowerShell 4
+        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $ModuleName
+        if( -not (Test-Path -Path $moduleRoot -PathType Container) )
+        {
+            Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
+            return
+        }
+
+        $moduleRootName = '{0}.{1}' -f $ModuleName,$Version
+        Rename-Item -Path $moduleRoot -NewName $moduleRootName
+        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $moduleRootName
+        $moduleRoot = Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $ModuleName)
+        if( -not (Test-Path -Path $moduleRoot -PathType Leaf) )
+        {
+            Write-Error -Message ('Failed to install {0} {1}: it downloaded successfully, but we failed to rename it to {2}.' -f $ModuleName,$Version,$moduleRootName)
+            return
+        }
+
         return $moduleRoot
     }
-
-    # Looks like we're on PowerShell 4
-    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $ModuleName
-    if( -not (Test-Path -Path $moduleRoot -PathType Container) )
+    elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
-        Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
-        return
+        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+        #have to figure out the powershell command for concat with '.' delimiter.
+        $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
+        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
+        {
+           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot
+        }
     }
-
-    $moduleRootName = '{0}.{1}' -f $ModuleName,$Version
-    Rename-Item -Path $moduleRoot -NewName $moduleRootName
-    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $moduleRootName
-    $moduleRoot = Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $ModuleName)
-    if( -not (Test-Path -Path $moduleRoot -PathType Leaf) )
-    {
-        Write-Error -Message ('Failed to install {0} {1}: it downloaded successfully, but we failed to rename it to {2}.' -f $ModuleName,$Version,$moduleRootName)
-        return
-    }
-
-    return $moduleRoot
 }
