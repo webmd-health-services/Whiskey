@@ -83,7 +83,8 @@
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIAppPackage',
-                            'Test-WhsCIRunByBuildServer'
+                            'Test-WhsCIRunByBuildServer',
+                            'Write-CommandOutput'
                          );
 
     # Cmdlets to export from this module

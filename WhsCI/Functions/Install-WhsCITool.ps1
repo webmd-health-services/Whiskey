@@ -106,13 +106,17 @@ function Install-WhsCITool
         return $moduleRoot
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
-    {
-        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-        #have to figure out the powershell command for concat with '.' delimiter.
-        $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
-        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
-        {
-           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot
+    {        
+        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+
+        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Packages'
+        #New-Item -Path $packagesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
+        $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
+        $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
+        $nuGetRoot = Join-Path -Path $nuGetRoot -ChildPath ('{0}.nupkg' -f $NuGetPackageName)
+        if( -not (Test-Path -Path $nuGetRoot -PathType Container) ){
+           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput
         }
+        return $nuGetRoot
     }
 }

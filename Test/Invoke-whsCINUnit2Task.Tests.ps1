@@ -31,6 +31,8 @@ function Assert-NUnitTestsNotRun
 }
 
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {
+
+
     $assemblyNames = $passingNUnit2TestAssemblyPath
     $ReportPath = Join-Path -path $TestDrive.FullName -ChildPath 'NUnit.xml'
 

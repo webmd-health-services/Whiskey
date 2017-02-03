@@ -111,10 +111,61 @@ function Invoke-Powershell-Install
 }
 
 function Invoke-NuGet-Install {
+    param(
+        $Package,
+        $Version,
 
+        [Switch]
+        $UsingDefaultDownloadRoot
+    )
+
+    $downloadRootParam = @{ }
+    if( -not $UsingDefaultDownloadRoot )
+    {
+        $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
+    }
+
+    $result = Install-WhsCITool @downloadRootParam -NugetPackageName $Package -Version $Version
+
+    Context 'the NuGet Package' {
+        It 'should exist' {
+            #Not sure what is happening here. This seems to "exist" when it is being looked at when I'm debugging yet this check fails.
+            $result | Should Exist
+        }
+        It 'should put it in the right place' {
+            $expectedRegex = 'Packages\\{0}\\{1}\\{0}\.nupkg' -f [regex]::Escape($Package),[regex]::Escape($Version)
+            #This is comparing the string = absolute path to the string = relative path. Convert one to the other.
+            $result | Should Match $expectedRegex
+        }
+        
+    }
 }
 
 #Need to work out test cases for happy path, bad name/version number that call above function.
+
+Describe 'Install-WhsCITool.when given a NuGet Package' {
+    Invoke-NuGet-Install -package 'NUnit.Runners' -version '2.6.4'
+}
+
+Describe 'Install-WhsCITool.when NuGet Pack is bad' {
+    Invoke-NuGet-Install -package 'BadPackage' -version '1.0.1'
+}
+
+Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
+    Invoke-Nuget-Install -package 'Nunit.Runners' -version '0.0.0'
+}
+
+Describe 'Install-WhsCITool.when installing an already installed package' {
+    
+    $Global:Error.Clear()
+
+    Invoke-NuGet-Install -package 'Nunit.Runners' -version '2.6.4'
+    Invoke-NuGet-Install -package 'Nunit.Runners' -version '2.6.4'
+
+    it 'should not write any errors' {
+        $Global:Error | Should BeNullOrEmpty
+    }
+}
 
 Describe 'Install-WhsCITool.when run by developer/build server' {
     Invoke-Powershell-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies

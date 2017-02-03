@@ -38,13 +38,13 @@ function Invoke-WhsCINUnit2Task
     )
   
     Process{        
-        Set-StrictMode -version 'latest'
-
-        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+        Set-StrictMode -version 'latest'        
 
         $nunitRoot = Install-WhsCITool -ModuleName 'NUnit.Runners' -Version 2.6.4
 
         <#
+        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
         $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
