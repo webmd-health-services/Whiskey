@@ -110,13 +110,17 @@ function Invoke-Powershell-Install
     }
 }
 
-function Invoke-NuGet-Install {
+function Invoke-NuGetInstall {
+    [CmdletBinding()]
     param(
         $Package,
         $Version,
 
         [Switch]
-        $UsingDefaultDownloadRoot
+        $UsingDefaultDownloadRoot,
+
+        [switch]
+        $invalidPackage
     )
 
     $downloadRootParam = @{ }
@@ -124,43 +128,50 @@ function Invoke-NuGet-Install {
     {
         $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
     }
-
+    $Global:Error.Clear()
     $result = Install-WhsCITool @downloadRootParam -NugetPackageName $Package -Version $Version
-
-    Context 'the NuGet Package' {
-        It 'should exist' {
-            #Not sure what is happening here. This seems to "exist" when it is being looked at when I'm debugging yet this check fails.
-            $result | Should Exist
+    if( -not $invalidPackage){
+        Context 'the Vaild NuGet Package' {
+            It 'should exist' {                    
+                $result | Should Exist
+            }
+            It 'should put it in the right place' {
+                $expectedRegex = 'Packages\\{0}\.{1}' -f [regex]::Escape($Package),[regex]::Escape($Version)
+                
+                $result | Should Match $expectedRegex
+            }
+        }        
+    }
+    else{
+        Context 'the Invalid NuGet Package' {
+            It 'should NOT exist' {                    
+                $result | Should Not Exist
+            }
+            it 'should write errors' {
+                $Global:Error | Should NOT BeNullOrEmpty
+            }
         }
-        It 'should put it in the right place' {
-            $expectedRegex = 'Packages\\{0}\\{1}\\{0}\.nupkg' -f [regex]::Escape($Package),[regex]::Escape($Version)
-            #This is comparing the string = absolute path to the string = relative path. Convert one to the other.
-            $result | Should Match $expectedRegex
-        }
-        
     }
 }
 
-#Need to work out test cases for happy path, bad name/version number that call above function.
-
 Describe 'Install-WhsCITool.when given a NuGet Package' {
-    Invoke-NuGet-Install -package 'NUnit.Runners' -version '2.6.4'
+    Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
 }
 
 Describe 'Install-WhsCITool.when NuGet Pack is bad' {
-    Invoke-NuGet-Install -package 'BadPackage' -version '1.0.1'
+    Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction SilentlyContinue
 }
 
 Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
-    Invoke-Nuget-Install -package 'Nunit.Runners' -version '0.0.0'
+    Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction SilentlyContinue
 }
 
-Describe 'Install-WhsCITool.when installing an already installed package' {
+Describe 'Install-WhsCITool.when installing an already installed NuGet package' {
     
     $Global:Error.Clear()
 
-    Invoke-NuGet-Install -package 'Nunit.Runners' -version '2.6.4'
-    Invoke-NuGet-Install -package 'Nunit.Runners' -version '2.6.4'
+    Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
+    Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
 
     it 'should not write any errors' {
         $Global:Error | Should BeNullOrEmpty

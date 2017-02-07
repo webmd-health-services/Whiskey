@@ -6,7 +6,7 @@ function Install-WhsCITool
     Downloads and installs tools needed by the WhsCI module.
 
     .DESCRIPTION
-    The `Install-WhsCITool` function downloads and installs PowerShell modules needed by functions in the WhsCI module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
+    The `Install-WhsCITool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the WhsCI module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
     
     Users of the `WhsCI` API typcially won't need to use this function. It is called by other `WhsCI` function so they ahve the tools they need.
 
@@ -19,6 +19,12 @@ function Install-WhsCITool
     Install-WhsCITool -ModuleName 'Pester' -Version 3
 
     Demonstrates how to instals the most recent version of a specific major version of a module. In this case, Pester version 3.6.4 would be installed (which is the most recent 3.x version of Pester as of this writing).
+    
+    .EXAMPLE
+    Install-WhsCITool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+
+    Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed. 
+
     #>
     [CmdletBinding()]
     param(
@@ -108,12 +114,10 @@ function Install-WhsCITool
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {        
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Packages'
-        #New-Item -Path $packagesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-        $nuGetRoot = Join-Path -Path $nuGetRoot -ChildPath ('{0}.nupkg' -f $NuGetPackageName)
+        
         if( -not (Test-Path -Path $nuGetRoot -PathType Container) ){
            & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput
         }

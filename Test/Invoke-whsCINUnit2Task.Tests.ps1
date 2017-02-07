@@ -30,55 +30,43 @@ function Assert-NUnitTestsNotRun
     }
 }
 
-Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {
-
-
-    $assemblyNames = $passingNUnit2TestAssemblyPath
-    $ReportPath = Join-Path -path $TestDrive.FullName -ChildPath 'NUnit.xml'
-
-    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-    Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
-
-    Assert-NUnitTestsRun -ReportPath $ReportPath
-
-    It 'should download NUnitRunners' {
-        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
+function Invoke-NUnitInstall{
+    param(
+        [switch]
+        $WithFailingTests
+    )
+    if( $WithFailingTests ){
+        $assemblyNames = $failingNUnit2TestAssemblyPath
+    }
+    else{
+        $assemblyNames = $passingNUnit2TestAssemblyPath
     }
 
+    $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
+    Invoke-WhsCINunit2Task -path $assemblyNames -ReportPath $reportPath -root $TestDrive.FullName
+
+    Assert-NUnitTestsRun -ReportPath $ReportPath    
+    It 'should download NUnit.Runners' {
+        (Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\packages\NUnit.Runners.2.6.4') | Should Exist
+    }
 }
 
+Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {    
+    Invoke-NUnitInstall
+}
 
 Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
-    $assemblyNames = $failingNUnit2TestAssemblyPath
-    $ReportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
-
-    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-
     $threwException = $false
+    $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
+    try{ Invoke-NUnitInstall -withFailingTests }
+    catch{ $threwException = $true }
 
-    try{
-        Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
-    }
-    catch{
-        $threwException = $true
-    }
-    Assert-NUnitTestsNotRun -ReportPath $ReportPath
-    It 'Should Throw an Exception' {
-        $threwException | should be $true
-    }
-    
+    finally{
+        Assert-NUnitTestsNotRun -ReportPath $ReportPath 
+        It 'Should Throw an Exception' {
+            $threwException | should be $true
+        }
+    }    
 }
 
 
-Describe 'Invoke-WhsCINUnit2Task when running NUnit2 tests from multiple bin directories' {
-    $assemblyNames = $passingNUnit2TestAssemblyPath
-    $ReportPath = Join-Path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
-
-    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-    Invoke-WhsCINunit2Task -DownloadRoot $downloadroot -path $assemblyNames -ReportPath $ReportPath -root $TestDrive.FullName
-
-    Assert-NUnitTestsRun -ReportPath $ReportPath
-    It 'should download NUnitRunners' {
-        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
-    }
-}
