@@ -297,6 +297,7 @@ function Assert-WhsAppPackageCreated
     It 'should start deploy in BuildMaster' {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 1
         Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 1
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 1
     }
 }
 #endregion
@@ -351,7 +352,6 @@ function Invoke-Build
     {
         $bbServerCredUsername = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerRestApiUsername'
         $devParams['BBServerCredential'] = Get-WhsSecret -Environment $Environment -Name $bbServerCredUsername -AsCredential 
-
         $devParams['BBServerUri'] = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerBaseUri'
     }
 
@@ -361,7 +361,7 @@ function Invoke-Build
         $downloadRootParam['DownloadRoot'] = $DownloadRoot
     }
 
-    $failed = $false
+    $threwException = $false
     try
     {
         Invoke-WhsCIBuild -ConfigurationPath $WithConfig `
@@ -371,7 +371,7 @@ function Invoke-Build
     }
     catch
     {
-        $failed = $true
+        $threwException = $true
         Write-Error $_
     }    
 
@@ -383,7 +383,7 @@ function Invoke-Build
     if( $ThatFails )
     {
         It 'should throw a terminating exception' {
-            $failed | Should Be $true
+            $threwException | Should Be $true
         }
 
         if( $runningUnderABuildServer )
@@ -394,7 +394,7 @@ function Invoke-Build
     else
     {
         It 'should not throw a terminating exception' {
-            $failed | Should Be $false
+            $threwException | Should Be $false
         }
 
         if( $runningUnderABuildServer )
@@ -1049,7 +1049,8 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
         Mock -CommandName 'Get-ProGetUri' -ModuleName 'WhsCI' -MockWith { return $testProGetFeedUri }.GetNewClosure()
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
         Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -MockWith { return [pscustomobject]@{ id = 455 } }
-        Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { return [pscustomobject]@{ id = 433; } }
+        Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
         Invoke-Build -ByJenkins -WithConfig $configPath
 
         Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $semVersion
