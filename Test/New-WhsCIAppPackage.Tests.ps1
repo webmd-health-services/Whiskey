@@ -62,10 +62,7 @@ function Assert-NewWhsCIAppPackage
         $ShouldNotUploadPackage,
 
         [Switch]
-        $ShouldUploadPackage,
-
-        [Switch]
-        $WithoutDeploying
+        $ShouldUploadPackage
     )
 
     if( -not $Version )
@@ -354,25 +351,18 @@ function Assert-NewWhsCIAppPackage
             }
         }
 
-        if( $WithoutDeploying )
-        {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
-        }
-        else
-        {
-            It 'should start deploy in BuildMaster' {
-                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                    Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
-                    Write-Debug -Message ('                            actual    {0}' -f $Package.id)
-                    return $bmSession.Uri -eq $Session.Uri -and `
-                           $bmSession.ApiKey -eq $Session.ApiKey -and `
-                           $Package.id -eq 'new-bmreleasepackage'
-                }
+        It 'should start deploy in BuildMaster' {
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
+                Write-Debug -Message ('                            actual    {0}' -f $Package.id)
+                return $bmSession.Uri -eq $Session.Uri -and `
+                        $bmSession.ApiKey -eq $Session.ApiKey -and `
+                        $Package.id -eq 'new-bmreleasepackage'
             }
         }
     }
@@ -687,8 +677,7 @@ Describe 'New-WhsCIAppPackage.when building on master branch' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
-                              -ShouldUploadPackage `
-                              -WithoutDeploying
+                              -ShouldUploadPackage 
 }
 
 Describe 'New-WhsCIAppPackage.when building on feature branch' {
