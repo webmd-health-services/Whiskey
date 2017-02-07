@@ -82,7 +82,7 @@ NVM for Windows is not installed. To install it:
         $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
 
         $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'
-        Invoke-WebRequest -UseBasicParsing -Uri $nvmUri -OutFile $tempZipFile
+        (New-Object 'Net.WebClient').DownloadFile($nvmUri, $tempZipFile)
         if( -not (Test-Path -Path $tempZipFile -PathType Leaf) )
         {
             Write-Error -Message ('Failed to download NVM from {0}' -f $nvmUri)
