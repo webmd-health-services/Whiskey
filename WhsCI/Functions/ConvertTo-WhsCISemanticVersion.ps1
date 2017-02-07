@@ -62,11 +62,16 @@ function ConvertTo-WhsCISemanticVersion
             $buildInfoWithBuildNumber = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
         }
 
+        [version]$asVersion = $null
         if( $InputObject -is [string] )
         {
             [int]$asInt = 0
             [double]$asDouble = 0.0
-            if( [int]::TryParse($InputObject,[ref]$asInt) )
+            if( [version]::TryParse($InputObject,[ref]$asVersion) )
+            {
+                $InputObject = $asVersion
+            }
+            elseif( [int]::TryParse($InputObject,[ref]$asInt) )
             {
                 $InputObject = $asInt
             }
@@ -102,6 +107,18 @@ function ConvertTo-WhsCISemanticVersion
         elseif( $InputObject -is [int] )
         {
             $InputObject = '{0}.0.{1}' -f $InputObject,$patch
+        }
+        elseif( $InputObject -is [version] )
+        {
+            if( $asVersion.Build -le -1 )
+            {
+                $InputObject = '{0}.{1}' -f $asVersion,$patch
+            }
+            else
+            {
+                $InputObject = $asVersion.ToString()
+                $buildInfo = $buildInfoWithBuildNumber
+            }
         }
         else
         {

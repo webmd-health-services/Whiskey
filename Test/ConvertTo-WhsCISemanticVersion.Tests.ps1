@@ -119,3 +119,4 @@ $dateBasedVersion = (Get-Date).ToString('yyyy.Mdd')
 '1'                | Assert-ConvertsTo -ByBuildServer '1.0' -ByDeveloper '1.0.0' -WithAppBuildMetadata
 '1.32'             | Assert-ConvertsTo -ByBuildServer '1.32' -ByDeveloper '1.32.0' -WithAppBuildMetadata
 '1.32.4'           | Assert-ConvertsTo -ByBuildServer '1.32.4' -ByDeveloper '1.32.4' -WithLibraryBuildMetadata
+'1.0130'           | Assert-ConvertsTo -ByBuildServer '1.130' -ByDeveloper '1.130.0' -WithAppBuildMetadata

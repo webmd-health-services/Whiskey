@@ -136,7 +136,7 @@ function New-WhsCIAppPackage
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
         {
-            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents | Write-Debug
+            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Debug
         }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
@@ -155,7 +155,7 @@ function New-WhsCIAppPackage
             $operationDescription = 'packaging {0}' -f $itemName
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $item $destination /MIR $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+                robocopy $item $destination '/MIR' '/NP' $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
             }
         }
 
@@ -175,6 +175,7 @@ function New-WhsCIAppPackage
             $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$ProGetPackageUri
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
+                Write-Debug -Message ('PUT {0}' -f $ProGetPackageUri)
                 $result = Invoke-RestMethod -Method Put `
                                             -Uri $ProGetPackageUri `
                                             -ContentType 'application/octet-stream' `
@@ -187,7 +188,12 @@ function New-WhsCIAppPackage
             }
 
             $release = Get-BMRelease -Session $BuildMasterSession -Application $Name -Name $branch
-            New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber ('{0}.{1}' -f $Version.Patch,$branch) -Variable @{ 'ProGetPackageName' = $Version.ToString() }
+            $release | Format-List | Out-String | Write-Verbose
+            $packageName = '{0}.{1}.{2}' -f $Version.Major,$Version.Minor,$Version.Patch
+            $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable @{ 'ProGetPackageName' = $Version.ToString() }
+            $package | Format-List | Out-String | Write-Verbose
+            $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
+            $deployment | Format-List | Out-String | Write-Verbose
         }
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)

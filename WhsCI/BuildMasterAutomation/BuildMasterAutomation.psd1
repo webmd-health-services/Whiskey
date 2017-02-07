@@ -77,7 +77,8 @@
                             'New-BMPipeline',
                             'New-BMRelease',
                             'New-BMReleasePackage',
-                            'New-BMSession'
+                            'New-BMSession',
+                            'Publish-BMReleasePackage'
                          )
 
     # Cmdlets to export from this module
