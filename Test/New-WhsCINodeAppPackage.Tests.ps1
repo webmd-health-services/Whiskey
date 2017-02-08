@@ -14,50 +14,43 @@ function Assert-NodePackageCreated
         $WithThirdPartyPath
     )
 
-    $repoRoot = 'reporoot'
     $packageName = 'name'
     $packageDescription = 'description'
-    $packageVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build'
     $packagePath = 'path1','path2'
-    $progetUri = 'fubar'
-    $progetCred = New-Credential -UserName 'fubar' -Password 'snafu'
-    $bmSession = 'session'
     $packageExclude = 'three','four'
+    $taskContext = New-WhsCITestContext -WithMockToolData
+    
+    $taskParameter = @{
+                            Name = $packageName;
+                            Description = $packageDescription;
+                            Path = $packagePath;
+                            Exclude = $packageExclude;
+                      }
 
-    $optionalParam = @{}
     if( $WithThirdPartyPath )
     {
-        $optionalParam['ThirdPartyPath'] = $WithThirdPartyPath
+        $taskParameter['ThirdPartyPath'] = $WithThirdPartyPath
+    }
+
+    if( $WithExtraFile )
+    {
+        $taskParameter['Include'] = $WithExtraFile
     }
 
     Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
 
-    if( $WithExtraFile )
-    {
-        $optionalParam['Include'] = $WithExtraFile
-    }
-
-    New-WhsCINodeAppPackage -RepositoryRoot $repoRoot `
-                            -Name $packageName `
-                            -Description $packageDescription `
-                            -Version $packageVersion `
-                            -Path $packagePath `
-                            @optionalParam `
-                            -ProGetPackageUri $progetUri `
-                            -ProGetCredential $progetCred `
-                            -BuildMasterSession $bmSession `
-                            -Exclude $packageExclude 
+    New-WhsCINodeAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
     
     It 'should pass parameters to New-WhsCIAppPackage' {
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
-            Write-Debug -Message ('RepositoryRoot      expected  {0}' -f $repoRoot)
+            Write-Debug -Message ('RepositoryRoot      expected  {0}' -f $taskContext.TaskPathRoot)
             Write-Debug -Message ('                    actual    {0}' -f $RepositoryRoot)
             Write-Debug -Message ('Name                expected  {0}' -f $packageName)
             Write-Debug -Message ('                    actual    {0}' -f $Name)
             Write-Debug -Message ('Description         expected  {0}' -f $packageDescription)
             Write-Debug -Message ('                    actual    {0}' -f $Description)
-            Write-Debug -Message ('Version             expected  {0}' -f $packageVersion)
+            Write-Debug -Message ('Version             expected  {0}' -f $taskContext.Version)
             Write-Debug -Message ('                    actual    {0}' -f $Version)
             
             $packagePath = $packagePath -join ';'
@@ -65,11 +58,11 @@ function Assert-NodePackageCreated
             Write-Debug -Message ('Path                expected  {0}' -f $packagePath)
             Write-Debug -Message ('                    actual    {0}' -f $Path)
 
-            Write-Debug -Message ('ProGetPackageUri    expected  {0}' -f $progetUri)
+            Write-Debug -Message ('ProGetPackageUri    expected  {0}' -f $taskContext.ProGetAppFeedUri)
             Write-Debug -Message ('                    actual    {0}' -f $ProGetPackageUri)
-            Write-Debug -Message ('ProGetCredential    expected  {0}' -f $progetCred)
+            Write-Debug -Message ('ProGetCredential    expected  {0}' -f $taskContext.ProGetCredential)
             Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
-            Write-Debug -Message ('BuildMasterSession  expected  {0}' -f $bmSession)
+            Write-Debug -Message ('BuildMasterSession  expected  {0}' -f $taskContext.BuildMasterSession)
             Write-Debug -Message ('                    actual    {0}' -f $BuildMasterSession)
 
             $packageExclude = $packageExclude -join ';'
@@ -77,13 +70,13 @@ function Assert-NodePackageCreated
             Write-Debug -Message ('Exclude             expected  {0}' -f $packageExclude)
             Write-Debug -Message ('                    actual    {0}' -f $Exclude)
 
-            [object]::ReferenceEquals($repoRoot,$RepositoryRoot) -and `
+            [object]::ReferenceEquals($taskContext.TaskPathRoot,$RepositoryRoot) -and `
             [object]::ReferenceEquals($packageName,$Name) -and `
             [object]::ReferenceEquals($packageDescription,$Description) -and `
-            [object]::ReferenceEquals($packageVersion,$Version) -and `
-            [object]::ReferenceEquals($progetUri,$ProGetPackageUri) -and `
-            [object]::ReferenceEquals($progetCred,$ProGetCredential) -and `
-            [object]::ReferenceEquals($bmSession,$BuildMasterSession) -and `
+            [object]::ReferenceEquals($taskContext.Version,$Version) -and `
+            [object]::ReferenceEquals($taskContext.ProGetAppFeedUri,$ProGetPackageUri) -and `
+            [object]::ReferenceEquals($taskContext.ProGetCredential,$ProGetCredential) -and `
+            [object]::ReferenceEquals($taskContext.BuildMasterSession,$BuildMasterSession) -and `
             $packagePath -eq $Path -and `
             $packageExclude -eq $Exclude
         }

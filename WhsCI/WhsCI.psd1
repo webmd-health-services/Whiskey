@@ -81,6 +81,7 @@
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIAppPackage',
+                            'New-WhsCINodeAppPackage',
                             'Test-WhsCIRunByBuildServer'
                          );
 
