@@ -6,25 +6,24 @@ function New-WhsCITestContext
         $WithMockToolData,
 
         [string]
-        $ForRepositoryRoot
+        $ForBuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
 
-    if( -not $ForRepositoryRoot )
+    if( -not $ForBuildRoot )
     {
-        $ForRepositoryRoot = $TestDrive.FullName
+        $ForBuildRoot = $TestDrive.FullName
     }
 
-    if( -not [IO.Path]::IsPathRooted($ForRepositoryRoot) )
+    if( -not [IO.Path]::IsPathRooted($ForBuildRoot) )
     {
-        $ForRepositoryRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForRepositoryRoot
+        $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
     $context = [pscustomobject]@{
-                                    TaskPathRoot = $TestDrive.FullName;
-                                    RepositoryRoot = $ForRepositoryRoot;
-                                    OutputDirectory = (Join-Path -Path $ForRepositoryRoot -ChildPath '.output');
+                                    BuildRoot = $ForBuildRoot;
+                                    OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
                                     Version = [semversion.SemanticVersion]'1.2.3-rc.1+build';
                                     ProGetAppFeedUri = 'http://proget.example.com/';
                                     ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';

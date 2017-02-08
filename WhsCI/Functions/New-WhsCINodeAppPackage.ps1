@@ -44,7 +44,7 @@ function New-WhsCINodeAppPackage
     .EXAMPLE
     New-WhsCINodeAppPackage -TaskContext $context -TaskParameter @{ Name = 'ui-cm'; Description = 'The Condition Management user interface.'; Path = 'dist','src'; }
 
-    Demonstrates how to create a Node.js application package. In this example, a package will get created that includes the `dist` and `src` directories, found in the directory specified by the `TaskPathRoot` property on the `$context` object. The package's name will be set to `ui-cm`. The package's description will be set to `The Condition Management user interface.`. The package's version will be set to the value of the `Version` property of the context object.
+    Demonstrates how to create a Node.js application package. In this example, a package will get created that includes the `dist` and `src` directories, found in the directory specified by the `BuildRoot` property on the `$context` object. The package's name will be set to `ui-cm`. The package's description will be set to `The Condition Management user interface.`. The package's version will be set to the value of the `Version` property of the context object.
 
 
     .EXAMPLE

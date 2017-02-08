@@ -95,7 +95,7 @@ function Assert-NewWhsCIAppPackage
         $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
     }
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForRepositoryRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo'
     $taskContext.Version = $Version
 
     $mock = { return $false }
@@ -128,7 +128,7 @@ function Assert-NewWhsCIAppPackage
 
     $Global:Error.Clear()
 
-    Push-Location -Path $taskContext.RepositoryRoot
+    Push-Location -Path $taskContext.BuildRoot
     try
     {
         $At = New-WhsCIAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
@@ -172,7 +172,7 @@ function Assert-NewWhsCIAppPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.RepositoryRoot
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
 
@@ -690,11 +690,11 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $context = New-WhsCITestContext -ForRepositoryRoot 'Repo'
+    $context = New-WhsCITestContext -ForBuildRoot 'Repo'
     $parameters = @{
                         Name = 'Package';
                         Description = 'Description';
-                        Path = $dirNames | ForEach-Object { Join-Path -Path $context.RepositoryRoot -ChildPath $_ };
+                        Path = $dirNames | ForEach-Object { Join-Path -Path $context.BuildRoot -ChildPath $_ };
                         Include = '*.html'
                    }
     $result = New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameters -WhatIf
