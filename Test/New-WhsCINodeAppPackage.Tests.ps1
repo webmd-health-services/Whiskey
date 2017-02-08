@@ -18,7 +18,7 @@ function Assert-NodePackageCreated
     $packageDescription = 'description'
     $packagePath = 'path1','path2'
     $packageExclude = 'three','four'
-    $taskContext = New-WhsCITestContext -WithMockToolData
+    $context = New-WhsCITestContext -WithMockToolData
     
     $taskParameter = @{
                             Name = $packageName;
@@ -39,44 +39,32 @@ function Assert-NodePackageCreated
 
     Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
 
-    New-WhsCINodeAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
+    New-WhsCINodeAppPackage -TaskContext $context -TaskParameter $taskParameter
     
     It 'should pass parameters to New-WhsCIAppPackage' {
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
-            Write-Debug -Message ('RepositoryRoot      expected  {0}' -f $taskContext.TaskPathRoot)
-            Write-Debug -Message ('                    actual    {0}' -f $RepositoryRoot)
             Write-Debug -Message ('Name                expected  {0}' -f $packageName)
-            Write-Debug -Message ('                    actual    {0}' -f $Name)
+            Write-Debug -Message ('                    actual    {0}' -f $TaskParameter['Name'])
             Write-Debug -Message ('Description         expected  {0}' -f $packageDescription)
-            Write-Debug -Message ('                    actual    {0}' -f $Description)
-            Write-Debug -Message ('Version             expected  {0}' -f $taskContext.Version)
-            Write-Debug -Message ('                    actual    {0}' -f $Version)
+            Write-Debug -Message ('                    actual    {0}' -f $TaskParameter['Description'])
             
             $packagePath = $packagePath -join ';'
-            $Path = $Path -join ';'
+            $path = $TaskParameter['Path'] -join ';'
             Write-Debug -Message ('Path                expected  {0}' -f $packagePath)
-            Write-Debug -Message ('                    actual    {0}' -f $Path)
-
-            Write-Debug -Message ('ProGetPackageUri    expected  {0}' -f $taskContext.ProGetAppFeedUri)
-            Write-Debug -Message ('                    actual    {0}' -f $ProGetPackageUri)
-            Write-Debug -Message ('ProGetCredential    expected  {0}' -f $taskContext.ProGetCredential)
-            Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
-            Write-Debug -Message ('BuildMasterSession  expected  {0}' -f $taskContext.BuildMasterSession)
-            Write-Debug -Message ('                    actual    {0}' -f $BuildMasterSession)
+            Write-Debug -Message ('                    actual    {0}' -f $path)
 
             $packageExclude = $packageExclude -join ';'
-            $Exclude = $Exclude -join ';'
+            $exclude = $TaskParameter['Exclude'] -join ';'
             Write-Debug -Message ('Exclude             expected  {0}' -f $packageExclude)
-            Write-Debug -Message ('                    actual    {0}' -f $Exclude)
+            Write-Debug -Message ('                    actual    {0}' -f $exclude)
 
-            [object]::ReferenceEquals($taskContext.TaskPathRoot,$RepositoryRoot) -and `
-            [object]::ReferenceEquals($packageName,$Name) -and `
-            [object]::ReferenceEquals($packageDescription,$Description) -and `
-            [object]::ReferenceEquals($taskContext.Version,$Version) -and `
-            [object]::ReferenceEquals($taskContext.ProGetAppFeedUri,$ProGetPackageUri) -and `
-            [object]::ReferenceEquals($taskContext.ProGetCredential,$ProGetCredential) -and `
-            [object]::ReferenceEquals($taskContext.BuildMasterSession,$BuildMasterSession) -and `
+            $contextsSame = [object]::ReferenceEquals($context,$TaskContext)
+            Write-Debug -Message ('Context = TaskContext         {0}' -f $contextsSame)
+
+            $contextsSame -and `
+            [object]::ReferenceEquals($packageName,$TaskParameter['Name']) -and `
+            [object]::ReferenceEquals($packageDescription,$TaskParameter['Description']) -and `
             $packagePath -eq $Path -and `
             $packageExclude -eq $Exclude
         }
@@ -86,12 +74,12 @@ function Assert-NodePackageCreated
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
-            $missing = Invoke-Command { $WithExtraFile ; '*.js','*.css' } | Where-Object { $Include -notcontains $_ }
+            $missing = Invoke-Command { $WithExtraFile ; '*.js','*.css' } | Where-Object { $TaskParameter['Include'] -notcontains $_ }
 
             $packageInclude = $WithExtraFile -join ';'
-            $Include = $Include -join ';'
+            $include = $TaskParameter['Include'] -join ';'
             Write-Debug -Message ('Include  expected  {0}' -f $packageInclude)
-            Write-Debug -Message ('         actual    {0}' -f $Include)
+            Write-Debug -Message ('         actual    {0}' -f $include)
             Write-Debug -Message ('         missing   {0}' -f ($missing -join ';'))
             if( $missing )
             {
@@ -109,11 +97,11 @@ function Assert-NodePackageCreated
             #$DebugPreference = 'Continue'
 
             $packageThirdPartyPath = $WithThirdPartyPath -join ';'
-            $thirdPartyPathCsv = $ThirdPartyPath -join ';'
+            $thirdPartyPathCsv = $TaskParameter['ThirdPartyPath'] -join ';'
             Write-Debug -Message ('ThirdPartyPath                        expected  {0}' -f $packageThirdPartyPath)
             Write-Debug -Message ('                                      actual    {0}' -f $thirdPartyPathCsv)
 
-            return ($ThirdPartyPath -contains 'node_modules')
+            return ($TaskParameter['ThirdPartyPath'] -contains 'node_modules')
         }
     }
 
@@ -121,7 +109,7 @@ function Assert-NodePackageCreated
         Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
-            $nodeModulesCount = $ThirdPartyPath | Where-Object { $_ -eq 'node_modules' } | Measure-Object | Select-Object -ExpandProperty 'Count'
+            $nodeModulesCount = $TaskParameter['ThirdPartyPath'] | Where-Object { $_ -eq 'node_modules' } | Measure-Object | Select-Object -ExpandProperty 'Count'
 
             Write-Debug -Message ('ThirdPartyPath[''node_modules''].Count  expected  1')
             Write-Debug -Message ('                                      actual    {0}' -f $nodeModulesCount)

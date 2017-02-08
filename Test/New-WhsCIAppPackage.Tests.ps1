@@ -80,18 +80,36 @@ function Assert-NewWhsCIAppPackage
         Start-Sleep -Milliseconds 1
     }
 
-    $Global:Error.Clear()
-    $excludeParam = @{ }
+    $taskParameter = @{
+                            Name = $Name;
+                            Description = $Description;
+                            Path = $ForPath;
+                            Include = $ThatIncludes;
+                        }
     if( $ThatExcludes )
     {
-        $excludeParam['Exclude'] = $ThatExcludes
+        $taskParameter['Exclude'] = $ThatExcludes
     }
+    if( $HasThirdPartyDirectory )
+    {
+        $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
+    }
+
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForRepositoryRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
+    $taskContext.Version = $Version
+
+    $mock = { return $false }
+    if( $ShouldUploadPackage )
+    {
+        $mock = { return $true }
+    }
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
     {
-        $UploadedTo = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test'
-        $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $taskContext.ProGetAppFeedUri = $UploadedTo = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test'
+        $taskContext.ProGetCredential = $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
         $packagesAtStart = @()
         try
         {
@@ -103,44 +121,21 @@ function Assert-NewWhsCIAppPackage
         }
     }
 
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    #$ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
-    $failed = $false
+
+    $threwException = $false
     $At = $null
-    $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
+    $taskContext.BuildMasterSession = $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
 
-    $thirdPartyParam = @{ }
-    if( $HasThirdPartyDirectory )
-    {
-        $thirdPartyParam['ThirdPartyPath'] = $HasThirdPartyDirectory
-    }
+    $Global:Error.Clear()
 
-    $progetParams = @{
-                        ProGetPackageUri = $UploadedTo;
-                        ProGetCredential = $UploadedBy;
-                        BuildMasterSession = $bmSession;
-                     }
-    if( $WithNoProGetParameters )
-    {
-        $progetParams = @{}
-    }
-
-    Push-Location -Path $repoRoot
+    Push-Location -Path $taskContext.RepositoryRoot
     try
     {
-        $At = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
-                                  -Name $Name `
-                                  -Description $Description `
-                                  -Version $Version `
-                                  -Path $ForPath `
-                                  -Include $ThatIncludes `
-                                  @progetParams `
-                                  @excludeParam `
-                                  @thirdPartyParam
+        $At = New-WhsCIAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
     }
     catch
     {
-        $failed = $true
+        $threwException = $true
         Write-Error -ErrorRecord $_
     }
     finally
@@ -151,7 +146,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldFailWithErrorMessage )
     {
         It 'should fail with a terminating error' {
-            $failed | Should Be $true
+            $threwException | Should Be $true
         }
 
         It ('should fail with error message that matches ''{0}''' -f $ShouldFailWithErrorMessage) {
@@ -165,7 +160,7 @@ function Assert-NewWhsCIAppPackage
     else
     {
         It 'should not fail' {
-            $failed | Should Be $false
+            $threwException | Should Be $false
         }
 
         It 'should return package info' {
@@ -177,8 +172,7 @@ function Assert-NewWhsCIAppPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.RepositoryRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
 
@@ -329,7 +323,7 @@ function Assert-NewWhsCIAppPackage
                     Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
                     Write-Debug -Message ('               actual    {0}' -f $Method)
 
-                    Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
+                    Write-Debug -Message ('Uri            expected  {0}' -f $taskContext.ProGetAppFeedUri)
                     Write-Debug -Message ('               actual    {0}' -f $Uri)
 
                     $expectedContentType = 'application/octet-stream'
@@ -341,7 +335,10 @@ function Assert-NewWhsCIAppPackage
                     Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
                     Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
 
-                    return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+                    return $expectedMethod -eq $Method -and `
+                           $taskContext.ProGetAppFeedUri -eq $Uri -and `
+                           $expectedContentType -eq $ContentType -and `
+                           $creds -eq $Headers['Authorization']
                 }
             }
         }
@@ -350,60 +347,71 @@ function Assert-NewWhsCIAppPackage
         $expectedReleaseName = $expectedReleaseName -replace '/.*$',''
         $expectedAppName = $Name
 
-        It 'should get release from BuildMaster' {
+        if( $ShouldFailWithErrorMessage )
+        {
+            It 'should not talk to BuildMaster' {
+                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+            }
+        }
+        else
+        {
+            It 'should get release from BuildMaster' {
             
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
-                Write-Debug -Message ('                actual    {0}' -f $Application)
-                Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
-                Write-Debug -Message ('                actual    {0}' -f $Name)
-                return $bmSession.Uri -eq $Session.Uri -and `
-                       $bmSession.ApiKey -eq $Session.ApiKey -and `
-                       $expectedAppName -eq $Application -and `
-                       $expectedReleaseName -eq $Name
+                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
+                    Write-Debug -Message ('                actual    {0}' -f $Application)
+                    Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
+                    Write-Debug -Message ('                actual    {0}' -f $Name)
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                           $bmSession.ApiKey -eq $Session.ApiKey -and `
+                           $expectedAppName -eq $Application -and `
+                           $expectedReleaseName -eq $Name
+                }
             }
-        }
 
-        It 'should create release package in BuildMaster' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Release.id                  expected  get-bmrelease')
-                Write-Debug -Message ('                            actual    {0}' -f $Release.id)
-                $semVersion = [SemVersion.SemanticVersion]$Version
-                $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-                Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
-                Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
-                Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
-                Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
-                return $bmSession.Uri -eq $Session.Uri -and `
-                       $bmSession.ApiKey -eq $Session.ApiKey -and `
-                       $Release.id -eq 'get-bmrelease' -and
-                       $expectedPackageNumber -eq $PackageNumber -and
-                       $Variable['ProGetPackageName'] -eq $Version
+            It 'should create release package in BuildMaster' {
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Release.id                  expected  get-bmrelease')
+                    Write-Debug -Message ('                            actual    {0}' -f $Release.id)
+                    $semVersion = [SemVersion.SemanticVersion]$Version
+                    $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+                    Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
+                    Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
+                    Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
+                    Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                           $bmSession.ApiKey -eq $Session.ApiKey -and `
+                           $Release.id -eq 'get-bmrelease' -and
+                           $expectedPackageNumber -eq $PackageNumber -and
+                           $Variable['ProGetPackageName'] -eq $Version
+                }
             }
-        }
 
-        It 'should start deploy in BuildMaster' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
-                Write-Debug -Message ('                            actual    {0}' -f $Package.id)
-                return $bmSession.Uri -eq $Session.Uri -and `
-                        $bmSession.ApiKey -eq $Session.ApiKey -and `
-                        $Package.id -eq 'new-bmreleasepackage'
+            It 'should start deploy in BuildMaster' {
+                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
+                    Write-Debug -Message ('                            actual    {0}' -f $Package.id)
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                            $bmSession.ApiKey -eq $Session.ApiKey -and `
+                            $Package.id -eq 'new-bmreleasepackage'
+                }
             }
         }
     }
@@ -646,6 +654,7 @@ Describe 'New-WhsCIAppPackage.when package upload fails' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
                               -ShouldFailWithErrorMessage 'failed to upload' `
                               -ErrorAction SilentlyContinue
 }
@@ -681,16 +690,14 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $result = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
-                                  -Name 'Package' `
-                                  -Description 'Description' `
-                                  -Version '1.2.3' `
-                                  -Path (Join-Path -Path $repoRoot -ChildPath 'dir1') `
-                                  -Include '*.html' `
-                                  -ProGetPackageUri 'fubarsnafu' `
-                                  -ProGetCredential (New-Credential -UserName 'fubar' -Password 'snafu') `
-                                  -BuildMasterSession (New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarsnafu') `
-                                  -WhatIf
+    $context = New-WhsCITestContext -ForRepositoryRoot 'Repo'
+    $parameters = @{
+                        Name = 'Package';
+                        Description = 'Description';
+                        Path = $dirNames | ForEach-Object { Join-Path -Path $context.RepositoryRoot -ChildPath $_ };
+                        Include = '*.html'
+                   }
+    $result = New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameters -WhatIf
 
     It 'should write no errors' {
         $Global:Error | Should BeNullOrEmpty

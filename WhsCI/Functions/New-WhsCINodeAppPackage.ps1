@@ -109,10 +109,5 @@ function New-WhsCINodeAppPackage
 
     $TaskParameter['ThirdPartyPath'] = Invoke-Command { 'node_modules' ; $TaskParameter['ThirdPartyPath'] } | Select-Object -Unique
 
-    New-WhsCIAppPackage @TaskParameter `
-                        -RepositoryRoot $TaskContext.TaskPathRoot `
-                        -Version $TaskContext.Version `
-                        -ProGetPackageUri $TaskContext.ProGetAppFeedUri `
-                        -ProGetCredential $TaskContext.ProGetCredential `
-                        -BuildMasterSession $TaskContext.BuildMasterSession
+    New-WhsCIAppPackage -TaskContext $TaskContext -TaskParameter $TaskParameter
 }
