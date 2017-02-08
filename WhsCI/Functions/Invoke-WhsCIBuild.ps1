@@ -410,7 +410,6 @@ function Invoke-WhsCIBuild
                     }
 
                     'WhsAppPackage' {
-                        $excludeParam = @{}
                         foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
                         {
                             if( -not $task.ContainsKey($mandatoryName) )
@@ -418,9 +417,16 @@ function Invoke-WhsCIBuild
                                 throw ('{0}Element ''{1}'' is mandatory.' -f $errorPrefix,$mandatoryName)
                             }
                         }
+
+                        $optionalParams = @{}
                         if( $task['Exclude'] )
                         {
-                            $excludeParam['Exclude'] = $task['Exclude']
+                            $optionalParams['Exclude'] = $task['Exclude']
+                        }
+
+                        if( $task.ContainsKey('ThirdPartyPath') )
+                        {
+                            $optionalParams['ThirdPartyPath'] = $task['ThirdPartyPath']
                         }
 
                         $proGetParams = @{ }
@@ -444,7 +450,7 @@ function Invoke-WhsCIBuild
                                             -Version $semVersion `
                                             -Path $taskPaths `
                                             -Include $task['Include'] `
-                                            @excludeParam `
+                                            @optionalParams `
                                             @proGetParams `
                                             @whatIfParam
                     }

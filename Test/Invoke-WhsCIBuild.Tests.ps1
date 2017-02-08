@@ -1032,6 +1032,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
                         Include = $whitelist;
                         Description = $packageDescription;
                         Name = $packageName;
+                        ThirdPartyPath = @( 'node_modules', 'another_tool' )
                    }
     $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
     $arcSource = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
@@ -1040,6 +1041,7 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
     $root = $configPath | Split-Path 
     $dirPath = Join-Path -Path $root -ChildPath $dirs
     Install-Directory -Path $dirPath
+    $properties['ThirdPartyPath'] | ForEach-Object { Install-Directory -Path (Join-Path -Path $root -ChildPath $_) }
     '' | Set-Content -Path (Join-Path -Path $dirPath -ChildPath $whitelist)
 
     $progetUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
@@ -1080,6 +1082,10 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
             Write-Debug -Message ('                           actual    {0}' -f $semVersion)
             Write-Debug -Message ('Path                       expected  {0}' -f $fullDirs)
             Write-Debug -Message ('                           actual    {0}' -f $Path[0])
+            $expectedThirdPartyPath = $properties['ThirdPartyPath'] -join ';'
+            $actualThirdParyPath = $ThirdPartyPath -join ';'
+            Write-Debug -Message ('ThirdPartyPath             expected  {0}' -f $expectedThirdPartyPath)
+            Write-Debug -Message ('                           actual    {0}' -f $actualThirdParyPath)
             Write-Debug -Message ('Include                    expected  {0}' -f $whitelist)
             Write-Debug -Message ('                           actual    {0}' -f $Include[0])
             Write-Debug -Message ('Exclude                    expected  {0}' -f $true)
@@ -1115,8 +1121,8 @@ Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
                    $ProGetPackageUri -eq $progetUri -and
                    $password -eq $expectedPassword -and
                    $expectedBMUri -eq $BuildMasterSession.Uri -and
-                   $bmApiKey -eq $BuildMasterSession.ApiKey
-
+                   $bmApiKey -eq $BuildMasterSession.ApiKey -and
+                   $expectedThirdPartyPath -eq $actualThirdParyPath
         }
     }
 

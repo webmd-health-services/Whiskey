@@ -18,6 +18,8 @@ function New-WhsCIAppPackage
      * `.git`
      * `.hg`
 
+    Some packages require third-party packages, tools, etc, whose contents are out of our control (e.g. the `node_modules` directory in Node.js applications). Pass paths to these items to the `ThirdPartyPath` parameter. These paths are copied as-is, with no filtering, i.e. the `Include` or `Exclude` parameters are not used to filter its contents.
+
     If the application doesn't exist exist in ProGet, it is created.
 
     The application must exist in BuildMaster and must have three releases: `develop` for deploying to Dev, `release` for deploying to Test, and `master` for deploying to Staging and Live. `New-WhsCIAppPackage` uses the current Git branch to determine which release to add the package to.
@@ -77,7 +79,11 @@ function New-WhsCIAppPackage
         # * .git
         # * .hg
         # * obj
-        $Exclude
+        $Exclude,
+
+        [string[]]
+        # Paths to any third-party directories that should get included in the package. Third-party paths are copied as-is, warts and all. Nothing is excluded and the whitelist is ignored (i.e. the `Include` and `Exclude` parameters do not apply to any third-party paths). 
+        $ThirdPartyPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -89,6 +95,16 @@ function New-WhsCIAppPackage
     {
         throw ('Unable to create ''{0}'' package. One or more of the paths to include in the package don''t exist.'-f $Name)
         return
+    }
+
+    if( $ThirdPartyPath )
+    {
+        $ThirdPartyPath = $ThirdPartyPath | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
+        if( $resolveErrors )
+        {
+            throw ('Unable to create ''{0}'' package. One or more of the third-party paths to include in the package don''t exist.'-f $Name)
+            return
+        }
     }
 
     $arcPath = Join-Path -Path $RepositoryRoot -ChildPath 'Arc'
@@ -156,6 +172,17 @@ function New-WhsCIAppPackage
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
                 robocopy $item $destination '/MIR' '/NP' $Include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+            }
+        }
+
+        foreach( $item in $ThirdPartyPath )
+        {
+            $itemName = $item | Split-Path -Leaf
+            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
+            $operationDescription = 'packaging third-party {0}' -f $itemName
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            {
+                robocopy $item $destination '/MIR' '/NP' | Write-Debug
             }
         }
 

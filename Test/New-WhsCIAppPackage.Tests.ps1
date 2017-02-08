@@ -62,7 +62,13 @@ function Assert-NewWhsCIAppPackage
         $ShouldNotUploadPackage,
 
         [Switch]
-        $ShouldUploadPackage
+        $ShouldUploadPackage,
+
+        [string[]]
+        $HasThirdPartyDirectory,
+
+        [string[]]
+        $HasThirdPartyFile
     )
 
     if( -not $Version )
@@ -98,10 +104,16 @@ function Assert-NewWhsCIAppPackage
     }
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    $ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
+    #$ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
     $failed = $false
     $At = $null
     $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
+
+    $thirdPartyParam = @{ }
+    if( $HasThirdPartyDirectory )
+    {
+        $thirdPartyParam['ThirdPartyPath'] = $HasThirdPartyDirectory
+    }
 
     $progetParams = @{
                         ProGetPackageUri = $UploadedTo;
@@ -112,6 +124,8 @@ function Assert-NewWhsCIAppPackage
     {
         $progetParams = @{}
     }
+
+    Push-Location -Path $repoRoot
     try
     {
         $At = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
@@ -121,12 +135,17 @@ function Assert-NewWhsCIAppPackage
                                   -Path $ForPath `
                                   -Include $ThatIncludes `
                                   @progetParams `
-                                  @excludeParam
+                                  @excludeParam `
+                                  @thirdPartyParam
     }
     catch
     {
         $failed = $true
         Write-Error -ErrorRecord $_
+    }
+    finally
+    {
+        Pop-Location
     }
 
     if( $ShouldFailWithErrorMessage )
@@ -199,6 +218,13 @@ function Assert-NewWhsCIAppPackage
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
                 }
             }
+
+            foreach( $fileName in $HasThirdPartyFile )
+            {
+                It ('should not include {0}\{1} file' -f $dirName,$fileName) {
+                    Join-Path -Path $dirPath -ChildPath $fileName | Should Not Exist
+                }
+            }
         }
 
         if( $NotHasFiles )
@@ -255,6 +281,21 @@ function Assert-NewWhsCIAppPackage
                 $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
                 $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
                 $itemPath | Should Exist
+            }
+        }
+
+        foreach( $dirName in $HasThirdPartyDirectory )
+        {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
+            It ('should include {0} third-party directory' -f $dirName) {
+                 $dirpath | Should Exist
+            }
+            
+            foreach( $fileName in $HasThirdPartyFile )
+            {
+                It ('should include {0}\{1} third-party file' -f $dirName,$fileName) {
+                    Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
+                }
             }
         }
     }
@@ -637,7 +678,7 @@ Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
 Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     $Global:Error.Clear()
 
-    $dirNames = @( 'dir1'  )
+    $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
     $result = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
@@ -750,4 +791,18 @@ Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
+}
+
+Describe 'New-WhsCIAppPackage.when including third-party items' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasDirectories 'dir1' `
+                              -HasFiles 'html.html' `
+                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyFile 'thirdparty.txt'
 }
