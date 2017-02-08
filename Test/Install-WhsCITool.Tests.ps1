@@ -1,7 +1,7 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCiTest.ps1' -Resolve)
 
-function Invoke-Powershell-Install
+function Invoke-PowershellInstall
 {
     param(
         $ForModule,
@@ -110,7 +110,8 @@ function Invoke-Powershell-Install
     }
 }
 
-function Invoke-NuGetInstall {
+function Invoke-NuGetInstall 
+{
     [CmdletBinding()]
     param(
         $Package,
@@ -128,10 +129,10 @@ function Invoke-NuGetInstall {
     {
         $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
     }
-    $Global:Error.Clear()
     $result = Install-WhsCITool @downloadRootParam -NugetPackageName $Package -Version $Version
-    if( -not $invalidPackage){
-        Context 'the Vaild NuGet Package' {
+    if( -not $invalidPackage)
+    {
+        Context 'the NuGet Package' {
             It 'should exist' {                    
                 $result | Should Exist
             }
@@ -142,7 +143,8 @@ function Invoke-NuGetInstall {
             }
         }        
     }
-    else{
+    else
+    {
         Context 'the Invalid NuGet Package' {
             It 'should NOT exist' {                    
                 $result | Should Not Exist
@@ -154,16 +156,18 @@ function Invoke-NuGetInstall {
     }
 }
 
+#Need to work out test cases for happy path, bad name/version number that call above function.
+
 Describe 'Install-WhsCITool.when given a NuGet Package' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
 }
 
 Describe 'Install-WhsCITool.when NuGet Pack is bad' {
-    Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction SilentlyContinue
+    Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction silentlyContinue
 }
 
 Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
-    Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction SilentlyContinue
+    Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
 }
 
 Describe 'Install-WhsCITool.when installing an already installed NuGet package' {
@@ -179,14 +183,14 @@ Describe 'Install-WhsCITool.when installing an already installed NuGet package' 
 }
 
 Describe 'Install-WhsCITool.when run by developer/build server' {
-    Invoke-Powershell-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
 }
 
 Describe 'Install-WhsCITool.when installing an already installed module' {
     $Global:Error.Clear()
 
-    Invoke-Powershell-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
-    Invoke-Powershell-Install -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
 
     it 'should not write any errors' {
         $Global:Error | Should BeNullOrEmpty
@@ -194,15 +198,15 @@ Describe 'Install-WhsCITool.when installing an already installed module' {
 }
 
 Describe 'Install-WhsCITool.when omitting BUILD number' {
-    Invoke-Powershell-Install -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
 }
 
 Describe 'Install-WhsCITool.when installing a module under PowerShell 4' {
-    Invoke-Powershell-Install -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell4
+    Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell4
 }
 
 Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
-    Invoke-Powershell-Install -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
+    Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
 }
 
 Describe 'Install-WhsCITool.when using default DownloadRoot' {
@@ -212,7 +216,7 @@ Describe 'Install-WhsCITool.when using default DownloadRoot' {
          -MockWith { return Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath $ChildPath } `
          -ParameterFilter { $Path -eq $defaultDownloadRoot }.GetNewClosure()
 
-    Invoke-Powershell-Install -ForModule 'Snafu' -Version '3939.9393' -ActualVersion '3939.9393.0' -LikePowerShell4 -UsingDefaultDownloadRoot
+    Invoke-PowershellInstall -ForModule 'Snafu' -Version '3939.9393' -ActualVersion '3939.9393.0' -LikePowerShell4 -UsingDefaultDownloadRoot
 
     It 'should use LOCALAPPDATA for default install location' {
         Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq $defaultDownloadRoot }

@@ -69,4 +69,9 @@ Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
     }    
 }
 
+Describe 'Invoke-WhsCINUnit2Task when Install-WhsCITool fails' {
+    #This doesn't do anything......... Need to figure out how to get it to work Thursday.
+    Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -ParameterFilter { $NuGetPackageName -eq 'NotAPackage' -and $Version -eq'1.1.1' } -MockWith { return $true }
+    Invoke-NUnitInstall
 
+}

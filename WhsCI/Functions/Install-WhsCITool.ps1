@@ -118,7 +118,8 @@ function Install-WhsCITool
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
         
-        if( -not (Test-Path -Path $nuGetRoot -PathType Container) ){
+        if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
+        {
            & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput
         }
         return $nuGetRoot

@@ -351,7 +351,7 @@ function Invoke-WhsCIBuild
 
                     'NUnit2' {
                         $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                        Invoke-whsCINUnit2Task -DownloadRoot $DownloadRoot -Path $taskPaths -ReportPath $testResultPath -Root $root
+                        Invoke-whsCINUnit2Task -Path $taskPaths -ReportPath $testResultPath -Root $root
                     }
 
                     'Pester3' {

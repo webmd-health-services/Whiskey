@@ -36,8 +36,14 @@ function Invoke-WhsCINUnit2Task
   
     Process{        
         Set-StrictMode -version 'latest'        
+        $package = 'NUnit.Runners'
+        $version = '2.6.4'
 
-        $nunitRoot = Install-WhsCITool -NuGetPackageName 'NUnit.Runners' -Version 2.6.4
+        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version
+        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
+        {
+            Write-Error -Message ('Failed to install {0} {1}.' -f $package,$version)
+        }
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
