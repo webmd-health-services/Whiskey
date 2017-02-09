@@ -6,7 +6,10 @@ function New-WhsCITestContext
         $WithMockToolData,
 
         [string]
-        $ForBuildRoot
+        $ForBuildRoot,
+
+        [string]
+        $ForTaskName
     )
 
     Set-StrictMode -Version 'Latest'
@@ -21,13 +24,22 @@ function New-WhsCITestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
+    if( -not $ForTaskName )
+    {
+        $ForTaskName = 'TaskName'
+    }
+
     $context = [pscustomobject]@{
+                                    ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
                                     BuildRoot = $ForBuildRoot;
                                     OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
                                     Version = [semversion.SemanticVersion]'1.2.3-rc.1+build';
                                     ProGetAppFeedUri = 'http://proget.example.com/';
                                     ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
-                                    BuildMasterSession = 'buildmaster session'
+                                    BuildMasterSession = 'buildmaster session';
+                                    TaskIndex = 0;
+                                    TaskName = $ForTaskName;
+                                    Configuration = @{ };
                                  }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     return $context

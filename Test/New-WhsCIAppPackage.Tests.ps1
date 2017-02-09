@@ -128,7 +128,6 @@ function Assert-NewWhsCIAppPackage
 
     $Global:Error.Clear()
 
-    Push-Location -Path $taskContext.BuildRoot
     try
     {
         $At = New-WhsCIAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
@@ -137,10 +136,6 @@ function Assert-NewWhsCIAppPackage
     {
         $threwException = $true
         Write-Error -ErrorRecord $_
-    }
-    finally
-    {
-        Pop-Location
     }
 
     if( $ShouldFailWithErrorMessage )
@@ -694,7 +689,7 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     $parameters = @{
                         Name = 'Package';
                         Description = 'Description';
-                        Path = $dirNames | ForEach-Object { Join-Path -Path $context.BuildRoot -ChildPath $_ };
+                        Path = $dirNames;
                         Include = '*.html'
                    }
     $result = New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameters -WhatIf
@@ -812,4 +807,65 @@ Describe 'New-WhsCIAppPackage.when including third-party items' {
                               -HasFiles 'html.html' `
                               -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt'
+}
+
+foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
+{
+    Describe ('New-WhsCIAppPackage.when {0} property is omitted' -f $parameterName) {
+        $parameter = @{
+                        Name = 'Name';
+                        Include = 'Include';
+                        Description = 'Description';
+                        Path = 'Path' 
+                      }
+        $parameter.Remove($parameterName)
+
+        $context = New-WhsCITestContext
+        $Global:Error.Clear()
+        $threwException = $false
+        try
+        {
+            New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameter
+        }
+        catch
+        {
+            $threwException = $true
+            Write-Error -ErrorRecord $_ -ErrorAction SilentlyContinue
+        }
+
+        It 'should fail' {
+            $threwException | Should Be $true
+            $Global:Error | Should BeLike ('*Element ''{0}'' is mandatory.' -f $parameterName)
+        }
+    }
+}
+
+Describe 'New-WhsCIAppPackage.when path to package doesn''t exist' {
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    It 'should throw an exception' {
+        { New-WhsCIAppPackage -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
+    }
+
+    It 'should mention path in error message' {
+        $Global:Error | Should BeLike ('* Path`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+    }
+}
+
+
+Describe 'New-WhsCIAppPackage.when path to third-party item doesn''t exist' {
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    It 'should throw an exception' {
+        { New-WhsCIAppPackage -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
+    }
+
+    It 'should mention path in error message' {
+        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+    }
+
 }

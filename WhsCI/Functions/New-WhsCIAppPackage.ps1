@@ -38,6 +38,14 @@ function New-WhsCIAppPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    foreach( $mandatoryName in @( 'Name', 'Description', 'Include', 'Path' ) )
+    {
+        if( -not $TaskParameter.ContainsKey($mandatoryName) )
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
+        }
+    }
+
     $version = [semversion.SemanticVersion]$TaskContext.Version
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
@@ -47,24 +55,14 @@ function New-WhsCIAppPackage
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
 
     $resolveErrors = @()
-    $path = $path | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
-    if( $resolveErrors )
-    {
-        throw ('Unable to create ''{0}'' package. One or more of the paths to include in the package don''t exist.'-f $name)
-        return
-    }
+    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     if( $thirdPartyPath )
     {
-        $thirdPartyPath = $thirdPartyPath | Resolve-Path -ErrorVariable 'resolveErrors' | Select-Object -ExpandProperty 'ProviderPath'
-        if( $resolveErrors )
-        {
-            throw ('Unable to create ''{0}'' package. One or more of the third-party paths to include in the package don''t exist.'-f $name)
-            return
-        }
+        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath'
     }
 
-    $arcPath = Join-Path -Path $TaskContext.RepositoryRoot -ChildPath 'Arc'
+    $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
     if( -not (Test-Path -Path $arcPath -PathType Container) )
     {
         throw ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)

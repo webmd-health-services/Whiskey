@@ -82,6 +82,8 @@
                             'Invoke-WhsCiBuild',
                             'New-WhsCIAppPackage',
                             'New-WhsCINodeAppPackage',
+                            'Resolve-WhsCITaskPath',
+                            'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer'
                          );
 
