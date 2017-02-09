@@ -30,20 +30,23 @@ function Assert-NUnitTestsNotRun
     }
 }
 
-function Invoke-NUnitInstall{
+function Invoke-RunNUnit2Task
+{
     param(
         [switch]
         $WithFailingTests
     )
-    if( $WithFailingTests ){
+    if( $WithFailingTests )
+    {
         $assemblyNames = $failingNUnit2TestAssemblyPath
     }
-    else{
+    else
+    {
         $assemblyNames = $passingNUnit2TestAssemblyPath
     }
 
     $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
-    Invoke-WhsCINunit2Task -path $assemblyNames -ReportPath $reportPath -root $TestDrive.FullName
+    Invoke-WhsCINunit2Task -path $assemblyNames -ReportPath $reportPath
 
     Assert-NUnitTestsRun -ReportPath $ReportPath    
     It 'should download NUnit.Runners' {
@@ -51,17 +54,25 @@ function Invoke-NUnitInstall{
     }
 }
 
+
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {    
-    Invoke-NUnitInstall
+    Invoke-RunNUnit2Task
 }
 
 Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
     $threwException = $false
     $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
-    try{ Invoke-NUnitInstall -withFailingTests }
-    catch{ $threwException = $true }
+    try
+    { 
+        Invoke-RunNUnit2Task -withFailingTests 
+    }
+    catch
+    { 
+        $threwException = $true 
+    }
 
-    finally{
+    finally
+    {
         Assert-NUnitTestsNotRun -ReportPath $ReportPath 
         It 'Should Throw an Exception' {
             $threwException | should be $true
@@ -70,8 +81,25 @@ Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
 }
 
 Describe 'Invoke-WhsCINUnit2Task when Install-WhsCITool fails' {
-    #This doesn't do anything......... Need to figure out how to get it to work Thursday.
-    Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -ParameterFilter { $NuGetPackageName -eq 'NotAPackage' -and $Version -eq'1.1.1' } -MockWith { return $true }
-    Invoke-NUnitInstall
-
+    Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $false }
+    $Global:Error.Clear()
+    $threwException = $false
+    try
+    {
+        Invoke-RunNUnit2Task -ErrorAction silentlyContinue
+    }
+    catch
+    {
+        $threwException = $true
+    }
+    <#
+    $Global:Error.Clear()
+    
+    It 'should write errors for failed installation' {
+        $Global:Error | Should not BeNullOrEmpty
+    }
+    #>
+    It 'should throw an exception' {
+        $threwException | should be $true
+    }
 }
