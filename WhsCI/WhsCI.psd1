@@ -76,6 +76,7 @@
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
+                            'Invoke-WhsCIMSBuildTask',
                             'Invoke-WhsCINodeTask',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
