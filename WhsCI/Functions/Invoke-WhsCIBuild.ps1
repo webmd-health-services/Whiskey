@@ -275,12 +275,46 @@ function Invoke-WhsCIBuild
 
         if( $config.ContainsKey('BuildTasks') )
         {
+            $context = @{
+                            ConfigurationPath = $ConfigurationPath
+                            BuildRoot = $root;
+                            OutputDirectory = $outputRoot;
+                            Version = $semVersion;
+                            NuGetVersion = $nugetVersion;
+                            ProGetAppFeedUri = $null;
+                            ProGetCredential = $null;
+                            BuildMasterSession = $null;
+                            BitbucketServerCredential = $BBServerCredential;
+                            BitbucketServerUri = $BBServerUri
+                            TaskName = '';
+                            TaskIndex = 0;
+                            Configuration = $config;
+                        }
+
+            if( $runningUnderBuildServer )
+            {
+                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+                $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+                $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
+                $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+                $context.BuildMasterSession = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
+            }
+
+            # Tasks that should be called with the WhatIf switch when run by developers
+            # This makes builds go a little faster.
+            $developerWhatIfTasks = @{
+                                        'AppPackage' = $true;
+                                        'NodeAppPackage' = $true;
+                                     }
+
             $taskIdx = -1
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
                 $taskName = $task.Keys | Select-Object -First 1
                 $task = $task[$taskName]
+                $context.TaskName = $taskName
+                $context.TaskIndex = $taskIdx
 
                 $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $ConfigurationPath,$taskIdx,$taskName
 
@@ -291,14 +325,11 @@ function Invoke-WhsCIBuild
 
                 $errors = @()
                 $pathIdx = -1
-                if( $task.ContainsKey('Path') )
-                {
-                    $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                }
 
                 switch( $taskName )
                 {
                     'MSBuild' {
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $projectPath in $taskPaths )
                         {
                             $errors = $null
@@ -346,6 +377,7 @@ function Invoke-WhsCIBuild
                     }
 
                     'NuGetPack' {
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $path in $taskPaths )
                         {
                             $preNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
@@ -373,6 +405,7 @@ function Invoke-WhsCIBuild
                         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
                         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
 
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $binRoots = $taskPaths | Group-Object -Property { Split-Path -Path $_ -Parent } 
                         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
 
@@ -388,6 +421,7 @@ function Invoke-WhsCIBuild
                     'Pester3' {
                         try
                         {
+                            $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                             Invoke-WhsCIPester3Task -OutputRoot $outputRoot -Path $taskPaths -Config $task
                         }
                         catch
@@ -403,61 +437,29 @@ function Invoke-WhsCIBuild
                             $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
                         }
 
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $scriptPath in $taskPaths )
                         {
                             Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
                         }
                     }
 
-                    'WhsAppPackage' {
-                        foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
+                    default {
+                        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+                        if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                         {
-                            if( -not $task.ContainsKey($mandatoryName) )
+                            $whatIfParam = @{ }
+                            if( -not $runningUnderBuildServer -and $developerWhatIfTasks.ContainsKey($taskName) )
                             {
-                                throw ('{0}Element ''{1}'' is mandatory.' -f $errorPrefix,$mandatoryName)
+                                $whatIfParam['WhatIf'] = $true
                             }
-                        }
-
-                        $optionalParams = @{}
-                        if( $task['Exclude'] )
-                        {
-                            $optionalParams['Exclude'] = $task['Exclude']
-                        }
-
-                        if( $task.ContainsKey('ThirdPartyPath') )
-                        {
-                            $optionalParams['ThirdPartyPath'] = $task['ThirdPartyPath']
-                        }
-
-                        $proGetParams = @{ }
-                        $whatIfParam = @{}
-                        if( $runningUnderBuildServer )
-                        {
-                            $proGetParams['ProGetPackageUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
-                            $proGetParams['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
-                            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
-                            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
-                            $proGetParams['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
+                            & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
                         }
                         else
                         {
-                            $whatIfParam['WhatIf'] = $true
+                            $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
+                            throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                         }
-
-                        New-WhsCIAppPackage -RepositoryRoot $root `
-                                            -Name $task['Name'] `
-                                            -Description $task['Description'] `
-                                            -Version $semVersion `
-                                            -Path $taskPaths `
-                                            -Include $task['Include'] `
-                                            @optionalParams `
-                                            @proGetParams `
-                                            @whatIfParam
-                    }
-
-                    default {
-                        $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
-                        throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                     }
                 }
             }

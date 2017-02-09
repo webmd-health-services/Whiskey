@@ -10,7 +10,6 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\powershell-yam
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
-$packageDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'packages'
 $moduleDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'Modules'
 
 #region Assertions
@@ -275,29 +274,6 @@ function Assert-NUnitTestsRun
 
     It 'should run NUnit tests' {
         $ConfigurationPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should Not BeNullOrEmpty
-    }
-}
-
-function Assert-WhsAppPackageCreated
-{
-    param(
-        $ConfigurationPath,
-        $Version,
-        $Name
-    )
-
-    It 'should create package' {
-        $root = $ConfigurationPath | Split-Path
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root
-        $packageFileName = '{0}.{1}.upack' -f $Name,$Version
-        $packagePath = Join-Path -Path $outputRoot -ChildPath $packageFileName
-        $packagePath | Should Exist
-    }
-
-    It 'should start deploy in BuildMaster' {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 1
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 1
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 1
     }
 }
 #endregion
@@ -1019,202 +995,6 @@ Version: 2.13.80
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when running the WhsAppPackage task' {
-    $now = Get-Date
-    $today = [datetime]::Today
-    $packageVersion = '{0}.{1}.{2}' -f $now.Year,$now.DayOfYear,($now - $today).TotalMilliseconds.ToInt32($null)
-    Start-Sleep -Milliseconds 1
-    $dirs = 'dir1'
-    $whitelist = 'html.html'
-    $packageName = 'WhsCI WhsAppPackage Task Test Package'
-    $packageDescription = 'description'
-    $properties = @{
-                        Include = $whitelist;
-                        Description = $packageDescription;
-                        Name = $packageName;
-                        ThirdPartyPath = @( 'node_modules', 'another_tool' )
-                   }
-    $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-    $arcSource = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
-    $arcDestination = Join-Path -Path ($configPath | Split-Path) -ChildPath 'Arc'
-    robocopy $arcSource $arcDestination /MIR
-    $root = $configPath | Split-Path 
-    $dirPath = Join-Path -Path $root -ChildPath $dirs
-    Install-Directory -Path $dirPath
-    $properties['ThirdPartyPath'] | ForEach-Object { Install-Directory -Path (Join-Path -Path $root -ChildPath $_) }
-    '' | Set-Content -Path (Join-Path -Path $dirPath -ChildPath $whitelist)
-
-    $progetUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
-    Context 'really packaging by build server' {
-        $semVersion = [SemVersion.SemanticVersion]::Parse(('{0}-prerelease.1+build' -f $packageVersion))
-        $testProGetFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test' -ForWrite
-        Mock -CommandName 'Get-ProGetUri' -ModuleName 'WhsCI' -MockWith { return $testProGetFeedUri }.GetNewClosure()
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
-        Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -MockWith { return [pscustomobject]@{ id = 455 } }
-        Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { return [pscustomobject]@{ id = 433; } }
-        Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
-        Invoke-Build -ByJenkins -WithConfig $configPath
-
-        Assert-WhsAppPackageCreated -ConfigurationPath $configPath -Name $packageName -Version $semVersion
-    }
-
-    Context 'mock packager by build server' {
-        $semVersion = [SemVersion.SemanticVersion]::Parse(('{0}-prerelease.1+build' -f $packageVersion))
-        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $semVersion }.GetNewClosure()
-
-        Invoke-Build -ByJenkins -WithConfig $configPath
-
-        $progetCred = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
-        $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $root = $configPath | Split-Path
-            $fullDirs = Join-Path -Path $root -ChildPath $dirs
-            #$DebugPreference = 'Continue'
-
-            Write-Debug -Message ('RepositoryRoot             expected  {0}' -f $RepositoryRoot)
-            Write-Debug -Message ('                           actual    {0}' -f $root)
-            Write-Debug -Message ('Description                expected  {0}' -f $Description)
-            Write-Debug -Message ('                           actual    {0}' -f $packageDescription)
-            Write-Debug -Message ('Name                       expected  {0}' -f $Name)
-            Write-Debug -Message ('                           actual    {0}' -f $packageName)
-            Write-Debug -Message ('Version                    expected  {0}' -f $Version)
-            Write-Debug -Message ('                           actual    {0}' -f $semVersion)
-            Write-Debug -Message ('Path                       expected  {0}' -f $fullDirs)
-            Write-Debug -Message ('                           actual    {0}' -f $Path[0])
-            $expectedThirdPartyPath = $properties['ThirdPartyPath'] -join ';'
-            $actualThirdParyPath = $ThirdPartyPath -join ';'
-            Write-Debug -Message ('ThirdPartyPath             expected  {0}' -f $expectedThirdPartyPath)
-            Write-Debug -Message ('                           actual    {0}' -f $actualThirdParyPath)
-            Write-Debug -Message ('Include                    expected  {0}' -f $whitelist)
-            Write-Debug -Message ('                           actual    {0}' -f $Include[0])
-            Write-Debug -Message ('Exclude                    expected  {0}' -f $true)
-            Write-Debug -Message ('                           actual    {0}' -f ($Exclude -eq $null))
-            Write-Debug -Message ('ProGetPackageUri           expected  {0}' -f $progetUri)
-            Write-Debug -Message ('                           actual    {0}' -f $ProgetPackageUri)
-            Write-Debug -Message ('ProGetCredential           expected  {0}' -f $progetCred.UserName)
-            Write-Debug -Message ('                           actual    {0}' -f $ProGetCredential.UserName)
-            $expectedBMUri = (Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri')
-            Write-Debug -Message ('BuildMasterSession.Uri     expected  {0}' -f $expectedBMUri)
-            Write-Debug -Message ('                           actual    {0}' -f $BuildMasterSession.Uri)
-            $hasher = New-Object -TypeName 'Security.Cryptography.Sha512Managed'
-            $expectedApiKey = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($bmApiKey))
-            $expectedApiKey = [Text.Encoding]::UTF8.GetString($expectedApiKey)
-            $actualApiKey = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($BuildMasterSession.ApiKey))
-            $actualApiKey = [Text.Encoding]::UTF8.GetString($actualApiKey)
-            Write-Debug -Message ('BuildMasterSession.ApiKey  expected  {0}' -f $expectedApiKey)
-            Write-Debug -Message ('                           actual    {0}' -f $actualApiKey)
-            $expectedPassword = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($progetCred.GetNetworkCredential().Password))
-            $expectedPassword = [Text.Encoding]::UTF8.GetString($expectedPassword)
-            $password = $hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($ProGetCredential.GetNetworkCredential().Password))
-            $password = [Text.Encoding]::UTF8.GetString($password)
-            Write-Debug -Message ('ProGetCredential           expected  {0}' -f $expectedPassword)
-            Write-Debug -Message ('                           actual    {0}' -f $password)
-
-            return $RepositoryRoot -eq $root -and 
-                   $Description -eq $packageDescription -and
-                   $Name -eq $packageName -and
-                   $Version -eq $semVersion -and
-                   $Path[0] -eq $fullDirs -and
-                   $Include[0] -eq $whitelist -and
-                   $Exclude -eq $null -and
-                   $ProGetPackageUri -eq $progetUri -and
-                   $password -eq $expectedPassword -and
-                   $expectedBMUri -eq $BuildMasterSession.Uri -and
-                   $bmApiKey -eq $BuildMasterSession.ApiKey -and
-                   $expectedThirdPartyPath -eq $actualThirdParyPath
-        }
-    }
-
-    Context 'by developer' {
-        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
-
-        Invoke-Build -ByDeveloper -WithConfig $configPath
-
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
-            #$DebugPreference = 'Continue'
-
-            Write-Debug -Message ('ProGetPackageUri    expected  {0}' -f '$null')
-            Write-Debug -Message ('                    actual    {0}' -f $ProgetPackageUri)
-            Write-Debug -Message ('ProGetCredential    expected  {0}' -f '$null')
-            Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
-            Write-Debug -Message ('BuildMasterSession  expected  {0}' -f '$null')
-            Write-Debug -Message ('                    actual    {0}' -f $ProGetCredential)
-            Write-Debug -Message ('WhatIfPreference    expected  {0}' -f $true)
-            Write-Debug -Message ('                    actual    {0}' -f $WhatIfPreference)
-            $ProGetPackageUri -eq $null -and $ProGetCredential -eq $null -and $WhatIfPreference -eq $true
-        }
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when running WhsAppPackage task and excluding items' {
-    $packageVersion = '4.23.80'
-    $dirs = 'dir1'
-    $whitelist = 'html.html'
-    $packageName = 'MyPackage'
-    $packageDescription = 'description'
-    $packageExclude = 'fubar'
-    $properties = @{
-                        Include = $whitelist;
-                        Description = $packageDescription;
-                        Name = $packageName;
-                        Exclude = $packageExclude;
-                   }
-    $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-    Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
-    New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-        #$DebugPreference = 'Continue'
-        return $Exclude.Count -eq 1 -and $Exclude[0] -eq $packageExclude
-    }
-}
-
-foreach( $propertyName in @( 'Name', 'Description', 'Include' ) )
-{
-    Describe ('Invoke-WhsCIBuild.when running WhsAppPackage and missing {0} element' -f $propertyName) {
-        $packageVersion = '4.23.80'
-        $dirs = 'dir1'
-        $whitelist = 'html.html'
-        $packageName = 'MyPackage'
-        $packageDescription = 'description'
-        $packageExclude = 'fubar'
-        $properties = @{
-                            Include = $whitelist;
-                            Description = $packageDescription;
-                            Name = $packageName;
-                            Exclude = $packageExclude;
-                       }
-        if( $properties.ContainsKey($propertyName) )
-        {
-            $properties.Remove($propertyName)
-        }
-        else
-        {
-            $dirs = @()
-        }
-
-        $Global:Error.Clear()
-
-        $configPath = New-TestWhsBuildFile -Version $packageVersion -TaskName 'WhsAppPackage' -Path $dirs -TaskProperty $properties
-        Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
-        New-Item -Path (Join-Path -Path ($configPath | Split-Path) -ChildPath $dirs) -ItemType 'Directory'
-
-        Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-
-        It 'should not create package' {
-            Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Times 0
-        }
-
-        it 'should write an error' {
-            $Global:Error.Count | Should BeGreaterThan 0
-            $Global:Error[0] | Should Match ('\b{0}\b.*\bmandatory' -f $propertyName)
-        }
-    }
-}
-
 Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
     $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
     $repoRoot = $whsbuildPath | Split-Path
@@ -1270,4 +1050,137 @@ Describe 'Invoke-WhsCIBuild.when Git repository doesn''t exist' {
     }
 
     Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName 'FubarSnafu.csproj'
+}
+
+# Tasks that should be called with the WhatIf parameter when run by developers
+$whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
+# TODO: Once:
+# * all task logic is migrated into its corresponding task function
+# * all tasks use the same interface
+# * task functions are created for all tasks
+#
+# Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage' ) )
+{
+    Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
+
+        function Assert-TaskCalled
+        {
+            param(
+                [Switch]
+                $WithWhatIfSwitch
+            )
+
+            It 'should pass context to task' {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+
+                    foreach( $propertyName in $expectedContext.Keys )
+                    {
+                        $expectedValue = $expectedContext[$propertyName]
+                        $actualValue = $TaskContext.$propertyName
+
+                        if( $propertyName -like '*Credential' )
+                        {
+                            $expectedValue = $expectedValue.UserName
+                            $actualVAlue = $actualValue.UserName 
+                        }
+
+                        Write-Debug -Message ('{0,-25}  expected  {1}' -f $propertyName,$expectedValue)
+                        Write-Debug -Message ('                           actual    {1}' -f $propertyName,$actualValue)
+
+                        if( $expectedValue -ne $actualValue )
+                        {
+                            return $false
+                        }
+                    }
+
+                    $bmSession = $TaskContext.BuildMasterSession
+                    Write-Debug -Message ('BuildMasterApiKey          expected  {0}' -f $bmApiKey)
+                    Write-Debug -Message ('                           actual    {0}' -f $bmSession.ApiKey)
+                    if( $bmApiKey -ne $bmSession.ApiKey )
+                    {
+                        return $false
+                    }
+                    
+                    Write-Debug -Message ('BuildMasterUri             expected  {0}' -f $bmUri)
+                    Write-Debug -Message ('                           actual    {0}' -f $bmSession.Uri)
+                    if( $bmUri -ne $bmSession.Uri )
+                    {
+                        return $false
+                    }
+
+                    Write-Debug -Message ('Configuration              expected  {0}' -f [hashtable].FullName)
+                    Write-Debug -Message ('                           actual    {0}' -f $TaskContext.Configuration.GetType().FullName)
+                    if( $TaskContext.Configuration -isnot [hashtable] )
+                    {
+                        return $false
+                    }
+
+                    Write-Debug -Message ('WhatIf                     expected  {0}' -f $WithWhatIfSwitch)
+                    Write-Debug -Message ('                           actual    {0}' -f $WhatIfPreference)
+                    if( $WithWhatIfSwitch -ne $WhatIfPreference )
+                    {
+                        return $false
+                    }
+
+                    return $true
+                }
+            }        
+
+            It 'should pass task parameters' {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
+                }
+            }
+        }
+
+
+        $version = '4.3.5-rc.1'
+        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+        $configPath = New-TestWhsBuildFile -TaskName $taskName -Path $taskName -Version $version
+        $buildRoot = $configPath | Split-Path
+        $expectedContext = @{
+                                ConfigurationPath = $configPath;
+                                TaskName = $taskName;
+                                TaskIndex = 0;
+                                BuildRoot = $buildRoot;
+                                OutputDirectory = (Join-Path -Path $buildRoot -ChildPath '.output');
+                                Version = $version;
+                                NuGetVersion = $version;
+                            }
+
+        Mock -CommandName 'Assert-WhsCIVersionAvailable' -ModuleName 'WhsCI' -MockWith { return $Version }
+        Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
+
+        Context 'By Developer' {
+            New-MockDeveloperEnvironment
+            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+            Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig'
+            $expectedContext['Version'] = '{0}+{1}.{2}' -f $version,$env:USERNAME,$env:COMPUTERNAME
+            $withWhatIfSwitchParam = @{ }
+            if( $whatIfTasks.ContainsKey($taskName) )
+            {
+                $withWhatIfSwitchParam['WithWhatIfSwitch'] = $true
+            }
+            Assert-TaskCalled @withWhatIfSwitchParam
+        }
+
+        Context 'By Jenkins' {
+            $bbServerCredential = New-Credential -UserName 'fubar' -Password 'password'
+            $bbServerUri = 'http://bitbucketserver.example.com/'
+            New-MockBitbucketServer
+            New-MockBuildServer
+            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+            Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig' -BBServerCredential $bbServerCredential -BBServerUri $bbServerUri
+            $expectedContext['Version'] = '{0}+80.develop.deadbee' -f $version
+            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+            $expectedContext['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+            $expectedContext['BitbucketServerCredential'] = $bbServerCredential
+            $expectedContext['BitbucketServerUri'] = $bbServerUri
+            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
+            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+            Assert-TaskCalled
+        }
+    }
 }
