@@ -37,12 +37,12 @@ function Assert-NodePackageCreated
         $taskParameter['Include'] = $WithExtraFile
     }
 
-    Mock -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Verifiable
 
-    New-WhsCINodeAppPackage -TaskContext $context -TaskParameter $taskParameter
+    Invoke-WhsCINodeAppPackageTask -TaskContext $context -TaskParameter $taskParameter
     
-    It 'should pass parameters to New-WhsCIAppPackage' {
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
+    It 'should pass parameters to Invoke-WhsCIAppPackageTask' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Name                expected  {0}' -f $packageName)
             Write-Debug -Message ('                    actual    {0}' -f $TaskParameter['Name'])
@@ -71,7 +71,7 @@ function Assert-NodePackageCreated
     }
 
     It 'should pass default whitelist' {
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
             $missing = Invoke-Command { $WithExtraFile ; '*.js','*.css' } | Where-Object { $TaskParameter['Include'] -notcontains $_ }
@@ -93,7 +93,7 @@ function Assert-NodePackageCreated
     }
 
     It 'should pass node_modules as third-party path' {
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
             $packageThirdPartyPath = $WithThirdPartyPath -join ';'
@@ -106,7 +106,7 @@ function Assert-NodePackageCreated
     }
 
     It 'should pass node_modules as third party path once' {
-        Assert-MockCalled -CommandName 'New-WhsCIAppPackage' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
             $nodeModulesCount = $TaskParameter['ThirdPartyPath'] | Where-Object { $_ -eq 'node_modules' } | Measure-Object | Select-Object -ExpandProperty 'Count'
@@ -119,18 +119,18 @@ function Assert-NodePackageCreated
     }
 }
 
-Describe 'New-WhsCINodeAppPackage.when called' {
+Describe 'Invoke-WhsCINodeAppPackageTask.when called' {
     Assert-NodePackageCreated
 }
 
-Describe 'New-WhsCINodeAppPackage.when called with extra files' {
+Describe 'Invoke-WhsCINodeAppPackageTask.when called with extra files' {
     Assert-NodePackageCreated -WithExtraFile 'one','two'
 }
 
-Describe 'New-WhsCINodeAppPackage.when called with duplicate third-party path' {
+Describe 'Invoke-WhsCINodeAppPackageTask.when called with duplicate third-party path' {
     Assert-NodePackageCreated -WithThirdPartyPath 'node_modules'
 }
 
-Describe 'New-WhsCINodeAppPackage.when called with third-party path' {
+Describe 'Invoke-WhsCINodeAppPackageTask.when called with third-party path' {
     Assert-NodePackageCreated -WithThirdPartyPath 'thirdfirst','thirdsecond'
 }

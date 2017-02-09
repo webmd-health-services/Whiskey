@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
-$defaultDescription = 'A package created to test the New-WhsCIAppPackage function in the WhsCI module.'
+$defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 
@@ -130,7 +130,7 @@ function Assert-NewWhsCIAppPackage
 
     try
     {
-        $At = New-WhsCIAppPackage -TaskContext $taskContext -TaskParameter $taskParameter
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter
     }
     catch
     {
@@ -172,7 +172,7 @@ function Assert-NewWhsCIAppPackage
 
 
     It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsCIAppPackage+*' |
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' |
             Should BeNullOrEmpty
     }
 
@@ -544,7 +544,7 @@ function Initialize-Test
     return $repoRoot
 }
 
-Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -557,7 +557,7 @@ Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -571,7 +571,7 @@ Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -585,7 +585,7 @@ Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
                               -ShouldUploadPackage 
 }
 
-Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excluded' {    
+Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -600,7 +600,7 @@ Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excl
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when paths don''t exist' {
+Describe 'Invoke-WhsCIAppPackageTask.when paths don''t exist' {
 
     $Global:Error.Clear()
 
@@ -612,7 +612,7 @@ Describe 'New-WhsCIAppPackage.when paths don''t exist' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
+Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
@@ -625,7 +625,7 @@ Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
+Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'index.aspx' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
@@ -640,7 +640,7 @@ Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when package upload fails' {
+Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
@@ -654,7 +654,7 @@ Describe 'New-WhsCIAppPackage.when package upload fails' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when really uploading package' {
+Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
@@ -666,7 +666,7 @@ Describe 'New-WhsCIAppPackage.when really uploading package' {
                               -ShouldReallyUploadToProGet 
 }
 
-Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
+Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
@@ -679,7 +679,7 @@ Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
+Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
     $Global:Error.Clear()
 
     $dirNames = @( 'dir1' )
@@ -692,7 +692,7 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
                         Path = $dirNames;
                         Include = '*.html'
                    }
-    $result = New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameters -WhatIf
+    $result = Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameters -WhatIf
 
     It 'should write no errors' {
         $Global:Error | Should BeNullOrEmpty
@@ -711,7 +711,7 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     }
 }
 
-Describe 'New-WhsCIAppPackage.when building on master branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnMasterBranch
@@ -723,7 +723,7 @@ Describe 'New-WhsCIAppPackage.when building on master branch' {
                               -ShouldUploadPackage 
 }
 
-Describe 'New-WhsCIAppPackage.when building on feature branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnFeatureBranch
@@ -735,7 +735,7 @@ Describe 'New-WhsCIAppPackage.when building on feature branch' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on release branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
@@ -747,7 +747,7 @@ Describe 'New-WhsCIAppPackage.when building on release branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on long-lived release branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnPermanentReleaseBranch
@@ -759,7 +759,7 @@ Describe 'New-WhsCIAppPackage.when building on long-lived release branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on develop branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnDevelopBranch
@@ -771,7 +771,7 @@ Describe 'New-WhsCIAppPackage.when building on develop branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on hot fix branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnHotFixBranch
@@ -783,7 +783,7 @@ Describe 'New-WhsCIAppPackage.when building on hot fix branch' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnBugFixBranch
@@ -795,7 +795,7 @@ Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when including third-party items' {
+Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
@@ -811,7 +811,7 @@ Describe 'New-WhsCIAppPackage.when including third-party items' {
 
 foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
 {
-    Describe ('New-WhsCIAppPackage.when {0} property is omitted' -f $parameterName) {
+    Describe ('Invoke-WhsCIAppPackageTask.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
                         Name = 'Name';
                         Include = 'Include';
@@ -825,7 +825,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
         $threwException = $false
         try
         {
-            New-WhsCIAppPackage -TaskContext $context -TaskParameter $parameter
+            Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter
         }
         catch
         {
@@ -840,13 +840,13 @@ foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
     }
 }
 
-Describe 'New-WhsCIAppPackage.when path to package doesn''t exist' {
+Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
     $context = New-WhsCITestContext
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { New-WhsCIAppPackage -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -855,13 +855,13 @@ Describe 'New-WhsCIAppPackage.when path to package doesn''t exist' {
 }
 
 
-Describe 'New-WhsCIAppPackage.when path to third-party item doesn''t exist' {
+Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
     $context = New-WhsCITestContext
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { New-WhsCIAppPackage -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
     }
 
     It 'should mention path in error message' {

@@ -1,18 +1,18 @@
 
-function New-WhsCIAppPackage
+function Invoke-WhsCIAppPackageTask
 {
     <#
     .SYNOPSIS
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `New-WhsCIAppPackage` function creates an universal ProGet package for a WHS application, and optionally uploads it to ProGet and starts a deploy for the package in BuildMaster. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet and start a deploy, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively and a session to BuildMaster with the `BuildMasterSession` object.
+    The `Invoke-WhsCIAppPackageTask` function creates an universal ProGet package for a WHS application, and optionally uploads it to ProGet and starts a deploy for the package in BuildMaster. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet and start a deploy, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively and a session to BuildMaster with the `BuildMasterSession` object.
 
     It returns an `IO.FileInfo` object for the created package.
 
     Packages are only allowed to have whitelisted files, i.e. you can't include all files by default. You must supply a value for the `Include` parameter that lists the file names or wildcards that match the files you want in your application.
 
-    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `New-WhsCIAppPackage` *always* excludes directories named:
+    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `Invoke-WhsCIAppPackageTask` *always* excludes directories named:
 
      * `obj`
      * `.git`
@@ -22,7 +22,7 @@ function New-WhsCIAppPackage
 
     If the application doesn't exist exist in ProGet, it is created.
 
-    The application must exist in BuildMaster and must have three releases: `develop` for deploying to Dev, `release` for deploying to Test, and `master` for deploying to Staging and Live. `New-WhsCIAppPackage` uses the current Git branch to determine which release to add the package to.
+    The application must exist in BuildMaster and must have three releases: `develop` for deploying to Dev, `release` for deploying to Test, and `master` for deploying to Staging and Live. `Invoke-WhsCIAppPackageTask` uses the current Git branch to determine which release to add the package to.
     #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
@@ -77,7 +77,7 @@ function New-WhsCIAppPackage
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+New-WhsCIAppPackage+{0}' -f $name
+    $tempBaseName = 'WhsCI+Invoke-WhsCIAppPackageTask+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
