@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
-$defaultDescription = 'A package created to test the New-WhsCIAppPackage function in the WhsCI module.'
+$defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 
@@ -62,7 +62,13 @@ function Assert-NewWhsCIAppPackage
         $ShouldNotUploadPackage,
 
         [Switch]
-        $ShouldUploadPackage
+        $ShouldUploadPackage,
+
+        [string[]]
+        $HasThirdPartyDirectory,
+
+        [string[]]
+        $HasThirdPartyFile
     )
 
     if( -not $Version )
@@ -74,18 +80,36 @@ function Assert-NewWhsCIAppPackage
         Start-Sleep -Milliseconds 1
     }
 
-    $Global:Error.Clear()
-    $excludeParam = @{ }
+    $taskParameter = @{
+                            Name = $Name;
+                            Description = $Description;
+                            Path = $ForPath;
+                            Include = $ThatIncludes;
+                        }
     if( $ThatExcludes )
     {
-        $excludeParam['Exclude'] = $ThatExcludes
+        $taskParameter['Exclude'] = $ThatExcludes
     }
+    if( $HasThirdPartyDirectory )
+    {
+        $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
+    }
+
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo'
+    $taskContext.Version = $Version
+
+    $mock = { return $false }
+    if( $ShouldUploadPackage )
+    {
+        $mock = { return $true }
+    }
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
     {
-        $UploadedTo = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test'
-        $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $taskContext.ProGetAppFeedUri = $UploadedTo = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Test'
+        $taskContext.ProGetCredential = $UploadedBy = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
         $packagesAtStart = @()
         try
         {
@@ -97,42 +121,27 @@ function Assert-NewWhsCIAppPackage
         }
     }
 
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    $ForPath = $ForPath | ForEach-Object { Join-Path -Path $repoRoot -ChildPath $_ }
-    $failed = $false
-    $At = $null
-    $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
 
-    $progetParams = @{
-                        ProGetPackageUri = $UploadedTo;
-                        ProGetCredential = $UploadedBy;
-                        BuildMasterSession = $bmSession;
-                     }
-    if( $WithNoProGetParameters )
-    {
-        $progetParams = @{}
-    }
+    $threwException = $false
+    $At = $null
+    $taskContext.BuildMasterSession = $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
+
+    $Global:Error.Clear()
+
     try
     {
-        $At = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
-                                  -Name $Name `
-                                  -Description $Description `
-                                  -Version $Version `
-                                  -Path $ForPath `
-                                  -Include $ThatIncludes `
-                                  @progetParams `
-                                  @excludeParam
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter
     }
     catch
     {
-        $failed = $true
+        $threwException = $true
         Write-Error -ErrorRecord $_
     }
 
     if( $ShouldFailWithErrorMessage )
     {
         It 'should fail with a terminating error' {
-            $failed | Should Be $true
+            $threwException | Should Be $true
         }
 
         It ('should fail with error message that matches ''{0}''' -f $ShouldFailWithErrorMessage) {
@@ -146,7 +155,7 @@ function Assert-NewWhsCIAppPackage
     else
     {
         It 'should not fail' {
-            $failed | Should Be $false
+            $threwException | Should Be $false
         }
 
         It 'should return package info' {
@@ -158,13 +167,12 @@ function Assert-NewWhsCIAppPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $repoRoot
+    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
 
     It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+New-WhsCIAppPackage+*' |
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' |
             Should BeNullOrEmpty
     }
 
@@ -197,6 +205,13 @@ function Assert-NewWhsCIAppPackage
             {
                 It ('should include {0}\{1} file' -f $dirName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
+                }
+            }
+
+            foreach( $fileName in $HasThirdPartyFile )
+            {
+                It ('should not include {0}\{1} file' -f $dirName,$fileName) {
+                    Join-Path -Path $dirPath -ChildPath $fileName | Should Not Exist
                 }
             }
         }
@@ -257,6 +272,21 @@ function Assert-NewWhsCIAppPackage
                 $itemPath | Should Exist
             }
         }
+
+        foreach( $dirName in $HasThirdPartyDirectory )
+        {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
+            It ('should include {0} third-party directory' -f $dirName) {
+                 $dirpath | Should Exist
+            }
+            
+            foreach( $fileName in $HasThirdPartyFile )
+            {
+                It ('should include {0}\{1} third-party file' -f $dirName,$fileName) {
+                    Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
+                }
+            }
+        }
     }
 
     if( $ShouldNotUploadPackage )
@@ -288,7 +318,7 @@ function Assert-NewWhsCIAppPackage
                     Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
                     Write-Debug -Message ('               actual    {0}' -f $Method)
 
-                    Write-Debug -Message ('Uri            expected  {0}' -f $UploadedTo)
+                    Write-Debug -Message ('Uri            expected  {0}' -f $taskContext.ProGetAppFeedUri)
                     Write-Debug -Message ('               actual    {0}' -f $Uri)
 
                     $expectedContentType = 'application/octet-stream'
@@ -300,7 +330,10 @@ function Assert-NewWhsCIAppPackage
                     Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
                     Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
 
-                    return $expectedMethod -eq $Method -and $UploadedTo -eq $Uri -and $expectedContentType -eq $ContentType -and $creds -eq $Headers['Authorization']
+                    return $expectedMethod -eq $Method -and `
+                           $taskContext.ProGetAppFeedUri -eq $Uri -and `
+                           $expectedContentType -eq $ContentType -and `
+                           $creds -eq $Headers['Authorization']
                 }
             }
         }
@@ -309,60 +342,71 @@ function Assert-NewWhsCIAppPackage
         $expectedReleaseName = $expectedReleaseName -replace '/.*$',''
         $expectedAppName = $Name
 
-        It 'should get release from BuildMaster' {
+        if( $ShouldFailWithErrorMessage )
+        {
+            It 'should not talk to BuildMaster' {
+                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+            }
+        }
+        else
+        {
+            It 'should get release from BuildMaster' {
             
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
-                Write-Debug -Message ('                actual    {0}' -f $Application)
-                Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
-                Write-Debug -Message ('                actual    {0}' -f $Name)
-                return $bmSession.Uri -eq $Session.Uri -and `
-                       $bmSession.ApiKey -eq $Session.ApiKey -and `
-                       $expectedAppName -eq $Application -and `
-                       $expectedReleaseName -eq $Name
+                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
+                    Write-Debug -Message ('                actual    {0}' -f $Application)
+                    Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
+                    Write-Debug -Message ('                actual    {0}' -f $Name)
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                           $bmSession.ApiKey -eq $Session.ApiKey -and `
+                           $expectedAppName -eq $Application -and `
+                           $expectedReleaseName -eq $Name
+                }
             }
-        }
 
-        It 'should create release package in BuildMaster' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Release.id                  expected  get-bmrelease')
-                Write-Debug -Message ('                            actual    {0}' -f $Release.id)
-                $semVersion = [SemVersion.SemanticVersion]$Version
-                $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-                Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
-                Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
-                Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
-                Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
-                return $bmSession.Uri -eq $Session.Uri -and `
-                       $bmSession.ApiKey -eq $Session.ApiKey -and `
-                       $Release.id -eq 'get-bmrelease' -and
-                       $expectedPackageNumber -eq $PackageNumber -and
-                       $Variable['ProGetPackageName'] -eq $Version
+            It 'should create release package in BuildMaster' {
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Release.id                  expected  get-bmrelease')
+                    Write-Debug -Message ('                            actual    {0}' -f $Release.id)
+                    $semVersion = [SemVersion.SemanticVersion]$Version
+                    $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+                    Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
+                    Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
+                    Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
+                    Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                           $bmSession.ApiKey -eq $Session.ApiKey -and `
+                           $Release.id -eq 'get-bmrelease' -and
+                           $expectedPackageNumber -eq $PackageNumber -and
+                           $Variable['ProGetPackageName'] -eq $Version
+                }
             }
-        }
 
-        It 'should start deploy in BuildMaster' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
-                Write-Debug -Message ('                            actual    {0}' -f $Package.id)
-                return $bmSession.Uri -eq $Session.Uri -and `
-                        $bmSession.ApiKey -eq $Session.ApiKey -and `
-                        $Package.id -eq 'new-bmreleasepackage'
+            It 'should start deploy in BuildMaster' {
+                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
+                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
+                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
+                    Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
+                    Write-Debug -Message ('                            actual    {0}' -f $Package.id)
+                    return $bmSession.Uri -eq $Session.Uri -and `
+                            $bmSession.ApiKey -eq $Session.ApiKey -and `
+                            $Package.id -eq 'new-bmreleasepackage'
+                }
             }
         }
     }
@@ -500,7 +544,7 @@ function Initialize-Test
     return $repoRoot
 }
 
-Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -513,7 +557,7 @@ Describe 'New-WhsCIAppPackage.when packaging everything in a directory' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -527,7 +571,7 @@ Describe 'New-WhsCIAppPackage.when packaging whitelisted files in a directory' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -541,7 +585,7 @@ Describe 'New-WhsCIAppPackage.when packaging multiple directories' {
                               -ShouldUploadPackage 
 }
 
-Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excluded' {    
+Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
@@ -556,7 +600,7 @@ Describe 'New-WhsCIAppPackage.when whitelist includes items that need to be excl
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when paths don''t exist' {
+Describe 'Invoke-WhsCIAppPackageTask.when paths don''t exist' {
 
     $Global:Error.Clear()
 
@@ -568,7 +612,7 @@ Describe 'New-WhsCIAppPackage.when paths don''t exist' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
+Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
@@ -581,7 +625,7 @@ Describe 'New-WhsCIAppPackage.when path contains known directories to exclude' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
+Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'index.aspx' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
@@ -596,7 +640,7 @@ Describe 'New-WhsCIAppPackage.when repository doesn''t use Arc' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when package upload fails' {
+Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
@@ -605,11 +649,12 @@ Describe 'New-WhsCIAppPackage.when package upload fails' {
                               -ThatIncludes '*.html' `
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
                               -ShouldFailWithErrorMessage 'failed to upload' `
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIAppPackage.when really uploading package' {
+Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
@@ -621,7 +666,7 @@ Describe 'New-WhsCIAppPackage.when really uploading package' {
                               -ShouldReallyUploadToProGet 
 }
 
-Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
+Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
@@ -634,22 +679,20 @@ Describe 'New-WhsCIAppPackage.when not uploading to ProGet' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
+Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
     $Global:Error.Clear()
 
-    $dirNames = @( 'dir1'  )
+    $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $result = New-WhsCIAppPackage -RepositoryRoot $repoRoot `
-                                  -Name 'Package' `
-                                  -Description 'Description' `
-                                  -Version '1.2.3' `
-                                  -Path (Join-Path -Path $repoRoot -ChildPath 'dir1') `
-                                  -Include '*.html' `
-                                  -ProGetPackageUri 'fubarsnafu' `
-                                  -ProGetCredential (New-Credential -UserName 'fubar' -Password 'snafu') `
-                                  -BuildMasterSession (New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarsnafu') `
-                                  -WhatIf
+    $context = New-WhsCITestContext -ForBuildRoot 'Repo'
+    $parameters = @{
+                        Name = 'Package';
+                        Description = 'Description';
+                        Path = $dirNames;
+                        Include = '*.html'
+                   }
+    $result = Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameters -WhatIf
 
     It 'should write no errors' {
         $Global:Error | Should BeNullOrEmpty
@@ -668,7 +711,7 @@ Describe 'New-WhsCIAppPackage.when using WhatIf switch' {
     }
 }
 
-Describe 'New-WhsCIAppPackage.when building on master branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnMasterBranch
@@ -680,7 +723,7 @@ Describe 'New-WhsCIAppPackage.when building on master branch' {
                               -ShouldUploadPackage 
 }
 
-Describe 'New-WhsCIAppPackage.when building on feature branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnFeatureBranch
@@ -692,7 +735,7 @@ Describe 'New-WhsCIAppPackage.when building on feature branch' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on release branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
@@ -704,7 +747,7 @@ Describe 'New-WhsCIAppPackage.when building on release branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on long-lived release branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnPermanentReleaseBranch
@@ -716,7 +759,7 @@ Describe 'New-WhsCIAppPackage.when building on long-lived release branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on develop branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnDevelopBranch
@@ -728,7 +771,7 @@ Describe 'New-WhsCIAppPackage.when building on develop branch' {
                               -ShouldUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on hot fix branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnHotFixBranch
@@ -740,7 +783,7 @@ Describe 'New-WhsCIAppPackage.when building on hot fix branch' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnBugFixBranch
@@ -750,4 +793,79 @@ Describe 'New-WhsCIAppPackage.when building on bug fix branch' {
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasDirectories 'dir1' `
+                              -HasFiles 'html.html' `
+                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyFile 'thirdparty.txt'
+}
+
+foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
+{
+    Describe ('Invoke-WhsCIAppPackageTask.when {0} property is omitted' -f $parameterName) {
+        $parameter = @{
+                        Name = 'Name';
+                        Include = 'Include';
+                        Description = 'Description';
+                        Path = 'Path' 
+                      }
+        $parameter.Remove($parameterName)
+
+        $context = New-WhsCITestContext
+        $Global:Error.Clear()
+        $threwException = $false
+        try
+        {
+            Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter
+        }
+        catch
+        {
+            $threwException = $true
+            Write-Error -ErrorRecord $_ -ErrorAction SilentlyContinue
+        }
+
+        It 'should fail' {
+            $threwException | Should Be $true
+            $Global:Error | Should BeLike ('*Element ''{0}'' is mandatory.' -f $parameterName)
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    It 'should throw an exception' {
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
+    }
+
+    It 'should mention path in error message' {
+        $Global:Error | Should BeLike ('* Path`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+    }
+}
+
+
+Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    It 'should throw an exception' {
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
+    }
+
+    It 'should mention path in error message' {
+        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+    }
+
 }
