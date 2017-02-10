@@ -76,11 +76,14 @@
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
+                            'Invoke-WhsCIAppPackageTask',
+                            'Invoke-WhsCINodeAppPackageTask',
                             'Invoke-WhsCINodeTask',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
-                            'New-WhsCIAppPackage',
+                            'Resolve-WhsCITaskPath',
+                            'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer'
                          );
 
