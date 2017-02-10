@@ -995,46 +995,6 @@ Version: 2.13.80
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
-
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath
-
-    It 'should run Node targets' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $WorkingDirectory -eq $repoRoot -and $NpmScript[0] -eq 'build' -and $NpmScript[1] -eq 'test'
-        }
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ }
-
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
-
-    $warnings = @()
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -WarningVariable 'warnings' -WarningAction SilentlyContinue
-
-    It 'should warn that nothing happened' {
-        $warnings | Should Match 'missing or not defined'
-    }
-
-    It 'should not run Node task' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 0 
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when Node task fails' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
-
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -ThatFails -ErrorAction SilentlyContinue
-}
-
 Describe 'Invoke-WhsCIBuild.when Git repository doesn''t exist' {
     $Global:Error.Clear()
     $version = '3.2.1-rc.1'
@@ -1060,7 +1020,7 @@ $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # * task functions are created for all tasks
 #
 # Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
-foreach( $taskName in @( 'AppPackage', 'NodeAppPackage' ) )
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
 {
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 

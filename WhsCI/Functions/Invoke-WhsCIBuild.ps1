@@ -364,18 +364,6 @@ function Invoke-WhsCIBuild
                         }
                     }
 
-                    'Node' {
-                        $NpmScripts = $task['NpmScripts']
-                        if( $NpmScripts )
-                        {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
-                        }
-                        else
-                        {
-                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
-                        }
-                    }
-
                     'NuGetPack' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $path in $taskPaths )
