@@ -132,7 +132,10 @@ function Initialize-NodeProject
         $ByDeveloper,
 
         [Switch]
-        $ByBuildServer
+        $ByBuildServer,
+
+        [string]
+        $InSubDirectory
     )
 
     if( $ByDeveloper )
@@ -153,22 +156,29 @@ function Initialize-NodeProject
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
-    $workingDir = Join-Path -Path $env:Temp -ChildPath 'z'
+    $buildRoot = Join-Path -Path $env:Temp -ChildPath 'z'
+    $workingDir = $buildRoot
+    if( $InSubDirectory )
+    {
+        $workingDir = Join-Path -Path $buildRoot -ChildPath $InSubDirectory
+    }
+
     try
     {
-        while( (Test-Path -Path $workingDir -PathType Container) )
+        while( (Test-Path -Path $buildRoot -PathType Container) )
         {
             Write-Verbose -Message 'Removing working directory...'
             Start-Sleep -Milliseconds 100
-            robocopy $empty $workingDir /MIR | Write-Verbose
-            Remove-Item -Path $workingDir -Recurse -Force
+            robocopy $empty $buildRoot /MIR | Write-Verbose
+            Remove-Item -Path $buildRoot -Recurse -Force
         }
     }
     finally
     {
         Remove-Item -Path $empty -Recurse
     }
-    New-Item -Path $workingDir -ItemType 'Directory' | Out-Null
+    New-Item -Path $buildRoot -ItemType 'Directory' | Out-Null
+    New-Item -Path $workingDir -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
 
     Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -Verifiable
 
@@ -238,7 +248,7 @@ module.exports = function(grunt) {
 }
 '@ | Set-Content -Path $gruntfilePath
 
-    return New-WhsCITestContext -ForBuildRoot $workingDir -ForTaskName 'Node'
+    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node'
 }
 
 function Invoke-FailingBuild
@@ -255,14 +265,23 @@ function Invoke-FailingBuild
         $NpmScript = @( 'fail', 'build', 'test' ),
 
         [Switch]
-        $WhoseScriptsPass
+        $WhoseScriptsPass,
+
+        [string]
+        $InWorkingDirectory
     )
 
     $failed = $false
     $failure = $null
+    $taskParameter = @{ NpmScript = $NpmScript }
+    if( $InWorkingDirectory )
+    {
+        $taskParameter['WorkingDirectory'] = $InWorkingDirectory
+    }
+
     try
     {
-        Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter @{ WorkingDirectory = $WithContext.BuildRoot; NpmScript = $NpmScript }
+        Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter
     }
     catch
     {
@@ -350,6 +369,20 @@ Describe 'Invoke-WhsCINodeTask.when user forgets to add any NpmScripts' {
     Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -WarningVariable 'warnings'
     It 'should warn that there were no NPM scripts' {
         $warnings | Should Match ([regex]::Escape('Element ''NpmScript'' is missing or empty'))
+    }
+}
+
+Describe 'Invoke-WhsCINodeTask.when app is not in the root of the repository' {
+    $context = Initialize-NodeProject -ByDeveloper -InSubDirectory 's'
+    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
+}
+
+Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
+    $context = Initialize-NodeProject -ByDeveloper 
+    $Global:Error.Clear()
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'WorkingDirectory\[0\] .* does not exist' -NpmScript @( 'build' ) -InWorkingDirectory 'idonotexist' -ErrorAction SilentlyContinue
+    It 'should write one error' {
+        $Global:Error.Count | Should Be 1
     }
 }
 

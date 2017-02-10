@@ -76,7 +76,11 @@ function Invoke-WhsCINodeTask
         Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
     }
 
-    $workingDir = $TaskContext.BuildRoot 
+    $workingDir = $TaskContext.BuildRoot
+    if( $TaskParameter.ContainsKey('WorkingDirectory') )
+    {
+        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+    }
 
     Push-Location -Path $workingDir
     try
