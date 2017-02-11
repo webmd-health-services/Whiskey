@@ -113,7 +113,7 @@ function Invoke-WhsCIAppPackageTask
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
         {
-            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Debug
+            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Verbose
         }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
@@ -132,7 +132,7 @@ function Invoke-WhsCIAppPackageTask
             $operationDescription = 'packaging {0}' -f $itemName
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+                robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
             }
         }
 
@@ -143,7 +143,7 @@ function Invoke-WhsCIAppPackageTask
             $operationDescription = 'packaging third-party {0}' -f $itemName
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $item $destination '/MIR' '/NP' | Write-Debug
+                robocopy $item $destination '/MIR' '/NP' | Write-Verbose
             }
         }
 
@@ -172,7 +172,7 @@ function Invoke-WhsCIAppPackageTask
             $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                Write-Debug -Message ('PUT {0}' -f $proGetPackageUri)
+                Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
                 $result = Invoke-RestMethod -Method Put `
                                             -Uri $proGetPackageUri `
                                             -ContentType 'application/octet-stream' `
