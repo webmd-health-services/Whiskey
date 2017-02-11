@@ -149,10 +149,15 @@ function Invoke-WhsCIAppPackageTask
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
+        if( -not (Test-WhsCIRunByBuildServer) )
+        {
+            return
+        }
+
         # Upload to ProGet
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
         $branch = $branch -replace '/.*$',''
-        if( (Test-WhsCIRunByBuildServer) -and $branch -match '^(release|master|develop)$' )
+        if( $branch -match '^(release|master|develop)$' )
         {
             $proGetPackageUri = $TaskContext.ProGetAppFeedUri
             $proGetCredential = $TaskContext.ProGetCredential

@@ -483,7 +483,10 @@ function Initialize-Test
         $OnBugFixBranch,
 
         [string]
-        $SourceRoot
+        $SourceRoot,
+
+        [Switch]
+        $AsDeveloper
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -529,36 +532,39 @@ function Initialize-Test
     Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ id = 'new-bmreleasepackage'; } }
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
 
-    $gitBranch = 'origin/develop'
-    if( $OnFeatureBranch )
+    if( -not $AsDeveloper )
     {
-        $gitBranch = 'origin/feature/fubar'
-    }
-    if( $OnMasterBranch )
-    {
-        $gitBranch = 'origin/master'
-    }
-    if( $OnReleaseBranch )
-    {
-        $gitBranch = 'origin/release/5.1'
-    }
-    if( $OnPermanentReleaseBranch )
-    {
-        $gitBranch = 'origin/release'
-    }
-    if( $OnHotFixBranch )
-    {
-        $gitBranch = 'origin/hotfix/snafu'
-    }
-    if( $OnBugFixBranch )
-    {
-        $gitBranch = 'origin/bugfix/fubarnsafu'
-    }
+        $gitBranch = 'origin/develop'
+        if( $OnFeatureBranch )
+        {
+            $gitBranch = 'origin/feature/fubar'
+        }
+        if( $OnMasterBranch )
+        {
+            $gitBranch = 'origin/master'
+        }
+        if( $OnReleaseBranch )
+        {
+            $gitBranch = 'origin/release/5.1'
+        }
+        if( $OnPermanentReleaseBranch )
+        {
+            $gitBranch = 'origin/release'
+        }
+        if( $OnHotFixBranch )
+        {
+            $gitBranch = 'origin/hotfix/snafu'
+        }
+        if( $OnBugFixBranch )
+        {
+            $gitBranch = 'origin/bugfix/fubarnsafu'
+        }
 
-    $filter = { $Path -eq 'env:GIT_BRANCH' }
-    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        $filter = { $Path -eq 'env:GIT_BRANCH' }
+        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+    }
 
     return $repoRoot
 }
@@ -574,6 +580,20 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
                               -HasDirectories $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as a developer' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames `
+                                      -AsDeveloper
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasDirectories $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldNotUploadPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
