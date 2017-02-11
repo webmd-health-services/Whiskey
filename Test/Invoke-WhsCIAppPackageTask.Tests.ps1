@@ -68,7 +68,10 @@ function Assert-NewWhsCIAppPackage
         $HasThirdPartyDirectory,
 
         [string[]]
-        $HasThirdPartyFile
+        $HasThirdPartyFile,
+
+        [string]
+        $FromSourceRoot
     )
 
     if( -not $Version )
@@ -93,6 +96,10 @@ function Assert-NewWhsCIAppPackage
     if( $HasThirdPartyDirectory )
     {
         $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
+    }
+    if( $FromSourceRoot )
+    {
+        $taskParameter['SourceRoot'] = $FromSourceRoot
     }
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo'
@@ -473,10 +480,22 @@ function Initialize-Test
         $OnHotFixBranch,
 
         [Switch]
-        $OnBugFixBranch
+        $OnBugFixBranch,
+
+        [string]
+        $SourceRoot
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    Install-Directory -Path $repoRoot
+    if( -not $SourceRoot )
+    {
+        $SourceRoot = $repoRoot
+    }
+    else
+    {
+        $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
+    }
     Install-Directory -Path $repoRoot
 
     if( -not $WithoutArc )
@@ -488,7 +507,7 @@ function Initialize-Test
 
     $DirectoryName | ForEach-Object { 
         $dirPath = $_
-        $dirPath = Join-Path -Path $repoRoot -ChildPath $_
+        $dirPath = Join-Path -Path $SourceRoot -ChildPath $_
         Install-Directory -Path $dirPath
         foreach( $file in $FileName )
         {
@@ -854,6 +873,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
     }
 }
 
+function New-TaskParameter
+{
+     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' }
+}
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
     $context = New-WhsCITestContext
@@ -861,11 +884,43 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exis
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
     }
 
     It 'should mention path in error message' {
         $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
+}
 
+Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of the repository' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -SourceRoot 'app'
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasDirectories 'dir1' `
+                              -HasFiles 'html.html' `
+                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyFile 'thirdparty.txt' `
+                              -FromSourceRoot 'app'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    $parameter = New-TaskParameter
+    $parameter['SourceRoot'] = 'app'
+
+    { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
+
+    It 'should fail to resolve the path' {
+        $Global:Error | Should Match 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
+    }
 }

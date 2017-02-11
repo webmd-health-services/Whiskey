@@ -14,7 +14,11 @@ function Resolve-WhsCITaskPath
 
         [Parameter(Mandatory=$true)]
         [string]
-        $PropertyName
+        $PropertyName,
+
+        [string]
+        # The root directory to use when resolving paths. The default is to use the `$TaskContext.BuildRoot` directory. Each path must be relative to this path.
+        $ParentPath
     )
 
     begin
@@ -36,7 +40,12 @@ function Resolve-WhsCITaskPath
             return
         }
 
-        $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
+        if( -not $ParentPath )
+        {
+            $ParentPath = $TaskContext.BuildRoot
+        }
+
+        $Path = Join-Path -Path $ParentPath -ChildPath $Path
         if( -not (Test-Path -Path $Path) )
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist.' -f $PropertyName,$pathIdx,$Path)

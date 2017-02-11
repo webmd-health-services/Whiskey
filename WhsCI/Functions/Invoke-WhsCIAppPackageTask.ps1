@@ -54,12 +54,18 @@ function Invoke-WhsCIAppPackageTask
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
 
+    $parentPathParam = @{ }
+    if( $TaskParameter.ContainsKey('SourceRoot') )
+    {
+        $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
+    }
+
     $resolveErrors = @()
-    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
 
     if( $thirdPartyPath )
     {
-        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath'
+        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath' @parentPathParam
     }
 
     $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
