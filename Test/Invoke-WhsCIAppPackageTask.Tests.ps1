@@ -41,7 +41,7 @@ function Assert-NewWhsCIAppPackage
         $WithNoProGetParameters,
 
         [string[]]
-        $HasDirectories,
+        $HasRootItems,
 
         [string[]]
         $HasFiles,
@@ -65,13 +65,16 @@ function Assert-NewWhsCIAppPackage
         $ShouldUploadPackage,
 
         [string[]]
-        $HasThirdPartyDirectory,
+        $HasThirdPartyRootItem,
 
         [string[]]
         $HasThirdPartyFile,
 
         [string]
-        $FromSourceRoot
+        $FromSourceRoot,
+
+        [string[]]
+        $MissingRootItems
     )
 
     if( -not $Version )
@@ -93,9 +96,9 @@ function Assert-NewWhsCIAppPackage
     {
         $taskParameter['Exclude'] = $ThatExcludes
     }
-    if( $HasThirdPartyDirectory )
+    if( $HasThirdPartyRootItem )
     {
-        $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
+        $taskParameter['ThirdPartyPath'] = $HasThirdPartyRootItem
     }
     if( $FromSourceRoot )
     {
@@ -202,22 +205,29 @@ function Assert-NewWhsCIAppPackage
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
     Context 'the package' {
-        foreach( $dirName in $HasDirectories )
+        foreach( $itemName in $MissingRootItems )
         {
-            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
-            It ('should include {0} directory' -f $dirName) {
+            It ('should not include {0} item' -f $itemName) {
+                Join-Path -Path $packageContentsPath -ChildPath $itemName | Should Not Exist
+            }
+        }
+
+        foreach( $itemName in $HasRootItems )
+        {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
+            It ('should include {0} item' -f $itemName) {
                  $dirpath | Should Exist
             }
             foreach( $fileName in $HasFiles )
             {
-                It ('should include {0}\{1} file' -f $dirName,$fileName) {
+                It ('should include {0}\{1} file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
                 }
             }
 
             foreach( $fileName in $HasThirdPartyFile )
             {
-                It ('should not include {0}\{1} file' -f $dirName,$fileName) {
+                It ('should not include {0}\{1} file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Not Exist
                 }
             }
@@ -280,16 +290,16 @@ function Assert-NewWhsCIAppPackage
             }
         }
 
-        foreach( $dirName in $HasThirdPartyDirectory )
+        foreach( $itemName in $HasThirdPartyRootItem )
         {
-            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
-            It ('should include {0} third-party directory' -f $dirName) {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
+            It ('should include {0} third-party root item' -f $itemName) {
                  $dirpath | Should Exist
             }
             
             foreach( $fileName in $HasThirdPartyFile )
             {
-                It ('should include {0}\{1} third-party file' -f $dirName,$fileName) {
+                It ('should include {0}\{1} third-party file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
                 }
             }
@@ -452,6 +462,9 @@ function Initialize-Test
         [string[]]
         $FileName,
 
+        [string[]]
+        $RootFileName,
+
         [Switch]
         $WithoutArc,
 
@@ -518,6 +531,11 @@ function Initialize-Test
         }
     }
 
+    foreach( $itemName in $RootFileName )
+    {
+        New-Item -Path (Join-Path -Path $SourceRoot -ChildPath $itemName) -ItemType 'File' | Out-Null
+    }
+
     if( -not $WhenReallyUploading )
     {
         $result = 201
@@ -577,9 +595,18 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
+    $file = 'project.json'
+    $thirdPartyFile = 'thirdparty.txt'
+    $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -HasThirdPartyRootItem $thirdPartyFile `
+                              -HasRootItems $file
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as a developer' {
@@ -591,7 +618,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -604,7 +631,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a direc
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'code.cs' `
                               -ShouldUploadPackage
@@ -618,7 +645,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'code.cs' `
                               -ShouldUploadPackage 
@@ -633,7 +660,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'html2.html','sub' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'html2.html','sub' `
                               -ShouldUploadPackage
@@ -658,7 +685,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exc
     
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
                               -NotHasFiles '.git','.hg','obj' `
                               -ShouldUploadPackage
@@ -686,7 +713,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ShouldFailWithErrorMessage 'failed to upload' `
@@ -700,7 +727,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldReallyUploadToProGet 
 }
@@ -712,7 +739,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -WithNoProGetParameters `
                               -ShouldNotUploadPackage
@@ -757,7 +784,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage 
 }
@@ -769,7 +796,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -781,7 +808,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -793,7 +820,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch'
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -805,7 +832,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -817,7 +844,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -829,7 +856,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -842,9 +869,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
-                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt'
 }
 
@@ -920,9 +947,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of th
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
-                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt' `
                               -FromSourceRoot 'app'
 }

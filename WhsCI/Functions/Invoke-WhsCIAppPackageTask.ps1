@@ -128,11 +128,18 @@ function Invoke-WhsCIAppPackageTask
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            $operationDescription = 'packaging {0}' -f $itemName
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            if( (Test-Path -Path $item -PathType Leaf) )
             {
-                robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
+                Copy-Item -Path $item -Destination $destination
+            }
+            else
+            {
+                $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+                $operationDescription = 'packaging {0}' -f $itemName
+                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                {
+                    robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
+                }
             }
         }
 
@@ -140,10 +147,17 @@ function Invoke-WhsCIAppPackageTask
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            $operationDescription = 'packaging third-party {0}' -f $itemName
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            if( (Test-Path -Path $item -PathType Leaf) )
             {
-                robocopy $item $destination '/MIR' '/NP' | Write-Verbose
+                Copy-Item -Path $item -Destination $destination
+            }
+            else
+            {
+                $operationDescription = 'packaging third-party {0}' -f $itemName
+                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                {
+                    robocopy $item $destination '/MIR' '/NP' | Write-Verbose
+                }
             }
         }
 
