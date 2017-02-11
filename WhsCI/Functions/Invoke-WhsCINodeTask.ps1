@@ -195,7 +195,7 @@ BuildTasks:
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
-        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker'
         $npmCmd = 'install'
         if( (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
