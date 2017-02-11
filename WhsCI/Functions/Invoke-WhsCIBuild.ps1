@@ -303,7 +303,7 @@ function Invoke-WhsCIBuild
 
             if( $runningUnderBuildServer )
             {
-                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
                 $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
                 $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
                 $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'

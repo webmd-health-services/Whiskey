@@ -1134,7 +1134,7 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
             Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
             Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig' -BBServerCredential $bbServerCredential -BBServerUri $bbServerUri
             $expectedContext['Version'] = '{0}+80.develop.deadbee' -f $version
-            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
             $expectedContext['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
             $expectedContext['BitbucketServerCredential'] = $bbServerCredential
             $expectedContext['BitbucketServerUri'] = $bbServerUri
