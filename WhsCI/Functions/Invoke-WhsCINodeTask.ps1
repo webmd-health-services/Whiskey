@@ -12,14 +12,14 @@ function Invoke-WhsCINodeTask
 
     This task accepts these parameters:
 
-    * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
+    * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
     * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
 
     Here's a sample `whsbuild.yml` using the Node task:
 
         BuildTasks:
         - Node:
-          NpmScript:
+          NpmScripts:
           - build
           - test
 
@@ -31,7 +31,7 @@ function Invoke-WhsCINodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhsCINodeTask -TaskContext $context -TaskParameter @{ NpmScript = 'build','test' }
+    Invoke-WhsCINodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
@@ -46,7 +46,7 @@ function Invoke-WhsCINodeTask
         [hashtable]
         # The task parameters, which are:
         #
-        # * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
+        # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
         $TaskParameter
     )
@@ -54,8 +54,8 @@ function Invoke-WhsCINodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $npmScript = $TaskParameter['NpmScript']
-    $npmScriptCount = $npmScript | Measure-Object | Select-Object -ExpandProperty 'Count'
+    $npmScripts = $TaskParameter['NpmScripts']
+    $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
     $numSteps = 5 + $npmScriptCount
     $stepNum = 0
 
@@ -148,20 +148,20 @@ function Invoke-WhsCINodeTask
             throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
-        if( -not $npmScript )
+        if( -not $npmScripts )
         {
             Write-WhsCIWarning -TaskContext $TaskContext -Message (@'
-Element 'NpmScript' is missing or empty. Your build isn''t *doing* anything. The 'NpmScript' element should be a list of one or more npm scripts to run during your build, e.g.
+Element 'NpmScripts' is missing or empty. Your build isn''t *doing* anything. The 'NpmScripts' element should be a list of one or more npm scripts to run during your build, e.g.
 
 BuildTasks:
 - Node:
-  NpmScript:
+  NpmScripts:
   - build
   - test           
 '@)
         }
 
-        foreach( $script in $npmScript )
+        foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             & $nodePath $npmPath 'run' $script $runNoColorArgs

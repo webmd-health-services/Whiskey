@@ -35,7 +35,7 @@ function Invoke-SuccessfulBuild
 
     if( $ThatRuns )
     {
-        $taskParameter['NpmScript'] = $ThatRuns
+        $taskParameter['NpmScripts'] = $ThatRuns
     }
     
     if( $InWorkingDirectory )
@@ -273,7 +273,7 @@ function Invoke-FailingBuild
 
     $failed = $false
     $failure = $null
-    $taskParameter = @{ NpmScript = $NpmScript }
+    $taskParameter = @{ NpmScripts = $NpmScript }
     if( $InWorkingDirectory )
     {
         $taskParameter['WorkingDirectory'] = $InWorkingDirectory
@@ -368,7 +368,7 @@ Describe 'Invoke-WhsCINodeTask.when user forgets to add any NpmScripts' {
     $context = Initialize-NodeProject -ByDeveloper
     Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -WarningVariable 'warnings'
     It 'should warn that there were no NPM scripts' {
-        $warnings | Should Match ([regex]::Escape('Element ''NpmScript'' is missing or empty'))
+        $warnings | Should Match ([regex]::Escape('Element ''NpmScripts'' is missing or empty'))
     }
 }
 
