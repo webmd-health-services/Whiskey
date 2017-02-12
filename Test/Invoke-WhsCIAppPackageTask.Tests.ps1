@@ -74,7 +74,13 @@ function Assert-NewWhsCIAppPackage
         $FromSourceRoot,
 
         [string[]]
-        $MissingRootItems
+        $MissingRootItems,
+
+        [Switch]
+        $WhenExcludingArc,
+
+        [Switch]
+        $ThenArcNotInPackage
     )
 
     if( -not $Version )
@@ -103,6 +109,10 @@ function Assert-NewWhsCIAppPackage
     if( $FromSourceRoot )
     {
         $taskParameter['SourceRoot'] = $FromSourceRoot
+    }
+    if( $WhenExcludingArc )
+    {
+        $taskParameter['ExcludeArc'] = $true
     }
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo'
@@ -247,46 +257,55 @@ function Assert-NewWhsCIAppPackage
             $upackJsonPath | Should Exist
         }
 
-        $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
         $arcPath = Join-Path -Path $packageContentsPath -ChildPath 'Arc'
-
-        It 'should include Arc' {
-            $arcPath | Should Exist
-        }
-
-        $arcComponentsToExclude = @(
-                                        'BitbucketServerAutomation', 
-                                        'Blade', 
-                                        'LibGit2', 
-                                        'LibGit2Adapter', 
-                                        'MSBuild',
-                                        'Pester', 
-                                        'PsHg',
-                                        'ReleaseTrain',
-                                        'WhsArtifacts',
-                                        'WhsHg',
-                                        'WhsPipeline'
-                                    )
-        It ('should exclude Arc CI components') {
-            foreach( $name in $arcComponentsToExclude )
-            {
-                Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
-            }
-
-            foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
-            {
-                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                $itemPath | Should Not Exist
+        if( $ThenArcNotInPackage )
+        {
+            It 'should not include Arc' {
+                $arcPath | Should Not Exist
             }
         }
+        else
+        {
+            $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
 
-        It ('should include Arc installation components') {
-            foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
-            {
-                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                $itemPath | Should Exist
+            It 'should include Arc' {
+                $arcPath | Should Exist
+            }
+
+            $arcComponentsToExclude = @(
+                                            'BitbucketServerAutomation', 
+                                            'Blade', 
+                                            'LibGit2', 
+                                            'LibGit2Adapter', 
+                                            'MSBuild',
+                                            'Pester', 
+                                            'PsHg',
+                                            'ReleaseTrain',
+                                            'WhsArtifacts',
+                                            'WhsHg',
+                                            'WhsPipeline'
+                                        )
+            It ('should exclude Arc CI components') {
+                foreach( $name in $arcComponentsToExclude )
+                {
+                    Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
+                }
+
+                foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
+                {
+                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                    $itemPath | Should Not Exist
+                }
+            }
+
+            It ('should include Arc installation components') {
+                foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
+                {
+                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                    $itemPath | Should Exist
+                }
             }
         }
 
@@ -598,6 +617,15 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when excluding Arc' {
+    $file = 'project.json'
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WhenExcludingArc `
+                              -HasRootItems $file `
+                              -ThenArcNotInPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
