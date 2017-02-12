@@ -162,7 +162,15 @@ function Assert-NewWhsCIAppPackage
     {
         $whatIfParam['WhatIf'] = $true
     }
+        
+    function Get-TempDirCount
+    {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+            Measure-Object -Sum | 
+            Select-Object -ExpandProperty Count
+    }
 
+    $preTempDirCount = Get-TempDirCount
     try
     {
         $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
@@ -172,6 +180,7 @@ function Assert-NewWhsCIAppPackage
         $threwException = $true
         Write-Error -ErrorRecord $_
     }
+    $postTempDirCount = Get-TempDirCount
 
     if( $ShouldReturnNothing -or $ShouldFailWithErrorMessage )
     {
@@ -219,8 +228,7 @@ function Assert-NewWhsCIAppPackage
 
 
     It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' |
-            Should BeNullOrEmpty
+        $postTempDirCount | Should Be $preTempDirCount
     }
 
     if( $ShouldNotCreatePackage )
