@@ -64,6 +64,12 @@ function Assert-NewWhsCIAppPackage
         [Switch]
         $ShouldUploadPackage,
 
+        [Switch]
+        $ShouldWriteNoErrors,
+
+        [Switch]
+        $ShouldReturnNothing,
+
         [string[]]
         $HasThirdPartyRootItem,
 
@@ -80,7 +86,10 @@ function Assert-NewWhsCIAppPackage
         $WhenExcludingArc,
 
         [Switch]
-        $ThenArcNotInPackage
+        $ThenArcNotInPackage,
+
+        [Switch]
+        $WhenRunByDeveloper
     )
 
     if( -not $Version )
@@ -148,14 +157,40 @@ function Assert-NewWhsCIAppPackage
 
     $Global:Error.Clear()
 
+    $whatIfParam = @{ }
+    if( $WhenRunByDeveloper )
+    {
+        $whatIfParam['WhatIf'] = $true
+    }
+
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
     }
     catch
     {
         $threwException = $true
         Write-Error -ErrorRecord $_
+    }
+
+    if( $ShouldReturnNothing -or $ShouldFailWithErrorMessage )
+    {
+        It 'should not return package info' {
+            $At | Should BeNullOrEmpty
+        }
+    }
+    else
+    {
+        It 'should return package info' {
+            $At | Should Exist
+        }
+    }
+
+    if( $ShouldWriteNoErrors )
+    {
+        It 'should not write any errors' {
+            $Global:Error | Should BeNullOrEmpty
+        }
     }
 
     if( $ShouldFailWithErrorMessage )
@@ -167,19 +202,11 @@ function Assert-NewWhsCIAppPackage
         It ('should fail with error message that matches ''{0}''' -f $ShouldFailWithErrorMessage) {
             $Global:Error | Should Match $ShouldFailWithErrorMessage
         }
-
-        It 'should not return package info' {
-            $At | Should BeNullOrEmpty
-        }
     }
     else
     {
         It 'should not fail' {
             $threwException | Should Be $false
-        }
-
-        It 'should return package info' {
-            $At | Should Exist
         }
     }
 
@@ -774,35 +801,34 @@ Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'html.html' )
+    $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes '*.html' `
+                              -WhenRunByDeveloper `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldWriteNoErrors `
+                              -ShouldReturnNothing
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch and not including Arc' {
     $Global:Error.Clear()
 
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $context = New-WhsCITestContext -ForBuildRoot 'Repo'
-    $parameters = @{
-                        Name = 'Package';
-                        Description = 'Description';
-                        Path = $dirNames;
-                        Include = '*.html'
-                   }
-    $result = Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameters -WhatIf
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes '*.html' `
+                              -WhenRunByDeveloper `
+                              -WhenExcludingArc `
+                              -ThenArcNotInPackage `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldWriteNoErrors `
+                              -ShouldReturnNothing
 
-    It 'should write no errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-
-    It 'should return nothing' {
-        $result | Should BeNullOrEmpty
-    }
-
-    It 'should not create package' {
-        Get-ChildItem -Path $TestDrive.FullName -Filter '*.upack' -Recurse | Should BeNullOrEmpty
-    }
-
-    It 'should not upload to ProGet' {
-        Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
-    }
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {

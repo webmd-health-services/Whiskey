@@ -114,6 +114,7 @@ function Invoke-WhsCIAppPackageTask
 
     try
     {
+        $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( -not $excludeArc )
         {
             $ciComponents = @(
@@ -134,7 +135,6 @@ function Invoke-WhsCIAppPackageTask
                                 ForEach-Object { '/XF'; $_.FullName }
             $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
             $operationDescription = 'packaging Arc'
-            $shouldProcessCaption = ('creating {0} package' -f $outFile)
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
                 robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Verbose
