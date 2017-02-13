@@ -8,12 +8,16 @@ $startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
 
 $defaultPackageName = 'fubarsnafu'
 
-function Assert-SuccessfulBuild
+function Invoke-SuccessfulBuild
 {
+    [CmdletBinding()]
     param(
-        $ThatRanIn,
+        [object]
+        $WithContext,
+        [string]
+        $InWorkingDirectory,
         [string[]]
-        $ThatRan = @( 'build', 'test' ),
+        $ThatRuns,
         [string]
         $ForVersion = '4.4.7',
         [Switch]
@@ -27,10 +31,29 @@ function Assert-SuccessfulBuild
         throw ('You must provide either the ByDeveloper or ByBuildServer switch when calling Assert-SuccessfulBuild.')
     }
 
-    foreach( $taskName in $ThatRan )
+    $taskParameter = @{ }
+
+    if( $ThatRuns )
+    {
+        $taskParameter['NpmScripts'] = $ThatRuns
+    }
+    
+    if( $InWorkingDirectory )
+    {
+        $taskParameter['WorkingDirectory'] = $InWorkingDirectory
+        $InWorkingDirectory = Join-Path -Path $WithContext.BuildRoot -ChildPath $InWorkingDirectory
+    }
+    else
+    {
+        $InWorkingDirectory = $WithContext.BuildRoot
+    }
+
+    Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter
+
+    foreach( $taskName in $ThatRuns )
     {
         It ('should run the {0} task' -f $taskName) {
-            (Join-Path -Path $ThatRanIn -ChildPath $taskName) | Should Exist
+            (Join-Path -Path $InWorkingDirectory -ChildPath $taskName) | Should Exist
         }
     }
 
@@ -47,8 +70,7 @@ function Assert-SuccessfulBuild
         }
     }
 
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $ThatRanIn
-    $licensePath = Join-Path -Path $outputRoot -ChildPath ('node-license-checker-report.json' -f $defaultPackageName)
+    $licensePath = Join-Path -Path $WithContext.OutputDirectory -ChildPath ('node-license-checker-report.json' -f $defaultPackageName)
 
     Context 'the licenses report' {
         It 'should exist' {
@@ -66,13 +88,13 @@ function Assert-SuccessfulBuild
         }
     }
 
-    $devDependencyPaths = Join-Path -Path $ThatRanIn -ChildPath 'package.json' | 
+    $devDependencyPaths = Join-Path -Path $InWorkingDirectory -ChildPath 'package.json' | 
                             ForEach-Object { Get-Content -Raw -Path $_ } | 
                             ConvertFrom-Json |
                             Select-Object -ExpandProperty 'devDependencies' |
                             Get-Member -MemberType NoteProperty |
                             Select-Object -ExpandProperty 'Name' |
-                            ForEach-Object { Join-Path -Path $ThatRanIn -ChildPath ('node_modules\{0}' -f $_)  }
+                            ForEach-Object { Join-Path -Path $InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
     if( $ByBuildServer )
     {
         It 'should prune dev dependencies' {
@@ -110,7 +132,10 @@ function Initialize-NodeProject
         $ByDeveloper,
 
         [Switch]
-        $ByBuildServer
+        $ByBuildServer,
+
+        [string]
+        $InSubDirectory
     )
 
     if( $ByDeveloper )
@@ -131,22 +156,29 @@ function Initialize-NodeProject
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
-    $workingDir = Join-Path -Path $env:Temp -ChildPath 'z'
+    $buildRoot = Join-Path -Path $env:Temp -ChildPath 'z'
+    $workingDir = $buildRoot
+    if( $InSubDirectory )
+    {
+        $workingDir = Join-Path -Path $buildRoot -ChildPath $InSubDirectory
+    }
+
     try
     {
-        while( (Test-Path -Path $workingDir -PathType Container) )
+        while( (Test-Path -Path $buildRoot -PathType Container) )
         {
             Write-Verbose -Message 'Removing working directory...'
             Start-Sleep -Milliseconds 100
-            robocopy $empty $workingDir /MIR | Write-Verbose
-            Remove-Item -Path $workingDir -Recurse -Force
+            robocopy $empty $buildRoot /MIR | Write-Verbose
+            Remove-Item -Path $buildRoot -Recurse -Force
         }
     }
     finally
     {
         Remove-Item -Path $empty -Recurse
     }
-    New-Item -Path $workingDir -ItemType 'Directory' | Out-Null
+    New-Item -Path $buildRoot -ItemType 'Directory' | Out-Null
+    New-Item -Path $workingDir -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
 
     Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -Verifiable
 
@@ -216,15 +248,15 @@ module.exports = function(grunt) {
 }
 '@ | Set-Content -Path $gruntfilePath
 
-    return $workingDir
+    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node'
 }
 
 function Invoke-FailingBuild
 {
     [CmdletBinding()]
     param(
-        [string]
-        $InDirectory,
+        [object]
+        $WithContext,
 
         [string]
         $ThatFailsWithMessage,
@@ -233,14 +265,23 @@ function Invoke-FailingBuild
         $NpmScript = @( 'fail', 'build', 'test' ),
 
         [Switch]
-        $WhoseScriptsPass
+        $WhoseScriptsPass,
+
+        [string]
+        $InWorkingDirectory
     )
 
     $failed = $false
     $failure = $null
+    $taskParameter = @{ NpmScripts = $NpmScript }
+    if( $InWorkingDirectory )
+    {
+        $taskParameter['WorkingDirectory'] = $InWorkingDirectory
+    }
+
     try
     {
-        Invoke-WhsCINodeTask -WorkingDirectory $InDirectory -NpmScript $NpmScript
+        Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter
     }
     catch
     {
@@ -260,70 +301,89 @@ function Invoke-FailingBuild
         if( $WhoseScriptsPass )
         {
             It ('should run ''{0}'' NPM script' -f $script) {
-                Join-Path -Path $InDirectory -ChildPath $script | Should Exist
+                Join-Path -Path $WithContext.BuildRoot -ChildPath $script | Should Exist
             }
         }
         else
         {
             It ('should not run ''{0}'' NPM script' -f $script) {
-                Join-Path -Path $InDirectory -ChildPath $script | Should Not Exist
+                Join-Path -Path $WithContext.BuildRoot -ChildPath $script | Should Not Exist
             }
         }
     }
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by a developer' {
-    $workingDir = Initialize-NodeProject -ByDeveloper
-    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByDeveloper
+    $context = Initialize-NodeProject -ByDeveloper
+    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by build server' {
-    $workingDir = Initialize-NodeProject -ByBuildServer
-    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
+    $context = Initialize-NodeProject -ByBuildServer
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
-    $workingDir = Initialize-NodeProject
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when a install fails' {
-    $workingDir = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"'
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"'
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
-    $workingDir = Initialize-NodeProject -ByBuildServer
-    Invoke-WhsCINodeTask -WorkingDirectory $workingDir -NpmScript 'build','test'
-    Assert-SuccessfulBuild -ThatRanIn $workingDir -ByBuildServer
+    $context = Initialize-NodeProject -ByBuildServer
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
-    $workingDir = Initialize-NodeProject -WithNoNodeEngine
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject -WithNoNodeEngine
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
-    $workingDir = Initialize-NodeProject -UsingNodeVersion "fubarsnafu"
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject -UsingNodeVersion "fubarsnafu"
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
-    $workingDir = Initialize-NodeProject -UsingNodeVersion "438.4393.329"
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject -UsingNodeVersion "438.4393.329"
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
-    $workingDir = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
+    $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCINodeTask.when package.json has no name' {
-    $workingDir = Initialize-NodeProject -WithNoName
-    Invoke-FailingBuild -InDirectory $workingDir -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
+Describe 'Invoke-WhsCINodeTask.when packageJson has no name' {
+    $context = Initialize-NodeProject -WithNoName
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCINodeTask.when user forgets to add any NpmScripts' {
+    $context = Initialize-NodeProject -ByDeveloper
+    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -WarningVariable 'warnings'
+    It 'should warn that there were no NPM scripts' {
+        $warnings | Should Match ([regex]::Escape('Element ''NpmScripts'' is missing or empty'))
+    }
+}
+
+Describe 'Invoke-WhsCINodeTask.when app is not in the root of the repository' {
+    $context = Initialize-NodeProject -ByDeveloper -InSubDirectory 's'
+    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
+}
+
+Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
+    $context = Initialize-NodeProject -ByDeveloper 
+    $Global:Error.Clear()
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'WorkingDirectory\[0\] .* does not exist' -NpmScript @( 'build' ) -InWorkingDirectory 'idonotexist' -ErrorAction SilentlyContinue
+    It 'should write one error' {
+        $Global:Error.Count | Should Be 1
+    }
 }
 
 if( $startedWithNodeEnv )

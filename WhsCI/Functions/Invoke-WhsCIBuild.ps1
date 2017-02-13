@@ -50,13 +50,23 @@ function Invoke-WhsCIBuild
     * generates a report on each dependency's licenses
     * removes developer dependencies from node_modules directory (i.e. runs the `npm prune` command) (this only happens when running under a build server)
 
-    You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
+    You are required to specify what version of Node your application uses in a package.json file. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
         BuildTasks:
         - Node:
             NpmScripts:
             - build
             - test
+
+    By default, your `package.json` is expected to be in your repository root, next to your `whsbuild.yml` file. If your application is in a sub-directory in your repository, use the `WorkingDirectory` element to specify the relative path to that directory, e.g.
+
+        BuildTasks:
+        - Node:
+            NpmScripts: build
+            WorkingDirectory: app
+
+    In the above example, the Node.js application is in the `app` directory. All build commands will be run in that directory. 
+
     
     ## NuGetPack
     
@@ -293,7 +303,7 @@ function Invoke-WhsCIBuild
 
             if( $runningUnderBuildServer )
             {
-                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
                 $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
                 $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
                 $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
@@ -361,18 +371,6 @@ function Invoke-WhsCIBuild
                             {
                                 throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$BuildConfiguration)
                             }
-                        }
-                    }
-
-                    'Node' {
-                        $NpmScripts = $task['NpmScripts']
-                        if( $NpmScripts )
-                        {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
-                        }
-                        else
-                        {
-                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
                         }
                     }
 
