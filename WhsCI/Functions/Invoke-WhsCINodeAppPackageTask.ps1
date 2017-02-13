@@ -11,6 +11,8 @@ function Invoke-WhsCINodeAppPackageTask
     * The `Include` parameter is optional. The `NodeAppPackage` task uses a default whitelist (which is shown below). If you do provide the `Include` parameter, your `Include` list is *added* to the default whitelist.
     * The `node_modules` directory is *always* incuded in your package as a third-party package, i.e. it is included in your package unfiltered.
     * The `Arc` platform is *excluded* from your package, since most of our Node.js applications don't need it. You can include `Arc` in  your package by setting the `IncludeArc` parameter to `true`.
+
+    You *must* include paths to package with the `Path` parameter. Your application's `package.json` file is included by default.
     
     The default `Include` whitelist is:
     
@@ -49,8 +51,6 @@ function Invoke-WhsCINodeAppPackageTask
             Path:
             - config
             - lib
-            - "*.js"
-            - "*.json"
         
     This example demonstrates how the Overlord package is created. The package includes all files that match the default whitelist from the `app\config`, `app\lib` directories. All files that match the `app\*.js` and `app\*.json` wildcard patterns are also included. Because Overlord is a service, it needs the `Arc` platform so Overlord can be installed, so the `IncludeArc` parameter is set to `true`.
 
@@ -124,6 +124,7 @@ function Invoke-WhsCINodeAppPackageTask
     $TaskParameter['Include'] += $whitelist
     $TaskParameter['ExcludeArc'] = -not $TaskParameter.ContainsKey('IncludeArc')
     $TaskParameter['ThirdPartyPath'] = Invoke-Command { 'node_modules' ; $TaskParameter['ThirdPartyPath'] } | Select-Object -Unique
+    $TaskParameter['Path'] = Invoke-Command { $TaskParameter['Path'] ; 'package.json' } | Select-Object -Unique
 
     Invoke-WhsCIAppPackageTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 }
