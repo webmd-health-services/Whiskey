@@ -240,7 +240,6 @@ function Invoke-WhsCIAppPackageTask
     }
     finally
     {
-        Get-ChildItem -Path $env:TEMP -Filter ('{0}+*' -f $tempBaseName) |
-            Remove-Item -Recurse -Force -WhatIf:$false
+        Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false
     }
 }
