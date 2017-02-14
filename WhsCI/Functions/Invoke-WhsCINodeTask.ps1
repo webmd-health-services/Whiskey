@@ -6,11 +6,24 @@ function Invoke-WhsCINodeTask
     Runs a Node build.
     
     .DESCRIPTION
-    The `Invoke-WhsCINodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `scripts` properties. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
+    The `Invoke-WhsCINodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `Scripts` property. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
 
-    You are required to specify what version of Node you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
+    You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
-    This task also does the following as part of each Node build:
+    This task accepts these parameters:
+
+    * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
+    * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
+
+    Here's a sample `whsbuild.yml` using the Node task:
+
+        BuildTasks:
+        - Node:
+          NpmScripts:
+          - build
+          - test
+
+    This task also does the following as part of each Node.js build:
 
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
@@ -18,27 +31,32 @@ function Invoke-WhsCINodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhsCINodeTask -WorkingDirectory 'C:\Projects\ui-cm' -NpmScript 'build','test'
+    Invoke-WhsCINodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
 
-    Demonstrates how to run the `build` and `test` NPM targets in the `C:\Projects\ui-cm` directory. The function would run `npm run build test`.
+    Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]
-        # The path to the directory where the Node build should run.
-        $WorkingDirectory,
+        [object]
+        # The context the task is running under.
+        $TaskContext,
 
         [Parameter(Mandatory=$true)]
-        [string[]]
-        # The NPM commands to run as part of the build.
-        $NpmScript
+        [hashtable]
+        # The task parameters, which are:
+        #
+        # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
+        # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $numSteps = 5 + $NpmScript.Count
+    $npmScripts = $TaskParameter['NpmScripts']
+    $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
+    $numSteps = 5 + $npmScriptCount
     $stepNum = 0
 
     $originalPath = $env:PATH
@@ -58,8 +76,13 @@ function Invoke-WhsCINodeTask
         Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
     }
 
+    $workingDir = $TaskContext.BuildRoot
+    if( $TaskParameter.ContainsKey('WorkingDirectory') )
+    {
+        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+    }
 
-    Push-Location -Path $WorkingDirectory
+    Push-Location -Path $workingDir
     try
     {
         Update-Progress -Status 'Validating package.json' -Step ($stepNum++)
@@ -94,7 +117,7 @@ function Invoke-WhsCINodeTask
 
         $version = $Matches[1]
         Update-Progress -Status ('Installing Node.js {0}' -f $version) -Step ($stepNum++)
-        $nodePath = Install-WhsCINodeJs -Version $version
+        $nodePath = Install-WhsCINodeJs -RegistryUri $TaskContext.NpmRegistryUri -Version $version
         if( -not $nodePath )
         {
             throw ('Node version ''{0}'' failed to install. Please see previous errors for details.' -f $version)
@@ -125,7 +148,20 @@ function Invoke-WhsCINodeTask
             throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
-        foreach( $script in $npmScript )
+        if( -not $npmScripts )
+        {
+            Write-WhsCIWarning -TaskContext $TaskContext -Message (@'
+Element 'NpmScripts' is missing or empty. Your build isn''t *doing* anything. The 'NpmScripts' element should be a list of one or more npm scripts to run during your build, e.g.
+
+BuildTasks:
+- Node:
+  NpmScripts:
+  - build
+  - test           
+'@)
+        }
+
+        foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             & $nodePath $npmPath 'run' $script $runNoColorArgs
@@ -159,7 +195,7 @@ function Invoke-WhsCINodeTask
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
-        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker' -Resolve
+        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker'
         $npmCmd = 'install'
         if( (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
@@ -188,9 +224,8 @@ function Invoke-WhsCINodeTask
         # show the report
         $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
 
-        $outputDirectory = Get-WhsCIOutputDirectory -WorkingDirectory $WorkingDirectory
         $licensePath = 'node-license-checker-report.json'
-        $licensePath = Join-Path -Path $outputDirectory -ChildPath $licensePath
+        $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
         ConvertTo-Json -InputObject $newReport -Depth ([int32]::MaxValue) | Set-Content -Path $licensePath
 
         $productionArg = ''

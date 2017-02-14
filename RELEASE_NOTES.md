@@ -21,6 +21,7 @@
  * Created `Invoke-WhsCIPowerShellTask` function for running PowerShell scripts.
  * Created `Install-WhsCINodeJs` function for installing NVM and using it to install a version of Node and its version of NPM.
  * Created `Get-WhsCIOutputDirectory` function for getting the path to the current build's output directory.
+ * `New-WhsCIAppPackage` now deploys the package in BuildMaster.
 
 
 # 0.1.0

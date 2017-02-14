@@ -52,17 +52,23 @@ function New-BMPipeline
 
         [string]
         # The background color BuildMaster should use when displaying the pipeline's name in the UI. Should be a CSS hexadecimal color, e.g. `#ffffff`
-        $Color
+        $Color,
+
+        [string[]]
+        # Stage configuration for the pipeline. Should be an array of `<Inedo.BuildMaster.Pipelines.PipelineStage>` XML elements. 
+        $Stage
     )
 
     Set-StrictMode -Version 'Latest'
 
     $pipelineParams = @{
                         'Pipeline_Name' = $Name;
-                        'Pipeline_Configuration' = @'
+                        'Pipeline_Configuration' = @"
 <Inedo.BuildMaster.Pipelines.Pipeline Assembly="BuildMaster">
   <Properties Name="Standard" Description="" EnforceStageSequence="True">
-     <Stages />
+     <Stages>
+        $( $Stage -join [Environment]::NewLine )
+     </Stages>
      <PostDeploymentOptions>
         <Inedo.BuildMaster.Pipelines.PipelinePostDeploymentOptions Assembly="BuildMaster">
            <Properties CreateRelease="False" CancelReleases="False" DeployRelease="False" />
@@ -70,7 +76,7 @@ function New-BMPipeline
      </PostDeploymentOptions>
   </Properties>
 </Inedo.BuildMaster.Pipelines.Pipeline>
-'@;
+"@;
                         'Active_Indicator' = $true;
                    }
     if( $Application )
