@@ -240,6 +240,25 @@ function Invoke-WhsCIAppPackageTask
     }
     finally
     {
-        Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false
+        $maxTries = 50
+        $tryNum = 0
+        $failedToCleanUp = $true
+        do
+        {
+            if( -not (Test-Path -Path $tempRoot -PathType Container) )
+            {
+                $failedToCleanUp = $false
+                break
+            }
+            Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot) -Verbose
+            Start-Sleep -Milliseconds 100
+            Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false -ErrorAction Ignore
+        }
+        while( $tryNum++ -lt $maxTries )
+
+        if( $failedToCleanUp )
+        {
+            Write-Warning -Message ('Failed to delete temporary directory ''{0}''.' -f $tempRoot)
+        }
     }
 }
