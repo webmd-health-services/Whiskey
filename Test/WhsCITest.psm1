@@ -40,6 +40,7 @@ function New-WhsCITestContext
                                     TaskIndex = 0;
                                     TaskName = $ForTaskName;
                                     Configuration = @{ };
+                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm'
                                  }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     return $context
