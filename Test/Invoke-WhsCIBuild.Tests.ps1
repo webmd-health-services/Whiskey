@@ -489,7 +489,7 @@ function New-TestWhsBuildFile
         }
         if( $Path )
         {
-            $TaskProperty['Path'] = ($Path | Split-Path -Leaf)
+            $TaskProperty['Path'] = $Path
         }
         $config = @{
                         BuildTasks = @(
@@ -516,6 +516,7 @@ function New-TestWhsBuildFile
     $Yaml | Set-Content -Path $whsbuildymlpath
     return $whsbuildymlpath
 }
+#endregion
 
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
@@ -777,6 +778,9 @@ Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
 }
 
+#TODO: Once NUnit2 task has been migrated to use standard task interface, remove this call, too.
+Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml') -BuildConfiguration 'Release'
+
 Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
     $assemblyNames = 'assembly.dll','assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
@@ -865,7 +869,7 @@ Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
     $project2 = New-MSBuildProject -FileName 'project2.csproj'
     $projectPaths = $project,$project2
     $expectedVersion = '1.6.7-rc1'
-    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $projectPaths -Version $expectedVersion
+    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path 'project.csproj','project2.csproj' -Version $expectedVersion
 
     Mock -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -Verifiable
     

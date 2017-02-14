@@ -111,7 +111,6 @@ Describe 'Invoke-WhsCIBuild.when passed a version' {
     ThenPackageShouldBeCreated -WithVersion $version
 }
 
-
 Describe 'Invoke-WhsCIBuild.when creating a package built in release mode' {
     $project = GivenABuiltLibrary -InReleaseMode
     Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Release'
