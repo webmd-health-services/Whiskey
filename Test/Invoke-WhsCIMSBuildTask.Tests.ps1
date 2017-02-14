@@ -21,6 +21,8 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
                                     'NUnit2PassingTest\NUnit2PassingTest.sln'
                                 )
                       }
+    $context.Version = '0.0.0'
+    $context.SemanticVersion = "0.0.0-rc.1+build"
 
     # Get rid of any existing packages directories.
     Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
@@ -128,8 +130,8 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
                                     'NUnit2PassingTest\NUnit2PassingTest.sln'
                                 )
                       }
-    $context.Version = '0.0.0'
-    $context.SemanticVersion = "0.0.0-rc.1+build"
+    $context.Version = '1.1.1'
+    $context.SemanticVersion = "1.1.1-rc.1+build"
 
     Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
 

@@ -9,6 +9,8 @@ function Invoke-WhsCIMSBuildTask
     
     The build fails if any MSBuild target fails. If your `whsbuild.yml` file defines a `Version` element and the build is running under a build server, all AssemblyInfo.cs files under each path is updated with appropriate `AssemblyVersion`, `AssemblyFileVersion`, and `AssemblyInformationalVersion` attributes. The `AssemblyInformationalVersion` attribute will contain the full semantic version from `whsbuild.yml` plus some build metadata: the build server's build number, the Git branch, and the Git commit ID.
 
+    You *must* include paths to build with the `Path` parameter.
+
     .EXAMPLE
     Invoke-WhsCIMSBuildTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 
@@ -18,9 +20,13 @@ function Invoke-WhsCIMSBuildTask
     [CmdletBinding()]
     param(
         [object]
+        # The context this task is operating in. Use `New-WhsCIContext` to create context objects.
         $TaskContext,
         
         [hashtable]
+        # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
+        # 
+        # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whsbuild.yml file they were taken from.
         $TaskParameter
     )
   
