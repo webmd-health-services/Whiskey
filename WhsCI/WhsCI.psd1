@@ -79,6 +79,7 @@
                             'Invoke-WhsCIAppPackageTask',
                             'Invoke-WhsCINodeAppPackageTask',
                             'Invoke-WhsCINodeTask',
+                            'Invoke-WhsCINuGetPackTask',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',

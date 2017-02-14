@@ -166,7 +166,7 @@ function Assert-NewWhsCIAppPackage
     function Get-TempDirCount
     {
         Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
-            Measure-Object -Sum | 
+            Measure-Object | 
             Select-Object -ExpandProperty Count
     }
 

@@ -377,21 +377,7 @@ function Invoke-WhsCIBuild
 
                     'NuGetPack' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        foreach( $path in $taskPaths )
-                        {
-                            $preNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            $versionArgs = @()
-                            if( $nugetVersion )
-                            {
-                                $versionArgs = @( '-Version', $nugetVersion )
-                            }
-                            & $nugetPath pack $versionArgs -OutputDirectory $outputRoot -Symbols -Properties ('Configuration={0}' -f $BuildConfiguration) $path | Write-CommandOutput
-                            $postNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            if( $postNupkgCount -eq $preNupkgCount )
-                            {
-                                throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $outputRoot)
-                            }
-                        }
+                        $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
 
                     'NUnit2' {
