@@ -33,13 +33,15 @@ function New-WhsCITestContext
                                     ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
                                     BuildRoot = $ForBuildRoot;
                                     OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
-                                    Version = [semversion.SemanticVersion]'1.2.3-rc.1+build';
+                                    SemanticVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build';
+                                    Version = [version]'1.2.3';
                                     ProGetAppFeedUri = 'http://proget.example.com/';
                                     ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
                                     BuildMasterSession = 'buildmaster session';
                                     TaskIndex = 0;
                                     TaskName = $ForTaskName;
                                     Configuration = @{ };
+                                    BuildConfiguration = 'Release';
                                  }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     return $context

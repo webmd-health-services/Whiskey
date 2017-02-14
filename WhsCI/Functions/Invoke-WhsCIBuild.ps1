@@ -289,6 +289,8 @@ function Invoke-WhsCIBuild
                             TaskName = '';
                             TaskIndex = 0;
                             Configuration = $config;
+                            # TODO: Add BuildConfiguration to context.
+                            # TODO: Rename Version property to SemanticVersion and add Version property for major.minor.build version number
                         }
 
             if( $runningUnderBuildServer )
