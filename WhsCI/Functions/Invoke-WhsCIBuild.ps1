@@ -299,6 +299,7 @@ function Invoke-WhsCIBuild
                             TaskName = '';
                             TaskIndex = 0;
                             Configuration = $config;
+                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/'
                         }
 
             if( $runningUnderBuildServer )

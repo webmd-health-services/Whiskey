@@ -27,7 +27,7 @@
     Copyright = '(c) 2016 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
-    # Description = ''
+    Description = 'Continuous Integration/Continuous Delivery module.'
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''

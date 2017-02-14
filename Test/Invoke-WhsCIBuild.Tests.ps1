@@ -1086,7 +1086,13 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
 
                     return $true
                 }
-            }        
+            }
+
+            It 'should pass NPM registry URI' {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    $TaskContext.NpmRegistryUri -eq 'https://proget.dev.webmd.com/npm/npm/'
+                }
+            }
 
             It 'should pass task parameters' {
                 Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {

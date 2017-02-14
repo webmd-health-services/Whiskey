@@ -22,6 +22,11 @@ function Install-WhsCINodeJs
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [uri]
+        # The URI to the registry from which NPM packages should be downloaded.
+        $RegistryUri,
+
+        [Parameter(Mandatory=$true)]
         [string]
         # The version to install.
         $Version,
@@ -133,6 +138,22 @@ path: $($nvmSymlink)
                 ForEach-Object { Write-Progress -Activity $activity -Status $_ ; }
             Write-Progress -Activity $activity -Completed
         }
+
+        $npmRegistry = & $nodePath $npmPath config --global get registry
+        if( $npmRegistry -ne $RegistryUri.ToString() )
+        {
+            Write-Verbose ('NPM  registry  {0} -> {1}' -f $npmRegistry,$RegistryUri)
+            & $nodePath $npmPath config --global set registry $RegistryUri
+        }
+
+        $whsAlwaysAuth = 'false'
+        $alwaysAuth = & $nodePath $npmPath config --global get 'always-auth'
+        if( $alwaysAuth -ne $whsAlwaysAuth )
+        {
+            Write-Verbose -Message ('NPM  config  always-auth  {0} -> {1}' -f $alwaysAuth,$whsAlwaysAuth)
+            & $nodePath $npmPath config --global set 'always-auth' $whsAlwaysAuth
+        }
+
         return $nodePath
     }
 

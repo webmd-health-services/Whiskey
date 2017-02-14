@@ -17,19 +17,25 @@ function Assert-NodePackageCreated
         $WhenIncludingArc,
 
         [Switch]
-        $ThenArcIncluded
+        $ThenArcIncluded,
+
+        [string]
+        $WithPath
     )
 
     $packageName = 'name'
     $packageDescription = 'description'
-    $packagePath = 'path1','path2'
+    if( -not $WithPath )
+    {
+        $WithPath = 'path1','path2'
+    }
     $packageExclude = 'three','four'
     $context = New-WhsCITestContext -WithMockToolData
     
     $taskParameter = @{
                             Name = $packageName;
                             Description = $packageDescription;
-                            Path = $packagePath;
+                            Path = $WithPath;
                             Exclude = $packageExclude;
                       }
 
@@ -51,7 +57,21 @@ function Assert-NodePackageCreated
     Mock -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Verifiable
 
     Invoke-WhsCINodeAppPackageTask -TaskContext $context -TaskParameter $taskParameter
+
+    It 'should include Path paths in package' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            $missingPaths = $WithPath | Where-Object { $TaskParameter['Path'] -notcontains $_ }
+            return -not $missingPaths
+        }
+    }
     
+    It 'should include package.json in package' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            $count = $TaskParameter['Path'] | Where-Object { $_ -eq 'package.json' } | Measure-Object | Select-Object -ExpandProperty 'Count'
+            $count -eq 1
+        }
+    }
+
     It 'should pass parameters to Invoke-WhsCIAppPackageTask' {
         Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
             #$DebugPreference = 'Continue'
@@ -60,11 +80,6 @@ function Assert-NodePackageCreated
             Write-Debug -Message ('Description         expected  {0}' -f $packageDescription)
             Write-Debug -Message ('                    actual    {0}' -f $TaskParameter['Description'])
             
-            $packagePath = $packagePath -join ';'
-            $path = $TaskParameter['Path'] -join ';'
-            Write-Debug -Message ('Path                expected  {0}' -f $packagePath)
-            Write-Debug -Message ('                    actual    {0}' -f $path)
-
             $packageExclude = $packageExclude -join ';'
             $exclude = $TaskParameter['Exclude'] -join ';'
             Write-Debug -Message ('Exclude             expected  {0}' -f $packageExclude)
@@ -76,7 +91,6 @@ function Assert-NodePackageCreated
             $contextsSame -and `
             [object]::ReferenceEquals($packageName,$TaskParameter['Name']) -and `
             [object]::ReferenceEquals($packageDescription,$TaskParameter['Description']) -and `
-            $packagePath -eq $Path -and `
             $packageExclude -eq $Exclude
         }
     }
@@ -161,4 +175,8 @@ Describe 'Invoke-WhsCINodeAppPackageTask.when called with third-party path' {
 
 Describe 'Invoke-WhsCINodeAppPackageTask.when including Arc' {
     Assert-NodePackageCreated -WhenIncludingArc -ThenArcIncluded
+}
+
+Describe 'Invoke-WhsCINodeAppPackageTask.when path includes package.json' {
+    Assert-NodePackageCreated -WithPath 'package.json'
 }

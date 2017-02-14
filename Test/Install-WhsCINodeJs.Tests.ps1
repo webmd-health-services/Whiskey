@@ -48,23 +48,20 @@ function Assert-ThatInstallNodeJs
         $installDirParam = @{ }
     }
 
+    $registryUri = 'https://proget.example.com/'
     try
     {
-        $nodePath = Install-WhsCINodeJs -Version $InstallsVersion @installDirParam
+        $nodePath = Install-WhsCINodeJs -RegistryUri $registryUri -Version $InstallsVersion @installDirParam
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
         $expectedNodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
-        $expectdNpmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+        $expectedNpmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
 
         if( $OnBuildServer )
         {
             $npmCliJsPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
-            $expectedLatest = & $nodePath $npmCliJsPath 'view' 'npm@3' 'version' |
-                                    Where-Object { $_ -match '@(\d+\.\d+\.\d+)' } |
-                                    ForEach-Object { [version]$Matches[1] } |
-                                    Sort-Object -Descending | 
-                                    Select-Object -First 1
+            $expectedLatest = [version]'3.10.10'  # This is the known latest version of 3.
             It 'should upgrade to NPM 3' {
                 [version]$version = & $nodePath $npmCliJsPath '--version'
                 $version | Should Be $expectedLatest
@@ -79,7 +76,7 @@ function Assert-ThatInstallNodeJs
 
             It 'should not install Node.js' {
                 $expectedNodePath | Should Not Exist
-                $expectdNpmPath | Should Not Exist
+                $expectedNpmPath | Should Not Exist
             }
 
             It 'should not return anything' {
@@ -101,7 +98,15 @@ function Assert-ThatInstallNodeJs
             }
 
             It ('should install NPM for Node.js {0}' -f $InstallsVersion) {
-                $expectdNpmPath | Should Exist
+                $expectedNpmPath | Should Exist
+            }
+
+            It 'should set registry' {
+                & $nodePath $expectedNpmPath get -g registry | Should Be $registryUri
+            }
+
+            It 'should set always-auth' {
+                & $nodePath $expectedNpmPath config get -g always-auth | Should Be 'false'
             }
         }
 
