@@ -778,9 +778,6 @@ Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
 }
 
-#TODO: Once NUnit2 task has been migrated to use standard task interface, remove this call, too.
-Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml') -BuildConfiguration 'Release'
-
 Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
     $assemblyNames = 'assembly.dll','assembly2.dll'
     $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
