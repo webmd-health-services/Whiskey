@@ -383,7 +383,7 @@ function Invoke-WhsCIBuild
                     'NUnit2' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                        Invoke-whsCINUnit2Task -Path $taskPaths -ReportPath $testResultPath
+                        Invoke-WhsCINUnit2Task -Path $taskPaths -ReportPath $testResultPath
                     }
 
                     'Pester3' {
