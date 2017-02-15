@@ -50,13 +50,23 @@ function Invoke-WhsCIBuild
     * generates a report on each dependency's licenses
     * removes developer dependencies from node_modules directory (i.e. runs the `npm prune` command) (this only happens when running under a build server)
 
-    You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
+    You are required to specify what version of Node your application uses in a package.json file. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
         BuildTasks:
         - Node:
             NpmScripts:
             - build
             - test
+
+    By default, your `package.json` is expected to be in your repository root, next to your `whsbuild.yml` file. If your application is in a sub-directory in your repository, use the `WorkingDirectory` element to specify the relative path to that directory, e.g.
+
+        BuildTasks:
+        - Node:
+            NpmScripts: build
+            WorkingDirectory: app
+
+    In the above example, the Node.js application is in the `app` directory. All build commands will be run in that directory. 
+
     
     ## NuGetPack
     
@@ -289,13 +299,14 @@ function Invoke-WhsCIBuild
                             TaskName = '';
                             TaskIndex = 0;
                             Configuration = $config;
+                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/'
                             # TODO: Add BuildConfiguration to context.
                             # TODO: Rename Version property to SemanticVersion and add Version property for major.minor.build version number
                         }
 
             if( $runningUnderBuildServer )
             {
-                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
                 $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
                 $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
                 $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
@@ -366,35 +377,9 @@ function Invoke-WhsCIBuild
                         }
                     }
 
-                    'Node' {
-                        $NpmScripts = $task['NpmScripts']
-                        if( $NpmScripts )
-                        {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
-                        }
-                        else
-                        {
-                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
-                        }
-                    }
-
                     'NuGetPack' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        foreach( $path in $taskPaths )
-                        {
-                            $preNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            $versionArgs = @()
-                            if( $nugetVersion )
-                            {
-                                $versionArgs = @( '-Version', $nugetVersion )
-                            }
-                            & $nugetPath pack $versionArgs -OutputDirectory $outputRoot -Symbols -Properties ('Configuration={0}' -f $BuildConfiguration) $path | Write-CommandOutput
-                            $postNupkgCount = Get-ChildItem -Path $outputRoot -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-                            if( $postNupkgCount -eq $preNupkgCount )
-                            {
-                                throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $outputRoot)
-                            }
-                        }
+                        $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
 
                     'NUnit2' {

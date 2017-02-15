@@ -6,23 +6,44 @@ function Invoke-WhsCIAppPackageTask
     Creates a WHS application deployment package.
 
     .DESCRIPTION
-    The `Invoke-WhsCIAppPackageTask` function creates an universal ProGet package for a WHS application, and optionally uploads it to ProGet and starts a deploy for the package in BuildMaster. The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed. To upload to ProGet and start a deploy, provide the packages's ProGet URI and credentials with the `ProGetPackageUri` and `ProGetCredential` parameters, respectively and a session to BuildMaster with the `BuildMasterSession` object.
+    The `Invoke-WhsCIAppPackageTask` function implements the `AppPackage` task, which creates an universal ProGet package for a WHS application. When running on the build server and building on the `develop`, a `release/*`, or the `master` branch, the package is uploaded to ProGet and starts a deploy for the package in BuildMaster. If the application doesn't exist in ProGet, it is created for you. In order for the BuildMaster deploy to start, the application has to exist in BuildMaster, and a `develop`, `release`, or `master` release (for those respective branches) must also exist.
+    
+    The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
+    
+    The `AppPackage` task has the following elements:
+    
+    * `Name` (**mandatory**): the name of the package. Must 
+    * `Description` (**mandatory**): a short description of the package.
+    * `Path` (**mandatory**): the directories and filenames to include in the package. The paths must relative to the `whsbuild.yml` file (you can change the path root via the `SourceRoot` element). Each item is added to the root of the application package using the name of the directory/file. If you have two paths that have the same name, the second item will replace the first.
+    * `Include` (**mandatory**): a whitlelist of wildcards and file names to include in the package. For any directory in the `Path` parameter, only files that match an item in this whitelist are included in the package.
+    * `Exclude`: a list of wildcards and file names to exclude from the package. Sometimes, a whitelist can be a little greedy and include some files you might not want. Use this element to exclude files.
+    * `ThirdPartyPath`: a list of directores and files that should be included in the package *unfiltered*. These are paths that are copied without using the `Include` or `Exclude` elements. This is useful to include items you depend on but have no control over, like Node.js applications' `node_modules` directory.
+    * `ExcludeArc`: by default, WHS's automation platform, `Arc`, is included in your package. If your application doesn't need Arc, set this element to `true` and it won't be included.
+    * `SourceRoot`: this changes the root path used to resolve the relative paths in the `Path` element. Use this element when your application's root directory isn't the same directory your `whsbuild.yml` file is in. This path should be relative to the `whsbuild.yml` file.
+    
+    Here is a sample `whsbuild.yml` file showing an `AppPackage` task definition:
+    
+    BuildTasks:
+    - WhsInit:
+        Name: WhsInit
+        Description: The WHS application used by WHS's Technology team to bootstrap computers and keep them up-to-date. 
+        Path:
+        - Certificates
+        - WhsInitAutomation
+        - Initialize-Computer.ps1
+        - "Initialize-Whs*Repository.ps1"
+        - Reset-Computer.ps1
+        - Test-Computer.ps1
+        - "Update-Whs*Repository.ps1"
+        - Update-WhsInit.ps1
+        - WhsEnvironments.json
+        Include:
+        - "*.ps81"
+        - "*.crt"
+        - "*.cer"
+        - "*.pfx"
 
-    It returns an `IO.FileInfo` object for the created package.
-
-    Packages are only allowed to have whitelisted files, i.e. you can't include all files by default. You must supply a value for the `Include` parameter that lists the file names or wildcards that match the files you want in your application.
-
-    If the whitelist includes files that you want to exclude, or you want to omit certain directories, use the `Exclude` parameter. `Invoke-WhsCIAppPackageTask` *always* excludes directories named:
-
-     * `obj`
-     * `.git`
-     * `.hg`
-
-    Some packages require third-party packages, tools, etc, whose contents are out of our control (e.g. the `node_modules` directory in Node.js applications). Pass paths to these items to the `ThirdPartyPath` parameter. These paths are copied as-is, with no filtering, i.e. the `Include` or `Exclude` parameters are not used to filter its contents.
-
-    If the application doesn't exist exist in ProGet, it is created.
-
-    The application must exist in BuildMaster and must have three releases: `develop` for deploying to Dev, `release` for deploying to Test, and `master` for deploying to Staging and Live. `Invoke-WhsCIAppPackageTask` uses the current Git branch to determine which release to add the package to.
+    Here's another example `whsbuild.yml` file showing 
     #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
@@ -53,13 +74,20 @@ function Invoke-WhsCIAppPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
+    $excludeArc = $TaskParameter['ExcludeArc']
+
+    $parentPathParam = @{ }
+    if( $TaskParameter.ContainsKey('SourceRoot') )
+    {
+        $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
+    }
 
     $resolveErrors = @()
-    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
 
     if( $thirdPartyPath )
     {
-        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath'
+        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath' @parentPathParam
     }
 
     $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
@@ -86,28 +114,31 @@ function Invoke-WhsCIAppPackageTask
 
     try
     {
-        $ciComponents = @(
-                            'BitbucketServerAutomation', 
-                            'Blade', 
-                            'LibGit2', 
-                            'LibGit2Adapter', 
-                            'MSBuild',
-                            'Pester', 
-                            'PsHg',
-                            'ReleaseTrain',
-                            'WhsArtifacts',
-                            'WhsHg',
-                            'WhsPipeline'
-                        )
-        $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
-        $excludedFiles = Get-ChildItem -Path $arcPath -File | 
-                            ForEach-Object { '/XF'; $_.FullName }
-        $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
-        $operationDescription = 'packaging Arc'
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+        if( -not $excludeArc )
         {
-            robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Debug
+            $ciComponents = @(
+                                'BitbucketServerAutomation', 
+                                'Blade', 
+                                'LibGit2', 
+                                'LibGit2Adapter', 
+                                'MSBuild',
+                                'Pester', 
+                                'PsHg',
+                                'ReleaseTrain',
+                                'WhsArtifacts',
+                                'WhsHg',
+                                'WhsPipeline'
+                            )
+            $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
+            $excludedFiles = Get-ChildItem -Path $arcPath -File | 
+                                ForEach-Object { '/XF'; $_.FullName }
+            $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
+            $operationDescription = 'packaging Arc'
+            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            {
+                robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Verbose
+            }
         }
 
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
@@ -122,11 +153,18 @@ function Invoke-WhsCIAppPackageTask
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            $operationDescription = 'packaging {0}' -f $itemName
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            if( (Test-Path -Path $item -PathType Leaf) )
             {
-                robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Debug
+                Copy-Item -Path $item -Destination $destination
+            }
+            else
+            {
+                $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+                $operationDescription = 'packaging {0}' -f $itemName
+                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                {
+                    robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
+                }
             }
         }
 
@@ -134,19 +172,31 @@ function Invoke-WhsCIAppPackageTask
         {
             $itemName = $item | Split-Path -Leaf
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            $operationDescription = 'packaging third-party {0}' -f $itemName
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+            if( (Test-Path -Path $item -PathType Leaf) )
             {
-                robocopy $item $destination '/MIR' '/NP' | Write-Debug
+                Copy-Item -Path $item -Destination $destination
+            }
+            else
+            {
+                $operationDescription = 'packaging third-party {0}' -f $itemName
+                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                {
+                    robocopy $item $destination '/MIR' '/NP' | Write-Verbose
+                }
             }
         }
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
+        if( -not (Test-WhsCIRunByBuildServer) )
+        {
+            return
+        }
+
         # Upload to ProGet
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
         $branch = $branch -replace '/.*$',''
-        if( (Test-WhsCIRunByBuildServer) -and $branch -match '^(release|master|develop)$' )
+        if( $branch -match '^(release|master|develop)$' )
         {
             $proGetPackageUri = $TaskContext.ProGetAppFeedUri
             $proGetCredential = $TaskContext.ProGetCredential
@@ -161,7 +211,7 @@ function Invoke-WhsCIAppPackageTask
             $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                Write-Debug -Message ('PUT {0}' -f $proGetPackageUri)
+                Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
                 $result = Invoke-RestMethod -Method Put `
                                             -Uri $proGetPackageUri `
                                             -ContentType 'application/octet-stream' `
@@ -190,7 +240,25 @@ function Invoke-WhsCIAppPackageTask
     }
     finally
     {
-        Get-ChildItem -Path $env:TEMP -Filter ('{0}+*' -f $tempBaseName) |
-            Remove-Item -Recurse -Force -WhatIf:$false
+        $maxTries = 50
+        $tryNum = 0
+        $failedToCleanUp = $true
+        do
+        {
+            if( -not (Test-Path -Path $tempRoot -PathType Container) )
+            {
+                $failedToCleanUp = $false
+                break
+            }
+            Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot) -Verbose
+            Start-Sleep -Milliseconds 100
+            Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false -ErrorAction Ignore
+        }
+        while( $tryNum++ -lt $maxTries )
+
+        if( $failedToCleanUp )
+        {
+            Write-Warning -Message ('Failed to delete temporary directory ''{0}''.' -f $tempRoot)
+        }
     }
 }

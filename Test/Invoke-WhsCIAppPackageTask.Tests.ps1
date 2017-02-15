@@ -41,7 +41,7 @@ function Assert-NewWhsCIAppPackage
         $WithNoProGetParameters,
 
         [string[]]
-        $HasDirectories,
+        $HasRootItems,
 
         [string[]]
         $HasFiles,
@@ -64,11 +64,32 @@ function Assert-NewWhsCIAppPackage
         [Switch]
         $ShouldUploadPackage,
 
-        [string[]]
-        $HasThirdPartyDirectory,
+        [Switch]
+        $ShouldWriteNoErrors,
+
+        [Switch]
+        $ShouldReturnNothing,
 
         [string[]]
-        $HasThirdPartyFile
+        $HasThirdPartyRootItem,
+
+        [string[]]
+        $HasThirdPartyFile,
+
+        [string]
+        $FromSourceRoot,
+
+        [string[]]
+        $MissingRootItems,
+
+        [Switch]
+        $WhenExcludingArc,
+
+        [Switch]
+        $ThenArcNotInPackage,
+
+        [Switch]
+        $WhenRunByDeveloper
     )
 
     if( -not $Version )
@@ -90,9 +111,17 @@ function Assert-NewWhsCIAppPackage
     {
         $taskParameter['Exclude'] = $ThatExcludes
     }
-    if( $HasThirdPartyDirectory )
+    if( $HasThirdPartyRootItem )
     {
-        $taskParameter['ThirdPartyPath'] = $HasThirdPartyDirectory
+        $taskParameter['ThirdPartyPath'] = $HasThirdPartyRootItem
+    }
+    if( $FromSourceRoot )
+    {
+        $taskParameter['SourceRoot'] = $FromSourceRoot
+    }
+    if( $WhenExcludingArc )
+    {
+        $taskParameter['ExcludeArc'] = $true
     }
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo'
@@ -128,14 +157,49 @@ function Assert-NewWhsCIAppPackage
 
     $Global:Error.Clear()
 
+    $whatIfParam = @{ }
+    if( $WhenRunByDeveloper )
+    {
+        $whatIfParam['WhatIf'] = $true
+    }
+        
+    function Get-TempDirCount
+    {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+            Measure-Object | 
+            Select-Object -ExpandProperty Count
+    }
+
+    $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
     }
     catch
     {
         $threwException = $true
         Write-Error -ErrorRecord $_
+    }
+    $postTempDirCount = Get-TempDirCount
+
+    if( $ShouldReturnNothing -or $ShouldFailWithErrorMessage )
+    {
+        It 'should not return package info' {
+            $At | Should BeNullOrEmpty
+        }
+    }
+    else
+    {
+        It 'should return package info' {
+            $At | Should Exist
+        }
+    }
+
+    if( $ShouldWriteNoErrors )
+    {
+        It 'should not write any errors' {
+            $Global:Error | Should BeNullOrEmpty
+        }
     }
 
     if( $ShouldFailWithErrorMessage )
@@ -147,19 +211,11 @@ function Assert-NewWhsCIAppPackage
         It ('should fail with error message that matches ''{0}''' -f $ShouldFailWithErrorMessage) {
             $Global:Error | Should Match $ShouldFailWithErrorMessage
         }
-
-        It 'should not return package info' {
-            $At | Should BeNullOrEmpty
-        }
     }
     else
     {
         It 'should not fail' {
             $threwException | Should Be $false
-        }
-
-        It 'should return package info' {
-            $At | Should Exist
         }
     }
 
@@ -172,8 +228,7 @@ function Assert-NewWhsCIAppPackage
 
 
     It 'should cleanup temporary directories' {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' |
-            Should BeNullOrEmpty
+        $postTempDirCount | Should Be $preTempDirCount
     }
 
     if( $ShouldNotCreatePackage )
@@ -195,22 +250,29 @@ function Assert-NewWhsCIAppPackage
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
     Context 'the package' {
-        foreach( $dirName in $HasDirectories )
+        foreach( $itemName in $MissingRootItems )
         {
-            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
-            It ('should include {0} directory' -f $dirName) {
+            It ('should not include {0} item' -f $itemName) {
+                Join-Path -Path $packageContentsPath -ChildPath $itemName | Should Not Exist
+            }
+        }
+
+        foreach( $itemName in $HasRootItems )
+        {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
+            It ('should include {0} item' -f $itemName) {
                  $dirpath | Should Exist
             }
             foreach( $fileName in $HasFiles )
             {
-                It ('should include {0}\{1} file' -f $dirName,$fileName) {
+                It ('should include {0}\{1} file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
                 }
             }
 
             foreach( $fileName in $HasThirdPartyFile )
             {
-                It ('should not include {0}\{1} file' -f $dirName,$fileName) {
+                It ('should not include {0}\{1} file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Not Exist
                 }
             }
@@ -230,59 +292,68 @@ function Assert-NewWhsCIAppPackage
             $upackJsonPath | Should Exist
         }
 
-        $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
         $arcPath = Join-Path -Path $packageContentsPath -ChildPath 'Arc'
-
-        It 'should include Arc' {
-            $arcPath | Should Exist
-        }
-
-        $arcComponentsToExclude = @(
-                                        'BitbucketServerAutomation', 
-                                        'Blade', 
-                                        'LibGit2', 
-                                        'LibGit2Adapter', 
-                                        'MSBuild',
-                                        'Pester', 
-                                        'PsHg',
-                                        'ReleaseTrain',
-                                        'WhsArtifacts',
-                                        'WhsHg',
-                                        'WhsPipeline'
-                                    )
-        It ('should exclude Arc CI components') {
-            foreach( $name in $arcComponentsToExclude )
-            {
-                Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
-            }
-
-            foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
-            {
-                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                $itemPath | Should Not Exist
-            }
-        }
-
-        It ('should include Arc installation components') {
-            foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
-            {
-                $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                $itemPath | Should Exist
-            }
-        }
-
-        foreach( $dirName in $HasThirdPartyDirectory )
+        if( $ThenArcNotInPackage )
         {
-            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $dirName
-            It ('should include {0} third-party directory' -f $dirName) {
+            It 'should not include Arc' {
+                $arcPath | Should Not Exist
+            }
+        }
+        else
+        {
+            $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
+
+            It 'should include Arc' {
+                $arcPath | Should Exist
+            }
+
+            $arcComponentsToExclude = @(
+                                            'BitbucketServerAutomation', 
+                                            'Blade', 
+                                            'LibGit2', 
+                                            'LibGit2Adapter', 
+                                            'MSBuild',
+                                            'Pester', 
+                                            'PsHg',
+                                            'ReleaseTrain',
+                                            'WhsArtifacts',
+                                            'WhsHg',
+                                            'WhsPipeline'
+                                        )
+            It ('should exclude Arc CI components') {
+                foreach( $name in $arcComponentsToExclude )
+                {
+                    Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
+                }
+
+                foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
+                {
+                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                    $itemPath | Should Not Exist
+                }
+            }
+
+            It ('should include Arc installation components') {
+                foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
+                {
+                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
+                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
+                    $itemPath | Should Exist
+                }
+            }
+        }
+
+        foreach( $itemName in $HasThirdPartyRootItem )
+        {
+            $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
+            It ('should include {0} third-party root item' -f $itemName) {
                  $dirpath | Should Exist
             }
             
             foreach( $fileName in $HasThirdPartyFile )
             {
-                It ('should include {0}\{1} third-party file' -f $dirName,$fileName) {
+                It ('should include {0}\{1} third-party file' -f $itemName,$fileName) {
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Exist
                 }
             }
@@ -445,6 +516,9 @@ function Initialize-Test
         [string[]]
         $FileName,
 
+        [string[]]
+        $RootFileName,
+
         [Switch]
         $WithoutArc,
 
@@ -473,10 +547,25 @@ function Initialize-Test
         $OnHotFixBranch,
 
         [Switch]
-        $OnBugFixBranch
+        $OnBugFixBranch,
+
+        [string]
+        $SourceRoot,
+
+        [Switch]
+        $AsDeveloper
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    Install-Directory -Path $repoRoot
+    if( -not $SourceRoot )
+    {
+        $SourceRoot = $repoRoot
+    }
+    else
+    {
+        $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
+    }
     Install-Directory -Path $repoRoot
 
     if( -not $WithoutArc )
@@ -488,12 +577,17 @@ function Initialize-Test
 
     $DirectoryName | ForEach-Object { 
         $dirPath = $_
-        $dirPath = Join-Path -Path $repoRoot -ChildPath $_
+        $dirPath = Join-Path -Path $SourceRoot -ChildPath $_
         Install-Directory -Path $dirPath
         foreach( $file in $FileName )
         {
             New-Item -Path (Join-Path -Path $dirPath -ChildPath $file) -ItemType 'File' | Out-Null
         }
+    }
+
+    foreach( $itemName in $RootFileName )
+    {
+        New-Item -Path (Join-Path -Path $SourceRoot -ChildPath $itemName) -ItemType 'File' | Out-Null
     }
 
     if( -not $WhenReallyUploading )
@@ -510,36 +604,39 @@ function Initialize-Test
     Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ id = 'new-bmreleasepackage'; } }
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
 
-    $gitBranch = 'origin/develop'
-    if( $OnFeatureBranch )
+    if( -not $AsDeveloper )
     {
-        $gitBranch = 'origin/feature/fubar'
-    }
-    if( $OnMasterBranch )
-    {
-        $gitBranch = 'origin/master'
-    }
-    if( $OnReleaseBranch )
-    {
-        $gitBranch = 'origin/release/5.1'
-    }
-    if( $OnPermanentReleaseBranch )
-    {
-        $gitBranch = 'origin/release'
-    }
-    if( $OnHotFixBranch )
-    {
-        $gitBranch = 'origin/hotfix/snafu'
-    }
-    if( $OnBugFixBranch )
-    {
-        $gitBranch = 'origin/bugfix/fubarnsafu'
-    }
+        $gitBranch = 'origin/develop'
+        if( $OnFeatureBranch )
+        {
+            $gitBranch = 'origin/feature/fubar'
+        }
+        if( $OnMasterBranch )
+        {
+            $gitBranch = 'origin/master'
+        }
+        if( $OnReleaseBranch )
+        {
+            $gitBranch = 'origin/release/5.1'
+        }
+        if( $OnPermanentReleaseBranch )
+        {
+            $gitBranch = 'origin/release'
+        }
+        if( $OnHotFixBranch )
+        {
+            $gitBranch = 'origin/hotfix/snafu'
+        }
+        if( $OnBugFixBranch )
+        {
+            $gitBranch = 'origin/bugfix/fubarnsafu'
+        }
 
-    $filter = { $Path -eq 'env:GIT_BRANCH' }
-    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        $filter = { $Path -eq 'env:GIT_BRANCH' }
+        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+    }
 
     return $repoRoot
 }
@@ -552,9 +649,41 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when excluding Arc' {
+    $file = 'project.json'
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WhenExcludingArc `
+                              -HasRootItems $file `
+                              -ThenArcNotInPackage
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
+    $file = 'project.json'
+    $thirdPartyFile = 'thirdparty.txt'
+    $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -HasThirdPartyRootItem $thirdPartyFile `
+                              -HasRootItems $file
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as a developer' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames `
+                                      -AsDeveloper
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasRootItems $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldNotUploadPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
@@ -565,7 +694,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a direc
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'code.cs' `
                               -ShouldUploadPackage
@@ -579,7 +708,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'code.cs' `
                               -ShouldUploadPackage 
@@ -594,7 +723,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'html2.html','sub' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
                               -NotHasFiles 'html2.html','sub' `
                               -ShouldUploadPackage
@@ -619,7 +748,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exc
     
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
                               -NotHasFiles '.git','.hg','obj' `
                               -ShouldUploadPackage
@@ -647,7 +776,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ShouldFailWithErrorMessage 'failed to upload' `
@@ -661,7 +790,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldReallyUploadToProGet 
 }
@@ -673,42 +802,41 @@ Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -WithNoProGetParameters `
                               -ShouldNotUploadPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'html.html' )
+    $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes '*.html' `
+                              -WhenRunByDeveloper `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldWriteNoErrors `
+                              -ShouldReturnNothing
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch and not including Arc' {
     $Global:Error.Clear()
 
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $context = New-WhsCITestContext -ForBuildRoot 'Repo'
-    $parameters = @{
-                        Name = 'Package';
-                        Description = 'Description';
-                        Path = $dirNames;
-                        Include = '*.html'
-                   }
-    $result = Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameters -WhatIf
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes '*.html' `
+                              -WhenRunByDeveloper `
+                              -WhenExcludingArc `
+                              -ThenArcNotInPackage `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldWriteNoErrors `
+                              -ShouldReturnNothing
 
-    It 'should write no errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-
-    It 'should return nothing' {
-        $result | Should BeNullOrEmpty
-    }
-
-    It 'should not create package' {
-        Get-ChildItem -Path $TestDrive.FullName -Filter '*.upack' -Recurse | Should BeNullOrEmpty
-    }
-
-    It 'should not upload to ProGet' {
-        Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
-    }
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
@@ -718,7 +846,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage 
 }
@@ -730,7 +858,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -742,7 +870,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -754,7 +882,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch'
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -766,7 +894,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
@@ -778,7 +906,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -790,7 +918,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
-                              -HasDirectories $dirNames `
+                              -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
@@ -803,9 +931,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasDirectories 'dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
-                              -HasThirdPartyDirectory 'thirdparty','thirdpart2' `
+                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt'
 }
 
@@ -854,6 +982,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
     }
 }
 
+function New-TaskParameter
+{
+     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' }
+}
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
     $context = New-WhsCITestContext
@@ -861,11 +993,43 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exis
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' } } | Should Throw
+        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
     }
 
     It 'should mention path in error message' {
         $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
+}
 
+Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of the repository' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -SourceRoot 'app'
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasRootItems 'dir1' `
+                              -HasFiles 'html.html' `
+                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
+                              -HasThirdPartyFile 'thirdparty.txt' `
+                              -FromSourceRoot 'app'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist' {
+    $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
+    $fileNames = @( 'html.html', 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+    $context = New-WhsCITestContext
+
+    $Global:Error.Clear()
+
+    $parameter = New-TaskParameter
+    $parameter['SourceRoot'] = 'app'
+
+    { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
+
+    It 'should fail to resolve the path' {
+        $Global:Error | Should Match 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
+    }
 }

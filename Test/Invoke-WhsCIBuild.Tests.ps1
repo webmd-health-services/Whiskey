@@ -1,6 +1,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\Import-WhsCI.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\LibGit2\Import-LibGit2.ps1' -Resolve)
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Carbon\Import-Carbon.ps1' -Resolve)
@@ -384,54 +385,6 @@ function Invoke-Build
     }
 }
 
-function New-AssemblyInfo
-{
-    param(
-        [string]
-        $RootPath
-    )
-
-    @'
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-// General Information about an assembly is controlled through the following 
-// set of attributes. Change these attribute values to modify the information
-// associated with an assembly.
-[assembly: AssemblyTitle("NUnit2FailingTest")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("NUnit2FailingTest")]
-[assembly: AssemblyCopyright("Copyright (c) 2016")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
-
-// Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  If you need to access a type in this assembly from 
-// COM, set the ComVisible attribute to true on that type.
-[assembly: ComVisible(false)]
-
-// The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("05b909ba-da71-42f6-836f-f1ec9b96e54d")]
-
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version 
-//      Build Number
-//      Revision
-//
-// You can specify all the values or you can default the Build and Revision Numbers 
-// by using the '*' as shown below:
-// [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0.0.0")]
-'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs') 
-}
-
 function New-BuildMetadata
 {
     if( (Test-WhsCIRunByBuildServer) )
@@ -502,41 +455,6 @@ function New-NUnitTestAssembly
     }
 }
 
-function New-MSBuildProject
-{
-    param(
-        [string[]]
-        $FileName,
-
-        [Switch]
-        $ThatFails
-    )
-
-    $root = (Get-Item -Path 'TestDrive:').FullName
-
-    foreach( $name in $FileName )
-    {
-        @"
-<?xml version="1.0" encoding="UTF-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
-
-    <Target Name="clean">
-        <Error Condition="'$ThatFails' == 'True'" Text="FAILURE!" />
-        <WriteLinesToFile File="`$(MSBuildThisFileDirectory)\`$(MSBuildProjectFile).clean" />
-    </Target>
-
-    <Target Name="build">
-        <Error Condition="'$ThatFails' == 'True'" Text="FAILURE!" />
-        <WriteLinesToFile File="`$(MSBuildThisFileDirectory)\`$(MSBuildProjectFile).build" />
-    </Target>
-
-</Project>
-"@ | Set-Content -Path (Join-Path -Path $root -ChildPath $name)
-
-        New-AssemblyInfo -RootPath (Join-Path -Path $root -ChildPath ($name | Split-Path))
-    }
-}
-
 function New-TestWhsBuildFile
 {
     param(
@@ -597,6 +515,7 @@ function New-TestWhsBuildFile
     $Yaml | Set-Content -Path $whsbuildymlpath
     return $whsbuildymlpath
 }
+#endregion
 
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
@@ -941,29 +860,37 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid project' {
-    $project = 'project.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path $project
-    New-MSBuildProject -FileName $project
+Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
+    $project = New-MSBuildProject -FileName 'project.csproj'
+    $project2 = New-MSBuildProject -FileName 'project2.csproj'
+    $projectPaths = $project,$project2
+    $expectedVersion = '1.6.7-rc1'
+    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path 'project.csproj','project2.csproj' -Version $expectedVersion
+
+    Mock -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -Verifiable
     
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails 2>&1
+    Invoke-Build -ByJenkins -WithConfig $configPath
 
-    function Assert-NuGetPackagesNotCreated
-    {
-        param(
-            $ConfigurationPath
-        )
+    It 'should call Invoke-WhsCINuGetPackTask' {
+        foreach( $projectPath in $projectPaths )
+        {
+            Assert-MockCalled -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -ParameterFilter {
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Path               expected  {0}' -f $projectPath)
+                Write-Debug -Message ('                   actual    {0}' -f $Path)
+                $expectedOutputRoot = Join-Path -Path ($configPath | Split-Path) -Child '.output'
+                Write-Debug -Message ('OutputDirectory    expected  {0}' -f $expectedOutputRoot)
+                Write-Debug -Message ('                   actual    {0}' -f $OutputDirectory)
+                Write-Debug -Message ('Version            expected  {0}' -f $expectedVersion)
+                Write-Debug -Message ('                   actual    {0}' -f $Version)
+                $configuration = Get-WhsSetting -Environment 'Dev' -Name '.NETProjectBuildConfiguration'
+                Write-Debug -Message ('BuildConfiguration expected  {0}' -f $configuration)
+                Write-Debug -Message ('                   actual    {0}' -f $BuildConfiguration)
 
-        It 'should write an error' {
-            $Global:Error[0] | Should Match 'pack command failed'
-        }
-
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory ($ConfigurationPath | Split-Path)
-        It 'should not create any .nupkg files' {
-            (Join-Path -Path $outputRoot -ChildPath '*.nupkg') | Should Not Exist
+                $projectPath -eq $Path -and $expectedOutputRoot -eq $OutputDirectory -and $expectedVersion -eq $Version -and $configuration -eq $BuildConfiguration
+            }
         }
     }
-    Assert-NuGetPackagesNotCreated -ConfigurationPath $configPath
 }
 
 Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
@@ -994,46 +921,6 @@ Version: 2.13.80
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when running Node task by Jenkins' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
-
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath
-
-    It 'should run Node targets' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $WorkingDirectory -eq $repoRoot -and $NpmScript[0] -eq 'build' -and $NpmScript[1] -eq 'test'
-        }
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when Node task has no targets' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ }
-
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable
-
-    $warnings = @()
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -WarningVariable 'warnings' -WarningAction SilentlyContinue
-
-    It 'should warn that nothing happened' {
-        $warnings | Should Match 'missing or not defined'
-    }
-
-    It 'should not run Node task' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Times 0 
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when Node task fails' {
-    $whsbuildPath = New-TestWhsBuildFile -TaskName 'Node' -TaskProperty @{ 'NpmScripts' = 'build','test'  }
-    $repoRoot = $whsbuildPath | Split-Path
-    Mock -CommandName 'Invoke-WhsCINodeTask' -ModuleName 'WhsCI' -Verifiable -MockWith { throw 'Node task failed!' }
-
-    Invoke-Build -ByJenkins -WithConfig $whsbuildPath -ThatFails -ErrorAction SilentlyContinue
-}
-
 Describe 'Invoke-WhsCIBuild.when Git repository doesn''t exist' {
     $Global:Error.Clear()
     $version = '3.2.1-rc.1'
@@ -1059,7 +946,7 @@ $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # * task functions are created for all tasks
 #
 # Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
-foreach( $taskName in @( 'AppPackage', 'NodeAppPackage' ) )
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
 {
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 
@@ -1125,7 +1012,13 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage' ) )
 
                     return $true
                 }
-            }        
+            }
+
+            It 'should pass NPM registry URI' {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    $TaskContext.NpmRegistryUri -eq 'https://proget.dev.webmd.com/npm/npm/'
+                }
+            }
 
             It 'should pass task parameters' {
                 Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
@@ -1173,7 +1066,7 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage' ) )
             Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
             Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig' -BBServerCredential $bbServerCredential -BBServerUri $bbServerUri
             $expectedContext['Version'] = '{0}+80.develop.deadbee' -f $version
-            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
+            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
             $expectedContext['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
             $expectedContext['BitbucketServerCredential'] = $bbServerCredential
             $expectedContext['BitbucketServerUri'] = $bbServerUri
