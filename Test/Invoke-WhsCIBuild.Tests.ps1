@@ -779,47 +779,6 @@ Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
 }
 
-Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
-
-    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-    Invoke-Build -ByJenkins -WithConfig $configPath -DownloadRoot $downloadroot
-
-    Assert-NUnitTestsRun -ConfigurationPath $configPath `
-                         -ExpectedAssembly $assemblyNames
-
-    It 'should download NUnitRunners' {
-        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when running failing NUnit2 tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames -ThatFail
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
-    
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly $assemblyNames
-}
-
-Describe 'Invoke-WhsCIBuild.when running NUnit2 tests from multiple bin directories' {
-    $assemblyNames = 'BinOne\assembly.dll','BinTwo\assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    $root = Split-Path -Path $configPath -Parent
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinOne')
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly2.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinTwo')
-}
-
 Describe 'Invoke-WhsCIBuild.when output exists from a previous build' {
     $project = 'project.csproj'
     $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
