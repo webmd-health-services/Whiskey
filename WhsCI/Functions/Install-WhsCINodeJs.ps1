@@ -22,6 +22,11 @@ function Install-WhsCINodeJs
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [uri]
+        # The URI to the registry from which NPM packages should be downloaded.
+        $RegistryUri,
+
+        [Parameter(Mandatory=$true)]
         [string]
         # The version to install.
         $Version,
@@ -82,7 +87,7 @@ NVM for Windows is not installed. To install it:
         $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
 
         $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'
-        Invoke-WebRequest -UseBasicParsing -Uri $nvmUri -OutFile $tempZipFile
+        (New-Object 'Net.WebClient').DownloadFile($nvmUri, $tempZipFile)
         if( -not (Test-Path -Path $tempZipFile -PathType Leaf) )
         {
             Write-Error -Message ('Failed to download NVM from {0}' -f $nvmUri)
@@ -133,6 +138,22 @@ path: $($nvmSymlink)
                 ForEach-Object { Write-Progress -Activity $activity -Status $_ ; }
             Write-Progress -Activity $activity -Completed
         }
+
+        $npmRegistry = & $nodePath $npmPath config --global get registry
+        if( $npmRegistry -ne $RegistryUri.ToString() )
+        {
+            Write-Verbose ('NPM  registry  {0} -> {1}' -f $npmRegistry,$RegistryUri)
+            & $nodePath $npmPath config --global set registry $RegistryUri
+        }
+
+        $whsAlwaysAuth = 'false'
+        $alwaysAuth = & $nodePath $npmPath config --global get 'always-auth'
+        if( $alwaysAuth -ne $whsAlwaysAuth )
+        {
+            Write-Verbose -Message ('NPM  config  always-auth  {0} -> {1}' -f $alwaysAuth,$whsAlwaysAuth)
+            & $nodePath $npmPath config --global set 'always-auth' $whsAlwaysAuth
+        }
+
         return $nodePath
     }
 

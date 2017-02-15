@@ -50,13 +50,23 @@ function Invoke-WhsCIBuild
     * generates a report on each dependency's licenses
     * removes developer dependencies from node_modules directory (i.e. runs the `npm prune` command) (this only happens when running under a build server)
 
-    You are required to specify what version of Node your application uses in a package.json file in the root of your repository. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
+    You are required to specify what version of Node your application uses in a package.json file. The version of Node is given in the engines field. See https://docs.npmjs.com/files/package.json#engines for more infomration.
 
         BuildTasks:
         - Node:
             NpmScripts:
             - build
             - test
+
+    By default, your `package.json` is expected to be in your repository root, next to your `whsbuild.yml` file. If your application is in a sub-directory in your repository, use the `WorkingDirectory` element to specify the relative path to that directory, e.g.
+
+        BuildTasks:
+        - Node:
+            NpmScripts: build
+            WorkingDirectory: app
+
+    In the above example, the Node.js application is in the `app` directory. All build commands will be run in that directory. 
+
     
     ## NuGetPack
     
@@ -275,12 +285,47 @@ function Invoke-WhsCIBuild
 
         if( $config.ContainsKey('BuildTasks') )
         {
+            $context = @{
+                            ConfigurationPath = $ConfigurationPath
+                            BuildRoot = $root;
+                            OutputDirectory = $outputRoot;
+                            Version = $semVersion;
+                            NuGetVersion = $nugetVersion;
+                            ProGetAppFeedUri = $null;
+                            ProGetCredential = $null;
+                            BuildMasterSession = $null;
+                            BitbucketServerCredential = $BBServerCredential;
+                            BitbucketServerUri = $BBServerUri
+                            TaskName = '';
+                            TaskIndex = 0;
+                            Configuration = $config;
+                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/'
+                        }
+
+            if( $runningUnderBuildServer )
+            {
+                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
+                $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+                $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
+                $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+                $context.BuildMasterSession = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
+            }
+
+            # Tasks that should be called with the WhatIf switch when run by developers
+            # This makes builds go a little faster.
+            $developerWhatIfTasks = @{
+                                        'AppPackage' = $true;
+                                        'NodeAppPackage' = $true;
+                                     }
+
             $taskIdx = -1
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
                 $taskName = $task.Keys | Select-Object -First 1
                 $task = $task[$taskName]
+                $context.TaskName = $taskName
+                $context.TaskIndex = $taskIdx
 
                 $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $ConfigurationPath,$taskIdx,$taskName
 
@@ -291,14 +336,11 @@ function Invoke-WhsCIBuild
 
                 $errors = @()
                 $pathIdx = -1
-                if( $task.ContainsKey('Path') )
-                {
-                    $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                }
 
                 switch( $taskName )
                 {
                     'MSBuild' {
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $projectPath in $taskPaths )
                         {
                             $errors = $null
@@ -333,23 +375,13 @@ function Invoke-WhsCIBuild
                         }
                     }
 
-                    'Node' {
-                        $NpmScripts = $task['NpmScripts']
-                        if( $NpmScripts )
-                        {
-                            Invoke-WhsCINodeTask -WorkingDirectory $root -NpmScript $task['NpmScripts']
-                        }
-                        else
-                        {
-                            Write-Warning -Message ('{0}NpmScripts is missing or not defined. This should be a list of npm targets to run during each build.' -f $errorPrefix)
-                        }
-                    }
-
                     'NuGetPack' {
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
 
                     'NUnit2' {
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
                         Invoke-whsCINUnit2Task -Path $taskPaths -ReportPath $testResultPath
                     }
@@ -357,6 +389,7 @@ function Invoke-WhsCIBuild
                     'Pester3' {
                         try
                         {
+                            $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                             Invoke-WhsCIPester3Task -OutputRoot $outputRoot -Path $taskPaths -Config $task
                         }
                         catch
@@ -372,55 +405,29 @@ function Invoke-WhsCIBuild
                             $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
                         }
 
+                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $scriptPath in $taskPaths )
                         {
                             Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
                         }
                     }
 
-                    'WhsAppPackage' {
-                        $excludeParam = @{}
-                        foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
+                    default {
+                        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+                        if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                         {
-                            if( -not $task.ContainsKey($mandatoryName) )
+                            $whatIfParam = @{ }
+                            if( -not $runningUnderBuildServer -and $developerWhatIfTasks.ContainsKey($taskName) )
                             {
-                                throw ('{0}Element ''{1}'' is mandatory.' -f $errorPrefix,$mandatoryName)
+                                $whatIfParam['WhatIf'] = $true
                             }
-                        }
-                        if( $task['Exclude'] )
-                        {
-                            $excludeParam['Exclude'] = $task['Exclude']
-                        }
-
-                        $proGetParams = @{ }
-                        $whatIfParam = @{}
-                        if( $runningUnderBuildServer )
-                        {
-                            $proGetParams['ProGetPackageUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps' -ForWrite
-                            $proGetParams['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
-                            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
-                            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
-                            $proGetParams['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
+                            & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
                         }
                         else
                         {
-                            $whatIfParam['WhatIf'] = $true
+                            $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
+                            throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                         }
-
-                        New-WhsCIAppPackage -RepositoryRoot $root `
-                                            -Name $task['Name'] `
-                                            -Description $task['Description'] `
-                                            -Version $semVersion `
-                                            -Path $taskPaths `
-                                            -Include $task['Include'] `
-                                            @excludeParam `
-                                            @proGetParams `
-                                            @whatIfParam
-                    }
-
-                    default {
-                        $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'WhsAppPackage' ) | Sort-Object
-                        throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                     }
                 }
             }
