@@ -19,6 +19,16 @@ function Invoke-WhsCINUnit2Task
     #>
     [CmdletBinding()]
     param(
+    [Parameter(Mandatory=$true)]
+    [object]
+    $TaskContext,
+    
+    [Parameter(Mandatory=$true)]
+    [hashtable]
+    $TaskParameter
+ )
+    <#
+    param(
         [parameter(Mandatory=$true)]
         [string[]]
         # an array of taskpaths passed in from the Build function
@@ -30,28 +40,49 @@ function Invoke-WhsCINUnit2Task
         # The directory where the test results will be saved.
         $ReportPath
     )
+    
   
     Process
-    {        
+    {
+    #>        
         Set-StrictMode -version 'latest'        
         $package = 'NUnit.Runners'
         $version = '2.6.4'
+        # Make sure the Taskpath contains a Path parameter.
+        if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+        
+            BuildTasks:
+            - NUnit2:
+                Path:
+                - Assembly.dll
+                - OtherAssembly.dll')
+        }
+
+        $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
+        #$reportPath = Join-path -Path $TaskContext.OutputDirectory -ChildPath 'NUnit.xml'
 
         $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
-            #Write-Error -Message ('Failed to install {0} {1}!' -f $package,$version)
             throw ('Package {0} {1} failed to install!' -f $package,$version)
         }
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
 
-        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $ReportPath)
+        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $reportPath) 
+        <#
+        $rptPath = ('/xml={0}' -f $ReportPath)
+        $params = @( "$Path",'/noshadow','/framework=4.0','/domain=Single','/labels',"$rptPath")
+        & $nunitConsolePath $params
+        #>
         if( $LastExitCode )
         {
             throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
         }
-    }
+    #}
 
 }

@@ -6,7 +6,7 @@ Set-StrictMode -Version 'Latest'
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
-Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml' -Resolve) -BuildConfiguration 'Release'
+
 
 function Assert-NUnitTestsRun
 {
@@ -33,21 +33,34 @@ function Assert-NUnitTestsNotRun
 function Invoke-RunNUnit2Task
 {
     param(
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
+
         [switch]
         $WithFailingTests
     )
+
     if( $WithFailingTests )
     {
-        $assemblyNames = $failingNUnit2TestAssemblyPath
+        $taskParameter = @{
+                        Path = @(
+                                    'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
+                                )
+                      }
+        
     }
     else
     {
-        $assemblyNames = $passingNUnit2TestAssemblyPath
+        $taskParameter = @{
+                        Path = @(
+                                    'NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
+                                )
+                      }
     }
-
-    $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
-    Invoke-WhsCINunit2Task -path $assemblyNames -ReportPath $reportPath
-
+     
+    $ReportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
+    Invoke-WhsCINUnit2Task -TaskContext $TaskContext -TaskParameter $taskParameter
     Assert-NUnitTestsRun -ReportPath $ReportPath    
     It 'should download NUnit.Runners' {
         (Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\packages\NUnit.Runners.2.6.4') | Should Exist
@@ -55,16 +68,21 @@ function Invoke-RunNUnit2Task
 }
 
 
-Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' {    
-    Invoke-RunNUnit2Task
+Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' { 
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
+    Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml' -Resolve) -BuildConfiguration 'Release' 
+    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  
+    Invoke-RunNUnit2Task -TaskContext $context
 }
 
 Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
     $threwException = $false
-    $reportPath = Join-path -Path $TestDrive.FullName -ChildPath 'NUnit.xml'
+    $context = New-WhsCITestContext
+    $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
+    #$reportPath = Join-path -Path $context.OutputDirectory -ChildPath 'NUnit.xml'
     try
-    { 
-        Invoke-RunNUnit2Task -withFailingTests 
+    {   
+        Invoke-RunNUnit2Task -TaskContext $context -withFailingTests 
     }
     catch
     { 
@@ -73,7 +91,7 @@ Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
 
     finally
     {
-        Assert-NUnitTestsNotRun -ReportPath $ReportPath 
+        Assert-NUnitTestsNotRun -ReportPath $reportPath 
         It 'Should Throw an Exception' {
             $threwException | should be $true
         }
@@ -84,22 +102,108 @@ Describe 'Invoke-WhsCINUnit2Task when Install-WhsCITool fails' {
     Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $false }
     $Global:Error.Clear()
     $threwException = $false
+    $context = New-WhsCITestContext
     try
     {
-        Invoke-RunNUnit2Task -ErrorAction silentlyContinue
+        Invoke-RunNUnit2Task -TaskContext $context -ErrorAction silentlyContinue
     }
     catch
     {
         $threwException = $true
     }
-    <#
-    $Global:Error.Clear()
-    
-    It 'should write errors for failed installation' {
-        $Global:Error | Should not BeNullOrEmpty
-    }
-    #>
     It 'should throw an exception' {
         $threwException | should be $true
     }
 }
+
+Describe 'Invoke-WhsCINUnit2Task when Path Parameter is not included' {
+    $context = New-WhsCITestContext
+    $taskParameter = @{ }
+    $threwException = $false
+    $Global:Error.Clear()
+
+    try
+    {
+        Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $taskParameter 
+    }
+    catch
+    {
+        $threwException = $true
+    }
+    It 'should throw an exception'{
+        $threwException | Should Be $true
+        $Global:Error | Should Match ([regex]::Escape('Element ''Path'' is mandatory'))
+    }
+}
+
+Describe 'Invoke-WhsCINUnit2Task when Path Parameter is invalid' {
+    $context = New-WhsCITestContext
+    $taskParameter = @{
+                        Path = @(
+                                    'I\do\not\exist'
+                                )
+                      }
+    $threwException = $false
+    $Global:Error.Clear()
+
+    try
+    {
+        Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $taskParameter 
+    }
+    catch
+    {
+        $threwException = $true
+    }
+    It 'should throw an exception'{
+        $threwException | Should Be $true
+        $Global:Error | Should Match ([regex]::Escape('does not exist.'))
+    }
+
+}
+
+<#
+Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is not included' {
+    $context = New-WhsCITestContext
+    $taskParameter = @{ }
+    $threwException = $false
+    $Global:Error.Clear()
+
+    try
+    {
+        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
+    }
+    catch
+    {
+        $threwException = $true
+    }
+    It 'should throw an exception'{
+        $threwException | Should Be $true
+        $Global:Error | Should Match ([regex]::Escape('Element ''Path'' is mandatory'))
+    }
+}
+
+Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is invalid' {
+    $context = New-WhsCITestContext
+    $taskParameter = @{
+                        Path = @(
+                                    'I\do\not\exist'
+                                )
+                      }
+    $threwException = $false
+    $Global:Error.Clear()
+
+    try
+    {
+        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
+    }
+    catch
+    {
+        $threwException = $true
+    }
+    It 'should throw an exception'{
+        $threwException | Should Be $true
+        $Global:Error | Should Match ([regex]::Escape('does not exist.'))
+    }
+
+}
+#>

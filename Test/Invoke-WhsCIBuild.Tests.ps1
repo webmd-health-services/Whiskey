@@ -405,12 +405,12 @@ function New-MockBitbucketServer
 
 function New-MockBuildServer
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { $true } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $true }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 
-    Mock -CommandName 'Test-Path' -MockWith { $true } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -MockWith { $true } 
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
@@ -418,8 +418,8 @@ function New-MockBuildServer
 
 function New-MockDeveloperEnvironment
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
-    Mock -CommandName 'Test-Path' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false } 
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -MockWith { $false } 
 }
 
 
