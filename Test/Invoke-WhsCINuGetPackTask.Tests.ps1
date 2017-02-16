@@ -48,7 +48,7 @@ function ThenPackageShouldBeCreated
 }
 
 
-Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid project' {
+Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with an invalid project' {
     $Global:Error.Clear()
 
     $project = Join-Path -Path $TestDrive.FullName -ChildPath 'project.csproj'
@@ -86,32 +86,32 @@ Describe 'Invoke-WhsCIBuild.when creating a NuGet package with an invalid projec
     Assert-NuGetPackagesNotCreated
 }
 
-Describe 'Invoke-WhsCIBuild.when creating a NuGet package' {
+Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package' {
     $project = GivenABuiltLibrary
     Invoke-WhsCINuGetPackTask -Path $project -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
     ThenPackageShouldBeCreated
 }
 
-Describe 'Invoke-WhsCIBuild.when piped strings' {
+Describe 'Invoke-WhsCINuGetPackTask.when piped strings' {
     $project = GivenABuiltLibrary
     $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
     ThenPackageShouldBeCreated
 }
 
-Describe 'Invoke-WhsCIBuild.when piped file info objects' {
+Describe 'Invoke-WhsCINuGetPackTask.when piped file info objects' {
     $project = GivenABuiltLibrary
     Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
     ThenPackageShouldBeCreated
 }
 
-Describe 'Invoke-WhsCIBuild.when passed a version' {
+Describe 'Invoke-WhsCINuGetPackTask.when passed a version' {
     $version = '4.5.6-rc1'
     $project = GivenABuiltLibrary
     Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug' -Version $version
     ThenPackageShouldBeCreated -WithVersion $version
 }
 
-Describe 'Invoke-WhsCIBuild.when creating a package built in release mode' {
+Describe 'Invoke-WhsCINuGetPackTask.when creating a package built in release mode' {
     $project = GivenABuiltLibrary -InReleaseMode
     Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Release'
     ThenPackageShouldBeCreated 
