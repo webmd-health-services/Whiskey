@@ -258,8 +258,7 @@ function Invoke-WhsCIBuild
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
 
     $runningUnderBuildServer = Test-WhsCIRunByBuildServer
-    #$runningUnderBuildServer = Test-Path -Path 'env:JENKINS_URL'
-
+    
     if( $runningUnderBuildServer )
     {
         $conn = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
@@ -382,9 +381,6 @@ function Invoke-WhsCIBuild
                     }
 
                     'NUnit2' {
-                        #$taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        #$testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                        #Invoke-WhsCINUnit2Task -Path $taskPaths -ReportPath $testResultPath
                         Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $task
                     }
 

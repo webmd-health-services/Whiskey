@@ -79,7 +79,6 @@ Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
     $threwException = $false
     $context = New-WhsCITestContext
     $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
-    #$reportPath = Join-path -Path $context.OutputDirectory -ChildPath 'NUnit.xml'
     try
     {   
         Invoke-RunNUnit2Task -TaskContext $context -withFailingTests 
@@ -161,32 +160,14 @@ Describe 'Invoke-WhsCINUnit2Task when Path Parameter is invalid' {
 
 }
 
-<#
-Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is not included' {
-    $context = New-WhsCITestContext
-    $taskParameter = @{ }
-    $threwException = $false
-    $Global:Error.Clear()
+Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Path -resolve fails' {
+    Mock -CommandName 'Join-Path' -ModuleName 'WhsCI' -MockWith { Write-Error 'Path does not exist!' } -ParameterFilter { $ChildPath -eq 'nunit-console.exe' }
 
-    try
-    {
-        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
-    }
-    catch
-    {
-        $threwException = $true
-    }
-    It 'should throw an exception'{
-        $threwException | Should Be $true
-        $Global:Error | Should Match ([regex]::Escape('Element ''Path'' is mandatory'))
-    }
-}
-
-Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is invalid' {
-    $context = New-WhsCITestContext
+    #Build a valid context and task parameter as we are just trying to isolate the testing of Join-path -Resolve 
+    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
     $taskParameter = @{
                         Path = @(
-                                    'I\do\not\exist'
+                                    'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
                                 )
                       }
     $threwException = $false
@@ -194,16 +175,16 @@ Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is invalid' {
 
     try
     {
-        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
+        Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction silentlyContinue
     }
     catch
     {
         $threwException = $true
     }
-    It 'should throw an exception'{
-        $threwException | Should Be $true
-        $Global:Error | Should Match ([regex]::Escape('does not exist.'))
+    It 'should write an error re: Join-Path failure' {
+        $Global:Error[1] | Should Match ([regex]::Escape('Path does not exist!'))
     }
-
+    It 'should throw an exception as a result'{
+        $threwException | Should Be $true
+    }
 }
-#>
