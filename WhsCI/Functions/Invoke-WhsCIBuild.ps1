@@ -379,12 +379,7 @@ function Invoke-WhsCIBuild
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
-                    <#
-                    'NUnit2' {
-                        Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $task
-                    }
-                    #>
-
+                    
                     'Pester3' {
                         try
                         {
