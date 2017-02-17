@@ -81,12 +81,14 @@
                             'Invoke-WhsCINodeAppPackageTask',
                             'Invoke-WhsCINodeTask',
                             'Invoke-WhsCINuGetPackTask',
+                            'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
                             'Resolve-WhsCITaskPath',
                             'Stop-WhsCITask',
-                            'Test-WhsCIRunByBuildServer'
+                            'Test-WhsCIRunByBuildServer',
+                            'Write-CommandOutput'
                          );
 
     # Cmdlets to export from this module

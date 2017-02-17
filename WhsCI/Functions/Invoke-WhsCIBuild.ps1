@@ -257,8 +257,8 @@ function Invoke-WhsCIBuild
     $root = Split-Path -Path $ConfigurationPath -Parent
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
 
-    $runningUnderBuildServer = Test-Path -Path 'env:JENKINS_URL'
-
+    $runningUnderBuildServer = Test-WhsCIRunByBuildServer
+    
     if( $runningUnderBuildServer )
     {
         $conn = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
@@ -286,7 +286,7 @@ function Invoke-WhsCIBuild
         if( $config.ContainsKey('BuildTasks') )
         {
             $context = @{
-                            ConfigurationPath = $ConfigurationPath
+                            ConfigurationPath = $ConfigurationPath;
                             BuildRoot = $root;
                             OutputDirectory = $outputRoot;
                             Version = $semVersion;
@@ -295,11 +295,11 @@ function Invoke-WhsCIBuild
                             ProGetCredential = $null;
                             BuildMasterSession = $null;
                             BitbucketServerCredential = $BBServerCredential;
-                            BitbucketServerUri = $BBServerUri
+                            BitbucketServerUri = $BBServerUri;
                             TaskName = '';
                             TaskIndex = 0;
                             Configuration = $config;
-                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/'
+                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/';
                             # TODO: Add BuildConfiguration to context.
                             # TODO: Rename Version property to SemanticVersion and add Version property for major.minor.build version number
                         }
@@ -381,30 +381,7 @@ function Invoke-WhsCIBuild
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
-
-                    'NUnit2' {
-                        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-                        $nunitRoot = Join-Path -Path $packagesRoot -ChildPath 'NUnit.Runners.2.6.4'
-                        if( -not (Test-Path -Path $nunitRoot -PathType Container) )
-                        {
-                            & $nugetPath install 'NUnit.Runners' -version '2.6.4' -OutputDirectory $packagesRoot
-                        }
-                        $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
-                        $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
-
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        $binRoots = $taskPaths | Group-Object -Property { Split-Path -Path $_ -Parent } 
-                        $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
-
-                        $assemblyNames = $taskPaths | ForEach-Object { $_ -replace ([regex]::Escape($root)),'.' }
-                        $testResultPath = Join-Path -Path $outputRoot -ChildPath ('nunit2-{0:00}.xml' -f $taskIdx)
-                        & $nunitConsolePath $assemblyNames /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $testResultPath)
-                        if( $LastExitCode )
-                        {
-                            throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
-                        }
-                    }
-
+                    
                     'Pester3' {
                         try
                         {
