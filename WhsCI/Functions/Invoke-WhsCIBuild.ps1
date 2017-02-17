@@ -341,7 +341,10 @@ function Invoke-WhsCIBuild
 
                 switch( $taskName )
                 {
+                    <#
                     'MSBuild' {
+                        #Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $task
+                        
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $projectPath in $taskPaths )
                         {
@@ -375,7 +378,9 @@ function Invoke-WhsCIBuild
                                 throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$BuildConfiguration)
                             }
                         }
+                        
                     }
+                    #>
 
                     'NuGetPack' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
