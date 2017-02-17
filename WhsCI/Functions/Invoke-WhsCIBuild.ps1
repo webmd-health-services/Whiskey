@@ -286,7 +286,7 @@ function Invoke-WhsCIBuild
         if( $config.ContainsKey('BuildTasks') )
         {
             $context = @{
-                            ConfigurationPath = $ConfigurationPath
+                            ConfigurationPath = $ConfigurationPath;
                             BuildRoot = $root;
                             OutputDirectory = $outputRoot;
                             Version = $semVersion;
@@ -295,11 +295,11 @@ function Invoke-WhsCIBuild
                             ProGetCredential = $null;
                             BuildMasterSession = $null;
                             BitbucketServerCredential = $BBServerCredential;
-                            BitbucketServerUri = $BBServerUri
+                            BitbucketServerUri = $BBServerUri;
                             TaskName = '';
                             TaskIndex = 0;
                             Configuration = $config;
-                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/'
+                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/';
                         }
 
             if( $runningUnderBuildServer )
@@ -379,10 +379,11 @@ function Invoke-WhsCIBuild
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
                     }
-
+                    
                     'NUnit2' {
                         Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $task
                     }
+                    
 
                     'Pester3' {
                         try

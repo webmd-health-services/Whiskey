@@ -182,7 +182,7 @@ Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Pat
         $threwException = $true
     }
     It 'should write an error re: Join-Path failure' {
-        $Global:Error[1] | Should Match ([regex]::Escape('Path does not exist!'))
+        $Global:Error[0] | Should Match ([regex]::Escape('Path does not exist!'))
     }
     It 'should throw an exception as a result'{
         $threwException | Should Be $true
