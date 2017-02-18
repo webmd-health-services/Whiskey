@@ -13,6 +13,8 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\powershell-yam
 $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
 $moduleDownloadRoot = Join-Path -Path $downloadRoot -ChildPath 'Modules'
 
+$defaultAssemblyVersion = '1.2.3-final+80.develop.deadbee'
+
 #region Assertions
 function Assert-AssemblyVersionSet
 {
@@ -36,12 +38,7 @@ function Assert-AssemblyVersionSet
         $projectRoot = Join-Path -Path $root -ChildPath $projectRoot
         foreach( $assemblyInfoInfo in (Get-ChildItem -Path $projectRoot -Recurse -Filter 'AssemblyInfo.cs') )
         {
-            $shouldMatch = $true
             $buildInfo = New-BuildMetadata
-            if( -not $buildInfo )
-            {
-                $shouldMatch = $false
-            }
 
             $assemblyInfoRelativePath = $assemblyInfoInfo.FullName -replace [regex]::Escape($root),''
             $assemblyInfoRelativePath = $assemblyInfoRelativePath.Trim("\")
@@ -50,14 +47,7 @@ function Assert-AssemblyVersionSet
                 It ('should update {0} in {1} project''s {2} file' -f $attribute,$name,$assemblyInfoRelativePath) {
                     $expectedRegex = ('\("{0}"\)' -f [regex]::Escape($version))
                     $line = Get-Content -Path $assemblyInfoInfo.FullName | Where-Object { $_ -match ('\b{0}\b' -f $attribute) }
-                    if( $shouldMatch )
-                    {
-                        $line | Should Match $expectedRegex
-                    }
-                    else
-                    {
-                        $line | Should Not Match $expectedRegex
-                    }
+                    $line | Should Match $expectedRegex
                 }
             }
 
@@ -66,14 +56,7 @@ function Assert-AssemblyVersionSet
             It ('should update AssemblyInformationalVersion in {0} project''s {1} file' -f $name,$assemblyInfoRelativePath) {
                 $expectedRegex = ('\("{0}"\)' -f [regex]::Escape($expectedSemanticVersion))
                 $line = Get-Content -Path $assemblyInfoInfo.FullName | Where-Object { $_ -match ('\bAssemblyInformationalVersion\b' -f $attribute) }
-                if( $shouldMatch )
-                {
-                    $line | Should Match $expectedRegex
-                }
-                else
-                {
-                    $line | Should Not Match $expectedRegex
-                }
+                $line | Should Match $expectedRegex
             }
         }
     }
@@ -96,9 +79,9 @@ function Assert-CommitStatusSetTo
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
         
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $expectedUri = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerBaseUri')
-            $expectedUsername = (Get-WhsSetting -Environment 'Dev' -Name 'BitbucketServerRestApiUsername')
-            $expectedPassword = Get-WhsSecret -Environment 'Dev' -Name $expectedUsername
+            $expectedUri = 'https://bbserver.example.com/'
+            $expectedUsername = 'fubar'
+            $expectedPassword = 'snafu'
 
             #$DebugPreference = 'Continue'
 
@@ -318,6 +301,8 @@ function Invoke-Build
     }
     New-MockBitbucketServer
 
+    Mock -CommandName 'Get-WhsSecret' -ModuleName 'WhsCI' -MockWith { return New-Credential -UserName 'fubar' -Password 'snafu' }
+
     if( -not ($NoGitRepository) )
     {
         Mock -CommandName 'Assert-WhsCIVersionAvailable' -ModuleName 'WhsCI' -MockWith { return $Version }
@@ -327,9 +312,8 @@ function Invoke-Build
     $devParams = @{ }
     if( (Test-WhsCIRunByBuildServer) )
     {
-        $bbServerCredUsername = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerRestApiUsername'
-        $devParams['BBServerCredential'] = Get-WhsSecret -Environment $Environment -Name $bbServerCredUsername -AsCredential 
-        $devParams['BBServerUri'] = Get-WhsSetting -Environment $Environment -Name 'BitbucketServerBaseUri'
+        $devParams['BBServerCredential'] = New-Credential -UserName 'fubar' -Password 'snafu'
+        $devParams['BBServerUri'] = 'https://bbserver.example.com/'
     }
 
     $downloadRootParam = @{ }
@@ -405,12 +389,12 @@ function New-MockBitbucketServer
 
 function New-MockBuildServer
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { $true } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 
-    Mock -CommandName 'Test-Path' -MockWith { $true } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
@@ -418,9 +402,10 @@ function New-MockBuildServer
 
 function New-MockDeveloperEnvironment
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
-    Mock -CommandName 'Test-Path' -MockWith { $false } -ParameterFilter { $Path -eq 'env:JENKINS_URL' }
+    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
+    Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
 }
+
 
 function New-NUnitTestAssembly
 {
@@ -524,6 +509,7 @@ $nunitWhsBuildYmlFile = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whs
 
 Describe 'Invoke-WhsCIBuild.when building real projects' {
     # Get rid of any existing packages directories.
+
     Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
     
     $errors = @()
@@ -738,7 +724,7 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
     
     Invoke-Build -ByDeveloper -WithConfig $configPath 
 
-    Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion $version -ProjectName $project
+    Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion '1.0.0' -ProjectName $project
 }
 
 Describe 'Invoke-WhsCIBuild.when compiling a dotNET project on the build server' {
@@ -776,47 +762,6 @@ Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
     Invoke-Build -ByJenkins -WithConfig $configPath
 
     Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
-}
-
-Describe 'Invoke-WhsCIBuild.when running NUnit tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
-
-    $downloadroot = Join-Path -Path $TestDrive.Fullname -ChildPath 'downloads'
-    Invoke-Build -ByJenkins -WithConfig $configPath -DownloadRoot $downloadroot
-
-    Assert-NUnitTestsRun -ConfigurationPath $configPath `
-                         -ExpectedAssembly $assemblyNames
-
-    It 'should download NUnitRunners' {
-        (Join-Path -Path $downloadroot -ChildPath 'packages\NUnit.Runners.*.*.*') | Should Exist
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when running failing NUnit2 tests' {
-    $assemblyNames = 'assembly.dll','assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames -ThatFail
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
-    
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly $assemblyNames
-}
-
-Describe 'Invoke-WhsCIBuild.when running NUnit2 tests from multiple bin directories' {
-    $assemblyNames = 'BinOne\assembly.dll','BinTwo\assembly2.dll'
-    $configPath = New-TestWhsBuildFile -TaskName 'NUnit2' -Path $assemblyNames
-
-    New-NUnitTestAssembly -Configuration $configPath -Assembly $assemblyNames
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    $root = Split-Path -Path $configPath -Parent
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinOne')
-    Assert-NUnitTestsRun -ConfigurationPath $configPath -ExpectedAssembly 'assembly2.dll' -ExpectedBinRoot (Join-Path -Path $root -ChildPath 'BinTwo')
 }
 
 Describe 'Invoke-WhsCIBuild.when output exists from a previous build' {
@@ -967,6 +912,11 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
                         $expectedValue = $expectedContext[$propertyName]
                         $actualValue = $TaskContext.$propertyName
 
+                        if( $propertyName -eq 'BuildMasterSession' )
+                        {
+                            continue
+                        }
+
                         if( $propertyName -like '*Credential' )
                         {
                             $expectedValue = $expectedValue.UserName
@@ -1048,7 +998,7 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
 
         Context 'By Developer' {
             New-MockDeveloperEnvironment
-            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
             Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig'
             $expectedContext['Version'] = '{0}+{1}.{2}' -f $version,$env:USERNAME,$env:COMPUTERNAME
             $withWhatIfSwitchParam = @{ }
@@ -1064,15 +1014,17 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
             $bbServerUri = 'http://bitbucketserver.example.com/'
             New-MockBitbucketServer
             New-MockBuildServer
-            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $true }
+            Mock -CommandName 'Get-WhsSecret' -ModuleName 'WhsCI' -MockWith { if( $AsCredential ) { New-Credential -UserName 'fubar' -Password 'snafu' } else { 'snafur' } }
             Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig' -BBServerCredential $bbServerCredential -BBServerUri $bbServerUri
             $expectedContext['Version'] = '{0}+80.develop.deadbee' -f $version
             $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
-            $expectedContext['ProGetCredential'] = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+            $expectedContext['ProGetCredential'] = New-Credential -UserName 'fubar' -Password 'snafu'
             $expectedContext['BitbucketServerCredential'] = $bbServerCredential
             $expectedContext['BitbucketServerUri'] = $bbServerUri
             $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
-            $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
+            $bmApiKey = 'snafur'
+            $expectedContext['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
             Assert-TaskCalled
         }
     }

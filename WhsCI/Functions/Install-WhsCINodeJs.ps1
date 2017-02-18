@@ -143,7 +143,7 @@ path: $($nvmSymlink)
         if( $npmRegistry -ne $RegistryUri.ToString() )
         {
             Write-Verbose ('NPM  registry  {0} -> {1}' -f $npmRegistry,$RegistryUri)
-            & $nodePath $npmPath config --global set registry $RegistryUri
+            Invoke-Command -ScriptBlock { & $nodePath $npmPath config --global set registry $RegistryUri }
         }
 
         $whsAlwaysAuth = 'false'

@@ -48,6 +48,8 @@ function Assert-ThatInstallNodeJs
         $installDirParam = @{ }
     }
 
+    Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Verifiable
+
     $registryUri = 'https://proget.example.com/'
     try
     {
@@ -102,7 +104,7 @@ function Assert-ThatInstallNodeJs
             }
 
             It 'should set registry' {
-                & $nodePath $expectedNpmPath get -g registry | Should Be $registryUri
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -ParameterFilter { $ScriptBlock.ToString() -match 'config\ --global\ set\ registry\ \$RegistryUri' }
             }
 
             It 'should set always-auth' {
