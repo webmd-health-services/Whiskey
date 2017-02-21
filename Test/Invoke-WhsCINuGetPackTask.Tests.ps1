@@ -31,7 +31,7 @@ function ThenPackageShouldBeCreated
 {
     param(
         [string]
-        $WithVersion = '1.2.3-final'
+        $WithVersion = '1.2.3-rc.1'
     )
 
     It 'should not write any errors' {

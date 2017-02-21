@@ -290,6 +290,9 @@ function Invoke-WhsCIBuild
                             BuildRoot = $root;
                             OutputDirectory = $outputRoot;
                             Version = $semVersion;
+                            #ask Aaron about this formatting.
+                            #SemanticVersion = $semVersion;
+                            #Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
                             NuGetVersion = $nugetVersion;
                             ProGetAppFeedUri = $null;
                             ProGetCredential = $null;
@@ -300,7 +303,7 @@ function Invoke-WhsCIBuild
                             TaskIndex = 0;
                             Configuration = $config;
                             NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/';
-                            # TODO: Add BuildConfiguration to context.
+                            BuildConfiguration = $BuildConfiguration;
                             # TODO: Rename Version property to SemanticVersion and add Version property for major.minor.build version number
                         }
 
@@ -341,47 +344,6 @@ function Invoke-WhsCIBuild
 
                 switch( $taskName )
                 {
-                    <#
-                    'MSBuild' {
-                        #Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $task
-                        
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        foreach( $projectPath in $taskPaths )
-                        {
-                            $errors = $null
-                            if( $projectPath -like '*.sln' )
-                            {
-                                & $nugetPath restore $projectPath | Write-CommandOutput
-                            }
-
-                            if( $version -and $runningUnderBuildServer )
-                            {
-                                $projectPath | 
-                                    Split-Path | 
-                                    Get-ChildItem -Filter 'AssemblyInfo.cs' -Recurse | 
-                                    ForEach-Object {
-                                        $assemblyInfo = $_
-                                        $assemblyInfoPath = $assemblyInfo.FullName
-                                        $newContent = Get-Content -Path $assemblyInfoPath | Where-Object { $_ -notmatch '\bAssembly(File|Informational)?Version\b' }
-                                        $newContent | Set-Content -Path $assemblyInfoPath
-                                        $informationalVersion = '{0}' -f $semVersion
-    @"
-[assembly: System.Reflection.AssemblyVersion("{0}")]
-[assembly: System.Reflection.AssemblyFileVersion("{0}")]
-[assembly: System.Reflection.AssemblyInformationalVersion("{1}")]
-"@ -f $version,$informationalVersion | Add-Content -Path $assemblyInfoPath
-                                    }
-                            }
-                            Invoke-MSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $BuildConfiguration) -ErrorVariable 'errors'
-                            if( $errors )
-                            {
-                                throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$BuildConfiguration)
-                            }
-                        }
-                        
-                    }
-                    #>
-
                     'NuGetPack' {
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
