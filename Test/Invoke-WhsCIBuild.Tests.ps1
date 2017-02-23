@@ -506,7 +506,7 @@ function New-TestWhsBuildFile
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 $nunitWhsBuildYmlFile = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml'
-
+<#
 Describe 'Invoke-WhsCIBuild.when building real projects' {
     # Get rid of any existing packages directories.
 
@@ -552,7 +552,7 @@ Describe 'Invoke-WhsCIBuild.when building real projects' {
         }
     }
 }
-
+#>
 <#
 Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Properties\AssemblyInfo.cs') |
     ForEach-Object { git checkout HEAD $_.FullName }
@@ -805,7 +805,7 @@ BuildTasks:
     Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName $project
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
-
+<#
 Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
     $project = New-MSBuildProject -FileName 'project.csproj'
     $project2 = New-MSBuildProject -FileName 'project2.csproj'
@@ -838,7 +838,7 @@ Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
         }
     }
 }
-
+#>
 Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 Version: 2.13.1
@@ -892,7 +892,7 @@ $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # * task functions are created for all tasks
 #
 # Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
-foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
 {
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 

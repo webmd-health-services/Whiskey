@@ -300,6 +300,7 @@ function Invoke-WhsCIBuild
                             TaskIndex = 0;
                             Configuration = $config;
                             NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/';
+                            BuildConfiguration = $BuildConfiguration;
                         }
 
             if( $runningUnderBuildServer )
@@ -339,7 +340,7 @@ function Invoke-WhsCIBuild
 
                 switch( $taskName )
                 {
-                    'MSBuild' {
+                    'MSBuild' { #already removed
                         $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
                         foreach( $projectPath in $taskPaths )
                         {
@@ -374,12 +375,6 @@ function Invoke-WhsCIBuild
                             }
                         }
                     }
-
-                    'NuGetPack' {
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $outputRoot -Version $nugetVersion -BuildConfiguration $BuildConfiguration
-                    }
-                    
                     'Pester3' {
                         try
                         {

@@ -99,7 +99,13 @@ function New-WhsCITestContext
         $ForBuildRoot,
 
         [string]
-        $ForTaskName
+        $ForTaskName,
+
+        [string]
+        $ForOutputDirectory,
+
+        [switch]
+        $InReleaseMode
     )
 
     Set-StrictMode -Version 'Latest'
@@ -119,19 +125,30 @@ function New-WhsCITestContext
         $ForTaskName = 'TaskName'
     }
 
+    if( -not $ForOutputDirectory )
+    {
+        $ForOutputDirectory = Join-Path -Path $ForBuildRoot -ChildPath '.output'
+    }
+
     $context = [pscustomobject]@{
                                     ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
                                     BuildRoot = $ForBuildRoot;
-                                    OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
+                                    OutputDirectory = $ForOutputDirectory;
                                     Version = [semversion.SemanticVersion]'1.2.3-rc.1+build';
+                                    NuGetVersion = '1.2.3-rc.1';
                                     ProGetAppFeedUri = 'http://proget.example.com/';
                                     ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
                                     BuildMasterSession = 'buildmaster session';
                                     TaskIndex = 0;
                                     TaskName = $ForTaskName;
                                     Configuration = @{ };
-                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm'
+                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm';
+                                    BuildConfiguration = 'Debug';
                                  }
+    if( $InReleaseMode )
+    {
+        $context.BuildConfiguration = 'Release'
+    }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     return $context
 }
