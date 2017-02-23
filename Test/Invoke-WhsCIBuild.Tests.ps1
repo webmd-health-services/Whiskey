@@ -1,4 +1,3 @@
-
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
@@ -507,52 +506,6 @@ $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assem
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 $nunitWhsBuildYmlFile = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml'
 
-Describe 'Invoke-WhsCIBuild.when building real projects' {
-    # Get rid of any existing packages directories.
-
-    Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
-    
-    $errors = @()
-    Invoke-Build -ByJenkins -WithConfig $nunitWhsBuildYmlFile -ErrorVariable 'errors'
-    It 'should write no errors' {
-        $errors | Should Not Match 'MSBuild'
-    }
-    It 'should restore NuGet packages' {
-        Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
-    }
-    $config = Get-Content -Path $nunitWhsBuildYmlFile -Raw | ConvertFrom-Yaml
-    $semVersion = [SemVersion.SemanticVersion]::Parse($config.Version)
-    $version = [version]('{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch)
-
-    It 'should build assemblies' {
-        $failingNUnit2TestAssemblyPath | Should Exist
-        $passingNUnit2TestAssemblyPath | Should Exist
-    }
-
-    foreach( $assembly in @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath ) )
-    {
-        It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
-            $fileInfo = Get-Item -Path $assembly
-            $fileVersionInfo = $fileInfo.VersionInfo
-            $fileVersionInfo.FileVersion | Should Be $version.ToString()
-            $fileVersionInfo.ProductVersion | Should Be ('{0}+{1}' -f $semVersion,(New-BuildMetadata))
-        }
-    }
-
-    $outputRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies'
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $outputRoot
-    foreach( $name in @( 'Passing', 'Failing' ) )
-    {
-        It ('should create NuGet package for NUnit2{0}Test' -f $name) {
-            (Join-Path -Path $outputRoot -ChildPath ('NUnit2{0}Test.1.2.3-final.nupkg' -f $name)) | Should Exist
-        }
-
-        It ('should create a NuGet symbols package for NUnit2{0}Test' -f $name) {
-            (Join-Path -Path $outputRoot -ChildPath ('NUnit2{0}Test.1.2.3-final.symbols.nupkg' -f $name)) | Should Exist
-        }
-    }
-}
-
 <#
 Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Properties\AssemblyInfo.cs') |
     ForEach-Object { git checkout HEAD $_.FullName }
@@ -578,55 +531,6 @@ Describe 'Invoke-WhsCIBuild.when running Pester task' {
     It 'should run pester tests' {
         $testReports | Should Not BeNullOrEmpty
     }
-}
-
-Describe 'Invoke-WhsCIBuild.when building NET assemblies.' {
-    $version = '3.2.1-rc.1'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path 'FubarSnafu.csproj' -Version $version
-
-    New-MSBuildProject -FileName 'FubarSnafu.csproj'
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'FubarSnafu.csproj' -AtVersion $version
-}
-
-Describe 'Invoke-WhsCIBuild.when building multiple projects' {
-    $projects = @( 'FubarSnafu.csproj','SnafuFubar.csproj' )
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $projects
-
-    New-MSBuildProject -FileName $projects
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $projects
-}
-
-Describe 'Invoke-WhsCIBuild.when compilation fails' {
-    $project = 'FubarSnafu.csproj' 
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
-    
-    New-MSBuildProject -FileName $project -ThatFails
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-
-    Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName $project
-}
-
-Describe 'Invoke-WhsCIBuild.when multiple AssemblyInfoCs files' {
-    $version = '4.3.2-fubar'
-    $project = 'FubarSnafu.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project -Version $version
-
-    $propertiesRoot = Join-Path -Path ($configPath | Split-Path) -ChildPath 'Properties'
-    Install-Directory $propertiesRoot
-    New-AssemblyInfo -RootPath $propertiesRoot
-
-    New-MSBuildProject -FileName $project
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName $project -AtVersion $version
 }
 
 Describe 'Invoke-WhsCIBuild.when running PowerShell task' {
@@ -715,30 +619,6 @@ BuildTasks:
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
-    $project = 'developer.csproj'
-    $version = '45.4.3-beta.1'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project -Version $version
-    New-MSBuildProject -FileName $project
-    Mock -CommandName 'Invoke-MSBuild' -ModuleName 'WhsCI' -Verifiable
-    
-    Invoke-Build -ByDeveloper -WithConfig $configPath 
-
-    Assert-DotNetProjectBuildConfiguration 'Debug' -ConfigurationPath $configPath -AtVersion '1.0.0' -ProjectName $project
-}
-
-Describe 'Invoke-WhsCIBuild.when compiling a dotNET project on the build server' {
-    $project = 'project.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
-    
-    New-MSBuildProject -FileName $project
-    Mock -CommandName 'Invoke-MSBuild' -ModuleName 'WhsCI' -Verifiable
-    
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-DotNetProjectBuildConfiguration 'Release'
-}
-
 Describe 'Invoke-WhsCIBuild.when running an unknown task' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
@@ -752,37 +632,6 @@ BuildTasks:
 
     It 'should write an error' {
         $Global:Error[0] | Should Match 'not exist'
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when path contains wildcards' {
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path '*.csproj'
-    New-MSBuildProject -FileName 'developer.csproj','developer2.csproj'
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    Assert-DotNetProjectsCompiled -ConfigurationPath $configPath -ProjectName 'developer.csproj','developer2.csproj'
-}
-
-Describe 'Invoke-WhsCIBuild.when output exists from a previous build' {
-    $project = 'project.csproj'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path $project
-    New-MSBuildProject -FileName $project
-
-    $root = $configPath | Split-Path -Parent
-    $output = Get-WhsCIOutputDirectory -WorkingDirectory $root
-    Install-Directory -Path $output
-
-    $outputSubDir = Join-Path -Path $output -ChildPath 'fubar'
-    Install-Directory -Path $outputSubDir
-
-    $outputFile = Join-Path -Path $outputSubDir -ChildPath 'snafu'
-    '' | Set-Content -Path $outputFile
-
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    It 'should delete pre-existing output' {
-        $outputFile | Should Not Exist
     }
 }
 
