@@ -80,6 +80,13 @@ function ThenPackageCreated
         It 'should set package variable for package version' {
             Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
+                $Variable.ContainsKey('ProGetPackageVersion') -and $Variable['ProGetPackageVersion'] -eq $Context.SemanticVersion.ToString() 
+            }
+        }
+
+        It 'should set legacy package variable for package version' {
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
                 Write-Debug $Variable['ProGetPackageName']
                 Write-Debug $Context.SemanticVersion.ToString()
                 $Variable.ContainsKey('ProGetPackageName') -and $Variable['ProGetPackageName'] -eq $Context.SemanticVersion.ToString() 

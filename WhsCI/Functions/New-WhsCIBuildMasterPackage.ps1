@@ -40,7 +40,12 @@ function New-WhsCIBuildMasterPackage
     $release = Get-BMRelease -Session $BuildMasterSession -Application $name -Name $branch
     $release | Format-List | Out-String | Write-Verbose
     $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
-    $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable @{ 'ProGetPackageName' = $version.ToString() }
+
+    $variable = @{
+                    'ProGetPackageName' = $version.ToString();
+                    'ProGetPackageVersion' = $version.ToString();
+                 }
+    $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable $variable
     $package | Format-List | Out-String | Write-Verbose
     $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
     $deployment | Format-List | Out-String | Write-Verbose
