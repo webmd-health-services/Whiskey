@@ -222,6 +222,10 @@ function Invoke-WhsCIAppPackageTask
                     throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
                 }
             }
+
+            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version
+            # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
+            $TaskContext.PackageVariables['ProGetPackageName'] = $version
         }
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)

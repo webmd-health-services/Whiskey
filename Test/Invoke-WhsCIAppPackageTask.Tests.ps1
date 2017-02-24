@@ -404,6 +404,16 @@ function Assert-NewWhsCIAppPackage
                 }
             }
         }
+
+        It 'should set package version package variable' {
+            $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $true
+            $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $Version.ToString()
+        }
+
+        It 'should set legacy package version package variable' {
+            $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
+            $taskContext.PackageVariables['ProGetPackageName'] | Should Be $Version.ToString()
+        }
     }
 
     Context 'upack.json' {

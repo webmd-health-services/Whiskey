@@ -4,6 +4,7 @@
 $mockPackage = [pscustomobject]@{ }
 $mockRelease = [pscustomobject]@{ }
 $mockDeploy = [pscustomobject]@{ }
+$packageVersion = 'version'
 
 function GivenAnApplication
 {
@@ -31,17 +32,69 @@ function WhenCreatingPackage
         $Context,
 
         [hashtable]
-        $WithVariables
+        $WithVariables = @{ },
+
+        [Switch]
+        $WithNoPackageVersionVariable,
+        
+        [Switch]
+        $ThenPackageNotCreated,
+
+        [string]
+        $WithErrorMessage
     )
 
     process
     {
+        if( -not $WithNoPackageVersionVariable )
+        {
+            $context.PackageVariables['ProGetPackageVersion'] = $packageVersion
+            $context.PackageVariables['ProGetPackageName'] = $packageVersion
+        }
+
         if( $WithVariables )
         {
-            $context.PackageVariables = $WithVariables
+            foreach( $key in $WithVariables.Keys )
+            {
+                $Context.PackageVariables[$key] = $WithVariables[$key]
+            }
         }
-        New-WhsCIBuildMasterPackage -TaskContext $Context | Out-Null
+
+        $threwException = $false
+        try
+        {
+            $Global:Error.Clear()
+            New-WhsCIBuildMasterPackage -TaskContext $Context | Out-Null
+        }
+        catch
+        {
+            $threwException = $true
+            Write-Error $_
+        }
+
+        if( $ThenPackageNotCreated )
+        {
+            It 'should throw an exception' {
+                $threwException | Should Be $true
+            }
+
+            It 'should write an errors' {
+                $Global:Error | Should Match $WithErrorMessage
+            }
+        }
+        else
+        {
+            It 'should not throw an exception' {
+                $threwException | Should Be $false
+            }
+
+            It 'should not write any errors' {
+                $Global:Error | Should BeNullOrEmpty
+            }
+        }
+
         return $Context
+
     }
 }
 
@@ -87,29 +140,21 @@ function ThenPackageCreated
             Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.SemanticVersion.Major,$Context.SemanticVersion.Minor,$Context.SemanticVersion.Patch) }
         }
 
-        It 'should set package variable for package version' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
-                #$DebugPreference = 'Continue'
-                $Variable.ContainsKey('ProGetPackageVersion') -and $Variable['ProGetPackageVersion'] -eq $Context.SemanticVersion.ToString() 
-            }
-        }
-
-        It 'should set legacy package variable for package version' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
-                #$DebugPreference = 'Continue'
-                Write-Debug $Variable['ProGetPackageName']
-                Write-Debug $Context.SemanticVersion.ToString()
-                $Variable.ContainsKey('ProGetPackageName') -and $Variable['ProGetPackageName'] -eq $Context.SemanticVersion.ToString() 
-            }
-        }
-
-        foreach( $variableName in $WithVariables.Keys )
+        $expectedVariables = @{
+                                    'ProGetPackageVersion' = $packageVersion;
+                                    'ProGetPackageName' = $packageVersion;
+                              }
+        foreach( $key in $WithVariables.Keys )
         {
-            Write-Host ""
-            $variableValue = $WithVariables[$variableName]
+            $expectedVariables[$key] = $WithVariables[$key]
+        }
+
+        foreach( $variableName in $expectedVariables.Keys )
+        {
+            $variableValue = $expectedVariables[$variableName]
             It ('should create {0} package variable' -f $variableName) {
                 Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
-                    $DebugPreference = 'Continue'
+                    #$DebugPreference = 'Continue'
                     Write-Debug ('Expected  {0}' -f $variableValue)
                     Write-Debug ('Actual    {0}' -f $Variable[$variableName])
                     $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
@@ -131,6 +176,28 @@ function ThenPackageCreated
     }
 }
 
+function ThenPackageNotCreated
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(ValueFromPipeline=$true)]
+        [object]
+        $Context
+    )
+
+    process
+    {
+        It 'should not get releases' {
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
+        }
+        It 'should not create release package' {
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+        }
+        It 'should not start deploy' {
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+        }
+    }
+}
 Describe 'New-WhsCIBuildMasterPackage.when called by build server' {
     GivenAnApplication |
         WhenCreatingPackage |
@@ -145,4 +212,10 @@ Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
     GivenAnApplication |
         WhenCreatingPackage -WithVariables $variables |
         ThenPackageCreated -WithVariables $variables
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
+    GivenAnApplication |
+        WhenCreatingPackage -WithNoPackageVersionVariable |
+        ThenPackageNotCreated
 }

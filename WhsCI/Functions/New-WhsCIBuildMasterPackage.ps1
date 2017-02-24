@@ -34,20 +34,25 @@ function New-WhsCIBuildMasterPackage
 
     $buildMasterSession = $TaskContext.BuildMasterSession
     $name = $TaskContext.ApplicationName
-    $branch = $TaskContext.ReleaseName
-    $version = $TaskContext.SemanticVersion
-
-    $release = Get-BMRelease -Session $BuildMasterSession -Application $name -Name $branch
-    $release | Format-List | Out-String | Write-Verbose
-    $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
+    $releaseName = $TaskContext.ReleaseName
+    $version = $TaskContext.Version
 
     $variables = $TaskContext.PackageVariables
-    $variables['ProGetPackageName'] = $version.ToString();
-    $variables['ProGetPackageVersion'] = $version.ToString();
-                 
-    $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable $variables
+
+    if( -not $variables.ContainsKey('ProGetPackageVersion') -or -not $variables.ContainsKey('ProGetPackageName') )
+    {
+        Write-Warning -Message ('Unable to create a new release package and start a deploy in BuildMaster. It looks like your application didn''t package anything. To deploy your application with BuildMaster, add a package task to {1} and re-run your build. Run `help about_WhsCI_Tasks` to see a list of tasks.`')
+        return
+    }
+
+    $release = Get-BMRelease -Session $buildMasterSession -Application $name -Name $releaseName
+    $release | Format-List | Out-String | Write-Verbose
+
+    $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
+    $package = New-BMReleasePackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables
     $package | Format-List | Out-String | Write-Verbose
-    $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
+
+    $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package
     $deployment | Format-List | Out-String | Write-Verbose
 
 }
