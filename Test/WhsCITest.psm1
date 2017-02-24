@@ -99,7 +99,13 @@ function New-WhsCITestContext
         $ForBuildRoot,
 
         [string]
-        $ForTaskName
+        $ForTaskName,
+
+        [string]
+        $ForApplicationName,
+
+        [string]
+        $ForReleaseName
     )
 
     Set-StrictMode -Version 'Latest'
@@ -120,6 +126,8 @@ function New-WhsCITestContext
     }
 
     $context = [pscustomobject]@{
+                                    ApplicationName = $ForApplicationName;
+                                    ReleaseName = $ForReleaseName;
                                     ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
                                     BuildRoot = $ForBuildRoot;
                                     OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');

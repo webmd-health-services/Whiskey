@@ -153,7 +153,6 @@ function Assert-NewWhsCIAppPackage
 
     $threwException = $false
     $At = $null
-    $taskContext.BuildMasterSession = $bmSession = New-BMSession -Uri 'http://buildmaster.example.com' -ApiKey 'fubarnsafu'
 
     $Global:Error.Clear()
 
@@ -364,9 +363,6 @@ function Assert-NewWhsCIAppPackage
     {
         It 'should not upload package to ProGet' {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
         }
     }
 
@@ -405,78 +401,6 @@ function Assert-NewWhsCIAppPackage
                            $taskContext.ProGetAppFeedUri -eq $Uri -and `
                            $expectedContentType -eq $ContentType -and `
                            $creds -eq $Headers['Authorization']
-                }
-            }
-        }
-
-        $expectedReleaseName = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-        $expectedReleaseName = $expectedReleaseName -replace '/.*$',''
-        $expectedAppName = $Name
-
-        if( $ShouldFailWithErrorMessage )
-        {
-            It 'should not talk to BuildMaster' {
-                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
-                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
-                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
-            }
-        }
-        else
-        {
-            It 'should get release from BuildMaster' {
-            
-                Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-                    Write-Debug -Message ('Session.Uri     expected  {0}' -f $bmSession.Uri)
-                    Write-Debug -Message ('                actual    {0}' -f $Session.Uri)
-                    Write-Debug -Message ('Session.ApiKey  expected  {0}' -f $bmSession.ApiKey)
-                    Write-Debug -Message ('                actual    {0}' -f $Session.ApiKey)
-                    Write-Debug -Message ('Application     expected  {0}' -f $expectedAppName)
-                    Write-Debug -Message ('                actual    {0}' -f $Application)
-                    Write-Debug -Message ('Name            expected  {0}' -f $expectedReleaseName)
-                    Write-Debug -Message ('                actual    {0}' -f $Name)
-                    return $bmSession.Uri -eq $Session.Uri -and `
-                           $bmSession.ApiKey -eq $Session.ApiKey -and `
-                           $expectedAppName -eq $Application -and `
-                           $expectedReleaseName -eq $Name
-                }
-            }
-
-            It 'should create release package in BuildMaster' {
-                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                    Write-Debug -Message ('Release.id                  expected  get-bmrelease')
-                    Write-Debug -Message ('                            actual    {0}' -f $Release.id)
-                    $semVersion = [SemVersion.SemanticVersion]$Version
-                    $expectedPackageNumber = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-                    Write-Debug -Message ('PackageNumber               expected  {0}' -f $expectedPackageNumber)
-                    Write-Debug -Message ('                            actual    {0}' -f $PackageNumber)
-                    Write-Debug -Message ('Variable.ProGetPackageName  expected  {0}' -f $Version)
-                    Write-Debug -Message ('                            actual    {0}' -f $Variable['ProGetPackageName'])
-                    return $bmSession.Uri -eq $Session.Uri -and `
-                           $bmSession.ApiKey -eq $Session.ApiKey -and `
-                           $Release.id -eq 'get-bmrelease' -and
-                           $expectedPackageNumber -eq $PackageNumber -and
-                           $Variable['ProGetPackageName'] -eq $Version
-                }
-            }
-
-            It 'should start deploy in BuildMaster' {
-                Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-                    Write-Debug -Message ('Session.Uri                 expected  {0}' -f $bmSession.Uri)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.Uri)
-                    Write-Debug -Message ('Session.ApiKey              expected  {0}' -f $bmSession.ApiKey)
-                    Write-Debug -Message ('                            actual    {0}' -f $Session.ApiKey)
-                    Write-Debug -Message ('Package.id                  expected  new-bmreleasepackage')
-                    Write-Debug -Message ('                            actual    {0}' -f $Package.id)
-                    return $bmSession.Uri -eq $Session.Uri -and `
-                            $bmSession.ApiKey -eq $Session.ApiKey -and `
-                            $Package.id -eq 'new-bmreleasepackage'
                 }
             }
         }
@@ -599,10 +523,6 @@ function Initialize-Test
         }
         Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
-
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ 'id' = 'get-bmrelease'; } }
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable -MockWith { [pscustomobject]@{ id = 'new-bmreleasepackage'; } }
-    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Verifiable
 
     if( -not $AsDeveloper )
     {
