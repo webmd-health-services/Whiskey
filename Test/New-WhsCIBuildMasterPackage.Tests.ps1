@@ -28,11 +28,18 @@ function WhenCreatingPackage
     param(
         [Parameter(ValueFromPipeline=$true)]
         [object]
-        $Context
+        $Context,
+
+        [hashtable]
+        $WithVariables
     )
 
     process
     {
+        if( $WithVariables )
+        {
+            $context.PackageVariables = $WithVariables
+        }
         New-WhsCIBuildMasterPackage -TaskContext $Context | Out-Null
         return $Context
     }
@@ -44,7 +51,10 @@ function ThenPackageCreated
     param(
         [Parameter(ValueFromPipeline=$true)]
         [object]
-        $Context
+        $Context,
+
+        [hashtable]
+        $WithVariables
     )
 
     process
@@ -93,6 +103,20 @@ function ThenPackageCreated
             }
         }
 
+        foreach( $variableName in $WithVariables.Keys )
+        {
+            Write-Host ""
+            $variableValue = $WithVariables[$variableName]
+            It ('should create {0} package variable' -f $variableName) {
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
+                    $DebugPreference = 'Continue'
+                    Write-Debug ('Expected  {0}' -f $variableValue)
+                    Write-Debug ('Actual    {0}' -f $Variable[$variableName])
+                    $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
+                }
+            }
+        }
+
         It 'should start the package''s release pipeline' {
             Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI'
         }
@@ -111,4 +135,14 @@ Describe 'New-WhsCIBuildMasterPackage.when called by build server' {
     GivenAnApplication |
         WhenCreatingPackage |
         ThenPackageCreated
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
+    $variables = @{ 
+                        'Fubar' = 'Snafu';
+                        'Snafu' = 'Fubuar';
+                   }
+    GivenAnApplication |
+        WhenCreatingPackage -WithVariables $variables |
+        ThenPackageCreated -WithVariables $variables
 }

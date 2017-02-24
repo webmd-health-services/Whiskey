@@ -41,11 +41,11 @@ function New-WhsCIBuildMasterPackage
     $release | Format-List | Out-String | Write-Verbose
     $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
 
-    $variable = @{
-                    'ProGetPackageName' = $version.ToString();
-                    'ProGetPackageVersion' = $version.ToString();
-                 }
-    $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable $variable
+    $variables = $TaskContext.PackageVariables
+    $variables['ProGetPackageName'] = $version.ToString();
+    $variables['ProGetPackageVersion'] = $version.ToString();
+                 
+    $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable $variables
     $package | Format-List | Out-String | Write-Verbose
     $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
     $deployment | Format-List | Out-String | Write-Verbose
