@@ -14,7 +14,7 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
 
     $failingNUnit2TestAssemblyPath,$passingNUnit2TestAssemblyPath | Remove-Item -Force -ErrorAction Ignore
 
-    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -InReleaseMode
     $taskParameter = @{
                         Path = @(
                                     'NUnit2FailingTest\NUnit2FailingTest.sln',

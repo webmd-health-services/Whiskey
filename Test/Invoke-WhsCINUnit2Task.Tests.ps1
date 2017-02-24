@@ -70,8 +70,15 @@ function Invoke-RunNUnit2Task
 
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' { 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
-    Invoke-WhsCIBuild -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml' -Resolve) -BuildConfiguration 'Release' 
-    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  
+    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  -InReleaseMode
+    $taskParameter = @{
+                        Path = @(
+                                    'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                    'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                )
+                      }
+
+    Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
     Invoke-RunNUnit2Task -TaskContext $context
 }
 

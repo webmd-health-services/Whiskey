@@ -289,10 +289,10 @@ function Invoke-WhsCIBuild
                             ConfigurationPath = $ConfigurationPath;
                             BuildRoot = $root;
                             OutputDirectory = $outputRoot;
-                            Version = $semVersion;
+                            #Version = $semVersion;
                             #ask Aaron about this formatting.
-                            #SemanticVersion = $semVersion;
-                            #Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
+                            SemanticVersion = $semVersion;
+                            Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
                             NuGetVersion = $nugetVersion;
                             ProGetAppFeedUri = $null;
                             ProGetCredential = $null;
@@ -344,19 +344,6 @@ function Invoke-WhsCIBuild
 
                 switch( $taskName )
                 {
-                   
-                    'Pester3' {
-                        try
-                        {
-                            $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                            Invoke-WhsCIPester3Task -OutputRoot $outputRoot -Path $taskPaths -Config $task
-                        }
-                        catch
-                        {
-                            throw ('{0}{1}' -f $errorPrefix,$_.Exception.Message)
-                        }
-                    }
-
                     'PowerShell' {
                         $workingDirParam = @{ }
                         if( $task.ContainsKey('WorkingDirectory') )

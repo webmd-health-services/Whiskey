@@ -133,9 +133,10 @@ function New-WhsCITestContext
     $context = [pscustomobject]@{
                                     ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
                                     BuildRoot = $ForBuildRoot;
-                                    OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
+                                    OutputDirectory = $ForOutputDirectory;
                                     SemanticVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build';
                                     Version = [version]'1.2.3';
+                                    NuGetVersion = '1.2.3-rc.1';
                                     ProGetAppFeedUri = 'http://proget.example.com/';
                                     ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
                                     BuildMasterSession = 'buildmaster session';
@@ -144,6 +145,7 @@ function New-WhsCITestContext
                                     Configuration = @{ };
                                     NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm';
                                     BuildConfiguration = 'Debug';
+
                                  }
     if( $InReleaseMode )
     {
