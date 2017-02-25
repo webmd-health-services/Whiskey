@@ -136,6 +136,6 @@ function ConvertTo-WhsCISemanticVersion
             return (New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList ($semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease,$buildInfo))
         }
 
-        Write-Error -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName)
+        Write-Error -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName) -ErrorAction $ErrorActionPreference
     }
 }
