@@ -155,7 +155,10 @@ function WhenCreatingContext
 
         $WithProGetNpmFeed,
 
-        $WithDownloadRoot
+        $WithDownloadRoot,
+
+        [Switch]
+        $WithNoToolInfo
     )
 
     process
@@ -169,14 +172,17 @@ function WhenCreatingContext
         if( $ByBuildServer )
         {
             Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
-            $optionalArgs = $buildServerContext.Clone()
-            if( $WithProGetAppFeed )
+            if( -not $WithNoToolInfo )
             {
-                $optionalArgs['ProGetAppFeed'] = $WithProGetAppFeed
-            }
-            if( $WithProGetNpmFeed )
-            {
-                $optionalArgs['ProGetNpmFeed'] = $WithProGetNpmFeed
+                $optionalArgs = $buildServerContext.Clone()
+                if( $WithProGetAppFeed )
+                {
+                    $optionalArgs['ProGetAppFeed'] = $WithProGetAppFeed
+                }
+                if( $WithProGetNpmFeed )
+                {
+                    $optionalArgs['ProGetNpmFeed'] = $WithProGetNpmFeed
+                }
             }
         }
 
@@ -364,4 +370,9 @@ Describe 'New-WhsCIContext.when run by the build server and customizing download
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' |
         WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName | 
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName
+}
+
+Describe 'New-WhsCIContext.when run by build server called with developer parameter set' {
+    GivenConfiguration -WithVersion '1.2.3' |
+        WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
 }

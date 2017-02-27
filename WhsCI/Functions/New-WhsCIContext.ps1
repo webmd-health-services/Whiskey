@@ -132,6 +132,22 @@ function New-WhsCIContext
     $byBuildServer = Test-WhsCIRunByBuildServer
     if( $byBuildServer )
     {
+        if( $PSCmdlet.ParameterSetName -ne 'ByBuildServer' )
+        {
+            throw (@"
+New-WhsCIContext is being run by a build server, but called using the developer parameter set. When running under a build server, you must supply the following parameters:
+
+* BBServerCredential
+* BBServerUri
+* BuildMasterUri
+* BuildMasterApiKey
+* ProGetCredential
+* ProGetUri
+
+Use the `Test-WhsCIRunByBuildServer` function to determine if you're running under a build server or not.
+"@)
+        }
+
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
         $buildmasterSession = New-BMSession -Uri $BuildMasterUri -ApiKey $BuildMasterApiKey
         $progetSession = [pscustomobject]@{
