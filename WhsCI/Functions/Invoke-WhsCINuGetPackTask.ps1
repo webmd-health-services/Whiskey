@@ -33,7 +33,6 @@ function Invoke-WhsCINuGetPackTask
     {
         Set-StrictMode -Version 'Latest'
 
-        # Be sure that the Taskparameter contains a 'Path'.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 

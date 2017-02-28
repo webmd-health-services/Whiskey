@@ -342,26 +342,23 @@ function Invoke-WhsCIBuild
                 $errors = @()
                 $pathIdx = -1
 
-                switch( $taskName )
+                $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+                if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                 {
-                    default {
-                        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
-                        if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
-                        {
-                            $whatIfParam = @{ }
-                            if( -not $runningUnderBuildServer -and $developerWhatIfTasks.ContainsKey($taskName) )
-                            {
-                                $whatIfParam['WhatIf'] = $true
-                            }
-                            & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
-                        }
-                        else
-                        {
-                            $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
-                            throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
-                        }
+                    $whatIfParam = @{ }
+                    if( -not $runningUnderBuildServer -and $developerWhatIfTasks.ContainsKey($taskName) )
+                    {
+                        $whatIfParam['WhatIf'] = $true
                     }
+                    & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
                 }
+                else
+                {
+                    $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
+                    throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
+                }
+                    
+                
             }
         }
 

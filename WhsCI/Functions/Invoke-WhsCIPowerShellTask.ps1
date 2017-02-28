@@ -29,6 +29,18 @@ function Invoke-WhsCIPowerShellTask
     )
     
     Set-StrictMode -Version 'Latest'
+
+    if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
+        
+            BuildTasks:
+            - PowerShell:
+                Path:
+                - myscript.ps1
+                - myotherscript.ps1
+                WorkingDirectory: bin')
+        }
     
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
 

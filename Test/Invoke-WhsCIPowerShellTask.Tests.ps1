@@ -33,17 +33,15 @@ function Assert-ThatTheTask
         $DoesNotRun,
 
         [Switch]
-        $InWorkingDirectoryThatDoesNotExist,
+        $WhenGivenADirectoryThatDoesNotExist,
 
         [Switch]
         $WhenGivenARelativePath
 
     )
     $script = 'myscript.ps1'
-    
     $scriptPath = Join-Path -Path $InWorkingDirectory -ChildPath $script
-    #$scriptPath = Join-Path -Path $TestDrive.FullName -ChildPath $script
-    
+        
         @'
 New-Item -Path 'run' -ItemType 'File'
 '@ | Set-Content -Path $scriptPath
@@ -68,7 +66,7 @@ New-Item -Path 'run' -ItemType 'File'
                       }
         $context = New-WhsCITestContext
     }
-    elseif( $InWorkingDirectoryThatDoesNotExist )
+    elseif( $WhenGivenADirectoryThatDoesNotExist )
     {
         $taskParameter = @{
                             WorkingDirectory = 'C:\I\DO\NOT\EXIST'
@@ -107,9 +105,7 @@ New-Item -Path 'run' -ItemType 'File'
                         }
         $context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory 
     }
-    #}
-    #$context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory  
-
+    
     $failed = $false
     try
     {
@@ -136,14 +132,12 @@ New-Item -Path 'run' -ItemType 'File'
     }
     if ( $WhenGivenARelativePath )
     {
-        $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath $relativePath
-        $itRanPath = Join-Path -Path $itRanPath -ChildPath 'run'
+        $itRanPath = Join-Path -Path (Join-Path -Path $InWorkingDirectory -ChildPath $relativePath) -ChildPath 'run'
     }
     else
     {
         $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath 'run'
     }    
-    #$itRanPath = Join-Path -Path $TestDrive.FullName -ChildPath 'run'
     if( $DoesNotRun )
     {
         It 'should not run' {
@@ -218,5 +212,5 @@ Describe 'Invoke-WhsCIPowerShellTask.when not given a working directory' {
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when working directory does not exist' {
-    Assert-ThatTheTask -ForAPassingScript -InWorkingDirectoryThatDoesNotExist -Fails -DoesNotRun -ErrorAction SilentlyContinue
+    Assert-ThatTheTask -ForAPassingScript -WhenGivenADirectoryThatDoesNotExist -Fails -DoesNotRun -ErrorAction SilentlyContinue
 }

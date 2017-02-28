@@ -31,6 +31,17 @@ function Invoke-WhsCIPester3Task
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
+        
+            BuildTasks:
+            - Pester3:
+                Path:
+                - My.Tests.ps1
+                - Tests')
+        }
+
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
     if( -not $TaskParameter.Version )
