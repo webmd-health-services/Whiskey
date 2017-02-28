@@ -23,7 +23,11 @@ function Assert-Context
         [Switch]
         $ByBuildServer,
 
-        $DownloadRoot
+        $DownloadRoot,
+
+        $ApplicationName,
+
+        $ReleaseName
     )
 
     It 'should set configuration path' {
@@ -105,7 +109,11 @@ function GivenConfiguration
         $WithVersion,
 
         [Switch]
-        $ThatDoesNotExist
+        $ThatDoesNotExist,
+
+        $ForApplicationName,
+
+        $ForReleaseName
     )
 
     if( $ThatDoesNotExist )
@@ -113,13 +121,23 @@ function GivenConfiguration
         return 'I\do\not\exist'
     }
 
-    $yml = 'SomeProperty: SomeValue'
+    $config = @{
+                 'SomProperty' = 'SomeValue'
+               }
+
     if( $WithVersion )
     {
-        $yml = @"
-Version: $($WithVersion)
-SomProperty: SomeValue
-"@
+        $config['Version'] = $WithVersion
+    }
+
+    if( $ForApplicationName )
+    {
+        $config['ApplicationName'] = $ForApplicationName
+    }
+
+    if( $ForReleaseName )
+    {
+        $config['ReleaseName'] = $ForReleaseName
     }
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { 
@@ -132,7 +150,7 @@ SomProperty: SomeValue
     }.GetNewClosure()
 
     $whsBuildYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
-    $yml | Set-Content -Path $whsBuildYmlPath
+    $config | ConvertTo-Yaml | Set-Content -Path $whsBuildYmlPath
     return $whsBuildYmlPath
 }
 
@@ -269,9 +287,11 @@ function ThenBuildServerContextCreated
         It 'should set ProGet session' {
             $Context.ProGetSession | Should Not BeNullOrEmpty
             $Context.ProGetSession.Uri | Should Be $buildServerContext['ProGetUri']
-            [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
             $Context.ProGetSession.AppFeed | Should Be $WithProGetAppFeed
             $Context.ProGetSession.NpmFeed | Should Be $WithProGetNpmFeed
+            $Context.ProGetSession.AppFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $Context.ProGetSession.Uri,$Context.ProGetSession.AppFeed)
+            $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $Context.ProGetSession.Uri,$Context.ProGetSession.NpmFeed)
+            [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
         }
     }
 
@@ -292,7 +312,11 @@ function ThenDeveloperContextCreated
         $Context,
 
         [SemVersion.SemanticVersion]
-        $WithSemanticVersion
+        $WithSemanticVersion,
+
+        $WithApplicationName = $null,
+
+        $WithReleaseName = $null
     )
 
     begin
@@ -316,6 +340,14 @@ function ThenDeveloperContextCreated
 
         It 'should not set ProGet session' {
             $Context.ProGetSession | Should BeNullOrEmpty
+        }
+
+        It 'should set application name' {
+            $Context.ApplicationName | Should Be $WithApplicationName
+        }
+
+        It 'should set release name' {
+            $Context.ReleaseName | Should Be $WithReleaseName
         }
     }
 
@@ -375,4 +407,16 @@ Describe 'New-WhsCIContext.when run by the build server and customizing download
 Describe 'New-WhsCIContext.when run by build server called with developer parameter set' {
     GivenConfiguration -WithVersion '1.2.3' |
         WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
+}
+
+Describe 'New-WhsCIContext.when application name in configuration file' {
+    GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar' |
+        WhenCreatingContext -ByDeveloper |
+        ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
+}
+
+Describe 'New-WhsCIContext.when release name in configuration file' {
+    GivenConfiguration -WithVersion '1.2.3' -ForReleaseName 'fubar' |
+        WhenCreatingContext -ByDeveloper |
+        ThenDeveloperContextCreated -WithReleaseName 'fubar' -WithSemanticVersion '1.2.3'
 }

@@ -125,6 +125,18 @@ function New-WhsCIContext
         $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
     }
 
+    $appName = $null
+    if( $config.ContainsKey('ApplicationName') )
+    {
+        $appName = $config['ApplicationName']
+    }
+
+    $releaseName = $null
+    if( $config.ContainsKey('ReleaseName') )
+    {
+        $releaseName = $config['ReleaseName']
+    }
+
     $bitbucketConnection = $null
     $buildmasterSession = $null
     $progetSession = $null
@@ -153,6 +165,8 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         $progetSession = [pscustomobject]@{
                                                 Uri = $ProGetUri;
                                                 Credential = $ProGetCredential;
+                                                AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
+                                                NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
                                                 AppFeed = $ProGetAppFeed;
                                                 NpmFeed = $ProGetNpmFeed;
                                           }
@@ -160,6 +174,8 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
 
     $buildRoot = $ConfigurationPath | Split-Path
     $context = [pscustomobject]@{
+                                    ApplicationName = $appName;
+                                    ReleaseName = $releaseName;
                                     BuildRoot = $buildRoot;
                                     ConfigurationPath = $ConfigurationPath;
                                     BBServerConnection = $bitbucketConnection;
