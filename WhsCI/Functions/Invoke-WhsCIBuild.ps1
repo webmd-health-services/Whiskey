@@ -289,10 +289,10 @@ function Invoke-WhsCIBuild
                             ConfigurationPath = $ConfigurationPath;
                             BuildRoot = $root;
                             OutputDirectory = $outputRoot;
-                            #Version = $semVersion;
+                            Version = $semVersion;
                             #ask Aaron about this formatting.
-                            SemanticVersion = $semVersion;
-                            Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
+                            #SemanticVersion = $semVersion;
+                            #Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
                             NuGetVersion = $nugetVersion;
                             ProGetAppFeedUri = $null;
                             ProGetCredential = $null;
@@ -344,20 +344,6 @@ function Invoke-WhsCIBuild
 
                 switch( $taskName )
                 {
-                    'PowerShell' {
-                        $workingDirParam = @{ }
-                        if( $task.ContainsKey('WorkingDirectory') )
-                        {
-                            $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
-                        }
-
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        foreach( $scriptPath in $taskPaths )
-                        {
-                            Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
-                        }
-                    }
-
                     default {
                         $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
                         if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )

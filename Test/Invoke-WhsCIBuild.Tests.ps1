@@ -559,27 +559,6 @@ exit 0
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a working directory' {
-    $fileName = 'task1.ps1'
-
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileName -TaskProperty @{ 'WorkingDirectory' = 'bin' }
-
-    $root = Split-Path -Path $configPath -Parent
-    $binRoot = Join-Path -Path $root -ChildPath 'bin'
-    New-Item -Path $binRoot -ItemType 'Directory'
-
-    @'
-'' | Set-Content -Path 'ran'
-'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $fileName)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath 
-
-    It ('should run PowerShell script in the working directory') {
-        Join-Path -Path $binRoot -ChildPath 'ran' | Should Exist
-    }
-}
-
-
 Describe 'Invoke-WhsCIBuild.when a task has no properties' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
