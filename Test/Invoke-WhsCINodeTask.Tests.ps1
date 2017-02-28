@@ -154,6 +154,9 @@ function Initialize-NodeProject
 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
+    $version = [SemVersion.SemanticVersion]'5.4.3-rc.5+build'
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
     $buildRoot = Join-Path -Path $env:Temp -ChildPath 'z'
@@ -248,7 +251,13 @@ module.exports = function(grunt) {
 }
 '@ | Set-Content -Path $gruntfilePath
 
-    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node'
+    $optionalArgs = @{ }
+    if( $ByBuildServer -or -not $ByDeveloper )
+    {
+        $optionalArgs['ForBuildServer'] = $true
+    }
+
+    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @optionalArgs -UseActualProGet
 }
 
 function Invoke-FailingBuild

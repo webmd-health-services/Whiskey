@@ -198,8 +198,8 @@ function Invoke-WhsCIAppPackageTask
         $branch = $branch -replace '/.*$',''
         if( $branch -match '^(release|master|develop)$' )
         {
-            $proGetPackageUri = $TaskContext.ProGetAppFeedUri
-            $proGetCredential = $TaskContext.ProGetCredential
+            $proGetPackageUri = $TaskContext.ProGetSession.AppFeedUri
+            $proGetCredential = $TaskContext.ProGetSession.Credential
             $buildMasterSession = $TaskContext.BuildMasterSession
 
             $branch = $Matches[1]

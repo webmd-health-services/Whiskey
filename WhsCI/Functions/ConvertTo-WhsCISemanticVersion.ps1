@@ -53,10 +53,24 @@ function ConvertTo-WhsCISemanticVersion
         $patch = '0'
         if( (Test-WhsCIRunByBuildServer) )
         {
+            if( -not (Test-Path -Path 'env:BUILD_ID') )
+            {
+                throw ('Environment variable BUILD_ID does not exist. Are you sure you''re running under a build server? If you see this message while running tests, you most likely need to mock the `ConvertTo-WhsCISemanticVersion` function.')
+            }
             $buildID = (Get-Item -Path 'env:BUILD_ID').Value
             $patch = $buildID
+
+            if( -not (Test-Path -Path 'env:GIT_BRANCH') )
+            {
+                throw ('Environment variable GIT_BRANCH does not exist. Are you sure you''re running under a build server? If you see this message while running tests, you most likely need to mock the `ConvertTo-WhsCISemanticVersion` function.')
+            }
             $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
             $branch = $branch -replace '[^A-Za-z0-9-]','-'
+
+            if( -not (Test-Path -Path 'env:GIT_COMMIT') )
+            {
+                throw ('Environment variable GIT_COMMIT does not exist. Are you sure you''re running under a build server? If you see this message while running tests, you most likely need to mock the `ConvertTo-WhsCISemanticVersion` function.')
+            }
             $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
             $buildInfo = '{0}.{1}' -f $branch,$commitID
             $buildInfoWithBuildNumber = '{0}.{1}.{2}' -f $buildID,$branch,$commitID

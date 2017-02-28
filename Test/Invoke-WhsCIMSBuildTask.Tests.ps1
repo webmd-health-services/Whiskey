@@ -11,18 +11,17 @@ $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assem
 Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]"1.2.3-rc.1+build" }
 
     $failingNUnit2TestAssemblyPath,$passingNUnit2TestAssemblyPath | Remove-Item -Force -ErrorAction Ignore
 
-    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForVersion "1.2.3-rc.1+build" -ForBuildServer
     $taskParameter = @{
                         Path = @(
                                     'NUnit2FailingTest\NUnit2FailingTest.sln',
                                     'NUnit2PassingTest\NUnit2PassingTest.sln'
                                 )
                       }
-    $context.Version = '1.2.3'
-    $context.SemanticVersion = "1.2.3-rc.1+build"
 
     # Get rid of any existing packages directories.
     Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
@@ -48,8 +47,8 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
         It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
             $fileInfo = Get-Item -Path $assembly
             $fileVersionInfo = $fileInfo.VersionInfo
-            $fileVersionInfo.FileVersion | Should Be $context.Version.ToString()
-            $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.SemanticVersion)
+            $fileVersionInfo.FileVersion | Should Be $context.Version.Version.ToString()
+            $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.Version)
         }
     }
 }
@@ -123,15 +122,13 @@ Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is invalid' {
 
 Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
-    $context = New-WhsCITestContext (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+    $context = New-WhsCITestContext (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForVersion "1.1.1-rc.1+build"
     $taskParameter = @{
                         Path = @(
                                     'NUnit2FailingTest\NUnit2FailingTest.sln',
                                     'NUnit2PassingTest\NUnit2PassingTest.sln'
                                 )
                       }
-    $context.Version = '1.1.1'
-    $context.SemanticVersion = "1.1.1-rc.1+build"
 
     Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
 
@@ -140,8 +137,8 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
         It ('should not version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
             $fileInfo = Get-Item -Path $assembly
             $fileVersionInfo = $fileInfo.VersionInfo
-            $fileVersionInfo.FileVersion | Should Not Be $context.Version.ToString()
-            $fileVersionInfo.ProductVersion | Should Not Be ('{0}' -f $context.SemanticVersion)
+            $fileVersionInfo.FileVersion | Should Not Be $context.Version.Version.ToString()
+            $fileVersionInfo.ProductVersion | Should Not Be ('{0}' -f $context.Version)
         }
     }
 }

@@ -16,11 +16,14 @@ function GivenAnApplication
     $package = $mockPackage
     $deploy = $mockDeploy
 
+    $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
     Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -MockWith { return $release }.GetNewClosure()
     Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $package }.GetNewClosure()
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $deploy }.GetNewClosure()
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
 
-    New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name'
+    New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
 }
 
 function WhenCreatingPackage
@@ -137,7 +140,7 @@ function ThenPackageCreated
         }
 
         It 'should create release package with package number' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.SemanticVersion.Major,$Context.SemanticVersion.Minor,$Context.SemanticVersion.Patch) }
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.Major,$Context.Version.Minor,$Context.Version.Patch) }
         }
 
         $expectedVariables = @{

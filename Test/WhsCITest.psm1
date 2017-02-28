@@ -105,7 +105,16 @@ function New-WhsCITestContext
         $ForApplicationName,
 
         [string]
-        $ForReleaseName
+        $ForReleaseName,
+
+        [Switch]
+        $ForBuildServer,
+
+        [SemVersion.SemanticVersion]
+        $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
+
+        [Switch]
+        $UseActualProGet
     )
 
     Set-StrictMode -Version 'Latest'
@@ -120,30 +129,47 @@ function New-WhsCITestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    if( -not $ForTaskName )
+    $progetUri = 'https://proget.example.com'
+    if( $UseActualProGet )
     {
-        $ForTaskName = 'TaskName'
+        $progetUri = Get-ProGetUri -Environment 'Dev'
     }
 
-    $context = [pscustomobject]@{
-                                    ApplicationName = $ForApplicationName;
-                                    ReleaseName = $ForReleaseName;
-                                    ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
-                                    BuildRoot = $ForBuildRoot;
-                                    OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
-                                    SemanticVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build';
-                                    Version = [version]'1.2.3';
-                                    ProGetAppFeedUri = 'http://proget.example.com/';
-                                    ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
-                                    BuildMasterSession = 'buildmaster session';
-                                    TaskIndex = 0;
-                                    TaskName = $ForTaskName;
-                                    Configuration = @{ };
-                                    BuildConfiguration = 'Release';
-                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm';
-                                    PackageVariables = @{ };
-                                 }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    $optionalArgs = @{ }
+    if( $ForBuildServer )
+    {
+        $optionalArgs = @{
+                           'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
+                           'BBServerUri' = 'https://bitbucket.example.com/'
+                           'BuildMasterUri' = 'https://buildmaster.example.com/'
+                           'BuildMasterApiKey' = 'racecaracecar';
+                           'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
+                         }
+    }
+    
+    $configData = @{
+                        'Version' = $ForVersion.ToString()
+                   }
+    if( $ForApplicationName )
+    {
+        $configData['ApplicationName'] = $ForApplicationName
+    }
+
+    if( $ForReleaseName )
+    {
+        $configData['ReleaseName'] = $ForReleaseName
+    }
+
+    $whsBuildYmlPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
+    $configData | ConvertTo-Yaml | Set-Content -Path $whsBuildYmlPath
+
+    $context = New-WhsCIContext -ConfigurationPath $whsBuildYmlPath -BuildConfiguration 'Release' -ProGetUri $progetUri @optionalArgs
+
+    if( $ForTaskName )
+    {
+        $context.TaskName = $ForTaskName
+    }
+
     return $context
 }
 
