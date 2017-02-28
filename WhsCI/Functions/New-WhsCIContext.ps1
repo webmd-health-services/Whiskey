@@ -12,13 +12,13 @@ function New-WhsCIContext
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
     * `BuildConfiguration`: the build configuration to use when compiling code. Set from the parameter by the same name.
     * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
-    * `SemanticVersion`: the semantic version to use when building the application
-    * `Version`: the semantic version with all pre-release and build metadata stripped away.
+    * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `NuGetVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
     * `NuGetVersion`: the semantic version with all build metadata stripped away.
     * `Configuration`: the parsed YAML as a hashtable.
     * `DownloadRoot`: the path to a directory where tools can be downloaded when needed. 
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
+    * `ApplicatoinName`: the name of the application being built.
 
     In addition, if you're creating a context while running under a build server, you must supply BuildMaster, ProGet, and Bitbucket Server connection information. That connection information is returned in the following properties:
 
@@ -113,12 +113,14 @@ function New-WhsCIContext
         throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
     }
 
-    $version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    $nugetVersion = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
+    $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     if( $semVersion.Prerelease )
     {
-        $nugetVersion = '{0}-{1}' -f $nugetVersion,$semVersion.Prerelease
+        $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
     }
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'NuGetVersion' -Value $nugetVersion
 
     if( -not $DownloadRoot )
     {
@@ -186,9 +188,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                                     TaskName = $null;
                                     TaskIndex = -1;
                                     PackageVariables = @{};
-                                    SemanticVersion = $semVersion;
-                                    Version = $version;
-                                    NuGetVersion = $nugetVersion;
+                                    Version = $semVersion;
                                     Configuration = $config;
                                     DownloadRoot = $DownloadRoot;
                                     ByBuildServer = $byBuildServer;

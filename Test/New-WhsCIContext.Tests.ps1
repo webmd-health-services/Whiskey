@@ -59,13 +59,15 @@ function Assert-Context
         $Context.PackageVariables.Count | Should Be 0
     }
 
-    It 'should set semantic version' {
-        $Context.SemanticVersion | Should Be $SemanticVersion
+    It 'should set version' {
+        $Context.Version | Should Be $SemanticVersion
+        $Context.Version | Should BeOfType ([SemVersion.SemanticVersion])
     }
 
     $expectedVersion = ('{0}.{1}.{2}' -f $SemanticVersion.Major,$SemanticVersion.Minor,$SemanticVersion.Patch)
-    It 'should set version' {
-        $Context.Version | Should Be $expectedVersion
+    It 'should set .NET version' {
+        $Context.Version.Version | Should Be $expectedVersion
+        $Context.Version.Version | Should BeOfType ([version])
     }
 
     $expectedNuGetVersion = $expectedVersion
@@ -75,7 +77,8 @@ function Assert-Context
     }
 
     It 'should set NuGet version' {
-        $Context.NuGetVersion | Should Be $expectedNuGetVersion
+        $Context.Version.NuGetVersion | Should Be $expectedNuGetVersion
+        $Context.Version.NuGetVersion | Should BeOfType ([SemVersion.SemanticVersion])
     }
 
     It 'should set raw configuration hashtable' {
