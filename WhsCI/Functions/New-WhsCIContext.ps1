@@ -73,9 +73,9 @@ function New-WhsCIContext
         # The credential to use when authenticating to ProGet. Required if running under a build server.
         $ProGetCredential,
 
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
+        [Parameter(Mandatory=$true)]
         [uri]
-        # The URI to ProGet. Required if running under a build server.
+        # The URI to ProGet. Used to get NuGet packages, NPM packages, etc.
         $ProGetUri,
 
         [Parameter(ParameterSetName='ByBuildServer')]
@@ -143,6 +143,15 @@ function New-WhsCIContext
     $buildmasterSession = $null
     $progetSession = $null
     
+    $progetSession = [pscustomobject]@{
+                                            Uri = $ProGetUri;
+                                            Credential = $null;
+                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
+                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
+                                            AppFeed = $ProGetAppFeed;
+                                            NpmFeed = $ProGetNpmFeed;
+                                        }
+
     $byBuildServer = Test-WhsCIRunByBuildServer
     if( $byBuildServer )
     {
@@ -164,14 +173,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
         $buildmasterSession = New-BMSession -Uri $BuildMasterUri -ApiKey $BuildMasterApiKey
-        $progetSession = [pscustomobject]@{
-                                                Uri = $ProGetUri;
-                                                Credential = $ProGetCredential;
-                                                AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
-                                                NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
-                                                AppFeed = $ProGetAppFeed;
-                                                NpmFeed = $ProGetNpmFeed;
-                                          }
+        $progetSession.Credential = $ProGetCredential
     }
 
     $buildRoot = $ConfigurationPath | Split-Path

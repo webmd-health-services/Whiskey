@@ -10,8 +10,8 @@ $buildServerContext = @{
                             BuildMasterUri = 'http://buildmaster.example.com/';
                             BuildMasterApiKey = 'deadbeef';
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
-                            ProGetUri = 'http://proget.example.com/'
                         }
+$progetUri = [uri]'https://proget.example.com/'
 
 function Assert-Context
 {
@@ -27,7 +27,11 @@ function Assert-Context
 
         $ApplicationName,
 
-        $ReleaseName
+        $ReleaseName,
+
+        $WithProGetAppFeed = 'upack/Apps', 
+
+        $WithProGetNpmFeed = 'npm/npm'
     )
 
     It 'should set configuration path' {
@@ -103,6 +107,16 @@ function Assert-Context
         $Context.ByBuildServer | Should Be $ByBuildServer
         $Context.ByDeveloper | Should Be (-not $ByBuildServer)
     }
+
+
+    It 'should set ProGet URIs' {
+        $Context.ProGetSession | Should Not BeNullOrEmpty
+        $Context.ProGetSession.Uri | Should Be $progetUri
+        $Context.ProGetSession.AppFeed | Should Be $WithProGetAppFeed
+        $Context.ProGetSession.NpmFeed | Should Be $WithProGetNpmFeed
+        $Context.ProGetSession.AppFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetAppFeed)
+        $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
+    }
 }
 
 function GivenConfiguration
@@ -172,9 +186,9 @@ function WhenCreatingContext
         [Switch]
         $ByBuildServer,
 
-        $WithProGetAppFeed, 
+        $WithProGetAppFeed = 'upack/Apps', 
 
-        $WithProGetNpmFeed,
+        $WithProGetNpmFeed = 'npm/npm',
 
         $WithDownloadRoot,
 
@@ -216,7 +230,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' @optionalArgs
+            New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetUri 'https://proget.example.com/' @optionalArgs
         }
         catch
         {
@@ -258,9 +272,9 @@ function ThenBuildServerContextCreated
         [SemVersion.SemanticVersion]
         $WithSemanticVersion,
 
-        $WithProGetAppFeed = 'upack/Apps', 
+        $WithProGetAppFeed, 
 
-        $WithProGetNpmFeed = 'npm/npm',
+        $WithProGetNpmFeed,
 
         $WithDownloadRoot
     )
@@ -272,8 +286,18 @@ function ThenBuildServerContextCreated
 
     process
     {
+        $optionalArgs = @{}
+        if( $WithProGetAppFeed )
+        {
+            $optionalArgs['WithProGetAppFeed'] = $WithProGetAppFeed
+        }
+        if( $WithProGetNpmFeed )
+        {
+            $optionalArgs['WithProGetNpmFeed'] = $WithProGetNpmFeed
+        }
+
         $iWasCalled = $true
-        Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot
+        Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
 
         It 'should set Bitbucket Server connection' {
             $Context.BBServerConnection | Should Not BeNullOrEmpty
@@ -289,11 +313,6 @@ function ThenBuildServerContextCreated
 
         It 'should set ProGet session' {
             $Context.ProGetSession | Should Not BeNullOrEmpty
-            $Context.ProGetSession.Uri | Should Be $buildServerContext['ProGetUri']
-            $Context.ProGetSession.AppFeed | Should Be $WithProGetAppFeed
-            $Context.ProGetSession.NpmFeed | Should Be $WithProGetNpmFeed
-            $Context.ProGetSession.AppFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $Context.ProGetSession.Uri,$Context.ProGetSession.AppFeed)
-            $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $Context.ProGetSession.Uri,$Context.ProGetSession.NpmFeed)
             [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
         }
     }
@@ -339,10 +358,6 @@ function ThenDeveloperContextCreated
 
         It 'should not set BuildMaster session' {
             $Context.BuildMasterSession| Should BeNullOrEmpty
-        }
-
-        It 'should not set ProGet session' {
-            $Context.ProGetSession | Should BeNullOrEmpty
         }
 
         It 'should set application name' {
