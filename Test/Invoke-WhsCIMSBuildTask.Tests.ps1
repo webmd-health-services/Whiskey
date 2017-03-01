@@ -69,6 +69,10 @@ function Invoke-MSBuild
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $runByBuildServerMock
         MOck -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
         $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') @optionalArgs
+        $assembliesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies'
+        # Set aside the AssemblyInfo.cs files so we can restore them late
+        Get-ChildItem -Path $assembliesRoot -Filter 'AssemblyInfo.cs' -Recurse |
+            ForEach-Object { Copy-Item -Path $_.FullName -Destination ('{0}.orig' -f $_.FullName) }
         $errors = @()
         try
         {
@@ -80,8 +84,9 @@ function Invoke-MSBuild
         }
         finally
         {
-            # Put the assemly info files back the way they were.
-            git checkout (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+            # Restore the original AssemblyInfo.cs files.
+            Get-ChildItem -Path $assembliesRoot -Filter 'AssemblyInfo.cs.orig' -Recurse |
+                ForEach-Object { Move-Item -Path $_.FullName -Destination ($_.FullName -replace '\.orig$','') -Force }
         }
         
         if( $WithError )
