@@ -30,14 +30,23 @@ function Assert-ThatTheTask
         $InWorkingDirectory = $TestDrive.FullName,
 
         [Switch]
-        $DoesNotRun
-    )
+        $DoesNotRun,
 
-    $scriptPath = Join-Path -Path $TestDrive.FullName -ChildPath 'myscript.ps1'
+        [Switch]
+        $WhenGivenADirectoryThatDoesNotExist,
+
+        [Switch]
+        $WhenGivenARelativePath
+
+    )
+    $script = 'myscript.ps1'
+    $scriptPath = Join-Path -Path $InWorkingDirectory -ChildPath $script
+        
         @'
 New-Item -Path 'run' -ItemType 'File'
 '@ | Set-Content -Path $scriptPath
 
+    
     if( $ForAFailingScript )
     {
         'exit 1' | Add-Content -Path $scriptPath
@@ -48,16 +57,59 @@ New-Item -Path 'run' -ItemType 'File'
         $ForScript | Add-Content -Path $scriptPath
     }
 
-    $workingDirParam = @{ WorkingDirectory = $InWorkingDirectory }
     if( $WhenNotGivenAWorkingDirectory )
     {
-        $workingDirParam = @{}
+        $taskParameter = @{
+                            Path = @(
+                                    $script
+                                )
+                      }
+        $context = New-WhsCITestContext
     }
+    elseif( $WhenGivenADirectoryThatDoesNotExist )
+    {
+        $taskParameter = @{
+                            WorkingDirectory = 'C:\I\DO\NOT\EXIST'
+                            Path = @(
+                                    $script
+                                )
+                        }
+        $context = New-WhsCITestContext 
+    }
+    elseif( $WhenGivenARelativePath )
+    {
+        $relativePath = 'relative'
+        $contentPath = Join-Path -Path $TestDrive.FullName -ChildPath $relativePath
+        New-Item -Path $contentPath -ItemType 'Directory'
+        $contentPath = Join-Path -Path $contentPath -ChildPath $script
+        @'
+New-Item -Path 'run' -ItemType 'File'
+'@ | Set-Content -Path $contentPath
+        $taskParameter = @{
+                            WorkingDirectory = $relativePath
+                            Path = @(
+                                    $script
+                                )
+                        }
+        $context = New-WhsCITestContext 
 
+
+    }
+    else
+    {
+        $taskParameter = @{
+                            WorkingDirectory = $InWorkingDirectory
+                            Path = @(
+                                    $script
+                                )
+                        }
+        $context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory 
+    }
+    
     $failed = $false
     try
     {
-        Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
+        Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -78,8 +130,14 @@ New-Item -Path 'run' -ItemType 'File'
             $failed | Should Be $true
         }
     }
-
-    $itRanPath = Join-Path -Path $TestDrive.FullName -ChildPath 'run'
+    if ( $WhenGivenARelativePath )
+    {
+        $itRanPath = Join-Path -Path (Join-Path -Path $InWorkingDirectory -ChildPath $relativePath) -ChildPath 'run'
+    }
+    else
+    {
+        $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath 'run'
+    }    
     if( $DoesNotRun )
     {
         It 'should not run' {
@@ -88,7 +146,7 @@ New-Item -Path 'run' -ItemType 'File'
     }
     else
     {
-        It 'should not run' {
+        It 'should run' {
             $itRanPath | Should Exist
         }
     }
@@ -130,6 +188,17 @@ Write-Error 'snafu!'
     }
 }
 
+Describe 'Invoke-WhsCIBuild.when PowerShell task defined with an absolute working directory' {
+    $absolutePath = Join-Path -path $TestDrive.FullName -ChildPath 'bin'
+    New-Item -Path $absolutePath -ItemType 'Directory' 
+    Assert-ThatTheTask -ForAPassingScript -Passes -InWorkingDirectory $absolutePath 
+}
+
+Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a relative working directory' {
+    Assert-ThatTheTask -ForAPassingScript -Passes -whenGivenARelativePath
+    return
+}
+
 Describe 'Invoke-WhsCIPowerShellTask.when not given a working directory' {
     Push-Location $TestDrive.FullName
     try
@@ -143,5 +212,5 @@ Describe 'Invoke-WhsCIPowerShellTask.when not given a working directory' {
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when working directory does not exist' {
-    Assert-ThatTheTask -ForAPassingScript -InWorkingDirectory 'C:\I\Do\Not\Exist' -Fails -DoesNotRun -ErrorAction SilentlyContinue
+    Assert-ThatTheTask -ForAPassingScript -WhenGivenADirectoryThatDoesNotExist -Fails -DoesNotRun -ErrorAction SilentlyContinue
 }

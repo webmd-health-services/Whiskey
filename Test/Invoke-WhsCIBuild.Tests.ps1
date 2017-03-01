@@ -559,51 +559,6 @@ exit 0
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a working directory' {
-    $fileName = 'task1.ps1'
-
-    $configPath = New-TestWhsBuildFile -TaskName 'PowerShell' -Path $fileName -TaskProperty @{ 'WorkingDirectory' = 'bin' }
-
-    $root = Split-Path -Path $configPath -Parent
-    $binRoot = Join-Path -Path $root -ChildPath 'bin'
-    New-Item -Path $binRoot -ItemType 'Directory'
-
-    @'
-'' | Set-Content -Path 'ran'
-'@ | Set-Content -Path (Join-Path -Path $root -ChildPath $fileName)
-
-    Invoke-Build -ByJenkins -WithConfig $configPath 
-
-    It ('should run PowerShell script in the working directory') {
-        Join-Path -Path $binRoot -ChildPath 'ran' | Should Exist
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when a task path does not exist' {
-    $path = 'FubarSnafu'
-    $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path $path
-    
-    $Global:Error.Clear()
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the file does not exist' {
-        $Global:Error[0] | Should Match 'not exist'
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when a task path is absolute' {
-    $configPath = New-TestWhsBuildFile -TaskName 'Pester3' -Path 'C:\FubarSnafu'
-    
-    $Global:Error.Clear()
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-
-    It 'should write an error that the path is absolute' {
-        $Global:Error[0] | Should Match 'absolute'
-    }
-}
-
 Describe 'Invoke-WhsCIBuild.when a task has no properties' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
@@ -628,7 +583,7 @@ BuildTasks:
     
     $Global:Error.Clear()
 
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
+    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
 
     It 'should write an error' {
         $Global:Error[0] | Should Match 'not exist'
@@ -653,39 +608,6 @@ BuildTasks:
 
     Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName $project
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
-}
-
-Describe 'Invoke-WhsCIBuild.when using NuGetPack task' {
-    $project = New-MSBuildProject -FileName 'project.csproj'
-    $project2 = New-MSBuildProject -FileName 'project2.csproj'
-    $projectPaths = $project,$project2
-    $expectedVersion = '1.6.7-rc1'
-    $configPath = New-TestWhsBuildFile -TaskName 'NuGetPack' -Path 'project.csproj','project2.csproj' -Version $expectedVersion
-
-    Mock -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -Verifiable
-    
-    Invoke-Build -ByJenkins -WithConfig $configPath
-
-    It 'should call Invoke-WhsCINuGetPackTask' {
-        foreach( $projectPath in $projectPaths )
-        {
-            Assert-MockCalled -CommandName 'Invoke-WhsCINuGetPackTask' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug -Message ('Path               expected  {0}' -f $projectPath)
-                Write-Debug -Message ('                   actual    {0}' -f $Path)
-                $expectedOutputRoot = Join-Path -Path ($configPath | Split-Path) -Child '.output'
-                Write-Debug -Message ('OutputDirectory    expected  {0}' -f $expectedOutputRoot)
-                Write-Debug -Message ('                   actual    {0}' -f $OutputDirectory)
-                Write-Debug -Message ('Version            expected  {0}' -f $expectedVersion)
-                Write-Debug -Message ('                   actual    {0}' -f $Version)
-                $configuration = Get-WhsSetting -Environment 'Dev' -Name '.NETProjectBuildConfiguration'
-                Write-Debug -Message ('BuildConfiguration expected  {0}' -f $configuration)
-                Write-Debug -Message ('                   actual    {0}' -f $BuildConfiguration)
-
-                $projectPath -eq $Path -and $expectedOutputRoot -eq $OutputDirectory -and $expectedVersion -eq $Version -and $configuration -eq $BuildConfiguration
-            }
-        }
-    }
 }
 
 Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
@@ -741,7 +663,7 @@ $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # * task functions are created for all tasks
 #
 # Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
-foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node' ) )
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
 {
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 

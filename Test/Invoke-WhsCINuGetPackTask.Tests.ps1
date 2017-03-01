@@ -3,18 +3,65 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
+$projectName ='NUnit2PassingTest.csproj' 
+
+function Remove-LeadingString
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]
+        $String,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $LeadingString
+    )
+
+    $retStr = $String
+            if ($String.StartsWith($LeadingString, $true, [System.Globalization.CultureInfo]::InvariantCulture))
+            {
+                $retStr = $String.Substring($LeadingString.Length)
+            }
+                    
+    return $retStr
+}
+
 function GivenABuiltLibrary
 {
     param(
         [Switch]
-        $InReleaseMode
+        $ThatDoesNotExist,
+
+        [Switch]
+        $InReleaseMode,
+
+        [string]
+        $WithVersion
     )
 
-    $Global:ERror.Clear()
+    $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest' 
+    # Make sure the output directory gets created by the task
+    $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    if( $InReleaseMode )
+    {
+        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory -InReleaseMode    
+    }
+    else
+    {
+        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory
+    }
+    
+    if( $WithVersion )
+    {
+        $Context.NugetVersion = $WithVersion
+    }
 
-    $project = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\NUnit2PassingTest.csproj' -Resolve
-    $projectRoot = $project | Split-Path
-    'bin','obj' | ForEach-Object { Get-ChildItem -Path $projectRoot -Filter $_ } | Remove-Item -Recurse -Force
+    $Global:Error.Clear()
+    $project = Join-Path -Path $projectRoot -ChildPath $projectName -Resolve
+    'bin','obj','.output' | 
+        ForEach-Object { Get-ChildItem -Path $projectRoot -Filter $_ -ErrorAction Ignore } | Remove-Item -Recurse -Force
     
     $propertyArg = @{}
     if( $InReleaseMode )
@@ -22,97 +69,136 @@ function GivenABuiltLibrary
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    Invoke-MSBuild -Path $project -Target 'build' @propertyArg
+    Invoke-MSBuild -Path $project -Target 'build' @propertyArg | Out-Null
+    return $context
+}
 
-    return $project    
+function WhenRunningNuGetPackTask
+{
+    param(
+        [Parameter(ValueFromPipeline=$true)]
+        [object]
+        $Context,
+
+        [Switch]
+        $ForProjectThatDoesNotExist,
+
+        [string]
+        $ThatFailsWithErrorMessage,
+
+        [string]
+        $WithVersion
+    )
+
+    process 
+    {
+        
+        $Global:Error.Clear()
+        $taskParameter = @{
+                            Path = @(
+                                        $projectName
+                                    )
+                          }
+
+        $threwException = $false
+        try
+        {
+            if( $WithVersion )
+            {
+                $Context.NugetVersion = $WithVersion
+            }
+            if( $ForProjectThatDoesNotExist )
+            {
+                $taskParameter['Path'] = 'I\do\not\exist.csproj'
+            }
+            Invoke-WhsCINuGetPackTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null
+
+        }
+        catch
+        {
+            $threwException = $true
+        }
+
+        if( $ThatFailsWithErrorMessage )
+        {
+            It 'should throw an exception' {
+                $threwException | Should Be $true
+                $Global:Error | Should Not BeNullOrEmpty
+                $Global:Error[0] | Should Match $ThatFailsWithErrorMessage
+            }
+        }
+        else
+        {
+            It 'should not throw an exception' {
+                $threwException | Should Be $false
+                $Global:Error | Should BeNullOrEmpty
+            }
+        }
+
+        return $Context
+
+    }
 }
 
 function ThenPackageShouldBeCreated
 {
     param(
         [string]
-        $WithVersion = '1.2.3-rc.1'
+        $WithVersion,
+
+        [Parameter(ValueFromPipeline=$true)]
+        [object]
+        $Context
     )
 
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
+    process
+    {
+        if( $WithVersion )
+        {
+            $Context.NugetVersion = $WithVersion
+        }
+        It 'should not write any errors' {
+            $Global:Error | Should BeNullOrEmpty
+        }
 
-    It ('should create NuGet package for NUnit2PassingTest') {
-        (Join-Path -Path $TestDrive.FullName -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $WithVersion)) | Should Exist
-    }
+        It ('should create NuGet package for NUnit2PassingTest') {
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.NuGetVersion)) | Should Exist
+        }
 
-    It ('should create a NuGet symbols package for NUnit2PassingTest') {
-        (Join-Path -Path $TestDrive.FullName -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $WithVersion)) | Should Exist
+        It ('should create a NuGet symbols package for NUnit2PassingTest') {
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.NuGetVersion)) | Should Exist
+        }
     }
 }
 
+function ThenPackageShouldNotBeCreated
+{
+    param(
+        [Parameter(ValueFromPipeline=$true)]
+        [object]
+        $Context
+    )
+
+    It 'should not create any .nupkg files' {
+        (Join-Path -Path $Context.OutputDirectory -ChildPath '*.nupkg') | Should Not Exist
+    }
+}
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with an invalid project' {
-    $Global:Error.Clear()
-
-    $project = Join-Path -Path $TestDrive.FullName -ChildPath 'project.csproj'
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'bin') -ItemType 'Directory' | Out-String | Write-Verbose
-
-    New-MSBuildProject -FileName $project
-    
-    $threwException = $false
-    try
-    {
-        Invoke-WhsCINuGetPackTask -Path $project -OutputDirectory $TestDrive.FullName -Version '1.0.1-rc1' -BuildConfiguration 'Debug' -ErrorAction SilentlyContinue
-    }
-    catch
-    {
-        $threwException = $true
-        Write-Error -ErrorRecord $_ -ErrorAction SilentlyContinue
-    }
-
-    function Assert-NuGetPackagesNotCreated
-    {
-        param(
-        )
-
-        It 'should throw an exception' {
-            $threwException | Should Be $true
-            $Global:Error | Should Not BeNullOrEmpty
-            $Global:Error[0] | Should Match 'pack command failed'
-        }
-
-        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
-        It 'should not create any .nupkg files' {
-            (Join-Path -Path $outputRoot -ChildPath '*.nupkg') | Should Not Exist
-        }
-    }
-    Assert-NuGetPackagesNotCreated
+    GivenABuiltLibrary | 
+        WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ThatFailsWithErrorMessage 'does not exist' | 
+        ThenPackageShouldNotBeCreated
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package' {
-    $project = GivenABuiltLibrary
-    Invoke-WhsCINuGetPackTask -Path $project -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
-    ThenPackageShouldBeCreated
-}
-
-Describe 'Invoke-WhsCINuGetPackTask.when piped strings' {
-    $project = GivenABuiltLibrary
-    $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
-    ThenPackageShouldBeCreated
-}
-
-Describe 'Invoke-WhsCINuGetPackTask.when piped file info objects' {
-    $project = GivenABuiltLibrary
-    Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug'
-    ThenPackageShouldBeCreated
+    GivenABuiltLibrary | WhenRunningNuGetPackTask | ThenPackageShouldBeCreated
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when passed a version' {
     $version = '4.5.6-rc1'
-    $project = GivenABuiltLibrary
-    Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Debug' -Version $version
-    ThenPackageShouldBeCreated -WithVersion $version
+    GivenABuiltLibrary -WithVersion $version | WhenRunningNugetPackTask  | ThenPackageShouldBeCreated -WithVersion $version
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a package built in release mode' {
-    $project = GivenABuiltLibrary -InReleaseMode
-    Get-Item $project | Invoke-WhsCINuGetPackTask -OutputDirectory $TestDrive.FullName -BuildConfiguration 'Release'
-    ThenPackageShouldBeCreated 
+    GivenABuiltLibrary -InReleaseMode | WhenRunningNugetPackTask | ThenPackageShouldBeCreated
 }
