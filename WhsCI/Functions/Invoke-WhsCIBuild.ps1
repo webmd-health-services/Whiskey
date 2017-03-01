@@ -244,57 +244,23 @@ function Invoke-WhsCIBuild
                 $errors = @()
                 $pathIdx = -1
 
-                switch( $taskName )
+                $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+                if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                 {
-                    'NuGetPack' {
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        $taskPaths | Invoke-WhsCINuGetPackTask -OutputDirectory $Context.OutputDirectory -Version $Context.Version.NuGetVersion -BuildConfiguration $Context.BuildConfiguration
+                    $whatIfParam = @{ }
+                    if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
+                    {
+                        $whatIfParam['WhatIf'] = $true
                     }
-                    
-                    'Pester3' {
-                        try
-                        {
-                            $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                            Invoke-WhsCIPester3Task -OutputRoot $Context.OutputDirectory -Path $taskPaths -Config $task
-                        }
-                        catch
-                        {
-                            throw ('{0}{1}' -f $errorPrefix,$_.Exception.Message)
-                        }
-                    }
-
-                    'PowerShell' {
-                        $workingDirParam = @{ }
-                        if( $task.ContainsKey('WorkingDirectory') )
-                        {
-                            $workingDirParam['WorkingDirectory'] = Resolve-TaskPath -Path $task['WorkingDirectory'] -PropertyName 'WorkingDirectory'
-                        }
-
-                        $taskPaths = Resolve-TaskPath -Path $task['Path'] -PropertyName 'Path'
-                        foreach( $scriptPath in $taskPaths )
-                        {
-                            Invoke-WhsCIPowerShellTask -ScriptPath $scriptPath @workingDirParam
-                        }
-                    }
-
-                    default {
-                        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
-                        if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
-                        {
-                            $whatIfParam = @{ }
-                            if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
-                            {
-                                $whatIfParam['WhatIf'] = $true
-                            }
-                            & $taskFunctionName -TaskContext $Context -TaskParameter $task @whatIfParam
-                        }
-                        else
-                        {
-                            $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
-                            throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $Context.ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
-                        }
-                    }
+                    & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
                 }
+                else
+                {
+                    $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
+                    throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $Context.ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
+                }
+                    
+                
             }
         }
 

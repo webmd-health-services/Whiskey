@@ -102,12 +102,19 @@ function New-WhsCITestContext
         $ForTaskName,
 
         [string]
+        $ForOutputDirectory,
+
+        [switch]
+        $InReleaseMode,
+
+        [string]
         $ForApplicationName,
 
         [string]
         $ForReleaseName,
 
         [Switch]
+        [Alias('ByBuildServer')]
         $ForBuildServer,
 
         [SemVersion.SemanticVersion]
@@ -189,6 +196,16 @@ function New-WhsCITestContext
     }
 
     $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
+    if( $InReleaseMode )
+    {
+        $context.BuildConfiguration = 'Release'
+    }
+
+    if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
+    {
+        $context.OutputDirectory = $ForOutputDirectory
+        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    }
 
     return $context
 }

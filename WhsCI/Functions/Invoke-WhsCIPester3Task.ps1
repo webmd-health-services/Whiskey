@@ -6,46 +6,51 @@ function Invoke-WhsCIPester3Task
     Runs Pester tests using Pester 3.
 
     .DESCRIPTION
-    The `Invoke-Pester3Task` runs tests using Pester 3. You pass the path(s) to test to the `Path` parameter, which are passed directly to the `Invoke-Pester` function's `Script` parameter. Use the `Config` parameter to pass additional configuration needed by this task. The additional configuration can be:
+    The `Invoke-Pester3Task` runs tests using Pester 3. You pass the path(s) to test to the `Path` parameter, which are passed directly to the `Invoke-Pester` function's `Script` parameter. Additional configuration information can be included in the `$TaskContext` such as:
 
-    * Version: The version of Pester 3 to use. Can be a version between 3.0 but less than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
+    * `$TaskContext.Version`: The version of Pester 3 to use. Can be a version between 3.0 but less than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
 
     If any tests fail (i.e. if the `FailedCount property on the result object returned by `Invoke-Pester` is greater than 0), this function will throw a terminating error.
 
     .EXAMPLE
-    Invoke-Pester3Task -OutputRoot '.\.output' -Path '.\Test' -Config @{ Version = '3.4.3' }
+    Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
 
-    Demonstrates how to run Pester tests against a set of test fixtures. In this case, Pester version 3.4.3 will recursively run all tests under `.\Test` and output an XML report with the results in the `.\.output` directory.
+    Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The path to the output directory. The Pester test result XML files will be saved to this directory.
-        $OutputRoot,
-
-        [Parameter(Mandatory=$true)]
-        [string[]]
-        # The paths to the tests to run. These are passed directly to the `Invoke-Pester` function's `Script` parameter.
-        $Path,
-
+         [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
+    
         [Parameter(Mandatory=$true)]
         [hashtable]
-        # Additional configuration used by the task. The following properties are supported:
-        #
-        # * Version: The version of Pester 3 to use. Can be a version between 3.0 but less than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
-        $Config
+        $TaskParameter        
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not $Config.ContainsKey('Version') )
+    if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
+        
+            BuildTasks:
+            - Pester3:
+                Path:
+                - My.Tests.ps1
+                - Tests')
+        }
+
+    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    
+    if( -not $TaskParameter.Version )
     {
         throw ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
     }
 
-    $version = $Config['Version'] | ConvertTo-WhsCISemanticVersion
+    $version = $TaskParameter.Version | ConvertTo-WhsCISemanticVersion
+    
     if( -not $version )
     {
         throw ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
@@ -60,7 +65,7 @@ function Invoke-WhsCIPester3Task
 
     $testIdx = 0
     $outputFileNameFormat = 'pester-{0:00}.xml'
-    while( (Test-Path -Path (Join-Path -Path $OutputRoot -ChildPath ($outputFileNameFormat -f $testIdx))) )
+    while( (Test-Path -Path (Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx))) )
     {
         $testIdx++
     }
@@ -68,7 +73,7 @@ function Invoke-WhsCIPester3Task
     # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
     $result = Start-Job -ScriptBlock {
         $script = $using:Path
-        $outputRoot = $using:OutputRoot
+        $outputRoot = $using:TaskContext.OutputDirectory
         $testIdx = $using:testIdx
         $pesterModulePath = $using:pesterModulePath
         $outputFileNameFormat = $using:outputFileNameFormat

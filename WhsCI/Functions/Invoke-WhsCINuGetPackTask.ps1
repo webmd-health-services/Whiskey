@@ -8,45 +8,43 @@ function Invoke-WhsCINuGetPackTask
     .DESCRIPTION
     The `Invoke-WhsCINuGetPackTask` runs `nuget.exe` against a list of .csproj files, which create a .nupkg file from that project's build output. The package can be uploaded to NuGet, ProGet, or other package management repository that supports NuGet.
 
-    You must supply the path to the .csproj files to pack with the `Path` parameter, the directory where the packaged .nupkg files go with the `OutputDirectory` parameter, the version being packaged with the `Version` parameter, and the build configuration (e.g. `Debug` or `Release`) via the `BuildConfiguration` parameter.
+    You must supply the path to the .csproj files to pack with the `$TaskParameter.Path` parameter, the directory where the packaged .nupkg files go with the `$Context.OutputDirectory` parameter, the version being packaged with the `$Context.Version` parameter, and the build configuration (e.g. `Debug` or `Release`) via the `$Context.BuildConfiguration` parameter.
 
-    To pack multiple projects, you can pipe them to `Invoke-WhsCINuGetPackTask`.
-
-    .EXAMPLE
-    Invoke-WhsCINuGetPackageTask -Path $csproj -OutputDirectory '.\output' -Version `1.0.1-rc1` -BuildConfiguration 'Debug'
-
-    Demonstrates how to package the assembly built by `$csproj` into a .nupkg file in the `output` directory. It will generate a package at version `1.0.1-rc1` using the project's `Debug` configuration.
+    You *must* include paths to build with the `Path` parameter.
 
     .EXAMPLE
-    $project1,$project2 | Invoke-WhsCINuGetPackTask -OutputDirectory '.\output' -Version `1.0.1-rc1` -BuildConfiguration 'Debug'
+    Invoke-WhsCINuGetPackageTask -Context $TaskContext -TaskParameter $TaskParameter
 
-    Demonstrates how to package multiple projects by piping them into `Invoke-WhsCINuGetPackTask`.
+    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.NugetVersion` using the project's `$Context.BuildConfiguration` configuration.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [string]
-        # The path to .csproj files to run the NuGEt pack command against. To pack multiple projects, pipe multiple paths to `Invoke-WhsCINuGetPackTask`.
-        $Path,
-
+    
         [Parameter(Mandatory=$true)]
-        [string]
-        # The directory where the NuGet packages (.nupkg files) will be saved.
-        $OutputDirectory,
-
-        [SemVersion.SemanticVersion]
-        # The version of the package. Because NuGet doesn't support true semantic versions, any build metadata will be removed. Pre-release metadata must conform to Semantic Version 1.0.
-        $Version,
-
+        [object]
+        $TaskContext,
+    
         [Parameter(Mandatory=$true)]
-        [string]
-        # The build configuration to use, e.g. `Debug` or `Release`.
-        $BuildConfiguration
+        [hashtable]
+        $TaskParameter
     )
 
     process
     {
         Set-StrictMode -Version 'Latest'
+
+        if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+        
+            BuildTasks:
+                - NuGetPack:
+                    Path:
+                    - MyProject.csproj
+                    - MyNuspec.csproj')
+        }
+
+        $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         if( -not $nugetPath )
@@ -55,16 +53,20 @@ function Invoke-WhsCINuGetPackTask
         }
         
         $versionArgs = @()
-        if( $Version )
+        if( $TaskContext.Version.NugetVersion )
         {
-            $versionArgs = @( '-Version', $Version )
+            $versionArgs = @( '-Version', $TaskContext.Version.NugetVersion )
         }
-        $preNupkgCount = Get-ChildItem -Path $OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-        & $nugetPath pack $versionArgs -OutputDirectory $OutputDirectory -Symbols -Properties ('Configuration={0}' -f $BuildConfiguration) $Path
-        $postNupkgCount = Get-ChildItem -Path $OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
+
+        New-Item -Path $TaskContext.OutputDirectory -ItemType 'Directory' -ErrorAction Ignore -Force | Out-String | Write-Debug
+
+        $preNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
+        & $nugetPath pack $versionArgs -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path |
+            Write-CommandOutput
+        $postNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
         if( $postNupkgCount -eq $preNupkgCount )
         {
-            throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $OutputDirectory)
+            throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $TaskContext.OutputDirectory)
         }
     }
 }
