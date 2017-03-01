@@ -30,7 +30,7 @@ function Assert-NodePackageCreated
         $WithPath = 'path1','path2'
     }
     $packageExclude = 'three','four'
-    $context = New-WhsCITestContext -WithMockToolData
+    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
     
     $taskParameter = @{
                             Name = $packageName;

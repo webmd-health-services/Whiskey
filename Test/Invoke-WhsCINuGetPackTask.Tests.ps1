@@ -54,7 +54,7 @@ function GivenABuiltLibrary
         $optionalArgs['BuildConfiguration'] = 'Debug'
     }
 
-    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs
+    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
     
     if( $WithVersion )
     {

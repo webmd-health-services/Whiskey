@@ -62,7 +62,7 @@ function New-WhsCIPesterTestContext
             New-Item -Path $outputRoot -ItemType 'Directory'
         }
         $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
-        $context = New-WhsCITestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot
+        $context = New-WhsCITestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
         return $context
     }
 }

@@ -112,10 +112,16 @@ function New-WhsCITestContext
 
         [string]
         $ForReleaseName,
-
+        
+        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         [Alias('ByBuildServer')]
         $ForBuildServer,
+
+        [Parameter(Mandatory=$true,ParameterSetName='ByDeveloper')]
+        [Switch]
+        [Alias('ByDeveloper')]
+        $ForDeveloper,
 
         [SemVersion.SemanticVersion]
         $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
@@ -155,7 +161,8 @@ function New-WhsCITestContext
     }
 
     $optionalArgs = @{ }
-    if( $ForBuildServer )
+    $testByBuildServerMock = { return $true }
+    if( $PSCmdlet.ParameterSetName -eq 'ByBuildServer' )
     {
         $optionalArgs = @{
                            'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
@@ -165,6 +172,12 @@ function New-WhsCITestContext
                            'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
                          }
     }
+    else
+    {
+        $testByBuildServerMock = { return $false }
+    }
+
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $testByBuildServerMock
 
     if( $DownloadRoot )
     {

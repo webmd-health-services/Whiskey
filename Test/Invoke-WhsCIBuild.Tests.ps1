@@ -289,10 +289,15 @@ function Invoke-Build
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
     $optionalParams = @{ }
-    if( (Test-WhsCIRunByBuildServer) )
+    if( $ByJenkins )
     {
         $optionalParams['ForBuildServer'] = $true
     }
+    if( $ByDeveloper )
+    {
+        $optionalParams['ForDeveloper'] = $true
+    }
+
 
     if( $DownloadRoot )
     {
@@ -672,7 +677,7 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
 
         Context 'By Developer' {
             Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
-            $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName }
+            $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
             $context.ByDeveloper = $true
             $context.ByBuildServer = $false
             Invoke-WhsCIBuild -Context $context

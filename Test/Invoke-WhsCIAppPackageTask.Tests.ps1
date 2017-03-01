@@ -121,16 +121,15 @@ function Assert-NewWhsCIAppPackage
         $taskParameter['ExcludeArc'] = $true
     }
 
-    $mock = { return $false }
+    $byWhoArg = @{ 'ByDeveloper' = $true }
     if( $ShouldUploadPackage )
     {
-        $mock = { return $true }
+        $byWhoArg = @{ 'ByBuildServer' = $true }
     }
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' -ForBuildServer:$ShouldUploadPackage
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = $Version
 
     $packagesAtStart = @()
@@ -903,7 +902,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
                       }
         $parameter.Remove($parameterName)
 
-        $context = New-WhsCITestContext
+        $context = New-WhsCITestContext -ForDeveloper
         $Global:Error.Clear()
         $threwException = $false
         try
@@ -924,7 +923,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
-    $context = New-WhsCITestContext
+    $context = New-WhsCITestContext -ForDeveloper
 
     $Global:Error.Clear()
 
@@ -943,7 +942,7 @@ function New-TaskParameter
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
-    $context = New-WhsCITestContext
+    $context = New-WhsCITestContext -ForDeveloper
 
     $Global:Error.Clear()
 
@@ -975,7 +974,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $context = New-WhsCITestContext
+    $context = New-WhsCITestContext -ForDeveloper
 
     $Global:Error.Clear()
 

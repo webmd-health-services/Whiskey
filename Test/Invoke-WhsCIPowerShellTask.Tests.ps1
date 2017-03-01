@@ -64,7 +64,7 @@ New-Item -Path 'run' -ItemType 'File'
                                     $script
                                 )
                       }
-        $context = New-WhsCITestContext
+        $context = New-WhsCITestContext -ForDeveloper
     }
     elseif( $WhenGivenADirectoryThatDoesNotExist )
     {
@@ -74,7 +74,7 @@ New-Item -Path 'run' -ItemType 'File'
                                     $script
                                 )
                         }
-        $context = New-WhsCITestContext 
+        $context = New-WhsCITestContext -ForDeveloper
     }
     elseif( $WhenGivenARelativePath )
     {
@@ -91,7 +91,7 @@ New-Item -Path 'run' -ItemType 'File'
                                     $script
                                 )
                         }
-        $context = New-WhsCITestContext 
+        $context = New-WhsCITestContext -ForDeveloper
 
 
     }
@@ -103,7 +103,7 @@ New-Item -Path 'run' -ItemType 'File'
                                     $script
                                 )
                         }
-        $context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory 
+        $context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory  -ForDeveloper
     }
     
     $failed = $false

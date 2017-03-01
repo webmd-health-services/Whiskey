@@ -251,13 +251,17 @@ module.exports = function(grunt) {
 }
 '@ | Set-Content -Path $gruntfilePath
 
-    $optionalArgs = @{ }
-    if( $ByBuildServer -or -not $ByDeveloper )
+    $byWhoArg = @{  }
+    if( $ByBuildServer )
     {
-        $optionalArgs['ForBuildServer'] = $true
+        $byWhoArg['ForBuildServer'] = $true
+    }
+    if( $ByDeveloper )
+    {
+        $byWhoArg['ForDeveloper'] = $true
     }
 
-    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @optionalArgs -UseActualProGet
+    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg -UseActualProGet
 }
 
 function Invoke-FailingBuild
@@ -333,43 +337,43 @@ Describe 'Invoke-WhsCINodeTask.when run by build server' {
 }
 
 Describe 'Invoke-WhsCINodeTask.when a build task fails' {
-    $context = Initialize-NodeProject
+    $context = Initialize-NodeProject -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when a install fails' {
-    $context = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"'
+    $context = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"' -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
-    $context = Initialize-NodeProject -ByBuildServer
+    $context = Initialize-NodeProject -ByBuildServer 
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
-    $context = Initialize-NodeProject -WithNoNodeEngine
+    $context = Initialize-NodeProject -WithNoNodeEngine -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
-    $context = Initialize-NodeProject -UsingNodeVersion "fubarsnafu"
+    $context = Initialize-NodeProject -UsingNodeVersion "fubarsnafu" -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
-    $context = Initialize-NodeProject -UsingNodeVersion "438.4393.329"
+    $context = Initialize-NodeProject -UsingNodeVersion "438.4393.329" -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
-    $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' )
+    $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' ) -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when packageJson has no name' {
-    $context = Initialize-NodeProject -WithNoName
+    $context = Initialize-NodeProject -WithNoName -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 

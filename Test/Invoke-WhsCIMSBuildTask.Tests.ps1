@@ -55,6 +55,7 @@ function Invoke-MSBuild
         {
             $version = [SemVersion.SemanticVersion]"1.2.3-rc.1+build"
             $runByBuildServerMock = { return $false }
+            $optionalArgs['ByDeveloper'] = $true
         }
         else
         {
@@ -67,7 +68,7 @@ function Invoke-MSBuild
 
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $runByBuildServerMock
         MOck -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
-        $context = New-WhsCITestContext (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') @optionalArgs
+        $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') @optionalArgs
         $errors = @()
         try
         {
