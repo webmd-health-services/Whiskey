@@ -31,32 +31,7 @@ function Invoke-WhsCIMSBuildTask
     )
   
     Set-StrictMode -version 'latest'  
-
-    function Write-CommandOutput
-    {
-        param(
-            [Parameter(ValueFromPipeline=$true)]
-            [string]
-            $InputObject
-        )
-
-        process
-        {
-            if( $InputObject -match '^WARNING\b' )
-            {
-                $InputObject | Write-Warning 
-            }
-            elseif( $InputObject -match '^ERROR\b' )
-            {
-                $InputObject | Write-Error
-            }
-            else
-            {
-                $InputObject | Write-Host
-            }
-        }
-    }
-
+    
     #setup
     $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
     
@@ -98,7 +73,7 @@ function Invoke-WhsCIMSBuildTask
 [assembly: System.Reflection.AssemblyVersion("{0}")]
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
 [assembly: System.Reflection.AssemblyInformationalVersion("{1}")]
-"@ -f $TaskContext.Version,$TaskContext.SemanticVersion | Add-Content -Path $assemblyInfoPath
+"@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
                                     }
         }
         Invoke-MSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'

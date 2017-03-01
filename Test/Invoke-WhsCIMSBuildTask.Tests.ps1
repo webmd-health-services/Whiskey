@@ -8,140 +8,157 @@ $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assem
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
 
-Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
+function Invoke-MSBuild
+{
+    param(
+        [Switch]
+        $ThatFails,
 
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+        [string[]]
+        $On,
 
-    $failingNUnit2TestAssemblyPath,$passingNUnit2TestAssemblyPath | Remove-Item -Force -ErrorAction Ignore
+        [Switch]
+        $InReleaseMode,
 
-    $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
-    $taskParameter = @{
-                        Path = @(
-                                    'NUnit2FailingTest\NUnit2FailingTest.sln',
-                                    'NUnit2PassingTest\NUnit2PassingTest.sln'
-                                )
-                      }
-    $context.Version = '1.2.3'
-    $context.SemanticVersion = "1.2.3-rc.1+build"
+        [Switch]
+        $AsDeveloper,
 
-    # Get rid of any existing packages directories.
-    Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
-    
-    $errors = @()
-    Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
+        [Switch]
+        $ForRealProjects,
 
-    It 'should write no errors' {
-        $errors | Should Not Match 'MSBuild'
-    }
+        [String[]]
+        $ForAssemblies,
 
-    It 'should restore NuGet packages' {
-        Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
-    }
+        [String]
+        $WithError
+    )
 
-    It 'should build assemblies' {
-        $failingNUnit2TestAssemblyPath | Should Exist
-        $passingNUnit2TestAssemblyPath | Should Exist
-    }
-
-    foreach( $assembly in @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath ) )
+    Process
     {
-        It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
-            $fileInfo = Get-Item -Path $assembly
-            $fileVersionInfo = $fileInfo.VersionInfo
-            $fileVersionInfo.FileVersion | Should Be $context.Version.ToString()
-            $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.SemanticVersion)
+        $optionalArgs = @{ }
+        $threwException = $false
+        $Global:Error.Clear()
+        
+        $runByBuildServerMock = { return $true }
+        $taskParameter = @{ }
+        if( $On )
+        {
+            $taskParameter['Path'] = $On
         }
+
+        if ( $InReleaseMode )
+        {
+            $optionalArgs['InReleaseMode'] = $true
+        }
+
+        if ( $AsDeveloper )
+        {
+            $version = [SemVersion.SemanticVersion]"1.2.3-rc.1+build"
+            $runByBuildServerMock = { return $false }
+        }
+        else
+        {
+            $version = [SemVersion.SemanticVersion]"1.1.1-rc.1+build"
+            $optionalArgs['ByBuildServer'] = $true
+        }
+
+        # Get rid of any existing packages directories.
+        Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
+
+        Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $runByBuildServerMock
+        MOck -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+        $context = New-WhsCITestContext (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') @optionalArgs
+        $errors = @()
+        try
+        {
+            Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
+        }
+        catch
+        {
+            $threwException = $true
+        }
+        finally
+        {
+            # Put the assemly info files back the way they were.
+            git checkout (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+        }
+        
+        if( $WithError )
+        {
+            It 'should should write an error'{
+                $Global:Error | Should Match ( $WithError )
+            }
+        }      
+        if( $ThatFails )
+        {
+            It 'should throw an exception'{
+                $threwException | Should Be $true
+            }
+        }
+        #Valid Path
+        else
+        {
+            It 'should not throw an exception'{
+                $threwException | Should Be $false
+            }
+
+            It 'should write no errors' {
+                $errors | Should Not Match 'MSBuild'
+            }
+
+            It 'should restore NuGet packages' {
+                Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
+            }
+
+            foreach( $assembly in $ForAssemblies )
+            {
+                It ('should build the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
+                    $assembly | Should Exist
+                }
+            }
+
+            foreach( $assembly in $ForAssemblies )
+            {
+                It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
+                    $fileInfo = Get-Item -Path $assembly
+                    $fileVersionInfo = $fileInfo.VersionInfo
+                    $fileVersionInfo.FileVersion | Should Be $context.Version.Version.ToString()
+                    $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.Version)
+                }
+            }
+        }  
     }
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
+    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
+    Invoke-MSBuild -On @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                    ) -InReleaseMode -ForAssemblies $assemblies
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when compilation fails' {
-    $context = New-WhsCITestContext 
-    $taskParameter = @{
-                        Path = @(
+    Invoke-MSBuild -ThatFails -On @(
                                     'ThisWillFail.sln',
                                     'ThisWillAlsoFail.sln'
                                 )
-                      }
-    $threwException = $false
-    try
-    {
-        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
-    }
-    catch
-    {
-        $threwException = $true
-    }
-    It 'should throw an exception'{
-        $threwException | Should Be $true
-    }
 }
 
 Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is not included' {
-    $context = New-WhsCITestContext
-    $taskParameter = @{ }
-    $threwException = $false
-    $Global:Error.Clear()
-
-    try
-    {
-        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
-    }
-    catch
-    {
-        $threwException = $true
-    }
-    It 'should throw an exception'{
-        $threwException | Should Be $true
-        $Global:Error | Should Match ([regex]::Escape('Element ''Path'' is mandatory'))
-    }
+    $errorMatch = [regex]::Escape('Element ''Path'' is mandatory')
+    Invoke-MSBuild -ThatFails -WithError $errorMatch
 }
 
 Describe 'Invoke-WhsCIMSBuildTask. when Path Parameter is invalid' {
-    $context = New-WhsCITestContext
-    $taskParameter = @{
-                        Path = @(
-                                    'I\do\not\exist'
-                                )
-                      }
-    $threwException = $false
-    $Global:Error.Clear()
-
-    try
-    {
-        Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter 
-    }
-    catch
-    {
-        $threwException = $true
-    }
-    It 'should throw an exception'{
-        $threwException | Should Be $true
-        $Global:Error | Should Match ([regex]::Escape('does not exist.'))
-    }
-
+    $errorMatch = [regex]::Escape('does not exist.')
+    Invoke-MSBuild -ThatFails -On 'I\do\not\exist' -WithError $errorMatch
 }
 
 Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
-    $context = New-WhsCITestContext (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
-    $taskParameter = @{
-                        Path = @(
-                                    'NUnit2FailingTest\NUnit2FailingTest.sln',
-                                    'NUnit2PassingTest\NUnit2PassingTest.sln'
-                                )
-                      }
-    $context.Version = '1.1.1'
-    $context.SemanticVersion = "1.1.1-rc.1+build"
-
-    Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
-
-    foreach( $assembly in @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath ) )
-    {
-        It ('should not version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
-            $fileInfo = Get-Item -Path $assembly
-            $fileVersionInfo = $fileInfo.VersionInfo
-            $fileVersionInfo.FileVersion | Should Not Be $context.Version.ToString()
-            $fileVersionInfo.ProductVersion | Should Not Be ('{0}' -f $context.SemanticVersion)
-        }
-    }
+    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
+    Invoke-MSBuild -On @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                    ) -AsDeveloper -ForAssemblies $assemblies
 }

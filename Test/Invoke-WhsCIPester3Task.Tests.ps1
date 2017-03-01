@@ -51,6 +51,22 @@ function Assert-PesterRan
     }
 }
 
+function New-WhsCIPesterTestContext 
+{
+    param()
+    process
+    {
+        $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
+        if( -not (Test-Path -Path $outputRoot -PathType Container) )
+        {
+            New-Item -Path $outputRoot -ItemType 'Directory'
+        }
+        $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
+        $context = New-WhsCITestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot
+        return $context
+    }
+}
+
 function Invoke-PesterTest
 {
     [CmdletBinding()]
@@ -69,22 +85,31 @@ function Invoke-PesterTest
     )
 
     Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -Verifiable -MockWith { Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Pester\Pester.psd1' -Resolve }.GetNewClosure()
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
-    if( -not (Test-Path -Path $outputRoot -PathType Container) )
-    {
-        New-Item -Path $outputRoot -ItemType 'Directory'
-    }
-
+    
     $defaultVersion = '3.4.3'
     $failed = $false
+    $context = New-WhsCIPesterTestContext
+    if( -not $Version )
+    {
+        $taskParameter = @{
+                        Version = $defaultVersion;
+                        Path = @(
+                                    $Path
+                                )
+                        }
+    }
+    else
+    {
+        $taskParameter = @{
+                        Version = $Version;
+                        Path = @(
+                                    $Path
+                                )
+                        }
+    }
     try
     {
-        $config = @{ }
-        if( -not $Version )
-        {
-            $Version = $defaultVersion
-        }
-        Invoke-WhsCIPester3Task -OutputRoot $outputRoot -Path $Path -Config @{ Version = $Version }
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -92,7 +117,7 @@ function Invoke-PesterTest
         Write-Error -ErrorRecord $_
     }
 
-    Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $outputRoot
+    Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
     if( $shouldFail )
@@ -122,8 +147,9 @@ function Invoke-PesterTest
     }
 }
 
-$pesterPassingPath = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\PassingTests' -Resolve
-$pesterFailingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\FailingTests' -Resolve
+$pesterPassingPath = 'PassingTests' 
+$pesterFailingConfig = 'FailingTests' 
+
 Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4
 }
@@ -133,12 +159,12 @@ Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
 }
 
 Describe 'Invoke-WhsCIPester3Task.when running multiple test scripts' {
-    Invoke-PesterTest -Path $pesterFailingConfig,$pesterPassingPath -FailureCount 4 -PassingCount 4
+    Invoke-PesterTest -Path $pesterFailingConfig,$pesterPassingPath -FailureCount 4 -PassingCount 4 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
-    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 4
-    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 8
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 4  
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 8  
 
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $TestDrive.FullName
     It 'should create multiple report files' {
@@ -154,10 +180,16 @@ Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
 
 Describe 'Invoke-WhsCIPester3Task.when missing Version configuration' {
     $Global:Error.Clear()
-
+    $taskParameter = @{
+                        Version = '';
+                        path = @(
+                                    $pesterPassingPath
+                        )
+                    }
+    $context = New-WhsCIPesterTestContext
     try
     {
-        Invoke-WhsCIPester3Task -OutputRoot $TestDrive.Name -Path $pesterPassingPath -Config @{ } -ErrorAction SilentlyContinue
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -168,16 +200,22 @@ Describe 'Invoke-WhsCIPester3Task.when missing Version configuration' {
     }
 
     It 'should not run any tests' {
-        Get-ChildItem -Path $TestDrive.FullName | Should BeNullOrEmpty
+        Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
     }
 }
 
 Describe 'Invoke-WhsCIPester3Task.when Version property isn''t a version' {
     $Global:Error.Clear()
-
+    $taskParameter = @{
+                        Version = 'fubar';
+                        path = @(
+                                    $pesterPassingPath
+                        )
+                    }
+    $context = New-WhsCIPesterTestContext 
     try
     {
-        Invoke-WhsCIPester3Task -OutputRoot $TestDrive.Name -Path $pesterPassingPath -Config @{ 'Version' = 'fubar' } 
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
     }
     catch
     {
@@ -188,16 +226,23 @@ Describe 'Invoke-WhsCIPester3Task.when Version property isn''t a version' {
     }
 
     It 'should not run any tests' {
-        Get-ChildItem -Path $TestDrive.FullName | Should BeNullOrEmpty
+        Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
+        
     }
 }
 
 Describe 'Invoke-WhsCIPester3Task.when version of tool doesn''t exist' {
     $Global:Error.Clear()
-
+    $taskParameter = @{
+                        Version = '3.0.0';
+                        path = @(
+                                    $pesterPassingPath
+                        )
+                    }
+    $context = New-WhsCIPesterTestContext 
     try
     {
-        Invoke-WhsCIPester3Task -OutputRoot $TestDrive.Name -Path $pesterPassingPath -Config @{ 'Version' = '3.0.0' } -ErrorAction SilentlyContinue
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
     }
     catch
     {
@@ -208,6 +253,62 @@ Describe 'Invoke-WhsCIPester3Task.when version of tool doesn''t exist' {
     }
 
     It 'should not run any tests' {
-        Get-ChildItem -Path $TestDrive.FullName | Should BeNullOrEmpty
+        Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
+    }
+}
+
+Describe 'Invoke-WhsCIPester3Task.when Version property is valid, but passed as a dateTime object' {
+    $Global:Error.Clear()
+    $taskParameter = @{
+                        #this "date" is a valid version 3.4.3 and should be converted by ConvertTo-WhsCISemanticVersion
+                        Version = [DateTime]'3/4/2003 12:00:00 AM';
+                        path = @(
+                                    $pesterPassingPath
+                        )
+                    }
+    $context = New-WhsCIPesterTestContext 
+    $failed = $false
+    $FailureCount = 0
+    $PassingCount = 4
+    try
+    {
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
+    }
+    catch
+    {
+        $failed = $true
+        Write-Error -ErrorRecord $_
+    }
+
+    It 'should not fail' {
+        $failed | Should be $false
+        $Global:Error | Should BeNullOrEmpty
+    }
+    Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
+}
+
+Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
+    $Global:Error.Clear()
+    $path = 'C:\FubarSnafu'
+    $taskParameter = @{
+                        path = @(                                    
+                                    $path
+                        )
+                    }
+    $context = New-WhsCIPesterTestContext 
+    try
+    {
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
+    }
+    catch
+    {
+    }
+
+    It 'should write an error that the path is absolute' {
+        $Global:Error[0] | Should Match 'absolute'
+    }
+
+    It 'should not run any tests' {
+        Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
     }
 }

@@ -143,10 +143,16 @@ function Convert-PSObjectToGenericObject {
     )
     # explicitly cast object to its type. Without this, it gets wrapped inside a powershell object
     # which causes YamlDotNet to fail
+
+    if( $Data -is [System.Management.Automation.PSCustomObject] )
+    {
+        return Convert-PSCustomObjectToDictionary -Data $Data
+    }
+
     $data = $data -as $data.GetType().FullName
     switch($data.GetType()) {
         ($_.FullName -eq "System.Management.Automation.PSCustomObject") {
-            return Convert-PSCustomObjectToDictionary
+            return Convert-PSCustomObjectToDictionary -Data $Data
         }
         default {
             if (([System.Collections.IDictionary].IsAssignableFrom($_))){

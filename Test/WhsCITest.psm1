@@ -99,7 +99,41 @@ function New-WhsCITestContext
         $ForBuildRoot,
 
         [string]
-        $ForTaskName
+        $ForTaskName,
+
+        [string]
+        $ForOutputDirectory,
+
+        [switch]
+        $InReleaseMode,
+
+        [string]
+        $ForApplicationName,
+
+        [string]
+        $ForReleaseName,
+
+        [Switch]
+        [Alias('ByBuildServer')]
+        $ForBuildServer,
+
+        [SemVersion.SemanticVersion]
+        $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
+
+        [Switch]
+        $UseActualProGet,
+
+        [string]
+        $BuildConfiguration = 'Release',
+
+        [string]
+        $ConfigurationPath,
+
+        [hashtable]
+        $TaskParameter = @{},
+
+        [string]
+        $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -114,27 +148,65 @@ function New-WhsCITestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    if( -not $ForTaskName )
+    $progetUri = 'https://proget.example.com'
+    if( $UseActualProGet )
     {
-        $ForTaskName = 'TaskName'
+        $progetUri = Get-ProGetUri -Environment 'Dev'
     }
 
-    $context = [pscustomobject]@{
-                                    ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
-                                    BuildRoot = $ForBuildRoot;
-                                    OutputDirectory = (Join-Path -Path $ForBuildRoot -ChildPath '.output');
-                                    SemanticVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build';
-                                    Version = [version]'1.2.3';
-                                    ProGetAppFeedUri = 'http://proget.example.com/';
-                                    ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
-                                    BuildMasterSession = 'buildmaster session';
-                                    TaskIndex = 0;
-                                    TaskName = $ForTaskName;
-                                    Configuration = @{ };
-                                    BuildConfiguration = 'Release';
-                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm'
-                                 }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    $optionalArgs = @{ }
+    if( $ForBuildServer )
+    {
+        $optionalArgs = @{
+                           'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
+                           'BBServerUri' = 'https://bitbucket.example.com/'
+                           'BuildMasterUri' = 'https://buildmaster.example.com/'
+                           'BuildMasterApiKey' = 'racecaracecar';
+                           'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
+                         }
+    }
+
+    if( $DownloadRoot )
+    {
+        $optionalArgs['DownloadRoot'] = $DownloadRoot
+    }
+
+    if( -not $ConfigurationPath )
+    {
+        $configData = @{
+                            'Version' = $ForVersion.ToString()
+                       }
+        if( $ForApplicationName )
+        {
+            $configData['ApplicationName'] = $ForApplicationName
+        }
+
+        if( $ForReleaseName )
+        {
+            $configData['ReleaseName'] = $ForReleaseName
+        }
+
+        if( $ForTaskName )
+        {
+            $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+        }
+
+        $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
+        $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+    }
+
+    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
+    if( $InReleaseMode )
+    {
+        $context.BuildConfiguration = 'Release'
+    }
+
+    if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
+    {
+        $context.OutputDirectory = $ForOutputDirectory
+        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    }
+
     return $context
 }
 
