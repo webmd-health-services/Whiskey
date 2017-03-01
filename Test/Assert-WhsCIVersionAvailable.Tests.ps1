@@ -67,6 +67,8 @@ function Initialize-Test
         $GivenCurrentBranchIs = 'develop'
     )
 
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+
     $currentBranch = [pscustomobject]@{
                         CanonicalName = ('refs/heads/{0}' -f $GivenCurrentBranchIs);
                         Name = $GivenCurrentBranchIs;

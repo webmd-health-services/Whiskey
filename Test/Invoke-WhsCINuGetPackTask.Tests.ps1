@@ -44,18 +44,21 @@ function GivenABuiltLibrary
     $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest' 
     # Make sure the output directory gets created by the task
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $optionalArgs = @{ }
     if( $InReleaseMode )
     {
-        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory -InReleaseMode    
+        $optionalArgs['BuildConfiguration'] = 'Release'
     }
     else
     {
-        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory
+        $optionalArgs['BuildConfiguration'] = 'Debug'
     }
+
+    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
     
     if( $WithVersion )
     {
-        $Context.NugetVersion = $WithVersion
+        $Context.Version.NuGetVersion = $WithVersion
     }
 
     $Global:Error.Clear()
@@ -105,7 +108,7 @@ function WhenRunningNuGetPackTask
         {
             if( $WithVersion )
             {
-                $Context.NugetVersion = $WithVersion
+                $Context.Version.NugetVersion = $WithVersion
             }
             if( $ForProjectThatDoesNotExist )
             {
@@ -117,6 +120,7 @@ function WhenRunningNuGetPackTask
         catch
         {
             $threwException = $true
+            Write-Error $_
         }
 
         if( $ThatFailsWithErrorMessage )
@@ -155,18 +159,18 @@ function ThenPackageShouldBeCreated
     {
         if( $WithVersion )
         {
-            $Context.NugetVersion = $WithVersion
+            $Context.Version.NuGetVersion = $WithVersion
         }
         It 'should not write any errors' {
             $Global:Error | Should BeNullOrEmpty
         }
 
         It ('should create NuGet package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.NuGetVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
         }
 
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.NuGetVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
         }
     }
 }

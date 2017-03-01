@@ -90,8 +90,11 @@ function New-MockBuildServerEnvironment
     )
 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:BUILD_ID' }
+    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'origin/feature/fubar' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
+    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
     Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 }
 
