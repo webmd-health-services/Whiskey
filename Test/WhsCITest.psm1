@@ -114,7 +114,19 @@ function New-WhsCITestContext
         $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
         [Switch]
-        $UseActualProGet
+        $UseActualProGet,
+
+        [string]
+        $BuildConfiguration = 'Release',
+
+        [string]
+        $ConfigurationPath,
+
+        [hashtable]
+        $TaskParameter = @{},
+
+        [string]
+        $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -146,29 +158,37 @@ function New-WhsCITestContext
                            'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
                          }
     }
-    
-    $configData = @{
-                        'Version' = $ForVersion.ToString()
-                   }
-    if( $ForApplicationName )
+
+    if( $DownloadRoot )
     {
-        $configData['ApplicationName'] = $ForApplicationName
+        $optionalArgs['DownloadRoot'] = $DownloadRoot
     }
 
-    if( $ForReleaseName )
+    if( -not $ConfigurationPath )
     {
-        $configData['ReleaseName'] = $ForReleaseName
+        $configData = @{
+                            'Version' = $ForVersion.ToString()
+                       }
+        if( $ForApplicationName )
+        {
+            $configData['ApplicationName'] = $ForApplicationName
+        }
+
+        if( $ForReleaseName )
+        {
+            $configData['ReleaseName'] = $ForReleaseName
+        }
+
+        if( $ForTaskName )
+        {
+            $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+        }
+
+        $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
+        $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
     }
 
-    $whsBuildYmlPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
-    $configData | ConvertTo-Yaml | Set-Content -Path $whsBuildYmlPath
-
-    $context = New-WhsCIContext -ConfigurationPath $whsBuildYmlPath -BuildConfiguration 'Release' -ProGetUri $progetUri @optionalArgs
-
-    if( $ForTaskName )
-    {
-        $context.TaskName = $ForTaskName
-    }
+    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
 
     return $context
 }
