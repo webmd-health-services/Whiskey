@@ -64,11 +64,11 @@ function Invoke-NUnitTask
     {
         if ( $InReleaseMode )
         {
-            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  -InReleaseMode
+            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  -InReleaseMode -ForDeveloper
         }
         else
         {
-            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')
+            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper
         }
         $threwException = $false
         $Global:Error.Clear()

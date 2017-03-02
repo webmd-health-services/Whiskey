@@ -150,26 +150,9 @@ function Invoke-WhsCIBuild
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]
-        # The path to the `whsbuild.yml` file to use.
-        $ConfigurationPath,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The build configuration to use if you're compiling code, e.g. `Debug`, `Release`.
-        $BuildConfiguration,
-
-        [pscredential]
-        # The connection to use to contact Bitbucket Server. Required if running under a build server.
-        $BBServerCredential,
-
-        [string]
-        # The URI to your Bitbucket Server installation.
-        $BBServerUri,
-
-        [string]
-        # The place where downloaded tools should be saved. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
-        $DownloadRoot
+        [object]
+        # The context for the build. Use `New-WhsCIContext` to create context objects.
+        $Context
     )
 
     Set-StrictMode -Version 'Latest'
@@ -200,7 +183,7 @@ function Invoke-WhsCIBuild
                 continue
             }
 
-            $taskPath = Join-Path -Path $root -ChildPath $taskPath
+            $taskPath = Join-Path -Path $Context.BuildRoot -ChildPath $taskPath
             if( -not (Test-Path -Path $taskPath) )
             {
                 Write-Error -Message ('{0}[{1}] ''{2}'' does not exist.' -f $errPrefix,$pathIdx,$taskPath)
@@ -216,106 +199,25 @@ function Invoke-WhsCIBuild
         }
     }
 
-    function Write-CommandOutput
+    if( $Context.ByBuildServer )
     {
-        param(
-            [Parameter(ValueFromPipeline=$true)]
-            [string]
-            $InputObject
-        )
-
-        process
-        {
-            if( $InputObject -match '^WARNING\b' )
-            {
-                $InputObject | Write-Warning 
-            }
-            elseif( $InputObject -match '^ERROR\b' )
-            {
-                $InputObject | Write-Error
-            }
-            else
-            {
-                $InputObject | Write-Host
-            }
-        }
-    }
-
-    if( -not ($DownloadRoot) )
-    {
-        $downloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
-    }
-
-    $ConfigurationPath = Resolve-Path -LiteralPath $ConfigurationPath
-    if( -not $ConfigurationPath )
-    {
-        throw ('Configuration file path ''{0}'' does not exist.' -f $PSBoundParameters['ConfigurationPath'])
-    }
-
-    # Do the build
-    $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
-    $root = Split-Path -Path $ConfigurationPath -Parent
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $root -Clear
-
-    $runningUnderBuildServer = Test-WhsCIRunByBuildServer
-    
-    if( $runningUnderBuildServer )
-    {
-        $conn = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
-        Set-BBServerCommitBuildStatus -Connection $conn -Status InProgress
+        Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status InProgress
     }
 
     $succeeded = $false
-    Push-Location -Path $root
+    Push-Location -Path $Context.BuildRoot
     try
     {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
-        [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion | Assert-WhsCIVersionAvailable
-        if( -not $semVersion )
-        {
-            throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config.Version)
-            return $false
-        }
+        Write-Verbose -Message ('Building version {0}' -f $Context.Version)
+        Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
+        Write-Verbose -Message ('                 {0}' -f $Context.Version.NuGetVersion)
 
-        [version]$version = '{0}.{1}.{2}' -f $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-        # NuGet doesn't support build metadata. Make sure it isn't there.
-        $nugetVersion = $semVersion.ToString() -replace '\+.+$',''
-        Write-Verbose -Message ('Building version {0}/{1}.' -f $semVersion,$nugetVersion)
+        $config = $Context.Configuration
 
         if( $config.ContainsKey('BuildTasks') )
         {
-            $context = @{
-                            ConfigurationPath = $ConfigurationPath;
-                            BuildRoot = $root;
-                            OutputDirectory = $outputRoot;
-                            Version = $semVersion;
-                            #ask Aaron about this formatting.
-                            #SemanticVersion = $semVersion;
-                            #Version = [version]'{0}.{1}.{2}' -f $semVersion.Major, $semVersion.Minor, $semVersion.Build; 
-                            NuGetVersion = $nugetVersion;
-                            ProGetAppFeedUri = $null;
-                            ProGetCredential = $null;
-                            BuildMasterSession = $null;
-                            BitbucketServerCredential = $BBServerCredential;
-                            BitbucketServerUri = $BBServerUri;
-                            TaskName = '';
-                            TaskIndex = 0;
-                            Configuration = $config;
-                            NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm/';
-                            BuildConfiguration = $BuildConfiguration;
-                            # TODO: Rename Version property to SemanticVersion and add Version property for major.minor.build version number
-                        }
-
-            if( $runningUnderBuildServer )
-            {
-                $context.ProGetAppFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
-                $context.ProGetCredential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
-                $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
-                $bmApiKey = Get-WhsSecret -Environment 'Dev' -Name 'BuildMasterReleaseAndPackageApiKey'
-                $context.BuildMasterSession = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
-            }
-
             # Tasks that should be called with the WhatIf switch when run by developers
             # This makes builds go a little faster.
             $developerWhatIfTasks = @{
@@ -329,14 +231,14 @@ function Invoke-WhsCIBuild
                 $taskIdx++
                 $taskName = $task.Keys | Select-Object -First 1
                 $task = $task[$taskName]
-                $context.TaskName = $taskName
-                $context.TaskIndex = $taskIdx
+                $Context.TaskName = $taskName
+                $Context.TaskIndex = $taskIdx
 
-                $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $ConfigurationPath,$taskIdx,$taskName
+                $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $Context.ConfigurationPath,$taskIdx,$taskName
 
                 if( $task -isnot [hashtable] )
                 {
-                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $ConfigurationPath,$taskIdx,$taskName)
+                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $Context.ConfigurationPath,$taskIdx,$taskName)
                 }
 
                 $errors = @()
@@ -346,7 +248,7 @@ function Invoke-WhsCIBuild
                 if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                 {
                     $whatIfParam = @{ }
-                    if( -not $runningUnderBuildServer -and $developerWhatIfTasks.ContainsKey($taskName) )
+                    if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
                     {
                         $whatIfParam['WhatIf'] = $true
                     }
@@ -355,7 +257,7 @@ function Invoke-WhsCIBuild
                 else
                 {
                     $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
-                    throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
+                    throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $Context.ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                 }
                     
                 
@@ -368,7 +270,7 @@ function Invoke-WhsCIBuild
     {
         Pop-Location
 
-        if( $runningUnderBuildServer )
+        if( $Context.ByBuildServer )
         {
             $status = 'Failed'
             if( $succeeded )
@@ -376,7 +278,7 @@ function Invoke-WhsCIBuild
                 $status = 'Successful'
             }
 
-            Set-BBServerCommitBuildStatus -Connection $conn -Status $status
+            Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status $status
         }
     }
 }

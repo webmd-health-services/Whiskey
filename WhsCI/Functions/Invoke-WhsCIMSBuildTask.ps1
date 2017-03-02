@@ -73,7 +73,7 @@ function Invoke-WhsCIMSBuildTask
 [assembly: System.Reflection.AssemblyVersion("{0}")]
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
 [assembly: System.Reflection.AssemblyInformationalVersion("{1}")]
-"@ -f $TaskContext.Version,$TaskContext.SemanticVersion | Add-Content -Path $assemblyInfoPath
+"@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
                                     }
         }
         Invoke-MSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'

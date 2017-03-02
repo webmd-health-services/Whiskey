@@ -105,7 +105,41 @@ function New-WhsCITestContext
         $ForOutputDirectory,
 
         [switch]
-        $InReleaseMode
+        $InReleaseMode,
+
+        [string]
+        $ForApplicationName,
+
+        [string]
+        $ForReleaseName,
+        
+        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
+        [Switch]
+        [Alias('ByBuildServer')]
+        $ForBuildServer,
+
+        [Parameter(Mandatory=$true,ParameterSetName='ByDeveloper')]
+        [Switch]
+        [Alias('ByDeveloper')]
+        $ForDeveloper,
+
+        [SemVersion.SemanticVersion]
+        $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
+
+        [Switch]
+        $UseActualProGet,
+
+        [string]
+        $BuildConfiguration = 'Release',
+
+        [string]
+        $ConfigurationPath,
+
+        [hashtable]
+        $TaskParameter = @{},
+
+        [string]
+        $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -120,38 +154,72 @@ function New-WhsCITestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    if( -not $ForTaskName )
+    $progetUri = 'https://proget.example.com'
+    if( $UseActualProGet )
     {
-        $ForTaskName = 'TaskName'
+        $progetUri = Get-ProGetUri -Environment 'Dev'
     }
 
-    if( -not $ForOutputDirectory )
+    $optionalArgs = @{ }
+    $testByBuildServerMock = { return $true }
+    if( $PSCmdlet.ParameterSetName -eq 'ByBuildServer' )
     {
-        $ForOutputDirectory = Join-Path -Path $ForBuildRoot -ChildPath '.output'
+        $optionalArgs = @{
+                           'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
+                           'BBServerUri' = 'https://bitbucket.example.com/'
+                           'BuildMasterUri' = 'https://buildmaster.example.com/'
+                           'BuildMasterApiKey' = 'racecaracecar';
+                           'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
+                         }
+    }
+    else
+    {
+        $testByBuildServerMock = { return $false }
     }
 
-    $context = [pscustomobject]@{
-                                    ConfigurationPath = (Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml')
-                                    BuildRoot = $ForBuildRoot;
-                                    OutputDirectory = $ForOutputDirectory;
-                                    SemanticVersion = [semversion.SemanticVersion]'1.2.3-rc.1+build';
-                                    Version = [version]'1.2.3';
-                                    NuGetVersion = '1.2.3-rc.1';
-                                    ProGetAppFeedUri = 'http://proget.example.com/';
-                                    ProGetCredential = New-Credential -UserName 'fubar' -Password 'snafu';
-                                    BuildMasterSession = 'buildmaster session';
-                                    TaskIndex = 0;
-                                    TaskName = $ForTaskName;
-                                    Configuration = @{ };
-                                    NpmRegistryUri = 'https://proget.dev.webmd.com/npm/npm';
-                                    BuildConfiguration = 'Debug';
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $testByBuildServerMock
 
-                                 }
+    if( $DownloadRoot )
+    {
+        $optionalArgs['DownloadRoot'] = $DownloadRoot
+    }
+
+    if( -not $ConfigurationPath )
+    {
+        $configData = @{
+                            'Version' = $ForVersion.ToString()
+                       }
+        if( $ForApplicationName )
+        {
+            $configData['ApplicationName'] = $ForApplicationName
+        }
+
+        if( $ForReleaseName )
+        {
+            $configData['ReleaseName'] = $ForReleaseName
+        }
+
+        if( $ForTaskName )
+        {
+            $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+        }
+
+        $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
+        $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+    }
+
+    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'
     }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+
+    if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
+    {
+        $context.OutputDirectory = $ForOutputDirectory
+        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    }
+
     return $context
 }
 

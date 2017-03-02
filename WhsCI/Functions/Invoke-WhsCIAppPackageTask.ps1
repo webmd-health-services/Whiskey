@@ -198,8 +198,8 @@ function Invoke-WhsCIAppPackageTask
         $branch = $branch -replace '/.*$',''
         if( $branch -match '^(release|master|develop)$' )
         {
-            $proGetPackageUri = $TaskContext.ProGetAppFeedUri
-            $proGetCredential = $TaskContext.ProGetCredential
+            $proGetPackageUri = $TaskContext.ProGetSession.AppFeedUri
+            $proGetCredential = $TaskContext.ProGetSession.Credential
             $buildMasterSession = $TaskContext.BuildMasterSession
 
             $branch = $Matches[1]
@@ -223,13 +223,9 @@ function Invoke-WhsCIAppPackageTask
                 }
             }
 
-            $release = Get-BMRelease -Session $BuildMasterSession -Application $name -Name $branch
-            $release | Format-List | Out-String | Write-Verbose
-            $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
-            $package = New-BMReleasePackage -Session $BuildMasterSession -Release $release -PackageNumber $packageName -Variable @{ 'ProGetPackageName' = $version.ToString() }
-            $package | Format-List | Out-String | Write-Verbose
-            $deployment = Publish-BMReleasePackage -Session $BuildMasterSession -Package $package
-            $deployment | Format-List | Out-String | Write-Verbose
+            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version
+            # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
+            $TaskContext.PackageVariables['ProGetPackageName'] = $version
         }
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)

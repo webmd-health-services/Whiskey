@@ -78,9 +78,9 @@ function Assert-CommitStatusSetTo
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
         
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $expectedUri = 'https://bbserver.example.com/'
-            $expectedUsername = 'fubar'
-            $expectedPassword = 'snafu'
+            $expectedUri = 'https://bitbucket.example.com/'
+            $expectedUsername = 'bbserver'
+            $expectedPassword = 'bbserver'
 
             #$DebugPreference = 'Continue'
 
@@ -93,34 +93,11 @@ function Assert-CommitStatusSetTo
             Write-Debug -Message ('Connection.Credential.UserName  expected  {0}' -f $expectedUsername)
             Write-Debug -Message ('                                actual    {0}' -f $Connection.Credential.UserName)
 
-            # For some reason, when run under Jenkins, there is a global $commitID variable 
-            # that hides the parameter, so we need to explicitly set the parameter.
-            $CommitID = $null
-            if( $PSBoundParameters.ContainsKey('CommitID') )
-            {
-                $CommitID = $PSBoundParameters['CommitID']
-            }
-            Write-Debug -Message ('CommitID                        expected  $null')
-            Write-Debug -Message ('                                actual    {0}' -f $CommitID)
-
-            Write-Debug -Message ('Key                             expected  $null')
-            Write-Debug -Message ('                                actual    {0}' -f $Key)
-
-            Write-Debug -Message ('BuildUri                        expected  $null')
-            Write-Debug -Message ('                                actual    {0}' -f $BuildUri)
-
-            Write-Debug -Message ('Name                            expected  $null')
-            Write-Debug -Message ('                                actual    {0}' -f $Name)
-
             $Status -eq $ExpectedStatus -and
             $Connection -ne $null -and
             $Connection.Uri -eq $expectedUri -and
             $Connection.Credential.Username -eq $expectedUsername -and
-            $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword -and 
-            -not $CommitID -and
-            -not $Key -and
-            -not $BuildUri -and
-            -not $Name
+            $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword 
         }
     }
 }
@@ -284,7 +261,10 @@ function Invoke-Build
         $DownloadRoot,
 
         [Switch]
-        $NoGitRepository
+        $NoGitRepository,
+
+        [SemVersion.SemanticVersion]
+        $Version = '5.4.1-prerelease+build'
     )
 
     $runningUnderABuildServer = $false
@@ -308,26 +288,35 @@ function Invoke-Build
     }
 
     $configuration = Get-WhsSetting -Environment $environment -Name '.NETProjectBuildConfiguration'
-    $devParams = @{ }
-    if( (Test-WhsCIRunByBuildServer) )
+    $optionalParams = @{ }
+    if( $ByJenkins )
     {
-        $devParams['BBServerCredential'] = New-Credential -UserName 'fubar' -Password 'snafu'
-        $devParams['BBServerUri'] = 'https://bbserver.example.com/'
+        $optionalParams['ForBuildServer'] = $true
+    }
+    if( $ByDeveloper )
+    {
+        $optionalParams['ForDeveloper'] = $true
     }
 
-    $downloadRootParam = @{ }
+
     if( $DownloadRoot )
     {
-        $downloadRootParam['DownloadRoot'] = $DownloadRoot
+        $optionalParams['DownloadRoot'] = $DownloadRoot
     }
+
+    if( $Version )
+    {
+        $optionalParams['ForVersion'] = $Version
+    }
+
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
+
+    $context = New-WhsCITestContext -BuildConfiguration $configuration -ConfigurationPath $WithConfig @optionalParams
 
     $threwException = $false
     try
     {
-        Invoke-WhsCIBuild -ConfigurationPath $WithConfig `
-                          -BuildConfiguration $configuration `
-                          @devParams `
-                          @downloadRootParam
+        Invoke-WhsCIBuild -Context $context
     }
     catch
     {
@@ -510,19 +499,10 @@ $nunitWhsBuildYmlFile = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whs
 Get-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit*\Properties\AssemblyInfo.cs') |
     ForEach-Object { git checkout HEAD $_.FullName }
 #>
-Describe 'Invoke-WhsCIBuild.when Version in configuration file is invalid' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
-Version: fubar
-'@
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-
-    It 'should write an error' {
-        $Global:Error[0] | Should Match 'not a valid semantic version'
-    }
-}
 
 $pesterPassingConfig = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\whsbuild_passing.yml' -Resolve
 Describe 'Invoke-WhsCIBuild.when running Pester task' {
+    Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -MockWith { return (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Pester') }.GetNewClosure()
     $downloadRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'downloads'
     Invoke-Build -ByJenkins -WithConfig $pesterPassingConfig -DownloadRoot $downloadRoot
 
@@ -610,51 +590,6 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild.when version looks like a date after 2000 and isn''t quoted' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
-Version: 2.13.1
-'@
-
-    $Global:Error.Clear()
-
-    Invoke-Build -ByDeveloper -WithConfig $configPath
-
-    it 'should not write any errors' {
-        $Global:Error | Should Not Match 'is not a valid semantic version' 
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when version looks like a date before 1900 and isn''t quoted' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
-Version: 2.13.80
-'@
-
-    $Global:Error.Clear()
-
-    Invoke-Build -ByDeveloper -WithConfig $configPath
-
-    it 'should not write any errors' {
-        $Global:Error | Should Not Match 'is not a valid semantic version' 
-    }
-}
-
-Describe 'Invoke-WhsCIBuild.when Git repository doesn''t exist' {
-    $Global:Error.Clear()
-    $version = '3.2.1-rc.1'
-    $configPath = New-TestWhsBuildFile -TaskName 'MSBuild' -Path 'FubarSnafu.csproj' -Version $version
-
-    New-MSBuildProject -FileName 'FubarSnafu.csproj'
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -NoGitRepository -ThatFails -ErrorAction SilentlyContinue
-
-    # i.e. it doesn't move the build into the repository where the build is happening
-    It 'should fail because a Git repository can''t be found' {
-        $Global:Error | Should Match 'not in a Git repository'
-    }
-
-    Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName 'FubarSnafu.csproj'
-}
-
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # TODO: Once:
@@ -670,81 +605,64 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
         function Assert-TaskCalled
         {
             param(
+                [object]
+                $WithContext,
+
                 [Switch]
                 $WithWhatIfSwitch
             )
 
             It 'should pass context to task' {
                 Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-
-                    foreach( $propertyName in $expectedContext.Keys )
-                    {
-                        $expectedValue = $expectedContext[$propertyName]
-                        $actualValue = $TaskContext.$propertyName
-
-                        if( $propertyName -eq 'BuildMasterSession' )
-                        {
-                            continue
-                        }
-
-                        if( $propertyName -like '*Credential' )
-                        {
-                            $expectedValue = $expectedValue.UserName
-                            $actualVAlue = $actualValue.UserName 
-                        }
-
-                        Write-Debug -Message ('{0,-25}  expected  {1}' -f $propertyName,$expectedValue)
-                        Write-Debug -Message ('                           actual    {1}' -f $propertyName,$actualValue)
-
-                        if( $expectedValue -ne $actualValue )
-                        {
-                            return $false
-                        }
-                    }
-
-                    $bmSession = $TaskContext.BuildMasterSession
-                    Write-Debug -Message ('BuildMasterApiKey          expected  {0}' -f $bmApiKey)
-                    Write-Debug -Message ('                           actual    {0}' -f $bmSession.ApiKey)
-                    if( $bmApiKey -ne $bmSession.ApiKey )
-                    {
-                        return $false
-                    }
-                    
-                    Write-Debug -Message ('BuildMasterUri             expected  {0}' -f $bmUri)
-                    Write-Debug -Message ('                           actual    {0}' -f $bmSession.Uri)
-                    if( $bmUri -ne $bmSession.Uri )
-                    {
-                        return $false
-                    }
-
-                    Write-Debug -Message ('Configuration              expected  {0}' -f [hashtable].FullName)
-                    Write-Debug -Message ('                           actual    {0}' -f $TaskContext.Configuration.GetType().FullName)
-                    if( $TaskContext.Configuration -isnot [hashtable] )
-                    {
-                        return $false
-                    }
-
-                    Write-Debug -Message ('WhatIf                     expected  {0}' -f $WithWhatIfSwitch)
-                    Write-Debug -Message ('                           actual    {0}' -f $WhatIfPreference)
-                    if( $WithWhatIfSwitch -ne $WhatIfPreference )
-                    {
-                        return $false
-                    }
-
-                    return $true
+                    [object]::ReferenceEquals($TaskContext, $WithContext) 
                 }
             }
-
-            It 'should pass NPM registry URI' {
-                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
-                    $TaskContext.NpmRegistryUri -eq 'https://proget.dev.webmd.com/npm/npm/'
-                }
-            }
-
+            
             It 'should pass task parameters' {
                 Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
+                }
+            }
+
+            if( $WithWhatIfSwitch )
+            {
+                It 'should use WhatIf switch' {
+                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                        $PSBoundParameters['WhatIf'] -eq $true
+                    }
+                }
+            }
+            else
+            {
+                It 'should not use WhatIf switch' {
+                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                        $PSBoundParameters.ContainsKey('WhatIf') -eq $false
+                    }
+                }
+            }
+
+            if( $context.ByBuildSErver )
+            {
+                It 'should set build status' {
+                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
+                        [object]::ReferenceEquals($WithContext.BBServerConnection,$Connection)
+                    }
+                }
+                It 'should set build status to in progress' {
+                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
+                        $Status -eq 'InProgress'
+                    }
+                }
+                It 'should set build status to passed' {
+                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
+                        $Status -eq 'Successful'
+                    }
+                }
+            }
+            else
+            {
+                It 'should not set build status' {
+                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 0
                 }
             }
         }
@@ -752,51 +670,32 @@ foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
 
         $version = '4.3.5-rc.1'
         $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
-        $configPath = New-TestWhsBuildFile -TaskName $taskName -Path $taskName -Version $version
-        $buildRoot = $configPath | Split-Path
-        $expectedContext = @{
-                                ConfigurationPath = $configPath;
-                                TaskName = $taskName;
-                                TaskIndex = 0;
-                                BuildRoot = $buildRoot;
-                                OutputDirectory = (Join-Path -Path $buildRoot -ChildPath '.output');
-                                Version = $version;
-                                NuGetVersion = $version;
-                            }
 
-        Mock -CommandName 'Assert-WhsCIVersionAvailable' -ModuleName 'WhsCI' -MockWith { return $Version }
         Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI'
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
 
         Context 'By Developer' {
-            New-MockDeveloperEnvironment
             Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
-            Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig'
-            $expectedContext['Version'] = '{0}+{1}.{2}' -f $version,$env:USERNAME,$env:COMPUTERNAME
+            $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
+            $context.ByDeveloper = $true
+            $context.ByBuildServer = $false
+            Invoke-WhsCIBuild -Context $context
             $withWhatIfSwitchParam = @{ }
             if( $whatIfTasks.ContainsKey($taskName) )
             {
                 $withWhatIfSwitchParam['WithWhatIfSwitch'] = $true
             }
-            Assert-TaskCalled @withWhatIfSwitchParam
+            Assert-TaskCalled -WithContext $context @withWhatIfSwitchParam
         }
 
         Context 'By Jenkins' {
-            $bbServerCredential = New-Credential -UserName 'fubar' -Password 'password'
-            $bbServerUri = 'http://bitbucketserver.example.com/'
-            New-MockBitbucketServer
-            New-MockBuildServer
             Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $true }
-            Mock -CommandName 'Get-WhsSecret' -ModuleName 'WhsCI' -MockWith { if( $AsCredential ) { New-Credential -UserName 'fubar' -Password 'snafu' } else { 'snafur' } }
-            Invoke-WhsCIBuild -ConfigurationPath $configPath -BuildConfiguration 'buildconfig' -BBServerCredential $bbServerCredential -BBServerUri $bbServerUri
-            $expectedContext['Version'] = '{0}+80.develop.deadbee' -f $version
-            $expectedContext['ProGetAppFeedUri'] = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Apps'
-            $expectedContext['ProGetCredential'] = New-Credential -UserName 'fubar' -Password 'snafu'
-            $expectedContext['BitbucketServerCredential'] = $bbServerCredential
-            $expectedContext['BitbucketServerUri'] = $bbServerUri
-            $bmUri = Get-WhsSetting -Environment 'Dev' -Name 'BuildMasterUri'
-            $bmApiKey = 'snafur'
-            $expectedContext['BuildMasterSession'] = New-BMSession -Uri $bmUri -ApiKey $bmApiKey
-            Assert-TaskCalled
+            $context = New-WhsCITestContext -ForBuildServer -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName }
+            $context.ByDeveloper = $false
+            $context.ByBuildServer = $true
+            Invoke-WhsCIBuild -Context $context
+            Assert-TaskCalled -WithContext $context
         }
     }
 }

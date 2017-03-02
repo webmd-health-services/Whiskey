@@ -85,6 +85,8 @@
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCiBuild',
+                            'New-WhsCIBuildMasterPackage',
+                            'New-WhsCIContext',
                             'Resolve-WhsCITaskPath',
                             'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer',

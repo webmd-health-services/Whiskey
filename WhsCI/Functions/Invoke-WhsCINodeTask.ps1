@@ -117,7 +117,7 @@ function Invoke-WhsCINodeTask
 
         $version = $Matches[1]
         Update-Progress -Status ('Installing Node.js {0}' -f $version) -Step ($stepNum++)
-        $nodePath = Install-WhsCINodeJs -RegistryUri $TaskContext.NpmRegistryUri -Version $version
+        $nodePath = Install-WhsCINodeJs -RegistryUri $TaskContext.ProGetSession.NpmFeedUri -Version $version
         if( -not $nodePath )
         {
             throw ('Node version ''{0}'' failed to install. Please see previous errors for details.' -f $version)

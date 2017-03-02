@@ -53,9 +53,9 @@ function Invoke-WhsCINuGetPackTask
         }
         
         $versionArgs = @()
-        if( $TaskContext.NugetVersion )
+        if( $TaskContext.Version.NugetVersion )
         {
-            $versionArgs = @( '-Version', $TaskContext.NugetVersion )
+            $versionArgs = @( '-Version', $TaskContext.Version.NugetVersion )
         }
 
         New-Item -Path $TaskContext.OutputDirectory -ItemType 'Directory' -ErrorAction Ignore -Force | Out-String | Write-Debug
