@@ -26,6 +26,9 @@ function Assert-NewWhsCIAppPackage
         $Name = $defaultPackageName,
 
         [string]
+        $ForBranch,
+
+        [string]
         $Description = $defaultDescription,
 
         [string]
@@ -422,6 +425,12 @@ function Assert-NewWhsCIAppPackage
             It 'should not set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $false
             }
+            It 'should not set package Application Name package variable' {
+                $taskContext.PackageVariables.ContainsKey('ApplicationName') | Should Be $false
+            }
+            It 'should not set legacy package Release Name package variable' {
+                $taskContext.PackageVariables.ContainsKey('ReleaseName') | Should Be $false
+            }
         }
         else
         {
@@ -433,6 +442,18 @@ function Assert-NewWhsCIAppPackage
             It 'should set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
                 $taskContext.PackageVariables['ProGetPackageName'] | Should Be $Version.ToString()
+            }
+            
+            It 'should set package application name package variable' {
+                $taskContext.PackageVariables.ContainsKey('ApplicationName') | Should Be $true
+                $taskContext.PackageVariables['ApplicationName'] | Should Be $Name
+            }
+            if ( $ForBranch )
+            {
+                It 'should set package release name package variable' {
+                    $taskContext.PackageVariables.ContainsKey('ReleaseName') | Should Be $true
+                    $taskContext.PackageVariables['ReleaseName'] | Should Be $ForBranch
+                }
             }
         }
     }
@@ -986,4 +1007,21 @@ Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist
     It 'should fail to resolve the path' {
         $Global:Error | Should Match 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
     }
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory for a particular branch' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $branch = 'develop'
+
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames `
+                                      -OnDevelopBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasRootItems $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
+                              -ForBranch $branch
 }
