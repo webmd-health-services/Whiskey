@@ -260,6 +260,7 @@ function Invoke-WhsCIBuild
                     throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $Context.ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                 }
                     
+                New-WhsCIBuildMasterPackage -TaskContext $Context
                 
             }
         }

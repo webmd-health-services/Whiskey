@@ -31,6 +31,11 @@ function New-WhsCIBuildMasterPackage
     )
 
     Set-StrictMode -Version 'Latest'
+    
+    if( $TaskContext.ByDeveloper )    
+    {
+        return
+    }
 
     $buildMasterSession = $TaskContext.BuildMasterSession
     $name = $TaskContext.ApplicationName

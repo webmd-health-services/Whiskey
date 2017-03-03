@@ -590,6 +590,27 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
+Describe 'Invoke-WhsCIBuild.when New-WhsCIBuildMasterPackage fails' {
+    Mock -CommandName 'New-WhsCIBuildMasterPackage' -ModuleName 'WhsCI' -MockWith `
+        { throw 'Build Master Pipeline failed' }
+    $project = 'project.csproj'
+    $assembly = 'assembly.dll'
+    $configPath = New-TestWhsBuildFile -Yaml @'
+BuildTasks:
+- MSBuild:
+    Path: project.csproj
+- NUnit2:
+    Path: assembly.dll
+'@
+
+    New-MSBuildProject -FileName $project 
+    New-NUnitTestAssembly -ConfigurationPath $configPath -AssemblyName $assembly
+
+    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
+
+    Assert-NUnitTestsNotRun -ConfigurationPath $configPath
+}
+
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # TODO: Once:

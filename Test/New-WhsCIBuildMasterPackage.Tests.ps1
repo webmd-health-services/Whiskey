@@ -21,8 +21,9 @@ function GivenAnApplication
     Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $package }.GetNewClosure()
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $deploy }.GetNewClosure()
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
-
+    
     New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    
 }
 
 function WhenCreatingPackage
@@ -43,7 +44,10 @@ function WhenCreatingPackage
         $ThenPackageNotCreated,
 
         [string]
-        $WithErrorMessage
+        $WithErrorMessage,
+
+        [Switch]
+        $ForDeveloper
     )
 
     process
@@ -61,7 +65,10 @@ function WhenCreatingPackage
                 $Context.PackageVariables[$key] = $WithVariables[$key]
             }
         }
-
+        if( $ForDeveloper )
+        {
+            $Context.ByDeveloper = $True
+        }
         $threwException = $false
         try
         {
@@ -219,5 +226,11 @@ Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
 Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
     GivenAnApplication |
         WhenCreatingPackage -WithNoPackageVersionVariable |
+        ThenPackageNotCreated
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
+    GivenAnApplication |
+        WhenCreatingPackage -ForDeveloper |
         ThenPackageNotCreated
 }
