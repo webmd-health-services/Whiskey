@@ -105,7 +105,7 @@ function Invoke-WhsCIAppPackageTask
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+Invoke-WhsCIApkpPackageTask+{0}' -f $name
+    $tempBaseName = 'WhsCI+Invoke-WhsCIAppPackageTask+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
@@ -224,13 +224,13 @@ function Invoke-WhsCIAppPackageTask
             }
 
             $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
-            if ( -not $TaskContext.PackageVariables.ContainsKey('ApplicationName') ) 
+            if ( -not $TaskContext.ApplicationName ) 
             {
-                $TaskContext.PackageVariables['ApplicationName'] = $name
+                $TaskContext.ApplicationName = $name
             }
-            if ( -not $TaskContext.PackageVariables.ContainsKey('ReleaseName') )
+            if ( -not $TaskContext.ReleaseName )
             {
-                $TaskContext.PackageVariables['ReleaseName'] = $branch
+                $TaskContext.ReleaseName = $branch
             }
             # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
             $TaskContext.PackageVariables['ProGetPackageName'] = $version

@@ -29,6 +29,12 @@ function Assert-NewWhsCIAppPackage
         $ForBranch,
 
         [string]
+        $ForApplicationName,
+
+        [string]
+        $ForReleaseName,
+
+        [string]
         $Description = $defaultDescription,
 
         [string]
@@ -134,6 +140,14 @@ function Assert-NewWhsCIAppPackage
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = $Version
+    if( $ForReleaseName )
+    {
+        $taskContext.ReleaseName = $ForReleaseName
+    }
+    if( $ForApplicationName )
+    {
+        $taskContext.ApplicationName = $ForApplicationName
+    }
 
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
@@ -425,12 +439,13 @@ function Assert-NewWhsCIAppPackage
             It 'should not set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $false
             }
-            It 'should not set package Application Name package variable' {
-                $taskContext.PackageVariables.ContainsKey('ApplicationName') | Should Be $false
+            It 'should not set package Application name' {
+                $taskContext.ApplicationName | Should BeNullOrEmpty
             }
-            It 'should not set legacy package Release Name package variable' {
-                $taskContext.PackageVariables.ContainsKey('ReleaseName') | Should Be $false
+            It 'should not set package Release name' {
+                $taskContext.ReleaseName | Should BeNullOrEmpty
             }
+            
         }
         else
         {
@@ -443,16 +458,34 @@ function Assert-NewWhsCIAppPackage
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
                 $taskContext.PackageVariables['ProGetPackageName'] | Should Be $Version.ToString()
             }
-            
-            It 'should set package application name package variable' {
-                $taskContext.PackageVariables.ContainsKey('ApplicationName') | Should Be $true
-                $taskContext.PackageVariables['ApplicationName'] | Should Be $Name
-            }
-            if ( $ForBranch )
+            if( $ForApplicationName )
             {
-                It 'should set package release name package variable' {
-                    $taskContext.PackageVariables.ContainsKey('ReleaseName') | Should Be $true
-                    $taskContext.PackageVariables['ReleaseName'] | Should Be $ForBranch
+                It 'should not set package Application Name' {
+                    $taskContext.ApplicationName | Should Be $ForApplicationName
+                }            
+            }
+            else
+            {           
+                It 'should set package application name' {
+                    $taskContext.ApplicationName | Should Be $Name
+                }
+            }
+            if( $ForReleaseName )
+            {
+                It 'should not set package Release Name' {
+                    $taskContext.ReleaseName | Should Be $ForReleaseName
+                }
+            }
+            elseif( $ForBranch )
+            {
+                It 'should set package release name' {
+                    $taskContext.ReleaseName | Should Be $ForBranch
+                }
+            }
+            else
+            {
+                It 'should set package release name' {
+                    $taskContext.ReleaseName | Should Not BeNullOrEmpty
                 }
             }
         }
@@ -1024,4 +1057,24 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory fo
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ForBranch $branch
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a with ApplicationName and ReleaseName' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $branch = 'develop'
+
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames `
+                                      -OnDevelopBranch
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                              -HasRootItems $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
+                              -ForApplicationName 'foo' `
+                              -ForReleaseName 'bar' `
+                              
+
 }

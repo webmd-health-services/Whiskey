@@ -608,7 +608,10 @@ BuildTasks:
 
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
 
-    Assert-NUnitTestsNotRun -ConfigurationPath $configPath
+    Assert-NUnitTestsRun -ConfigurationPath $configPath
+    it ( 'should call New-WhsCIBuildMasterPackage mock once' ){
+        Assert-MockCalled -CommandName 'New-WhsCIBuildMasterPackage' -ModuleName 'WhsCI' -Times 1     
+    }
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
