@@ -599,16 +599,11 @@ Describe 'Invoke-WhsCIBuild.when New-WhsCIBuildMasterPackage fails' {
 BuildTasks:
 - MSBuild:
     Path: project.csproj
-- NUnit2:
-    Path: assembly.dll
 '@
 
     New-MSBuildProject -FileName $project 
-    New-NUnitTestAssembly -ConfigurationPath $configPath -AssemblyName $assembly
-
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails
-
-    Assert-NUnitTestsRun -ConfigurationPath $configPath
+        
     it ( 'should call New-WhsCIBuildMasterPackage mock once' ){
         Assert-MockCalled -CommandName 'New-WhsCIBuildMasterPackage' -ModuleName 'WhsCI' -Times 1     
     }
