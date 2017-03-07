@@ -205,21 +205,18 @@ Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
 Describe 'Invoke-WhsCIPester3Task.when missing Version configuration' {
     $failureMessage = 'is mandatory'
     Invoke-PesterTest -Path $pesterPassingPath -WithMissingVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
-    return
 }
 
 Describe 'Invoke-WhsCIPester3Task.when Version property isn''t a version' {
     $version = 'fubar'
     $failureMessage = 'isn''t a valid version'
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
-    return
 }
 
 Describe 'Invoke-WhsCIPester3Task.when version of tool doesn''t exist' {
     $version = '3.0.0'
     $failureMessage = 'does not exist'
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
-    return
 }
 
 Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
@@ -227,5 +224,4 @@ Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
     $path = 'C:\FubarSnafu'
     $failureMessage = 'absolute'
     Invoke-PesterTest -Path $path -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
-    return
 }
