@@ -223,7 +223,15 @@ function Invoke-WhsCIAppPackageTask
                 }
             }
 
-            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version
+            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
+            if ( -not $TaskContext.ApplicationName ) 
+            {
+                $TaskContext.ApplicationName = $name
+            }
+            if ( -not $TaskContext.ReleaseName )
+            {
+                $TaskContext.ReleaseName = $branch
+            }
             # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
             $TaskContext.PackageVariables['ProGetPackageName'] = $version
         }
