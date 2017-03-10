@@ -26,13 +26,7 @@ function Assert-NewWhsCIAppPackage
         $Name = $defaultPackageName,
 
         [string]
-        $ForBranch,
-
-        [string]
         $ForApplicationName,
-
-        [string]
-        $ForReleaseName,
 
         [string]
         $Description = $defaultDescription,
@@ -140,10 +134,6 @@ function Assert-NewWhsCIAppPackage
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = $Version
-    if( $ForReleaseName )
-    {
-        $taskContext.ReleaseName = $ForReleaseName
-    }
     if( $ForApplicationName )
     {
         $taskContext.ApplicationName = $ForApplicationName
@@ -441,11 +431,7 @@ function Assert-NewWhsCIAppPackage
             }
             It 'should not set package Application name' {
                 $taskContext.ApplicationName | Should BeNullOrEmpty
-            }
-            It 'should not set package Release name' {
-                $taskContext.ReleaseName | Should BeNullOrEmpty
-            }
-            
+            }         
         }
         else
         {
@@ -468,24 +454,6 @@ function Assert-NewWhsCIAppPackage
             {           
                 It 'should set package application name' {
                     $taskContext.ApplicationName | Should Be $Name
-                }
-            }
-            if( $ForReleaseName )
-            {
-                It 'should not set package Release Name' {
-                    $taskContext.ReleaseName | Should Be $ForReleaseName
-                }
-            }
-            elseif( $ForBranch )
-            {
-                It 'should set package release name' {
-                    $taskContext.ReleaseName | Should Be $ForBranch
-                }
-            }
-            else
-            {
-                It 'should set package release name' {
-                    $taskContext.ReleaseName | Should Not BeNullOrEmpty
                 }
             }
         }
@@ -847,90 +815,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch and not including 
 
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnMasterBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage 
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnFeatureBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnPermanentReleaseBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnDevelopBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnHotFixBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnBugFixBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
-}
-
 Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
@@ -1042,27 +926,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory for a particular branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom application name' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
-    $branch = 'develop'
-
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-                                      -FileName $fileNames `
-                                      -OnDevelopBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage `
-                              -ForBranch $branch
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a with ApplicationName and ReleaseName' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-    $branch = 'develop'
 
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames `
@@ -1074,7 +940,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a with Applica
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ForApplicationName 'foo' `
-                              -ForReleaseName 'bar' `
                               
 
 }
