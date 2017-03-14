@@ -36,9 +36,23 @@ function Invoke-Publish
         $ForFeedName,
 
         [Switch]
-        $WithDefaultRepo
+        $WithDefaultRepo,
+
+        [String]
+        $ThatFailsWith,
+
+        [Switch]
+        $withNoProgetURI,
+
+        [Switch]
+        $WithInvalidPath,
+
+        [Switch]
+        $WithoutPathParameter
     )
     
+    $Global:Error.Clear()
+
     if( -not $ForRepositoryName )
     {
         $ForRepositoryName = 'thisRepo'
@@ -58,8 +72,19 @@ function Invoke-Publish
                             FeedName = $ForFeedName;
         }
     }
-
-    $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.Uri), $ForFeedName
+    if( $WithInvalidPath )
+    {
+        $TaskParameter.Add( 'Path', 'MyModule.ps1' )
+    }
+    elseif( -not $WithoutPathParameter )
+    {
+        $TaskParameter.Add( 'Path', 'MyModule.ps1' )
+        New-Item -Path $TestDrive.FullName -ItemType 'file' -Name 'MyModule.ps1' 
+    }
+    if( -not $withNoProgetURI )
+    {
+        $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.Uri), $ForFeedName
+    }
     if( $withoutRegisteredRepo )
     {
         Mock -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -MockWith { return $false }
@@ -68,13 +93,49 @@ function Invoke-Publish
     {
         Mock -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -MockWith { return $true }
     }
-    
+
+    Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
+    $failed = $False
 
-    Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
+    try
+    {
+        Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
+    }
+    catch
+    {
+        $failed = $True
+    }
+    if( $ThatFailsWith )
+    {
+        It 'should throw an exception' {
+            $failed | Should Be $True
+        }
+        It 'should exit with error' {
+            $Global:Error | Should Match $ThatFailsWith
+        }
+    }
+    else
+    {
+        It 'should not throw an exception'{
+            $failed | Should Be $False
+        }
+        It 'should exit without error'{
+            $Global:Error | Should BeNullOrEmpty
+        }
+    }
+}
 
-
+function Assert-ModuleNotPublished
+{    
+    It 'should not attempt to register the module'{
+        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
+    }    
+    It 'should not attempt to publish the module'{
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 0
+    }
 }
 
 function Assert-ModuleRegistered
@@ -140,7 +201,10 @@ function Assert-ModulePublished
         $TaskContext,
 
         [String]
-        $ExpectedRepositoryName,
+        $ExpectedRepositoryName = 'thisRepo',
+
+        [String]
+        $ExpectedPathName = $TestDrive.FullName+'\MyModule.ps1',
 
         [switch]
         $WithDefaultRepo
@@ -150,20 +214,21 @@ function Assert-ModulePublished
     {
         $ExpectedRepositoryName = 'WhsPowerShellVerification'
     }
-    elseif( -not $ExpectedRepositoryName )
-    {
-        $ExpectedRepositoryName = 'thisRepo'
-    }
+    
     It ('should publish the Module')  {
         $expectedApiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
+            Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
+            Write-Debug -Message ('                                actual   {0}' -f $Path)
+
             Write-Debug -Message ('Repository Name                 expected {0}' -f $ExpectedRepositoryName)
             Write-Debug -Message ('                                actual   {0}' -f $Repository)
 
             Write-Debug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
             Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
-
+            
+            $Path -eq $ExpectedPathName -and
             $Repository -eq $ExpectedRepositoryName -and
             $NuGetApiKey -eq $expectedApiKey
         }
@@ -193,16 +258,10 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing previously pu
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when not run by developer, not publishing.' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when run by developer, not publishing.' {
     $context = New-WhsCITestContext -ForDeveloper
     Invoke-Publish -TaskContext $context
-    It 'should return without attempting to register the module'{
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
-    }    
-    It 'should not attempt to publish the module'{
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 0
-    }
+    Assert-ModuleNotPublished
 }
 
 Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module with custom repository name.'{
@@ -227,15 +286,26 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with no ProGet URI.'{
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $context.ProGetSession = 'foo'
-
-    $Global:Error.Clear()
-       
-    It 'should throw an exception' {
-        { Invoke-Publish -WithoutRegisteredRepo -TaskContext $context } | Should Throw
-    }
-
-    It 'should exit with error' {
-        $Global:Error | Should Match ('The property ''Uri'' cannot be found on this object. Verify that the property exists.')
-    }
+    $errorMatch = 'The property ''Uri'' cannot be found on this object. Verify that the property exists.'
+    
+    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch
+    Assert-ModuleNotPublished
 }
 
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when Path Parameter is not included' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    $errorMatch = 'Element ''Path'' is mandatory'
+
+    Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch
+    Assert-ModuleNotPublished
+}
+
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with invalid path parameter' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    $errorMatch = 'does not exist'
+
+    Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch
+    Assert-ModuleNotPublished
+}

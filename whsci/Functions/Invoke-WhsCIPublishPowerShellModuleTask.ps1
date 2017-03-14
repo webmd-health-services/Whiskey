@@ -18,9 +18,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         BuildTasks:
         - PublishPowerShellModule:
             Path:
-            - mymodule.ps1
-            - myothermodule.ps1
-            
+            - mymodule.ps1            
   
 
     .EXAMPLE
@@ -61,7 +59,19 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         {
             $feedName = $TaskParameter.FeedName
         }
+
+        # Make sure the TaskParameter contains a Path parameter.
+        if( -not ($TaskParameter.ContainsKey('Path')))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whsbuild.yml file, to the repository publish with WhsCIPublishPowerShellModuleTask, e.g. 
         
+            BuildTasks:
+            - PublishPowerShellModule:
+                Path:
+                - mymodule.ps1')
+        }
+
+        $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'        
         $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.URI), $feedName
         
         if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )
@@ -69,7 +79,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
-        Publish-Module -Path .\WhsCI -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
     }
 }
  
