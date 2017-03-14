@@ -120,11 +120,6 @@ function Invoke-WhsCINodeAppPackageTask
                         '*.woff',
                         '*.woff2'
                   )
-    if( -not $TaskParameter['Path'].Contains('package.json') )
-    {
-        $TaskParameter.Path.Add( (New-Item -Name 'package.json' -ItemType 'file') )          
-    }
-    
     $TaskParameter['Include'] += $whitelist
     $TaskParameter['ExcludeArc'] = -not $TaskParameter.ContainsKey('IncludeArc')
     $TaskParameter['ThirdPartyPath'] = Invoke-Command { 'node_modules' ; $TaskParameter['ThirdPartyPath'] } | Select-Object -Unique
