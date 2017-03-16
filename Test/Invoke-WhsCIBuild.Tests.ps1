@@ -617,7 +617,7 @@ $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 # * task functions are created for all tasks
 #
 # Then we can update this to get the task list by using `Get-Command -Name 'Invoke-WhsCI*Task' -Module 'WhsCI'`
-foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'NugetPack' ) )
+foreach( $taskName in @( 'AppPackage', 'NodeAppPackage', 'Node', 'PublishNugetLibrary' ) )
 {
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 

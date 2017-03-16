@@ -85,6 +85,11 @@ function New-WhsCIContext
 
         [Parameter(ParameterSetName='ByBuildServer')]
         [string]
+        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
+        $ProGetNuGetFeed = 'nuget/NuGet',
+
+        [Parameter(ParameterSetName='ByBuildServer')]
+        [string]
         # The name/path to the feed in ProGet where NPM packages should be uploaded to and downloaded from. The default is `npm/npm`. Combined with the `ProGetUri` parameter to create the URI to the feed.
         $ProGetNpmFeed = 'npm/npm',
 
@@ -150,6 +155,7 @@ function New-WhsCIContext
                                             NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
                                             AppFeed = $ProGetAppFeed;
                                             NpmFeed = $ProGetNpmFeed;
+                                            NuGetFeedUri = $ProGetNuGetFeed;
                                         }
 
     $byBuildServer = Test-WhsCIRunByBuildServer

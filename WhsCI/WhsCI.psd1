@@ -84,6 +84,7 @@
                             'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
+                            'Invoke-WhsCIPublishNuGetLibraryTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',

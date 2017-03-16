@@ -5,29 +5,6 @@ Set-StrictMode -Version 'Latest'
 
 $projectName ='NUnit2PassingTest.csproj' 
 
-function Remove-LeadingString
-{
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [AllowEmptyString()]
-        [string]
-        $String,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $LeadingString
-    )
-
-    $retStr = $String
-            if ($String.StartsWith($LeadingString, $true, [System.Globalization.CultureInfo]::InvariantCulture))
-            {
-                $retStr = $String.Substring($LeadingString.Length)
-            }
-                    
-    return $retStr
-}
-
 function GivenABuiltLibrary
 {
     param(
@@ -94,16 +71,15 @@ function WhenRunningNuGetPackTask
     )
 
     process 
-    {
-        
+    {        
         $Global:Error.Clear()
         $taskParameter = @{
                             Path = @(
                                         $projectName
                                     )
                           }
-
         $threwException = $false
+        Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -MockWith { return $True }
         try
         {
             if( $WithVersion )
@@ -114,7 +90,7 @@ function WhenRunningNuGetPackTask
             {
                 $taskParameter['Path'] = 'I\do\not\exist.csproj'
             }
-            Invoke-WhsCINuGetPackTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null
+            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null
 
         }
         catch
@@ -171,6 +147,12 @@ function ThenPackageShouldBeCreated
 
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
             (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
+        }
+
+        It ('should try to publish the package') {
+            Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+                return $ScriptBlock.toString().contains('& $nugetPath push $path ')
+            }
         }
     }
 }

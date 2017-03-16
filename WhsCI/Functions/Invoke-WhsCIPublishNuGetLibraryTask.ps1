@@ -1,5 +1,5 @@
 
-function Invoke-WhsCINuGetPackTask
+function Invoke-WhsCIPublishNuGetLibraryTask
 {
     <#
     .SYNOPSIS
@@ -45,7 +45,8 @@ function Invoke-WhsCINuGetPackTask
         }
 
         $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-
+        $source = '$TaskContext.ProGetSession.NuGetFeedUri'
+        $apiKey = '(''{0}:{1}'' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)'
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         if( -not $nugetPath )
         {
@@ -63,6 +64,8 @@ function Invoke-WhsCINuGetPackTask
         $preNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
         & $nugetPath pack $versionArgs -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path |
             Write-CommandOutput
+        Invoke-Command -ScriptBlock { & $nugetPath push $path -Source $source -ApiKey $apiKey | Write-CommandOutput }
+
         $postNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
         if( $postNupkgCount -eq $preNupkgCount )
         {
