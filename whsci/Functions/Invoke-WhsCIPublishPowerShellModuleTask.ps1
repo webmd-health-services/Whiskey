@@ -63,17 +63,21 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         # Make sure the TaskParameter contains a Path parameter.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whsbuild.yml file, to the repository publish with WhsCIPublishPowerShellModuleTask, e.g. 
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whsbuild.yml file, to the module directory of the module to publish, e.g. 
         
             BuildTasks:
             - PublishPowerShellModule:
                 Path:
-                - mymodule.ps1')
+                - mymodule')
         }
 
         $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'        
         $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.URI), $feedName
-        
+        if( -not (Test-Path $path -PathType Container) )
+        {
+            throw('Element ''Path'' must point to a directory, specifically the module directory of the module to publish.')
+        }
+                
         if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )
         {
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose

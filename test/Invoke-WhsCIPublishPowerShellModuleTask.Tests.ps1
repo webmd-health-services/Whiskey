@@ -48,6 +48,9 @@ function Invoke-Publish
         $WithInvalidPath,
 
         [Switch]
+        $WithNonExistentPath,
+
+        [Switch]
         $WithoutPathParameter
     )
     
@@ -75,11 +78,16 @@ function Invoke-Publish
     if( $WithInvalidPath )
     {
         $TaskParameter.Add( 'Path', 'MyModule.ps1' )
+        New-Item -Path $TestDrive.FullName -ItemType 'file' -Name 'MyModule.ps1'
+    }
+    elseif( $WithNonExistentPath )
+    {
+        $TaskParameter.Add( 'Path', 'MyModule.ps1' )
     }
     elseif( -not $WithoutPathParameter )
     {
-        $TaskParameter.Add( 'Path', 'MyModule.ps1' )
-        New-Item -Path $TestDrive.FullName -ItemType 'file' -Name 'MyModule.ps1' 
+        $TaskParameter.Add( 'Path', 'MyModule' )
+        New-Item -Path $TestDrive.FullName -ItemType 'directory' -Name 'MyModule' 
     }
     if( -not $withNoProgetURI )
     {
@@ -204,7 +212,7 @@ function Assert-ModulePublished
         $ExpectedRepositoryName = 'thisRepo',
 
         [String]
-        $ExpectedPathName = $TestDrive.FullName+'\MyModule.ps1',
+        $ExpectedPathName = $TestDrive.FullName+'\MyModule',
 
         [switch]
         $WithDefaultRepo
@@ -301,11 +309,22 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when Path Parameter is not in
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with invalid path parameter' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with non-existent path parameter' {
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $errorMatch = 'does not exist'
 
+    Invoke-Publish -WithNonExistentPath -TaskContext $context -ThatFailsWith $errorMatch
+    Assert-ModuleNotPublished
+}
+
+Describe 'Invoke-WhsPublishPowerShellModuleTask. with non-directory path parameter' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    $errorMatch = 'must point to a directory'
+
     Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
 }
+
+
