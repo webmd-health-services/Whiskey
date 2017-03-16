@@ -19,7 +19,7 @@ function GivenABuiltLibrary
     )
 
     $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest' 
-    # Make sure the output directory gets created by the task
+    # Make sure output directory gets created by the task
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $optionalArgs = @{ }
     if( $InReleaseMode )
