@@ -151,7 +151,7 @@ function New-WhsCIContext
                                             AppFeed = $ProGetAppFeed;
                                             NpmFeed = $ProGetNpmFeed;
                                         }
-
+    $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer
     if( $byBuildServer )
     {
@@ -169,6 +169,20 @@ New-WhsCIContext is being run by a build server, but called using the developer 
 
 Use the `Test-WhsCIRunByBuildServer` function to determine if you're running under a build server or not.
 "@)
+        }
+        
+        $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+        $branch = $branch -replace '/.*$',''
+        $publishOn = @( 'develop', 'release', 'master' )
+        if( $config.ContainsKey( 'PublishOn' ) )
+        {
+            $publishOn = $config['PublishOn']
+        }
+
+        $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
+        if( -not $releaseName -and $publish )
+        {        
+            $releaseName = $branch
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
@@ -195,6 +209,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                                     DownloadRoot = $DownloadRoot;
                                     ByBuildServer = $byBuildServer;
                                     ByDeveloper = (-not $byBuildServer);
+                                    Publish = $publish;
                                 }
     return $context
 }

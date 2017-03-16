@@ -120,7 +120,6 @@ function Invoke-WhsCINodeAppPackageTask
                         '*.woff',
                         '*.woff2'
                   )
-
     $TaskParameter['Include'] += $whitelist
     $TaskParameter['ExcludeArc'] = -not $TaskParameter.ContainsKey('IncludeArc')
     $TaskParameter['ThirdPartyPath'] = Invoke-Command { 'node_modules' ; $TaskParameter['ThirdPartyPath'] } | Select-Object -Unique

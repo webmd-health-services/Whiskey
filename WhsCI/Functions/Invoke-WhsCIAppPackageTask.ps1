@@ -43,7 +43,6 @@ function Invoke-WhsCIAppPackageTask
         - "*.cer"
         - "*.pfx"
 
-    Here's another example `whsbuild.yml` file showing 
     #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
@@ -194,15 +193,11 @@ function Invoke-WhsCIAppPackageTask
         }
 
         # Upload to ProGet
-        $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-        $branch = $branch -replace '/.*$',''
-        if( $branch -match '^(release|master|develop)$' )
+        if( $TaskContext.Publish )
         {
             $proGetPackageUri = $TaskContext.ProGetSession.AppFeedUri
             $proGetCredential = $TaskContext.ProGetSession.Credential
             $buildMasterSession = $TaskContext.BuildMasterSession
-
-            $branch = $Matches[1]
             $headers = @{ }
             $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))
             $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
@@ -228,10 +223,7 @@ function Invoke-WhsCIAppPackageTask
             {
                 $TaskContext.ApplicationName = $name
             }
-            if ( -not $TaskContext.ReleaseName )
-            {
-                $TaskContext.ReleaseName = $branch
-            }
+            
             # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
             $TaskContext.PackageVariables['ProGetPackageName'] = $version
         }
