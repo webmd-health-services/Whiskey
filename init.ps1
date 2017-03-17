@@ -17,16 +17,25 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\Carbon\Import-Carbon.ps1' -Resolve)
+$modules = @{
+                'Carbon' = '2.4.1';
+                'Pester' = '3.4.6';
+            }
 
-$junctions = @( 
-                    'Carbon',
-                    'Pester',
-                    'LibGit2'
-              )
-foreach( $junctionName in $junctions )
+foreach( $moduleName in $modules.Keys )
 {
-    $linkPath = Join-Path -Path $PSScriptRoot -ChildPath $junctionName
-    $targetPath = Join-Path -Path $PSScriptRoot -ChildPath ('Arc\{0}' -f $junctionName)
-    Install-Junction -Link $linkPath -Target $targetPath
+    $moduleRootPath = Join-Path -Path $PSScriptRoot -ChildPath $moduleName
+    if( (Test-Path -Path $moduleRootPath -PathType Container) )
+    {
+        if( $Clean )
+        {
+            Remove-Item -Path $moduleRootPath -Recurse -Force
+        }
+        else
+        {
+            continue
+        }
+    }
+
+    Save-Module -Name $moduleName -Path $PSScriptRoot -RequiredVersion $modules[$moduleName]
 }
