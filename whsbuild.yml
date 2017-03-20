@@ -1,4 +1,6 @@
 Version: 0.2.0
+PublishOn: 
+- master
 BuildTasks:
 - PowerShell:
     Path: init.ps1
