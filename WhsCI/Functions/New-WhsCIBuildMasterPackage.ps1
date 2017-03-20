@@ -46,7 +46,6 @@ function New-WhsCIBuildMasterPackage
 
     if( -not $variables.ContainsKey('ProGetPackageVersion') -or -not $variables.ContainsKey('ProGetPackageName') )
     {
-        Write-Warning -Message ('Unable to create a new release package and start a deploy in BuildMaster. It looks like your application didn''t package anything. To deploy your application with BuildMaster, add a package task to {1} and re-run your build. Run `help about_WhsCI_Tasks` to see a list of tasks.`')
         return
     }
 
