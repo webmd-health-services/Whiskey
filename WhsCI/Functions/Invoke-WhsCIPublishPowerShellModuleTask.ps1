@@ -49,12 +49,12 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             return
         }     
         
-        $repositoryName = 'WhsPowerShellVerification'
+        $repositoryName = 'WhsPowerShell'
         if( $TaskParameter.ContainsKey('RepositoryName') )
         {
             $repositoryName = $TaskParameter.RepositoryName
         }
-        $feedName = 'nuget/PowerShellVerification'
+        $feedName = 'nuget/PowerShell'
         if( $TaskParameter.ContainsKey('FeedName') )
         {
             $feedName = $TaskParameter.FeedName
@@ -83,6 +83,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
+        Install-PackageProvider -Name 'NuGet' -ForceBootstrap
         Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
     }
 }

@@ -102,6 +102,7 @@ function Invoke-Publish
 
     Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
+    Mock -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI'
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
     $failed = $False
 
@@ -139,6 +140,9 @@ function Assert-ModuleNotPublished
         Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
     }    
+    It 'should not attempt to register package provider' {
+        Assert-MockCalled -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI' -Times 0
+    }
     It 'should not attempt to publish the module'{
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 0
     }
@@ -162,8 +166,8 @@ function Assert-ModuleRegistered
     )
     if ( $WithDefaultRepo )
     {
-        $ExpectedRepositoryName = 'WhsPowerShellVerification'
-        $ExpectedFeedName = 'nuget/PowerShellVerification'
+        $ExpectedRepositoryName = 'WhsPowerShell'
+        $ExpectedFeedName = 'nuget/PowerShell'
     }
     else
     {
@@ -218,7 +222,14 @@ function Assert-ModulePublished
     
     if( $WithDefaultRepo )
     {
-        $ExpectedRepositoryName = 'WhsPowerShellVerification'
+        $ExpectedRepositoryName = 'WhsPowerShell'
+    }
+
+    It 'NuGet package provider should get registered' {
+        Assert-MockCalled -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Name -eq 'NuGet' }
+    }
+    It 'NuGet package provider should get bootstrapped' {
+        Assert-MockCalled -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $ForceBootstrap }
     }
     
     It ('should publish the Module')  {
