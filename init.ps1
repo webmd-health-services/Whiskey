@@ -39,3 +39,9 @@ foreach( $moduleName in $modules.Keys )
 
     Save-Module -Name $moduleName -Path $PSScriptRoot -RequiredVersion $modules[$moduleName]
 }
+
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') -Force
+
+# Use WhsCI to build itself
+Install-Junction -Link (Join-Path -Path $PSScriptRoot -ChildPath 'Arc\WhsCI') `
+                 -Target (Join-Path -Path $PSScriptRoot -ChildPath 'WhsCI')

@@ -6,3 +6,4 @@ Test/Assemblies/**/bin/**
 Test/Assemblies/**/packages/**
 Test/Pester/whsbuild.yml
 Test/Assemblies/**/whsbuild.yml
+Arc/WhsCI/**
