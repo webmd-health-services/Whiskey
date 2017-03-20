@@ -71,7 +71,6 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
-                            'Assert-WhsCIVersionAvailable',
                             'ConvertTo-WhsCISemanticVersion',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
@@ -124,13 +123,17 @@
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://confluence.webmd.net/display/WHS/WhsCI'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = @'
+This is the first alpha release of WhsCI. Everything is new. [Documentation is on the WhsCI Confluence page.](https://confluence.webmd.net/display/WHS/WhsCI)
+
+This should be considered *alpha* software. Backwards-compatability is not guaranteed between releases, so upgrading may require you to modify your `whsbuild.yml` file. You should also consider all functions exported by `WhsCI` to be private. The correct way to use WhsCI is via a `whsbuild.yml` file checked into your repository. Anything beyond that is unsupported.
+'@
 
         } # End of PSData hashtable
 

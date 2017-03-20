@@ -158,47 +158,6 @@ function Invoke-WhsCIBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    function Resolve-TaskPath
-    {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory=$true)]
-            [string[]]
-            $Path,
-
-            [Parameter(Mandatory=$true)]
-            [string]
-            $PropertyName
-        )
-
-        $errPrefix = $propertyName
-        $foundInvalidTaskPath = $false
-        foreach( $taskPath in $Path )
-        {
-            $pathIdx++
-            if( [IO.Path]::IsPathRooted($taskPath) )
-            {
-                Write-Error -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the whsbuild.yml file.' -f $errPrefix,$pathIdx,$taskPath)
-                $foundInvalidTaskPath = $true
-                continue
-            }
-
-            $taskPath = Join-Path -Path $Context.BuildRoot -ChildPath $taskPath
-            if( -not (Test-Path -Path $taskPath) )
-            {
-                Write-Error -Message ('{0}[{1}] ''{2}'' does not exist.' -f $errPrefix,$pathIdx,$taskPath)
-                $foundInvalidTaskPath = $true
-            }
-
-            Resolve-Path -Path $taskPath | Select-Object -ExpandProperty 'ProviderPath'
-        }
-
-        if( $foundInvalidTaskPath )
-        {
-            throw ('{0}: One or more paths do not exist or are absolute.' -f $errPrefix)
-        }
-    }
-
     if( $Context.ByBuildServer )
     {
         Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status InProgress
@@ -229,17 +188,17 @@ function Invoke-WhsCIBuild
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
+                if( $task -isnot [hashtable] )
+                {
+                    Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
+                    continue
+                }
                 $taskName = $task.Keys | Select-Object -First 1
                 $task = $task[$taskName]
                 $Context.TaskName = $taskName
                 $Context.TaskIndex = $taskIdx
 
                 $errorPrefix = '{0}: BuildTasks[{1}]: {2}: ' -f $Context.ConfigurationPath,$taskIdx,$taskName
-
-                if( $task -isnot [hashtable] )
-                {
-                    throw ('{0}: BuildTasks[{1}]: {2}: ''Path'' property not found. This property is mandatory for all tasks. It can be a single path or an array/list of paths.' -f $Context.ConfigurationPath,$taskIdx,$taskName)
-                }
 
                 $errors = @()
                 $pathIdx = -1

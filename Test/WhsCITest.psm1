@@ -158,7 +158,7 @@ function New-WhsCITestContext
     $progetUri = 'https://proget.example.com'
     if( $UseActualProGet )
     {
-        $progetUri = Get-ProGetUri -Environment 'Dev'
+        $progetUri = 'https://proget.dev.webmd.com'
     }
 
     $optionalArgs = @{ }

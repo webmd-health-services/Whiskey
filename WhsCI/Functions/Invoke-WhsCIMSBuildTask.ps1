@@ -76,7 +76,7 @@ function Invoke-WhsCIMSBuildTask
 "@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
                                     }
         }
-        Invoke-MSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+        Invoke-WhsCIMSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
         if( $errors )
         {
             throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$TaskContext.BuildConfiguration)

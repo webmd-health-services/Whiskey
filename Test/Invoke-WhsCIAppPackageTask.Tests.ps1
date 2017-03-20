@@ -1,8 +1,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
 $defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
@@ -142,9 +140,9 @@ function Assert-NewWhsCIAppPackage
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
     {
-        $progetUri = Get-ProGetUri -Environment 'Dev'
-        $appFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Tests'
-        $credential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $progetUri = 'https://proget.dev.webmd.com/'
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
                                                         Uri = $progetUri;

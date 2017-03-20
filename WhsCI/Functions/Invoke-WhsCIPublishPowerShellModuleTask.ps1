@@ -86,4 +86,3 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
     }
 }
- 

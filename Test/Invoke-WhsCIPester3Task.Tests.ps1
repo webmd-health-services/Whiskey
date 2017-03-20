@@ -93,10 +93,7 @@ function Invoke-PesterTest
         [String]
         $ShouldFailWithMessage
     )
-    if( -not $ShouldFailWithMessage )
-    {
-        Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -Verifiable -MockWith { Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\Pester\Pester.psd1' -Resolve }.GetNewClosure()
-    }
+
     $defaultVersion = '3.4.3'
     $failed = $false
     $context = New-WhsCIPesterTestContext
@@ -152,21 +149,6 @@ function Invoke-PesterTest
     {
         It 'should pass' {
             $failed | Should Be $false
-        }
-    }
-
-    $moduleRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\Modules'
-    if( -not $ShouldFailWithMessage )
-    {
-        It 'should download Pester' {
-            Assert-MockCalled -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue';
-                Write-Debug -Message ('ModuleName  expected  Pester')
-                Write-Debug -Message ('            actual    {0}' -f $ModuleName)
-                Write-Debug -Message ('Version     expected  {0}' -f $defaultVersion)
-                Write-Debug -Message ('            actual    {0}' -f $Version)
-                $ModuleName -eq 'Pester' -and $Version -eq $defaultVersion
-            }
         }
     }
 }
