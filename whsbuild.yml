@@ -5,3 +5,6 @@ BuildTasks:
 - Pester3:
     Version: 3.4.6
     Path: Test\*.Tests.ps1
+- PublishPowerShellModule:
+    Path:
+    - WhsCI
