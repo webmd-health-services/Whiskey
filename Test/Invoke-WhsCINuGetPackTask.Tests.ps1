@@ -42,6 +42,22 @@ function GivenABuiltLibrary
     )
 
     $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest' 
+    $whsbuildYmlPath = Join-Path -Path $projectRoot -ChildPath 'whsbuild.yml'
+
+    $versionProperty = ''
+    if( $WithVersion )
+    {
+        $versionProperty = 'Version: "{0}"' -f $WithVersion
+    }
+
+    @"
+$($versionProperty)
+BuildTasks:
+  MSBuild:
+    Path: NUnit2PassingTest.sln
+    Version: 4.5.6-rc1
+"@ | Set-Content -Path $whsbuildYmlPath
+
     # Make sure the output directory gets created by the task
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $optionalArgs = @{ }
@@ -54,25 +70,9 @@ function GivenABuiltLibrary
         $optionalArgs['BuildConfiguration'] = 'Debug'
     }
 
-    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
-    
-    if( $WithVersion )
-    {
-        $Context.Version.NuGetVersion = $WithVersion
-    }
-
-    $Global:Error.Clear()
-    $project = Join-Path -Path $projectRoot -ChildPath $projectName -Resolve
-    'bin','obj','.output' | 
-        ForEach-Object { Get-ChildItem -Path $projectRoot -Filter $_ -ErrorAction Ignore } | Remove-Item -Recurse -Force
-    
-    $propertyArg = @{}
-    if( $InReleaseMode )
-    {
-        $propertyArg['Property'] = 'Configuration=Release'
-    }
-
-    Invoke-MSBuild -Path $project -Target 'build' @propertyArg | Out-Null
+    $context = New-WhsCIContext -ConfigurationPath (Join-Path -Path $projectRoot -ChildPath 'whsbuild.yml') -ProGetUri 'http://proget.example.com' @optionalArgs
+    Get-ChildItem -Path $context.OutputDirectory | Remove-Item
+    Invoke-WhsCIBuild -Context $context | Write-Verbose -Verbose
     return $context
 }
 
@@ -200,7 +200,8 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package' {
 
 Describe 'Invoke-WhsCINuGetPackTask.when passed a version' {
     $version = '4.5.6-rc1'
-    GivenABuiltLibrary -WithVersion $version | WhenRunningNugetPackTask  | ThenPackageShouldBeCreated -WithVersion $version
+    $context = GivenABuiltLibrary -WithVersion $version 
+    $context | WhenRunningNugetPackTask  | ThenPackageShouldBeCreated -WithVersion $version
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a package built in release mode' {
