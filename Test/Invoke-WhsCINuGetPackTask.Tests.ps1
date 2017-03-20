@@ -70,6 +70,7 @@ BuildTasks:
         $optionalArgs['BuildConfiguration'] = 'Debug'
     }
 
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
     $context = New-WhsCIContext -ConfigurationPath (Join-Path -Path $projectRoot -ChildPath 'whsbuild.yml') -ProGetUri 'http://proget.example.com' @optionalArgs
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item
     Invoke-WhsCIBuild -Context $context | Write-Verbose -Verbose
