@@ -2,6 +2,8 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
+$psGalleryInstallPolicy = Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'InstallationPolicy'
+
 function Initialize-Test
 {
     param(
@@ -102,6 +104,8 @@ function Invoke-Publish
 
     Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
+    Set-PSRepository -Name 'PSGallery' -InstallationPolicy Untrusted
+    $Global:Error.Clear()
     Mock -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI'
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
     $failed = $False
@@ -140,6 +144,9 @@ function Assert-ModuleNotPublished
         Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
     }    
+    It 'should not trust PSGallery' {
+        Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'InstallationPolicy' | Should Be 'Untrusted'
+    }
     It 'should not attempt to register package provider' {
         Assert-MockCalled -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI' -Times 0
     }
@@ -225,6 +232,9 @@ function Assert-ModulePublished
         $ExpectedRepositoryName = 'WhsPowerShell'
     }
 
+    It 'should trust PSGallery repository so NuGet provider can get installed' {
+        Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'InstallationPolicy' | Should Be 'Trusted'
+    }
     It 'NuGet package provider should get registered' {
         Assert-MockCalled -CommandName 'Install-PackageProvider' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Name -eq 'NuGet' }
     }
@@ -337,3 +347,4 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. with non-directory path paramet
 }
 
 
+Set-PSRepository -Name 'PSGallery' -InstallationPolicy $psGalleryInstallPolicy
