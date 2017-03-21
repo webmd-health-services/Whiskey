@@ -113,7 +113,7 @@ function WhenRunningNuGetPackTask
             {
                 $taskParameter['Path'] = 'I\do\not\exist.csproj'
             }
-            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null
+            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null 
 
         }
         catch
@@ -152,9 +152,15 @@ function ThenPackageShouldBeCreated
         [Switch]
         $ForMultiplePackages,
 
+        [String]
+        $WithoutPushingToProgetError,
+
         [Parameter(ValueFromPipeline=$true)]
         [object]
-        $Context
+        $Context,
+
+        [Switch]
+        $PackageAlreadyExists
     )
 
     process
@@ -163,10 +169,18 @@ function ThenPackageShouldBeCreated
         {
             $Context.Version.NuGetVersion = $WithVersion
         }
-        It 'should not write any errors' {
-            $Global:Error | Should BeNullOrEmpty
+        if( $WithoutPushingToProgetError )
+        {
+            It 'should write push errors' {
+                $Global:Error[0] | Should match $WithoutPushingToProgetError             
+            }
         }
-
+        else
+        {
+            It 'should not write any errors' {
+                $Global:Error | Should BeNullOrEmpty
+            }
+        }
         It ('should create NuGet package for NUnit2PassingTest') {
             (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
         }
@@ -184,6 +198,14 @@ function ThenPackageShouldBeCreated
                     }
                 }
             }
+            elseif( $PackageAlreadyExists )
+            {
+                It('should not try to publish the package') {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+                        return $ScriptBlock.toString().contains('& $nugetPath push')
+                    }
+                }
+            }
             else
             {
                 It ('should try to publish the package') {
@@ -191,14 +213,13 @@ function ThenPackageShouldBeCreated
                         return $ScriptBlock.toString().contains('& $nugetPath push')
                     }
                 }
-            }
-            
+            }            
         }
         else
         {
             It('should not try to publish the package') {
                 Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
-                    return $ScriptBlock.toString().contains('& $nugetPath push $path ')
+                    return $ScriptBlock.toString().contains('& $nugetPath push')
                 }
             }
         }
@@ -220,7 +241,7 @@ function ThenPackageShouldNotBeCreated
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with an invalid project' {
     GivenABuiltLibrary | 
-        WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ThatFailsWithErrorMessage 'does not exist' | 
+        WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ThatFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue | 
         ThenPackageShouldNotBeCreated
 }
 
@@ -241,7 +262,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishi
     $global:counter = -1
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
-        $global:counter++       
+        $global:counter++    
         if($global:counter -eq 0)
         {
             Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
@@ -249,8 +270,41 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishi
         else
         {
             $global:counter = -1
-            return $true
+            return $True
         }
     } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
     GivenABuiltLibrary -ForBuildServer | WhenRunningNugetPackTask -ForMultiplePackages | ThenPackageShouldBeCreated -ForMultiplePackages
+}
+
+Describe 'Invoke-WhsCINuGetPackTask.when push command fails' {
+    $errorMessage = 'push command failed'
+    $Global:error.Clear()
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+        Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
+    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    GivenABuiltLibrary -ForBuildServer | 
+        WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue| 
+        ThenPackageShouldBeCreated -WithoutPushingToProgetError $errorMessage
+}
+
+Describe 'Invoke-WhsCINuGetPackTask.when package already exists' {
+    $errorMessage = 'already exists'
+    $Global:error.Clear()
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { return $True}
+    GivenABuiltLibrary -ForBuildServer | 
+        WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue | 
+        ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
+}
+
+Describe 'Invoke-WhsCINuGetPackTask.when creating WebRequest fails' {
+    $errorMessage = 'Invoke-WebRequest failed with'
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+        Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/500'
+    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    GivenABuiltLibrary -ForBuildServer | 
+        WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue | 
+        ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
 }

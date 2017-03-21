@@ -85,6 +85,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             
             # Make sure this version doesn't exist.
             $packageExists = $false
+            $errCount = $Global:Error.Count
             try
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
@@ -94,14 +95,18 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             {
                 if( ([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode -ne [Net.HttpStatusCode]::NotFound )
                 {
-                    throw ([Net.HttpWebResponse]([Net.WebException]$_.Exception))
+                    Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} could not be pushed. Invoke-WebRequest failed with ''{2}''.' -f $projectName,$packageVersion,([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode)
                 }
-                $Global:error.Clear()
+
+                for( $idx = 0; $idx -lt ($Global:Error.Count - $errCount); ++$idx )
+                {
+                    $Global:Error.RemoveAt(0)
+                }
             }
 
             if( $packageExists )
             {
-                throw ('{0} {1} already exists. Please increment your library''s version number in ''{2}''.' -f $projectName,$packageVersion,$TaskContext.ConfigurationPath)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} already exists. Please increment your library''s version number in ''{2}''.' -f $projectName,$packageVersion,$TaskContext.ConfigurationPath)
             }
 
             # Publish package and symbols to NuGet
@@ -109,19 +114,13 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             Invoke-Command -ScriptBlock { & $nugetPath push $symbolsPackagePath -Source $source -ApiKey $apiKey}
 
             # Since NuGet sux0r, we have to check that the package exists in the repo to test that the nuget push command succeeded or not
-            $packageExists = $false
             try
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
-                $packageExists = $true
             }
             catch [Net.WebException]
             {
-            }
-
-            if( -not $packageExists )
-            {
-                throw ('NuGet push command failed to publish NuGet package to ''{0}''. Please see build output for more information.' -f $packageUri)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('NuGet push command failed to publish NuGet package to ''{0}''. Please see build output for more information.' -f $packageUri)
             }
         }
 
