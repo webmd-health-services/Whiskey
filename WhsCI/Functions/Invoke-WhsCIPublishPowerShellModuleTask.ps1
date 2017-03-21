@@ -1,5 +1,4 @@
 function Invoke-WhsCIPublishPowerShellModuleTask
- 
 {
     <#
     .SYNOPSIS
@@ -83,16 +82,17 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
-        $numErrorsAtStart = $Global:Error.Count
-        # Trust the PSGallery so we can install the NuGet package provider
-        Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
-        $numErrors = $Global:Error.Count - $numErrorsAtStart
-        for( $idx = 0; $idx -lt $numErrors; ++$idx )
+        # Publish-Module needs nuget.exe. If it isn't in the PATH, it tries to install it, which doesn't work when running non-interactively.
+        $binPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin' -Resolve
+        $originalPath = $env:PATH
+        Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $binPath,$env:PATH)
+        try
         {
-            $Global:Error.RemoveAt(0) 
+            Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
         }
-
-        Install-PackageProvider -Name 'NuGet' -ForceBootstrap
-        Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        finally
+        {
+            Set-Item -Path 'env:PATH' -Value $originalPath
+        }
     }
 }
