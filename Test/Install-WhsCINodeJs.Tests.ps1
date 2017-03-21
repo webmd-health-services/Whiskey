@@ -51,9 +51,29 @@ function Assert-ThatInstallNodeJs
     Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Verifiable
 
     $registryUri = 'https://proget.example.com/'
+    $testPackageJson = 
+'{
+  "name": "whsnodetest",
+  "version": "0.0.1",
+  "description": "TestApp",
+  "main": "main.js",
+  "scripts": {
+    "test": "Yo"
+  },
+  "engines": { 
+    "node": "' + $InstallsVersion + '" 
+  }, 
+  "author": "doofus",
+  "license": "MIT"
+}
+'
+
     try
     {
-        $nodePath = Install-WhsCINodeJs -RegistryUri $registryUri -Version $InstallsVersion @installDirParam
+
+        Install-Directory -Path $installDir
+        $null = New-Item (Join-Path -Path $installDir -ChildPath 'package.json') -ItemType File -Value $testPackageJson -Force
+        $nodePath = Install-WhsCINodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)

@@ -364,7 +364,7 @@ Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
 
 Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
     $context = Initialize-NodeProject -UsingNodeVersion "438.4393.329" -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
+    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version required for this package failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
