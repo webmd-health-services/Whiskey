@@ -83,6 +83,15 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
+        $numErrorsAtStart = $Global:Error.Count
+        # Trust the PSGallery so we can install the NuGet package provider
+        Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+        $numErrors = $Global:Error.Count - $numErrorsAtStart
+        for( $idx = 0; $idx -lt $numErrors; ++$idx )
+        {
+            $Global:Error.RemoveAt(0) 
+        }
+
         Install-PackageProvider -Name 'NuGet' -ForceBootstrap
         Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
     }
