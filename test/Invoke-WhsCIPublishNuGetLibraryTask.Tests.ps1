@@ -14,6 +14,9 @@ function GivenABuiltLibrary
         [Switch]
         $InReleaseMode,
 
+        [Switch]
+        $ForBuildServer,
+
         [string]
         $WithVersion
     )
@@ -30,9 +33,14 @@ function GivenABuiltLibrary
     {
         $optionalArgs['BuildConfiguration'] = 'Debug'
     }
-
-    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
-    
+    if( -not $ForBuildServer )
+    {
+        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
+    }
+    else
+    {
+        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForBuildServer
+    }
     if( $WithVersion )
     {
         $Context.Version.NuGetVersion = $WithVersion
@@ -66,18 +74,33 @@ function WhenRunningNuGetPackTask
         [string]
         $ThatFailsWithErrorMessage,
 
+        [Switch]
+        $ForMultiplePackages,
+
         [string]
         $WithVersion
     )
 
     process 
     {        
-        $Global:Error.Clear()
-        $taskParameter = @{
+        $Global:Error.Clear()        
+        if( $ForMultiplePackages )
+        {
+            $taskParameter = @{
+                            Path = @(
+                                        $projectName,
+                                        $projectName
+                                    )
+                          }
+        }
+        else 
+        {
+            $taskParameter = @{
                             Path = @(
                                         $projectName
                                     )
                           }
+        }
         $threwException = $false
         Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -MockWith { return $True }
         try
@@ -126,6 +149,9 @@ function ThenPackageShouldBeCreated
         [string]
         $WithVersion,
 
+        [Switch]
+        $ForMultiplePackages,
+
         [Parameter(ValueFromPipeline=$true)]
         [object]
         $Context
@@ -148,10 +174,32 @@ function ThenPackageShouldBeCreated
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
             (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
         }
-
-        It ('should try to publish the package') {
-            Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-                return $ScriptBlock.toString().contains('& $nugetPath push $path ')
+        if( $Context.byBuildServer )
+        {
+            if( $ForMultiplePackages )
+            {
+                It ('should try to publish multiple packages') {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 4 -ParameterFilter {
+                        return $ScriptBlock.toString().contains('& $nugetPath push')
+                    }
+                }
+            }
+            else
+            {
+                It ('should try to publish the package') {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 2 -ParameterFilter {
+                        return $ScriptBlock.toString().contains('& $nugetPath push')
+                    }
+                }
+            }
+            
+        }
+        else
+        {
+            It('should not try to publish the package') {
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+                    return $ScriptBlock.toString().contains('& $nugetPath push $path ')
+                }
             }
         }
     }
@@ -187,4 +235,22 @@ Describe 'Invoke-WhsCINuGetPackTask.when passed a version' {
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating a package built in release mode' {
     GivenABuiltLibrary -InReleaseMode | WhenRunningNugetPackTask | ThenPackageShouldBeCreated
+}
+
+Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishing' {
+    $global:counter = -1
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+        $global:counter++       
+        if($global:counter -eq 0)
+        {
+            Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
+        }
+        else
+        {
+            $global:counter = -1
+            return $true
+        }
+    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    GivenABuiltLibrary -ForBuildServer | WhenRunningNugetPackTask -ForMultiplePackages | ThenPackageShouldBeCreated -ForMultiplePackages
 }

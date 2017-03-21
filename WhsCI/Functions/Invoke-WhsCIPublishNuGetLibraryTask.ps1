@@ -19,7 +19,6 @@ function Invoke-WhsCIPublishNuGetLibraryTask
     #>
     [CmdletBinding()]
     param(
-    
         [Parameter(Mandatory=$true)]
         [object]
         $TaskContext,
@@ -41,35 +40,91 @@ function Invoke-WhsCIPublishNuGetLibraryTask
                 - NuGetPack:
                     Path:
                     - MyProject.csproj
-                    - MyNuspec.csproj')
+                    - MyNuspec.nuspec')
         }
 
-        $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-        $source = '$TaskContext.ProGetSession.NuGetFeedUri'
-        $apiKey = '(''{0}:{1}'' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)'
+        $paths = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+       
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         if( -not $nugetPath )
         {
             return
         }
-        
-        $versionArgs = @()
-        if( $TaskContext.Version.NugetVersion )
+        foreach ($path in $paths)
         {
-            $versionArgs = @( '-Version', $TaskContext.Version.NugetVersion )
+            $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
+            $packageVersion = $TaskContext.Version.NuGetVersion
+                    
+            # Create NuGet package
+            & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path
+
+            # Make sure package was created.
+            $filename = '{0}.{1}.nupkg' -f $projectName,$packageVersion
+            $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
+            if( -not (Test-Path -Path $packagePath -PathType Leaf) )
+            {
+                throw ('Tried to package ''{0}'' but expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
+            }
+
+            # Make sure symbols package was created
+            $filename = '{0}.{1}.symbols.nupkg' -f $projectName,$packageVersion
+            $symbolsPackagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
+            if( -not (Test-Path -Path $symbolsPackagePath -PathType Leaf) )
+            {
+                throw ('Tried to package ''{0}'' but expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
+            }
+
+            if( $TaskContext.ByDeveloper )
+            {
+                continue
+            }
+
+            $source = $TaskContext.ProGetSession.NuGetFeedUri
+            $apiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+            $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
+            
+            # Make sure this version doesn't exist.
+            $packageExists = $false
+            try
+            {
+                Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
+                $packageExists = $true
+            }
+            catch [Net.WebException]
+            {
+                if( ([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode -ne [Net.HttpStatusCode]::NotFound )
+                {
+                    throw ([Net.HttpWebResponse]([Net.WebException]$_.Exception))
+                }
+                $Global:error.Clear()
+            }
+
+            if( $packageExists )
+            {
+                throw ('{0} {1} already exists. Please increment your library''s version number in ''{2}''.' -f $projectName,$packageVersion,$TaskContext.ConfigurationPath)
+            }
+
+            # Publish package and symbols to NuGet
+            Invoke-Command -ScriptBlock { & $nugetPath push $packagePath -Source $source -ApiKey $apiKey}
+            Invoke-Command -ScriptBlock { & $nugetPath push $symbolsPackagePath -Source $source -ApiKey $apiKey}
+
+            # Since NuGet sux0r, we have to check that the package exists in the repo to test that the nuget push command succeeded or not
+            $packageExists = $false
+            try
+            {
+                Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
+                $packageExists = $true
+            }
+            catch [Net.WebException]
+            {
+            }
+
+            if( -not $packageExists )
+            {
+                throw ('NuGet push command failed to publish NuGet package to ''{0}''. Please see build output for more information.' -f $packageUri)
+            }
         }
 
-        New-Item -Path $TaskContext.OutputDirectory -ItemType 'Directory' -ErrorAction Ignore -Force | Out-String | Write-Debug
-
-        $preNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-        & $nugetPath pack $versionArgs -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path |
-            Write-CommandOutput
-        Invoke-Command -ScriptBlock { & $nugetPath push $path -Source $source -ApiKey $apiKey | Write-CommandOutput }
-
-        $postNupkgCount = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.nupkg' | Measure-Object | Select-Object -ExpandProperty 'Count'
-        if( $postNupkgCount -eq $preNupkgCount )
-        {
-            throw ('NuGet pack command failed. No new .nupkg files found in ''{0}''.' -f $TaskContext.OutputDirectory)
-        }
     }
-}
+} 
+
