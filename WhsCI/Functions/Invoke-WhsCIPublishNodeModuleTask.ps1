@@ -57,11 +57,12 @@ function Invoke-WhsCIPublishNodeModuleTask
         return
     }
 
-    $npmConfigPrefix = $npmFeedUri.SubString($npmFeedUri.IndexOf(':') + 1, $npmFeedUri.Length - ($npmFeedUri.IndexOf(':') + 1))
-    $npmConfigPrefix = $npmConfigPrefix.Substring(0, $npmConfigPrefix.LastIndexOf('/') + 1)
+    $npmConfigPrefix = '//' + $context.ProGetSession.NpmFeedUri.Authority `
+                    + $context.ProGetSession.NpmFeedUri.Segments[0] `
+                    + $context.ProGetSession.NpmFeedUri.Segments[1]
 
     $npmUserName = $TaskContext.ProGetSession.Credential.UserName
-    $npmEmail = 'jenkins@webmd.net'
+    $npmEmail = $env:USERNAME + '@webmd.net'
     $npmCredPassword = $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)

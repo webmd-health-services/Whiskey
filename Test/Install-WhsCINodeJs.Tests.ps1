@@ -73,6 +73,9 @@ function Assert-ThatInstallNodeJs
 
         Install-Directory -Path $installDir
         $null = New-Item (Join-Path -Path $installDir -ChildPath 'package.json') -ItemType File -Value $testPackageJson -Force
+        $nodePath = $null
+        $expectedNodePath = $null
+        $expectedNpmPath = $null
         $nodePath = Install-WhsCINodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
@@ -102,6 +105,16 @@ function Assert-ThatInstallNodeJs
             }
 
             It 'should not return anything' {
+                $nodePath | Should BeNullOrEmpty
+            }
+        }
+        elseif($InstallsVersion -eq '438.4393.329')
+        {
+            It ('should write an error that Node version ''{0}'' is not available' -f $InstallsVersion) {
+                $Global:Error | Should Match ('Failed to install Node.js version {0}.' -f $InstallsVersion)
+            }
+
+            It 'should not install Node.js' {
                 $nodePath | Should BeNullOrEmpty
             }
         }
@@ -139,6 +152,19 @@ function Assert-ThatInstallNodeJs
             }
         }
     }
+    catch
+    {
+        if(($InstallsVersion -eq '') -or ($InstallsVersion -eq 'fubarsnafu'))
+        {
+            It ('should write an error that Node version ''{0}'' is invalid' -f $InstallsVersion) {
+                $Global:Error | Should Match ('Node version ''{0}'' is invalid' -f $InstallsVersion)
+            }
+            
+            It 'should not install Node.js' {
+                $nodePath | Should BeNullOrEmpty
+            }
+        }
+    }
     finally
     {
         if( -not $PreserveInstall )
@@ -161,19 +187,32 @@ function Assert-ThatInstallNodeJs
     }
 }
 
+
 Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed' {
-  Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -PreserveInstall
-  Context 'now its installed' {
-    Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer
+    Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -PreserveInstall
+    Context 'now its installed' {
+        Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer
   }
 }
 
 Describe 'Install-WhsCINodeJs.when run on developer computer and NVM isn''t installed' {
-  Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnDeveloperComputer -ErrorAction SilentlyContinue
+    Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnDeveloperComputer -ErrorAction SilentlyContinue
 }
 
-Describe 'Install-WhsCiNodejs.when using default installation directory' {
+Describe 'Install-WhsCINodejs.when using default installation directory' {
     Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -WhenUsingDefaultInstallDirectory
+}
+
+Describe 'Install-WhsCINodejs.should fail when node engine is missing' {
+    Assert-ThatInstallNodeJs -InstallsVersion ''
+}
+
+Describe 'Install-WhsCINodejs.should fail when node version is invalid' {
+    Assert-ThatInstallNodeJs -InstallsVersion 'fubarsnafu'
+}
+
+Describe 'Install-WhsCINodejs.should fail when node version does not exist' {
+    Assert-ThatInstallNodeJs -InstallsVersion '438.4393.329' -ErrorAction SilentlyContinue
 }
 
 if( $restoreNvmHome )

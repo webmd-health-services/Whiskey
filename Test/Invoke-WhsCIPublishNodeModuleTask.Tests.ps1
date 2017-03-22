@@ -18,11 +18,8 @@ function New-PublishNodeModuleStructure
     )
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
-    Mock -CommandName 'Install-WhsCINodeJs' -ModuleName 'WhsCI' -MockWith {return 'C:\PathToNode\whsbuild.yml'}
-    Mock -CommandName 'Join-Path' -ModuleName 'WhsCI' -ParameterFilter {$ChildPath -eq 'node_modules\npm\bin\npm-cli.js'} -MockWith {return 'C:\PathToNode\PathToNPM'}
-    Mock -CommandName 'New-Item' -ModuleName 'WhsCI' -ParameterFilter {$Path -match '.npmrc'} -MockWith {return 'C:\NotANullPath'}
-    Mock -CommandName 'Add-Content' -ModuleName 'WhsCI'
     Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -ParameterFilter {$ScriptBlock -match 'publish'}
+    Mock -CommandName 'Remove-Item' -ModuleName 'WhsCI'
 
     if ($ByDeveloper)
     {
@@ -68,12 +65,8 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Developer' {
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
-    It 'should ensure the appropriate versions of Node and NPM are installed' {
-        Assert-MockCalled -CommandName 'Install-WhsCINodeJs' -ModuleName 'WhsCI' -Times 1 -Exactly
-    }
-
-    It 'should ensure that a package.json file exists in the appropriate working directory' {
-        Test-Path (Join-Path -Path $taskContext.BuildRoot -ChildPath 'package.json') | Should be $true
+    It 'should not publish the Node module package to the defined registry' {
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0
     }
 }
 
@@ -81,16 +74,11 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Developer with define
     $returnContextParams = New-PublishNodeModuleStructure -ByDeveloper -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
-    $workingDir = Join-Path -Path $taskContext.BuildRoot -ChildPath $taskParameter.WorkingDirectory
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
-    It 'should ensure the appropriate versions of Node and NPM are installed' {
-        Assert-MockCalled -CommandName 'Install-WhsCINodeJs' -ModuleName 'WhsCI' -Times 1 -Exactly
-    }
-
-    It 'should ensure that a package.json file exists in the appropriate working directory' {
-        Test-Path (Join-Path -Path $workingDir -ChildPath 'package.json') | Should be $true
+    It 'should not publish the Node module package to the defined registry' {
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0
     }
 }
 
@@ -98,6 +86,7 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
+    $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
@@ -105,20 +94,30 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         Assert-MockCalled -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -Times 1 -Exactly
     }
 
-    It 'should ensure that a package.json file exists in the appropriate working directory' {
-        Test-Path (Join-Path -Path $taskContext.BuildRoot -ChildPath 'package.json') | Should be $true
-    }
-
     It 'should create a temporary .npmrc file in the root of the application build directory' {
-        Assert-MockCalled -CommandName 'New-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Test-Path -Path $npmrcPath | Should be $true
     }
 
-    It 'should populate the .npmrc file with the appropriate configuration values' {
-        Assert-MockCalled -CommandName 'Add-Content' -ModuleName 'WhsCI' -Times 4 -Exactly
+    It 'should populate the .npmrc file with the appropriate NPM registry value' {
+        $npmrcPath | Should Contain $taskContext.ProgetSession.NpmFeedUri
+    }
+
+    It 'should populate the .npmrc file with authentication credentials' {
+        $npmrcPath | Should Contain ('username={0}' -f $taskContext.ProGetSession.Credential.UserName)
+        $npmrcPath | Should Contain '_password'
+    }
+
+    It 'should populate the .npmrc file with the current user''s email address' {
+        $npmEmail = $env:USERNAME + '@webmd.net'
+        $npmrcPath | Should Contain $npmEmail
     }
 
     It 'should publish the Node module package to the defined registry' {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -Exactly
+    }
+
+    It 'should remove the temporary config file .npmrc from the build root' {
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
     }
 }
 
@@ -126,7 +125,7 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
-    $workingDir = Join-Path -Path $taskContext.BuildRoot -ChildPath $taskParameter.WorkingDirectory
+    $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
@@ -134,19 +133,29 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         Assert-MockCalled -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -Times 1 -Exactly
     }
 
-    It 'should ensure that a package.json file exists in the appropriate working directory' {
-        Test-Path (Join-Path -Path $workingDir -ChildPath 'package.json') | Should be $true
-    }
-
     It 'should create a temporary .npmrc file in the root of the application build directory' {
-        Assert-MockCalled -CommandName 'New-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Test-Path -Path $npmrcPath | Should be $true
     }
 
-    It 'should populate the .npmrc file with the appropriate configuration values' {
-        Assert-MockCalled -CommandName 'Add-Content' -ModuleName 'WhsCI' -Times 4 -Exactly
+    It 'should populate the .npmrc file with the appropriate NPM registry value' {
+        $npmrcPath | Should Contain $taskContext.ProgetSession.NpmFeedUri
+    }
+
+    It 'should populate the .npmrc file with authentication credentials' {
+        $npmrcPath | Should Contain ('username={0}' -f $taskContext.ProGetSession.Credential.UserName)
+        $npmrcPath | Should Contain '_password'
+    }
+
+    It 'should populate the .npmrc file with the current user''s email address' {
+        $npmEmail = $env:USERNAME + '@webmd.net'
+        $npmrcPath | Should Contain $npmEmail
     }
 
     It 'should publish the Node module package to the defined registry' {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -Exactly
+    }
+    
+    It 'should remove the temporary config file .npmrc from the application build root' {
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
     }
 }
