@@ -25,9 +25,6 @@ function Invoke-WhsCIPublishPowerShellModuleTask
     Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 
     Demonstrates how to call the `WhsCIPublishPowerShellModuleTask`. In this case  element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
-
-
-
     #> 
     [CmdletBinding()]
     param(
@@ -60,7 +57,6 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             $feedName = $TaskParameter.FeedName
         }
 
-        # Make sure the TaskParameter contains a Path parameter.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whsbuild.yml file, to the module directory of the module to publish, e.g. 
@@ -78,6 +74,20 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             throw('Element ''Path'' must point to a directory, specifically the module directory of the module to publish.')
         }
                 
+        $manifestPath = '{0}\{1}.psd1' -f $path,($path | Split-Path -Leaf)
+        if( $TaskParameter.ContainsKey('ModuleManifestPath') )
+        {
+            $manifestPath = $TaskParameter.ModuleManifestPath
+        }
+        if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Module Manifest Path {0} is invalid, please check that the {1}.psd1 file is valid and in the correct location.' -f $manifestPath, ($path | Split-Path -Leaf))
+        }
+        $manifest = Get-Content $manifestPath
+        $versionString = "'{0}.{1}.{2}'" -f ( $TaskContext.Version.Major, $TaskContext.Version.Minor, $TaskContext.Version.Patch )
+        $manifest = $manifest -replace "'(\d+(\.\d+){1,3}).*'", $versionString 
+        $manifest | Set-Content $manifestPath
+
         if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )
         {
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
