@@ -57,9 +57,9 @@ function Invoke-WhsCIPublishNodeModuleTask
         return
     }
 
-    $npmConfigPrefix = '//' + $context.ProGetSession.NpmFeedUri.Authority `
-                    + $context.ProGetSession.NpmFeedUri.Segments[0] `
-                    + $context.ProGetSession.NpmFeedUri.Segments[1]
+    $npmConfigPrefix = '//' + $TaskContext.ProGetSession.NpmFeedUri.Authority `
+                    + $TaskContext.ProGetSession.NpmFeedUri.Segments[0] `
+                    + $TaskContext.ProGetSession.NpmFeedUri.Segments[1]
 
     $npmUserName = $TaskContext.ProGetSession.Credential.UserName
     $npmEmail = $env:USERNAME + '@webmd.net'
@@ -84,7 +84,7 @@ function Invoke-WhsCIPublishNodeModuleTask
     {
         if (Test-Path $packageNpmrc)
         {
-            Remove-Item $packageNpmrc
+            Remove-Item -Path $packageNpmrc
         }
         Pop-Location
     }

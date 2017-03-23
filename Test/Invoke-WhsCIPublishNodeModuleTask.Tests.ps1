@@ -19,7 +19,7 @@ function New-PublishNodeModuleStructure
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
     Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -ParameterFilter {$ScriptBlock -match 'publish'}
-    Mock -CommandName 'Remove-Item' -ModuleName 'WhsCI'
+    Mock -CommandName 'Remove-Item' -ModuleName 'WhsCI' -ParameterFilter {$Path -match '\.npmrc'}
 
     if ($ByDeveloper)
     {
@@ -111,13 +111,16 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         $npmEmail = $env:USERNAME + '@webmd.net'
         $npmrcPath | Should Contain $npmEmail
     }
-
+    
     It 'should publish the Node module package to the defined registry' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
     }
-
+    
     It 'should remove the temporary config file .npmrc from the build root' {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+                          -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
+
     }
 }
 
@@ -150,12 +153,14 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         $npmEmail = $env:USERNAME + '@webmd.net'
         $npmrcPath | Should Contain $npmEmail
     }
-
+    
     It 'should publish the Node module package to the defined registry' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
     }
     
-    It 'should remove the temporary config file .npmrc from the application build root' {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' -Times 1 -Exactly
+    It 'should remove the temporary config file .npmrc from the build root' {
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+                          -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
     }
 }
