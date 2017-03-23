@@ -47,14 +47,14 @@ function Invoke-WhsCIPublishNodeModuleTask
     {
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
+    [String]$npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
+    $nodePath = Install-WhsCINodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
     
     if (!$TaskContext.Publish)
     {
         return
     }
-
-    [String]$npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
-    $nodePath = Install-WhsCINodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
+    
     $nodeRoot = $nodePath | Split-Path
     $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
 
