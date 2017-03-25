@@ -24,11 +24,31 @@ function New-PublishNodeModuleStructure
     if ($ByDeveloper)
     {
         $context = New-WhsCITestContext -ForDeveloper
+        $npmrcFileContents = ''
     }
     
     if ($ByBuildServer)
     {
         $context = New-WhsCITestContext -ForBuildServer
+        [String]$npmFeedUri = $context.ProGetSession.NpmFeedUri
+        $npmUserName = $context.ProGetSession.Credential.UserName
+        $npmEmail = $env:USERNAME + '@webmd.net'
+        $npmCredPassword = $context.ProGetSession.Credential.GetNetworkCredential().Password
+        $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
+        $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
+        $npmConfigPrefix = '//' + $context.ProGetSession.NpmFeedUri.Authority `
+                        + $context.ProGetSession.NpmFeedUri.Segments[0] `
+                        + $context.ProGetSession.NpmFeedUri.Segments[1]
+        $npmrcFileLine1 = ('registry={0}' -f $npmFeedUri)
+        $npmrcFileLine2 = ('{0}:_password="{1}"' -f $npmConfigPrefix, $npmPassword)
+        $npmrcFileLine3 = ('{0}:username={1}' -f $npmConfigPrefix, $npmUserName)
+        $npmrcFileLine4 = ('{0}:email={1}' -f $npmConfigPrefix, $npmEmail)
+        $npmrcFileContents = @"
+$npmrcFileLine1
+$npmrcFileLine2
+$npmrcFileLine3
+$npmrcFileLine4
+"@
     }
     
     $taskParameter = @{}
@@ -49,11 +69,12 @@ function New-PublishNodeModuleStructure
   }
 }'
     $testPackageJsonPath = New-Item -Path $testPackageJsonPath -ItemType File -Value $testPackageJson
-    
+
     $returnContextParams = @{}
     $returnContextParams.TaskContext = $context
     $returnContextParams.TaskParameter = $taskParameter
-    
+    $returnContextParams.NpmrcFileContents = $npmrcFileContents
+
     return $returnContextParams
 
 }
@@ -87,6 +108,7 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
+    $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
@@ -98,20 +120,11 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         Test-Path -Path $npmrcPath | Should be $true
     }
 
-    It 'should populate the .npmrc file with the appropriate NPM registry value' {
-        $npmrcPath | Should Contain $taskContext.ProgetSession.NpmFeedUri
+    It 'should populate the .npmrc file with the appropriate configuration values' {
+        $actualFileContents = Get-Content -Raw -Path $npmrcPath
+        $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
     }
 
-    It 'should populate the .npmrc file with authentication credentials' {
-        $npmrcPath | Should Contain ('username={0}' -f $taskContext.ProGetSession.Credential.UserName)
-        $npmrcPath | Should Contain '_password'
-    }
-
-    It 'should populate the .npmrc file with the current user''s email address' {
-        $npmEmail = $env:USERNAME + '@webmd.net'
-        $npmrcPath | Should Contain $npmEmail
-    }
-    
     It 'should publish the Node module package to the defined registry' {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
@@ -129,6 +142,7 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
+    $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
     Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
@@ -140,18 +154,9 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
         Test-Path -Path $npmrcPath | Should be $true
     }
 
-    It 'should populate the .npmrc file with the appropriate NPM registry value' {
-        $npmrcPath | Should Contain $taskContext.ProgetSession.NpmFeedUri
-    }
-
-    It 'should populate the .npmrc file with authentication credentials' {
-        $npmrcPath | Should Contain ('username={0}' -f $taskContext.ProGetSession.Credential.UserName)
-        $npmrcPath | Should Contain '_password'
-    }
-
-    It 'should populate the .npmrc file with the current user''s email address' {
-        $npmEmail = $env:USERNAME + '@webmd.net'
-        $npmrcPath | Should Contain $npmEmail
+    It 'should populate the .npmrc file with the appropriate configuration values' {
+        $actualFileContents = Get-Content -Raw -Path $npmrcPath
+        $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
     }
     
     It 'should publish the Node module package to the defined registry' {
