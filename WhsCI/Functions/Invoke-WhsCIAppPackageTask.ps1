@@ -116,27 +116,11 @@ function Invoke-WhsCIAppPackageTask
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( -not $excludeArc )
         {
-            $ciComponents = @(
-                                'BitbucketServerAutomation', 
-                                'Blade', 
-                                'LibGit2', 
-                                'LibGit2Adapter', 
-                                'MSBuild',
-                                'Pester', 
-                                'PsHg',
-                                'ReleaseTrain',
-                                'WhsArtifacts',
-                                'WhsHg',
-                                'WhsPipeline'
-                            )
             $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
-            $excludedFiles = Get-ChildItem -Path $arcPath -File | 
-                                ForEach-Object { '/XF'; $_.FullName }
-            $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
             $operationDescription = 'packaging Arc'
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Verbose
+                robocopy $arcPath $arcDestination '/MIR' '/NP' | Write-Verbose
             }
         }
 

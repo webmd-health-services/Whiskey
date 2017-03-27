@@ -130,9 +130,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-This is the first alpha release of WhsCI. Everything is new. [Documentation is on the WhsCI Confluence page.](https://confluence.webmd.net/display/WHS/WhsCI)
-
-This should be considered *alpha* software. Backwards-compatability is not guaranteed between releases, so upgrading may require you to modify your `whsbuild.yml` file. You should also consider all functions exported by `WhsCI` to be private. The correct way to use WhsCI is via a `whsbuild.yml` file checked into your repository. Anything beyond that is unsupported.
+* All of Arc is now included in packages. We no longer filter anything. This is preparation for the day when Arc is distributed as a package.
 '@
 
         } # End of PSData hashtable
