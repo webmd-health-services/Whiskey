@@ -83,6 +83,7 @@
                             'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
+                            'Invoke-WhsCIPublishNodeModuleTask',
                             'Invoke-WhsCIPublishPowerShellModuleTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
