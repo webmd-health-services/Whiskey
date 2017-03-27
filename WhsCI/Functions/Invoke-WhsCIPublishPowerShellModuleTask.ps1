@@ -1,5 +1,4 @@
 function Invoke-WhsCIPublishPowerShellModuleTask
- 
 {
     <#
     .SYNOPSIS
@@ -49,12 +48,12 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             return
         }     
         
-        $repositoryName = 'WhsPowerShellVerification'
+        $repositoryName = 'WhsPowerShell'
         if( $TaskParameter.ContainsKey('RepositoryName') )
         {
             $repositoryName = $TaskParameter.RepositoryName
         }
-        $feedName = 'nuget/PowerShellVerification'
+        $feedName = 'nuget/PowerShell'
         if( $TaskParameter.ContainsKey('FeedName') )
         {
             $feedName = $TaskParameter.FeedName
@@ -83,6 +82,17 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
-        Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        # Publish-Module needs nuget.exe. If it isn't in the PATH, it tries to install it, which doesn't work when running non-interactively.
+        $binPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin' -Resolve
+        $originalPath = $env:PATH
+        Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $binPath,$env:PATH)
+        try
+        {
+            Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        }
+        finally
+        {
+            Set-Item -Path 'env:PATH' -Value $originalPath
+        }
     }
 }
