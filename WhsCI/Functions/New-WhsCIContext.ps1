@@ -172,8 +172,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         }
         
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-        $branch = $branch -replace '/.*$',''
-        $publishOn = @( 'develop', 'release', 'master' )
+        $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
         {
             $publishOn = $config['PublishOn']
@@ -181,8 +180,15 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
 
         $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
         if( -not $releaseName -and $publish )
-        {        
-            $releaseName = $branch
+        {
+            if( $branch -like 'release/*' )
+            {
+                $releaseName = 'release'
+            }
+            else
+            {
+                $releaseName = $branch
+            }
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
