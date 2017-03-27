@@ -131,6 +131,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * All of Arc is now included in packages. We no longer filter anything. This is preparation for the day when Arc is distributed as a package.
+* The `PublishOn` property in whsbuild.yml is now a list of regular expressions that match the branch name.
 '@
 
         } # End of PSData hashtable
