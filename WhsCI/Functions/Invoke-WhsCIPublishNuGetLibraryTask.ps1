@@ -63,7 +63,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
             if( -not (Test-Path -Path $packagePath -PathType Leaf) )
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('Tried to package ''{0}'' but expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' but the expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
             }
 
             # Make sure symbols package was created
@@ -71,7 +71,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             $symbolsPackagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
             if( -not (Test-Path -Path $symbolsPackagePath -PathType Leaf) )
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('Tried to package ''{0}'' but expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
             }
 
             if( $TaskContext.ByDeveloper )
