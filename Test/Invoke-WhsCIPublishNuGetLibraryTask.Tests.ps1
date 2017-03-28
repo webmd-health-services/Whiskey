@@ -57,7 +57,7 @@ function GivenABuiltLibrary
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    Invoke-MSBuild -Path $project -Target 'build' @propertyArg | Out-Null
+    Invoke-WhsCIMSBuild -Path $project -Target 'build' @propertyArg | Out-Null
     return $context
 }
 

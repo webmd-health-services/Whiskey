@@ -1,4 +1,6 @@
 
+
+
 function New-AssemblyInfo
 {
     param(
@@ -111,8 +113,7 @@ function New-WhsCITestContext
         $ForApplicationName,
 
         [string]
-        $ForReleaseName,
-        
+        $ForReleaseName,        
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         [Alias('ByBuildServer')]
@@ -157,7 +158,7 @@ function New-WhsCITestContext
     $progetUri = 'https://proget.example.com'
     if( $UseActualProGet )
     {
-        $progetUri = Get-ProGetUri -Environment 'Dev'
+        $progetUri = 'https://proget.dev.webmd.com'
     }
 
     $optionalArgs = @{ }
@@ -171,6 +172,11 @@ function New-WhsCITestContext
                            'BuildMasterApiKey' = 'racecaracecar';
                            'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
                          }
+        $gitBranch = 'origin/develop'
+        $filter = { $Path -eq 'env:GIT_BRANCH' }
+        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
     }
     else
     {

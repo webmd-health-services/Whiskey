@@ -1,0 +1,108 @@
+# The version being built. It must be a [Semantic Version](http://semver.org). 
+# Pre-release metadata is allowed. Build metadata is removed. When running on a build 
+# server, the build metadata is replaced with information provided by the build server. 
+# The build metadata uses this format `BUILD_NUMBER.BRANCH.COMMIT_ID`. For example, if 
+# the current build number is `93`, the branch is `release/2.0`, and the commit ID is 
+# `d3833712a970a7b5015725d3e1d0577f7e6475fa`, the build metadata will be 
+# `93.release-2.0.d383371`.
+#
+# If you omit the Version property, a version number is created using this format: 
+# `YEAR.MONTHDAY.BUILD_NUMBER`. For example, if today is 3/9/2017 and the build number 
+# is `93`, the version number would be `2017.309.93`. When running on a build server, 
+# the build metadata is replaced with information provided by the build server. The 
+# build metadaa use the format `BRANCH.COMMIT_ID`. For example, if tthe branch is 
+# `release/2.0`, and the commit ID is `d3833712a970a7b5015725d3e1d0577f7e6475fa`, the 
+# build metadata will be `release-2.0.d383371`.
+Version: 0.0.0
+
+# The branches on which you want to publish a package to ProGet and start a deployment 
+# pipeline in BuildMaster, when running on the build server. If you omit the
+# `PublishOn` property (i.e. by default), publishing will happen on the `develop`, 
+# `release`, and `master` branches and any branch that starts with `release/`.
+#
+# You can't publish something unless you create a package, so make sure your 
+# `BuildTasks` property contains a `AppPackage` or `NodeAppPackage` task.
+#
+# You may use regular expressions. Make sure to escape any regular expression 
+# operators. If the entire branch name matches one of the items in this list, your 
+# package will be published. For example, given the example list below, your package 
+# would get published on any of these branches:
+# 
+# * develop
+# * release
+# * release/2.0
+# * master
+#
+# Your package would *not* get published on any of these branches:
+#
+# * development
+# * released
+# * master/hotfix
+#
+# The list of branches gets converted to a regular expression using this format:
+# `^(ITEM|ITEM|ITEM)$`.
+PublishOn:
+ - develop
+ - release
+ - release/.*
+ - master
+ 
+# The name of your application in BuildMaster. By default, the `Name` property from the 
+# `NodeAppPackage` or `AppPackage` tasks is used. You should only need to define this 
+# property if your build creates multiple packages.
+ApplicationName: APPLICATION_NAME
+
+# The name of the release in BuildMaster. By default, the branch name being built is 
+# used. On release branches, e.g. `release/2.0`, `release/3.1`, the release name is
+# always `release`.
+ReleaseName: RELEASE_NAME
+
+# Whether or not to create and deploy your application in BuildMaster. Only applies 
+# if an application package was created (i.e. you have an `AppPackage` or 
+# `NodeAppPackage` build task and you're on a branch that publishes). The default is 
+# `true`. Set to `false` if you don't use BuildMaster to deploy your application or 
+# your application doesn't get deployed.
+DeployPackage: true
+
+# [The list of build tasks to run.](https://confluence.webmd.net/display/WHS/WhsCI+Tasks)
+BuildTasks:
+
+# The `PowerShell` task runs a PowerShell script. 
+- PowerShell:
+    Path: init.ps1
+    
+# The `Pester` task runs Pester tests. (Pester is a testing tool for PowerShell 
+# modules and scripts.)
+- Pester3:
+    # The version of Pester to use. This is mandatory. 3.4.6 is the latest 3.x version.
+    Version: 3.4.6
+    # The path to tests to run. This gets passed to the `Invoke-Pester` function's 
+    # `Script` parameter. Pester runs tests recursively, so if you pass a directory, 
+    # Pester will run all PowerShell scripts whose name matches `*.Tests.ps1`.
+    Path: Test\*.Tests.ps1
+
+# The `Node` task is used to build and test Node.js applications and modules. It:
+#
+#  * Installs the version of Node.js specified in your `package.json` file
+#  * Install all your dependencies
+#  * Run the NPM scripts/commands given by the `NpmScripts` property
+#  * Generates a license report for all the Node.js modules in use
+#  * Runs a security scan against your dependencies
+- Node:
+    # The NPM commands to run. These must be defined in your `package.json` file.
+    NpmScripts:
+    - build-jenkins
+    - test-jenkins
+    
+# The `NodeAppPackage` creates a package of a Node.js application. If running under a 
+# build server, the package is uploaded to ProGet.
+#
+# The `NodeAppPackage` uses a common, WHS-specific whitelist. You can add items to the 
+# whitelist with the `Include` property (not shown). Your `package.json` file is always 
+# included in your package.
+- NodeAppPackage:
+    Name: ui-cm
+    Description: The Condition Management user-interface.
+    Path:
+    - dist
+    - src

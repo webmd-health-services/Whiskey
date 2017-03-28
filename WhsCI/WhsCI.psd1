@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.2.0'
+    ModuleVersion = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -71,20 +71,21 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
-                            'Assert-WhsCIVersionAvailable',
                             'ConvertTo-WhsCISemanticVersion',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
                             'Invoke-WhsCIAppPackageTask',
+                            'Invoke-WhsCIMSBuild',
                             'Invoke-WhsCIMSBuildTask',
                             'Invoke-WhsCINodeAppPackageTask',
                             'Invoke-WhsCINodeTask',
-                            'Invoke-WhsCINuGetPackTask',
                             'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',
                             'Invoke-WhsCIPowerShellTask',
-                            'Invoke-WhsCIPublishNuGetLibraryTask',
+                            'Invoke-WhsCIPublishNodeModuleTask',
+			                'Invoke-WhsCIPublishNuGetLibraryTask',
+                            'Invoke-WhsCIPublishPowerShellModuleTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',
@@ -124,13 +125,17 @@
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://confluence.webmd.net/display/WHS/WhsCI'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = @'
+* All of Arc is now included in packages. We no longer filter anything. This is preparation for the day when Arc is distributed as a package.
+* The `PublishOn` property in whsbuild.yml is now a list of regular expressions that match the branch name.
+* Fixed: AppPackage task fails when Arc is not part of your repository but you're excluding it
+'@
 
         } # End of PSData hashtable
 

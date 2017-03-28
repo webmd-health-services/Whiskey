@@ -1,8 +1,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Carbon\Import-Carbon.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Arc\WhsAutomation\Import-WhsAutomation.ps1' -Resolve)
 
 $defaultPackageName = 'WhsCITest'
 $defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
@@ -26,13 +24,7 @@ function Assert-NewWhsCIAppPackage
         $Name = $defaultPackageName,
 
         [string]
-        $ForBranch,
-
-        [string]
         $ForApplicationName,
-
-        [string]
-        $ForReleaseName,
 
         [string]
         $Description = $defaultDescription,
@@ -140,10 +132,6 @@ function Assert-NewWhsCIAppPackage
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = $Version
-    if( $ForReleaseName )
-    {
-        $taskContext.ReleaseName = $ForReleaseName
-    }
     if( $ForApplicationName )
     {
         $taskContext.ApplicationName = $ForApplicationName
@@ -152,9 +140,9 @@ function Assert-NewWhsCIAppPackage
     $packagesAtStart = @()
     if( $ShouldReallyUploadToProGet )
     {
-        $progetUri = Get-ProGetUri -Environment 'Dev'
-        $appFeedUri = Get-ProGetUri -Environment 'Dev' -Feed 'upack/Tests'
-        $credential = Get-WhsSecret -Environment 'Dev' -Name 'svc-prod-lcsproget' -AsCredential
+        $progetUri = 'https://proget.dev.webmd.com/'
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
                                                         Uri = $progetUri;
@@ -329,39 +317,11 @@ function Assert-NewWhsCIAppPackage
                 $arcPath | Should Exist
             }
 
-            $arcComponentsToExclude = @(
-                                            'BitbucketServerAutomation', 
-                                            'Blade', 
-                                            'LibGit2', 
-                                            'LibGit2Adapter', 
-                                            'MSBuild',
-                                            'Pester', 
-                                            'PsHg',
-                                            'ReleaseTrain',
-                                            'WhsArtifacts',
-                                            'WhsHg',
-                                            'WhsPipeline'
-                                        )
-            It ('should exclude Arc CI components') {
-                foreach( $name in $arcComponentsToExclude )
+            It ('should include all files in Arc') {
+                foreach( $sourceItem in (Get-ChildItem -Path $arcSourcePath -File -Recurse) )
                 {
-                    Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
-                }
-
-                foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
-                {
-                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                    $itemPath | Should Not Exist
-                }
-            }
-
-            It ('should include Arc installation components') {
-                foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
-                {
-                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                    $itemPath | Should Exist
+                    $destinationItem = $sourceItem.FullName -replace ([regex]::Escape($arcSourcePath),$arcPath)
+                    $destinationItem | Should Exist
                 }
             }
         }
@@ -441,11 +401,7 @@ function Assert-NewWhsCIAppPackage
             }
             It 'should not set package Application name' {
                 $taskContext.ApplicationName | Should BeNullOrEmpty
-            }
-            It 'should not set package Release name' {
-                $taskContext.ReleaseName | Should BeNullOrEmpty
-            }
-            
+            }         
         }
         else
         {
@@ -468,24 +424,6 @@ function Assert-NewWhsCIAppPackage
             {           
                 It 'should set package application name' {
                     $taskContext.ApplicationName | Should Be $Name
-                }
-            }
-            if( $ForReleaseName )
-            {
-                It 'should not set package Release Name' {
-                    $taskContext.ReleaseName | Should Be $ForReleaseName
-                }
-            }
-            elseif( $ForBranch )
-            {
-                It 'should set package release name' {
-                    $taskContext.ReleaseName | Should Be $ForBranch
-                }
-            }
-            else
-            {
-                It 'should set package release name' {
-                    $taskContext.ReleaseName | Should Not BeNullOrEmpty
                 }
             }
         }
@@ -577,11 +515,15 @@ function Initialize-Test
     }
     Install-Directory -Path $repoRoot
 
+    $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
     if( -not $WithoutArc )
     {
         $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
-        $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
         robocopy $arcSourcePath $arcDestinationPath '/MIR' | Write-Verbose
+    }
+    else
+    {
+        Get-Item -Path $arcDestinationPath -ErrorAction Ignore | Remove-Item -Recurse -WhatIf
     }
 
     $DirectoryName | ForEach-Object { 
@@ -776,6 +718,21 @@ Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
                               -ErrorAction SilentlyContinue
 }
 
+Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc and ExcludeArc flag is set' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'index.aspx' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
+
+    $Global:Error.Clear()
+
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes $fileNames `
+                              -WhenExcludingArc `
+                              -ShouldWriteNoErrors `
+                              -ShouldUploadPackage `
+                              -ThenArcNotInPackage
+}
+
 Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
@@ -845,90 +802,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch and not including 
                               -ShouldWriteNoErrors `
                               -ShouldReturnNothing
 
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on master branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnMasterBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage 
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on feature branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnFeatureBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on release branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnReleaseBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on long-lived release branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnPermanentReleaseBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on develop branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnDevelopBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on hot fix branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnHotFixBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when building on bug fix branch' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -OnBugFixBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldNotUploadPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
@@ -1042,27 +915,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory for a particular branch' {
+Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom application name' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
-    $branch = 'develop'
-
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-                                      -FileName $fileNames `
-                                      -OnDevelopBranch
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage `
-                              -ForBranch $branch
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a with ApplicationName and ReleaseName' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-    $branch = 'develop'
 
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames `
@@ -1074,7 +929,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a with Applica
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ForApplicationName 'foo' `
-                              -ForReleaseName 'bar' `
                               
 
 }

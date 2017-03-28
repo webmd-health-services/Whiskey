@@ -1,0 +1,11 @@
+TOPIC
+    about_WhsCI
+    
+SHORT DESCRIPTION
+    WhsCI is the WHS build platform. It builds, tests, packages, and publishes Node.js applications, and PowerShell modules. You specify what and how to build something via a YAML configuration file. Full documentation is in Confluence.
+    
+SEE_ALSO
+    https://confluence.webmd.net/display/WHS/WhsCI
+    https://confluence.webmd.net/display/WHS/WhsCI+Tasks
+    https://confluence.webmd.net/display/WHS/whsbuild.yml
+    

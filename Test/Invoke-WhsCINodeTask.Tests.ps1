@@ -118,10 +118,7 @@ function Initialize-NodeProject
 
         [string[]]
         $Dependency,
-
-        [switch]
-        $WithNoNodeEngine,
-
+        
         [string]
         $UsingNodeVersion = '^4.4.7',
 
@@ -199,10 +196,6 @@ function Initialize-NodeProject
         "node": "$($UsingNodeVersion)"
     },
 "@
-    if( $WithNoNodeEngine )
-    {
-        $nodeEngine = ''
-    }
     $packageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
     $name = '"name": "{0}",' -f $defaultPackageName
     if( $WithNoName )
@@ -350,21 +343,6 @@ Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $context = Initialize-NodeProject -ByBuildServer 
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
-}
-
-Describe 'Invoke-WhsCINodeTask.when node engine is missing' {
-    $context = Initialize-NodeProject -WithNoNodeEngine -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version is not defined or is missing' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
-}
-
-Describe 'Invoke-WhsCINodeTask.when node version is invalid' {
-    $context = Initialize-NodeProject -UsingNodeVersion "fubarsnafu" -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'Node version ''fubarsnafu'' is invalid' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
-}
-
-Describe 'Invoke-WhsCINodeTask.when node version does not exist' {
-    $context = Initialize-NodeProject -UsingNodeVersion "438.4393.329" -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'version ''.*'' failed to install' -NpmScript @( 'build' ) -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
