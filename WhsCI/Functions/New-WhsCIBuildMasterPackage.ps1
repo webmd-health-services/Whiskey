@@ -32,8 +32,14 @@ function New-WhsCIBuildMasterPackage
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $deployPackage = $true
+    if( $TaskContext.Configuration.ContainsKey('DeployPackage') )
+    {
+        $deployPackage = $TaskContext.Configuration['DeployPackage']
+    }
     
-    if( $TaskContext.ByDeveloper )    
+    if( $TaskContext.ByDeveloper -or -not $deployPackage )
     {
         return
     }

@@ -57,6 +57,13 @@ ApplicationName: APPLICATION_NAME
 # always `release`.
 ReleaseName: RELEASE_NAME
 
+# Whether or not to create and deploy your application in BuildMaster. Only applies 
+# if an application package was created (i.e. you have an `AppPackage` or 
+# `NodeAppPackage` build task and you're on a branch that publishes). The default is 
+# `true`. Set to `false` if you don't use BuildMaster to deploy your application or 
+# your application doesn't get deployed.
+DeployPackage: true
+
 # [The list of build tasks to run.](https://confluence.webmd.net/display/WHS/WhsCI+Tasks)
 BuildTasks:
 

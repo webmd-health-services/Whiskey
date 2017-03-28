@@ -58,7 +58,10 @@ function WhenCreatingPackage
         $WithErrorMessage,
 
         [Switch]
-        $ForDeveloper
+        $ForDeveloper,
+
+        [Switch]
+        $ThatDoesNotGetDeployed
     )
 
     process
@@ -80,6 +83,12 @@ function WhenCreatingPackage
         {
             $Context.ByDeveloper = $True
         }
+
+        if( $ThatDoesNotGetDeployed )
+        {
+            $Context.Configuration['DeployPackage'] = $false
+        }
+
         $threwException = $false
         try
         {
@@ -255,6 +264,12 @@ Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
 Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
     GivenAnApplication |
         WhenCreatingPackage -ForDeveloper |
+        ThenPackageNotCreated
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
+    GivenAnApplication |
+        WhenCreatingPackage -ThatDoesNotGetDeployed |
         ThenPackageNotCreated
 }
 
