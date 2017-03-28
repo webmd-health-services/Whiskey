@@ -31,8 +31,15 @@ function New-WhsCIBuildMasterPackage
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $deployPackage = $true
+    if( $TaskContext.Configuration.ContainsKey('DeployPackage') )
+    {
+        $deployPackage = $TaskContext.Configuration['DeployPackage']
+    }
     
-    if( $TaskContext.ByDeveloper )    
+    if( $TaskContext.ByDeveloper -or -not $deployPackage )
     {
         return
     }
@@ -50,6 +57,33 @@ function New-WhsCIBuildMasterPackage
     }
 
     $release = Get-BMRelease -Session $buildMasterSession -Application $name -Name $releaseName
+    if( -not $release )
+    {
+        throw (@'
+Unable to create and deploy a release package in BuildMaster. Either the '{0}' application doesn't exist or it doesn't have a '{1}' release. Please contact WHS-LifecycleServices@webmd.net to get BuildMaster pipelines created and configured. 
+ 
+If you don't want to publish to BuildMaster, set the `PublishToBuildMaster` property in '{2}' to `false`, e.g.
+ 
+    PublishToBuildMaster: false
+     
+If your application name in BuildMaster is not '{0}', set the `ApplicationName` property in '{2}' to the name of your application, e.g.
+ 
+    ApplicationName: APPLICATION_NAME
+     
+If your release name in BuildMaster is not '{1}', set the `ReleaseName` property in '{2}' file to the name of your release, e.g.
+ 
+    ReleaseName: RELEASE_NAME
+     
+If you don't want to publish to BuildMaster on this branch, create a `PublishOn` property and list the branches you want to publish on, e.g.
+ 
+    PublishOn:
+    - master
+     
+Full documentation on the `whsbuild.yml` file is at https://confluence.webmd.net/display/WHS/whsbuild.yml.
+ 
+'@ -f $name,$releaseName,$TaskContext.ConfigurationPath)
+    }
+
     $release | Format-List | Out-String | Write-Verbose
 
     $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch

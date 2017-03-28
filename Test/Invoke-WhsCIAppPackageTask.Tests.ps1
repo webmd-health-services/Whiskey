@@ -515,11 +515,15 @@ function Initialize-Test
     }
     Install-Directory -Path $repoRoot
 
+    $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
     if( -not $WithoutArc )
     {
         $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
-        $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
         robocopy $arcSourcePath $arcDestinationPath '/MIR' | Write-Verbose
+    }
+    else
+    {
+        Get-Item -Path $arcDestinationPath -ErrorAction Ignore | Remove-Item -Recurse -WhatIf
     }
 
     $DirectoryName | ForEach-Object { 
@@ -712,6 +716,21 @@ Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
                               -ShouldNotCreatePackage `
                               -ShouldNotUploadPackage `
                               -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc and ExcludeArc flag is set' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'index.aspx' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
+
+    $Global:Error.Clear()
+
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes $fileNames `
+                              -WhenExcludingArc `
+                              -ShouldWriteNoErrors `
+                              -ShouldUploadPackage `
+                              -ThenArcNotInPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
