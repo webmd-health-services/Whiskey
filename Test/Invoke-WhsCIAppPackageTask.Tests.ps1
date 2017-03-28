@@ -932,3 +932,21 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               
 
 }
+
+Describe 'Invoke-WhsCIAppPackageTask.when including WhsEnvironments.json' {
+    $dirNames = @( 'dir1', 'dir1\sub' )
+    $fileNames = @( 'html.html' )
+    $rootFileNames = @( 'WhsEnvironments.json' )
+    $path = @( 'dir1', 'WhsEnvironments.json' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
+                                      -FileName $fileNames `
+                                      -RootFileName $rootFileNames `
+
+
+    Assert-NewWhsCIAppPackage -ForPath  $path `
+                              -ThatIncludes '*.html' `
+                              -HasRootItems $dirNames `
+                              -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
+
+}

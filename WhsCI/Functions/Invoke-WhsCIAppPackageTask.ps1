@@ -74,7 +74,11 @@ function Invoke-WhsCIAppPackageTask
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     $excludeArc = $TaskParameter['ExcludeArc']
-
+    if( -not ($TaskParameter.Path -contains 'WhsEnvironments.json'))
+    {
+        $TaskParameter.Path += 'WhsEnvironments.json'
+    }
+    
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
     {
