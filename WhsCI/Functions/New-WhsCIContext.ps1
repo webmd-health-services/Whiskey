@@ -151,11 +151,12 @@ function New-WhsCIContext
     $progetSession = [pscustomobject]@{
                                             Uri = $ProGetUri;
                                             Credential = $null;
-                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
-                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
+                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed);
+                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed);
+                                            NuGetFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNuGetFeed);
                                             AppFeed = $ProGetAppFeed;
                                             NpmFeed = $ProGetNpmFeed;
-                                            NuGetFeedUri = $ProGetNuGetFeed;
+                                            NuGetFeed = $ProGetNuGetFeed;                                            
                                         }
     $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer

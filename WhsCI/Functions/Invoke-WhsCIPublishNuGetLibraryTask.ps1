@@ -63,7 +63,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
             if( -not (Test-Path -Path $packagePath -PathType Leaf) )
             {
-                throw ('Tried to package ''{0}'' but expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('Tried to package ''{0}'' but expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
             }
 
             # Make sure symbols package was created
@@ -71,7 +71,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             $symbolsPackagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
             if( -not (Test-Path -Path $symbolsPackagePath -PathType Leaf) )
             {
-                throw ('Tried to package ''{0}'' but expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('Tried to package ''{0}'' but expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
             }
 
             if( $TaskContext.ByDeveloper )
@@ -79,13 +79,13 @@ function Invoke-WhsCIPublishNuGetLibraryTask
                 continue
             }
 
-            $source = $TaskContext.ProGetSession.NuGetFeedUri
+            $source = $TaskContext.ProGetSession.NuGetFeed
             $apiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
             $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             
             # Make sure this version doesn't exist.
             $packageExists = $false
-            $errCount = $Global:Error.Count
+            $numErrorsAtStart = $Global:Error.Count
             try
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
@@ -95,10 +95,10 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             {
                 if( ([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode -ne [Net.HttpStatusCode]::NotFound )
                 {
-                    Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} could not be pushed. Invoke-WebRequest failed with ''{2}''.' -f $projectName,$packageVersion,([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode)
+                    Stop-WhsCITask -TaskContext $TaskContext -Message ('Failure checking if {0} {1} package already exists at {2}. The web request returned a {3} status code.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
                 }
 
-                for( $idx = 0; $idx -lt ($Global:Error.Count - $errCount); ++$idx )
+                for( $idx = 0; $idx -lt ($Global:Error.Count - $numErrorsAtStart); ++$idx )
                 {
                     $Global:Error.RemoveAt(0)
                 }
@@ -112,15 +112,13 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             # Publish package and symbols to NuGet
             Invoke-Command -ScriptBlock { & $nugetPath push $packagePath -Source $source -ApiKey $apiKey}
             Invoke-Command -ScriptBlock { & $nugetPath push $symbolsPackagePath -Source $source -ApiKey $apiKey}
-
-            # Since NuGet sux0r, we have to check that the package exists in the repo to test that the nuget push command succeeded or not
             try
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
             }
             catch [Net.WebException]
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('NuGet push command failed to publish NuGet package to ''{0}''. Please see build output for more information.' -f $packageUri)
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to publish NuGet package {0} {1} to {2}. When we checked if that package existed, we got a {3} HTTP status code. Please see build output for more information.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
             }
         }
 

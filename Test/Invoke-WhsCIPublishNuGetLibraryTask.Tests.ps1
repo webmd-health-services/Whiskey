@@ -33,14 +33,14 @@ function GivenABuiltLibrary
     {
         $optionalArgs['BuildConfiguration'] = 'Debug'
     }
-    if( -not $ForBuildServer )
+
+    $forParam = @{ 'ForDeveloper' = $true }
+    if( $ForBuildServer )
     {
-        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForDeveloper
+        $forParam = @{ 'ForBuildServer' = $true }
     }
-    else
-    {
-        $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs -ForBuildServer
-    }
+    $context = New-WhsCITestContext -ForBuildRoot $projectRoot -ForTaskName 'NuGetPack' -ForOutputDirectory $outputDirectory @optionalArgs @forParam
+    
     if( $WithVersion )
     {
         $Context.Version.NuGetVersion = $WithVersion
@@ -277,7 +277,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishi
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when push command fails' {
-    $errorMessage = 'push command failed'
+    $errorMessage = 'Failed to publish NuGet package'
     $Global:error.Clear()
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
@@ -299,7 +299,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when package already exists' {
 }
 
 Describe 'Invoke-WhsCINuGetPackTask.when creating WebRequest fails' {
-    $errorMessage = 'Invoke-WebRequest failed with'
+    $errorMessage = 'Failure checking if'
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
         Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/500'
