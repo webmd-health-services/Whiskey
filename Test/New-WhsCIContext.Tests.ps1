@@ -137,7 +137,10 @@ function GivenConfiguration
 
         $ForApplicationName,
 
-        $ForReleaseName
+        $ForReleaseName,
+
+        [string[]]
+        $PublishingOn
     )
 
     if( $ThatDoesNotExist )
@@ -163,15 +166,20 @@ function GivenConfiguration
     {
         $config['ReleaseName'] = $ForReleaseName
     }
+
+    if( $PublishingOn )
+    {
+        $config['PublishOn'] = $PublishingOn
+    }
     
     if( $ForBuildServer )
     {
-    $gitBranch = $OnBranch
-    $filter = { $Path -eq 'env:GIT_BRANCH' }
-    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+        $gitBranch = $OnBranch
+        $filter = { $Path -eq 'env:GIT_BRANCH' }
+        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     }
     
 
@@ -527,4 +535,10 @@ Describe 'New-WhsCIContext.when building on bug fix branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/bugfix/fubarnsafu' |
             WhenCreatingContext -ByBuildServer | 
             ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
+}
+
+Describe 'New-WhsCIContext.when publishing on custom branch' {
+    GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0' |
+        WhenCreatingContext -ByBuildServer |
+        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
 }

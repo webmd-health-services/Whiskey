@@ -317,39 +317,11 @@ function Assert-NewWhsCIAppPackage
                 $arcPath | Should Exist
             }
 
-            $arcComponentsToExclude = @(
-                                            'BitbucketServerAutomation', 
-                                            'Blade', 
-                                            'LibGit2', 
-                                            'LibGit2Adapter', 
-                                            'MSBuild',
-                                            'Pester', 
-                                            'PsHg',
-                                            'ReleaseTrain',
-                                            'WhsArtifacts',
-                                            'WhsHg',
-                                            'WhsPipeline'
-                                        )
-            It ('should exclude Arc CI components') {
-                foreach( $name in $arcComponentsToExclude )
+            It ('should include all files in Arc') {
+                foreach( $sourceItem in (Get-ChildItem -Path $arcSourcePath -File -Recurse) )
                 {
-                    Join-Path -Path $arcPath -ChildPath $name | Should Not Exist
-                }
-
-                foreach( $item in (Get-ChildItem -Path $arcSourcePath -File) )
-                {
-                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                    $itemPath | Should Not Exist
-                }
-            }
-
-            It ('should include Arc installation components') {
-                foreach( $item in (Get-ChildItem -Path $arcSourcePath -Directory -Exclude $arcComponentsToExclude))
-                {
-                    $relativePath = $item.FullName -replace [regex]::Escape($arcSourcePath),''
-                    $itemPath = Join-Path -Path $arcPath -ChildPath $relativePath
-                    $itemPath | Should Exist
+                    $destinationItem = $sourceItem.FullName -replace ([regex]::Escape($arcSourcePath),$arcPath)
+                    $destinationItem | Should Exist
                 }
             }
         }
@@ -543,11 +515,15 @@ function Initialize-Test
     }
     Install-Directory -Path $repoRoot
 
+    $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
     if( -not $WithoutArc )
     {
         $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
-        $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
         robocopy $arcSourcePath $arcDestinationPath '/MIR' | Write-Verbose
+    }
+    else
+    {
+        Get-Item -Path $arcDestinationPath -ErrorAction Ignore | Remove-Item -Recurse -WhatIf
     }
 
     $DirectoryName | ForEach-Object { 
@@ -740,6 +716,21 @@ Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
                               -ShouldNotCreatePackage `
                               -ShouldNotUploadPackage `
                               -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc and ExcludeArc flag is set' {
+    $dirNames = @( 'dir1' )
+    $fileNames = @( 'index.aspx' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
+
+    $Global:Error.Clear()
+
+    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+                              -ThatIncludes $fileNames `
+                              -WhenExcludingArc `
+                              -ShouldWriteNoErrors `
+                              -ShouldUploadPackage `
+                              -ThenArcNotInPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {

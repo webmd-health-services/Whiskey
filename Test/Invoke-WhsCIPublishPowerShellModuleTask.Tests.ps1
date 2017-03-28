@@ -120,6 +120,7 @@ function Invoke-Publish
 
     Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
+    Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:PATH' }
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
     $Global:Error.Clear()
     $failed = $False
@@ -158,6 +159,9 @@ function Assert-ModuleNotPublished
         Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
     }    
+    It 'should not add NuGet.exe to path' {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 0
+    }
     It 'should not attempt to publish the module'{
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 0
     }
@@ -181,8 +185,8 @@ function Assert-ModuleRegistered
     )
     if ( $WithDefaultRepo )
     {
-        $ExpectedRepositoryName = 'WhsPowerShellVerification'
-        $ExpectedFeedName = 'nuget/PowerShellVerification'
+        $ExpectedRepositoryName = 'WhsPowerShell'
+        $ExpectedFeedName = 'nuget/PowerShell'
     }
     else
     {
@@ -237,7 +241,14 @@ function Assert-ModulePublished
     
     if( $WithDefaultRepo )
     {
-        $ExpectedRepositoryName = 'WhsPowerShellVerification'
+        $ExpectedRepositoryName = 'WhsPowerShell'
+    }
+
+    $whsCIBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\bin' -Resolve
+    It ('should add nuget.exe to path so Publish-Module works') {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $Value -eq ('{0};{1}' -f $whsCIBinPath,$env:Path)
+        }
     }
     
     It ('should publish the Module')  {
@@ -256,6 +267,12 @@ function Assert-ModulePublished
             $Path -eq $ExpectedPathName -and
             $Repository -eq $ExpectedRepositoryName -and
             $NuGetApiKey -eq $expectedApiKey
+        }
+    }
+
+    It ('should put the PATH environment variable back the way it was') {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            $Value -eq $env:PATH
         }
     }
 }

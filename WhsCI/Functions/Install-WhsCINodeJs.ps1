@@ -28,8 +28,8 @@ function Install-WhsCINodeJs
 
         [Parameter(Mandatory=$true)]
         [string]
-        # The version to install.
-        $Version,
+        # The root directory of the target Node.js application. This directory will contain the application's `package.json` config file.
+        $ApplicationRoot,
 
         [string]
         # The directory where NVM should be installed to. Only used if NVM isn't already installed. NVM is installed to `$NvmInstallDirectory\nvm`.
@@ -87,7 +87,7 @@ NVM for Windows is not installed. To install it:
         $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
 
         $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'
-        (New-Object 'Net.WebClient').DownloadFile($nvmUri, $tempZipFile)
+        Invoke-WebRequest -Uri $nvmUri -OutFile $tempZipFile
         if( -not (Test-Path -Path $tempZipFile -PathType Leaf) )
         {
             Write-Error -Message ('Failed to download NVM from {0}' -f $nvmUri)
@@ -110,15 +110,45 @@ path: $($nvmSymlink)
         Write-Error -Message ('Failed to install NVM to {0}.' -f $nvmRoot)
         return
     }
+    
+    $packageJsonPath = Resolve-Path -Path (Join-Path -Path $ApplicationRoot -ChildPath 'package.json') | Select-Object -ExpandProperty 'ProviderPath'
+    if( -not $packageJsonPath )
+    {
+        throw ('Package.json file ''{0}'' does not exist. This file is mandatory when using the Node build task.' -f (Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'))
+    }
 
-    $activity = 'Installing Node.js {0}' -f $Version
+    $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
+    if( -not $packageJson )
+    {
+        throw ('Package.json file ''{0}'' contains invalid JSON. Please see previous errors for more information.' -f $packageJsonPath)
+    }
+
+    if( -not ($packageJson | Get-Member -Name 'name') -or -not $packageJson.name )
+    {
+        throw ('Package name is missing or doesn''t have a value. Please ensure ''{0}'' contains a ''name'' field., e.g. `"name": "fubarsnafu"`. A package name is required by NSP, the Node Security Platform, when scanning for security vulnerabilities.' -f $packageJsonPath)
+    }
+
+    if( -not ($packageJson | Get-Member -Name 'engines') -or -not ($packageJson.engines | Get-Member -Name 'node') )
+    {
+        throw ('Node version is not defined or is missing from the package.json file ''{0}''. Please ensure the Node version to use is defined using the package.json''s engines field, e.g. `"engines": {{ node: "VERSION" }}`. See https://docs.npmjs.com/files/package.json#engines for more information.' -f $packageJsonPath)
+        return
+    }
+
+    if( $packageJson.engines.node -notmatch '(\d+\.\d+\.\d+)' )
+    {
+        throw ('Node version ''{0}'' is invalid. The Node version must be a valid semantic version. Package.json file ''{1}'', engines field:{2}{3}' -f $packageJson.engines.node,$packageJsonPath,[Environment]::NewLine,($packageJson.engines | ConvertTo-Json -Depth 50))
+    }
+
+    $version = $Matches[1]
+
+    $activity = 'Installing Node.js {0}' -f $version
     Write-Progress -Activity $activity
-    $output = & $nvmPath install $Version 64 | 
+    $output = & $nvmPath install $version 64 | 
                 Where-Object { $_ } |
                 ForEach-Object { Write-Progress -Activity $activity -Status $_; $_ }
     Write-Progress -Activity $activity -Completed
 
-    $versionRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $Version)
+    $versionRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $version)
     $node64Path = Join-Path -Path $versionRoot -ChildPath 'node64.exe'
     $nodePath = Join-Path -Path $versionRoot -ChildPath 'node.exe'
     if( (Test-Path -Path $node64Path -PathType Leaf) )
@@ -157,5 +187,5 @@ path: $($nvmSymlink)
         return $nodePath
     }
 
-    Write-Error -Message ('Failed to install Node.js version {0}.{1}{2}' -f $Version,[Environment]::NewLine,($output -join [Environment]::NewLine))
+    Write-Error -Message ('Failed to install Node.js version {0}.{1}{2}' -f $version,[Environment]::NewLine,($output -join [Environment]::NewLine))
 }

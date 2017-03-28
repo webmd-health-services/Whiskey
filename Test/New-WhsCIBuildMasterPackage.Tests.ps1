@@ -26,6 +26,17 @@ function GivenAnApplication
     
 }
 
+function GivenNoApplication
+{
+    $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' 
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' 
+    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' 
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+
+    New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+}
+
 function WhenCreatingPackage
 {
     [CmdletBinding()]
@@ -47,7 +58,10 @@ function WhenCreatingPackage
         $WithErrorMessage,
 
         [Switch]
-        $ForDeveloper
+        $ForDeveloper,
+
+        [Switch]
+        $ThatDoesNotGetDeployed
     )
 
     process
@@ -69,6 +83,12 @@ function WhenCreatingPackage
         {
             $Context.ByDeveloper = $True
         }
+
+        if( $ThatDoesNotGetDeployed )
+        {
+            $Context.Configuration['DeployPackage'] = $false
+        }
+
         $threwException = $false
         try
         {
@@ -104,6 +124,17 @@ function WhenCreatingPackage
 
         return $Context
 
+    }
+}
+
+function ThenItFails
+{
+    It 'should not create release package' {
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+    }
+
+    It 'should not start deploy' {
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
     }
 }
 
@@ -207,6 +238,7 @@ function ThenPackageNotCreated
         }
     }
 }
+
 Describe 'New-WhsCIBuildMasterPackage.when called by build server' {
     GivenAnApplication |
         WhenCreatingPackage |
@@ -233,4 +265,16 @@ Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
     GivenAnApplication |
         WhenCreatingPackage -ForDeveloper |
         ThenPackageNotCreated
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
+    GivenAnApplication |
+        WhenCreatingPackage -ThatDoesNotGetDeployed |
+        ThenPackageNotCreated
+}
+
+Describe 'New-WhsCIBuildMasterPackage.when application doesn''t exist in BuildMaster' {
+    GivenNoApplication |
+        WhenCreatingPackage -WithErrorMessage 'unable to create and deploy a release package' -ThenPackageNotCreated -ErrorAction SilentlyContinue |
+        ThenItFails
 }

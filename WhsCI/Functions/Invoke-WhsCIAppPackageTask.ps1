@@ -89,13 +89,6 @@ function Invoke-WhsCIAppPackageTask
         $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath' @parentPathParam
     }
 
-    $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
-    if( -not (Test-Path -Path $arcPath -PathType Container) )
-    {
-        throw ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository.' -f $Name,$arcPath)
-        return
-    }
-
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
     $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
@@ -116,27 +109,18 @@ function Invoke-WhsCIAppPackageTask
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( -not $excludeArc )
         {
-            $ciComponents = @(
-                                'BitbucketServerAutomation', 
-                                'Blade', 
-                                'LibGit2', 
-                                'LibGit2Adapter', 
-                                'MSBuild',
-                                'Pester', 
-                                'PsHg',
-                                'ReleaseTrain',
-                                'WhsArtifacts',
-                                'WhsHg',
-                                'WhsPipeline'
-                            )
+            $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
+            if( -not (Test-Path -Path $arcPath -PathType Container) )
+            {
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository. You can exclude Arc from your package by setting the `ExcludeArc` task property in {1} to `true`.' -f $Name,$arcPath,$TaskContext.ConfigurationPath)
+                return
+            }
+
             $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
-            $excludedFiles = Get-ChildItem -Path $arcPath -File | 
-                                ForEach-Object { '/XF'; $_.FullName }
-            $excludedCIComponents = $ciComponents | ForEach-Object { '/XD' ; Join-Path -Path $arcPath -ChildPath $_ }
             $operationDescription = 'packaging Arc'
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $arcPath $arcDestination '/MIR' $excludedFiles $excludedCIComponents '/NP' | Write-Verbose
+                robocopy $arcPath $arcDestination '/MIR' '/NP' | Write-Verbose
             }
         }
 
