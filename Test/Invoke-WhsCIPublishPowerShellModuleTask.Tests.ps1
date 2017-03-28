@@ -55,7 +55,7 @@ function Invoke-Publish
         $WithoutPathParameter
     )
     
-    $Global:Error.Clear()
+    
 
     if( -not $ForRepositoryName )
     {
@@ -121,6 +121,7 @@ function Invoke-Publish
     Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
+    $Global:Error.Clear()
     $failed = $False
 
     try
