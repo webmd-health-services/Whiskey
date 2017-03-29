@@ -90,6 +90,9 @@ function Invoke-PesterTest
         [Switch]
         $WithMissingVersion,
 
+        [Switch]
+        $WithMissingPath,
+
         [String]
         $ShouldFailWithMessage
     )
@@ -98,7 +101,11 @@ function Invoke-PesterTest
     $failed = $false
     $context = New-WhsCIPesterTestContext
     $Global:Error.Clear()
-    if( -not $Version -and -not $WithMissingVersion )
+    if( $WithMissingPath )
+    {
+        $taskParameter = @{}
+    }
+    elseif( -not $Version -and -not $WithMissingVersion )
     {
         $taskParameter = @{
                         Version = $defaultVersion;
@@ -177,6 +184,11 @@ Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
         Join-Path -Path $outputRoot -ChildPath 'pester-00.xml' | Should Exist
         Join-Path -Path $outputRoot -ChildPath 'pester-01.xml' | Should Exist
     }
+}
+
+Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+    $failureMessage = 'Element ''Path'' is mandatory.'
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
