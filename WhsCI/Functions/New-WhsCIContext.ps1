@@ -85,6 +85,11 @@ function New-WhsCIContext
 
         [Parameter(ParameterSetName='ByBuildServer')]
         [string]
+        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
+        $ProGetNuGetFeed = 'nuget/NuGet',
+
+        [Parameter(ParameterSetName='ByBuildServer')]
+        [string]
         # The name/path to the feed in ProGet where NPM packages should be uploaded to and downloaded from. The default is `npm/npm`. Combined with the `ProGetUri` parameter to create the URI to the feed.
         $ProGetNpmFeed = 'npm/npm',
 
@@ -146,10 +151,12 @@ function New-WhsCIContext
     $progetSession = [pscustomobject]@{
                                             Uri = $ProGetUri;
                                             Credential = $null;
-                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
-                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
+                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed);
+                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed);
+                                            NuGetFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNuGetFeed);
                                             AppFeed = $ProGetAppFeed;
                                             NpmFeed = $ProGetNpmFeed;
+                                            NuGetFeed = $ProGetNuGetFeed;                                            
                                         }
     $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer
