@@ -33,10 +33,10 @@ function Invoke-WhsCIPester4Task
 
     if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester4, e.g. 
         
             BuildTasks:
-            - Pester3:
+            - Pester4:
                 Path:
                 - My.Tests.ps1
                 - Tests')
@@ -51,15 +51,25 @@ function Invoke-WhsCIPester4Task
         {
             Stop-WhsCITask -TaskContext $TaskContext -message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
         }
+
+        if( $version.Major -ne 4)
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Specified Pester Version {0} is not part of version 4. The Pester4 task is designed to run tests using Pester4 with version 4.0.0 or greater.' -f $version)
+        }
+        
         $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
     }
     else
     {
-        $latestPester = ( find-Module -Name 'Pester' -AllVersions | ? { $_.Version -like '4.*' } )
-        $version = $latestPester[0].Version 
-        $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Build)
+        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
+        if( -not $latestPester )
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to find a suitable default version of Pester4. Try again with explicit Version property.')
+        }
+        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $version = $latestPester.Version 
     }
-        
+
     $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version
     if( -not $pesterModulePath )
     {
@@ -73,7 +83,7 @@ function Invoke-WhsCIPester4Task
         $testIdx++
     }
 
-    # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
+    # We do this in the background so we can test this with Pester.
    $job = Start-Job -ScriptBlock {
         $script = $using:Path
         $outputRoot = $using:TaskContext.OutputDirectory
@@ -87,7 +97,7 @@ function Invoke-WhsCIPester4Task
         $result
         if( $result.FailedCount )
         {
-            throw ('Pester tests failed.')
+             Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
         }
     } 
     
