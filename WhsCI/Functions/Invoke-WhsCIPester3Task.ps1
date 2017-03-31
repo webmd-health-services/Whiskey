@@ -71,7 +71,7 @@ function Invoke-WhsCIPester3Task
     }
 
     # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
-    $result = Start-Job -ScriptBlock {
+    $job = Start-Job -ScriptBlock {
         $script = $using:Path
         $outputRoot = $using:TaskContext.OutputDirectory
         $testIdx = $using:testIdx
@@ -80,11 +80,19 @@ function Invoke-WhsCIPester3Task
 
         Import-Module -Name $pesterModulePath
         $outputFile = Join-Path -Path $outputRoot -ChildPath ($outputFileNameFormat -f $testIdx)
-        Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
-    } | Wait-Job | Receive-Job
-
-    if( $result.FailedCount )
+        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
+        $result
+        if( $result.FailedCount )
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
+        }
+    } 
+    
+    do
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
+            $job | Receive-Job
     }
+    while( -not ($job | Wait-Job -Timeout 1) )
+
+    $job | Receive-Job
 }
