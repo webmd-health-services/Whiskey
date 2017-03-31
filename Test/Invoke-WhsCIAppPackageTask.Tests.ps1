@@ -503,6 +503,10 @@ function Initialize-Test
         $AsDeveloper
     )
 
+    if( -not ($RootFileName -contains 'WhsEnvironments.json'))
+    {
+        $RootFileName += 'WhsEnvironments.json'
+    }
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     Install-Directory -Path $repoRoot
     if( -not $SourceRoot )
@@ -859,16 +863,19 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* Path`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* Path`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 
 function New-TaskParameter
 {
-     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' }
+     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' }
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
+    $filter = { $PropertyName -eq 'Path' } 
+    Mock -CommandName 'Resolve-whsCITaskPath' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $True }
+
     $context = New-WhsCITestContext -ForDeveloper
 
     $Global:Error.Clear()
@@ -878,7 +885,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exis
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 
@@ -928,25 +935,19 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
-                              -ForApplicationName 'foo' `
-                              
-
+                              -ForApplicationName 'foo'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when including WhsEnvironments.json' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-    $rootFileNames = @( 'WhsEnvironments.json' )
-    $path = @( 'dir1', 'WhsEnvironments.json' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-                                      -FileName $fileNames `
-                                      -RootFileName $rootFileNames `
+Describe 'Invoke-WhsCIAppPackageTask.when explicitly including WhsEnvironments.json in Path Parameter' {
+    $file = 'WhsEnvironments.json'
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $file -HasRootItems $file
+}
 
-
-    Assert-NewWhsCIAppPackage -ForPath  $path `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage `
-
+Describe 'Invoke-WhsCIAppPackageTask.when not including WhsEnvironments.json in Path Parameter' {
+    $dirName = 'dir1'
+    $fileName = 'html.html'
+    $file = 'WhsEnvironments.json'
+    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $dirName -ThatIncludes '*.html' -HasRootItems $file
 }

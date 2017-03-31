@@ -65,6 +65,10 @@ function Invoke-WhsCIAppPackageTask
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
         }
     }
+    if( -not ($TaskParameter.Path -contains 'WhsEnvironments.json'))
+    {
+        $TaskParameter.Path += 'WhsEnvironments.json'
+    }
 
     $version = [semversion.SemanticVersion]$TaskContext.Version
     $name = $TaskParameter['Name']
@@ -74,10 +78,7 @@ function Invoke-WhsCIAppPackageTask
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     $excludeArc = $TaskParameter['ExcludeArc']
-    if( -not ($TaskParameter.Path -contains 'WhsEnvironments.json'))
-    {
-        $TaskParameter.Path += 'WhsEnvironments.json'
-    }
+    
     
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
