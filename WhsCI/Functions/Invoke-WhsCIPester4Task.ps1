@@ -32,15 +32,15 @@ function Invoke-WhsCIPester4Task
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     if( -not ($TaskParameter.ContainsKey('Path')))
-        {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester4, e.g. 
+    {
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhsCIPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
         
-            BuildTasks:
-            - Pester4:
-                Path:
-                - My.Tests.ps1
-                - Tests')
-        }
+        BuildTasks:
+        - Pester4:
+            Path:
+            - My.Tests.ps1
+            - Tests')
+    }
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
@@ -49,12 +49,12 @@ function Invoke-WhsCIPester4Task
         $version = $TaskParameter.Version | ConvertTo-WhsCISemanticVersion
         if( -not $version )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
+            Stop-WhsCITask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')
         }
 
         if( $version.Major -ne 4)
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Specified Pester Version {0} is not part of version 4. The Pester4 task is designed to run tests using Pester4 with version 4.0.0 or greater.' -f $version)
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Version property''s value ''{0}'' is invalid. It must start with ''4.'' (i.e. the major version number must always be ''4'')."' -f $version)
         }
         
         $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
@@ -64,7 +64,7 @@ function Invoke-WhsCIPester4Task
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         if( -not $latestPester )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to find a suitable default version of Pester4. Try again with explicit Version property.')
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to find a version of Pester 4 to install. This usually happens if the Find-Module function can''t communicate with the PowerShell Gallery or whatever PowerShell package repositories you have configured. Make sure you have a network connection and that you''ve got a package source installed that has Pester 4. The Register-PackageSource cmdlet installs new package sources.')
         }
         $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
         $version = $latestPester.Version 

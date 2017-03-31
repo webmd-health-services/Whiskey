@@ -193,7 +193,7 @@ Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
 
 Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
-    $failureMessage = 'not part of version 4'
+    $failureMessage = 'the major version number must always be ''4'''
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -Version ([datetime]'3/4/2003') -ShouldFailWithMessage $failureMessage
 }
 
@@ -223,14 +223,14 @@ Describe 'Invoke-WhsCIPester4Task.when a task path is absolute' {
 Describe 'Invoke-WhsCIPester4Task.when Find-Module fails' {
     Mock -CommandName 'Find-Module' -ModuleName 'WhsCI' -MockWith { return $Null }
     Mock -CommandName 'Where-Object' -ModuleName 'WhsCI' -MockWith { return $Null }
-    $failureMessage = 'Unable to find'
-    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -WithMissingVersion -ShouldFailWithMessage $failureMessage
+    $failureMessage = 'Unable to find a version of Pester 4 to install.'
+    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -WithMissingVersion -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
     Assert-MockCalled -CommandName 'Find-Module' -Times 1 -ModuleName 'WhsCI'
     Assert-MockCalled -CommandName 'Where-Object' -Times 1 -ModuleName 'WhsCI'
 }
 
 Describe 'Invoke-WhsCIPester4Task.when version of tool is less than 4.*' {
     $version = '3.4.3'
-    $failureMessage = 'not part of version 4'
-    Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 
+    $failureMessage = 'the major version number must always be ''4'''
+    Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
