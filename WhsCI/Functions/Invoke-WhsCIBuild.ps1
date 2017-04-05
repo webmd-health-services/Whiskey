@@ -157,7 +157,6 @@ function Invoke-WhsCIBuild
         [Switch]
         $Clean
 
-
     )
 
     Set-StrictMode -Version 'Latest'
@@ -211,20 +210,18 @@ function Invoke-WhsCIBuild
                 $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
                 if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                 {
-                    $whatIfParam = @{ }
+                    $optionalParams = @{ }
                     if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
                     {
-                        $whatIfParam['WhatIf'] = $true
+                        $optionalParams['WhatIf'] = $True
                     }
-                    #there is probably a better way of doing this? Can I do it the same as the @WhatIfParam?
                     if ( $Clean )
                     {
-                        & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam -Clean
+                        $optionalParams['Clean'] = $True
                     }
-                    else
-                    {
-                        & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
-                    }
+
+                    & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
+                    
                 }
                 else
                 {
@@ -241,7 +238,7 @@ function Invoke-WhsCIBuild
     {
         if( $Clean )
         {
-            Remove-Item -path ( Join-Path -Path $PSScriptRoot -ChildPath '.output' ) -Recurse -Force
+            Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
         }
         Pop-Location
 
