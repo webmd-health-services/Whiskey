@@ -4,223 +4,208 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
-function New-PublishFileStructure
+$taskfailed = $false
+$taskException = $null
+
+function Get-BuildRoot
+{
+    Join-Path -Path $TestDrive.FullName -ChildPath 'Source'
+}
+
+function Get-DestinationRoot
+{
+    Join-Path -Path $TestDrive.FullName -ChildPath 'Destination'
+}
+
+function GivenCurrentUserCanNotWriteToDestination
+{
+    Mock -CommandName 'New-Item' -MockWith { Write-Error 'You don''t have access!' }
+}
+
+function GivenDirectories
 {
     param(
-        [Switch]
-        $ByDeveloper,
-
-        [Switch]
-        $ByBuildServer,
-
-        [Switch]
-        $NoFilePathsProvided,
-
-        [Switch]
-        $NoDestinationDirectoriesProvided,
-
-        [Switch]
-        $InvalidDestinationWriteLocation
+        [string[]]
+        $Path
     )
-    
-    $Global:Error.Clear()
+
+    $sourceRoot = Get-BuildRoot
+    foreach( $item in $Path )
+    {
+        New-Item -Path (Join-Path -Path $sourceRoot -ChildPath $item) -ItemType 'Directory' -Force | Out-Null
+    }
+}
+
+function GivenFiles
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    $sourceRoot = Get-BuildRoot
+    foreach( $item in $Path )
+    {
+        New-Item -Path (Join-Path -Path $sourceRoot -ChildPath $item) -ItemType 'File' -Force | Out-Null
+    }
+}
+
+function GivenNoFilesToPublish
+{
+}
+
+function WhenPublishingFiles
+{
+    param(
+        [Parameter(Position=0)]
+        [string[]]
+        $Path,
+
+        [string[]]
+        $To,
+
+        [Switch]
+        $ByADeveloper
+    )
+
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
 
-    if ($ByDeveloper)
+    $optionalParams = @{ }
+    if( $ByADeveloper )
     {
-        $taskContext = New-WhsCITestContext -ForDeveloper
+        $optionalParams['ForDeveloper'] = $true
     }
-    
-    if ($ByBuildServer)
+    else
     {
-        $taskContext = New-WhsCITestContext -ForBuildServer
-    }
-
-    $sourceDir1 = Join-Path $taskContext.BuildRoot -ChildPath '\SourceDir1'
-    $sourceDir2 = Join-Path $sourceDir1 -ChildPath '\SourceDir2'
-    $sourceDir3 = Join-Path $sourceDir1 -ChildPath '\SourceDir3'
-    $destDir1 = Join-Path $taskContext.BuildRoot -ChildPath '\DestDir1'
-    $destDirDNE = Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE'
-    $testFile1 = Join-Path $sourceDir1 -ChildPath 'TestFile1.txt'
-    $testFile2 = Join-Path $sourceDir2 -ChildPath 'TestFile2.txt'
-    $testFile3 = Join-Path $sourceDir3 -ChildPath 'TestFile3.txt'
-    $testFileDNE = 'TestFileDNE.txt'
-    
-    Install-Directory -Path $sourceDir1
-    Install-Directory -Path $sourceDir2
-    Install-Directory -Path $sourceDir3
-    Install-Directory -Path $destDir1
-    $null = New-Item -Path $testFile1 -ItemType File -Value 'I am TestFile1.txt'
-    $null = New-Item -Path $testFile2 -ItemType File -Value 'I am TestFile2.txt'
-    $null = New-Item -Path $testFile3 -ItemType File -Value 'I am TestFile3.txt'
-    
-    $taskParameter = @{}
-    $taskParameter.SourceFiles = ('\SourceDir1\TestFile1.txt', '\SourceDir1\SourceDir2\TestFile2.txt', '\SourceDir1\SourceDir3\TestFile3.txt', $testFileDNE)
-    $taskParameter.DestinationDirectories = ($taskContext.BuildRoot, $destDir1, $destDirDNE)
-
-    if ($NoFilePathsProvided)
-    {
-        $taskParameter.Remove('SourceFiles')
+        $optionalParams['ForBuildServer'] = $true
     }
 
-    if ($NoDestinationDirectoriesProvided)
+    $taskContext = New-WhsCITestContext @optionalParams
+
+    $taskParameter = @{ }
+    $taskParameter['SourceFiles'] = $Path
+    $destinationRoot = Get-DestinationRoot
+    $To = $To | ForEach-Object { Join-Path -Path $destinationRoot -ChildPath $_ }
+    if( -not $To )
     {
-        $taskParameter.Remove('DestinationDirectories')
+        $To = $destinationRoot
+    }
+    $taskParameter['DestinationDirectories'] = $To
+
+    $taskContext.BuildRoot = Get-BuildRoot
+    $script:taskfailed = $false
+    $script:taskException = $null
+
+    try
+    {
+        Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
+    }
+    catch
+    {
+        $taskException = $_
+        $taskFailed = $true
+        Write-Error -ErrorRecord $_
+    }
+}
+
+function ThenNothingPublished
+{
+    param(
+        [string[]]
+        $To
+    )
+
+    $destinationRoot = Get-DestinationRoot
+    It 'should copy nothing' {
+        foreach( $item in $To )
+        {
+            Join-Path -Path $destinationRoot -ChildPath $item |
+                Get-Item |
+                Should BeNullOrEmpty
+        }
+    }
+}
+
+function ThenFilesPublished
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    $destinationRoot = Get-DestinationRoot
+
+    It 'should copy files' {
+        foreach( $item in $Path )
+        {
+            Join-Path -Path $destinationRoot -ChildPath $item  |
+                Get-Item |
+                Should Not BeNullOrEmpty
+        }
+    }
+}
+
+function ThenTaskFails
+{
+    param(
+        $WithErrorMessage
+    )
+
+    It 'should throw an exception' {
+        $taskfailed | Should Be $true
+        $taskException | Should Match $WithErrorMessage
     }
 
-    if ($InvalidDestinationWriteLocation)
-    {
-        $taskParameter.DestinationDirectories = ($taskContext.BuildRoot, $destDir1, $destDirDNE, 'DX:\BadLocation')
-    }
-        
-    $returnContextParams = @{}
-    $returnContextParams.TaskContext = $taskContext
-    $returnContextParams.TaskParameter = $taskParameter
-
-    return $returnContextParams
 }
 
 Describe 'Invoke-WhsCIPublishFileTask when called by Developer' {
-    $returnContextParams = New-PublishFileStructure -ByDeveloper
-    $taskContext = $returnContextParams.TaskContext
-    $taskParameter = $returnContextParams.TaskParameter
-
-    Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
-
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-    
-    It 'should not create any new directories' {
-        Test-Path -Path (Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE') | should be $false
-    }
-    
-    It 'should not publish any files' {
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile3.txt') | should be $false
-    }    
+    GivenFiles 'file.txt'
+    WhenPublishingFiles 'file.txt' -ByADeveloper
+    ThenNothingPublished 
 }
 
-Describe 'Invoke-WhsCIPublishFileTask when called by Build Server' {
-    $returnContextParams = New-PublishFileStructure -ByBuildServer
-    $taskContext = $returnContextParams.TaskContext
-    $taskParameter = $returnContextParams.TaskParameter
-    Mock -CommandName 'Write-Warning' -ModuleName 'WhsCI' -ParameterFilter {$Message -match 'The source file ''TestFileDNE.txt'' does not exist.'}
-
-    Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter -WarningVariable +warnings
-    
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-    
-    It 'should write warnings about the file that does not exist' {    
-        Assert-MockCalled -CommandName 'Write-Warning' -ModuleName 'WhsCI' -Times 3 -Exactly -ParameterFilter {$Message -match 'The source file ''TestFileDNE.txt'' does not exist.'}
-    }
-    
-    It 'should create a new destination directory that does not exist' {
-        Test-Path -Path (Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE') | should be $true
-    }
-    
-    It 'should publish the 3 test files to the 3 destination directories' {
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile1.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile2.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile3.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile1.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile2.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile3.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile1.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile2.txt') | should be $true
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile3.txt') | should be $true
-    }    
+Describe 'Invoke-WhsCIPublishFileTask.when publishing a single file' {
+    GivenFiles 'one.txt'
+    WhenPublishingFiles 'one.txt' 
+    ThenFilesPublished 'one.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask when a valid `SourceFiles` list is not provided' {
-    $returnContextParams = New-PublishFileStructure -ByBuildServer -NoFilePathsProvided
-    $taskContext = $returnContextParams.TaskContext
-    $taskParameter = $returnContextParams.TaskParameter
-    
-    Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the `SourceFiles` parameter is not valid' {
-        $Global:Error | Should Match 'No source files were defined. Please provide a valid list of files utilizing the `TaskParameter.SourceFiles` parameter.'
-    }
-   
-    It 'should not create any new directories' {
-        Test-Path -Path (Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE') | should be $false
-    }
-    
-    It 'should not publish any files' {
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile3.txt') | should be $false
-    }
+Describe 'Invoke-WhsCIPublishFileTask.when publishing multiple files to a single destination' {
+    GivenFiles 'one.txt','two.txt'
+    WhenPublishingFiles 'one.txt','two.txt'
+    ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask when a valid `DestinationDirectories` list is not provided' {
-    $returnContextParams = New-PublishFileStructure -ByBuildServer -NoDestinationDirectoriesProvided
-    $taskContext = $returnContextParams.TaskContext
-    $taskParameter = $returnContextParams.TaskParameter
-    
-    Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the `DestinationDirectories` parameter is not valid' {
-        $Global:Error | Should Match 'No target directory locations were defined. Please provide a valid list of directories utilizing the `TaskParameter.DestinationDirectories` parameter.'
-    }
-   
-    It 'should not create any new directories' {
-        Test-Path -Path (Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE') | should be $false
-    }
-    
-    It 'should not publish any files' {
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile3.txt') | should be $false
-    }
+Describe 'Invoke-WhsCIPublishFileTask.when publishing files from different directories' {
+    GivenFiles 'dir1\one.txt','dir2\two.txt'
+    WhenPublishingFiles 'dir1\one.txt','dir2\two.txt'
+    ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask when an invalid destination directory drive is passed' {
-    $returnContextParams = New-PublishFileStructure -ByBuildServer -InvalidDestinationWriteLocation
-    $taskContext = $returnContextParams.TaskContext
-    $taskParameter = $returnContextParams.TaskParameter
-    
-    Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter -ErrorAction SilentlyContinue
-    
-    It 'should write an error that the destination drive name does not exist' {
-        $Global:Error | Should BeLike 'Cannot find drive. A drive with the name * does not exist.'
-    }
-   
-    It 'should not create any new directories' {
-        Test-Path -Path (Join-Path $taskContext.BuildRoot -ChildPath '\DestDirDNE') | should be $false
-    }
-    
-    It 'should not publish any files' {
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDir1\TestFile3.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile1.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile2.txt') | should be $false
-        Test-Path -Path (Join-Path -Path $taskContext.BuildRoot -ChildPath '\DestDirDNE\TestFile3.txt') | should be $false
-    }
+Describe 'Invoke-WhsCIPublishFileTask.when publishing to multiple destinations' {
+    GivenFiles 'one.txt'
+    WhenPublishingFiles 'one.txt' -To 'dir1','dir2'
+    ThenFilesPublished 'dir1\one.txt','dir2\one.txt'
+}
+
+Describe 'Invoke-WhsCIPublishFileTask.when publishing files and user can''t create destination directories' {
+    GivenFiles 'one.txt'
+    GivenCurrentUserCanNotWriteToDestination
+    WhenPublishingFiles 'one.txt'
+    ThenTaskFails -WithErrorMessage 'failed\ to\ create\ destination\ directory'
+    ThenNothingPublished
+}
+
+Describe 'Invoke-WhsCIPublishFileTask.when publishing nothing' {
+    GivenNoFilesToPublish
+    WhenPublishingFiles
+    ThenTaskFails -WithErrorMessage 'is missing'
+    ThenNothingPublished
+}
+
+Describe 'Invoke-WhsCIPublishFileTask.when publishing a directory' {
+    GivenFiles 'dir1\file1.txt'
+    WhenPublishingFiles 'dir1'
+    ThenTaskFails 'must be a file'
+    ThenNothingPublished
 }
