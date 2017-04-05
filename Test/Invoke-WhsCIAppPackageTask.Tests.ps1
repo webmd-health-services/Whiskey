@@ -929,6 +929,14 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
                               -ForApplicationName 'foo' `
-                              
+}
 
+Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
+    $file = 'project.json'
+    $directory = 'relative'
+    $path = ('{0}\{1}' -f ($directory, $file))
+    $forPath = ('{0}: {1}' -f ($path, $file))
+
+    $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
+    Assert-NewWhsCIAppPackage -ForPath $forPath -HasRootItems $path 
 }

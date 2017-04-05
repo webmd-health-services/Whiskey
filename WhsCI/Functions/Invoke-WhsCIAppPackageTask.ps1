@@ -81,6 +81,23 @@ function Invoke-WhsCIAppPackageTask
         $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
     }
 
+    $iter = 0
+    $packItems = @{}
+    $pathNum = @{}
+    foreach( $item in $path )
+    {
+        if( $item.Contains(': ') )
+        {
+            $split = $item -split ": "
+            $path[$iter] = $split[0]
+            #table mapping itemName of split items to path index
+            $pathNum.Add( $split[1], $iter )
+            #table mapping path index to full relative path of path item to be packaged
+            $packItems.Add( $iter, $split[0] )
+        }
+        $iter++
+    }
+
     $resolveErrors = @()
     $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
 
@@ -132,10 +149,46 @@ function Invoke-WhsCIAppPackageTask
             description = $description
         } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
 
+        function Initialize-Path
+        {
+            param(
+                [Parameter(Mandatory=$true)]
+                [String]
+                $Path
+            )
+            if( (Test-Path -Path $Path) )
+            {
+                return
+            }
+            else
+            {
+                $parent = (Split-Path -Path $Path -Parent)
+                $name = (Split-Path -Path $Path -Leaf)
+                Initialize-Path -Path $parent
+                New-Item -Name $name -Path $parent -ItemType 'Directory' | Out-String | Write-Verbose
+            }            
+        }
+
         foreach( $item in $path )
         {
+
             $itemName = $item | Split-Path -Leaf
+            #check to see if this item was passed in with full relative path and change name accordingly
+            if( $pathNum.ContainsKey($itemName) )
+            {
+                $itemNum = $pathNum.Get_Item($itemName)
+                $itemName = $packItems.Get_Item($itemNum)
+            }
+
             $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
+            $parentPath = ( Split-Path -Path $destination -Parent)
+
+            #if parent doesn't exist in the destination dir, create all necessary path nodes recursively
+            if( -not ( Test-Path -Path $parentPath ) )
+            {
+                Initialize-Path -Path $parentPath
+            }
+
             if( (Test-Path -Path $item -PathType Leaf) )
             {
                 Copy-Item -Path $item -Destination $destination
