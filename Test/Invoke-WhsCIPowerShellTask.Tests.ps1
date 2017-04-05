@@ -36,7 +36,10 @@ function Assert-ThatTheTask
         $WhenGivenADirectoryThatDoesNotExist,
 
         [Switch]
-        $WhenGivenARelativePath
+        $WhenGivenARelativePath,
+
+        [Switch]
+        $WhenGivenCleanSwitch
 
     )
     $script = 'myscript.ps1'
@@ -107,9 +110,15 @@ New-Item -Path 'run' -ItemType 'File'
     }
     
     $failed = $false
+    $CleanParam = @{ }
+    if( $WhenGivenCleanSwitch )
+    {
+        $CleanParam['Clean'] = $True
+    }
+
     try
     {
-        Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $taskParameter @CleanParam
     }
     catch
     {
@@ -213,4 +222,8 @@ Describe 'Invoke-WhsCIPowerShellTask.when not given a working directory' {
 
 Describe 'Invoke-WhsCIPowerShellTask.when working directory does not exist' {
     Assert-ThatTheTask -ForAPassingScript -WhenGivenADirectoryThatDoesNotExist -Fails -DoesNotRun -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIPowerShellTask.when Clean switch is active' {
+    Assert-ThatTheTask -ForAPassingScript -WhenGivenCleanSwitch -Passes -DoesNotRun
 }

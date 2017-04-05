@@ -14,7 +14,7 @@ function Assert-NUnitTestsRun
         $ReportPath
     )
     It 'should run NUnit tests' {
-        $ReportPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should not BeNullOrEmpty
     }   
 }
 
@@ -25,7 +25,7 @@ function Assert-NUnitTestsNotRun
         $ReportPath
     )
     It 'should not run NUnit tests' {
-        $ReportPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 
@@ -57,18 +57,19 @@ function Invoke-NUnitTask
         $WithRunningTests,
 
         [String]
-        $WithError
+        $WithError,
+
+        [Switch]
+        $WhenRunningClean
     )
     Process
     {
+        $inReleaseParam = @{ }
         if ( $InReleaseMode )
         {
-            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies')  -InReleaseMode -ForDeveloper
+            $inReleaseParam['InReleaseMode'] = $True
         }
-        else
-        {
-            $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper
-        }
+        $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper @inReleaseParam
         $threwException = $false
         $Global:Error.Clear()
 
@@ -84,7 +85,7 @@ function Invoke-NUnitTask
                                         )
                               }
         }
-        elseif( $WhenJoinPathResolveFails )
+        elseif( $WithFailingTests )
         {
             $taskParameter = @{
                                 Path = @(
@@ -92,29 +93,35 @@ function Invoke-NUnitTask
                                         )
                               }
         }
-        elseif( $WithFailingTests )
-        {
-            $taskParameter = @{
-                            Path = @(
-                                        'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
-                                    )
-                          }
-        
-        }
         elseif( $WithRunningTests )
         {
             $taskParameter = @{
                             Path = @(
-                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
-                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'   
                                     )
                           }
             Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
         }
+        else
+        {
+            $taskParameter = @{
+                                Path = @(
+                                            'NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll',
+                                            'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
+                                        )
+                              }
+        }
 
+        $optionalParams = @{ }
+        if( $WhenRunningClean )
+        {
+            $optionalParams['Clean'] = $True
+        }
+
+        $Global:Error.Clear()
         try
         {
-            Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
+            Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $taskParameter @optionalParams -ErrorAction SilentlyContinue
         }
         catch
         {
@@ -136,22 +143,39 @@ function Invoke-NUnitTask
                 }
             }
         }
+
         $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
-        if( $ThatFails )
+        if( $WhenRunningClean )
         {
-            Assert-NUnitTestsNotRun -ReportPath $reportPath
+            It 'should not throw an exception' {
+                $threwException | Should be $False
+            }
+            It 'should not exit with error' {
+                $Global:Error | Should beNullorEmpty
+            } 
+        }
+        elseif( $ThatFails )
+        {            
             It 'should throw an exception'{
-                $threwException | Should Be $true
+                $threwException | Should Be $True
             }
         }
         else
-        {
-            Assert-NUnitTestsRun -ReportPath $ReportPath    
+        {               
             It 'should download NUnit.Runners' {
                 (Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\packages\NUnit.Runners.2.6.4') | Should Exist
             }
         }
-        
+        if( $WithFailingTests -or $WithRunningTests )
+        {
+            Assert-NUnitTestsRun -ReportPath $ReportPath
+        }
+        else
+        {
+            Assert-NUnitTestsNotRun -ReportPath $reportPath
+        }
+
+        Remove-Item -Path $context.OutputDirectory -Recurse -Force        
     }
 }
 
@@ -159,18 +183,16 @@ function Invoke-NUnitTask
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' { 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
     Invoke-NUnitTask -WithRunningTests -InReleaseMode
-    return
 }
 
 Describe 'Invoke-WhsCINUnit2Task when running failing NUnit2 tests' {
-    Invoke-NUnitTask -ThatFails -WithFailingTests
-    return   
+    $withError = [regex]::Escape('NUnit2 tests failed')
+    Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError 
 }
 
 Describe 'Invoke-WhsCINUnit2Task when Install-WhsCITool fails' {
     Mock -CommandName 'Install-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $false }
     Invoke-NUnitTask -ThatFails
-    return
 }
 
 Describe 'Invoke-WhsCINUnit2Task when Path Parameter is not included' {
@@ -186,6 +208,9 @@ Describe 'Invoke-WhsCINUnit2Task when Path Parameter is invalid' {
 Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Path -resolve fails' {
     Mock -CommandName 'Join-Path' -ModuleName 'WhsCI' -MockWith { Write-Error 'Path does not exist!' } -ParameterFilter { $ChildPath -eq 'nunit-console.exe' }
     $withError = [regex]::Escape('was installed, but couldn''t find nunit-console.exe')
-    Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError 
-    
+    Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError     
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when the Clean Switch is active' {
+    Invoke-NUnitTask -WhenRunningClean
 }

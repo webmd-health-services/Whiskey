@@ -94,6 +94,11 @@ function Invoke-WhsCINodeAppPackageTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if ( $Clean )
+    {
+        return
+    }
+
     $whitelist = @( 
                         #'*.cert', # only found in Node Overlord
                         '*.css',

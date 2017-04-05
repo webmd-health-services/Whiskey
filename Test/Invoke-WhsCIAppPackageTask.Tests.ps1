@@ -87,7 +87,10 @@ function Assert-NewWhsCIAppPackage
         $WhenRunByDeveloper,
 
         [Switch]
-        $ShouldNotSetPackageVariables
+        $ShouldNotSetPackageVariables,
+
+        [Switch]
+        $WhenGivenCleanSwitch
     )
 
     if( -not $Version )
@@ -167,10 +170,14 @@ function Assert-NewWhsCIAppPackage
 
     $Global:Error.Clear()
 
-    $whatIfParam = @{ }
+    $optionalParams = @{ }
     if( $WhenRunByDeveloper )
     {
-        $whatIfParam['WhatIf'] = $true
+        $optionalParams['WhatIf'] = $true
+    }
+    if( $WhenGivenCleanSwitch )
+    {
+        $optionalParams['Clean'] = $true
     }
         
     function Get-TempDirCount
@@ -183,7 +190,7 @@ function Assert-NewWhsCIAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -931,4 +938,15 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -ForApplicationName 'foo' `
                               
 
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
+    $file = 'project.json'    
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WhenGivenCleanSwitch `
+                              -ShouldReturnNothing `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldNotSetPackageVariables
 }

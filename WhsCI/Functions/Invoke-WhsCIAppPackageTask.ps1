@@ -57,9 +57,12 @@ function Invoke-WhsCIAppPackageTask
         [Switch]
         $Clean
     )
-
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    if( $Clean )
+    {
+        return
+    }
 
     foreach( $mandatoryName in @( 'Name', 'Description', 'Include', 'Path' ) )
     {
