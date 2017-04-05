@@ -25,7 +25,10 @@ function Invoke-WhsCIPublishNuGetLibraryTask
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     process

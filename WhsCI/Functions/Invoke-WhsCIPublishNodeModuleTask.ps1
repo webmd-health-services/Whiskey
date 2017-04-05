@@ -35,7 +35,10 @@ function Invoke-WhsCIPublishNodeModuleTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
         #
         # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.                     
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     Set-StrictMode -Version 'Latest'

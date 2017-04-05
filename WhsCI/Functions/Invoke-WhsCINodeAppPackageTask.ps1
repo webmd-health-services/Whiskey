@@ -85,7 +85,10 @@ function Invoke-WhsCINodeAppPackageTask
         # * `Include`: a whitelist of wildcard patterns and filenames that should be included in the package. Only files under `Path` that match items an item in this list are included in the package.
         # * `Exclude`: a list of wildcard patterns and filenames that should be excluded from the package.
         # * `ThirdPartyPath`: a list of third-party directories/files that should be added to the package without being filtered by `Include` or `Exclude` lists.
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     Set-StrictMode -Version 'Latest'

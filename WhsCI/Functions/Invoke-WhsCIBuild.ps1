@@ -152,7 +152,12 @@ function Invoke-WhsCIBuild
         [Parameter(Mandatory=$true)]
         [object]
         # The context for the build. Use `New-WhsCIContext` to create context objects.
-        $Context
+        $Context,
+
+        [Switch]
+        $Clean
+
+
     )
 
     Set-StrictMode -Version 'Latest'
@@ -211,7 +216,15 @@ function Invoke-WhsCIBuild
                     {
                         $whatIfParam['WhatIf'] = $true
                     }
-                    & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
+                    #there is probably a better way of doing this? Can I do it the same as the @WhatIfParam?
+                    if ( $Clean )
+                    {
+                        & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam -Clean
+                    }
+                    else
+                    {
+                        & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
+                    }
                 }
                 else
                 {
@@ -226,6 +239,10 @@ function Invoke-WhsCIBuild
     }
     finally
     {
+        if( $Clean )
+        {
+            Remove-Item -path ( Join-Path -Path $PSScriptRoot -ChildPath '.output' ) -Recurse -Force
+        }
         Pop-Location
 
         if( $Context.ByBuildServer )

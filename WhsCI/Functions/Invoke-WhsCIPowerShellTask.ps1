@@ -25,7 +25,10 @@ function Invoke-WhsCIPowerShellTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
     
     Set-StrictMode -Version 'Latest'

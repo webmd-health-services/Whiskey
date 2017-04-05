@@ -21,14 +21,17 @@ function Invoke-WhsCINUnit2Task
     #>
     [CmdletBinding()]
     param(
-    [Parameter(Mandatory=$true)]
-    [object]
-    $TaskContext,
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
     
-    [Parameter(Mandatory=$true)]
-    [hashtable]
-    $TaskParameter
- )    
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter,
+
+        [Switch]
+        $Clean
+     )    
   
     Process
     {

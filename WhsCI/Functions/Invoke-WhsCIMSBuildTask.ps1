@@ -27,7 +27,10 @@ function Invoke-WhsCIMSBuildTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
         # 
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whsbuild.yml file they were taken from.
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
   
     Set-StrictMode -version 'latest'  
