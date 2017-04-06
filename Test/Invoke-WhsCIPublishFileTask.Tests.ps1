@@ -4,8 +4,8 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
-$taskfailed = $false
-$taskException = $null
+$Script:taskFailed = $false
+$Script:taskException = $null
 
 function Get-BuildRoot
 {
@@ -15,25 +15,6 @@ function Get-BuildRoot
 function Get-DestinationRoot
 {
     Join-Path -Path $TestDrive.FullName -ChildPath 'Destination'
-}
-
-function GivenCurrentUserCanNotWriteToDestination
-{
-    Mock -CommandName 'New-Item' -MockWith { Write-Error 'You don''t have access!' }
-}
-
-function GivenDirectories
-{
-    param(
-        [string[]]
-        $Path
-    )
-
-    $sourceRoot = Get-BuildRoot
-    foreach( $item in $Path )
-    {
-        New-Item -Path (Join-Path -Path $sourceRoot -ChildPath $item) -ItemType 'Directory' -Force | Out-Null
-    }
 }
 
 function GivenFiles
@@ -65,7 +46,10 @@ function WhenPublishingFiles
         $To,
 
         [Switch]
-        $ByADeveloper
+        $ByADeveloper,
+
+        [Switch]
+        $UserCannotCreateDestinationDirectory
     )
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
@@ -83,7 +67,7 @@ function WhenPublishingFiles
     $taskContext = New-WhsCITestContext @optionalParams
 
     $taskParameter = @{ }
-    $taskParameter['SourceFiles'] = $Path
+    $taskParameter['Path'] = $Path
     $destinationRoot = Get-DestinationRoot
     $To = $To | ForEach-Object { Join-Path -Path $destinationRoot -ChildPath $_ }
     if( -not $To )
@@ -91,20 +75,23 @@ function WhenPublishingFiles
         $To = $destinationRoot
     }
     $taskParameter['DestinationDirectories'] = $To
+    if( $UserCannotCreateDestinationDirectory )
+    {
+        $taskParameter['DestinationDirectories'] = 'BadDestinationDrive:\'
+    }
 
     $taskContext.BuildRoot = Get-BuildRoot
-    $script:taskfailed = $false
-    $script:taskException = $null
+    $Script:taskFailed = $false
+    $Script:taskException = $null
 
     try
     {
-        Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
+        Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter -ErrorAction SilentlyContinue
     }
     catch
     {
-        $taskException = $_
-        $taskFailed = $true
-        Write-Error -ErrorRecord $_
+        $Script:taskException = $_
+        $Script:taskFailed = $true
     }
 }
 
@@ -152,8 +139,8 @@ function ThenTaskFails
     )
 
     It 'should throw an exception' {
-        $taskfailed | Should Be $true
-        $taskException | Should Match $WithErrorMessage
+        $Script:taskFailed | Should Be $true
+        $Script:taskException | Should Match $WithErrorMessage
     }
 
 }
@@ -190,22 +177,21 @@ Describe 'Invoke-WhsCIPublishFileTask.when publishing to multiple destinations' 
 
 Describe 'Invoke-WhsCIPublishFileTask.when publishing files and user can''t create destination directories' {
     GivenFiles 'one.txt'
-    GivenCurrentUserCanNotWriteToDestination
-    WhenPublishingFiles 'one.txt'
-    ThenTaskFails -WithErrorMessage 'failed\ to\ create\ destination\ directory'
+    WhenPublishingFiles 'one.txt' -UserCannotCreateDestinationDirectory
+    ThenTaskFails -WithErrorMessage 'Failed to create destination directory'
     ThenNothingPublished
 }
 
 Describe 'Invoke-WhsCIPublishFileTask.when publishing nothing' {
     GivenNoFilesToPublish
     WhenPublishingFiles
-    ThenTaskFails -WithErrorMessage 'is missing'
+    ThenTaskFails -WithErrorMessage '''Path'' property is missing'
     ThenNothingPublished
 }
 
 Describe 'Invoke-WhsCIPublishFileTask.when publishing a directory' {
     GivenFiles 'dir1\file1.txt'
     WhenPublishingFiles 'dir1'
-    ThenTaskFails 'must be a file'
+    ThenTaskFails 'File paths must resolve to individual files and not directories'
     ThenNothingPublished
 }
