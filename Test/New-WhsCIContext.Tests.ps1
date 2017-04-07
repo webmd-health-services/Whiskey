@@ -32,7 +32,9 @@ function Assert-Context
 
         $WithProGetAppFeed = 'upack/Apps', 
 
-        $WithProGetNpmFeed = 'npm/npm'
+        $WithProGetNpmFeed = 'npm/npm',
+
+        $WithProGetNuGetFeed = 'nuget/NuGet'
     )
 
     It 'should set configuration path' {
@@ -117,6 +119,8 @@ function Assert-Context
         $Context.ProGetSession.NpmFeed | Should Be $WithProGetNpmFeed
         $Context.ProGetSession.AppFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetAppFeed)
         $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
+        $Context.ProGetSession.NuGetFeed | Should Be $WithProGetNuGetFeed
+        $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
     }
 }
 
@@ -137,7 +141,10 @@ function GivenConfiguration
 
         $ForApplicationName,
 
-        $ForReleaseName
+        $ForReleaseName,
+
+        [string[]]
+        $PublishingOn
     )
 
     if( $ThatDoesNotExist )
@@ -163,15 +170,20 @@ function GivenConfiguration
     {
         $config['ReleaseName'] = $ForReleaseName
     }
+
+    if( $PublishingOn )
+    {
+        $config['PublishOn'] = $PublishingOn
+    }
     
     if( $ForBuildServer )
     {
-    $gitBranch = $OnBranch
-    $filter = { $Path -eq 'env:GIT_BRANCH' }
-    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+        $gitBranch = $OnBranch
+        $filter = { $Path -eq 'env:GIT_BRANCH' }
+        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     }
     
 
@@ -208,6 +220,8 @@ function WhenCreatingContext
 
         $WithProGetNpmFeed = 'npm/npm',
 
+        $WithProGetNuGetFeed = 'nuget/NuGet',
+
         $WithDownloadRoot,
 
         [Switch]
@@ -235,6 +249,10 @@ function WhenCreatingContext
                 if( $WithProGetNpmFeed )
                 {
                     $optionalArgs['ProGetNpmFeed'] = $WithProGetNpmFeed
+                }
+                if( $WithProGetNuGetFeed )
+                {
+                    $optionalArgs['ProGetNuGetFeed'] = $WithProGetNuGetFeed
                 }
             }
         }
@@ -297,6 +315,8 @@ function ThenBuildServerContextCreated
 
         $WithProGetNpmFeed,
 
+        $WithProGetNuGetFeed,
+
         $WithDownloadRoot
     )
 
@@ -316,6 +336,11 @@ function ThenBuildServerContextCreated
         {
             $optionalArgs['WithProGetNpmFeed'] = $WithProGetNpmFeed
         }
+        if( $WithProGetNuGetFeed )
+        {
+            $optionalArgs['WithProGetNuGetFeed'] = $WithProGetNuGetFeed
+        }
+            
 
         $iWasCalled = $true
         Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
@@ -457,8 +482,8 @@ Describe 'New-WhsCIContext.when run by the build server' {
 
 Describe 'New-WhsCIContext.when run by the build server and customizing ProGet feed names' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer |
-        WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' | 
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop'
+        WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' | 
+        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu'
 }
 
 Describe 'New-WhsCIContext.when run by the build server and customizing download root' {
@@ -527,4 +552,10 @@ Describe 'New-WhsCIContext.when building on bug fix branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/bugfix/fubarnsafu' |
             WhenCreatingContext -ByBuildServer | 
             ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
+}
+
+Describe 'New-WhsCIContext.when publishing on custom branch' {
+    GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0' |
+        WhenCreatingContext -ByBuildServer |
+        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
 }

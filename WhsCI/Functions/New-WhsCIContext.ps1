@@ -85,6 +85,11 @@ function New-WhsCIContext
 
         [Parameter(ParameterSetName='ByBuildServer')]
         [string]
+        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
+        $ProGetNuGetFeed = 'nuget/NuGet',
+
+        [Parameter(ParameterSetName='ByBuildServer')]
+        [string]
         # The name/path to the feed in ProGet where NPM packages should be uploaded to and downloaded from. The default is `npm/npm`. Combined with the `ProGetUri` parameter to create the URI to the feed.
         $ProGetNpmFeed = 'npm/npm',
 
@@ -146,10 +151,12 @@ function New-WhsCIContext
     $progetSession = [pscustomobject]@{
                                             Uri = $ProGetUri;
                                             Credential = $null;
-                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed)
-                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed)
+                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed);
+                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed);
+                                            NuGetFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNuGetFeed);
                                             AppFeed = $ProGetAppFeed;
                                             NpmFeed = $ProGetNpmFeed;
+                                            NuGetFeed = $ProGetNuGetFeed;                                            
                                         }
     $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer
@@ -172,8 +179,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         }
         
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
-        $branch = $branch -replace '/.*$',''
-        $publishOn = @( 'develop', 'release', 'master' )
+        $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
         {
             $publishOn = $config['PublishOn']
@@ -181,8 +187,15 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
 
         $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
         if( -not $releaseName -and $publish )
-        {        
-            $releaseName = $branch
+        {
+            if( $branch -like 'release/*' )
+            {
+                $releaseName = 'release'
+            }
+            else
+            {
+                $releaseName = $branch
+            }
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri

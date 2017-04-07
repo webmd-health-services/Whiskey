@@ -33,6 +33,9 @@ function Invoke-Publish
         [String]
         $ForFeedName,
 
+        [String]
+        $ForManifestPath,
+
         [Switch]
         $WithDefaultRepo,
 
@@ -52,7 +55,7 @@ function Invoke-Publish
         $WithoutPathParameter
     )
     
-    $Global:Error.Clear()
+    
 
     if( -not $ForRepositoryName )
     {
@@ -86,7 +89,22 @@ function Invoke-Publish
     {
         $TaskParameter.Add( 'Path', 'MyModule' )
         New-Item -Path $TestDrive.FullName -ItemType 'directory' -Name 'MyModule' 
+        $module = Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'
+        if( -not $ForManifestPath )
+        {            
+            New-Item -Path $module -ItemType 'file' -Name 'MyModule.psd1' -Value @"
+@{
+    # Version number of this module.
+    ModuleVersion = '0.2.0'
+}
+"@
+        }
+        else
+        {
+            $TaskParameter.Add( 'ModuleManifestPath', $ForManifestPath )
+        }
     }
+
     if( -not $withNoProgetURI )
     {
         $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.Uri), $ForFeedName
@@ -104,6 +122,7 @@ function Invoke-Publish
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
     Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:PATH' }
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
+    $Global:Error.Clear()
     $failed = $False
 
     try
@@ -258,6 +277,25 @@ function Assert-ModulePublished
     }
 }
 
+function Assert-ManifestVersion
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
+
+        [String]
+        $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1')
+    )
+    $versionString = "'{0}.{1}.{2}'" -f ( $TaskContext.Version.Major, $TaskContext.Version.Minor, $TaskContext.Version.Patch )
+
+    $matches = Select-String $versionString $manifestPath
+
+    It ('should have a matching Manifest Version with the Context'){
+        $matches | Should Not BeNullOrEmpty
+    }
+}
+
 Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module.'{
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
@@ -339,5 +377,38 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. with non-directory path paramet
     $errorMatch = 'must point to a directory'
 
     Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch
+    Assert-ModuleNotPublished
+}
+
+Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest with custom manifestPath and authentic manifest file' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    $existingManifestPath = (Join-Path -path (Split-Path $PSScriptRoot -Parent ) -ChildPath 'WhsCI\WhsCI.psd1')
+    New-Item -Name 'Manifest' -Path $TestDrive.FullName -ItemType 'Directory'
+    $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'Manifest\manifest.psd1')
+    Copy-Item $existingManifestPath $manifestPath
+    
+    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath
+    Assert-ModuleRegistered -TaskContext $context
+    Assert-ModulePublished -TaskContext $context
+    Assert-ManifestVersion -TaskContext $context -manifestPath $manifestPath
+}
+
+Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest without custom manifestPath' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    Invoke-Publish -withoutRegisteredRepo -TaskContext $context
+    Assert-ModuleRegistered -TaskContext $context
+    Assert-ModulePublished -TaskContext $context
+    Assert-ManifestVersion -TaskContext $context
+}
+
+Describe 'Invoke-WhsPublishPowerShellModuleTask. with invalid manifestPath' {
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    $manifestPath = 'fubar'
+    $errorMatch = 'Module Manifest Path'
+
+    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
 }

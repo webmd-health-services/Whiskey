@@ -16,18 +16,35 @@
 Version: 0.0.0
 
 # The branches on which you want to publish a package to ProGet and start a deployment 
-# pipeline in BuildMaster, when running on the build server. If you omit the `PublishOn` 
-# property, publishing will happen on the `develop`, `release`, and `master` branches.
-#
-# Child paths are removed from the branch name before determing if the build should 
-# publish. For example, if the current branch is `release/2.0`, the `/2.0` is removed 
-# and publishing happens if `release` is in the `PublishOn` list.
+# pipeline in BuildMaster, when running on the build server. If you omit the
+# `PublishOn` property (i.e. by default), publishing will happen on the `develop`, 
+# `release`, and `master` branches and any branch that starts with `release/`.
 #
 # You can't publish something unless you create a package, so make sure your 
 # `BuildTasks` property contains a `AppPackage` or `NodeAppPackage` task.
+#
+# You may use regular expressions. Make sure to escape any regular expression 
+# operators. If the entire branch name matches one of the items in this list, your 
+# package will be published. For example, given the example list below, your package 
+# would get published on any of these branches:
+# 
+# * develop
+# * release
+# * release/2.0
+# * master
+#
+# Your package would *not* get published on any of these branches:
+#
+# * development
+# * released
+# * master/hotfix
+#
+# The list of branches gets converted to a regular expression using this format:
+# `^(ITEM|ITEM|ITEM)$`.
 PublishOn:
  - develop
  - release
+ - release/.*
  - master
  
 # The name of your application in BuildMaster. By default, the `Name` property from the 
@@ -36,8 +53,16 @@ PublishOn:
 ApplicationName: APPLICATION_NAME
 
 # The name of the release in BuildMaster. By default, the branch name being built is 
-# used.
+# used. On release branches, e.g. `release/2.0`, `release/3.1`, the release name is
+# always `release`.
 ReleaseName: RELEASE_NAME
+
+# Whether or not to create and deploy your application in BuildMaster. Only applies 
+# if an application package was created (i.e. you have an `AppPackage` or 
+# `NodeAppPackage` build task and you're on a branch that publishes). The default is 
+# `true`. Set to `false` if you don't use BuildMaster to deploy your application or 
+# your application doesn't get deployed.
+DeployPackage: true
 
 # [The list of build tasks to run.](https://confluence.webmd.net/display/WHS/WhsCI+Tasks)
 BuildTasks:
