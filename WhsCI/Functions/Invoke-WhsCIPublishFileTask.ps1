@@ -62,7 +62,7 @@ BuildTasks:
     {
         if((Test-Path -Path $sourceFile -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('File paths must resolve to individual files and not directories. Please adjust your ''Path'' property to a valid list of files to publish.')
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Path ''{0}'' is directory. The PublishFile task only publishes files. Please remove this path from your ''Path'' property.' -f $sourceFile)
         }
     }
     
@@ -70,18 +70,19 @@ BuildTasks:
     {
         if(!(Test-Path -Path $destDir -PathType Container))
         {
-            Write-Verbose ('The destination directory ''{0}'' does not exist. Creating this directory now..' -f $destDir)
             $null = New-Item -Path $destDir -ItemType 'Directory' -Force
         }
         
         if(!(Test-Path -Path $destDir -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to create destination directory ''{0}''. Make sure the current user, ''{1}\{2}'' has access to ''{0}''. If it is a share, check that the share exists.' -f $destDir, $env:USERDOMAIN, $env:USERNAME)
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to create destination directory ''{0}''. Make sure the current user, ''{1}\{2}'' has access to create directories in ''{0}''. If it is a file share, check that the share exists and the share''s permissions.' -f $destDir, $env:USERDOMAIN, $env:USERNAME)
         }
-    
+    }
+
+    foreach( $destDir in $TaskParameter['DestinationDirectories'] )
+    {
         foreach($sourceFile in $sourceFiles)
         {
-            Write-Verbose ('Copying ''{0}'' to ''{1}''' -f $sourceFile, $destDir)
             Copy-Item -Path $sourceFile -Destination $destDir
         }
     }
