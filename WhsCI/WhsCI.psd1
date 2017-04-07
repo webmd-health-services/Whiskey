@@ -134,9 +134,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* All of Arc is now included in packages. We no longer filter anything. This is preparation for the day when Arc is distributed as a package.
-* The `PublishOn` property in whsbuild.yml is now a list of regular expressions that match the branch name.
-* Fixed: AppPackage task fails when Arc is not part of your repository but you're excluding it
+* Fixed: Pester4 task fails when Version property is not provided.
 '@
 
         } # End of PSData hashtable
