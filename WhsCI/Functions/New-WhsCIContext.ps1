@@ -120,12 +120,12 @@ function New-WhsCIContext
 
     $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
-    $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     if( $semVersion.Prerelease )
     {
-        $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
+        $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
     }
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'NuGetVersion' -Value $nugetVersion
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
 
     if( -not $DownloadRoot )
     {

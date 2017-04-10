@@ -312,7 +312,6 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
                 }
             }
 
-            $versionJsonPath = Join-Path -Path $WithContext.BuildRoot -ChildPath 'version.json'
             if( $WithContext.ByBuildServer )
             {
                 It 'should set build status' {
@@ -330,33 +329,11 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
                         $Status -eq 'Successful'
                     }
                 }
-
-                It 'version.json should exist' {
-                    $versionJsonPath | Should Exist
-                }
-
-                $version = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
-                It 'version.json should have Version property' {
-                    $version.Version | Should Be $WithContext.Version.Version
-                }
-                It 'version.json should have PrereleaseMetadata property' {
-                    $version.PrereleaseMetadata | Should Be $WithContext.Version.Prerelease
-                }
-                It 'version.json shuld have BuildMetadata property' {
-                    $version.BuildMetadata | Should Be $WithContext.Version.Build
-                }
-                It 'version.json should have full semantic version' {
-                    $version.SemanticVersion | Should Be $WithContext.Version
-                }
             }
             else
             {
                 It 'should not set build status' {
                     Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 0
-                }
-
-                It 'version.json should not exist' {
-                    $versionJsonPath | Should Not Exist
                 }
             }
         }

@@ -131,7 +131,14 @@ function Assert-NewWhsCIAppPackage
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version = $Version
+    $taskContext.Version = [SemVersion.SemanticVersion]$Version
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'Version' -Value ('{0}.{1}.{2}' -f $taskContext.Version.Major,$taskContext.Version.Minor,$taskContext.Version.Patch)
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $taskContext.Version.Version
+    if( $taskContext.Version.Prerelease )
+    {
+        $taskContext.Version.ReleaseVersion = '{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease
+    }
+
     if( $ForApplicationName )
     {
         $taskContext.ApplicationName = $ForApplicationName
@@ -288,6 +295,28 @@ function Assert-NewWhsCIAppPackage
             }
         }
 
+        $versionJsonPath = Join-Path -Path $packageContentsPath -ChildPath 'version.json'
+        It 'should include version.json' {
+            $versionJsonPath | Should Exist
+        }
+
+        $version = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
+        It 'version.json should have Version property' {
+            $version.Version | Should Be $taskContext.Version.Version
+        }
+        It 'version.json should have PrereleaseMetadata property' {
+            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease
+        }
+        It 'version.json shuld have BuildMetadata property' {
+            $version.BuildMetadata | Should Be $taskContext.Version.Build
+        }
+        It 'version.json should have full semantic version' {
+            $version.SemanticVersion | Should Be $taskContext.Version
+        }
+        It 'version.json should have release version' {
+            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion
+        }
+
         if( $NotHasFiles )
         {
             foreach( $item in $NotHasFiles )
@@ -362,7 +391,7 @@ function Assert-NewWhsCIAppPackage
             else
             {
                 Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
-                    $DebugPreference = 'Continue'
+                    #$DebugPreference = 'Continue'
 
                     $expectedMethod = 'Put'
                     Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)

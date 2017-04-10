@@ -161,13 +161,6 @@ function Invoke-WhsCIBuild
     if( $Context.ByBuildServer )
     {
         Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status InProgress
-
-        @{
-            Version = $Context.Version.Version.ToString();
-            SemanticVersion = $Context.Version.ToString();
-            PrereleaseMetadata = $Context.Version.Prerelease;
-            BuildMetadata = $Context.Version.Build;
-        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $Context.BuildRoot -ChildPath 'version.json')
     }
 
     $succeeded = $false
