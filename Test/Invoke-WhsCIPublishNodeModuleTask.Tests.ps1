@@ -133,11 +133,10 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     It 'should remove the temporary config file .npmrc from the build root' {
         Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
                           -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
-
     }
 }
 
-    Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
+Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
@@ -167,5 +166,32 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     It 'should remove the temporary config file .npmrc from the build root' {
         Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
                           -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
+    }
+}
+
+Describe 'Invoke-WhsCIPublishNodeModuleTask when called with Clean Switch' {
+    $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
+    $taskContext = $returnContextParams.TaskContext
+    $taskParameter = $returnContextParams.TaskParameter
+    $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
+
+    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter -Clean
+   
+    It 'should not create a temporary .npmrc file in the root of the application build directory' {
+        Test-Path -Path $npmrcPath | Should be $False
+    }
+  
+    It 'should not populate the .npmrc file with the appropriate configuration values' {
+        Test-Path $npmrcPath | Should be $False
+    }
+  
+    It 'should not publish the Node module package to the defined registry' {
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0
+    }
+    
+    It 'should not attempt to remove the temporary config file .npmrc from the build root' {
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+                          -ParameterFilter {$Path -match '\.npmrc'} -Times 0
     }
 }

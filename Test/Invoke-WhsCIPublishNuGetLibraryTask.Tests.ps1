@@ -78,7 +78,10 @@ function WhenRunningNuGetPackTask
         $ForMultiplePackages,
 
         [string]
-        $WithVersion
+        $WithVersion,
+
+        [Switch]
+        $WithCleanSwitch
     )
 
     process 
@@ -103,6 +106,12 @@ function WhenRunningNuGetPackTask
         }
         $threwException = $false
         Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -MockWith { return $True }
+
+        $optionalParams = @{ }
+        if( $WithCleanSwitch )
+        {
+            $optionalParams['Clean'] = $True
+        }
         try
         {
             if( $WithVersion )
@@ -113,7 +122,7 @@ function WhenRunningNuGetPackTask
             {
                 $taskParameter['Path'] = 'I\do\not\exist.csproj'
             }
-            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter | Out-Null 
+            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
 
         }
         catch
@@ -307,4 +316,27 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating WebRequest fails' {
     GivenABuiltLibrary -ForBuildServer | 
         WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue | 
         ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
+}
+
+Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with Clean switch' {    
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+    Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
+    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    $context = GivenABuiltLibrary -ForBuildServer | WhenRunningNuGetPackTask -WithCleanSwitch
+
+    $directoryInfo = Get-ChildItem $context.OutputDirectory | Measure-Object
+
+    It('should not create the package') {
+        $directoryInfo.Count | Should -eq 0
+    }
+
+    It('should not try to publish the package') {
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+            return $ScriptBlock.toString().contains('& $nugetPath push')
+        }
+    }
+    It 'should not write any errors' {
+        $Global:Error | Should BeNullOrEmpty
+    }
 }

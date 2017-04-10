@@ -31,6 +31,11 @@ function Invoke-WhsCIPester3Task
         $Clean        
     )
 
+    if( $Clean )
+    {
+        return
+    }
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 

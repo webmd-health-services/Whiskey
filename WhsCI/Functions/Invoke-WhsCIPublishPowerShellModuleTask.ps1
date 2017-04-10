@@ -43,7 +43,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
  
     process{
 
-        if( -not $TaskContext.Publish )
+        if( $Clean -or -not $TaskContext.Publish )
         {
             return
         }     
