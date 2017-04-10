@@ -82,18 +82,28 @@ function Invoke-WhsCIAppPackageTask
     }
 
     $iter = 0
-    $packItems = @{}
-    $pathNum = @{}
+    $packageOverrideItemsMap = @{}
+    $thirdPartyOverrideItemsMap = @{}
     foreach( $item in $path )
     {
         if( $item.Contains(': ') )
         {
             $split = $item -split ": "
             $path[$iter] = $split[0]
-            #table mapping itemName of split items to path index
-            $pathNum.Add( $split[1], $iter )
-            #table mapping path index to full relative path of path item to be packaged
-            $packItems.Add( $iter, $split[0] )
+            #table mapping relative source path of path items to the desired override destination
+            $packageOverrideItemsMap.Add($split[0], $split[1])
+        }
+        $iter++
+    }
+    $iter = 0
+    foreach( $item in $thirdPartyPath )
+    {
+        if( $item.Contains(': ') )
+        {
+            $split = $item -split ": "
+            $thirdPartyPath[$iter] = $split[0]
+            #table mapping relative source path of third party items to the desired override destination
+            $thirdPartyOverrideItemsMap.Add($split[0], $split[1])
         }
         $iter++
     }
@@ -169,55 +179,68 @@ function Invoke-WhsCIAppPackageTask
             }            
         }
 
-        foreach( $item in $path )
+        foreach( $sourcePath in $path )
         {
-
-            $itemName = $item | Split-Path -Leaf
-            #check to see if this item was passed in with full relative path and change name accordingly
-            if( $pathNum.ContainsKey($itemName) )
+            $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+            $relativePath = $relativePath.Trim("\")
+            $destinationItemName = $relativePath
+            if( $packageOverrideItemsMap.ContainsKey($relativePath) )
             {
-                $itemNum = $pathNum.Get_Item($itemName)
-                $itemName = $packItems.Get_Item($itemNum)
+                $destinationItemName = $packageOverrideItemsMap[$relativePath]
             }
 
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            $parentPath = ( Split-Path -Path $destination -Parent)
+            $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+            $parentDestinationPath = ( Split-Path -Path $destination -Parent)
 
             #if parent doesn't exist in the destination dir, create all necessary path nodes recursively
-            if( -not ( Test-Path -Path $parentPath ) )
+            if( -not ( Test-Path -Path $parentDestinationPath ) )
             {
-                Initialize-Path -Path $parentPath
+                Initialize-Path -Path $parentDestinationPath
             }
 
-            if( (Test-Path -Path $item -PathType Leaf) )
+            if( (Test-Path -Path $sourcePath -PathType Leaf) )
             {
-                Copy-Item -Path $item -Destination $destination
+                Copy-Item -Path $sourcePath -Destination $destination
             }
             else
             {
                 $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-                $operationDescription = 'packaging {0}' -f $itemName
+                $operationDescription = 'packaging {0}' -f $relativePath
                 if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
                 {
-                    robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
+                    robocopy $sourcePath $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
                 }
             }
         }
 
-        foreach( $item in $thirdPartyPath )
+        foreach( $sourcePath in $thirdPartyPath )
         {
-            $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            if( (Test-Path -Path $item -PathType Leaf) )
+            $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+            $relativePath = $relativePath.Trim("\")
+            $destinationItemName = $relativePath
+            if( $thirdPartyOverrideItemsMap.ContainsKey($relativePath) )
             {
-                Copy-Item -Path $item -Destination $destination
+                $destinationItemName = $thirdPartyOverrideItemsMap[$relativePath]
+            }
+            
+            $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+            $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+            #if parent doesn't exist in the destination dir, create all necessary path nodes recursively
+            if( -not ( Test-Path -Path $parentDestinationPath ) )
+            {
+                Initialize-Path -Path $parentDestinationPath
+            }
+            if( (Test-Path -Path $sourcePath -PathType Leaf) )
+            {
+                Copy-Item -Path $sourcePath -Destination $destination
             }
             else
             {
-                $operationDescription = 'packaging third-party {0}' -f $itemName
+                $operationDescription = 'packaging third-party {0}' -f $relativePath
                 if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
                 {
-                    robocopy $item $destination '/MIR' '/NP' | Write-Verbose
+                    robocopy $sourcePath $destination '/MIR' '/NP' | Write-Verbose
                 }
             }
         }
