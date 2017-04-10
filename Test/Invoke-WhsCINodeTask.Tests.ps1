@@ -405,22 +405,16 @@ Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
 
 Describe 'Invoke-WhsCINodeTask.when run by build server with Clean Switch' {
     $context = Initialize-NodeProject -ByBuildServer
-    Context 'setup node_modules dir' {
-        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build'
-    }
-    Context 'remove node_modules dir' {
-        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
-    }
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build'
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    
 }
 
 Describe 'Invoke-WhsCINodeTask.when run by build server, running Clean on already Clean directory' {
     $context = Initialize-NodeProject -ByBuildServer
-    Context 'primary clean' {
-        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
-    }
-    Context 'secondary clean' {
-        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
-    }
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
+    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    
 }
 
 if( $startedWithNodeEnv )
