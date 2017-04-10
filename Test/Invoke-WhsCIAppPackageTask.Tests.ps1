@@ -239,7 +239,6 @@ function Assert-NewWhsCIAppPackage
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
-
     It 'should cleanup temporary directories' {
         $postTempDirCount | Should Be $preTempDirCount
     }
