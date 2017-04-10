@@ -57,6 +57,23 @@ function Invoke-WhsCINodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if( $Clean )
+    {
+        #remove node_modules dir
+        $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
+        if( Test-Path $nodeModulesPath -PathType Container )
+        {
+            #create empty dir
+            $emptyDir = New-Item -Name 'TempEmptyDir' -Path $TaskContext.BuildRoot -ItemType 'Directory'
+            #robocopy
+            robocopy $emptyDir $nodeModulesPath /R:0 /MIR /NP
+            #delete empty dir
+            Remove-Item -Path $emptyDir
+            Remove-Item -Path $nodeModulesPath
+        }
+        return
+    }
+
     $npmScripts = $TaskParameter['NpmScripts']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
     $numSteps = 5 + $npmScriptCount

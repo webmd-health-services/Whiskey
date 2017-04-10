@@ -14,18 +14,26 @@ function Invoke-SuccessfulBuild
     param(
         [object]
         $WithContext,
+
         [string]
         $InWorkingDirectory,
+
         [string[]]
         $ThatRuns,
+
         [string]
         $ForVersion = '4.4.7',
+
         [Switch]
         $ByDeveloper,
-        [Switch]
-        $ByBuildServer
-    )
 
+        [Switch]
+        $ByBuildServer,
+
+        [Switch]
+        $WithCleanSwitch
+    )
+    $optionalParams = @{ }
     if( -not $ByDeveloper -and -not $ByBuildServer )
     {
         throw ('You must provide either the ByDeveloper or ByBuildServer switch when calling Assert-SuccessfulBuild.')
@@ -47,8 +55,26 @@ function Invoke-SuccessfulBuild
     {
         $InWorkingDirectory = $WithContext.BuildRoot
     }
+    if ( $WithCleanSwitch )
+    {
+        $optionalParams['Clean'] = $True
+    }
 
-    Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter
+    Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter @optionalParams
+
+    if( $WithCleanSwitch )
+    {
+        It ('should remove the node_modules directory') {
+            (Join-Path -Path $InWorkingDirectory -ChildPath 'node_modules') | Should Not Exist
+        }
+        foreach( $taskName in $ThatRuns )
+        {
+            It ('should NOT run the {0} task' -f $taskName) {
+                (Join-Path -Path $InWorkingDirectory -ChildPath $taskName) | Should Not Exist
+            }
+        }
+        return
+    }
 
     foreach( $taskName in $ThatRuns )
     {
@@ -374,6 +400,26 @@ Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'WorkingDirectory\[0\] .* does not exist' -NpmScript @( 'build' ) -InWorkingDirectory 'idonotexist' -ErrorAction SilentlyContinue
     It 'should write one error' {
         $Global:Error.Count | Should Be 1
+    }
+}
+
+Describe 'Invoke-WhsCINodeTask.when run by build server with Clean Switch' {
+    $context = Initialize-NodeProject -ByBuildServer
+    Context 'setup node_modules dir' {
+        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build'
+    }
+    Context 'remove node_modules dir' {
+        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    }
+}
+
+Describe 'Invoke-WhsCINodeTask.when run by build server, running Clean on already Clean directory' {
+    $context = Initialize-NodeProject -ByBuildServer
+    Context 'primary clean' {
+        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
+    }
+    Context 'secondary clean' {
+        Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
     }
 }
 

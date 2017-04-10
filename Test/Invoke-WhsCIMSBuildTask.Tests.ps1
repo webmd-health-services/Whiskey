@@ -29,12 +29,16 @@ function Invoke-MSBuild
         $ForAssemblies,
 
         [String]
-        $WithError
+        $WithError,
+
+        [Switch]
+        $WithCleanSwitch
     )
 
     Process
     {
         $optionalArgs = @{ }
+        $optionalParams = @{ }
         $threwException = $false
         $Global:Error.Clear()
         
@@ -61,9 +65,13 @@ function Invoke-MSBuild
             $version = [SemVersion.SemanticVersion]"1.1.1-rc.1+build"
             $optionalArgs['ByBuildServer'] = $true
         }
+        if ( $WithCleanSwitch )
+        {
+            $optionalParams['Clean'] = $True
+        }
 
         # Get rid of any existing packages directories.
-        Get-ChildItem -Path $PSScriptRoot 'packages' -Recurse -Directory | Remove-Item -Recurse -Force
+        Get-ChildItem -Path $PSScriptRoot -Include 'bin','obj','packages' -Recurse -Directory | Remove-Item -Recurse -Force
 
         Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $runByBuildServerMock
         MOck -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
@@ -75,7 +83,7 @@ function Invoke-MSBuild
         $errors = @()
         try
         {
-            Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
+            Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter @optionalParams
         }
         catch
         {
@@ -110,25 +118,36 @@ function Invoke-MSBuild
             It 'should write no errors' {
                 $errors | Should Not Match 'MSBuild'
             }
-
+            
             It 'should restore NuGet packages' {
                 Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
             }
-
-            foreach( $assembly in $ForAssemblies )
+            if( $WithCleanSwitch )
             {
-                It ('should build the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
-                    $assembly | Should Exist
+                foreach( $assembly in $ForAssemblies )
+                {
+                    It ('should not build the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
+                        $assembly | Should not Exist
+                    }
                 }
             }
-
-            foreach( $assembly in $ForAssemblies )
+            else
             {
-                It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
-                    $fileInfo = Get-Item -Path $assembly
-                    $fileVersionInfo = $fileInfo.VersionInfo
-                    $fileVersionInfo.FileVersion | Should Be $context.Version.Version.ToString()
-                    $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.Version)
+                foreach( $assembly in $ForAssemblies )
+                {
+                    It ('should build the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
+                        $assembly | Should Exist
+                    }
+                }
+
+                foreach( $assembly in $ForAssemblies )
+                {
+                    It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
+                        $fileInfo = Get-Item -Path $assembly
+                        $fileVersionInfo = $fileInfo.VersionInfo
+                        $fileVersionInfo.FileVersion | Should Be $context.Version.Version.ToString()
+                        $fileVersionInfo.ProductVersion | Should Be ('{0}' -f $context.Version)
+                    }
                 }
             }
         }  
@@ -166,4 +185,12 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
                                         'NUnit2FailingTest\NUnit2FailingTest.sln',
                                         'NUnit2PassingTest\NUnit2PassingTest.sln'
                                     ) -AsDeveloper -ForAssemblies $assemblies
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when building real projects with Clean Switch' {
+    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
+    Invoke-MSBuild -On @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                    ) -InReleaseMode -ForAssemblies $assemblies -WithCleanSwitch
 }

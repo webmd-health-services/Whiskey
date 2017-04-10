@@ -51,7 +51,12 @@ function Invoke-WhsCIMSBuildTask
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-   
+    
+    $target = @('build')
+    if( $Clean )
+    {
+        $target = 'clean'
+    }
     #build
     foreach( $projectPath in $path )
     {
@@ -79,10 +84,11 @@ function Invoke-WhsCIMSBuildTask
 "@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
                                     }
         }
-        Invoke-WhsCIMSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+        Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+        #Invoke-WhsCIMSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
         if( $errors )
         {
-            throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$TaskContext.BuildConfiguration)
+            throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)
         }
     }
 }
