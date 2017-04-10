@@ -328,7 +328,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with Clean swi
     $directoryInfo = Get-ChildItem $context.OutputDirectory | Measure-Object
 
     It('should not create the package') {
-        $directoryInfo.Count | Should -eq 0
+        $directoryInfo.Count | Should Be 0
     }
 
     It('should not try to publish the package') {
