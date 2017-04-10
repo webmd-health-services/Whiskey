@@ -154,6 +154,14 @@ function Invoke-MSBuild
     }
 }
 
+Describe 'Invoke-WhsCIMSBuildTask.when building real projects with Clean Switch' {
+    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
+    Invoke-MSBuild -On @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
+                                    ) -InReleaseMode -ForAssemblies $assemblies -WithCleanSwitch
+}
+
 Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
     $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
     Invoke-MSBuild -On @(
@@ -187,10 +195,3 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
                                     ) -AsDeveloper -ForAssemblies $assemblies
 }
 
-Describe 'Invoke-WhsCIMSBuildTask.when building real projects with Clean Switch' {
-    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )
-    Invoke-MSBuild -On @(
-                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
-                                        'NUnit2PassingTest\NUnit2PassingTest.sln'
-                                    ) -InReleaseMode -ForAssemblies $assemblies -WithCleanSwitch
-}

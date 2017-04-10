@@ -73,6 +73,16 @@ function Invoke-NUnitTask
         $threwException = $false
         $Global:Error.Clear()
 
+        if( $WithRunningTests )
+        {
+            $taskParameter = @{
+                            Path = @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'   
+                                    )
+                          }
+            Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
+        }
         if( $WithNoPath )
         {
             $taskParameter = @{ }
@@ -92,16 +102,7 @@ function Invoke-NUnitTask
                                             'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
                                         )
                               }
-        }
-        elseif( $WithRunningTests )
-        {
-            $taskParameter = @{
-                            Path = @(
-                                        'NUnit2PassingTest\NUnit2PassingTest.sln'   
-                                    )
-                          }
-            Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $taskParameter
-        }
+        }        
         else
         {
             $taskParameter = @{
