@@ -15,7 +15,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
     .EXAMPLE
     Invoke-WhsCINuGetPackageTask -Context $TaskContext -TaskParameter $TaskParameter
 
-    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.NugetVersion` using the project's `$Context.BuildConfiguration` configuration.
+    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion` using the project's `$Context.BuildConfiguration` configuration.
     #>
     [CmdletBinding()]
     param(
@@ -53,7 +53,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
         foreach ($path in $paths)
         {
             $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
-            $packageVersion = $TaskContext.Version.NuGetVersion
+            $packageVersion = $TaskContext.Version.ReleaseVersion
                     
             # Create NuGet package
             & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path
