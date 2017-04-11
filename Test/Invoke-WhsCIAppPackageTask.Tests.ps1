@@ -500,13 +500,12 @@ function Initialize-Test
         $SourceRoot,
 
         [Switch]
-        $AsDeveloper
+        $AsDeveloper,
+
+        [Switch]
+        $WithNewWhsEnvironmentsJson
     )
 
-    if( -not ($RootFileName -contains 'WhsEnvironments.json'))
-    {
-        $RootFileName += 'WhsEnvironments.json'
-    }
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
     Install-Directory -Path $repoRoot
     if( -not $SourceRoot )
@@ -518,6 +517,11 @@ function Initialize-Test
         $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
     }
     Install-Directory -Path $repoRoot
+
+    if( $WithNewWhsEnvironmentsJson )
+    {
+        New-Item -Path (Join-Path -Path $repoRoot -ChildPath 'WhsEnvironments.json') -ItemType 'File' | Out-Null
+    }
 
     $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
     if( -not $WithoutArc )
@@ -940,7 +944,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
 
 Describe 'Invoke-WhsCIAppPackageTask.when explicitly including WhsEnvironments.json in Path Parameter' {
     $file = 'WhsEnvironments.json'
-    $outputFilePath = Initialize-Test -RootFileName $file
+    $outputFilePath = Initialize-Test -WithNewWhsEnvironmentsJson
     Assert-NewWhsCIAppPackage -ForPath $file -HasRootItems $file
 }
 
@@ -948,6 +952,24 @@ Describe 'Invoke-WhsCIAppPackageTask.when not including WhsEnvironments.json in 
     $dirName = 'dir1'
     $fileName = 'html.html'
     $file = 'WhsEnvironments.json'
-    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -RootFileName $file
+    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -WithNewWhsEnvironmentsJson
     Assert-NewWhsCIAppPackage -ForPath $dirName -ThatIncludes '*.html' -HasRootItems $file
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when including WhsEnvironments.json in Source Root' {
+    $dirName = 'dir1'
+    $fileName = @('html.html', 'WhsEnvironments.json')
+    $file = 'WhsEnvironments.json'
+    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -sourceRoot 'app' #-RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $dirName -ThatIncludes '*.html' -NotHasFiles $file -FromSourceRoot 'app'
+    return
+    
+    
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatIncludes '*.html' `
+                             
+                              -HasRootItems 'dir1' `
+                              -HasFiles 'html.html' `
+                            
+                              -FromSourceRoot 'app'
 }
