@@ -239,7 +239,7 @@ function Assert-NewWhsCIAppPackage
     #region
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
-    $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
+    $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.ReleaseVersion -replace '[\\/]','-')
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
@@ -436,12 +436,12 @@ function Assert-NewWhsCIAppPackage
         {
             It 'should set package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $Version.ToString()
+                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
             }
 
             It 'should set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $Version.ToString()
+                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
             }
             if( $ForApplicationName )
             {
@@ -473,7 +473,7 @@ function Assert-NewWhsCIAppPackage
         }
 
         It 'should contain version' {
-            $upackInfo.Version | Should Be $Version
+            $upackInfo.Version | Should Be $taskContext.Version.ReleaseVersion.ToString()
         }
 
         It 'should contain description' {

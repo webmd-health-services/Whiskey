@@ -66,7 +66,8 @@ function Invoke-WhsCIAppPackageTask
         }
     }
 
-    $version = [semversion.SemanticVersion]$TaskContext.Version
+    # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
+    $version = [semversion.SemanticVersion]$TaskContext.Version.ReleaseVersion
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
     $path = $TaskParameter['Path']
