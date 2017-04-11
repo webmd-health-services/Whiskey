@@ -77,15 +77,15 @@ function Assert-Context
         $Context.Version.Version | Should BeOfType ([version])
     }
 
-    $expectedNuGetVersion = $expectedVersion
+    $expectedReleaseVersion = $expectedVersion
     if( $SemanticVersion.Prerelease )
     {
-        $expectedNuGetVersion = '{0}-{1}' -f $expectedVersion,$SemanticVersion.Prerelease
+        $expectedReleaseVersion = '{0}-{1}' -f $expectedVersion,$SemanticVersion.Prerelease
     }
 
     It 'should set NuGet version' {
-        $Context.Version.NuGetVersion | Should Be $expectedNuGetVersion
-        $Context.Version.NuGetVersion | Should BeOfType ([SemVersion.SemanticVersion])
+        $Context.Version.ReleaseVersion | Should Be $expectedReleaseVersion
+        $Context.Version.ReleaseVersion | Should BeOfType ([SemVersion.SemanticVersion])
     }
 
     It 'should set raw configuration hashtable' {
