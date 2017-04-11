@@ -312,7 +312,7 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
                 }
             }
 
-            if( $context.ByBuildSErver )
+            if( $WithContext.ByBuildServer )
             {
                 It 'should set build status' {
                     Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {

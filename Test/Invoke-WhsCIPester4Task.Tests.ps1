@@ -105,10 +105,9 @@ function Invoke-PesterTest
     {
         $taskParameter = @{}
     }
-    elseif( -not $Version -and -not $WithMissingVersion )
+    elseif( -not $Version -or $WithMissingVersion )
     {
         $taskParameter = @{
-                        Version = $defaultVersion;
                         Path = @(
                                     $Path
                                 )

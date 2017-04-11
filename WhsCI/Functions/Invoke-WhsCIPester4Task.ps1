@@ -44,9 +44,9 @@ function Invoke-WhsCIPester4Task
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
-    if( $TaskParameter.Version )
+    if( $TaskParameter.ContainsKey('Version') )
     {
-        $version = $TaskParameter.Version | ConvertTo-WhsCISemanticVersion
+        $version = $TaskParameter['Version'] | ConvertTo-WhsCISemanticVersion
         if( -not $version )
         {
             Stop-WhsCITask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')

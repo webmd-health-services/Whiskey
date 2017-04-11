@@ -66,7 +66,8 @@ function Invoke-WhsCIAppPackageTask
         }
     }
 
-    $version = [semversion.SemanticVersion]$TaskContext.Version
+    # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
+    $version = [semversion.SemanticVersion]$TaskContext.Version.ReleaseVersion
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
     $path = $TaskParameter['Path']
@@ -131,6 +132,15 @@ function Invoke-WhsCIAppPackageTask
             title = $name;
             description = $description
         } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
+
+        # Add the version.json file
+        @{
+            Version = $TaskContext.Version.Version.ToString();
+            SemanticVersion = $TaskContext.Version.ToString();
+            PrereleaseMetadata = $TaskContext.Version.Prerelease;
+            BuildMetadata = $TaskContext.Version.Build;
+            ReleaseVersion = $TaskContext.Version.ReleaseVersion;
+        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
 
         foreach( $item in $path )
         {
@@ -230,7 +240,7 @@ function Invoke-WhsCIAppPackageTask
                 $failedToCleanUp = $false
                 break
             }
-            Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot) -Verbose
+            Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot)
             Start-Sleep -Milliseconds 100
             Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false -ErrorAction Ignore
         }

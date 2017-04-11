@@ -43,7 +43,7 @@ function GivenABuiltLibrary
     
     if( $WithVersion )
     {
-        $Context.Version.NuGetVersion = $WithVersion
+        $Context.Version.ReleaseVersion = $WithVersion
     }
 
     $Global:Error.Clear()
@@ -107,7 +107,7 @@ function WhenRunningNuGetPackTask
         {
             if( $WithVersion )
             {
-                $Context.Version.NugetVersion = $WithVersion
+                $Context.Version.ReleaseVersion = $WithVersion
             }
             if( $ForProjectThatDoesNotExist )
             {
@@ -167,7 +167,7 @@ function ThenPackageShouldBeCreated
     {
         if( $WithVersion )
         {
-            $Context.Version.NuGetVersion = $WithVersion
+            $Context.Version.ReleaseVersion = $WithVersion
         }
         if( $WithoutPushingToProgetError )
         {
@@ -182,11 +182,11 @@ function ThenPackageShouldBeCreated
             }
         }
         It ('should create NuGet package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.ReleaseVersion)) | Should Exist
         }
 
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.NuGetVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.ReleaseVersion)) | Should Exist
         }
         if( $Context.byBuildServer )
         {
