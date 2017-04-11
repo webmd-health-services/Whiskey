@@ -6,6 +6,12 @@ $defaultPackageName = 'WhsCITest'
 $defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
+$defaultVersion = '1.2.3'
+
+$threwException = $false
+
+$preTempDirCount = 0
+$postTempDirCount = 0
 
 function Assert-NewWhsCIAppPackage
 {
@@ -942,34 +948,220 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -ForApplicationName 'foo'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when explicitly including WhsEnvironments.json in Path Parameter' {
-    $file = 'WhsEnvironments.json'
-    $outputFilePath = Initialize-Test -WithNewWhsEnvironmentsJson
-    Assert-NewWhsCIAppPackage -ForPath $file -HasRootItems $file
+function Get-BuildRoot
+{
+    $buildRoot = (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
+    New-Item -Path $buildRoot -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
+    return $buildRoot
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when not including WhsEnvironments.json in Path Parameter' {
-    $dirName = 'dir1'
-    $fileName = 'html.html'
-    $file = 'WhsEnvironments.json'
-    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -WithNewWhsEnvironmentsJson
-    Assert-NewWhsCIAppPackage -ForPath $dirName -ThatIncludes '*.html' -HasRootItems $file
+function GivenARepositoryWithFiles
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    $buildRoot = Get-BuildRoot
+
+    $arcRoot = Join-Path -Path $buildRoot -ChildPath 'Arc'
+    New-Item -Path $arcRoot -ItemType 'Directory' | Out-Null
+    New-Item -Path (Join-Path -Path $arcRoot -ChildPath 'arc.txt') -ItemType 'File' | Out-Null
+
+    foreach( $item in $Path )
+    {
+        $parent = $item | Split-Path
+        if( $parent )
+        {
+            New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
+        }
+
+        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType 'File'
+    }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when including WhsEnvironments.json in Source Root' {
-    $dirName = 'dir1'
-    $fileName = @('html.html', 'WhsEnvironments.json')
-    $file = 'WhsEnvironments.json'
-    $outputFilePath = Initialize-Test -DirectoryName $dirName -FileName $fileName -sourceRoot 'app' #-RootFileName $file
-    Assert-NewWhsCIAppPackage -ForPath $dirName -ThatIncludes '*.html' -NotHasFiles $file -FromSourceRoot 'app'
-    return
+function WhenPackaging
+{
+    param(
+        $WithPackageName = $defaultPackageName,
+        $WithDescription = $defaultDescription,
+        [object[]]
+        $Paths,
+        [object[]]
+        $WithWhitelist,
+        [object[]]
+        $ThatExcludes,
+        $FromSourceRoot,
+        $ThatExcludesArc,
+        [object[]]
+        $WithThirdPartyPath,
+        $WithVersion = $defaultVersion,
+        $WithApplicationName,
+        $ThatReallyUploadsToProGet,
+        [Switch]
+        $ByDeveloper
+    )
+
+    $taskParameter = @{ }
+    if( $WithPackageName )
+    {
+        $taskParameter['Name'] = $WithPackageName
+    }
+    if( $WithDescription )
+    {
+        $taskParameter['Description'] = $WithDescription
+    }
+    if( $Paths )
+    {
+        $taskParameter['Path'] = $Paths
+    }
+    if( $WithWhitelist )
+    {
+        $taskParameter['Include'] = $WithWhitelist
+    }
+    if( $ThatExcludes )
+    {
+        $taskParameter['Exclude'] = $ThatExcludes
+    }
+    if( $WithThirdPartyPath )
+    {
+        $taskParameter['ThirdPartyPath'] = $WithThirdPartyPath
+    }
+    if( $FromSourceRoot )
+    {
+        $taskParameter['SourceRoot'] = $FromSourceRoot
+    }
+    if( $ThatExcludesArc )
+    {
+        $taskParameter['ExcludeArc'] = $true
+    }
+
+    $byWhoArg = @{ }
+    if( $ByDeveloper )
+    {
+        $byWhoArg['ByDeveloper'] = $true
+    }
+    else
+    {
+        $byWhoArg['ByBuildServer'] = $true
+    }
     
-    
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                             
-                              -HasRootItems 'dir1' `
-                              -HasFiles 'html.html' `
-                            
-                              -FromSourceRoot 'app'
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $WithVersion }.GetNewClosure()
+
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
+    $taskContext.Version = $WithVersion
+    if( $WithApplicationName )
+    {
+        $taskContext.ApplicationName = $WithApplicationName
+    }
+
+    $packagesAtStart = @()
+    if( $ThatReallyUploadsToProGet )
+    {
+        $progetUri = 'https://proget.dev.webmd.com/'
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
+
+        $taskContext.ProGetSession = [pscustomobject]@{
+                                                        Uri = $progetUri;
+                                                        AppFeedUri = $appFeedUri;
+                                                        Credential = $credential;
+                                                        AppFeed = 'upack/Test'
+                                                      }
+        $packagesAtStart = @()
+        try
+        {
+            $packagesAtStart = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name) -ErrorAction Ignore
+        }
+        catch
+        {
+            $packagesAtStart = @()
+        }
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
+    }
+
+
+    $threwException = $false
+    $At = $null
+
+    $Global:Error.Clear()
+
+    $whatIfParam = @{ }
+    if( $ByDeveloper )
+    {
+        $whatIfParam['WhatIf'] = $true
+    }
+        
+    function Get-TempDirCount
+    {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+            Measure-Object | 
+            Select-Object -ExpandProperty Count
+    }
+
+    $preTempDirCount = Get-TempDirCount
+    try
+    {
+        Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+    }
+    catch
+    {
+        $threwException = $true
+        Write-Error -ErrorRecord $_
+    }
+    $postTempDirCount = Get-TempDirCount
+}
+
+function ThenPackageShouldInclude
+{
+    param(
+        $PackageName = $defaultPackageName,
+        $PackageVersion = $defaultVersion,
+        [Parameter(Mandatory=$true,Position=0)]
+        [string[]]
+        $Path
+    )
+
+    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
+    $outputRoot = Get-BuildRoot
+    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
+    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
+
+
+    It 'should create a package' {
+        $packagePath | Should Exist
+    }
+
+    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    Expand-Item -Path $packagePath -OutDirectory $expandPath
+
+    $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
+    foreach( $item in $Path )
+    {
+        $expectedPath = Join-Path -Path $packageRoot -ChildPath $item
+        It ('should include {0}' -f $item) {
+            $expectedPath | Should Exist
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when WhsEnvironments.json is explicitly included in the package' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
+    WhenPackaging -Paths 'WhsEnvironments.json','file.txt' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
+    WhenPackaging -Paths 'file.txt' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','dir1\file.txt'
+    WhenPackaging -Paths 'file.txt' -FromSourceRoot 'dir1' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
 }
