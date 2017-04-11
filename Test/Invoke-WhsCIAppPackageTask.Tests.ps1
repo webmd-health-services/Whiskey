@@ -940,17 +940,17 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' 
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))
-    $forPath = ('{0}: {1}' -f ($path, $file))
+    $forPath = @{ $path = $file }
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $path 
+    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $file 
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path with override syntax' {
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))
-    $forPath = ('{0}: {1}' -f ($path, $file))
+    $forPath = @{ $path = $file }
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
     Assert-NewWhsCIAppPackage -ForPath $forPath -HasRootItems $file 
@@ -964,7 +964,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with overr
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
-                              -WithThirdPartyRootItem 'app\thirdparty: thirdparty' `
+                              -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
                               -HasThirdPartyRootItem 'thirdparty' `
                               -HasThirdPartyFile 'thirdparty.txt' 
 }
