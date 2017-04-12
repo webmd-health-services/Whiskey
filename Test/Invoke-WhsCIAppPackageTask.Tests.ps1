@@ -140,10 +140,10 @@ function Assert-NewWhsCIAppPackage
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = [SemVersion.SemanticVersion]$Version
     $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'Version' -Value ('{0}.{1}.{2}' -f $taskContext.Version.Major,$taskContext.Version.Minor,$taskContext.Version.Patch)
-    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $taskContext.Version.Version
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value ([SemVersion.SemanticVersion]$taskContext.Version.Version)
     if( $taskContext.Version.Prerelease )
     {
-        $taskContext.Version.ReleaseVersion = '{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease
+        $taskContext.Version.ReleaseVersion = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease)
     }
 
     if( $ForApplicationName )
@@ -309,19 +309,24 @@ function Assert-NewWhsCIAppPackage
 
         $version = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
         It 'version.json should have Version property' {
-            $version.Version | Should Be $taskContext.Version.Version
+            $version.Version | Should BeOfType ([string])
+            $version.Version | Should Be $taskContext.Version.Version.ToString()
         }
         It 'version.json should have PrereleaseMetadata property' {
-            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease
+            $version.PrereleaseMetadata | Should BeOfType ([string])
+            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease.ToString()
         }
         It 'version.json shuld have BuildMetadata property' {
-            $version.BuildMetadata | Should Be $taskContext.Version.Build
+            $version.BuildMetadata | Should BeOfType ([string])
+            $version.BuildMetadata | Should Be $taskContext.Version.Build.ToString()
         }
         It 'version.json should have full semantic version' {
-            $version.SemanticVersion | Should Be $taskContext.Version
+            $version.SemanticVersion | Should BeOfType ([string])
+            $version.SemanticVersion | Should Be $taskContext.Version.ToString()
         }
         It 'version.json should have release version' {
-            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion
+            $version.ReleaseVersion | Should BeOfType ([string])
+            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion.ToString()
         }
 
         if( $NotHasFiles )
@@ -1076,10 +1081,10 @@ function WhenPackaging
         $byWhoArg['ByBuildServer'] = $true
     }
     
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $WithVersion }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version = $WithVersion
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
+    #$taskContext.Version = $WithVersion
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
