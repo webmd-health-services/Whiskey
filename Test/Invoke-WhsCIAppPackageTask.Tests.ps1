@@ -11,7 +11,7 @@ function Assert-NewWhsCIAppPackage
 {
     [CmdletBinding()]
     param(
-        [string[]]
+        [object[]]
         $ForPath,
 
         [string[]]
@@ -68,7 +68,7 @@ function Assert-NewWhsCIAppPackage
         [string[]]
         $HasThirdPartyRootItem,
 
-        [string[]]
+        [object[]]
         $WithThirdPartyRootItem,
 
         [string[]]
@@ -968,11 +968,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
 Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
     $file = 'project.json'
     $directory = 'relative'
-    $path = ('{0}\{1}' -f ($directory, $file))
-    $forPath = @{ $path = $file }
+    $path = ('{0}\{1}' -f ($directory, $file))    
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $file 
+    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $path 
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path with override syntax' {
