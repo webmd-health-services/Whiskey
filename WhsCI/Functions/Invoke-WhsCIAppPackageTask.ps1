@@ -65,13 +65,6 @@ function Invoke-WhsCIAppPackageTask
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
         }
     }
-    if( Test-Path -Path (Join-Path -Path $TaskContext.BuildRoot -ChildPath 'WhsEnvironments.json') -PathType Leaf )
-    {
-        if( -not ($TaskParameter.Path -contains 'WhsEnvironments.json'))
-        {
-            $TaskParameter.Path += 'WhsEnvironments.json'
-        }
-    }
 
     $version = [semversion.SemanticVersion]$TaskContext.Version
     $name = $TaskParameter['Name']
@@ -80,8 +73,7 @@ function Invoke-WhsCIAppPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
-    $excludeArc = $TaskParameter['ExcludeArc']
-    
+    $excludeArc = $TaskParameter['ExcludeArc']    
     
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
@@ -114,6 +106,11 @@ function Invoke-WhsCIAppPackageTask
 
     try
     {
+        $whsEnvironmentsPath = (Join-Path -Path $TaskContext.BuildRoot -ChildPath 'WhsEnvironments.json')
+        if( Test-Path -Path $whsEnvironmentsPath -PathType Leaf )
+        {
+            Copy-Item -Path $whsEnvironmentsPath -Destination $tempPackageRoot
+        }        
         $shouldProcessCaption = ('creating {0} package' -f $outFile)
         if( -not $excludeArc )
         {
