@@ -134,7 +134,14 @@ function Assert-NewWhsCIAppPackage
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version = $Version
+    $taskContext.Version = [SemVersion.SemanticVersion]$Version
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'Version' -Value ('{0}.{1}.{2}' -f $taskContext.Version.Major,$taskContext.Version.Minor,$taskContext.Version.Patch)
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $taskContext.Version.Version
+    if( $taskContext.Version.Prerelease )
+    {
+        $taskContext.Version.ReleaseVersion = '{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease
+    }
+
     if( $ForApplicationName )
     {
         $taskContext.ApplicationName = $ForApplicationName
@@ -178,7 +185,7 @@ function Assert-NewWhsCIAppPackage
         
     function Get-TempDirCount
     {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+        Get-ChildItem -Path $env:TEMP -Filter ('WhsCI+Invoke-WhsCIAppPackageTask+{0}+*' -f $Name) | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
@@ -235,7 +242,7 @@ function Assert-NewWhsCIAppPackage
     #region
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
-    $packageName = '{0}.{1}.upack' -f $Name,($Version -replace '[\\/]','-')
+    $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.ReleaseVersion -replace '[\\/]','-')
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
@@ -288,6 +295,28 @@ function Assert-NewWhsCIAppPackage
                     Join-Path -Path $dirPath -ChildPath $fileName | Should Not Exist
                 }
             }
+        }
+
+        $versionJsonPath = Join-Path -Path $packageContentsPath -ChildPath 'version.json'
+        It 'should include version.json' {
+            $versionJsonPath | Should Exist
+        }
+
+        $version = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
+        It 'version.json should have Version property' {
+            $version.Version | Should Be $taskContext.Version.Version
+        }
+        It 'version.json should have PrereleaseMetadata property' {
+            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease
+        }
+        It 'version.json shuld have BuildMetadata property' {
+            $version.BuildMetadata | Should Be $taskContext.Version.Build
+        }
+        It 'version.json should have full semantic version' {
+            $version.SemanticVersion | Should Be $taskContext.Version
+        }
+        It 'version.json should have release version' {
+            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion
         }
 
         if( $NotHasFiles )
@@ -364,7 +393,7 @@ function Assert-NewWhsCIAppPackage
             else
             {
                 Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
-                    $DebugPreference = 'Continue'
+                    #$DebugPreference = 'Continue'
 
                     $expectedMethod = 'Put'
                     Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
@@ -409,12 +438,12 @@ function Assert-NewWhsCIAppPackage
         {
             It 'should set package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $Version.ToString()
+                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
             }
 
             It 'should set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $Version.ToString()
+                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
             }
             if( $ForApplicationName )
             {
@@ -446,7 +475,7 @@ function Assert-NewWhsCIAppPackage
         }
 
         It 'should contain version' {
-            $upackInfo.Version | Should Be $Version
+            $upackInfo.Version | Should Be $taskContext.Version.ReleaseVersion.ToString()
         }
 
         It 'should contain description' {
