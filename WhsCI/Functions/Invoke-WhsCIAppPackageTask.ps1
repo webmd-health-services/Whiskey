@@ -83,27 +83,31 @@ function Invoke-WhsCIAppPackageTask
 
     $iter = 0
     $packageOverrideItemsMap = @{}
-    $thirdPartyOverrideItemsMap = @{}
     foreach( $item in $path )
     {
-        if( $item.Contains(': ') )
-        {
-            $split = $item -split ": "
-            $path[$iter] = $split[0]
-            #table mapping relative source path of path items to the desired override destination
-            $packageOverrideItemsMap.Add($split[0], $split[1])
+        if( $item -is [hashtable] )
+        {            
+            foreach($key in $item.Keys)
+            {
+                $itemKey = $key
+            }            
+            $packageOverrideItemsMap.Add($itemKey, $item[$itemKey])
+            $path[$iter] = $itemKey
         }
         $iter++
     }
-    $iter = 0
+    $iter = 0    
+    $thirdPartyOverrideItemsMap = @{}
     foreach( $item in $thirdPartyPath )
     {
-        if( $item.Contains(': ') )
-        {
-            $split = $item -split ": "
-            $thirdPartyPath[$iter] = $split[0]
-            #table mapping relative source path of third party items to the desired override destination
-            $thirdPartyOverrideItemsMap.Add($split[0], $split[1])
+        if( $item -is [hashtable] )
+        {            
+            foreach($key in $item.Keys)
+            {
+                $itemKey = $key
+            }            
+            $thirdPartyOverrideItemsMap.Add($itemKey, $item[$itemKey])
+            $thirdPartyPath[$iter] = $itemKey
         }
         $iter++
     }
