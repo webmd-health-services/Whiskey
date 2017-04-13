@@ -1076,10 +1076,9 @@ function WhenPackaging
         $byWhoArg['ByBuildServer'] = $true
     }
     
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $WithVersion }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version = $WithVersion
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' -ForVersion $WithVersion @byWhoArg
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
