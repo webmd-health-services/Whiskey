@@ -155,7 +155,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldReallyUploadToProGet )
     {
         $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
         $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
@@ -801,6 +801,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
                               -ShouldReallyUploadToProGet 
 }
 
