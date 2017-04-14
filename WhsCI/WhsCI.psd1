@@ -66,7 +66,8 @@
     NestedModules = @( 
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'powershell-yaml'
+                        'powershell-yaml',
+                        'ProGetAutomation'
                      )
 
     # Functions to export from this module
