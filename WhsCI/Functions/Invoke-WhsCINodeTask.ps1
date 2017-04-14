@@ -59,15 +59,12 @@ function Invoke-WhsCINodeTask
 
     if( $Clean )
     {
-        #remove node_modules dir
         $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
         if( Test-Path $nodeModulesPath -PathType Container )
         {
-            #create empty dir
-            $emptyDir = New-Item -Name 'TempEmptyDir' -Path $TaskContext.BuildRoot -ItemType 'Directory'
-            #robocopy
-            robocopy $emptyDir $nodeModulesPath /R:0 /MIR /NP
-            #delete empty dir
+            $outputDirectory = Join-Path -path $TaskContext.BuildRoot -ChildPath '.output' 
+            $emptyDir = New-Item -Name 'TempEmptyDir' -Path $outputDirectory -ItemType 'Directory'
+            robocopy $emptyDir $nodeModulesPath /R:0 /MIR /NP | Write-Debug
             Remove-Item -Path $emptyDir
             Remove-Item -Path $nodeModulesPath
         }

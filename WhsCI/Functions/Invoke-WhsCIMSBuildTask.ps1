@@ -65,6 +65,14 @@ function Invoke-WhsCIMSBuildTask
         if( $projectPath -like '*.sln' )
         {
             & $nugetPath restore $projectPath | Write-CommandOutput
+            if( $target -eq 'clean' )
+            {
+                $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
+                if( Test-Path -Path $packageDirectoryPath -PathType Container )
+                {
+                    Remove-Item $packageDirectoryPath -Recurse -Force | Write-CommandOutput
+                }
+            }
         }
 
         if( (Test-WhsCIRunByBuildServer) )

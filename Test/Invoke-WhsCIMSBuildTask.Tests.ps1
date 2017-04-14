@@ -118,10 +118,6 @@ function Invoke-MSBuild
             It 'should write no errors' {
                 $errors | Should Not Match 'MSBuild'
             }
-            
-            It 'should restore NuGet packages' {
-                Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
-            }
             if( $WithCleanSwitch )
             {
                 foreach( $assembly in $ForAssemblies )
@@ -129,6 +125,9 @@ function Invoke-MSBuild
                     It ('should not build the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
                         $assembly | Should not Exist
                     }
+                }
+                It 'should remove NuGet packages' {
+                    Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should BeNullOrEmpty
                 }
             }
             else
@@ -139,7 +138,9 @@ function Invoke-MSBuild
                         $assembly | Should Exist
                     }
                 }
-
+                It 'should restore NuGet packages' {
+                    Get-ChildItem -Path $PSScriptRoot -Filter 'packages' -Recurse -Directory | Should Not BeNullOrEmpty
+                }
                 foreach( $assembly in $ForAssemblies )
                 {
                     It ('should version the {0} assembly' -f ($assembly | Split-Path -Leaf)) {
@@ -160,6 +161,22 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects with Clean Switch'
                                         'NUnit2FailingTest\NUnit2FailingTest.sln',
                                         'NUnit2PassingTest\NUnit2PassingTest.sln'
                                     ) -InReleaseMode -ForAssemblies $assemblies -WithCleanSwitch
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when building real projects with Clean Switch and removing related nuget packages' {
+    $assemblies = @( $failingNUnit2TestAssemblyPath, $passingNUnit2TestAssemblyPath )  
+    Context 'Build task to populate packages' {
+        Invoke-MSBuild -On @(
+                                'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                'NUnit2PassingTest\NUnit2PassingTest.sln'
+                            ) -InReleaseMode -ForAssemblies $assemblies  
+    }
+    Context 'Clean task to remove packages' {
+        Invoke-MSBuild -On @(
+                                'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                'NUnit2PassingTest\NUnit2PassingTest.sln'
+                            ) -InReleaseMode -ForAssemblies $assemblies -WithCleanSwitch
+    }
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when building real projects' {
