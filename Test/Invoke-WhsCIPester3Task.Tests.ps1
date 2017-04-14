@@ -136,14 +136,11 @@ function Invoke-PesterTest
     Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
+    $testsRun = $FailureCount + $PassingCount
     if( $ShouldFailWithMessage )
     {
         It 'should fail' {
-        $Global:Error[0] | Should Match $ShouldFailWithMessage
-        }
-
-        It 'should not run any tests' {
-            Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
+            $Global:Error[0] | Should Match $ShouldFailWithMessage
         }
     }
     elseif( $shouldFail )
@@ -168,7 +165,8 @@ Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
 }
 
 Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
-    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ErrorAction SilentlyContinue
+    $failureMessage = 'Pester tests failed'
+    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester3Task.when running multiple test scripts' {

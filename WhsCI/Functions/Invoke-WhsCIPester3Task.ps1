@@ -84,13 +84,13 @@ function Invoke-WhsCIPester3Task
         $result
         if( $result.FailedCount )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
+            throw ('Pester tests failed.')
         }
     } 
     
     do
     {
-            $job | Receive-Job
+        $job | Receive-Job
     }
     while( -not ($job | Wait-Job -Timeout 1) )
 
