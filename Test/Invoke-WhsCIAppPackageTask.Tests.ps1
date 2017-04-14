@@ -155,7 +155,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldReallyUploadToProGet )
     {
         $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
         $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
@@ -381,7 +381,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Invoke-RestMethod' -Times 0
         }
     }
 
@@ -397,7 +397,7 @@ function Assert-NewWhsCIAppPackage
             }
             else
             {
-                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
+                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ParameterFilter { 
                     #$DebugPreference = 'Continue'
 
                     $expectedMethod = 'Put'
@@ -592,7 +592,7 @@ function Initialize-Test
         {
             $result = 1
         }
-        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
+        Mock -CommandName 'Invoke-RestMethod' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
 
     if( -not $AsDeveloper )
@@ -801,6 +801,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
                               -ShouldReallyUploadToProGet 
 }
 
@@ -1088,7 +1089,7 @@ function WhenPackaging
     if( $ThatReallyUploadsToProGet )
     {
         $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
         $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
@@ -1109,7 +1110,7 @@ function WhenPackaging
     }
     else
     {
-        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
+        Mock -CommandName 'Invoke-RestMethod' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
     }
 
 

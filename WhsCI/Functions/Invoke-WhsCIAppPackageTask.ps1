@@ -194,29 +194,10 @@ function Invoke-WhsCIAppPackageTask
         # Upload to ProGet
         if( $TaskContext.Publish )
         {
-            $proGetPackageUri = $TaskContext.ProGetSession.AppFeedUri
-            $proGetCredential = $TaskContext.ProGetSession.Credential
-            $buildMasterSession = $TaskContext.BuildMasterSession
-            $headers = @{ }
-            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))
-            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-            $headers.Add('Authorization', $creds)
-    
-            $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-            {
-                Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
-                $result = Invoke-RestMethod -Method Put `
-                                            -Uri $proGetPackageUri `
-                                            -ContentType 'application/octet-stream' `
-                                            -Body ([IO.File]::ReadAllBytes($outFile)) `
-                                            -Headers $headers
-                if( -not $? -or ($result -and $result.StatusCode -ne 201) )
-                {
-                    throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
-                }
-            }
-
+            $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
+            $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
+            Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile
+            
             $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
             if ( -not $TaskContext.ApplicationName ) 
             {
