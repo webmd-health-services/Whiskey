@@ -381,7 +381,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Invoke-RestMethod' -Times 0
+            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -Times 0
         }
     }
 
@@ -397,7 +397,7 @@ function Assert-NewWhsCIAppPackage
             }
             else
             {
-                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ParameterFilter { 
+                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -ParameterFilter { 
                     #$DebugPreference = 'Continue'
 
                     $expectedMethod = 'Put'
@@ -592,7 +592,7 @@ function Initialize-Test
         {
             $result = 1
         }
-        Mock -CommandName 'Invoke-RestMethod' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
     }
 
     if( -not $AsDeveloper )
@@ -1110,7 +1110,7 @@ function WhenPackaging
     }
     else
     {
-        Mock -CommandName 'Invoke-RestMethod' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
     }
 
 
