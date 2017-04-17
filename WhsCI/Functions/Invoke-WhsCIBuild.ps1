@@ -175,7 +175,7 @@ function Invoke-WhsCIBuild
 
         Write-Verbose -Message ('Building version {0}' -f $Context.Version)
         Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.NuGetVersion)
+        Write-Verbose -Message ('                 {0}' -f $Context.Version.ReleaseVersion)
 
         $config = $Context.Configuration
 

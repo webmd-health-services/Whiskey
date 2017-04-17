@@ -12,8 +12,8 @@ function New-WhsCIContext
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
     * `BuildConfiguration`: the build configuration to use when compiling code. Set from the parameter by the same name.
     * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
-    * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `NuGetVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
-    * `NuGetVersion`: the semantic version with all build metadata stripped away.
+    * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
+    * `ReleaseVersion`: the semantic version with all build metadata stripped away, i.e. the version and pre-release only.
     * `Configuration`: the parsed YAML as a hashtable.
     * `DownloadRoot`: the path to a directory where tools can be downloaded when needed. 
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
@@ -120,12 +120,12 @@ function New-WhsCIContext
 
     $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
-    $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     if( $semVersion.Prerelease )
     {
-        $nugetVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
+        $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
     }
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'NuGetVersion' -Value $nugetVersion
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
 
     if( -not $DownloadRoot )
     {
