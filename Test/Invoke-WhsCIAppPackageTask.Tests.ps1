@@ -18,7 +18,7 @@ function Assert-NewWhsCIAppPackage
 {
     [CmdletBinding()]
     param(
-        [string[]]
+        [object[]]
         $ForPath,
 
         [string[]]
@@ -75,6 +75,9 @@ function Assert-NewWhsCIAppPackage
         [string[]]
         $HasThirdPartyRootItem,
 
+        [object[]]
+        $WithThirdPartyRootItem,
+
         [string[]]
         $HasThirdPartyFile,
 
@@ -118,7 +121,7 @@ function Assert-NewWhsCIAppPackage
     }
     if( $HasThirdPartyRootItem )
     {
-        $taskParameter['ThirdPartyPath'] = $HasThirdPartyRootItem
+        $taskParameter['ThirdPartyPath'] = $WithThirdPartyRootItem
     }
     if( $FromSourceRoot )
     {
@@ -155,7 +158,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldReallyUploadToProGet )
     {
         $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
+        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
         $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
 
         $taskContext.ProGetSession = [pscustomobject]@{
@@ -249,7 +252,6 @@ function Assert-NewWhsCIAppPackage
     $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.ReleaseVersion -replace '[\\/]','-')
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
-
 
     It 'should cleanup temporary directories' {
         $postTempDirCount | Should Be $preTempDirCount
@@ -664,6 +666,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
     $thirdPartyFile = 'thirdparty.txt'
     $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
     Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WithThirdPartyRootItem $thirdPartyFile `
                               -HasThirdPartyRootItem $thirdPartyFile `
                               -HasRootItems $file
 }
@@ -806,6 +809,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
+                              -ShouldUploadPackage `
                               -ShouldReallyUploadToProGet 
 }
 
@@ -863,6 +867,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
+                              -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt'
 }
@@ -942,9 +947,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of th
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasRootItems 'dir1' `
+                              -HasRootItems 'app\dir1' `
                               -HasFiles 'html.html' `
-                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
+                              -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
+                              -HasThirdPartyRootItem 'app\thirdparty','app\thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt' `
                               -FromSourceRoot 'app'
 }
@@ -983,6 +989,14 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -ForApplicationName 'foo'
 }
 
+Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
+    $file = 'project.json'
+    $directory = 'relative'
+    $path = ('{0}\{1}' -f ($directory, $file))    
+
+    $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
+    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $path 
+}
 function Get-BuildRoot
 {
     $buildRoot = (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
@@ -1084,7 +1098,6 @@ function WhenPackaging
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
-    #$taskContext.Version = $WithVersion
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
@@ -1198,5 +1211,28 @@ Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json 
 Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
     GivenARepositoryWithFiles 'WhsEnvironments.json','dir1\file.txt'
     WhenPackaging -Paths 'file.txt' -FromSourceRoot 'dir1' -WithWhitelist '*.txt'
-    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','dir1\file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path with override syntax' {
+    $file = 'project.json'
+    $directory = 'relative'
+    $path = ('{0}\{1}' -f ($directory, $file))
+    $forPath = @{ $path = $file }
+
+    $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
+    Assert-NewWhsCIAppPackage -ForPath $forPath -HasRootItems $file 
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with override syntax' {
+    $dirNames = @( 'dir1', 'app\thirdparty')
+    $fileNames = @( 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasRootItems 'dir1' `
+                              -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
+                              -HasThirdPartyRootItem 'thirdparty' `
+                              -HasThirdPartyFile 'thirdparty.txt' 
 }
