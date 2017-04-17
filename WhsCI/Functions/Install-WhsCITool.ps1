@@ -60,7 +60,7 @@ function Install-WhsCITool
     
     if( $DownloadRoot -and $Path )
     {
-        Write-Error ('You have supplied a $Path and $DownloadRoot to Install-WhsCITool, where only one or the other is necessary, the $Path parameter takes precedence and will be used. Please be sure this is the behavior you are expecting.')
+        Write-Error ('You have supplied a Path and DownloadRoot parameter to Install-WhsCITool, where only one or the other is necessary, the Path parameter takes precedence and will be used. Please be sure this is the behavior you are expecting.')
     }
 
     Set-StrictMode -Version 'Latest'
@@ -78,16 +78,13 @@ function Install-WhsCITool
    
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        $pathParam = @{}
         if ( $Path )
         {
             $modulesRoot = $Path
-            $pathParam['LiteralPath'] = $modulesRoot
         }
         else
         {
             $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
-            $pathParam['Path'] = $modulesRoot
         }
 
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
@@ -104,8 +101,7 @@ function Install-WhsCITool
             return
         }
 
-        Save-Module -Name $ModuleName -RequiredVersion $Version @pathParam -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
-        #Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
+        Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
                 
         $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
         if( (Test-Path -Path $moduleRoot -PathType Leaf) )

@@ -50,7 +50,14 @@ function Invoke-PowershellInstall
         }
 
         Mock -CommandName 'Save-Module' -ModuleName 'WhsCI' -MockWith {
-            $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
+            if( $forPath )
+            {
+                $moduleRoot = $forPath
+            }
+            else
+            {
+                $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
+            }
             if( $LikePowerShell4 )
             {
                 $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $ForModule
@@ -75,7 +82,7 @@ function Invoke-PowershellInstall
     {
         $optionalParams['Path'] = $forPath
     }
-
+    $Global:Error.Clear()
     $result = Install-WhsCITool @optionalParams -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
@@ -108,16 +115,21 @@ function Invoke-PowershellInstall
             {
                 $expectedRegex = 'Modules\\{0}\.{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
+            elseif( $forPath )
+            {
+                $expectedRegex = '{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
+            }
             else
             {
                 $expectedRegex = 'Modules\\{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
             $result | Should Match $expectedRegex
         }
-        if( $forPath -and $UsingDefaultDownloadRoot )
+        if( $forPath -and -not $UsingDefaultDownloadRoot )
         {
+            $errorMessage = 'You have supplied a Path and DownloadRoot parameter'
             It 'should warn about Path and DownloadRoot' {
-                $Global:Error | should Match 'You have supplied a $Path and $DownloadRoot to Install-WhsCITool'
+                $Global:Error | should Match $errorMessage
             }
         }
     }
@@ -257,14 +269,11 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
     }
 }
 
-
-#DownloadRoot and Path
 Describe 'Install-WhsCITool.when installing a Pester module with DownloadRoot and Path both supplied' {
     $path = $TestDrive.FullName
-    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path -ErrorAction SilentlyContinue
 }
 
-#Path where Pester already exists
 Describe 'Install-WhsCITool.when attempting to install a Pester module with a Path that already includes a Pester Module' {
     $path = $TestDrive.FullName
     $pesterPath = (Join-Path -Path $path -ChildPath 'Pester')
@@ -272,7 +281,6 @@ Describe 'Install-WhsCITool.when attempting to install a Pester module with a Pa
     Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path -UsingDefaultDownloadRoot
 }
 
-#Path where Pester doesn't exist
 Describe 'Install-WhsCITool.when actually installing a Pester module with a Path that does NOT include a Pester Module' {
     $path = $TestDrive.FullName
     Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path -UsingDefaultDownloadRoot
