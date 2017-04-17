@@ -48,11 +48,28 @@ function Invoke-WhsCINodeTask
         #
         # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    if( $Clean )
+    {
+        $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
+        if( Test-Path $nodeModulesPath -PathType Container )
+        {
+            $outputDirectory = Join-Path -path $TaskContext.BuildRoot -ChildPath '.output' 
+            $emptyDir = New-Item -Name 'TempEmptyDir' -Path $outputDirectory -ItemType 'Directory'
+            robocopy $emptyDir $nodeModulesPath /R:0 /MIR /NP | Write-Debug
+            Remove-Item -Path $emptyDir
+            Remove-Item -Path $nodeModulesPath
+        }
+        return
+    }
 
     $npmScripts = $TaskParameter['NpmScripts']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'

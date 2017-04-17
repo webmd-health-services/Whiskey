@@ -152,7 +152,11 @@ function Invoke-WhsCIBuild
         [Parameter(Mandatory=$true)]
         [object]
         # The context for the build. Use `New-WhsCIContext` to create context objects.
-        $Context
+        $Context,
+
+        [Switch]
+        $Clean
+
     )
 
     Set-StrictMode -Version 'Latest'
@@ -206,12 +210,18 @@ function Invoke-WhsCIBuild
                 $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
                 if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
                 {
-                    $whatIfParam = @{ }
+                    $optionalParams = @{ }
                     if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
                     {
-                        $whatIfParam['WhatIf'] = $true
+                        $optionalParams['WhatIf'] = $True
                     }
-                    & $taskFunctionName -TaskContext $context -TaskParameter $task @whatIfParam
+                    if ( $Clean )
+                    {
+                        $optionalParams['Clean'] = $True
+                    }
+
+                    & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
+                    
                 }
                 else
                 {
@@ -226,6 +236,10 @@ function Invoke-WhsCIBuild
     }
     finally
     {
+        if( $Clean )
+        {
+            Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
+        }
         Pop-Location
 
         if( $Context.ByBuildServer )

@@ -25,13 +25,19 @@ function Invoke-WhsCIPublishNuGetLibraryTask
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     process
     {
         Set-StrictMode -Version 'Latest'
-
+        if( $Clean )
+        {
+            return
+        }
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 

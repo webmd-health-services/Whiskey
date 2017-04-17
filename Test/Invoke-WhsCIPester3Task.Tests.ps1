@@ -94,7 +94,10 @@ function Invoke-PesterTest
         $WithMissingPath,
 
         [String]
-        $ShouldFailWithMessage
+        $ShouldFailWithMessage,
+
+        [Switch]
+        $WithClean
     )
 
     $defaultVersion = '3.4.3'
@@ -123,9 +126,15 @@ function Invoke-PesterTest
                                 )
                         }
     }
+
+    $optionalParams = @{ }
+    if( $WithClean )
+    {
+        $optionalParams['Clean'] = $True
+    }
     try
     {
-        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -216,4 +225,8 @@ Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
     $path = 'C:\FubarSnafu'
     $failureMessage = 'absolute'
     Invoke-PesterTest -Path $path -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIBuild when running passing Pester tests with Clean Switch' {
+    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }
