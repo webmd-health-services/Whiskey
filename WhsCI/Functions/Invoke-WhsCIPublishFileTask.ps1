@@ -9,8 +9,16 @@ function Invoke-WhsCIPublishFileTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean        
     )
+
+    if( $Clean )
+    {
+        return
+    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
