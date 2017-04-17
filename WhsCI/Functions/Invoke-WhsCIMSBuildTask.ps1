@@ -64,14 +64,17 @@ function Invoke-WhsCIMSBuildTask
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
-            & $nugetPath restore $projectPath | Write-CommandOutput
-            if( $target -eq 'clean' )
+            if( $Clean )
             {
                 $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
                     Remove-Item $packageDirectoryPath -Recurse -Force | Write-CommandOutput
                 }
+            }
+            else
+            {
+                & $nugetPath restore $projectPath | Write-CommandOutput
             }
         }
 
@@ -93,7 +96,6 @@ function Invoke-WhsCIMSBuildTask
                                     }
         }
         Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
-        #Invoke-WhsCIMSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
         if( $errors )
         {
             throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)
