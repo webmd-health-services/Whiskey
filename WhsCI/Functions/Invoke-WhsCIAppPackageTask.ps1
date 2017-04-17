@@ -52,11 +52,17 @@ function Invoke-WhsCIAppPackageTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
-    )
+        $TaskParameter,
 
+        [Switch]
+        $Clean
+    )
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    if( $Clean )
+    {
+        return
+    }
 
     foreach( $mandatoryName in @( 'Name', 'Description', 'Include', 'Path' ) )
     {
@@ -81,15 +87,6 @@ function Invoke-WhsCIAppPackageTask
     {
         $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
     }
-
-    $resolveErrors = @()
-    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
-
-    if( $thirdPartyPath )
-    {
-        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath' @parentPathParam
-    }
-
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
     $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
@@ -112,7 +109,120 @@ function Invoke-WhsCIAppPackageTask
         {
             Copy-Item -Path $whsEnvironmentsPath -Destination $tempPackageRoot
         }        
-        $shouldProcessCaption = ('creating {0} package' -f $outFile)
+        $shouldProcessCaption = ('creating {0} package' -f $outFile)        
+        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+        @{
+            name = $name;
+            version = $version.ToString();
+            title = $name;
+            description = $description
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
+        
+        # Add the version.json file
+        @{
+            Version = $TaskContext.Version.Version.ToString();
+            SemanticVersion = $TaskContext.Version.ToString();
+            PrereleaseMetadata = $TaskContext.Version.Prerelease;
+            BuildMetadata = $TaskContext.Version.Build;
+            ReleaseVersion = $TaskContext.Version.ReleaseVersion.ToString();
+        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
+        
+        function Copy-ToPackage
+        {
+	        param(
+		        [Parameter(Mandatory=$true)]
+		        [object[]]
+		        $Path,
+		
+		        [Switch]
+		        $AsThirdPartyItem
+	        )
+	
+            foreach( $item in $Path )
+            {
+                $override = $False
+                if( $item -is [hashtable] )
+                {
+    	            $sourcePath = $null
+                    $override = $True
+    	            foreach( $key in $item.Keys )
+	                {
+		                $destinationItemName = $item[$key]
+		                $sourcePath = $key
+	                }
+                }
+                else
+                {
+                    $sourcePath = $item
+                }
+                $pathparam = 'path'
+                if( $AsThirdPartyItem )
+                {
+                    $pathparam = 'ThirdPartyPath'
+                }
+
+                $sourcePath = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+                if( -not $sourcePath )
+                {
+    	            return
+                }
+                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+                $relativePath = $relativePath.Trim("\")
+                if( -not $override )
+                {
+                    $destinationItemName = $relativePath
+                }
+
+                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+                #if parent doesn't exist in the destination dir, create it
+                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                {
+                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                }
+
+                if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                {
+                    Copy-Item -Path $sourcePath -Destination $destination
+                }
+                else
+                {
+    	            if( $AsThirdPartyItem )
+	                {
+		                $excludeParams = @()
+		                $whitelist = @()
+                        $operationDescription = 'packaging third-party {0}' -f $item
+	                }
+	                else
+	                {
+            	        $excludeParams = Invoke-Command {
+							        '.git'
+							        '.hg'
+							        'obj'
+							        $exclude
+						        } |
+					    ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+            	        $operationDescription = 'packaging {0}' -f $item
+		                $whitelist = Invoke-Command {
+						                'upack.json',
+						                $include
+						                } 
+	                }
+                    if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                    {
+                        robocopy $sourcePath $destination '/MIR' '/NP' $whitelist $excludeParams | Write-Verbose
+                    }
+                }
+            }
+        }       
+
+        Copy-ToPackage -Path $TaskParameter['Path']
+        if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
+        {
+	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+        }
+
         if( -not $excludeArc )
         {
             $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
@@ -127,60 +237,6 @@ function Invoke-WhsCIAppPackageTask
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
                 robocopy $arcPath $arcDestination '/MIR' '/NP' | Write-Verbose
-            }
-        }
-
-        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-        @{
-            name = $name;
-            version = $version.ToString();
-            title = $name;
-            description = $description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
-
-        # Add the version.json file
-        @{
-            Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.ToString();
-            PrereleaseMetadata = $TaskContext.Version.Prerelease;
-            BuildMetadata = $TaskContext.Version.Build;
-            ReleaseVersion = $TaskContext.Version.ReleaseVersion;
-        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
-
-        foreach( $item in $path )
-        {
-            $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            if( (Test-Path -Path $item -PathType Leaf) )
-            {
-                Copy-Item -Path $item -Destination $destination
-            }
-            else
-            {
-                $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-                $operationDescription = 'packaging {0}' -f $itemName
-                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-                {
-                    robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
-                }
-            }
-        }
-
-        foreach( $item in $thirdPartyPath )
-        {
-            $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            if( (Test-Path -Path $item -PathType Leaf) )
-            {
-                Copy-Item -Path $item -Destination $destination
-            }
-            else
-            {
-                $operationDescription = 'packaging third-party {0}' -f $itemName
-                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-                {
-                    robocopy $item $destination '/MIR' '/NP' | Write-Verbose
-                }
             }
         }
 

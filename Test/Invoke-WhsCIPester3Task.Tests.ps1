@@ -90,15 +90,25 @@ function Invoke-PesterTest
         [Switch]
         $WithMissingVersion,
 
+        [Switch]
+        $WithMissingPath,
+
         [String]
-        $ShouldFailWithMessage
+        $ShouldFailWithMessage,
+
+        [Switch]
+        $WithClean
     )
 
     $defaultVersion = '3.4.3'
     $failed = $false
     $context = New-WhsCIPesterTestContext
     $Global:Error.Clear()
-    if( -not $Version -and -not $WithMissingVersion )
+    if( $WithMissingPath )
+    {
+        $taskParameter = @{}
+    }
+    elseif( -not $Version -and -not $WithMissingVersion )
     {
         $taskParameter = @{
                         Version = $defaultVersion;
@@ -116,9 +126,15 @@ function Invoke-PesterTest
                                 )
                         }
     }
+
+    $optionalParams = @{ }
+    if( $WithClean )
+    {
+        $optionalParams['Clean'] = $True
+    }
     try
     {
-        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -129,14 +145,11 @@ function Invoke-PesterTest
     Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
+    $testsRun = $FailureCount + $PassingCount
     if( $ShouldFailWithMessage )
     {
         It 'should fail' {
-        $Global:Error[0] | Should Match $ShouldFailWithMessage
-        }
-
-        It 'should not run any tests' {
-            Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
+            $Global:Error[0] | Should Match $ShouldFailWithMessage
         }
     }
     elseif( $shouldFail )
@@ -161,7 +174,8 @@ Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
 }
 
 Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
-    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ErrorAction SilentlyContinue
+    $failureMessage = 'Pester tests failed'
+    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester3Task.when running multiple test scripts' {
@@ -177,6 +191,11 @@ Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
         Join-Path -Path $outputRoot -ChildPath 'pester-00.xml' | Should Exist
         Join-Path -Path $outputRoot -ChildPath 'pester-01.xml' | Should Exist
     }
+}
+
+Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+    $failureMessage = 'Element ''Path'' is mandatory.'
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
@@ -206,4 +225,8 @@ Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
     $path = 'C:\FubarSnafu'
     $failureMessage = 'absolute'
     Invoke-PesterTest -Path $path -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIBuild when running passing Pester tests with Clean Switch' {
+    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }

@@ -52,7 +52,10 @@ function Invoke-Publish
         $WithNonExistentPath,
 
         [Switch]
-        $WithoutPathParameter
+        $WithoutPathParameter,
+
+        [Switch]
+        $WithCleanSwitch
     )
     
     
@@ -122,12 +125,18 @@ function Invoke-Publish
     Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
     Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:PATH' }
     Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
+    $optionalParams = @{ }
+    if( $WithCleanSwitch )
+    {
+        $optionalParams['Clean'] = $True
+    }
+    
     $Global:Error.Clear()
     $failed = $False
-
+    
     try
     {
-        Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
+        Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter @optionalParams
     }
     catch
     {
@@ -411,4 +420,11 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. with invalid manifestPath' {
 
     Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
+}
+
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module.'{
+    Initialize-Test
+    $context = New-WhsCITestContext -ForBuildServer
+    Invoke-Publish -WithoutRegisteredRepo -TaskContext $context -WithCleanSwitch
+    Assert-ModuleNotPublished 
 }

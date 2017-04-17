@@ -140,10 +140,6 @@ function Invoke-PesterTest
         It 'should fail' {
         $Global:Error[0] | Should Match $ShouldFailWithMessage
         }
-
-        It 'should not run any tests' {
-            Get-ChildItem -Path $context.OutputDirectory | Should BeNullOrEmpty
-        }
     }
     elseif( $shouldFail )
     {
@@ -167,7 +163,8 @@ Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
 }
 
 Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
-    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ErrorAction SilentlyContinue
+    $failureMessage = 'Pester tests failed'
+    Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester4Task.when running multiple test scripts' {

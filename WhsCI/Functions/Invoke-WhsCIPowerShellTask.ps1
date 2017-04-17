@@ -25,11 +25,18 @@ function Invoke-WhsCIPowerShellTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
     
     Set-StrictMode -Version 'Latest'
-
+    if( $Clean )
+    {
+        return
+    }
+    
     if( -not ($TaskParameter.ContainsKey('Path')))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 

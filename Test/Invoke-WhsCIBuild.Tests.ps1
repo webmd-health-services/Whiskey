@@ -266,11 +266,23 @@ BuildTasks:
     }
 }
 
+Describe 'Invoke-WhsCIBuild.when running with Clean switch' {
+    $context = New-WhsCITestContext -ForDeveloper
+    $context.Configuration = @{ }
+    Invoke-WhsCIBuild -Context $context -Clean
+    $withWhatIfSwitchParam = @{ }
+
+    it( 'should remove .output dir'){
+        $context.OutputDirectory | should not exist
+    }
+}
+
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task' | Sort-Object -Property 'Name') )
 {
     $taskName = $functionName -replace '^Invoke-WhsCI(.*)Task$','$1'
+
     Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
@@ -367,6 +379,19 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
             $context.ByBuildServer = $true
             Invoke-WhsCIBuild -Context $context
             Assert-TaskCalled -WithContext $context
+        }
+    }
+    
+    Describe ('Invoke-WhsCIBuild.when calling {0} task with Clean switch' -f $taskName) {
+        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+        $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
+        Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
+
+        Invoke-WhsCIBuild -Context $context -Clean
+        It 'should call task with active Clean switch' {
+            Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                $PSBoundParameters['Clean'] -eq $true
+            }
         }
     }
 }

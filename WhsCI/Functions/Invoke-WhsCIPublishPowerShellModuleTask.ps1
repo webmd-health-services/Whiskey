@@ -34,13 +34,16 @@ function Invoke-WhsCIPublishPowerShellModuleTask
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
 
     )
  
     process{
 
-        if( -not $TaskContext.Publish )
+        if( $Clean -or -not $TaskContext.Publish )
         {
             return
         }     

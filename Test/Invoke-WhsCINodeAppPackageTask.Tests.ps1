@@ -180,3 +180,21 @@ Describe 'Invoke-WhsCINodeAppPackageTask.when including Arc' {
 Describe 'Invoke-WhsCINodeAppPackageTask.when path includes package.json' {
     Assert-NodePackageCreated -WithPath 'package.json'
 }
+
+Describe 'Invoke-WhsCINodeAppPackageTask.when Clean Switch is active' {
+    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+    $taskParameter = @{
+                            Name = 'Fubar';
+                            Description = 'Snafu';
+                            Path = 'Foo\Bar';
+                            Exclude = 'AllTheThings';
+                      }
+    Mock -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Verifiable
+
+    Invoke-WhsCINodeAppPackageTask -TaskContext $context -TaskParameter $taskParameter -Clean
+
+    It ('should not call Invoke-WhsCIAppPackageTask'){
+        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Times 0
+    }
+    
+}
