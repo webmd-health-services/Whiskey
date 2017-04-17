@@ -22,7 +22,10 @@ function Invoke-PowershellInstall
         $LikePowerShell4,
 
         [Switch]
-        $UsingDefaultDownloadRoot
+        $UsingDefaultDownloadRoot,
+
+        [String]
+        $forPath
     )
 
     if( -not $ActualVersion )
@@ -63,13 +66,17 @@ function Invoke-PowershellInstall
         }.GetNewClosure()
     }
 
-    $downloadRootParam = @{ }
+    $optionalParams = @{ }
     if( -not $UsingDefaultDownloadRoot )
     {
-        $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
+        $optionalParams['DownloadRoot'] = $TestDrive.FullName
+    }
+    if ( $forPath )
+    {
+        $optionalParams['Path'] = $forPath
     }
 
-    $result = Install-WhsCITool @downloadRootParam -ModuleName $ForModule -Version $Version
+    $result = Install-WhsCITool @optionalParams -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
@@ -106,6 +113,12 @@ function Invoke-PowershellInstall
                 $expectedRegex = 'Modules\\{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
             $result | Should Match $expectedRegex
+        }
+        if( $forPath -and $UsingDefaultDownloadRoot )
+        {
+            It 'should warn about Path and DownloadRoot' {
+                $Global:Error | should Match 'You have supplied a $Path and $DownloadRoot to Install-WhsCITool'
+            }
         }
     }
 }
@@ -242,4 +255,25 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
         $Global:Error.Count | Should Be 2
         $Global:Error[0] | Should Match 'failed to download'
     }
+}
+
+
+#DownloadRoot and Path
+Describe 'Install-WhsCITool.when installing a Pester module with DownloadRoot and Path both supplied' {
+    $path = $TestDrive.FullName
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path
+}
+
+#Path where Pester already exists
+Describe 'Install-WhsCITool.when attempting to install a Pester module with a Path that already includes a Pester Module' {
+    $path = $TestDrive.FullName
+    $pesterPath = (Join-Path -Path $path -ChildPath 'Pester')
+    New-Item -Path $pesterPath -ItemType 'Directory'
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path -UsingDefaultDownloadRoot
+}
+
+#Path where Pester doesn't exist
+Describe 'Install-WhsCITool.when actually installing a Pester module with a Path that does NOT include a Pester Module' {
+    $path = $TestDrive.FullName
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -forPath $path -UsingDefaultDownloadRoot
 }
