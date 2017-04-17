@@ -118,7 +118,7 @@ function Invoke-WhsCIAppPackageTask
             SemanticVersion = $TaskContext.Version.ToString();
             PrereleaseMetadata = $TaskContext.Version.Prerelease;
             BuildMetadata = $TaskContext.Version.Build;
-            ReleaseVersion = $TaskContext.Version.ReleaseVersion;
+            ReleaseVersion = $TaskContext.Version.ReleaseVersion.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage
