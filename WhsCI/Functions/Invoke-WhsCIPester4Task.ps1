@@ -105,7 +105,7 @@ function Invoke-WhsCIPester4Task
         $result
         if( $result.FailedCount )
         {
-             Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
+             throw ('Pester tests failed.')
         }
     } 
     

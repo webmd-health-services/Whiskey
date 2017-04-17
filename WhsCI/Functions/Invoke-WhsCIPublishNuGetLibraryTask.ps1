@@ -79,7 +79,6 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             {
                 Stop-WhsCITask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
             }
-
             if( $TaskContext.ByDeveloper )
             {
                 continue

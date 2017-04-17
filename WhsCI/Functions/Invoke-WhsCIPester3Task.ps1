@@ -54,21 +54,21 @@ function Invoke-WhsCIPester3Task
     
     if( -not $TaskParameter.Version )
     {
-        throw ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
     }
 
     $version = $TaskParameter.Version | ConvertTo-WhsCISemanticVersion
     
     if( -not $version )
     {
-        throw ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
     }
     $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
 
     $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version
     if( -not $pesterModulePath )
     {
-        throw ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
     $testIdx = 0
@@ -79,7 +79,7 @@ function Invoke-WhsCIPester3Task
     }
 
     # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
-    $result = Start-Job -ScriptBlock {
+    $job = Start-Job -ScriptBlock {
         $script = $using:Path
         $outputRoot = $using:TaskContext.OutputDirectory
         $testIdx = $using:testIdx
@@ -88,11 +88,19 @@ function Invoke-WhsCIPester3Task
 
         Import-Module -Name $pesterModulePath
         $outputFile = Join-Path -Path $outputRoot -ChildPath ($outputFileNameFormat -f $testIdx)
-        Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
-    } | Wait-Job | Receive-Job
-
-    if( $result.FailedCount )
+        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
+        $result
+        if( $result.FailedCount )
+        {
+            throw ('Pester tests failed.')
+        }
+    } 
+    
+    do
     {
-        throw ('Pester tests failed.')
+        $job | Receive-Job
     }
+    while( -not ($job | Wait-Job -Timeout 1) )
+
+    $job | Receive-Job
 }
