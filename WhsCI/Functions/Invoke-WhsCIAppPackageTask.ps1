@@ -196,7 +196,7 @@ function Invoke-WhsCIAppPackageTask
         {
             $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
             $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
-            Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile
+            Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile -ErrorAction Stop
             
             $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
             if ( -not $TaskContext.ApplicationName ) 

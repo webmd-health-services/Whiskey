@@ -56,10 +56,7 @@ function Assert-NewWhsCIAppPackage
         
         [Switch]
         $ShouldNotCreatePackage,
-
-        [Switch]
-        $ShouldReallyUploadToProGet,
-
+        
         [Switch]
         $ShouldNotUploadPackage,
 
@@ -152,30 +149,7 @@ function Assert-NewWhsCIAppPackage
     }
 
     $packagesAtStart = @()
-    if( $ShouldReallyUploadToProGet )
-    {
-        $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
-        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
-
-        $taskContext.ProGetSession = [pscustomobject]@{
-                                                        Uri = $progetUri;
-                                                        AppFeedUri = $appFeedUri;
-                                                        Credential = $credential;
-                                                        AppFeed = 'upack/Test'
-                                                      }
-        $packagesAtStart = @()
-        try
-        {
-            $packagesAtStart = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name) -ErrorAction Ignore
-        }
-        catch
-        {
-            $packagesAtStart = @()
-        }
-    }
-
-
+    
     $threwException = $false
     $At = $null
 
@@ -381,48 +355,35 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -Times 0
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -Times 0
         }
     }
 
     if( $ShouldUploadPackage )
     {
-        It 'should upload package to ProGet' {
-            if( $ShouldReallyUploadToProGet )
-            {
-                $packageInfo = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name)
-                $packageInfo | Should Not BeNullOrEmpty
-                $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
-                $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
+        It 'should upload package to ProGet with the defined session info' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $ProGetSession.Uri | Should Be $taskContext.ProGetSession.Uri
+                $ProGetSession.Credential | Should Be $taskContext.ProGetSession.Credential
             }
-            else
-            {
-                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
+        }
 
-                    $expectedMethod = 'Put'
-                    Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
-                    Write-Debug -Message ('               actual    {0}' -f $Method)
+        It 'should upload the configured package to ProGet' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $version = [semversion.SemanticVersion]$taskContext.Version.ReleaseVersion
+                $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+                $fixRegex = '[{0}]' -f ($badChars -join '')
+                $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
+                $outDirectory = $TaskContext.OutputDirectory
+                $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
-                    $expectedUri = $taskContext.ProGetSession.AppFeedUri
-                    Write-Debug -Message ('Uri            expected  {0}' -f $expectedUri)
-                    Write-Debug -Message ('               actual    {0}' -f $Uri)
+                $PackagePath | Should Be $outFile
+            }
+        }
 
-                    $expectedContentType = 'application/octet-stream'
-                    Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
-                    Write-Debug -Message ('               actual    {0}' -f $ContentType)
-
-                    $credential = $taskContext.ProGetSession.Credential
-                    $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $credential.UserName,$credential.GetNetworkCredential().Password))
-                    $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-                    Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
-                    Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
-
-                    return $expectedMethod -eq $Method -and `
-                           $expectedUri -eq $Uri -and `
-                           $expectedContentType -eq $ContentType -and `
-                           $creds -eq $Headers['Authorization']
-                }
+        It 'should upload package to the defined ProGet feed' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $FeedName | Should Be $taskContext.ProGetSession.AppFeed.Split('/')[1]
             }
         }
 
@@ -435,6 +396,7 @@ function Assert-NewWhsCIAppPackage
             It 'should not set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $false
             }
+            
             It 'should not set package Application name' {
                 $taskContext.ApplicationName | Should BeNullOrEmpty
             }         
@@ -507,10 +469,7 @@ function Initialize-Test
 
         [Switch]
         $WhenUploadFails,
-
-        [Switch]
-        $WhenReallyUploading,
-
+        
         [Switch]
         $OnFeatureBranch,
 
@@ -585,16 +544,15 @@ function Initialize-Test
         New-Item -Path (Join-Path -Path $SourceRoot -ChildPath $itemName) -ItemType 'File' | Out-Null
     }
 
-    if( -not $WhenReallyUploading )
+    if ( $WhenUploadFails )
     {
-        $result = 201
-        if( $WhenUploadFails )
-        {
-            $result = 1
-        }
-        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -MockWith { Write-Error 'failed to upload' }
     }
-
+    else
+    {
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+    }
+    
     if( -not $AsDeveloper )
     {
         $gitBranch = 'origin/develop'
@@ -790,19 +748,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
                               -ShouldFailWithErrorMessage 'failed to upload' `
                               -ShouldNotSetPackageVariables `
                               -ErrorAction SilentlyContinue
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldUploadPackage `
-                              -ShouldReallyUploadToProGet 
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
@@ -1028,7 +973,6 @@ function WhenPackaging
         $WithThirdPartyPath,
         $WithVersion = $defaultVersion,
         $WithApplicationName,
-        $ThatReallyUploadsToProGet,
         [Switch]
         $ByDeveloper
     )
@@ -1084,36 +1028,9 @@ function WhenPackaging
     {
         $taskContext.ApplicationName = $WithApplicationName
     }
-
-    $packagesAtStart = @()
-    if( $ThatReallyUploadsToProGet )
-    {
-        $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Test')
-        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
-
-        $taskContext.ProGetSession = [pscustomobject]@{
-                                                        Uri = $progetUri;
-                                                        AppFeedUri = $appFeedUri;
-                                                        Credential = $credential;
-                                                        AppFeed = 'upack/Test'
-                                                      }
-        $packagesAtStart = @()
-        try
-        {
-            $packagesAtStart = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name) -ErrorAction Ignore
-        }
-        catch
-        {
-            $packagesAtStart = @()
-        }
-    }
-    else
-    {
-        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'ProGetAutomation' -MockWith { [pscustomobject]@{ StatusCode = 201; } }.GetNewClosure()
-    }
-
-
+    
+    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+    
     $threwException = $false
     $At = $null
 

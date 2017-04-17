@@ -60,7 +60,7 @@ function Publish-ProGetUniversalPackage
                                     -Headers $headers
         if( -not $? -or ($result -and $result.StatusCode -ne 201) )
         {
-            throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($PackagePath | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+            Write-Error -Message ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($PackagePath | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
         }
     }
 }
