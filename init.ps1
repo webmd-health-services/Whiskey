@@ -17,12 +17,12 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-$modules = @{
-                'Carbon' = '2.4.1';
-                'Pester' = '3.4.6';
-            }
+$modules = @(
+                'Carbon',
+                'Pester'
+            )
 
-foreach( $moduleName in $modules.Keys )
+foreach( $moduleName in $modules )
 {
     $moduleRootPath = Join-Path -Path $PSScriptRoot -ChildPath $moduleName
     if( (Test-Path -Path $moduleRootPath -PathType Container) )
@@ -37,7 +37,7 @@ foreach( $moduleName in $modules.Keys )
         }
     }
 
-    Save-Module -Name $moduleName -Path $PSScriptRoot -RequiredVersion $modules[$moduleName]
+    Save-Module -Name $moduleName -Path $PSScriptRoot
 }
 
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') -Force
