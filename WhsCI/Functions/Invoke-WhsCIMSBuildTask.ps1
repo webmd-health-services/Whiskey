@@ -27,7 +27,10 @@ function Invoke-WhsCIMSBuildTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
         # 
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whsbuild.yml file they were taken from.
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
   
     Set-StrictMode -version 'latest'  
@@ -48,7 +51,12 @@ function Invoke-WhsCIMSBuildTask
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-   
+    
+    $target = @('build')
+    if( $Clean )
+    {
+        $target = 'clean'
+    }
     #build
     foreach( $projectPath in $path )
     {
@@ -56,7 +64,18 @@ function Invoke-WhsCIMSBuildTask
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
-            & $nugetPath restore $projectPath | Write-CommandOutput
+            if( $Clean )
+            {
+                $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
+                if( Test-Path -Path $packageDirectoryPath -PathType Container )
+                {
+                    Remove-Item $packageDirectoryPath -Recurse -Force | Write-CommandOutput
+                }
+            }
+            else
+            {
+                & $nugetPath restore $projectPath | Write-CommandOutput
+            }
         }
 
         if( (Test-WhsCIRunByBuildServer) )
@@ -76,10 +95,10 @@ function Invoke-WhsCIMSBuildTask
 "@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
                                     }
         }
-        Invoke-WhsCIMSBuild -Path $projectPath -Target 'clean','build' -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+        Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
         if( $errors )
         {
-            throw ('Building ''{0}'' MSBuild project''s ''clean'',''build'' targets with {1} configuration failed.' -f $projectPath,$TaskContext.BuildConfiguration)
+            throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)
         }
     }
 }

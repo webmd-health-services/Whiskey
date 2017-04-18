@@ -1,11 +1,10 @@
-Version: 0.3.1
+Version: 0.4.0
 PublishOn: 
 - master
 BuildTasks:
 - PowerShell:
     Path: init.ps1
-- Pester3:
-    Version: 3.4.6
+- Pester4:
     Path: Test\*.Tests.ps1
 - PublishPowerShellModule:
     Path:

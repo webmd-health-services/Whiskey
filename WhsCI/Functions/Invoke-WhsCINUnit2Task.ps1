@@ -21,17 +21,24 @@ function Invoke-WhsCINUnit2Task
     #>
     [CmdletBinding()]
     param(
-    [Parameter(Mandatory=$true)]
-    [object]
-    $TaskContext,
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
     
-    [Parameter(Mandatory=$true)]
-    [hashtable]
-    $TaskParameter
- )    
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter,
+
+        [Switch]
+        $Clean
+     )    
   
     Process
     {
+        if( $Clean )
+        {
+            return
+        }
           
         Set-StrictMode -version 'latest'        
         $package = 'NUnit.Runners'
@@ -54,19 +61,19 @@ function Invoke-WhsCINUnit2Task
         $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
-            throw ('Package {0} {1} failed to install!' -f $package,$version)
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
         }
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
         if( -not ($nunitConsolePath))
         {
-            throw ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
         & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $reportPath) 
         if( $LastExitCode )
         {
-            throw ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
         }
     }
 

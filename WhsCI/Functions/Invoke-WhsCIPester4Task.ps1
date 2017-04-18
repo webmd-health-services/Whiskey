@@ -25,8 +25,16 @@ function Invoke-WhsCIPester4Task
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter        
+        $TaskParameter,
+        
+        [Switch]
+        $Clean        
     )
+
+    if( $Clean )
+    {
+        return
+    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -97,7 +105,7 @@ function Invoke-WhsCIPester4Task
         $result
         if( $result.FailedCount )
         {
-             Stop-WhsCITask -TaskContext $TaskContext -Message ('Pester tests failed.')
+             throw ('Pester tests failed.')
         }
     } 
     

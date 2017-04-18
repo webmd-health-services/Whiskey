@@ -25,13 +25,19 @@ function Invoke-WhsCIPublishNuGetLibraryTask
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Switch]
+        $Clean
     )
 
     process
     {
         Set-StrictMode -Version 'Latest'
-
+        if( $Clean )
+        {
+            return
+        }
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
@@ -73,7 +79,6 @@ function Invoke-WhsCIPublishNuGetLibraryTask
             {
                 Stop-WhsCITask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
             }
-
             if( $TaskContext.ByDeveloper )
             {
                 continue

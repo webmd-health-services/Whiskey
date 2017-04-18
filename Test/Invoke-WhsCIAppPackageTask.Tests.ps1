@@ -1,3 +1,4 @@
+
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
@@ -6,12 +7,18 @@ $defaultPackageName = 'WhsCITest'
 $defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
+$defaultVersion = '1.2.3'
+
+$threwException = $false
+
+$preTempDirCount = 0
+$postTempDirCount = 0
 
 function Assert-NewWhsCIAppPackage
 {
     [CmdletBinding()]
     param(
-        [string[]]
+        [object[]]
         $ForPath,
 
         [string[]]
@@ -49,10 +56,7 @@ function Assert-NewWhsCIAppPackage
         
         [Switch]
         $ShouldNotCreatePackage,
-
-        [Switch]
-        $ShouldReallyUploadToProGet,
-
+        
         [Switch]
         $ShouldNotUploadPackage,
 
@@ -67,6 +71,9 @@ function Assert-NewWhsCIAppPackage
 
         [string[]]
         $HasThirdPartyRootItem,
+
+        [object[]]
+        $WithThirdPartyRootItem,
 
         [string[]]
         $HasThirdPartyFile,
@@ -87,7 +94,10 @@ function Assert-NewWhsCIAppPackage
         $WhenRunByDeveloper,
 
         [Switch]
-        $ShouldNotSetPackageVariables
+        $ShouldNotSetPackageVariables,
+
+        [Switch]
+        $WhenGivenCleanSwitch
     )
 
     if( -not $Version )
@@ -111,7 +121,7 @@ function Assert-NewWhsCIAppPackage
     }
     if( $HasThirdPartyRootItem )
     {
-        $taskParameter['ThirdPartyPath'] = $HasThirdPartyRootItem
+        $taskParameter['ThirdPartyPath'] = $WithThirdPartyRootItem
     }
     if( $FromSourceRoot )
     {
@@ -133,51 +143,30 @@ function Assert-NewWhsCIAppPackage
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version = [SemVersion.SemanticVersion]$Version
     $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'Version' -Value ('{0}.{1}.{2}' -f $taskContext.Version.Major,$taskContext.Version.Minor,$taskContext.Version.Patch)
-    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $taskContext.Version.Version
+    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value ([SemVersion.SemanticVersion]$taskContext.Version.Version)
     if( $taskContext.Version.Prerelease )
     {
-        $taskContext.Version.ReleaseVersion = '{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease
+        $taskContext.Version.ReleaseVersion = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease)
     }
 
     if( $ForApplicationName )
     {
         $taskContext.ApplicationName = $ForApplicationName
     }
-
-    $packagesAtStart = @()
-    if( $ShouldReallyUploadToProGet )
-    {
-        $progetUri = 'https://proget.dev.webmd.com/'
-        $appFeedUri = [string](New-Object 'Uri' ([uri]$progetUri),'upack/Tests')
-        $credential = New-Credential -UserName 'aaron-admin' -Password 'aaron'
-
-        $taskContext.ProGetSession = [pscustomobject]@{
-                                                        Uri = $progetUri;
-                                                        AppFeedUri = $appFeedUri;
-                                                        Credential = $credential;
-                                                        AppFeed = 'upack/Test'
-                                                      }
-        $packagesAtStart = @()
-        try
-        {
-            $packagesAtStart = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name) -ErrorAction Ignore
-        }
-        catch
-        {
-            $packagesAtStart = @()
-        }
-    }
-
-
+    
     $threwException = $false
     $At = $null
 
     $Global:Error.Clear()
 
-    $whatIfParam = @{ }
+    $optionalParams = @{ }
     if( $WhenRunByDeveloper )
     {
-        $whatIfParam['WhatIf'] = $true
+        $optionalParams['WhatIf'] = $true
+    }
+    if( $WhenGivenCleanSwitch )
+    {
+        $optionalParams['Clean'] = $true
     }
         
     function Get-TempDirCount
@@ -190,7 +179,7 @@ function Assert-NewWhsCIAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -242,7 +231,6 @@ function Assert-NewWhsCIAppPackage
     $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.ReleaseVersion -replace '[\\/]','-')
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
-
 
     It 'should cleanup temporary directories' {
         $postTempDirCount | Should Be $preTempDirCount
@@ -302,19 +290,24 @@ function Assert-NewWhsCIAppPackage
 
         $version = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
         It 'version.json should have Version property' {
-            $version.Version | Should Be $taskContext.Version.Version
+            $version.Version | Should BeOfType ([string])
+            $version.Version | Should Be $taskContext.Version.Version.ToString()
         }
         It 'version.json should have PrereleaseMetadata property' {
-            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease
+            $version.PrereleaseMetadata | Should BeOfType ([string])
+            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease.ToString()
         }
         It 'version.json shuld have BuildMetadata property' {
-            $version.BuildMetadata | Should Be $taskContext.Version.Build
+            $version.BuildMetadata | Should BeOfType ([string])
+            $version.BuildMetadata | Should Be $taskContext.Version.Build.ToString()
         }
         It 'version.json should have full semantic version' {
-            $version.SemanticVersion | Should Be $taskContext.Version
+            $version.SemanticVersion | Should BeOfType ([string])
+            $version.SemanticVersion | Should Be $taskContext.Version.ToString()
         }
         It 'version.json should have release version' {
-            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion
+            $version.ReleaseVersion | Should BeOfType ([string])
+            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion.ToString()
         }
 
         if( $NotHasFiles )
@@ -374,48 +367,43 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -Times 0
         }
     }
 
     if( $ShouldUploadPackage )
     {
-        It 'should upload package to ProGet' {
-            if( $ShouldReallyUploadToProGet )
-            {
-                $packageInfo = Invoke-RestMethod -Uri ('{0}/packages?name={1}' -f $appFeedUri,$Name)
-                $packageInfo | Should Not BeNullOrEmpty
-                $packageInfo.latestVersion | Should Not Be $packagesAtStart.latestVersion
-                $packageInfo.versions.Count | Should Be ($packagesAtStart.versions.Count + 1)
+        It 'should upload package to ProGet with the defined session info' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $DebugPreference = 'Continue'
+                Write-Debug $ProGetSession.Uri
+                Write-Debug $taskContext.ProGetSession.Uri
+                $ProGetSession.Uri -eq $taskContext.ProGetSession.Uri
             }
-            else
-            {
-                Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
+        }
+        It 'should upload package to ProGet with session credential' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $ProGetSession.Credential.UserName -eq $taskContext.ProGetSession.Credential.UserName -and
+                $ProGetSession.Credential.GetNetworkCredential().Password -eq $taskContext.ProGetSession.Credential.GetNetworkCredential().Password
+            }
+        }
 
-                    $expectedMethod = 'Put'
-                    Write-Debug -Message ('Method         expected  {0}' -f $expectedMethod)
-                    Write-Debug -Message ('               actual    {0}' -f $Method)
+        It 'should upload the configured package to ProGet' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $version = [semversion.SemanticVersion]$taskContext.Version.ReleaseVersion
+                $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+                $fixRegex = '[{0}]' -f ($badChars -join '')
+                $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
+                $outDirectory = $TaskContext.OutputDirectory
+                $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
-                    $expectedUri = $taskContext.ProGetSession.AppFeedUri
-                    Write-Debug -Message ('Uri            expected  {0}' -f $expectedUri)
-                    Write-Debug -Message ('               actual    {0}' -f $Uri)
+                $PackagePath -eq $outFile
+            }
+        }
 
-                    $expectedContentType = 'application/octet-stream'
-                    Write-Debug -Message ('ContentType    expected  {0}' -f $expectedContentType)
-                    Write-Debug -Message ('               actual    {0}' -f $ContentType)
-
-                    $credential = $taskContext.ProGetSession.Credential
-                    $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $credential.UserName,$credential.GetNetworkCredential().Password))
-                    $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-                    Write-Debug -Message ('Authorization  expected  {0}' -f $creds)
-                    Write-Debug -Message ('               actual    {0}' -f $Headers['Authorization'])
-
-                    return $expectedMethod -eq $Method -and `
-                           $expectedUri -eq $Uri -and `
-                           $expectedContentType -eq $ContentType -and `
-                           $creds -eq $Headers['Authorization']
-                }
+        It 'should upload package to the defined ProGet feed' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $FeedName -eq $taskContext.ProGetSession.AppFeed.Split('/')[1]
             }
         }
 
@@ -428,6 +416,7 @@ function Assert-NewWhsCIAppPackage
             It 'should not set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $false
             }
+            
             It 'should not set package Application name' {
                 $taskContext.ApplicationName | Should BeNullOrEmpty
             }         
@@ -500,10 +489,7 @@ function Initialize-Test
 
         [Switch]
         $WhenUploadFails,
-
-        [Switch]
-        $WhenReallyUploading,
-
+        
         [Switch]
         $OnFeatureBranch,
 
@@ -529,7 +515,10 @@ function Initialize-Test
         $SourceRoot,
 
         [Switch]
-        $AsDeveloper
+        $AsDeveloper,
+
+        [Switch]
+        $WithNewWhsEnvironmentsJson
     )
 
     $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
@@ -543,6 +532,11 @@ function Initialize-Test
         $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
     }
     Install-Directory -Path $repoRoot
+
+    if( $WithNewWhsEnvironmentsJson )
+    {
+        New-Item -Path (Join-Path -Path $repoRoot -ChildPath 'WhsEnvironments.json') -ItemType 'File' | Out-Null
+    }
 
     $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
     if( -not $WithoutArc )
@@ -570,16 +564,15 @@ function Initialize-Test
         New-Item -Path (Join-Path -Path $SourceRoot -ChildPath $itemName) -ItemType 'File' | Out-Null
     }
 
-    if( -not $WhenReallyUploading )
+    if ( $WhenUploadFails )
     {
-        $result = 201
-        if( $WhenUploadFails )
-        {
-            $result = 1
-        }
-        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ StatusCode = $result; } }.GetNewClosure()
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -MockWith { Write-Error 'failed to upload' }
     }
-
+    else
+    {
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+    }
+    
     if( -not $AsDeveloper )
     {
         $gitBranch = 'origin/develop'
@@ -644,6 +637,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
     $thirdPartyFile = 'thirdparty.txt'
     $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
     Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WithThirdPartyRootItem $thirdPartyFile `
                               -HasThirdPartyRootItem $thirdPartyFile `
                               -HasRootItems $file
 }
@@ -777,18 +771,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when really uploading package' {
-    $dirNames = @( 'dir1'  )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenReallyUploading
-
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
-                              -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
-                              -ShouldReallyUploadToProGet 
-}
-
 Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
@@ -843,6 +825,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
+                              -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt'
 }
@@ -888,16 +871,19 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* Path`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* Path`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 
 function New-TaskParameter
 {
-     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.' ; ThirdPartyPath = 'fubar' }
+     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' }
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
+    $filter = { $PropertyName -eq 'Path' } 
+    Mock -CommandName 'Resolve-whsCITaskPath' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $True }
+
     $context = New-WhsCITestContext -ForDeveloper
 
     $Global:Error.Clear()
@@ -907,7 +893,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exis
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 
@@ -919,9 +905,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of th
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasRootItems 'dir1' `
+                              -HasRootItems 'app\dir1' `
                               -HasFiles 'html.html' `
-                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
+                              -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
+                              -HasThirdPartyRootItem 'app\thirdparty','app\thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt' `
                               -FromSourceRoot 'app'
 }
@@ -957,7 +944,237 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage `
-                              -ForApplicationName 'foo' `
-                              
+                              -ForApplicationName 'foo'
+}
 
+Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
+    $file = 'project.json'    
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhsCIAppPackage -ForPath $file `
+                              -WhenGivenCleanSwitch `
+                              -ShouldReturnNothing `
+                              -ShouldNotCreatePackage `
+                              -ShouldNotUploadPackage `
+                              -ShouldNotSetPackageVariables
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
+    $file = 'project.json'
+    $directory = 'relative'
+    $path = ('{0}\{1}' -f ($directory, $file))    
+
+    $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
+    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $path 
+}
+
+function Get-BuildRoot
+{
+    $buildRoot = (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
+    New-Item -Path $buildRoot -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
+    return $buildRoot
+}
+
+function GivenARepositoryWithFiles
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    $buildRoot = Get-BuildRoot
+
+    $arcRoot = Join-Path -Path $buildRoot -ChildPath 'Arc'
+    New-Item -Path $arcRoot -ItemType 'Directory' | Out-Null
+    New-Item -Path (Join-Path -Path $arcRoot -ChildPath 'arc.txt') -ItemType 'File' | Out-Null
+
+    foreach( $item in $Path )
+    {
+        $parent = $item | Split-Path
+        if( $parent )
+        {
+            New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
+        }
+
+        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType 'File'
+    }
+}
+
+function WhenPackaging
+{
+    param(
+        $WithPackageName = $defaultPackageName,
+        $WithDescription = $defaultDescription,
+        [object[]]
+        $Paths,
+        [object[]]
+        $WithWhitelist,
+        [object[]]
+        $ThatExcludes,
+        $FromSourceRoot,
+        $ThatExcludesArc,
+        [object[]]
+        $WithThirdPartyPath,
+        $WithVersion = $defaultVersion,
+        $WithApplicationName,
+        [Switch]
+        $ByDeveloper
+    )
+
+    $taskParameter = @{ }
+    if( $WithPackageName )
+    {
+        $taskParameter['Name'] = $WithPackageName
+    }
+    if( $WithDescription )
+    {
+        $taskParameter['Description'] = $WithDescription
+    }
+    if( $Paths )
+    {
+        $taskParameter['Path'] = $Paths
+    }
+    if( $WithWhitelist )
+    {
+        $taskParameter['Include'] = $WithWhitelist
+    }
+    if( $ThatExcludes )
+    {
+        $taskParameter['Exclude'] = $ThatExcludes
+    }
+    if( $WithThirdPartyPath )
+    {
+        $taskParameter['ThirdPartyPath'] = $WithThirdPartyPath
+    }
+    if( $FromSourceRoot )
+    {
+        $taskParameter['SourceRoot'] = $FromSourceRoot
+    }
+    if( $ThatExcludesArc )
+    {
+        $taskParameter['ExcludeArc'] = $true
+    }
+
+    $byWhoArg = @{ }
+    if( $ByDeveloper )
+    {
+        $byWhoArg['ByDeveloper'] = $true
+    }
+    else
+    {
+        $byWhoArg['ByBuildServer'] = $true
+    }
+    
+    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
+
+    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
+    if( $WithApplicationName )
+    {
+        $taskContext.ApplicationName = $WithApplicationName
+    }
+    
+    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+    
+    $threwException = $false
+    $At = $null
+
+    $Global:Error.Clear()
+
+    $whatIfParam = @{ }
+    if( $ByDeveloper )
+    {
+        $whatIfParam['WhatIf'] = $true
+    }
+        
+    function Get-TempDirCount
+    {
+        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+            Measure-Object | 
+            Select-Object -ExpandProperty Count
+    }
+
+    $preTempDirCount = Get-TempDirCount
+    try
+    {
+        Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+    }
+    catch
+    {
+        $threwException = $true
+        Write-Error -ErrorRecord $_
+    }
+    $postTempDirCount = Get-TempDirCount
+}
+
+function ThenPackageShouldInclude
+{
+    param(
+        $PackageName = $defaultPackageName,
+        $PackageVersion = $defaultVersion,
+        [Parameter(Mandatory=$true,Position=0)]
+        [string[]]
+        $Path
+    )
+
+    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
+    $outputRoot = Get-BuildRoot
+    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
+    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
+
+
+    It 'should create a package' {
+        $packagePath | Should Exist
+    }
+
+    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    Expand-Item -Path $packagePath -OutDirectory $expandPath
+
+    $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
+    foreach( $item in $Path )
+    {
+        $expectedPath = Join-Path -Path $packageRoot -ChildPath $item
+        It ('should include {0}' -f $item) {
+            $expectedPath | Should Exist
+        }
+    }
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when WhsEnvironments.json is explicitly included in the package' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
+    WhenPackaging -Paths 'WhsEnvironments.json','file.txt' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
+    WhenPackaging -Paths 'file.txt' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
+    GivenARepositoryWithFiles 'WhsEnvironments.json','dir1\file.txt'
+    WhenPackaging -Paths 'file.txt' -FromSourceRoot 'dir1' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'WhsEnvironments.json','dir1\file.txt'
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path with override syntax' {
+    $file = 'project.json'
+    $directory = 'relative'
+    $path = ('{0}\{1}' -f ($directory, $file))
+    $forPath = @{ $path = $file }
+
+    $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
+    Assert-NewWhsCIAppPackage -ForPath $forPath -HasRootItems $file 
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with override syntax' {
+    $dirNames = @( 'dir1', 'app\thirdparty')
+    $fileNames = @( 'thirdparty.txt' )
+    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
+
+    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+                              -ThatExcludes 'thirdparty.txt' `
+                              -HasRootItems 'dir1' `
+                              -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
+                              -HasThirdPartyRootItem 'thirdparty' `
+                              -HasThirdPartyFile 'thirdparty.txt' 
 }

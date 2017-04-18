@@ -52,11 +52,17 @@ function Invoke-WhsCIAppPackageTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter
-    )
+        $TaskParameter,
 
+        [Switch]
+        $Clean
+    )
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    if( $Clean )
+    {
+        return
+    }
 
     foreach( $mandatoryName in @( 'Name', 'Description', 'Include', 'Path' ) )
     {
@@ -74,22 +80,13 @@ function Invoke-WhsCIAppPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
-    $excludeArc = $TaskParameter['ExcludeArc']
-
+    $excludeArc = $TaskParameter['ExcludeArc']    
+    
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
     {
         $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
     }
-
-    $resolveErrors = @()
-    $path = $path | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
-
-    if( $thirdPartyPath )
-    {
-        $thirdPartyPath = $thirdPartyPath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'ThirdPartyPath' @parentPathParam
-    }
-
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
     $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
@@ -107,7 +104,125 @@ function Invoke-WhsCIAppPackageTask
 
     try
     {
-        $shouldProcessCaption = ('creating {0} package' -f $outFile)
+        $whsEnvironmentsPath = (Join-Path -Path $TaskContext.BuildRoot -ChildPath 'WhsEnvironments.json')
+        if( Test-Path -Path $whsEnvironmentsPath -PathType Leaf )
+        {
+            Copy-Item -Path $whsEnvironmentsPath -Destination $tempPackageRoot
+        }        
+        $shouldProcessCaption = ('creating {0} package' -f $outFile)        
+        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+        @{
+            name = $name;
+            version = $version.ToString();
+            title = $name;
+            description = $description
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
+        
+        # Add the version.json file
+        @{
+            Version = $TaskContext.Version.Version.ToString();
+            SemanticVersion = $TaskContext.Version.ToString();
+            PrereleaseMetadata = $TaskContext.Version.Prerelease;
+            BuildMetadata = $TaskContext.Version.Build;
+            ReleaseVersion = $TaskContext.Version.ReleaseVersion.ToString();
+        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
+        
+        function Copy-ToPackage
+        {
+	        param(
+		        [Parameter(Mandatory=$true)]
+		        [object[]]
+		        $Path,
+		
+		        [Switch]
+		        $AsThirdPartyItem
+	        )
+	
+            foreach( $item in $Path )
+            {
+                $override = $False
+                if( $item -is [hashtable] )
+                {
+    	            $sourcePath = $null
+                    $override = $True
+    	            foreach( $key in $item.Keys )
+	                {
+		                $destinationItemName = $item[$key]
+		                $sourcePath = $key
+	                }
+                }
+                else
+                {
+                    $sourcePath = $item
+                }
+                $pathparam = 'path'
+                if( $AsThirdPartyItem )
+                {
+                    $pathparam = 'ThirdPartyPath'
+                }
+
+                $sourcePath = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+                if( -not $sourcePath )
+                {
+    	            return
+                }
+                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+                $relativePath = $relativePath.Trim("\")
+                if( -not $override )
+                {
+                    $destinationItemName = $relativePath
+                }
+
+                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+                #if parent doesn't exist in the destination dir, create it
+                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                {
+                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                }
+
+                if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                {
+                    Copy-Item -Path $sourcePath -Destination $destination
+                }
+                else
+                {
+    	            if( $AsThirdPartyItem )
+	                {
+		                $excludeParams = @()
+		                $whitelist = @()
+                        $operationDescription = 'packaging third-party {0}' -f $item
+	                }
+	                else
+	                {
+            	        $excludeParams = Invoke-Command {
+							        '.git'
+							        '.hg'
+							        'obj'
+							        $exclude
+						        } |
+					    ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+            	        $operationDescription = 'packaging {0}' -f $item
+		                $whitelist = Invoke-Command {
+						                'upack.json',
+						                $include
+						                } 
+	                }
+                    if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                    {
+                        robocopy $sourcePath $destination '/MIR' '/NP' $whitelist $excludeParams | Write-Verbose
+                    }
+                }
+            }
+        }       
+
+        Copy-ToPackage -Path $TaskParameter['Path']
+        if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
+        {
+	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+        }
+
         if( -not $excludeArc )
         {
             $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
@@ -125,102 +240,26 @@ function Invoke-WhsCIAppPackageTask
             }
         }
 
-        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-        @{
-            name = $name;
-            version = $version.ToString();
-            title = $name;
-            description = $description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
-
-        # Add the version.json file
-        @{
-            Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.ToString();
-            PrereleaseMetadata = $TaskContext.Version.Prerelease;
-            BuildMetadata = $TaskContext.Version.Build;
-            ReleaseVersion = $TaskContext.Version.ReleaseVersion;
-        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
-
-        foreach( $item in $path )
-        {
-            $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            if( (Test-Path -Path $item -PathType Leaf) )
-            {
-                Copy-Item -Path $item -Destination $destination
-            }
-            else
-            {
-                $excludeParams = $exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-                $operationDescription = 'packaging {0}' -f $itemName
-                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-                {
-                    robocopy $item $destination '/MIR' '/NP' $include 'upack.json' $excludeParams '/XD' '.git' '/XD' '.hg' '/XD' 'obj' | Write-Verbose
-                }
-            }
-        }
-
-        foreach( $item in $thirdPartyPath )
-        {
-            $itemName = $item | Split-Path -Leaf
-            $destination = Join-Path -Path $tempPackageRoot -ChildPath $itemName
-            if( (Test-Path -Path $item -PathType Leaf) )
-            {
-                Copy-Item -Path $item -Destination $destination
-            }
-            else
-            {
-                $operationDescription = 'packaging third-party {0}' -f $itemName
-                if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-                {
-                    robocopy $item $destination '/MIR' '/NP' | Write-Verbose
-                }
-            }
-        }
-
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
-        if( -not (Test-WhsCIRunByBuildServer) )
+        # Upload to ProGet
+        if( -not $TaskContext.Publish )
         {
             return
         }
 
-        # Upload to ProGet
-        if( $TaskContext.Publish )
-        {
-            $proGetPackageUri = $TaskContext.ProGetSession.AppFeedUri
-            $proGetCredential = $TaskContext.ProGetSession.Credential
-            $buildMasterSession = $TaskContext.BuildMasterSession
-            $headers = @{ }
-            $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))
-            $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-            $headers.Add('Authorization', $creds)
-    
-            $operationDescription = 'uploading {0} package to ProGet {1}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-            {
-                Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
-                $result = Invoke-RestMethod -Method Put `
-                                            -Uri $proGetPackageUri `
-                                            -ContentType 'application/octet-stream' `
-                                            -Body ([IO.File]::ReadAllBytes($outFile)) `
-                                            -Headers $headers
-                if( -not $? -or ($result -and $result.StatusCode -ne 201) )
-                {
-                    throw ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($outFile | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
-                }
-            }
-
-            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
-            if ( -not $TaskContext.ApplicationName ) 
-            {
-                $TaskContext.ApplicationName = $name
-            }
+        $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
+        $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
+        Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile -ErrorAction Stop
             
-            # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
-            $TaskContext.PackageVariables['ProGetPackageName'] = $version
+        $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
+        if ( -not $TaskContext.ApplicationName ) 
+        {
+            $TaskContext.ApplicationName = $name
         }
+            
+        # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
+        $TaskContext.PackageVariables['ProGetPackageName'] = $version
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
         if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
