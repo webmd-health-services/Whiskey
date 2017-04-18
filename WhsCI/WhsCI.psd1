@@ -27,7 +27,22 @@
     Copyright = '(c) 2016 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description = 'Continuous Integration/Continuous Delivery module.'
+    Description = @'
+Continuous Integration/Continuous Delivery module.
+
+# Release Notes
+
+## Enhancements
+
+ * Introduced a clean mode to `Invoke-WhsCIBuild`. When run with the `Clean` switch, each task cleans any output it created on previous builds.
+ * The `NodeAppPackage` and `AppPackage` tasks now automatically include in the appliation package the WhsEnvironments.json files in the root of a repository.
+ * The `NodeAppPackage` and `AppPackage` task now include a `version.json` file in the root of the package that defines the version that was built.
+ * The `Pester3` and `Pester4` tasks now show Pester output while Pester is running (in previsou versions the output would only show once Pester finished).
+
+## Bug Fixes
+
+ * The `Pester3` and `Pester4` tasks would fail when any Pester tests failed. 
+'@
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''
@@ -135,7 +150,16 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Pester4 task fails when Version property is not provided.
+# Enhancements
+
+ * Introduced a clean mode to `Invoke-WhsCIBuild`. When run with the `Clean` switch, each task cleans any output it created on previous builds.
+ * The `NodeAppPackage` and `AppPackage` tasks now automatically include in the appliation package the WhsEnvironments.json files in the root of a repository.
+ * The `NodeAppPackage` and `AppPackage` task now include a `version.json` file in the root of the package that defines the version that was built.
+ * The `Pester3` and `Pester4` tasks now show Pester output while Pester is running (in previsou versions the output would only show once Pester finished).
+
+# Bug Fixes
+
+ * The `Pester3` and `Pester4` tasks would fail when any Pester tests failed. 
 '@
 
         } # End of PSData hashtable
