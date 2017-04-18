@@ -27,22 +27,7 @@
     Copyright = '(c) 2016 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description = @'
-Continuous Integration/Continuous Delivery module.
-
-# Release Notes
-
-## Enhancements
-
- * Introduced a clean mode to `Invoke-WhsCIBuild`. When run with the `Clean` switch, each task cleans any output it created on previous builds.
- * The `NodeAppPackage` and `AppPackage` tasks now automatically include in the appliation package the WhsEnvironments.json files in the root of a repository.
- * The `NodeAppPackage` and `AppPackage` task now include a `version.json` file in the root of the package that defines the version that was built.
- * The `Pester3` and `Pester4` tasks now show Pester output while Pester is running (in previsou versions the output would only show once Pester finished).
-
-## Bug Fixes
-
- * The `Pester3` and `Pester4` tasks would fail when any Pester tests failed. 
-'@
+    Description = 'Continuous Integration/Continuous Delivery module.'
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''
@@ -150,16 +135,9 @@ Continuous Integration/Continuous Delivery module.
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-# Enhancements
+### Bug Fixes
 
- * Introduced a clean mode to `Invoke-WhsCIBuild`. When run with the `Clean` switch, each task cleans any output it created on previous builds.
- * The `NodeAppPackage` and `AppPackage` tasks now automatically include in the appliation package the WhsEnvironments.json files in the root of a repository.
- * The `NodeAppPackage` and `AppPackage` task now include a `version.json` file in the root of the package that defines the version that was built.
- * The `Pester3` and `Pester4` tasks now show Pester output while Pester is running (in previsou versions the output would only show once Pester finished).
-
-# Bug Fixes
-
- * The `Pester3` and `Pester4` tasks would fail when any Pester tests failed. 
+ * The `AppPackage` and `NodeAppPackage` tasks create empty packages when a whitelist has more than one item.
 '@
 
         } # End of PSData hashtable

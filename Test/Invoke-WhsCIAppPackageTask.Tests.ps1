@@ -375,7 +375,7 @@ function Assert-NewWhsCIAppPackage
     {
         It 'should upload package to ProGet with the defined session info' {
             Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
-                $DebugPreference = 'Continue'
+                #$DebugPreference = 'Continue'
                 Write-Debug $ProGetSession.Uri
                 Write-Debug $taskContext.ProGetSession.Uri
                 $ProGetSession.Uri -eq $taskContext.ProGetSession.Uri
@@ -658,14 +658,14 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html', 'code.cs' )
+    $fileNames = @( 'html.html', 'code.cs', 'style.css' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
     Assert-NewWhsCIAppPackage -ForPath 'dir1' `
-                              -ThatIncludes '*.html' `
+                              -ThatIncludes '*.html','*.css' `
                               -HasRootItems $dirNames `
-                              -HasFiles 'html.html' `
+                              -HasFiles 'html.html','style.css' `
                               -NotHasFiles 'code.cs' `
                               -ShouldUploadPackage
 }

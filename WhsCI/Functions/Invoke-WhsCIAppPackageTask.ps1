@@ -205,13 +205,13 @@ function Invoke-WhsCIAppPackageTask
 					    ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
             	        $operationDescription = 'packaging {0}' -f $item
 		                $whitelist = Invoke-Command {
-						                'upack.json',
+						                'upack.json'
 						                $include
 						                } 
 	                }
                     if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
                     {
-                        robocopy $sourcePath $destination '/MIR' '/NP' $whitelist $excludeParams | Write-Verbose
+                        robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
                     }
                 }
             }
@@ -236,7 +236,7 @@ function Invoke-WhsCIAppPackageTask
             $operationDescription = 'packaging Arc'
             if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
             {
-                robocopy $arcPath $arcDestination '/MIR' '/NP' | Write-Verbose
+                robocopy $arcPath $arcDestination '/MIR' '/NP' '/R:0' | Write-Verbose
             }
         }
 
