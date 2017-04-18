@@ -375,8 +375,16 @@ function Assert-NewWhsCIAppPackage
     {
         It 'should upload package to ProGet with the defined session info' {
             Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
-                $ProGetSession.Uri | Should Be $taskContext.ProGetSession.Uri
-                $ProGetSession.Credential | Should Be $taskContext.ProGetSession.Credential
+                $DebugPreference = 'Continue'
+                Write-Debug $ProGetSession.Uri
+                Write-Debug $taskContext.ProGetSession.Uri
+                $ProGetSession.Uri -eq $taskContext.ProGetSession.Uri
+            }
+        }
+        It 'should upload package to ProGet with session credential' {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                $ProGetSession.Credential.UserName -eq $taskContext.ProGetSession.Credential.UserName -and
+                $ProGetSession.Credential.GetNetworkCredential().Password -eq $taskContext.ProGetSession.Credential.GetNetworkCredential().Password
             }
         }
 
@@ -389,13 +397,13 @@ function Assert-NewWhsCIAppPackage
                 $outDirectory = $TaskContext.OutputDirectory
                 $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
-                $PackagePath | Should Be $outFile
+                $PackagePath -eq $outFile
             }
         }
 
         It 'should upload package to the defined ProGet feed' {
             Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
-                $FeedName | Should Be $taskContext.ProGetSession.AppFeed.Split('/')[1]
+                $FeedName -eq $taskContext.ProGetSession.AppFeed.Split('/')[1]
             }
         }
 

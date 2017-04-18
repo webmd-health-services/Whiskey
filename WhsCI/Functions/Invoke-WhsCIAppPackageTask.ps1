@@ -242,27 +242,24 @@ function Invoke-WhsCIAppPackageTask
 
         Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
 
-        if( -not (Test-WhsCIRunByBuildServer) )
+        # Upload to ProGet
+        if( -not $TaskContext.Publish )
         {
             return
         }
 
-        # Upload to ProGet
-        if( $TaskContext.Publish )
+        $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
+        $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
+        Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile -ErrorAction Stop
+            
+        $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
+        if ( -not $TaskContext.ApplicationName ) 
         {
-            $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
-            $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
-            Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile -ErrorAction Stop
-            
-            $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
-            if ( -not $TaskContext.ApplicationName ) 
-            {
-                $TaskContext.ApplicationName = $name
-            }
-            
-            # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
-            $TaskContext.PackageVariables['ProGetPackageName'] = $version
+            $TaskContext.ApplicationName = $name
         }
+            
+        # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
+        $TaskContext.PackageVariables['ProGetPackageName'] = $version
 
         $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
         if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
