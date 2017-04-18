@@ -215,7 +215,7 @@ function Invoke-WhsCIAppPackageTask
                     }
                 }
             }
-        }       
+        }
 
         Copy-ToPackage -Path $TaskParameter['Path']
         if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
