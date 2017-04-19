@@ -94,6 +94,7 @@
                             'Resolve-WhsCITaskPath',
                             'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer',
+                            'Uninstall-WhsCITool',
                             'Write-CommandOutput'
                          );
 

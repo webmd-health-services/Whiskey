@@ -181,8 +181,6 @@ function Invoke-NuGetInstall
     }
 }
 
-#Need to work out test cases for happy path, bad name/version number that call above function.
-
 Describe 'Install-WhsCITool.when given a NuGet Package' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
 }
