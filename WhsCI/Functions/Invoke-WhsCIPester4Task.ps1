@@ -33,6 +33,7 @@ function Invoke-WhsCIPester4Task
 
     if( $Clean )
     {
+        Uninstall-WhsCITool -ModuleName 'Pester' -Path $TaskContext.BuildRoot
         return
     }
 

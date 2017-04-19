@@ -131,6 +131,7 @@ function Invoke-PesterTest
     if( $WithClean )
     {
         $optionalParams['Clean'] = $True
+        Mock -CommandName 'Uninstall-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $true }
     }
     try
     {
@@ -162,6 +163,12 @@ function Invoke-PesterTest
     {
         It 'should pass' {
             $failed | Should Be $false
+        }
+    }
+    if( $WithClean )
+    {
+        It 'should attempt to uninstall Pester' {
+            Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
         }
     }
 }
@@ -227,6 +234,6 @@ Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
     Invoke-PesterTest -Path $path -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when running passing Pester tests with Clean Switch' {
+Describe 'Invoke-WhsCIPester3Task.when running passing Pester tests with Clean Switch' {
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }

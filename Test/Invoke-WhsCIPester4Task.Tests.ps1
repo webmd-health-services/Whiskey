@@ -94,7 +94,10 @@ function Invoke-PesterTest
         $WithMissingPath,
 
         [String]
-        $ShouldFailWithMessage
+        $ShouldFailWithMessage,
+
+        [Switch]
+        $WithClean
     )
 
     $defaultVersion = '4.0.3'
@@ -121,10 +124,16 @@ function Invoke-PesterTest
                                     $Path
                                 )
                         }
+    }
+    $optionalParams = @{ }
+    if( $WithClean )
+    {
+        $optionalParams['Clean'] = $True
+        Mock -CommandName 'Uninstall-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $true }
     }    
     try
     {
-        Invoke-WhsCIPester4Task -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhsCIPester4Task -TaskContext $context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -151,6 +160,12 @@ function Invoke-PesterTest
     {
         It 'should pass' {
             $failed | Should Be $false
+        }
+    }
+    if( $WithClean )
+    {
+        It 'should attempt to uninstall Pester' {
+            Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
         }
     }
 }
@@ -229,4 +244,8 @@ Describe 'Invoke-WhsCIPester4Task.when version of tool is less than 4.*' {
     $version = '3.4.3'
     $failureMessage = 'the major version number must always be ''4'''
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIPester4Task.when running passing Pester tests with Clean Switch' {
+     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }
