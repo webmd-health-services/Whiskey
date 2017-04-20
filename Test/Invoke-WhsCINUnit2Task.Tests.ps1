@@ -259,6 +259,21 @@ function Get-TestCaseResult
         }
 }
 
+function ThenOutput
+{
+    param(
+        [string[]]
+        $DoesNotContain
+    )
+
+    foreach( $regex in $DoesNotContain )
+    {
+        It ('should not contain ''{0}''' -f $regex) {
+            $output | Should Not Match $regex
+        }
+    }
+}
+
 function ThenTestsNotRun
 {
     param(
@@ -302,4 +317,10 @@ Describe 'Invoke-WhsCINUnit2Task.when excluding tests by category' {
     WhenRunningTask -WithParameters @{ 'Exclude' = 'Category with Spaces 1','Category with Spaces 2' }
     ThenTestsNotRun 'HasCategory1','HasCategory2'
     ThenTestsPassed 'ShouldPass'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when running with custom options' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Options' = @( '/nologo', '/nodots' ) }
+    ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','\.{2,}'
 }

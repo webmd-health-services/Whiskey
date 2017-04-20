@@ -82,7 +82,7 @@ function Invoke-WhsCINUnit2Task
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
-        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels $includeParam $excludeParam ('/xml={0}' -f $reportPath) 
+        & $nunitConsolePath $Path /framework=4.0 $includeParam $excludeParam $TaskParameter['Options'] ('/xml={0}' -f $reportPath) 
         if( $LastExitCode )
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
