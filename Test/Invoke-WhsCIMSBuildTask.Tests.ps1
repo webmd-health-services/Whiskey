@@ -294,6 +294,16 @@ function ThenOutput
             $fullOutput | Should Match ('^{0}$' -f $Is)
         }
     }
+
+    if( $DoesNotContain )
+    {
+        foreach( $item in $DoesNotContain )
+        {
+            It ('should not contain {0}' -f $item) {
+                $output | Should Not Match $item
+            }
+        }
+    }
 }
 
 function ThenOutputIsEmpty
@@ -347,4 +357,16 @@ Describe 'Invoke-WhsCIMSBuild.when passing a single custom argument' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Arguments' = @( '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
+}
+
+Describe 'Invoke-WhsCIMSBuild.when run with no CPU parameter' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
+    ThenOutput -Contains '\n\ {5}\d>'
+}
+
+Describe 'Invoke-WhsCIMSBuild.when run with CPU parameter' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
+    ThenOutput -DoesNotContain '^\ {5}\d>'
 }

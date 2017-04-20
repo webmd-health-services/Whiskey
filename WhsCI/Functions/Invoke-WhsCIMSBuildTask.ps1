@@ -69,12 +69,12 @@ function Invoke-WhsCIMSBuildTask
                 $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
-                    Remove-Item $packageDirectoryPath -Recurse -Force | Write-CommandOutput
+                    Remove-Item $packageDirectoryPath -Recurse -Force
                 }
             }
             else
             {
-                & $nugetPath restore $projectPath | Write-CommandOutput
+                & $nugetPath restore $projectPath
             }
         }
 
@@ -112,8 +112,15 @@ function Invoke-WhsCIMSBuildTask
             $property += $TaskParameter['Property']
         }
 
+        $cpuArg = '/maxcpucount'
+        if( $TaskParameter['CpuCount'] )
+        {
+            $cpuArg = '/maxcpucount:{0}' -f $TaskParameter['CpuCount']
+        }
+
         $msbuildArgs = @(
-                            ('/verbosity:{0}' -f $verbosity)
+                            ('/verbosity:{0}' -f $verbosity),
+                            $cpuArg
                         )
 
         Invoke-WhsCIMSBuild -Path $projectPath `
