@@ -22,30 +22,13 @@ function Invoke-WhsCIMSBuild
         # The properties to pass.  Seperate multiple name=value pairs with commas.
         $Property = @(),
     
-        [Parameter(Mandatory=$false)]
-	    [ValidateSet("q", "m", "n", "d", "diag")]
-        [string]
-        # The logging verbosity.  One of 'q', 'm', 'n', 'd', or 'diag'.
-        $Verbosity,
-    
-        [Parameter(Mandatory=$false)]
-        [Switch]
-        # If set, saves detailed output to msbuild.log in the current directory.
-        $FileLogger,
-    
-        [Parameter()]
-        [string]
-        # The path to a file where logging output should be saved in XML format.
-        $XmlLogPath,
-    
-        [Parameter(Mandatory=$false)]
-        [Switch]
-        # If set, enables multi-CPU builds.
-        $MaxCPU,
-    
         [Switch]
         # Use 32-bit MSBuild
-        $Use32Bit
+        $Use32Bit,
+
+        [string[]]
+        # Extra arguments to pass to MSBuild.
+        $ArgumentList = @()
     )
 
     #Requires -Version 3
@@ -74,11 +57,9 @@ function Invoke-WhsCIMSBuild
     }
     Write-Verbose "Using MSBuild at '$pathToMSBuild'."
 
-    $msbuildArgs = @()
-
     if( $Target )
     {
-        $msbuildArgs += "/t:{0}" -f ($Target -join ';')
+        $ArgumentList += "/t:{0}" -f ($Target -join ';')
     }
 
     if( $Property )
@@ -92,28 +73,18 @@ function Invoke-WhsCIMSBuild
             {
                 $value += '\'
             }
-            $msbuildArgs += "/p:$name=""{0}""" -f ($value -replace ' ','%20')
+            $ArgumentList += "/p:$name=""{0}""" -f ($value -replace ' ','%20')
         }
     }
 
     if( $Verbosity )
     {
-        $msbuildArgs += "/v:$Verbosity"
+        $ArgumentList += "/v:$Verbosity"
     }
 
-    if( $FileLogger )
+    if( $pscmdlet.ShouldProcess($Path, $ArgumentList) )
     {
-        $msbuildArgs += '/flp:v=d'
-    }
-
-    if( $MaxCPU )
-    {
-        $msbuildArgs += '/maxcpucount'
-    }
-
-    if( $pscmdlet.ShouldProcess($Path, $msbuildArgs) )
-    {
-        & $pathToMSBuild @msbuildArgs /nologo $Path
+        & $pathToMSBuild $ArgumentList /nologo $Path
         if( $LASTEXITCODE -ne 0 )
         {
             Write-Error ("MSBuild exited with code {0}." -f $LASTEXITCODE)

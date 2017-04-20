@@ -112,10 +112,14 @@ function Invoke-WhsCIMSBuildTask
             $property += $TaskParameter['Property']
         }
 
+        $msbuildArgs = @(
+                            ('/verbosity:{0}' -f $verbosity)
+                        )
+
         Invoke-WhsCIMSBuild -Path $projectPath `
                             -Target $target `
-                            -Verbosity $verbosity `
                             -Property $property `
+                            -ArgumentList $msbuildArgs `
                             -ErrorVariable 'errors'
         if( $errors )
         {
