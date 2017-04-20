@@ -106,7 +106,17 @@ function Invoke-WhsCIMSBuildTask
             $verbosity = $TaskParameter['Verbosity']
         }
 
-        Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Verbosity $verbosity -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+        $property = @( ('Configuration={0}' -f $TaskContext.BuildConfiguration) )
+        if( $TaskParameter.ContainsKey('Property') )
+        {
+            $property += $TaskParameter['Property']
+        }
+
+        Invoke-WhsCIMSBuild -Path $projectPath `
+                            -Target $target `
+                            -Verbosity $verbosity `
+                            -Property $property `
+                            -ErrorVariable 'errors'
         if( $errors )
         {
             throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)

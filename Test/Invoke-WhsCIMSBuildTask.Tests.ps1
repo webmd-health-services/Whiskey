@@ -263,6 +263,28 @@ function WhenRunningTask
     }
 }
 
+function ThenOutput
+{
+    param(
+        [string[]]
+        $Contains,
+
+        [string[]]
+        $DoesNotContain
+    )
+
+    if( $Contains )
+    {
+        $fullOutput = $output -join [Environment]::NewLine
+        foreach( $item in $Contains )
+        {
+            It ('the output should contain' -f $item) {
+                $fullOutput | Should Match $item
+            }
+        }
+    }
+}
+
 function ThenOutputIsEmpty
 {
     It 'should write no output' {
@@ -279,9 +301,7 @@ function ThenOutputIsMinimal
 
 function ThenOutputIsDebug
 {
-    It 'should write debug output' {
-        $output -join [Environment]::NewLine | Should Match 'Target\ "[^"]+"\ in\ file\ '
-    }
+    ThenOutput -Contains 'Target\ "[^"]+"\ in\ file\ '
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when customizing output level' {
@@ -300,4 +320,10 @@ Describe 'Invoke-WhsCIMSBuildTask.when run by build server using default verbosi
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
     ThenOutputIsDebug
+}
+
+Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
+    ThenOutput -Contains 'Fubar=Snafu'
 }
