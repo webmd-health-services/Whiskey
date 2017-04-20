@@ -93,9 +93,20 @@ function Invoke-WhsCIMSBuildTask
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
 [assembly: System.Reflection.AssemblyInformationalVersion("{1}")]
 "@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
-                                    }
+                }
         }
-        Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
+
+        $verbosity = 'm'
+        if( (Test-WhsCIRunByBuildServer) )
+        {
+            $verbosity = 'd'
+        }
+        if( $TaskParameter['Verbosity'] )
+        {
+            $verbosity = $TaskParameter['Verbosity']
+        }
+
+        Invoke-WhsCIMSBuild -Path $projectPath -Target $target -Verbosity $verbosity -Property ('Configuration={0}' -f $TaskContext.BuildConfiguration) -ErrorVariable 'errors'
         if( $errors )
         {
             throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)

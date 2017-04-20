@@ -212,3 +212,92 @@ Describe 'Invoke-WhsCIBuild.when a developer is compiling dotNET project' {
                                     ) -AsDeveloper -ForAssemblies $assemblies
 }
 
+$output = $null
+$path = $null
+$threwException = $null
+
+function GivenAProjectThatCompiles
+{
+    $source = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest'
+    $destination = Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot'
+    robocopy $source $destination '/MIR' '/NP' '/R:0'
+    $script:path = 'NUnit2PassingTest.sln'
+}
+
+function WhenRunningTask
+{
+    param(
+        [hashtable]
+        $WithParameter = @{},
+
+        [Switch]
+        $AsDeveloper,
+
+        [Switch]
+        $AsBuildServer
+    ) 
+
+    $optionalParams = @{ }
+    if( $AsDeveloper )
+    {
+        $optionalParams['ForDeveloper'] = $true
+    }
+    
+    if( $AsBuildServer )
+    {
+        $optionalParams['ForBuildServer'] = $true
+    }
+
+    $context = New-WhsCITestContext @optionalParams -ForBuildRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
+
+    $WithParameter['Path'] = $path
+    
+    try
+    {
+        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter
+    }
+    catch
+    {
+        Write-Error $_
+        $script:threwException = $true
+    }
+}
+
+function ThenOutputIsEmpty
+{
+    It 'should write no output' {
+        $output | Should BeNullOrEmpty
+    }
+}
+
+function ThenOutputIsMinimal
+{
+    It 'should write minimal output' {
+        $output | Should Match '^.*\ ->\ .*$'
+    }
+}
+
+function ThenOutputIsDebug
+{
+    It 'should write debug output' {
+        $output -join [Environment]::NewLine | Should Match 'Target\ "[^"]+"\ in\ file\ '
+    }
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when customizing output level' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -WithParameter @{ 'Verbosity' = 'q' }
+    ThenOutputIsEmpty
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when run by developer using default verbosity output level' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper
+    ThenOutputIsMinimal
+}
+
+Describe 'Invoke-WhsCIMSBuildTask.when run by build server using default verbosity output level' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsBuildServer
+    ThenOutputIsDebug
+}

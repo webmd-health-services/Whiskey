@@ -45,11 +45,7 @@ function Invoke-WhsCIMSBuild
     
         [Switch]
         # Use 32-bit MSBuild
-        $Use32Bit,
-
-        [Switch]
-        # Return an object representing the result of the build.
-        $PassThru
+        $Use32Bit
     )
 
     #Requires -Version 3
@@ -115,58 +111,12 @@ function Invoke-WhsCIMSBuild
         $msbuildArgs += '/maxcpucount'
     }
 
-    if( $XmlLogPath )
-    {
-        $xmlLogDir = Split-Path -Parent $xmlLogPath
-        if( -not (Test-Path $xmlLogDir -PathType Container) )
-        {
-            $null = New-Item $xmlLogDir -ItemType Directory -Force
-        }
-        $ccnetXmlLogger = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\ThoughtWorks.CruiseControl.MSBuild.dll' -Resolve
-        $msbuildArgs += """/l:$ccnetXmlLogger;$XmlLogPath"""
-    }
-
-    $result = [pscustomobject] @{
-                                    ExitCode = 0; 
-                                    Output = @();
-                                }
     if( $pscmdlet.ShouldProcess($Path, $msbuildArgs) )
     {
-        $writeHostParams = @{ }
-        $output = New-Object 'Collections.Generic.List[string]' 
-        & $pathToMSBuild @msbuildArgs /nologo $Path | 
-            ForEach-Object { 
-                if( $PassThru )
-                {
-                    [void] $output.Add( $_ ) 
-                }
-                else
-                {
-                    $writeHostParams.Clear()
-                    if( $_ -match '((\(\d+,\d+\): )?(error|warning) ((.*?)\d+)?: .*)$' )
-                    {
-                        if( $Matches[3] -eq 'error' )
-                        {
-                            $writeHostParams.ForegroundColor = 'Red'
-                        }
-                        elseif( $Matches[3] -eq 'warning' )
-                        {
-                            $writeHostParams.ForegroundColor = 'Yellow'
-                        }
-                    }
-                    Write-Host -Object $_ @writeHostParams
-                }
-            }
-
-        $result.ExitCode = $LastExitCode
-        $result.Output = $output.ToArray()
-        if( $PassThru )
+        & $pathToMSBuild @msbuildArgs /nologo $Path
+        if( $LASTEXITCODE -ne 0 )
         {
-            return $result
-        }
-        if( $result.ExitCode -ne 0 )
-        {
-            Write-Error ("MSBuild exited with code {0}." -f $result.ExitCode)
+            Write-Error ("MSBuild exited with code {0}." -f $LASTEXITCODE)
         }
     }
 }
