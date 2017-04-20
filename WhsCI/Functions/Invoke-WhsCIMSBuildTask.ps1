@@ -119,7 +119,7 @@ function Invoke-WhsCIMSBuildTask
         Invoke-WhsCIMSBuild -Path $projectPath `
                             -Target $target `
                             -Property $property `
-                            -ArgumentList $msbuildArgs `
+                            -ArgumentList ($msbuildArgs + [string[]]$TaskParameter['Arguments']) `
                             -ErrorVariable 'errors'
         if( $errors )
         {

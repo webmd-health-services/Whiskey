@@ -270,17 +270,28 @@ function ThenOutput
         $Contains,
 
         [string[]]
-        $DoesNotContain
+        $DoesNotContain,
+
+        [string]
+        $Is
     )
+
+    $fullOutput = $output -join [Environment]::NewLine
 
     if( $Contains )
     {
-        $fullOutput = $output -join [Environment]::NewLine
         foreach( $item in $Contains )
         {
             It ('the output should contain' -f $item) {
                 $fullOutput | Should Match $item
             }
+        }
+    }
+
+    if( $Is )
+    {
+        It ('the output should be {0}' -f $Is) {
+            $fullOutput | Should Match ('^{0}$' -f $Is)
         }
     }
 }
@@ -294,9 +305,7 @@ function ThenOutputIsEmpty
 
 function ThenOutputIsMinimal
 {
-    It 'should write minimal output' {
-        $output | Should Match '^.*\ ->\ .*$'
-    }
+    ThenOutput -Is '.*\ ->\ .*'
 }
 
 function ThenOutputIsDebug
@@ -326,4 +335,16 @@ Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
     ThenOutput -Contains 'Fubar=Snafu'
+}
+
+Describe 'Invoke-WhsCIMSBuild.when passing custom arguments' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Arguments' = @( '/nologo', '/version' ) }
+    ThenOutput -Is '\d+\.\d+\.\d+\.\d+'
+}
+
+Describe 'Invoke-WhsCIMSBuild.when passing a single custom argument' {
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Arguments' = @( '/version' ) }
+    ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
