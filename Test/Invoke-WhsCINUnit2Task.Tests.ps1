@@ -219,6 +219,8 @@ $assemblyToTest = $null
 $buildScript = $null
 $output = $null
 $context = $null
+$threwException = $false
+$thrownError = $null
 
 function GivenPassingTests
 {
@@ -238,9 +240,22 @@ function WhenRunningTask
 
     Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
 
-    $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
-    $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters
-    $script:output | Write-Verbose -Verbose
+    try
+    {
+        $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
+        $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters
+        $script:threwException = $false
+        $script:thrownError = $null
+    }
+    catch
+    {
+        $script:threwException = $true
+        $script:thrownError = $_
+    }
+    finally
+    {
+        $output | Write-Verbose -Verbose
+    }
 }
 
 function Get-TestCaseResult
@@ -263,8 +278,18 @@ function ThenOutput
 {
     param(
         [string[]]
+        $Contains,
+
+        [string[]]
         $DoesNotContain
     )
+
+    foreach( $regex in $Contains )
+    {
+        It ('should contain ''{0}''' -f $regex) {
+            $output -join [Environment]::NewLine | Should Match $regex
+        }
+    }
 
     foreach( $regex in $DoesNotContain )
     {
@@ -323,4 +348,10 @@ Describe 'Invoke-WhsCINUnit2Task.when running with custom options' {
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Options' = @( '/nologo', '/nodots' ) }
     ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','\.{2,}'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when running under a custom dotNET framework' {
+    GivenPassingTests
+    WhenRunningTask @{ 'Framework' = 'net-4.5' }
+    ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
 }
