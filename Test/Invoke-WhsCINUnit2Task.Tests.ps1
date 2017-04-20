@@ -290,9 +290,16 @@ function ThenTestsPassed
     }
 }
 
-Describe 'Invoke-WhsCINUnit2Task.when running tests by category' {
+Describe 'Invoke-WhsCINUnit2Task.when including tests by category' {
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
     ThenTestsPassed 'HasCategory1','HasCategory2'
     ThenTestsNotRun 'ShouldPass'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when excluding tests by category' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Exclude' = 'Category with Spaces 1','Category with Spaces 2' }
+    ThenTestsNotRun 'HasCategory1','HasCategory2'
+    ThenTestsPassed 'ShouldPass'
 }
