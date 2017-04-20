@@ -57,6 +57,12 @@ function Invoke-WhsCINUnit2Task
 
         $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
         $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
+
+        $includeParam = @()
+        if( $TaskParameter.ContainsKey('Include') )
+        {
+            $includeParam = '/include={0}' -f ($TaskParameter['Include'] -join ',')
+        }
         
         $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
@@ -70,7 +76,7 @@ function Invoke-WhsCINUnit2Task
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
-        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels ('/xml={0}' -f $reportPath) 
+        & $nunitConsolePath $Path /noshadow /framework=4.0 /domain=Single /labels $includeParam ('/xml={0}' -f $reportPath) 
         if( $LastExitCode )
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)

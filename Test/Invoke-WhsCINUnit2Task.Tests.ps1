@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
-
-
 function Assert-NUnitTestsRun
 {
     param(
@@ -214,4 +212,87 @@ Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Pat
 
 Describe 'Invoke-WhsCINUnit2Task.when the Clean Switch is active' {
     Invoke-NUnitTask -WhenRunningClean
+}
+
+$solutionToBuild = $null
+$assemblyToTest = $null
+$buildScript = $null
+$output = $null
+$context = $null
+
+function GivenPassingTests
+{
+    $script:solutionToBuild = 'NUnit2PassingTest.sln'
+    $script:assemblyToTest = 'NUnit2PassingTest.dll'
+    $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whsbuild.yml'
+}
+
+function WhenRunningTask
+{
+    param(
+        [hashtable]
+        $WithParameters = @{ }
+    )
+
+    $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript
+
+    Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
+
+    $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
+    $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters
+    $script:output | Write-Verbose -Verbose
+}
+
+function Get-TestCaseResult
+{
+    [OutputType([System.Xml.XmlElement])]
+    param(
+        [string]
+        $TestName
+    )
+
+    Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
+        Get-Content -Raw |
+        ForEach-Object { 
+            $testResult = [xml]$_
+            $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
+        }
+}
+
+function ThenTestsNotRun
+{
+    param(
+        [string[]]
+        $TestName
+    )
+
+    foreach( $name in $TestName )
+    {
+        It ('{0} should not run' -f $name) {
+            Get-TestCaseResult -TestName $name | Should BeNullOrEmpty
+        }
+    }
+}
+
+function ThenTestsPassed
+{
+    param(
+        [string[]]
+        $TestName
+    )
+
+    foreach( $name in $TestName )
+    {
+        $result = Get-TestCaseResult -TestName $name
+        It ('{0} test should pass' -f $name) {
+            $result.GetAttribute('result') | Should Be 'Success'
+        }
+    }
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when running tests by category' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
+    ThenTestsPassed 'HasCategory1','HasCategory2'
+    ThenTestsNotRun 'ShouldPass'
 }
