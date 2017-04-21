@@ -30,29 +30,10 @@ function Invoke-WhsCIPester3Task
         [Switch]
         $Clean        
     )
-
-    if( $Clean )
-    {
-        Uninstall-WhsCITool -ModuleName 'Pester' -Path $TaskContext.BuildRoot
-        return
-    }
-
+    
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not ($TaskParameter.ContainsKey('Path')))
-        {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
-        
-            BuildTasks:
-            - Pester3:
-                Path:
-                - My.Tests.ps1
-                - Tests')
-        }
-
-    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    
     if( -not $TaskParameter.Version )
     {
         Stop-WhsCITask -TaskContext $TaskContext -Message ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
@@ -66,10 +47,36 @@ function Invoke-WhsCIPester3Task
     }
     $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
 
-    $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version
-    if( -not $pesterModulePath )
+    if( $Clean )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        Uninstall-WhsCITool -ModuleName 'Pester' -Path $TaskContext.BuildRoot -Version $version
+        return
+    }
+    
+    if( -not ($TaskParameter.ContainsKey('Path')))
+    {
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
+        
+        BuildTasks:
+        - Pester3:
+            Path:
+            - My.Tests.ps1
+            - Tests')
+    }
+
+    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    
+    if( -not ( Test-Path -Path $TaskContext.BuildRoot -PathType Container ) )
+    {
+        $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version -Path $TaskContext.BuildRoot
+        if( -not $pesterModulePath )
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        }
+    }
+    else
+    {
+        $pesterModulePath = $TaskContext.BuildRoot
     }
 
     $testIdx = 0
@@ -89,7 +96,7 @@ function Invoke-WhsCIPester3Task
 
         Import-Module -Name $pesterModulePath
         $outputFile = Join-Path -Path $outputRoot -ChildPath ($outputFileNameFormat -f $testIdx)
-        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
+        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
         $result
         if( $result.FailedCount )
         {

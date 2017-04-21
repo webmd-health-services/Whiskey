@@ -41,7 +41,7 @@ function Uninstall-WhsCITool
         # The name of the NuGet package to uninstall.
         $NuGetPackageName,
 
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
+        [Parameter(Mandatory=$true)]
         [version]
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
@@ -80,7 +80,7 @@ function Uninstall-WhsCITool
         {
             $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
         }
-        
+        $ModuleName = '{0}.{1}' -f $ModuleName, $Version
         $removeModule = (join-path -path $modulesRoot -ChildPath $ModuleName )
         if( Test-Path -Path $removeModule -PathType Container )
         {

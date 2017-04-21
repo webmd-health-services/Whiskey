@@ -97,16 +97,28 @@ function Invoke-PesterTest
         $ShouldFailWithMessage,
 
         [Switch]
-        $WithClean
+        $WithClean,
+
+        [Switch]
+        $WithInvalidVersion
     )
 
     $defaultVersion = '4.0.3'
     $failed = $false
     $context = New-WhsCIPesterTestContext
     $Global:Error.Clear()
+    if ( $WithInvalidVersion )
+    {
+        $Version = '4.0.999'
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' `
+                                      -MockWith { return $False }`
+                                      -ParameterFilter { $Path -eq $context.BuildRoot }
+    }
     if ( $WithMissingPath )
     {
-        $taskParameter = @{}
+        $taskParameter = @{ 
+                        Version = $defaultVersion 
+                        }
     }
     elseif( -not $Version -or $WithMissingVersion )
     {
@@ -219,9 +231,8 @@ Describe 'Invoke-WhsCIPester4Task.when Version property isn''t a version' {
 }
 
 Describe 'Invoke-WhsCIPester4Task.when version of tool doesn''t exist' {
-    $version = '4.0.999'
     $failureMessage = 'does not exist'
-    Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+    Invoke-PesterTest -Path $pesterPassingPath -WithInvalidVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester4Task.when a task path is absolute' {
