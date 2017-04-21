@@ -55,7 +55,7 @@ function Invoke-WhsCIMSBuild
         Write-Error "Unable to find MSBuild.  Has it been installed?"
         return
     }
-    Write-Verbose "Using MSBuild at '$pathToMSBuild'."
+    Write-Verbose "    Found MSBuild at '$pathToMSBuild'."
 
     if( $Target )
     {

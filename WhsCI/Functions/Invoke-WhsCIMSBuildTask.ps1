@@ -57,10 +57,10 @@ function Invoke-WhsCIMSBuildTask
     {
         $target = 'clean'
     }
-    #build
+
     foreach( $projectPath in $path )
     {
-        
+        Write-Verbose -Message ('  {0}' -f $projectPath)
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
@@ -69,11 +69,13 @@ function Invoke-WhsCIMSBuildTask
                 $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
+                    Write-Verbose -Message ('    Removing NuGet packages at {0}.' -f $packageDirectoryPath)
                     Remove-Item $packageDirectoryPath -Recurse -Force
                 }
             }
             else
             {
+                Write-Verbose -Message ('    Restoring NuGet packages.')
                 & $nugetPath restore $projectPath
             }
         }
@@ -88,6 +90,7 @@ function Invoke-WhsCIMSBuildTask
                     $assemblyInfoPath = $assemblyInfo.FullName
                     $newContent = Get-Content -Path $assemblyInfoPath | Where-Object { $_ -notmatch '\bAssembly(File|Informational)?Version\b' }
                     $newContent | Set-Content -Path $assemblyInfoPath
+                    Write-Verbose -Message ('    Updating version in {0}.' -f $assemblyInfoPath)
     @"
 [assembly: System.Reflection.AssemblyVersion("{0}")]
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
@@ -118,15 +121,20 @@ function Invoke-WhsCIMSBuildTask
             $cpuArg = '/maxcpucount:{0}' -f $TaskParameter['CpuCount']
         }
 
-        $msbuildArgs = @(
-                            ('/verbosity:{0}' -f $verbosity),
-                            $cpuArg
-                        )
-
+        $msbuildArgs = Invoke-Command {
+                                            ('/verbosity:{0}' -f $verbosity)
+                                            $cpuArg
+                                            $TaskParameter['Arguments']
+                                      } | Where-Object { $_ }
+        $separator = '{0}VERBOSE:                   ' -f [Environment]::NewLine
+        Write-Verbose -Message ('    Building')
+        Write-Verbose -Message ('      Targets     {0}' -f ($target -join $separator))
+        Write-Verbose -Message ('      Properties  {0}' -f ($property -join $separator))
+        Write-Verbose -Message ('      Arguments   {0}' -f ($msbuildArgs -join $separator))
         Invoke-WhsCIMSBuild -Path $projectPath `
                             -Target $target `
                             -Property $property `
-                            -ArgumentList ($msbuildArgs + [string[]]$TaskParameter['Arguments']) `
+                            -ArgumentList $msbuildArgs `
                             -ErrorVariable 'errors'
         if( $errors )
         {
