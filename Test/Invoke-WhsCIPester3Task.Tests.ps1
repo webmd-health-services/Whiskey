@@ -139,6 +139,11 @@ function Invoke-PesterTest
                         }
     }
 
+    if( -not $Version )
+    {
+        $Version = $defaultVersion
+    }
+    
     $optionalParams = @{ }
     if( $WithClean )
     {
@@ -158,7 +163,6 @@ function Invoke-PesterTest
     Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
-    $testsRun = $FailureCount + $PassingCount
     if( $ShouldFailWithMessage )
     {
         It 'should fail' {
@@ -173,14 +177,24 @@ function Invoke-PesterTest
     }
     else
     {
+        $version = $Version | ConvertTo-WhsCISemanticVersion
+        $version = '{0}.{1}.{2}' -f ($Version.Major, $version.Minor, $version.patch)
+        $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
         It 'should pass' {
             $failed | Should Be $false
         }
-    }
-    if( $WithClean )
-    {
-        It 'should attempt to uninstall Pester' {
-            Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+        if( -not $WithClean )
+        {
+            It 'Should pass the build root to the Install tool' {
+                $pesterPath | Should Exist
+           }
+        }
+        else
+        {
+            It 'should attempt to uninstall Pester' {
+                Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+            }            
         }
     }
 }
@@ -188,11 +202,11 @@ function Invoke-PesterTest
 $pesterPassingPath = 'PassingTests' 
 $pesterFailingConfig = 'FailingTests' 
 
-Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
+Describe 'Invoke-WhsCIPester3Task.when running passing Pester tests' {
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4
 }
 
-Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
+Describe 'Invoke-WhsCIPester3Task.when running failing Pester tests' {
     $failureMessage = 'Pester tests failed'
     Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
@@ -212,12 +226,12 @@ Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+Describe 'Invoke-WhsCIPester3Task.when missing Path Configuration' {
     $failureMessage = 'Element ''Path'' is mandatory.'
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
+Describe 'Invoke-WhsCIPester3Task.when version parsed from YAML' {
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4 -Version ([datetime]'3/4/2003')
 }

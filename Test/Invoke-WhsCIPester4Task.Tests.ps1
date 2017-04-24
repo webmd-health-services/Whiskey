@@ -137,6 +137,7 @@ function Invoke-PesterTest
                                 )
                         }
     }
+
     $optionalParams = @{ }
     if( $WithClean )
     {
@@ -170,14 +171,35 @@ function Invoke-PesterTest
     }
     else
     {
+        if( -not $Version )
+        {
+            $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
+            $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
+            $Version = $latestPester.Version 
+            $Version = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
+        }
+        else
+        {
+            $Version = $Version | ConvertTo-WhsCISemanticVersion
+            $Version = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.patch)
+        }
+        $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
+
         It 'should pass' {
             $failed | Should Be $false
         }
-    }
-    if( $WithClean )
-    {
-        It 'should attempt to uninstall Pester' {
-            Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+        if( -not $WithClean )
+        {
+            It 'Should pass the build root to the Install tool' {
+                $pesterPath | Should Exist
+           }
+        }
+        else
+        {
+            It 'should attempt to uninstall Pester' {
+                Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+            }            
         }
     }
 }

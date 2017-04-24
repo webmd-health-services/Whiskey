@@ -65,18 +65,11 @@ function Invoke-WhsCIPester3Task
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    
-    if( -not ( Test-Path -Path $TaskContext.BuildRoot -PathType Container ) )
+
+    $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version -Path $TaskContext.BuildRoot
+    if( -not $pesterModulePath )
     {
-        $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version -Path $TaskContext.BuildRoot
-        if( -not $pesterModulePath )
-        {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
-        }
-    }
-    else
-    {
-        $pesterModulePath = $TaskContext.BuildRoot
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
     $testIdx = 0
