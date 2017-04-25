@@ -238,12 +238,14 @@ function WhenRunningTask
 
     $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript
 
+    Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
+
     Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
 
     try
     {
         $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
-        $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters
+        $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters | ForEach-Object { Write-Verbose -Message $_ ; $_ }
         $script:threwException = $false
         $script:thrownError = $null
     }
@@ -251,10 +253,6 @@ function WhenRunningTask
     {
         $script:threwException = $true
         $script:thrownError = $_
-    }
-    finally
-    {
-        $output | Write-Verbose -Verbose
     }
 }
 
@@ -287,14 +285,14 @@ function ThenOutput
     foreach( $regex in $Contains )
     {
         It ('should contain ''{0}''' -f $regex) {
-            $output -join [Environment]::NewLine | Should Match $regex
+            $output -join [Environment]::NewLine | Should -Match $regex
         }
     }
 
     foreach( $regex in $DoesNotContain )
     {
         It ('should not contain ''{0}''' -f $regex) {
-            $output | Should Not Match $regex
+            $output | Should -Not -Match $regex
         }
     }
 }
@@ -309,7 +307,7 @@ function ThenTestsNotRun
     foreach( $name in $TestName )
     {
         It ('{0} should not run' -f $name) {
-            Get-TestCaseResult -TestName $name | Should BeNullOrEmpty
+            Get-TestCaseResult -TestName $name | Should -BeNullOrEmpty
         }
     }
 }
@@ -325,7 +323,7 @@ function ThenTestsPassed
     {
         $result = Get-TestCaseResult -TestName $name
         It ('{0} test should pass' -f $name) {
-            $result.GetAttribute('result') | Should Be 'Success'
+            $result.GetAttribute('result') | ForEach-Object { $_ | Should -Be 'Success' }
         }
     }
 }

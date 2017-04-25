@@ -77,11 +77,6 @@ function Invoke-WhsCIMSBuild
         }
     }
 
-    if( $Verbosity )
-    {
-        $ArgumentList += "/v:$Verbosity"
-    }
-
     if( $pscmdlet.ShouldProcess($Path, $ArgumentList) )
     {
         & $pathToMSBuild $ArgumentList /nologo $Path
