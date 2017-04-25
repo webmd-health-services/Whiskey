@@ -43,6 +43,7 @@ function GivenABuiltLibrary
     }
     $script:context = New-WhsCITestContext -ForBuildRoot $TestDrive.FullName -ForTaskName 'NuGetPack'  @optionalArgs @forParam
     
+    Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     if( $WithVersion )
     {
         $Context.Version.ReleaseVersion = $WithVersion
