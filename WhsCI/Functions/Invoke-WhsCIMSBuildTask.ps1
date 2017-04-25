@@ -110,11 +110,19 @@ function Invoke-WhsCIMSBuildTask
             $verbosity = $TaskParameter['Verbosity']
         }
 
-        $property = @( ('Configuration={0}' -f $TaskContext.BuildConfiguration) )
-        if( $TaskParameter.ContainsKey('Property') )
-        {
-            $property += $TaskParameter['Property']
-        }
+        $property = Invoke-Command {
+                                        ('Configuration={0}' -f $TaskContext.BuildConfiguration)
+
+                                        if( $TaskParameter.ContainsKey('Property') )
+                                        {
+                                            $TaskParameter['Property']
+                                        }
+
+                                        if( $TaskParameter.ContainsKey('OutputDirectory') )
+                                        {
+                                            ('OutDir={0}' -f ($TaskParameter['OutputDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force))
+                                        }
+                                  }
 
         $cpuArg = '/maxcpucount'
         if( $TaskParameter['CpuCount'] )

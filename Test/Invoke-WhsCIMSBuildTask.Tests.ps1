@@ -116,7 +116,7 @@ function WhenRunningTask
     
     try
     {
-        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean -Verbose | ForEach-Object { Write-Debug $_ ; $_ }
     }
     catch
     {
@@ -189,13 +189,34 @@ function ThenNuGetPackagesNotRestored
 
 function ThenProjectsCompiled
 {
-    It 'should compile code' {
-        foreach( $item in $path )
-        {
-            $item = $item | Split-Path
-            $solutionRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $item
-            Get-ChildItem -Path $solutionRoot -Directory -Include 'bin','obj' -Recurse | Should -Not -BeNullOrEmpty
-            Get-ChildItem -Path $solutionRoot -Include $assembly -File -Recurse | Should -Not -BeNullOrEmpty
+    param(
+        [string]
+        $To
+    )
+
+    if( $To )
+    {
+        $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $To
+        It 'should compile code to custom directory' {
+            foreach( $item in $assembly )
+            {
+                (Join-Path -Path $outputRoot -ChildPath $item) | Should -Exist
+            }
+            Get-ChildItem -Path (Get-BuildRoot) -Include 'bin' -Directory -Recurse | 
+                Get-ChildItem -Include $assembly -File -Recurse |
+                Should -BeNullOrEmpty
+        }
+    }
+    else
+    {
+        It 'should compile code' {
+            foreach( $item in $path )
+            {
+                $item = $item | Split-Path
+                $solutionRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $item
+                Get-ChildItem -Path $solutionRoot -Directory -Include 'bin','obj' -Recurse | Should -Not -BeNullOrEmpty
+                Get-ChildItem -Path $solutionRoot -Include $assembly -File -Recurse | Should -Not -BeNullOrEmpty
+            }
         }
     }
 }
@@ -423,7 +444,7 @@ Describe 'Invoke-WhsCIMSBuild.when run with CPU parameter' {
 }
 
 Describe 'Invoke-WhsCIBuild.when using custom output directory' {
-    It 'should be written' {
-        $false | Should Be $true
-    }
+    GivenAProjectThatCompiles
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
+    ThenProjectsCompiled -To '.myoutput'
 }
