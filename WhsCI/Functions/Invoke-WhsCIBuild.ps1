@@ -220,8 +220,13 @@ function Invoke-WhsCIBuild
                         $optionalParams['Clean'] = $True
                     }
 
+                    Write-Verbose -Message ('{0}' -f $taskName)
+                    $startedAt = Get-Date
                     & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
-                    
+                    $endedAt = Get-Date
+                    $duration = $endedAt - $startedAt
+                    Write-Verbose ('{0} COMPLETED in {1}' -f $taskName,$duration)
+                    Write-Verbose ('')
                 }
                 else
                 {

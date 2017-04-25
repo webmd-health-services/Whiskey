@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 $failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
 $passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
-
-
 function Assert-NUnitTestsRun
 {
     param(
@@ -214,4 +212,144 @@ Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Pat
 
 Describe 'Invoke-WhsCINUnit2Task.when the Clean Switch is active' {
     Invoke-NUnitTask -WhenRunningClean
+}
+
+$solutionToBuild = $null
+$assemblyToTest = $null
+$buildScript = $null
+$output = $null
+$context = $null
+$threwException = $false
+$thrownError = $null
+
+function GivenPassingTests
+{
+    $script:solutionToBuild = 'NUnit2PassingTest.sln'
+    $script:assemblyToTest = 'NUnit2PassingTest.dll'
+    $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whsbuild.yml'
+}
+
+function WhenRunningTask
+{
+    param(
+        [hashtable]
+        $WithParameters = @{ }
+    )
+
+    $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript
+
+    Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
+
+    Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
+
+    try
+    {
+        $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
+        $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters | ForEach-Object { Write-Verbose -Message $_ ; $_ }
+        $script:threwException = $false
+        $script:thrownError = $null
+    }
+    catch
+    {
+        $script:threwException = $true
+        $script:thrownError = $_
+    }
+}
+
+function Get-TestCaseResult
+{
+    [OutputType([System.Xml.XmlElement])]
+    param(
+        [string]
+        $TestName
+    )
+
+    Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
+        Get-Content -Raw |
+        ForEach-Object { 
+            $testResult = [xml]$_
+            $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
+        }
+}
+
+function ThenOutput
+{
+    param(
+        [string[]]
+        $Contains,
+
+        [string[]]
+        $DoesNotContain
+    )
+
+    foreach( $regex in $Contains )
+    {
+        It ('should contain ''{0}''' -f $regex) {
+            $output -join [Environment]::NewLine | Should -Match $regex
+        }
+    }
+
+    foreach( $regex in $DoesNotContain )
+    {
+        It ('should not contain ''{0}''' -f $regex) {
+            $output | Should -Not -Match $regex
+        }
+    }
+}
+
+function ThenTestsNotRun
+{
+    param(
+        [string[]]
+        $TestName
+    )
+
+    foreach( $name in $TestName )
+    {
+        It ('{0} should not run' -f $name) {
+            Get-TestCaseResult -TestName $name | Should -BeNullOrEmpty
+        }
+    }
+}
+
+function ThenTestsPassed
+{
+    param(
+        [string[]]
+        $TestName
+    )
+
+    foreach( $name in $TestName )
+    {
+        $result = Get-TestCaseResult -TestName $name
+        It ('{0} test should pass' -f $name) {
+            $result.GetAttribute('result') | ForEach-Object { $_ | Should -Be 'Success' }
+        }
+    }
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when including tests by category' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
+    ThenTestsPassed 'HasCategory1','HasCategory2'
+    ThenTestsNotRun 'ShouldPass'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when excluding tests by category' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Exclude' = 'Category with Spaces 1','Category with Spaces 2' }
+    ThenTestsNotRun 'HasCategory1','HasCategory2'
+    ThenTestsPassed 'ShouldPass'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when running with custom options' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'Options' = @( '/nologo', '/nodots' ) }
+    ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','\.{2,}'
+}
+
+Describe 'Invoke-WhsCINUnit2Task.when running under a custom dotNET framework' {
+    GivenPassingTests
+    WhenRunningTask @{ 'Framework' = 'net-4.5' }
+    ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
 }
