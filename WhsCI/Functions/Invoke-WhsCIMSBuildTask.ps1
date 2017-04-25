@@ -34,12 +34,13 @@ function Invoke-WhsCIMSBuildTask
     )
   
     Set-StrictMode -version 'latest'  
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     #setup
     $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
     
     # Make sure the Taskpath contains a Path parameter.
-    if( -not ($TaskParameter.ContainsKey('Path')))
+    if( -not ($TaskParameter.ContainsKey('Path')) -or -not $TaskParameter['Path'] )
     {
         Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whsbuild.yml file, to build with MSBuild.exe, e.g. 
         
@@ -138,7 +139,7 @@ function Invoke-WhsCIMSBuildTask
                             -ErrorVariable 'errors'
         if( $errors )
         {
-            throw ('Building ''{0}'' MSBuild project''s {1} target(s) with {2} configuration failed.' -f $projectPath,$target,$TaskContext.BuildConfiguration)
+            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$TaskContext.BuildConfiguration)
         }
     }
 }
