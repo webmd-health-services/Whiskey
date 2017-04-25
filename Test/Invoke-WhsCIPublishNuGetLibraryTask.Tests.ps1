@@ -248,26 +248,26 @@ function ThenPackageShouldNotBeCreated
     }
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with an invalid project' {
+Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with an invalid project' {
     GivenABuiltLibrary | 
         WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ThatFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue | 
         ThenPackageShouldNotBeCreated
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package' {
+Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package' {
     GivenABuiltLibrary | WhenRunningNuGetPackTask | ThenPackageShouldBeCreated
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when passed a version' {
+Describe 'Invoke-PublishNuGetLibraryTask.when passed a version' {
     $version = '4.5.6-rc1'
     GivenABuiltLibrary -WithVersion $version | WhenRunningNugetPackTask  | ThenPackageShouldBeCreated -WithVersion $version
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating a package built in release mode' {
+Describe 'Invoke-PublishNuGetLibraryTask.when creating a package built in release mode' {
     GivenABuiltLibrary -InReleaseMode | WhenRunningNugetPackTask | ThenPackageShouldBeCreated
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishing' {
+Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for publishing' {
     $global:counter = -1
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
@@ -285,7 +285,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating multiple packages for publishi
     GivenABuiltLibrary -ForBuildServer | WhenRunningNugetPackTask -ForMultiplePackages | ThenPackageShouldBeCreated -ForMultiplePackages
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when push command fails' {
+Describe 'Invoke-PublishNuGetLibraryTask.when push command fails' {
     $errorMessage = 'Failed to publish NuGet package'
     $Global:error.Clear()
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
@@ -297,7 +297,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when push command fails' {
         ThenPackageShouldBeCreated -WithoutPushingToProgetError $errorMessage
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when package already exists' {
+Describe 'Invoke-PublishNuGetLibraryTask.when package already exists' {
     $errorMessage = 'already exists'
     $Global:error.Clear()
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
@@ -307,7 +307,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when package already exists' {
         ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating WebRequest fails' {
+Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
     $errorMessage = 'Failure checking if'
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
@@ -318,7 +318,7 @@ Describe 'Invoke-WhsCINuGetPackTask.when creating WebRequest fails' {
         ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
 }
 
-Describe 'Invoke-WhsCINuGetPackTask.when creating a NuGet package with Clean switch' {    
+Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clean switch' {    
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
     Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
