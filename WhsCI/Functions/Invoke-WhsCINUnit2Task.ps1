@@ -90,13 +90,13 @@ function Invoke-WhsCINUnit2Task
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
 
-        $extraArgs = $TaskParameter['Options'] | Where-Object { $_ }
+        $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
         $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
-        Write-Verbose -Message ('  Paths       {0}' -f ($Path -join $separator))
+        Write-Verbose -Message ('  Path        {0}' -f ($Path -join $separator))
         Write-Verbose -Message ('  Framework   {0}' -f $frameworkParam)
         Write-Verbose -Message ('  Include     {0}' -f $includeParam)
         Write-Verbose -Message ('  Exclude     {0}' -f $excludeParam)
-        Write-Verbose -Message ('  Arguments   {0}' -f ($extraArgs -join $separator))
+        Write-Verbose -Message ('  Argument    {0}' -f ($extraArgs -join $separator))
         Write-Verbose -Message ('              /xml={0}' -f $reportPath)
         & $nunitConsolePath $Path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
         if( $LastExitCode )

@@ -133,13 +133,13 @@ function Invoke-WhsCIMSBuildTask
         $msbuildArgs = Invoke-Command {
                                             ('/verbosity:{0}' -f $verbosity)
                                             $cpuArg
-                                            $TaskParameter['Arguments']
+                                            $TaskParameter['Argument']
                                       } | Where-Object { $_ }
         $separator = '{0}VERBOSE:                   ' -f [Environment]::NewLine
         Write-Verbose -Message ('    Building')
-        Write-Verbose -Message ('      Targets     {0}' -f ($target -join $separator))
-        Write-Verbose -Message ('      Properties  {0}' -f ($property -join $separator))
-        Write-Verbose -Message ('      Arguments   {0}' -f ($msbuildArgs -join $separator))
+        Write-Verbose -Message ('      Target      {0}' -f ($target -join $separator))
+        Write-Verbose -Message ('      Property    {0}' -f ($property -join $separator))
+        Write-Verbose -Message ('      Argument    {0}' -f ($msbuildArgs -join $separator))
         Invoke-WhsCIMSBuild -Path $projectPath `
                             -Target $target `
                             -Property $property `

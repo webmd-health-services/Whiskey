@@ -421,13 +421,13 @@ Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
 
 Describe 'Invoke-WhsCIMSBuild.when passing custom arguments' {
     GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Arguments' = @( '/nologo', '/version' ) }
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
     ThenOutput -Is '\d+\.\d+\.\d+\.\d+'
 }
 
 Describe 'Invoke-WhsCIMSBuild.when passing a single custom argument' {
     GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Arguments' = @( '/version' ) }
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
