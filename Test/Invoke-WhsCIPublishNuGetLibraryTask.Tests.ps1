@@ -320,18 +320,17 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clea
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNuGetPackTask -WithCleanSwitch
 
-    $directoryInfo = Get-ChildItem $context.OutputDirectory | Measure-Object
+    It 'should not write any errors' {
+        $Global:Error | Should BeNullOrEmpty
+    }
 
     It('should not create the package') {
-        $directoryInfo.Count | Should Be 0
+        Get-ChildItem $context.OutputDirectory | Should -BeNullOrEmpty
     }
 
     It('should not try to publish the package') {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
             return $ScriptBlock.toString().contains('& $nugetPath push')
         }
-    }
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
     }
 }
