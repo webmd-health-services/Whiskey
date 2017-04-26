@@ -149,6 +149,7 @@
  * The `MSBuild` task now runs builds in multi-CPU (i.e. parallel) mode by default.
  * Updated the `MSBuild` task to allow customizing the number of CPUs (i.e. parallel "threads") to use during a build with the `CpuCount` parameter. To disable multi-CPU builds, set `CpuCount` to `1`.
  * Updated the `MSBuild` task to allow passing custom arguments to `msbuild.exe` with the `Argument` property.
+ * Updated the `MSBuild` task to allow custom build targets with the `Target` parameter.
 '@
 
         } # End of PSData hashtable

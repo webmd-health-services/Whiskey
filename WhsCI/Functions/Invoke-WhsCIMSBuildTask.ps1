@@ -53,10 +53,17 @@ function Invoke-WhsCIMSBuildTask
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
-    $target = @('build')
+    $target = @( 'build' )
     if( $Clean )
     {
         $target = 'clean'
+    }
+    else
+    {
+        if( $TaskParameter.ContainsKey('Target') )
+        {
+            $target = $TaskParameter['Target']
+        }
     }
 
     foreach( $projectPath in $path )

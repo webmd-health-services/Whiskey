@@ -55,16 +55,27 @@ function New-MSBuildProject
         $FileName,
 
         [Switch]
-        $ThatFails
+        $ThatFails,
+
+        [string]
+        $BuildRoot
     )
 
-    $root = (Get-Item -Path 'TestDrive:').FullName
+    if( -not $BuildRoot )
+    {
+        $BuildRoot = (Get-Item -Path 'TestDrive:').FullName
+    }
+
+    if( -not (Test-Path -Path $BuildRoot -PathType Container) )
+    {
+        New-Item -Path $BuildRoot -ItemType 'Directory' -Force | Out-Null
+    }
 
     foreach( $name in $FileName )
     {
         if( -not ([IO.Path]::IsPathRooted($name) ) )
         {
-            $name = Join-Path -Path $root -ChildPath $name
+            $name = Join-Path -Path $BuildRoot -ChildPath $name
         }
 
         @"

@@ -7,10 +7,17 @@ $output = $null
 $path = $null
 $threwException = $null
 $assembly = $null
+$previousBuildRunAt = $null
 
 function Get-BuildRoot
 {
     return (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
+}
+
+function GivenCustomMSBuildScriptWithMultipleTargets
+{
+    New-MSBuildProject -FileName 'fubar.msbuild' -BuildRoot (Get-BuildRoot)
+    $script:path = 'fubar.msbuild'
 }
 
 function GivenAProjectThatCompiles
@@ -164,6 +171,14 @@ function ThenBinsAreEmpty
     }
     It 'should remove packages directory' {
         Get-ChildItem -Path (Get-BuildRoot) -Directory -Include 'packages' -Recurse | Should -BeNullOrEmpty
+    }
+}
+
+function ThenBothTargetsRun
+{
+    It 'should run multiple targets' {
+        Join-Path -Path (Get-BuildRoot) -ChildPath '*.clean' | Should -Exist
+        Join-Path -Path (Get-BuildRoot) -ChildPath '*.build' | Should -Exist
     }
 }
 
@@ -447,4 +462,10 @@ Describe 'Invoke-WhsCIBuild.when using custom output directory' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
     ThenProjectsCompiled -To '.myoutput'
+}
+
+Describe 'Invoke-WhsCIBuild.when using custom targets' {
+    GivenCustomMSBuildScriptWithMultipleTargets
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
+    ThenBothTargetsRun
 }
