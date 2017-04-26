@@ -57,6 +57,7 @@ function Invoke-WhsCIAppPackageTask
         [Switch]
         $Clean
     )
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     if( $Clean )
@@ -247,11 +248,13 @@ function Invoke-WhsCIAppPackageTask
         {
             return
         }
-
+        $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.AppFeedUri -Credential $TaskContext.ProGetSession.Credential
+        Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName  $TaskContext.ProGetSession.AppFeedName -PackagePath $outFile -ErrorAction Stop
+        <#
         $progetSession = New-ProGetSession -Uri $TaskContext.ProGetSession.Uri -Credential $TaskContext.ProGetSession.Credential
         $progetFeedName = $TaskContext.ProGetSession.AppFeed.Split('/')[1]
         Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName $progetFeedName -PackagePath $outFile -ErrorAction Stop
-            
+        #>    
         $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
         if ( -not $TaskContext.ApplicationName ) 
         {

@@ -73,25 +73,25 @@ function New-WhsCIContext
         # The credential to use when authenticating to ProGet. Required if running under a build server.
         $ProGetCredential,
 
-        [Parameter(Mandatory=$true)]
         [uri]
-        # The URI to ProGet. Used to get NuGet packages, NPM packages, etc.
-        $ProGetUri,
+        # The URI to ProGet. Used to get Application Packages
+        $ProGetAppFeedUri,
 
-        [Parameter(ParameterSetName='ByBuildServer')]
         [string]
         # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetAppFeed = 'upack/Apps',
+        $ProGetAppFeedName = 'Apps',
 
-        [Parameter(ParameterSetName='ByBuildServer')]
-        [string]
-        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetNuGetFeed = 'nuget/NuGet',
-
-        [Parameter(ParameterSetName='ByBuildServer')]
-        [string]
-        # The name/path to the feed in ProGet where NPM packages should be uploaded to and downloaded from. The default is `npm/npm`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetNpmFeed = 'npm/npm',
+        [uri]
+        # The URI to ProGet to get NuGet Packages
+        $NuGetFeedUri,
+        
+        [uri]
+        # The URI to ProGet to get PowerShell Modules
+        $PowerShellFeedUri,
+        
+        [uri]
+        # The URI to ProGet to get npm Packages
+        $NpmFeedUri,
 
         [string]
         # The place where downloaded tools should be cached. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
@@ -146,18 +146,17 @@ function New-WhsCIContext
 
     $bitbucketConnection = $null
     $buildmasterSession = $null
-    $progetSession = $null
-    
+    $progetSession = $null   
     $progetSession = [pscustomobject]@{
-                                            Uri = $ProGetUri;
+                                            
                                             Credential = $null;
-                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed);
-                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed);
-                                            NuGetFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNuGetFeed);
-                                            AppFeed = $ProGetAppFeed;
-                                            NpmFeed = $ProGetNpmFeed;
-                                            NuGetFeed = $ProGetNuGetFeed;                                            
+                                            AppFeedUri = $ProGetAppFeedUri
+                                            AppFeedName = $ProGetAppFeedName;
+                                            NpmFeedUri = $NpmFeedUri;
+                                            NuGetFeedUri = $NuGetFeedUri;
+                                            PowerShellFeedUri = $PowerShellFeedUri;                                           
                                         }
+
     $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer
     if( $byBuildServer )
@@ -177,7 +176,7 @@ New-WhsCIContext is being run by a build server, but called using the developer 
 Use the `Test-WhsCIRunByBuildServer` function to determine if you're running under a build server or not.
 "@)
         }
-        
+
         $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
         $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )

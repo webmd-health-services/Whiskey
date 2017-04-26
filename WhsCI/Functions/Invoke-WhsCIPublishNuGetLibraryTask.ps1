@@ -84,7 +84,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
                 continue
             }
 
-            $source = $TaskContext.ProGetSession.NuGetFeed
+            $source = $TaskContext.ProGetSession.NuGetFeedUri
             $apiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
             $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             
