@@ -1,0 +1,4 @@
+Version: "4.5.6-rc1"
+BuildTasks:
+- MSBuild:
+    Path: NUnit2PassingTest.sln

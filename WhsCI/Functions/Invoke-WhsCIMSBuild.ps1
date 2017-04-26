@@ -22,34 +22,13 @@ function Invoke-WhsCIMSBuild
         # The properties to pass.  Seperate multiple name=value pairs with commas.
         $Property = @(),
     
-        [Parameter(Mandatory=$false)]
-	    [ValidateSet("q", "m", "n", "d", "diag")]
-        [string]
-        # The logging verbosity.  One of 'q', 'm', 'n', 'd', or 'diag'.
-        $Verbosity,
-    
-        [Parameter(Mandatory=$false)]
-        [Switch]
-        # If set, saves detailed output to msbuild.log in the current directory.
-        $FileLogger,
-    
-        [Parameter()]
-        [string]
-        # The path to a file where logging output should be saved in XML format.
-        $XmlLogPath,
-    
-        [Parameter(Mandatory=$false)]
-        [Switch]
-        # If set, enables multi-CPU builds.
-        $MaxCPU,
-    
         [Switch]
         # Use 32-bit MSBuild
         $Use32Bit,
 
-        [Switch]
-        # Return an object representing the result of the build.
-        $PassThru
+        [string[]]
+        # Extra arguments to pass to MSBuild.
+        $ArgumentList = @()
     )
 
     #Requires -Version 3
@@ -76,13 +55,11 @@ function Invoke-WhsCIMSBuild
         Write-Error "Unable to find MSBuild.  Has it been installed?"
         return
     }
-    Write-Verbose "Using MSBuild at '$pathToMSBuild'."
-
-    $msbuildArgs = @()
+    Write-Verbose "    Found MSBuild at '$pathToMSBuild'."
 
     if( $Target )
     {
-        $msbuildArgs += "/t:{0}" -f ($Target -join ';')
+        $ArgumentList += "/t:{0}" -f ($Target -join ';')
     }
 
     if( $Property )
@@ -96,77 +73,16 @@ function Invoke-WhsCIMSBuild
             {
                 $value += '\'
             }
-            $msbuildArgs += "/p:$name=""{0}""" -f ($value -replace ' ','%20')
+            $ArgumentList += "/p:$name=""{0}""" -f ($value -replace ' ','%20')
         }
     }
 
-    if( $Verbosity )
+    if( $pscmdlet.ShouldProcess($Path, $ArgumentList) )
     {
-        $msbuildArgs += "/v:$Verbosity"
-    }
-
-    if( $FileLogger )
-    {
-        $msbuildArgs += '/flp:v=d'
-    }
-
-    if( $MaxCPU )
-    {
-        $msbuildArgs += '/maxcpucount'
-    }
-
-    if( $XmlLogPath )
-    {
-        $xmlLogDir = Split-Path -Parent $xmlLogPath
-        if( -not (Test-Path $xmlLogDir -PathType Container) )
+        & $pathToMSBuild $ArgumentList /nologo $Path
+        if( $LASTEXITCODE -ne 0 )
         {
-            $null = New-Item $xmlLogDir -ItemType Directory -Force
-        }
-        $ccnetXmlLogger = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\ThoughtWorks.CruiseControl.MSBuild.dll' -Resolve
-        $msbuildArgs += """/l:$ccnetXmlLogger;$XmlLogPath"""
-    }
-
-    $result = [pscustomobject] @{
-                                    ExitCode = 0; 
-                                    Output = @();
-                                }
-    if( $pscmdlet.ShouldProcess($Path, $msbuildArgs) )
-    {
-        $writeHostParams = @{ }
-        $output = New-Object 'Collections.Generic.List[string]' 
-        & $pathToMSBuild @msbuildArgs /nologo $Path | 
-            ForEach-Object { 
-                if( $PassThru )
-                {
-                    [void] $output.Add( $_ ) 
-                }
-                else
-                {
-                    $writeHostParams.Clear()
-                    if( $_ -match '((\(\d+,\d+\): )?(error|warning) ((.*?)\d+)?: .*)$' )
-                    {
-                        if( $Matches[3] -eq 'error' )
-                        {
-                            $writeHostParams.ForegroundColor = 'Red'
-                        }
-                        elseif( $Matches[3] -eq 'warning' )
-                        {
-                            $writeHostParams.ForegroundColor = 'Yellow'
-                        }
-                    }
-                    Write-Host -Object $_ @writeHostParams
-                }
-            }
-
-        $result.ExitCode = $LastExitCode
-        $result.Output = $output.ToArray()
-        if( $PassThru )
-        {
-            return $result
-        }
-        if( $result.ExitCode -ne 0 )
-        {
-            Write-Error ("MSBuild exited with code {0}." -f $result.ExitCode)
+            Write-Error ("MSBuild exited with code {0}." -f $LASTEXITCODE)
         }
     }
 }
