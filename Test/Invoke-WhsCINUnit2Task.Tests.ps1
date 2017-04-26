@@ -342,9 +342,9 @@ Describe 'Invoke-WhsCINUnit2Task.when excluding tests by category' {
     ThenTestsPassed 'ShouldPass'
 }
 
-Describe 'Invoke-WhsCINUnit2Task.when running with custom options' {
+Describe 'Invoke-WhsCINUnit2Task.when running with custom arguments' {
     GivenPassingTests
-    WhenRunningTask -WithParameters @{ 'Options' = @( '/nologo', '/nodots' ) }
+    WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
     ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','\.{2,}'
 }
 
