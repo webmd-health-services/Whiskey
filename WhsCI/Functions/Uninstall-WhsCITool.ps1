@@ -80,11 +80,16 @@ function Uninstall-WhsCITool
         {
             $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
         }
-        $ModuleName = '{0}.{1}' -f $ModuleName, $Version
-        $removeModule = (join-path -path $modulesRoot -ChildPath $ModuleName )
-        if( Test-Path -Path $removeModule -PathType Container )
+        #Remove modules saved by either PowerShell4 or PowerShell5
+        $moduleRoots = @( ('{0}.{1}' -f $ModuleName, $Version), ('{0}\{1}' -f $ModuleName, $Version)  )
+        forEach ($item in $moduleRoots)
         {
-            Remove-Item $removeModule -Recurse -Force
+            $removeModule = (join-path -path $modulesRoot -ChildPath $item )
+            if( Test-Path -Path $removeModule -PathType Container )
+            {
+                Remove-Item $removeModule -Recurse -Force
+                return
+            }
         }
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )

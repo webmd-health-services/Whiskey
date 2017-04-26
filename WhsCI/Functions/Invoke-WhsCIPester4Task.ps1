@@ -31,6 +31,9 @@ function Invoke-WhsCIPester4Task
         $Clean        
     )
     
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    
     if( $TaskParameter.ContainsKey('Version') )
     {
         $version = $TaskParameter['Version'] | ConvertTo-WhsCISemanticVersion
@@ -62,10 +65,7 @@ function Invoke-WhsCIPester4Task
         Uninstall-WhsCITool -ModuleName 'Pester' -Path $TaskContext.BuildRoot -Version $version
         return
     }
-
-    Set-StrictMode -Version 'Latest'
-    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
+    
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
         Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhsCIPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
