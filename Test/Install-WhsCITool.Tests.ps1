@@ -22,7 +22,10 @@ function Invoke-PowershellInstall
         $LikePowerShell4,
 
         [Switch]
-        $UsingDefaultDownloadRoot
+        $UsingDefaultDownloadRoot,
+
+        [String]
+        $ForPath
     )
 
     if( -not $ActualVersion )
@@ -47,7 +50,14 @@ function Invoke-PowershellInstall
         }
 
         Mock -CommandName 'Save-Module' -ModuleName 'WhsCI' -MockWith {
-            $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
+            if( $ForPath )
+            {
+                $moduleRoot = $ForPath
+            }
+            else
+            {
+                $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
+            }
             if( $LikePowerShell4 )
             {
                 $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $ForModule
@@ -63,13 +73,17 @@ function Invoke-PowershellInstall
         }.GetNewClosure()
     }
 
-    $downloadRootParam = @{ }
+    $optionalParams = @{ }
     if( -not $UsingDefaultDownloadRoot )
     {
-        $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
+        $optionalParams['DownloadRoot'] = $TestDrive.FullName
     }
-
-    $result = Install-WhsCITool @downloadRootParam -ModuleName $ForModule -Version $Version
+    if ( $ForPath )
+    {
+        $optionalParams['Path'] = $ForPath
+    }
+    $Global:Error.Clear()
+    $result = Install-WhsCITool @optionalParams -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
@@ -101,11 +115,22 @@ function Invoke-PowershellInstall
             {
                 $expectedRegex = 'Modules\\{0}\.{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
+            elseif( $ForPath )
+            {
+                $expectedRegex = '{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
+            }
             else
             {
                 $expectedRegex = 'Modules\\{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
             }
             $result | Should Match $expectedRegex
+        }
+        if( $ForPath -and -not $UsingDefaultDownloadRoot )
+        {
+            $errorMessage = 'You have supplied a Path and DownloadRoot parameter'
+            It 'should warn about Path and DownloadRoot' {
+                $Global:Error | should Match $errorMessage
+            }
         }
     }
 }
@@ -155,8 +180,6 @@ function Invoke-NuGetInstall
         }
     }
 }
-
-#Need to work out test cases for happy path, bad name/version number that call above function.
 
 Describe 'Install-WhsCITool.when given a NuGet Package' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
@@ -242,4 +265,21 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
         $Global:Error.Count | Should Be 2
         $Global:Error[0] | Should Match 'failed to download'
     }
+}
+
+Describe 'Install-WhsCITool.when installing a Pester module with DownloadRoot and Path both supplied' {
+    $path = $TestDrive.FullName
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -ForPath $path -ErrorAction SilentlyContinue
+}
+
+Describe 'Install-WhsCITool.when attempting to install a Pester module with a Path that already includes a Pester Module' {
+    $path = $TestDrive.FullName
+    $pesterPath = (Join-Path -Path $path -ChildPath 'Pester')
+    New-Item -Path $pesterPath -ItemType 'Directory'
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -ForPath $path -UsingDefaultDownloadRoot
+}
+
+Describe 'Install-WhsCITool.when actually installing a Pester module with a Path that does NOT include a Pester Module' {
+    $path = $TestDrive.FullName
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '3.0.0' -LikePowerShell5 -ForPath $path -UsingDefaultDownloadRoot
 }

@@ -97,16 +97,28 @@ function Invoke-PesterTest
         $ShouldFailWithMessage,
 
         [Switch]
-        $WithClean
+        $WithClean,
+
+        [Switch]
+        $WithInvalidVersion
     )
 
     $defaultVersion = '3.4.3'
     $failed = $false
     $context = New-WhsCIPesterTestContext
     $Global:Error.Clear()
+    if ( $WithInvalidVersion )
+    {
+        $Version = '3.0.0'
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' `
+                                      -MockWith { return $False }`
+                                      -ParameterFilter { $Path -eq $context.BuildRoot }
+    }
     if( $WithMissingPath )
     {
-        $taskParameter = @{}
+        $taskParameter = @{ 
+                        Version = $defaultVersion 
+                        }
     }
     elseif( -not $Version -and -not $WithMissingVersion )
     {
@@ -127,10 +139,16 @@ function Invoke-PesterTest
                         }
     }
 
+    if( -not $Version )
+    {
+        $Version = $defaultVersion
+    }
+    
     $optionalParams = @{ }
     if( $WithClean )
     {
         $optionalParams['Clean'] = $True
+        Mock -CommandName 'Uninstall-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $true }
     }
     try
     {
@@ -145,7 +163,6 @@ function Invoke-PesterTest
     Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
-    $testsRun = $FailureCount + $PassingCount
     if( $ShouldFailWithMessage )
     {
         It 'should fail' {
@@ -160,8 +177,24 @@ function Invoke-PesterTest
     }
     else
     {
+        $version = $Version | ConvertTo-WhsCISemanticVersion
+        $version = '{0}.{1}.{2}' -f ($Version.Major, $version.Minor, $version.patch)
+        $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
         It 'should pass' {
             $failed | Should Be $false
+        }
+        if( -not $WithClean )
+        {
+            It 'Should pass the build root to the Install tool' {
+                $pesterPath | Should Exist
+           }
+        }
+        else
+        {
+            It 'should attempt to uninstall Pester' {
+                Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+            }            
         }
     }
 }
@@ -169,11 +202,11 @@ function Invoke-PesterTest
 $pesterPassingPath = 'PassingTests' 
 $pesterFailingConfig = 'FailingTests' 
 
-Describe 'Invoke-WhsCIBuild when running passing Pester tests' {
+Describe 'Invoke-WhsCIPester3Task.when running passing Pester tests' {
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4
 }
 
-Describe 'Invoke-WhsCIBuild when running failing Pester tests' {
+Describe 'Invoke-WhsCIPester3Task.when running failing Pester tests' {
     $failureMessage = 'Pester tests failed'
     Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
@@ -193,12 +226,12 @@ Describe 'Invoke-WhsCIPester3Task.when run multiple times in the same build' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+Describe 'Invoke-WhsCIPester3Task.when missing Path Configuration' {
     $failureMessage = 'Element ''Path'' is mandatory.'
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
+Describe 'Invoke-WhsCIPester3Task.when version parsed from YAML' {
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4 -Version ([datetime]'3/4/2003')
 }
@@ -215,9 +248,8 @@ Describe 'Invoke-WhsCIPester3Task.when Version property isn''t a version' {
 }
 
 Describe 'Invoke-WhsCIPester3Task.when version of tool doesn''t exist' {
-    $version = '3.0.0'
     $failureMessage = 'does not exist'
-    Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+    Invoke-PesterTest -Path $pesterPassingPath -WithInvalidVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
@@ -227,6 +259,6 @@ Describe 'Invoke-WhsCIPester3Task.when a task path is absolute' {
     Invoke-PesterTest -Path $path -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when running passing Pester tests with Clean Switch' {
+Describe 'Invoke-WhsCIPester3Task.when running passing Pester tests with Clean Switch' {
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }
