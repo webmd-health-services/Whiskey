@@ -50,8 +50,18 @@ function Install-WhsCITool
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
         # NuGet packages are saved to `$DownloadRoot\packages`.
-        $DownloadRoot
+        $DownloadRoot,
+
+        [Parameter(ParameterSetName='PowerShell')]
+        [String]
+        # The Path parameter will take precedence over the DownloadRoot parameter and allows the user to specify specifically where they would like the PowerShell Module installed.
+        $Path
     )
+    
+    if( $DownloadRoot -and $Path )
+    {
+        Write-Error ('You have supplied a Path and DownloadRoot parameter to Install-WhsCITool, where only one or the other is necessary, the Path parameter takes precedence and will be used. Please be sure this is the behavior you are expecting.')
+    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -68,7 +78,15 @@ function Install-WhsCITool
    
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
+        if ( $Path )
+        {
+            $modulesRoot = $Path
+        }
+        else
+        {
+            $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
+        }
+
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
 
         $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
@@ -84,7 +102,7 @@ function Install-WhsCITool
         }
 
         Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
- 
+                
         $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
         if( (Test-Path -Path $moduleRoot -PathType Leaf) )
         {
