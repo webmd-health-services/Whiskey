@@ -184,6 +184,12 @@ function Invoke-PesterTest
             $Version = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.patch)
         }
         $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        if( $PSVersionTable.PSVersion.Major -ge 5 )
+        {
+            $pesterDirectoryName = 'Pester\{0}' -f $Version
+        }
+        $pesterDirectoryName = 'Modules\{0}' -f $pesterDirectoryName
+
         $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
 
         It 'should pass' {
@@ -231,15 +237,15 @@ Describe 'Invoke-WhsCIPester4Task.when run multiple times in the same build' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+Describe 'Invoke-WhsCIPester4Task.when missing Path Configuration' {
     $failureMessage = 'Element ''Path'' is mandatory.'
-    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage 
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage  -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
+Describe 'Invoke-WhsCIPester4Task.when version parsed from YAML' {
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
     $failureMessage = 'the major version number must always be ''4'''
-    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -Version ([datetime]'3/4/2003') -ShouldFailWithMessage $failureMessage
+    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -Version ([datetime]'3/4/2003') -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester4Task.when missing Version configuration' {

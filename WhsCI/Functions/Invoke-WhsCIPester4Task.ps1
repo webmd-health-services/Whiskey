@@ -79,7 +79,7 @@ function Invoke-WhsCIPester4Task
 
     $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
-    $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version -Path $TaskContext.BuildRoot
+    $pesterModulePath = Install-WhsCITool -BuildRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
     
     if( -not $pesterModulePath )
     {
