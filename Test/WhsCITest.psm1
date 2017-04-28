@@ -226,7 +226,7 @@ function New-WhsCITestContext
         $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
     }
 
-    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
+    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetAppFeedUri $progetUri @optionalArgs
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'
