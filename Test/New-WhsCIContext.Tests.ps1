@@ -12,6 +12,7 @@ $buildServerContext = @{
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
+$progetUris = @( $progetUri, [uri]'https://proget.another.example.com/' )
 
 
 function Assert-Context
@@ -116,7 +117,7 @@ function Assert-Context
 
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.AppFeedUri | Should Be $progetUri
+        $Context.ProGetSession.AppFeedUri | Should Be $progetUris
         $Context.ProGetSession.AppFeedName | Should Be $WithProGetAppFeed
         $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
         $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
@@ -273,7 +274,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUri @optionalArgs
+            New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
         }
         catch
         {

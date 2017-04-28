@@ -73,7 +73,7 @@ function New-WhsCIContext
         # The credential to use when authenticating to ProGet. Required if running under a build server.
         $ProGetCredential,
 
-        [uri]
+        [uri[]]
         # The URI to ProGet. Used to get Application Packages
         $ProGetAppFeedUri,
 
