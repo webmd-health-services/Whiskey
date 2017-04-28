@@ -125,6 +125,18 @@ function Assert-Context
     }
 }
 
+function GivenBuildID
+{
+    param(
+        $BuildID
+    )
+
+    function Get-WhsCIBuildID
+    {
+    }
+    Mock -CommandName 'Get-WhsCIBuildID' -ModuleName 'WhsCI' -MockWith { $BuildID }.GetNewClosure()
+}
+
 function GivenConfiguration
 {
     param(
@@ -135,38 +147,45 @@ function GivenConfiguration
         $ForBuildServer,
 
         [String]
-        $OnBranch = 'origin/develop',
+        $OnBranch = 'develop',
 
         $ForApplicationName,
 
         $ForReleaseName,
 
         [string[]]
-        $PublishingOn
+        $PublishingOn,
+
+        [Parameter(Position=0)]
+        [hashtable]
+        $Configuration
     )
 
-    $config = @{
-                 'SomProperty' = 'SomeValue'
-               }
+    if( -not $Configuration )
+    {
+        $Configuration = @{ }
+    }
+
+    $Configuration['SomProperty'] = 'SomeValue'
 
     if( $WithVersion )
     {
-        $config['Version'] = $WithVersion
+        $Configuration['Version'] = $WithVersion
     }
 
     if( $ForApplicationName )
     {
-        $config['ApplicationName'] = $ForApplicationName
+        $Configuration['ApplicationName'] = $ForApplicationName
     }
 
     if( $ForReleaseName )
     {
-        $config['ReleaseName'] = $ForReleaseName
+        $Configuration['ReleaseName'] = $ForReleaseName
     }
 
     if( $PublishingOn )
     {
-        $config['PublishOn'] = $PublishingOn
+        $Configuration['PublishOn'] = $PublishingOn
     }
     
     if( $ForBuildServer )
@@ -176,13 +195,18 @@ function GivenConfiguration
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
         Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+        function Get-WhsCIBranch
+        {
+        }
+        Mock -CommandName 'Get-WhsCIBranch' -ModuleName 'WhsCI' -MockWith { return $OnBranch }.GetNewClosure() 
+
+        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
     }
     
 
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { 
         [SemVersion.SemanticVersion]$semVersion = $null
-        if( -not [SemVersion.SemanticVersion]::TryParse($WithVersion,[ref]$semVersion) )
+        if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
         {
             return 
         }
@@ -190,7 +214,7 @@ function GivenConfiguration
     }.GetNewClosure()
 
     $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
-    $config | ConvertTo-Yaml | Set-Content -Path $configurationPath
+    $Configuration | ConvertTo-Yaml | Set-Content -Path $configurationPath
 }
 
 function GivenConfigurationFileDoesNotExist
@@ -434,6 +458,18 @@ function ThenDeveloperContextCreated
     }
 }
 
+function ThenVersionIs
+{
+    param(
+        [SemVersion.SemanticVersion]
+        $Version
+    )
+
+    It ('should set version to {0}' -f $Version) {
+        $context.Version | Should Be $Version
+    }
+}
+
 Describe 'New-WhsCIContext.when run by a developer for an application' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
     WhenCreatingContext -ByDeveloper
@@ -493,43 +529,43 @@ Describe 'New-WhsCIContext.when release name in configuration file' {
 
 
 Describe 'New-WhsCIContext.when building on master branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/master'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'master'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'master'
 }
 
 Describe 'New-WhsCIContext.when building on feature branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/feature/fubar'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'feature/fubar'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/feature/fubar'
 }
 
 Describe 'New-WhsCIContext.when building on release branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release/5.1'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release/5.1'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
 Describe 'New-WhsCIContext.when building on long-lived release branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
 Describe 'New-WhsCIContext.when building on develop branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/develop'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'develop'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
 }
 
 Describe 'New-WhsCIContext.when building on hot fix branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/hotfix/snafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'hotfix/snafu'
     WhenCreatingContext -ByBuildServer 
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/hotfix/snafu'
 }
 
 Describe 'New-WhsCIContext.when building on bug fix branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/bugfix/fubarnsafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'bugfix/fubarnsafu'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
 }
@@ -538,4 +574,22 @@ Describe 'New-WhsCIContext.when publishing on custom branch' {
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
+}
+
+Describe 'New-WhsCIContext.when run by developer on a prerelease branch' {
+    GivenConfiguration -WithVersion '1.2.3' -OnBranch 'alpha/2.0' -PublishingOn '^alpha\b'
+    WhenCreatingContext -ByDeveloper
+    ThenVersionIs '1.2.3'
+}
+
+Describe 'New-WhsCIContext.when publishing on a prerelease branch' {
+    GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
+    GivenBuildID '93'
+    WhenCreatingContext -ByBuildServer
+    ThenVersionIs '1.2.3-alpha.93'
+}
+
+Describe 'New-WhsCIContext.when a PrereleaseMap has multiple keys' {
+    GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' ; '\bbeta\b' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
+    WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
 }
