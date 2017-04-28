@@ -12,7 +12,8 @@ $buildServerContext = @{
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
-
+$configurationPath = $null
+$context = $null
 
 function Assert-Context
 {
@@ -131,9 +132,6 @@ function GivenConfiguration
         $WithVersion,
 
         [Switch]
-        $ThatDoesNotExist,
-
-        [Switch]
         $ForBuildServer,
 
         [String]
@@ -146,11 +144,6 @@ function GivenConfiguration
         [string[]]
         $PublishingOn
     )
-
-    if( $ThatDoesNotExist )
-    {
-        return 'I\do\not\exist'
-    }
 
     $config = @{
                  'SomProperty' = 'SomeValue'
@@ -196,17 +189,19 @@ function GivenConfiguration
         return $semVersion
     }.GetNewClosure()
 
-    $whsBuildYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
-    $config | ConvertTo-Yaml | Set-Content -Path $whsBuildYmlPath
-    return $whsBuildYmlPath
+    $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
+    $config | ConvertTo-Yaml | Set-Content -Path $configurationPath
+}
+
+function GivenConfigurationFileDoesNotExist
+{
+    $script:configurationPath = 'I\do\not\exist'
 }
 
 function WhenCreatingContext
 {
+    [CmdletBinding()]
     param(
-        [Parameter(ValueFromPIpeline=$true)]
-        $ConfigurationPath,
-
         [string]
         $ThenCreationFailsWithErrorMessage,
 
@@ -266,7 +261,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetUri 'https://proget.example.com/' @optionalArgs
+            $script:context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetUri 'https://proget.example.com/' @optionalArgs
         }
         catch
         {
@@ -301,10 +296,6 @@ function ThenBuildServerContextCreated
 {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
-        $Context,
-
         [SemVersion.SemanticVersion]
         $WithSemanticVersion,
 
@@ -395,10 +386,6 @@ function ThenDeveloperContextCreated
 {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
-        $Context,
-
         [SemVersion.SemanticVersion]
         $WithSemanticVersion,
 
@@ -448,114 +435,107 @@ function ThenDeveloperContextCreated
 }
 
 Describe 'New-WhsCIContext.when run by a developer for an application' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' |
-        WhenCreatingContext -ByDeveloper | 
-        ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
+    WhenCreatingContext -ByDeveloper
+    ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
 }
 
 Describe 'New-WhsCIContext.when run by developer for a library' {
-    GivenConfiguration -WithVersion '1.2.3' |
-        WhenCreatingContext -ByDeveloper  | 
-        ThenDeveloperContextCreated -WithSemanticVersion ('1.2.3+{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME)
+    GivenConfiguration -WithVersion '1.2.3'
+    WhenCreatingContext -ByDeveloper 
+    ThenDeveloperContextCreated -WithSemanticVersion ('1.2.3+{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME)
 }
 
 Describe 'New-WhsCIContext.when run by developer and configuration file does not exist' {
-    GivenConfiguration -ThatDoesNotExist |
-        WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'does not exist'-ErrorAction SilentlyContinue
-}
-
-Describe 'New-WhsCIContext.when run by developer and configuration file does not exist' {
-    GivenConfiguration -ThatDoesNotExist |
-        WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'does not exist'-ErrorAction SilentlyContinue
+    GivenConfigurationFileDoesNotExist
+    WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhsCIContext.when run by developer and version is not a semantic version' {
-    GivenConfiguration -WithVersion 'fubar' |
-        WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'not a valid semantic version' -ErrorAction SilentlyContinue
+    GivenConfiguration -WithVersion 'fubar'
+    WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'not a valid semantic version' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhsCIContext.when run by the build server' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer |
-        WhenCreatingContext -ByBuildServer | 
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
 }
 
 Describe 'New-WhsCIContext.when run by the build server and customizing ProGet feed names' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer |
-        WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' | 
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
+    WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu'
 }
 
 Describe 'New-WhsCIContext.when run by the build server and customizing download root' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer |
-        WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName | 
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName -WithReleaseName 'develop'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
+    WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName -WithReleaseName 'develop'
 }
 
 Describe 'New-WhsCIContext.when run by build server called with developer parameter set' {
-    GivenConfiguration -WithVersion '1.2.3' -ForBuildServer |
-        WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
+    GivenConfiguration -WithVersion '1.2.3' -ForBuildServer
+    WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhsCIContext.when application name in configuration file' {
-    GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar' |
-        WhenCreatingContext -ByDeveloper |
-        ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
+    GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar'
+    WhenCreatingContext -ByDeveloper
+    ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
 }
 
 Describe 'New-WhsCIContext.when release name in configuration file' {
-    GivenConfiguration -WithVersion '1.2.3' -ForReleaseName 'fubar' |
-        WhenCreatingContext -ByDeveloper |
-        ThenDeveloperContextCreated -WithReleaseName 'fubar' -WithSemanticVersion '1.2.3'
+    GivenConfiguration -WithVersion '1.2.3' -ForReleaseName 'fubar'
+    WhenCreatingContext -ByDeveloper
+    ThenDeveloperContextCreated -WithReleaseName 'fubar' -WithSemanticVersion '1.2.3'
 }
 
 
 Describe 'New-WhsCIContext.when building on master branch' {
-        GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/master' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'master'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/master'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'master'
 }
 
 Describe 'New-WhsCIContext.when building on feature branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/feature/fubar' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/feature/fubar'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/feature/fubar'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/feature/fubar'
 }
 
 Describe 'New-WhsCIContext.when building on release branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release/5.1' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
-        return
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release/5.1'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
 Describe 'New-WhsCIContext.when building on long-lived release branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
-        return
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/release'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
 Describe 'New-WhsCIContext.when building on develop branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/develop' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/develop'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
 }
 
 Describe 'New-WhsCIContext.when building on hot fix branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/hotfix/snafu' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/hotfix/snafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/hotfix/snafu'
+    WhenCreatingContext -ByBuildServer 
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/hotfix/snafu'
 }
 
 Describe 'New-WhsCIContext.when building on bug fix branch' {
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/bugfix/fubarnsafu' |
-            WhenCreatingContext -ByBuildServer | 
-            ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
+    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'origin/bugfix/fubarnsafu'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
 }
 
 Describe 'New-WhsCIContext.when publishing on custom branch' {
-    GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0' |
-        WhenCreatingContext -ByBuildServer |
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
+    GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0'
+    WhenCreatingContext -ByBuildServer
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
 }
