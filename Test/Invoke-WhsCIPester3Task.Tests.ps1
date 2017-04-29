@@ -179,7 +179,11 @@ function Invoke-PesterTest
     {
         $version = $Version | ConvertTo-WhsCISemanticVersion
         $version = '{0}.{1}.{2}' -f ($Version.Major, $version.Minor, $version.patch)
-        $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        $pesterDirectoryName = 'Modules\Pester.{0}' -f $Version 
+        if( $PSVersionTable.PSVersion.Major -ge 5 )
+        {
+            $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        }
         $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
         It 'should pass' {
             $failed | Should Be $false

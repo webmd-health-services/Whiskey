@@ -13,26 +13,15 @@ function GivenAnInstalledPowerShellModule
         [Switch]
         $LikePowerShell4,
 
-        [Switch]
-        $InDefaultDownloadDirectory,
-
         [Version]
         $WithVersion = '4.0.3',
 
         [String]
-        $InstalledAt,
-
-        [String]
         $WithName = 'Pester'
     )
-    if( $InstalledAt )
-    {
-        $moduleRoot = $InstalledAt
-    }
-    else
-    {
-        $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-    }
+
+    $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
+
     if( $LikePowerShell4 )
     {        
         $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -50,61 +39,34 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [Switch]
-        $InDefaultDownloadDirectory,
-
         [Version]
         $WithVersion,
 
         [String]
-        $InstalledAt,
+        $WithName = 'NUnit.Runners',
 
-        [String]
-        $WithName
+        [string]
+        $Version = '2.6.4'
     )
 
-    $Name = '{0}.{1}' -f $Name, $Version
-    
-    if( -not $InstalledAt )
-    {
-        $InstalledAt = Join-Path -Path $TestDrive.FullName -ChildPath 'Packages'
-        
-    }
-    New-Item -Name $Name -Path $InstalledAt -ItemType 'Directory' | Out-Null
+    $dirName = '{0}.{1}' -f $WithName, $Version
+    $installRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
+    New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
 }
 
 function WhenUninstallingPowerShellModule
 {
     [CmdletBinding()]
     param(
-
-        [Switch]
-        $FromDefaultDownloadDirectory,
-
         [Version]
         $WithVersion = '4.0.3',
-
-        [String]
-        $AtPath,
 
         [String]
         $WithName = 'Pester'
     )
 
-    $optionalParams = @{ }
-    if( -not $FromDefaultDownloadDirectory )
-    {
-        $downloadRoot = $TestDrive.FullName 
-        $optionalParams['DownloadRoot'] = $downloadRoot
-    }
-
-    if ( $AtPath )
-    {
-        $optionalParams['Path'] = $AtPath
-    }
-
     $Global:Error.Clear()
-    Uninstall-WhsCITool -ModuleName $WithName -Version $WithVersion @optionalParams
+    Uninstall-WhsCITool -ModuleName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
 }
 
 function WhenUninstallingNuGetPackage
@@ -114,21 +76,12 @@ function WhenUninstallingNuGetPackage
         [Version]
         $WithVersion = '2.6.4',
 
-        [Switch]
-        $FromDefaultDownloadDirectory,
-
         [String]
         $WithName = 'NUnit.Runners'
     )
 
-    $optionalParams = @{ }
-    if( -not $FromDefaultDownloadDirectory )
-    {
-        $downloadRoot = $TestDrive.FullName 
-        $optionalParams['DownloadRoot'] = $downloadRoot
-    }
     $Global:Error.Clear()
-    Uninstall-WhsCITool -NuGetPackageName $WithName -Version $WithVersion @optionalParams
+    Uninstall-WhsCITool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
 }
 
 function ThenPowerShellModuleUninstalled
@@ -147,13 +100,7 @@ function ThenPowerShellModuleUninstalled
         $WithVersion = '4.0.3',
 
         [String]
-        $WithName = 'Pester',
-
-        [String]
-        $From,
-
-        [Switch]
-        $FromDefaultDownloadDirectory
+        $WithName = 'Pester'
     )
 
     if( $LikePowerShell4 )
@@ -165,32 +112,15 @@ function ThenPowerShellModuleUninstalled
         $Name = '{0}\{1}' -f $WithName, $WithVersion 
     }
 
-    if( $From )
-    {
-        $uninstalledPath = $From
-    }
-    else
-    {
-        $path = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-        $uninstalledPath = Join-Path -Path $path -ChildPath $Name
-    }
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
+    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
     It 'should successfully uninstall the PowerShell Module' {
         $uninstalledPath | Should not Exist
     }
 
-    if( $From -and -not $FromDefaultDownloadDirectory )
-    {
-        $errorMessage = 'You have supplied a Path and DownloadRoot parameter'
-        It 'should warn about Path and DownloadRoot' {
-            $Global:Error | should Match $errorMessage
-        }       
-    }
-    else
-    {
-        It 'Should not write any errors' {
-            $Global:Error | Should beNullOrEmpty
-        }
+    It 'Should not write any errors' {
+        $Global:Error | Should beNullOrEmpty
     }
 }
 
@@ -206,7 +136,7 @@ function ThenNuGetPackageUninstalled
     )
 
     $Name = '{0}.{1}' -f $WithName, $Version
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'Packages'
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
     It 'should successfully uninstall the NuGet Package' {
@@ -234,29 +164,4 @@ Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5'
     GivenAnInstalledPowerShellModule -LikePowerShell5
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell5
-}
-
-Describe 'Uninstall-WhsCITool.when given a PowerShell Module with a specified path parameter' {
-    $path = Join-Path -path $TestDrive.FullName -ChildPath 'FuBar'
-    $modulePath = Join-Path -Path $path -ChildPath ( Join-Path -Path 'Pester' -ChildPath '4.0.3' ) 
-    New-Item -Path $modulePath -ItemType 'Directory' -Force | Out-Null
-    GivenAnInstalledPowerShellModule -InstalledAt $path -LikePowerShell5
-    WhenUninstallingPowerShellModule -AtPath $path -ErrorAction SilentlyContinue
-    ThenPowerShellModuleUninstalled -From $modulePath -LikePowerShell5
-}
-
-Describe 'Uninstall-WhsCITool.when uninstalling Powershell Module using default DownloadRoot' {
-    $defaultDownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
-    Mock -CommandName 'Join-Path' `
-         -ModuleName 'WhsCI' `
-         -MockWith { return Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath $ChildPath } `
-         -ParameterFilter { $Path -eq $defaultDownloadRoot }.GetNewClosure()
-
-    GivenAnInstalledPowerShellModule -InDefaultDownloadDirectory -LikePowerShell5
-    WhenUninstallingPowerShellModule -FromDefaultDownloadDirectory
-    ThenPowerShellModuleUninstalled -FromDefaultDownloadDirectory -LikePowerShell5
-
-    It 'should use LOCALAPPDATA for default install location' {
-        Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq $defaultDownloadRoot }
-    }
 }

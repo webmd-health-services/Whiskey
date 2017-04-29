@@ -46,45 +46,23 @@ function Uninstall-WhsCITool
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
+        [Parameter(Mandatory=$true)]
         [string]
-        # The root directory where the tools should be removed from. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
-        #
-        # PowerShell modules will be uninstalled from to `$DownloadRoot\Modules`.
-        #
-        # NuGet packages are uninstalled from `$DownloadRoot\packages`.
-        $DownloadRoot,
-
-        [Parameter(ParameterSetName='PowerShell')]
-        [String]
-        # The Path parameter will take precedence over the DownloadRoot parameter and allows the user to specify the exact directory where they would like the PowerShell Module removed from.
-        $Path
+        # The build root where the build is currently running. Tools are installed here.
+        $BuildRoot
     )
 
-    if( $DownloadRoot -and $Path )
-    {
-        Write-Error ('You have supplied a Path and DownloadRoot parameter to Uninstall-WhsCITool, where only one or the other is necessary, the Path parameter takes precedence and will be used. Please be sure this is the behavior you are expecting.')
-    }
-
-    if ( -not $DownloadRoot )
-    {
-        $DownloadRoot = Join-Path -path $env:LOCALAPPDATA -childPath '\WebMD Health Services\WhsCI'
-    }
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        if ( $Path )
-        {
-            $modulesRoot = $Path
-        }
-        else
-        {
-            $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
-        }
+        $modulesRoot = Join-Path -Path $BuildRoot -ChildPath 'Modules'
         #Remove modules saved by either PowerShell4 or PowerShell5
         $moduleRoots = @( ('{0}.{1}' -f $ModuleName, $Version), ('{0}\{1}' -f $ModuleName, $Version)  )
         forEach ($item in $moduleRoots)
         {
-            $removeModule = (join-path -path $modulesRoot -ChildPath $item )
+            $removeModule = (Join-Path -Path $modulesRoot -ChildPath $item )
             if( Test-Path -Path $removeModule -PathType Container )
             {
                 Remove-Item $removeModule -Recurse -Force
@@ -94,7 +72,7 @@ function Uninstall-WhsCITool
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
-        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Packages'
+        $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
         
