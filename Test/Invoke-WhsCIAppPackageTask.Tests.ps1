@@ -373,12 +373,18 @@ function Assert-NewWhsCIAppPackage
 
     if( $ShouldUploadPackage )
     {
-        It 'should upload package to ProGet with the defined session info' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
-                #$DebugPreference = 'Continue'
-                Write-Debug $ProGetSession.Uri
-                Write-Debug $taskContext.ProGetSession.AppFeedUri
-                $ProGetSession.Uri -eq $taskContext.ProGetSession.AppFeedUri
+        foreach ( $api in $taskContext.ProGetSession.AppFeedUri )
+        {
+            if( -not $ShouldFailWithErrorMessage )
+            {
+                It ('should upload package to {0} ProGet instance with the defined session info' -f $api) {
+                    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                        #$DebugPreference = 'Continue'
+                        Write-Debug $ProGetSession.Uri
+                        Write-Debug $api
+                        $ProGetSession.Uri -eq $api
+                    }
+                }
             }
         }
         It 'should upload package to ProGet with session credential' {
