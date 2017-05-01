@@ -373,9 +373,9 @@ function Assert-NewWhsCIAppPackage
 
     if( $ShouldUploadPackage )
     {
-        foreach ( $api in $taskContext.ProGetSession.AppFeedUri )
+        if( -not $ShouldFailWithErrorMessage )
         {
-            if( -not $ShouldFailWithErrorMessage )
+            foreach ( $api in $taskContext.ProGetSession.AppFeedUri )
             {
                 It ('should upload package to {0} ProGet instance with the defined session info' -f $api) {
                     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
