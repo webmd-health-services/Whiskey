@@ -70,7 +70,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         }
 
         $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'        
-        $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.URI), $feedName
+        $publishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
         if( -not (Test-Path $path -PathType Container) )
         {
             throw('Element ''Path'' must point to a directory, specifically the module directory of the module to publish.')

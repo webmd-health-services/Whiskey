@@ -166,10 +166,24 @@ function New-WhsCITestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    $progetUri = 'https://proget.example.com'
+    $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
+    $NpmFeedUri = 'https://proget.example.com/npm'
+    $NuGetFeedUri = 'https://proget.example.com/nuget'
+    $PowerShellFeedUri = 'https://proget.example.com/powershell'
     if( $UseActualProGet )
     {
-        $progetUri = 'https://proget.dev.webmd.com'
+        
+        $progetUris = @('https://proget.dev.webmd.com')
+        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm'
+        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget'
+        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh'
+        
+        <#
+        $progetUris = @('https://proget.example.com')
+        $NpmFeedUri = 'https://proget.example.com'
+        $NuGetFeedUri = 'https://proget.example.com'
+        $PowerShellFeedUri = 'https://proget.example.com'
+        #>
     }
 
     $optionalArgs = @{ }
@@ -225,8 +239,14 @@ function New-WhsCITestContext
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
         $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
     }
+    $progetArgs = @{
+                    ProGetAppFeedUri = $progetUris;
+                    NpmFeedUri = $NpmFeedUri;
+                    NuGetFeedUri = $NuGetFeedUri;
+                    PowerShellFeedUri = $PowerShellFeedUri;
+                    }
 
-    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration -ProGetUri $progetUri @optionalArgs
+    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'

@@ -12,6 +12,7 @@ $buildServerContext = @{
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
+$progetUris = @( $progetUri, [uri]'https://proget.another.example.com/' )
 $configurationPath = $null
 $context = $null
 
@@ -31,11 +32,13 @@ function Assert-Context
 
         $ReleaseName,
 
-        $WithProGetAppFeed = 'upack/Apps', 
+        $WithProGetAppFeed = 'Apps', 
 
         $WithProGetNpmFeed = 'npm/npm',
 
-        $WithProGetNuGetFeed = 'nuget/NuGet'
+        $WithProGetNuGetFeed = 'nuget/NuGet',
+
+        $WithProGetPowerShellFeed = 'posh/PoSh'
     )
 
     It 'should set configuration path' {
@@ -115,13 +118,11 @@ function Assert-Context
 
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.Uri | Should Be $progetUri
-        $Context.ProGetSession.AppFeed | Should Be $WithProGetAppFeed
-        $Context.ProGetSession.NpmFeed | Should Be $WithProGetNpmFeed
-        $Context.ProGetSession.AppFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetAppFeed)
+        $Context.ProGetSession.AppFeedUri | Should Be $progetUris
+        $Context.ProGetSession.AppFeedName | Should Be $WithProGetAppFeed
         $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
-        $Context.ProGetSession.NuGetFeed | Should Be $WithProGetNuGetFeed
         $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
+        $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
     }
 }
 
@@ -235,11 +236,13 @@ function WhenCreatingContext
         [Switch]
         $ByBuildServer,
 
-        $WithProGetAppFeed = 'upack/Apps', 
+        $WithProGetAppFeed = 'Apps', 
 
         $WithProGetNpmFeed = 'npm/npm',
 
         $WithProGetNuGetFeed = 'nuget/NuGet',
+
+        $WithPowerShellNuGetFeed = 'posh/PoSh',
 
         $WithDownloadRoot,
 
@@ -258,21 +261,26 @@ function WhenCreatingContext
         if( $ByBuildServer )
         {
             Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
-            if( -not $WithNoToolInfo )
+        }
+
+        if( -not $WithNoToolInfo )
+        {
+            $optionalArgs = $buildServerContext.Clone()
+            if( $WithProGetAppFeed )
             {
-                $optionalArgs = $buildServerContext.Clone()
-                if( $WithProGetAppFeed )
-                {
-                    $optionalArgs['ProGetAppFeed'] = $WithProGetAppFeed
-                }
-                if( $WithProGetNpmFeed )
-                {
-                    $optionalArgs['ProGetNpmFeed'] = $WithProGetNpmFeed
-                }
-                if( $WithProGetNuGetFeed )
-                {
-                    $optionalArgs['ProGetNuGetFeed'] = $WithProGetNuGetFeed
-                }
+                $optionalArgs['ProGetAppFeedName'] = $WithProGetAppFeed
+            }
+            if( $WithProGetNpmFeed )
+            {
+                $optionalArgs['NpmFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNpmFeed
+            }
+            if( $WithProGetNuGetFeed )
+            {
+                $optionalArgs['NuGetFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNuGetFeed
+            }
+            if( $WithPowerShellNuGetFeed )
+            {
+                $optionalArgs['PowerShellFeedUri'] = New-Object 'uri' $progetUri, $WithPowerShellNuGetFeed
             }
         }
 
@@ -285,7 +293,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            $script:context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetUri 'https://proget.example.com/' @optionalArgs
+            $script:context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
         }
         catch
         {
@@ -332,6 +340,8 @@ function ThenBuildServerContextCreated
 
         $WithProGetNuGetFeed,
 
+        $WithPowerShellNuGetFeed,
+
         $WithDownloadRoot
     )
 
@@ -355,7 +365,10 @@ function ThenBuildServerContextCreated
         {
             $optionalArgs['WithProGetNuGetFeed'] = $WithProGetNuGetFeed
         }
-            
+        if( $WithPowerShellNuGetFeed )
+        {
+            $optionalArgs['WithProGetPowerShellFeed'] = $WithPowerShellNuGetFeed
+        }
 
         $iWasCalled = $true
         Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
@@ -500,8 +513,8 @@ Describe 'New-WhsCIContext.when run by the build server' {
 
 Describe 'New-WhsCIContext.when run by the build server and customizing ProGet feed names' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-    WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu'
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu'
+    WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
 }
 
 Describe 'New-WhsCIContext.when run by the build server and customizing download root' {
