@@ -6,7 +6,7 @@ function Install-WhsCITool
     Downloads and installs tools needed by the WhsCI module.
 
     .DESCRIPTION
-    The `Install-WhsCITool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the WhsCI module. PowerShell modules are installed into the build root to a `Modules` directory. A `DirectoryInfo` object for the downloaded tool's directory is returned.
+    The `Install-WhsCITool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the WhsCI module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
     
     Users of the `WhsCI` API typcially won't need to use this function. It is called by other `WhsCI` function so they ahve the tools they need.
 
@@ -38,30 +38,32 @@ function Install-WhsCITool
         # The name of the NuGet package to download.
         $NuGetPackageName,
 
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
-        [version]
+        [Parameter(ParameterSetName='NuGet')]
+        [Parameter(ParameterSetName='PowerShell')]
+        [string]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
-        [Parameter(Mandatory=$true)]
         [string]
-        # The build root directory. This is typically the root of the repository. Tools will be installed here. NuGet packages will be installed into a `packages` directory. PowerShell modules will be installed into a `Modules` directory.
-        $BuildRoot
+        # The root directory where the tools should be downloaded. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
+        #
+        # PowerShell modules are saved to `$DownloadRoot\Modules`.
+        #
+        # NuGet packages are saved to `$DownloadRoot\packages`.
+        $DownloadRoot
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( $Version.Build -lt 0 )
+    if( -not $DownloadRoot )
     {
-        $Version = [version]('{0}.{1}.0' -f $Version.Major,$Version.Minor)
+        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
     }
-
+   
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        $modulesRoot = Join-Path -Path $BuildRoot -ChildPath 'Modules'
-
+        $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
 
         $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
@@ -76,8 +78,29 @@ function Install-WhsCITool
             return
         }
 
+        if( $Version )
+        {
+            $Version = Find-Module -Name $ModuleName -AllVersions | 
+                            Where-Object { $_.Version.ToString() -like $Version } | 
+                            Sort-Object -Property 'Version' -Descending | 
+                            Select-Object -First 1 | 
+                            Select-Object -ExpandProperty 'Version'
+            if( -not $Version )
+            {
+                #do something and test it.
+            }
+        }
+        else
+        {
+            $Version = Find-Module -Name $ModuleName | Select-Object -ExpandProperty 'Version'
+            if( -not $Version )
+            {
+                #do something and test it.
+            }
+        }
+
         Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
-                
+
         $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
         if( (Test-Path -Path $moduleRoot -PathType Leaf) )
         {
@@ -107,7 +130,25 @@ function Install-WhsCITool
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {        
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-        $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
+        $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+        if( -not $Version )
+        {
+            $version = & $nugetPath list ('packageid:{0}' -f $NuGetPackageName) |
+                            Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
+                            ForEach-Object { $Matches[1] }
+            if( -not $version )
+            {
+                Write-Error ("Unable to find latest version of package '{0}'." -f $NuGetPackageName)
+                return
+            }
+        }
+        elseif( [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
+        {
+            Write-Error "Wildcards are not allowed for NuGet packages yet because of a bug in the nuget.org search API (https://github.com/NuGet/NuGetGallery/issues/3274)."
+            return
+        }
+
+
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
         
@@ -117,4 +158,5 @@ function Install-WhsCITool
         }
         return $nuGetRoot
     }
-}
+} 
+

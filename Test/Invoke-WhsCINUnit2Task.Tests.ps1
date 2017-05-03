@@ -58,7 +58,19 @@ function Invoke-NUnitTask
         $WithError,
 
         [Switch]
-        $WhenRunningClean
+        $WhenRunningClean,
+
+        [Version]
+        $WithOpenCoverVersion = '4.6.519',
+
+        [Version]
+        $WithReportGeneratorVersion = '2.5.7',
+
+        [Switch]
+        $DisableCodeCoverage,
+
+        [String[]]
+        $CoverageFilter
     )
     Process
     {

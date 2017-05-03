@@ -41,8 +41,7 @@ function Uninstall-WhsCITool
         # The name of the NuGet package to uninstall.
         $NuGetPackageName,
 
-        [Parameter(Mandatory=$true)]
-        [version]
+        [String]
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
@@ -54,6 +53,11 @@ function Uninstall-WhsCITool
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    if( -not $Version )
+    {
+        $Version = '*'
+    }
 
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {

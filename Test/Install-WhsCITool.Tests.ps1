@@ -62,7 +62,7 @@ function Invoke-PowershellInstall
 
     $optionalParams = @{ }
     $Global:Error.Clear()
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
@@ -77,7 +77,7 @@ function Invoke-PowershellInstall
             }
         }
 
-        It 'should put the modules in $BuildRoot\Modules' {
+        It 'should put the modules in $DownloadRoot\Modules' {
             Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'WhsCI' -ParameterFilter {
                 $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
             }
@@ -120,14 +120,14 @@ function Invoke-NuGetInstall
         $invalidPackage
     )
 
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
             It 'should exist' {                    
                 $result | Should -Exist
             }
-            It 'should get installed into $BuildRoot\packages' {
+            It 'should get installed into $DownloadRoot\packages' {
                 $result | Should -BeLike ('{0}\packages\*' -f $TestDrive.FullName)
             }
         }        
@@ -199,7 +199,7 @@ Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
 Describe 'Install-WhsCITool.when version doesn''t exist' {
     $Global:Error.Clear()
 
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
     
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
