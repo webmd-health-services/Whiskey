@@ -146,7 +146,8 @@ function Invoke-WhsCINUnit2Task
 
         #$pathString = "\`"" + ($path -Join "\`" \`"") + "\`""   
         $pathString = ($path -join " ")
-        $nunitArgs = "${pathString} /nologo /noshadow `"${frameworkParam}`" `"${includeParam}`" `"${excludeParam}`" /xml=`"${reportPath}/nunit-results.xml`""
+        $nunitArgs = "${pathString} /nologo /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam}"
+        #$nunitArgs = "${pathString} /nologo /noshadow \`"${frameworkParam}\`" /xml=\`"${reportPath}\`" \`"${includeParam}\`" \`"${excludeParam}\`""
         #$argString = $pathString = "\`"" + ($nunitArgs -Join "\`" \`"") + "\`"" 
         #$nunitArgs = "${pathString} /nologo /noshadow `"${frameworkParam}`" `"${includeParam}`" `"${excludeParam}`" `"${extraArgs}`" /xml=\`"${reportPath}/nunit-results.xml\`""
         #$nunitArgs = '${pathString} /nologo /noshadow ''${frameworkParam}'' ''${includeParam}'' ''${excludeParam}'' /xml=\''${reportPath}/nunit-results.xml\'''
@@ -154,7 +155,7 @@ function Invoke-WhsCINUnit2Task
         {
             #this works
             #& $openCoverConsolePath '-register:user' '-target:C:\Users\esmelser\Projects\whsci\Test\Assemblies\packages\NUnit.Runners.2.6.4\tools\nunit-console.exe' '-targetargs:C:\Users\esmelser\Projects\whsci\Test\Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll C:\Users\esmelser\Projects\whsci\Test\Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll /noshadow /framework=4.0' '-output:C:\Users\esmelser\Projects\whsci\Test\Assemblies\.output\opencover\openCover.xml' '-filter:' -returntargetcode
-            & $openCoverConsolePath '-target:${nunitConsolePath}' '-targetargs:${nunitArgs}' ('-filter:{0}' -f $CoverageFilter -join ' ') '-register:user' '-output:${openCoverReport}' '-returntargetcode'
+            & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" ('-filter:{0}' -f $CoverageFilter -join ' ') '-register:user' "-output:${openCoverReport}" '-returntargetcode'
             & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir"
         }
         else
