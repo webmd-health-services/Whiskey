@@ -47,14 +47,28 @@ function Invoke-WhsCINUnit2Task
   
     Process
     {
-        if( $Clean )
-        {
-            return
-        }
-          
+              
         Set-StrictMode -version 'latest'        
         $package = 'NUnit.Runners'
         $version = '2.6.4'
+        if( $Clean )
+        {
+            $optionalOpenCoverArgs = @{}
+            $optionalReportGeneratorArgs = @{}
+            if( $OpenCoverVersion )
+            {
+                $optionalOpenCoverArgs['Version'] = $OpenCoverVersion
+            }
+            if( $ReportGeneratorVersion )
+            {
+                $optionalReportGeneratorArgs['Version'] = $ReportGeneratorVersion
+            }
+            Uninstall-WhsCITool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @optionalReportGeneratorArgs
+            Uninstall-WhsCITool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @optionalOpenCoverArgs
+            Uninstall-WhsCITool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
+            return
+        }
+
         # Be sure that the Taskparameter contains a 'Path'.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
@@ -73,13 +87,13 @@ function Invoke-WhsCINUnit2Task
         $includeParam = $null
         if( $TaskParameter.ContainsKey('Include') )
         {
-            $includeParam = '/include={0}' -f ($TaskParameter['Include'] -join ',')
+            $includeParam = '/include=\"{0}\"' -f ($TaskParameter['Include'] -join ',')
         }
         
         $excludeParam = $null
         if( $TaskParameter.ContainsKey('Exclude') )
         {
-            $excludeParam = '/exclude={0}' -f ($TaskParameter['Exclude'] -join ',')
+            $includeParam = '/exclude=\"{0}\"' -f ($TaskParameter['Exclude'] -join ',')
         }
 
         $frameworkParam = '4.0'
@@ -144,19 +158,18 @@ function Invoke-WhsCINUnit2Task
         Write-Verbose -Message ('  Filter      {0}' -f $CoverageFilter -join ' ')
         Write-Verbose -Message ('  Output     {0}' -f $openCoverReport)
 
-        #$pathString = "\`"" + ($path -Join "\`" \`"") + "\`""   
         $pathString = ($path -join " ")
-        $nunitArgs = "${pathString} /nologo /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam}"
-        #$nunitArgs = "${pathString} /nologo /noshadow \`"${frameworkParam}\`" /xml=\`"${reportPath}\`" \`"${includeParam}\`" \`"${excludeParam}\`""
-        #$argString = $pathString = "\`"" + ($nunitArgs -Join "\`" \`"") + "\`"" 
-        #$nunitArgs = "${pathString} /nologo /noshadow `"${frameworkParam}`" `"${includeParam}`" `"${excludeParam}`" `"${extraArgs}`" /xml=\`"${reportPath}/nunit-results.xml\`""
-        #$nunitArgs = '${pathString} /nologo /noshadow ''${frameworkParam}'' ''${includeParam}'' ''${excludeParam}'' /xml=\''${reportPath}/nunit-results.xml\'''
+        $extraArgString = ($extraArgs -join " ")
+        $nunitArgs = "${pathString} /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
         if( -not $DisableCodeCoverage )
         {
-            #this works
-            #& $openCoverConsolePath '-register:user' '-target:C:\Users\esmelser\Projects\whsci\Test\Assemblies\packages\NUnit.Runners.2.6.4\tools\nunit-console.exe' '-targetargs:C:\Users\esmelser\Projects\whsci\Test\Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll C:\Users\esmelser\Projects\whsci\Test\Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll /noshadow /framework=4.0' '-output:C:\Users\esmelser\Projects\whsci\Test\Assemblies\.output\opencover\openCover.xml' '-filter:' -returntargetcode
             & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" ('-filter:{0}' -f $CoverageFilter -join ' ') '-register:user' "-output:${openCoverReport}" '-returntargetcode'
+            $testsFailed = $LastExitCode;
             & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir"
+            if( $LastExitCode -or $testsFailed )
+            {
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
+            }
         }
         else
         {

@@ -247,6 +247,7 @@ function New-WhsCITestContext
 
     if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
     {
+        Remove-Item -Path $context.OutputDirectory -Recurse -Force
         $context.OutputDirectory = $ForOutputDirectory
         New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     }

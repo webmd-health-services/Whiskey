@@ -27,6 +27,37 @@ function Assert-NUnitTestsNotRun
     }
 }
 
+function Assert-OpenCoverRuns
+{
+    param(
+        [String]
+        $OpenCoverDirectoryPath
+    )
+    $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
+    $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
+    It 'should run OpenCover' {
+        $openCoverFilePath | Should exist
+    }
+    It 'should run ReportGenerator' {
+        $reportGeneratorFilePath | Should exist
+    }
+}
+
+function Assert-OpenCoverNotRun
+{
+    param(
+        [String]
+        $OpenCoverDirectoryPath
+    )
+    $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
+    $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
+    It 'should not run OpenCover' {
+        $openCoverFilePath | Should not exist
+    }
+    It 'should not run ReportGenerator' {
+        $reportGeneratorFilePath | Should not exist
+    }
+}
 
 function Invoke-NUnitTask 
 {
@@ -67,7 +98,7 @@ function Invoke-NUnitTask
         $WithReportGeneratorVersion = '2.5.7',
 
         [Switch]
-        $DisableCodeCoverage,
+        $WithDisabledCodeCoverage,
 
         [String[]]
         $CoverageFilter
@@ -79,7 +110,8 @@ function Invoke-NUnitTask
         {
             $inReleaseParam['InReleaseMode'] = $True
         }
-        $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper @inReleaseParam
+        $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+        $context = New-WhsCITestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper @inReleaseParam -ForOutputDirectory $outputDirectory
         $threwException = $false
         $Global:Error.Clear()
 
@@ -127,7 +159,14 @@ function Invoke-NUnitTask
         if( $WhenRunningClean )
         {
             $optionalParams['Clean'] = $True
+            #check to be sure that we are only uninstalling the desired version of particular packages on clean
+            Install-WhsCITool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -DownloadRoot $context.BuildRoot
         }
+        if( $WithDisabledCodeCoverage )
+        {
+            $optionalParams['DisableCodeCoverage'] = $True
+        }
+
 
         $Global:Error.Clear()
         try
@@ -156,14 +195,33 @@ function Invoke-NUnitTask
         }
 
         $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
+        $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
         if( $WhenRunningClean )
         {
+            $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+            $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
+            $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
+            $openCoverPath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
+            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
             It 'should not throw an exception' {
                 $threwException | Should be $False
             }
             It 'should not exit with error' {
                 $Global:Error | Should beNullorEmpty
             } 
+            It 'should uninstall the expected version of Nunit.Runners' {
+                $nunitPath | should not exist
+            }
+            It 'should not uninstall other versions of NUnit.Runners' {
+                $oldNUnitPath | should exist
+            }
+            It 'should uninstall OpenCover' {
+                $openCoverPath | should not exist
+            }
+            It 'should uninstall ReportGenerator' {
+                $reportGeneratorPath | should not exist
+            }
+            Uninstall-WhsCITool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
         }
         elseif( $ThatFails )
         {            
@@ -180,16 +238,28 @@ function Invoke-NUnitTask
         if( $WithFailingTests -or $WithRunningTests )
         {
             Assert-NUnitTestsRun -ReportPath $ReportPath
+            if( -not $WithDisabledCodeCoverage )
+            {
+                Assert-OpenCoverRuns -OpenCoverDirectoryPath $openCoverPath
+            }
+            else
+            {
+                Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
+            }
         }
         else
         {
             Assert-NUnitTestsNotRun -ReportPath $reportPath
+            Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
         }
 
         Remove-Item -Path $context.OutputDirectory -Recurse -Force        
     }
 }
 
+Describe 'Invoke-WhsCINUnit2Task.when the Clean Switch is active' {
+    Invoke-NUnitTask -WhenRunningClean
+}
 
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests' { 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
@@ -222,8 +292,9 @@ Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Pat
     Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError     
 }
 
-Describe 'Invoke-WhsCINUnit2Task.when the Clean Switch is active' {
-    Invoke-NUnitTask -WhenRunningClean
+Describe 'Invoke-WhsCINUnit2Task when running NUnit tests with disabled code coverage' { 
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
+    Invoke-NUnitTask -WithRunningTests -InReleaseMode -WithDisabledCodeCoverage
 }
 
 $solutionToBuild = $null
@@ -247,8 +318,8 @@ function WhenRunningTask
         [hashtable]
         $WithParameters = @{ }
     )
-
-    $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript
+    $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 
@@ -338,6 +409,7 @@ function ThenTestsPassed
             $result.GetAttribute('result') | ForEach-Object { $_ | Should -Be 'Success' }
         }
     }
+    Assert-OpenCoverRuns -OpenCoverDirectoryPath (Join-Path -path $Script:context.OutputDirectory -ChildPath 'OpenCover')
 }
 
 Describe 'Invoke-WhsCINUnit2Task.when including tests by category' {
@@ -357,7 +429,7 @@ Describe 'Invoke-WhsCINUnit2Task.when excluding tests by category' {
 Describe 'Invoke-WhsCINUnit2Task.when running with custom arguments' {
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
-    ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','\.{2,}'
+    ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','^\.{2,}'
 }
 
 Describe 'Invoke-WhsCINUnit2Task.when running under a custom dotNET framework' {
