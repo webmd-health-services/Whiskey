@@ -166,6 +166,10 @@ function Invoke-NUnitTask
         {
             $optionalParams['DisableCodeCoverage'] = $True
         }
+        if( $CoverageFilter )
+        {
+            $optionalParams['CoverageFilter'] = $CoverageFilter
+        }
 
 
         $Global:Error.Clear()
@@ -201,7 +205,7 @@ function Invoke-NUnitTask
             $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
             $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
             $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
-            $openCoverPath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
+            $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
             $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
             It 'should not throw an exception' {
                 $threwException | Should be $False
@@ -216,7 +220,7 @@ function Invoke-NUnitTask
                 $oldNUnitPath | should exist
             }
             It 'should uninstall OpenCover' {
-                $openCoverPath | should not exist
+                $openCoverPackagePath | should not exist
             }
             It 'should uninstall ReportGenerator' {
                 $reportGeneratorPath | should not exist
@@ -251,6 +255,17 @@ function Invoke-NUnitTask
         {
             Assert-NUnitTestsNotRun -ReportPath $reportPath
             Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
+        }
+        if( $CoverageFilter )
+        {
+            $plusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2PassingTest_TestFixture.htm'
+            $minusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2FailingTest_TestFixture.htm'
+            It ('should allow {0} to pass through the coverage filter' -f $plusFilterPath) {
+                $plusFilterPath | should exist
+            }
+            It ('should filter out {0}' -f $minusFilterPath) {
+                $minusFilterPath | should not exist
+            }
         }
 
         Remove-Item -Path $context.OutputDirectory -Recurse -Force        
@@ -295,6 +310,15 @@ Describe 'Invoke-WhsCINUnit2Task when NUnit Console Path is invalid and Join-Pat
 Describe 'Invoke-WhsCINUnit2Task when running NUnit tests with disabled code coverage' { 
     Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
     Invoke-NUnitTask -WithRunningTests -InReleaseMode -WithDisabledCodeCoverage
+}
+
+Describe 'Invoke-WhsCINUnit2Task when running NUnit tests with coverage filters' { 
+    $coverageFilter = (
+                    '-[NUnit2FailingTest]*',
+                    '+[NUnit2PassingTest]*'
+                    )
+    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { $false }
+    Invoke-NUnitTask -WithRunningTests -InReleaseMode -CoverageFilter $coverageFilter
 }
 
 $solutionToBuild = $null

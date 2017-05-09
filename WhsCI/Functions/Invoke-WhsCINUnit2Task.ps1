@@ -156,14 +156,15 @@ function Invoke-WhsCINUnit2Task
         Write-Verbose -Message ('  Argument    {0}' -f ($extraArgs -join $separator))
         Write-Verbose -Message ('              /xml={0}' -f $reportPath)
         Write-Verbose -Message ('  Filter      {0}' -f $CoverageFilter -join ' ')
-        Write-Verbose -Message ('  Output     {0}' -f $openCoverReport)
+        Write-Verbose -Message ('  Output      {0}' -f $openCoverReport)
 
         $pathString = ($path -join " ")
         $extraArgString = ($extraArgs -join " ")
+        $coverageFilterString = ($CoverageFilter -join " ")
         $nunitArgs = "${pathString} /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
         if( -not $DisableCodeCoverage )
         {
-            & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" ('-filter:{0}' -f $CoverageFilter -join ' ') '-register:user' "-output:${openCoverReport}" '-returntargetcode'
+            & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode'
             $testsFailed = $LastExitCode;
             & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir"
             if( $LastExitCode -or $testsFailed )
