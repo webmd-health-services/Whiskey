@@ -128,7 +128,7 @@
             # LicenseUri = ''
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://confluence.webmd.net/display/WHS/WhsCI'
+            ProjectUri = 'https://whsconfluence.webmd.net/display/WHS/WhsCI'
 
             # A URL to an icon representing this module.
             # IconUri = ''
@@ -137,7 +137,7 @@
             ReleaseNotes = @'
 ### Bug Fixes
 
-* Fixed: some tasks fail when task paths use wildcards that match multiple items
+* Fixed: Updated Pester3 and Pester4 tasks to properly run in background tasks when executed under the context of the build server
 '@
 
         } # End of PSData hashtable
