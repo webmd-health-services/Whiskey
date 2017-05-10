@@ -260,10 +260,10 @@ function Invoke-NUnitTask
         {
             $plusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2PassingTest_TestFixture.htm'
             $minusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2FailingTest_TestFixture.htm'
-            It ('should allow {0} to pass through the coverage filter' -f $plusFilterPath) {
+            It ('should run allowed assemblies to pass through the OpenCover coverage filter') {
                 $plusFilterPath | should exist
             }
-            It ('should filter out {0}' -f $minusFilterPath) {
+            It ('should not run assemblies disabled by the OpenCover coverage filter') {
                 $minusFilterPath | should not exist
             }
         }
