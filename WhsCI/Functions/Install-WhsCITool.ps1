@@ -80,6 +80,11 @@ function Install-WhsCITool
 
         if( $Version )
         {
+            $TempVersion = [Version]$Version
+            if( $TempVersion -and ($TempVersion.Build -lt 0) )
+            {
+                $Version = [version]('{0}.{1}.0' -f $TempVersion.Major,$TempVersion.Minor)
+            }
             $Version = Find-Module -Name $ModuleName -AllVersions | 
                             Where-Object { $_.Version.ToString() -like $Version } | 
                             Sort-Object -Property 'Version' -Descending | 
@@ -87,7 +92,8 @@ function Install-WhsCITool
                             Select-Object -ExpandProperty 'Version'
             if( -not $Version )
             {
-                #do something and test it.
+                Write-Error -Message ('Failed to find module {0} on the PowerShell Gallery. Either the {0} module does not exist, or it does but the expected version does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName)
+                return
             }
         }
         else
@@ -95,7 +101,8 @@ function Install-WhsCITool
             $Version = Find-Module -Name $ModuleName | Select-Object -ExpandProperty 'Version'
             if( -not $Version )
             {
-                #do something and test it.
+                Write-Error -Message ('Unable to find any versions of the {0} module on the PowerShell Gallery. You can browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName)
+                return
             }
         }
 

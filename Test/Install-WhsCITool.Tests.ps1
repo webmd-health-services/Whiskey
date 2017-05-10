@@ -43,6 +43,17 @@ function Invoke-PowershellInstall
             $LikePowerShell5 = $false
         }
 
+        Mock -CommandName 'Find-Module' -ModuleName 'whsCI' -MockWith {
+            return $module = @(
+                                 [pscustomobject]@{
+                                                Version = [Version]$Version                                            
+                                            }
+                                 [pscustomobject]@{
+                                                Version = '0.1.1'
+                                            }
+                              )            
+        }
+
         Mock -CommandName 'Save-Module' -ModuleName 'WhsCI' -MockWith {
             $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
             if( $LikePowerShell4 )
@@ -196,7 +207,7 @@ Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
 }
 
-Describe 'Install-WhsCITool.when version doesn''t exist' {
+Describe 'Install-WhsCITool.when version of module doesn''t exist' {
     $Global:Error.Clear()
 
     $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
@@ -206,7 +217,22 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
     }
 
     It 'should write an error' {
+        $Global:Error.Count | Should Be 1
+        $Global:Error[0] | Should Match 'failed to find module'
+    }
+}
+
+Describe 'Install-WhsCITool.for non-existent module when version parameter is empty' {
+    $Global:Error.Clear()
+
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
+    
+    It 'shouldn''t return anything' {
+        $result | Should BeNullOrEmpty
+    }
+
+    It 'should write an error' {
         $Global:Error.Count | Should Be 2
-        $Global:Error[0] | Should Match 'failed to download'
+        $Global:Error[0] | Should Match 'Unable to find any versions'
     }
 }
