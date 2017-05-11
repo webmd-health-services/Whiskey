@@ -79,44 +79,28 @@ function Invoke-WhsCIPester3Task
     }
 
     # We do this in the background so we can test this with Pester. Pester tests calling Pester tests. Madness!
-    $commandParams = @{ }
-    $commandName = 'Invoke-Command'
-    $asJob = $false
-    if( (Get-PSCallStack | Where-Object { $_.Command -eq 'Invoke-Pester' } ) )
-    {
-        $asJob = $true
-        $commandName = 'Start-Job'
-        $commandParams['Name'] = [IO.Path]::GetRandomFileName()
-    }
-    
-    & $commandName -ScriptBlock {
-        param(
-            $Script,
-            $OutputRoot,
-            $TestIdx,
-            $PesterModulePath,
-            $OutputFileNameFormat
-        )
-        
+    $job = Start-Job -ScriptBlock {
+        $script = $using:Path
+        $outputRoot = $using:TaskContext.OutputDirectory
+        $testIdx = $using:testIdx
+        $pesterModulePath = $using:pesterModulePath
+        $outputFileNameFormat = $using:outputFileNameFormat
+
         Import-Module -Name $pesterModulePath
         $outputFile = Join-Path -Path $outputRoot -ChildPath ($outputFileNameFormat -f $testIdx)
         $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat LegacyNUnitXml -PassThru
         $result
         if( $result.FailedCount )
         {
-             throw ('Pester tests failed.')
+            throw ('Pester tests failed.')
         }
-    } -ArgumentList $Path,$TaskContext.OutputDirectory,$testIdx,$pesterModulePath,$outputFileNameFormat @commandParams
+    } 
     
-    if( $asJob )
+    do
     {
-        $job = Get-Job -Name $commandParams['Name']
-        do
-        {
-            $job | Receive-Job
-        }
-        while( -not ($job | Wait-Job -Timeout 1) )
-
         $job | Receive-Job
     }
+    while( -not ($job | Wait-Job -Timeout 1) )
+
+    $job | Receive-Job
 }
