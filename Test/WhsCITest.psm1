@@ -201,7 +201,7 @@ function New-WhsCITestContext
         $filter = { $Path -eq 'env:GIT_BRANCH' }
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $true }
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $ForVersion }.GetNewClosure()
     }
     else

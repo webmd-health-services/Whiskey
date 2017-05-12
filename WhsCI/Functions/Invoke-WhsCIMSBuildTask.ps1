@@ -108,10 +108,6 @@ function Invoke-WhsCIMSBuildTask
         }
 
         $verbosity = 'm'
-        if( (Test-WhsCIRunByBuildServer) )
-        {
-            $verbosity = 'd'
-        }
         if( $TaskParameter['Verbosity'] )
         {
             $verbosity = $TaskParameter['Verbosity']
@@ -137,10 +133,14 @@ function Invoke-WhsCIMSBuildTask
             $cpuArg = '/maxcpucount:{0}' -f $TaskParameter['CpuCount']
         }
 
+        $projectFileName = $projectPath | Split-Path -Leaf
+        $logFilePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('msbuild.{0}.debug.log' -f $projectFileName)
         $msbuildArgs = Invoke-Command {
                                             ('/verbosity:{0}' -f $verbosity)
                                             $cpuArg
                                             $TaskParameter['Argument']
+                                            '/filelogger9'
+                                            ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
                                       } | Where-Object { $_ }
         $separator = '{0}VERBOSE:                   ' -f [Environment]::NewLine
         Write-Verbose -Message ('    Building')
