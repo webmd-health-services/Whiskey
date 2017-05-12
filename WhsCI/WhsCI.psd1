@@ -136,21 +136,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-### Enhancements
+### Bug Fixes
 
- * The `NUnit2` task can now run specific test categories. Use the `Include` parameter to list the categories you want to run.
- * The `NUnit2` task can now exclude specific test categories. Use the `Exclude` parameter to list the categories you don't want to run.
- * The `NUnit2` task now allows you to specify the .NET framework to run tests under via the `Framework` parameter. The default is .NET 4.0.
- * You can now pass custom arguments to `nunit-console.exe`. Use the `Argument` parameter to list the arguments you want to pass to `nunit-console.exe`.
- * The `NUnit2` task no longer calls `nunit-console.exe` with the `/noshadow`, `/domain`, or `/labels` parameters.
- * The `MSBuild` task now runs with minimal output by default and debug output on the build server.
- * Updated the `MSBuild` task to allow customizing the logging level with the `Verbosity` parameter.
- * Updated the `MSBuild` task to allow passing custom properties with the `Property` parameter.
- * Updated the `MSBuild` task to allow customizing the directory where build output is saved with the `OutputDirectory` parameter.
- * The `MSBuild` task now runs builds in multi-CPU (i.e. parallel) mode by default.
- * Updated the `MSBuild` task to allow customizing the number of CPUs (i.e. parallel "threads") to use during a build with the `CpuCount` parameter. To disable multi-CPU builds, set `CpuCount` to `1`.
- * Updated the `MSBuild` task to allow passing custom arguments to `msbuild.exe` with the `Argument` property.
- * Updated the `MSBuild` task to allow custom build targets with the `Target` parameter.
+* Fixed: some tasks fail when task paths use wildcards that match multiple items
 '@
 
         } # End of PSData hashtable
