@@ -9,6 +9,13 @@ $threwException = $null
 $assembly = $null
 $previousBuildRunAt = $null
 
+$assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
+foreach( $item in @( 'bin', 'obj', 'packages' ) )
+{
+    Get-ChildItem -Path $assemblyRoot -Filter $item -Recurse -Directory |
+        Remove-Item -Recurse -Force
+}
+
 function Get-BuildRoot
 {
     return (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
@@ -123,7 +130,7 @@ function WhenRunningTask
     
     try
     {
-        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean -Verbose | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean | ForEach-Object { Write-Debug $_ ; $_ }
     }
     catch
     {
@@ -437,7 +444,7 @@ Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
 Describe 'Invoke-WhsCIMSBuild.when passing custom arguments' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
-    ThenOutput -Is '\d+\.\d+\.\d+\.\d+'
+    ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
 Describe 'Invoke-WhsCIMSBuild.when passing a single custom argument' {
