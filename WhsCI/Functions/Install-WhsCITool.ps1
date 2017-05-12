@@ -78,32 +78,10 @@ function Install-WhsCITool
             return
         }
 
-        if( $Version )
+        $Version = Resolve-WhsCIPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
+        if( -not $Version )
         {
-            $TempVersion = [Version]$Version
-            if( $TempVersion -and ($TempVersion.Build -lt 0) )
-            {
-                $Version = [version]('{0}.{1}.0' -f $TempVersion.Major,$TempVersion.Minor)
-            }
-            $Version = Find-Module -Name $ModuleName -AllVersions | 
-                            Where-Object { $_.Version.ToString() -like $Version } | 
-                            Sort-Object -Property 'Version' -Descending | 
-                            Select-Object -First 1 | 
-                            Select-Object -ExpandProperty 'Version'
-            if( -not $Version )
-            {
-                Write-Error -Message ('Failed to find module {0} on the PowerShell Gallery. Either the {0} module does not exist, or it does but the expected version does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName)
-                return
-            }
-        }
-        else
-        {
-            $Version = Find-Module -Name $ModuleName | Select-Object -ExpandProperty 'Version'
-            if( -not $Version )
-            {
-                Write-Error -Message ('Unable to find any versions of the {0} module on the PowerShell Gallery. You can browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName)
-                return
-            }
+            return
         }
 
         Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
@@ -138,23 +116,11 @@ function Install-WhsCITool
     {        
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+        $version = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
         if( -not $Version )
         {
-            $version = & $nugetPath list ('packageid:{0}' -f $NuGetPackageName) |
-                            Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
-                            ForEach-Object { $Matches[1] }
-            if( -not $version )
-            {
-                Write-Error ("Unable to find latest version of package '{0}'." -f $NuGetPackageName)
-                return
-            }
-        }
-        elseif( [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
-        {
-            Write-Error "Wildcards are not allowed for NuGet packages yet because of a bug in the nuget.org search API (https://github.com/NuGet/NuGetGallery/issues/3274)."
             return
         }
-
 
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName

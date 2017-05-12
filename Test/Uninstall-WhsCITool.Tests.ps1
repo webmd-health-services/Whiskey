@@ -13,7 +13,7 @@ function GivenAnInstalledPowerShellModule
         [Switch]
         $LikePowerShell4,
 
-        [Version]
+        [String]
         $WithVersion = '4.0.3',
 
         [String]
@@ -21,7 +21,7 @@ function GivenAnInstalledPowerShellModule
     )
 
     $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-
+    $WithVersion = Resolve-WhsCIPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
         $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -39,17 +39,19 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [Version]
-        $WithVersion,
+        [String]
+        $WithVersion = '2.6.4',
 
         [String]
-        $WithName = 'NUnit.Runners',
+        $WithName = 'NUnit.Runners'
 
-        [string]
-        $Version = '2.6.4'
     )
-
-    $dirName = '{0}.{1}' -f $WithName, $Version
+    $WithVersion = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
+    if( -not $WithVersion )
+    {
+        return
+    }
+    $dirName = '{0}.{1}' -f $WithName, $WithVersion
     $installRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
 }
@@ -58,7 +60,7 @@ function WhenUninstallingPowerShellModule
 {
     [CmdletBinding()]
     param(
-        [Version]
+        [String]
         $WithVersion = '4.0.3',
 
         [String]
@@ -73,7 +75,7 @@ function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
     param(
-        [Version]
+        [String]
         $WithVersion = '2.6.4',
 
         [String]
@@ -96,13 +98,14 @@ function ThenPowerShellModuleUninstalled
         [Switch]
         $LikePowerShell4,
 
-        [version]
+        [String]
         $WithVersion = '4.0.3',
 
         [String]
         $WithName = 'Pester'
     )
 
+    $WithVersion = Resolve-WhsCIPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
         $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -128,7 +131,7 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [version]
+        [String]
         $WithVersion = '2.6.4',
 
         [String]
@@ -148,6 +151,46 @@ function ThenNuGetPackageUninstalled
     }
 }
 
+function ThenNuGetPackageNotUninstalled
+{
+        [CmdLetBinding()]
+    param(
+        [String]
+        $WithVersion = '2.6.4',
+
+        [String]
+        $WithName = 'NUnit.Runners',
+
+        [switch]
+        $PackageShouldExist,
+
+        [string]
+        $WithError
+    )
+
+    $Name = '{0}.{1}' -f $WithName, $Version
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
+    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
+
+    if( -not $PackageShouldExist )
+    {
+        It 'should never have installed the package' {
+            $uninstalledPath | Should not Exist
+        }
+    }
+    else
+    {
+        It 'should not have uninstalled the existing package' {
+            $uninstalledPath | Should Exist
+        }
+        Remove-Item -Path $uninstalledPath -Recurse -Force
+    }
+
+    It 'Should write errors' {
+        $Global:Error | Should Match $WithError
+    }
+}
+
 Describe 'Uninstall-WhsCITool.when given an NuGet Package' {
     GivenAnInstalledNuGetPackage
     WhenUninstallingNuGetPackage
@@ -164,4 +207,28 @@ Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5'
     GivenAnInstalledPowerShellModule -LikePowerShell5
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell5
+}
+
+Describe 'Uninstall-WhsCITool.when given an NuGet Package with an empty Version' {
+    GivenAnInstalledNuGetPackage -WithVersion ''
+    WhenUninstallingNuGetPackage -WithVersion ''
+    ThenNuGetPackageUnInstalled -WithVersion ''
+}
+
+Describe 'Uninstall-WhsCITool.when given an NuGet Package with a wildcard Version' {
+    GivenAnInstalledNuGetPackage -WithVersion '2.*'
+    WhenUninstallingNuGetPackage -WithVersion '2.*'
+    ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+}
+
+Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5 witn an empty Version' {
+    GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion ''
+    WhenUninstallingPowerShellModule -WithVersion ''
+    ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion ''
+}
+
+Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5 witn a wildcard Version' {
+    GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '4.*'
+    WhenUninstallingPowerShellModule -WithVersion '4.*'
+    ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'
 }

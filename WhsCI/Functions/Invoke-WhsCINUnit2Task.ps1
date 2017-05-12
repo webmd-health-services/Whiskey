@@ -46,25 +46,26 @@ function Invoke-WhsCINUnit2Task
      )    
   
     Process
-    {
-              
+    {              
         Set-StrictMode -version 'latest'        
+     
         $package = 'NUnit.Runners'
         $version = '2.6.4'
+        $openCoverVersionArg  = @{}
+        $reportGeneratorVersionArg = @{}
+        if( $OpenCoverVersion )
+        {
+            $openCoverVersionArg['Version'] = $OpenCoverVersion
+        }
+        if( $ReportGeneratorVersion )
+        {
+            $reportGeneratorVersionArg['Version'] = $ReportGeneratorVersion
+        }
+
         if( $Clean )
         {
-            $optionalOpenCoverArgs = @{}
-            $optionalReportGeneratorArgs = @{}
-            if( $OpenCoverVersion )
-            {
-                $optionalOpenCoverArgs['Version'] = $OpenCoverVersion
-            }
-            if( $ReportGeneratorVersion )
-            {
-                $optionalReportGeneratorArgs['Version'] = $ReportGeneratorVersion
-            }
-            Uninstall-WhsCITool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @optionalReportGeneratorArgs
-            Uninstall-WhsCITool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @optionalOpenCoverArgs
+            Uninstall-WhsCITool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+            Uninstall-WhsCITool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
             Uninstall-WhsCITool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
             return
         }
@@ -116,13 +117,7 @@ function Invoke-WhsCINUnit2Task
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
 
-        $optionalArgs = @{}
-        
-        if( $OpenCoverVersion )
-        {
-            $optionalArgs['Version'] = $OpenCoverVersion
-        }
-        $openCoverPath = Install-WhsCITool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @optionalArgs
+        $openCoverPath = Install-WhsCITool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
         if( -not (Test-Path -Path $openCoverPath -PathType Container))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
@@ -130,12 +125,7 @@ function Invoke-WhsCINUnit2Task
         $openCoverPath = Join-Path -Path $openCoverPath -ChildPath 'tools'
         $openCoverConsolePath = Join-Path -Path $openCoverPath -ChildPath 'OpenCover.Console.exe' -Resolve
 
-        $optionalArgs.clear()
-        if( $ReportGeneratorVersion )
-        {
-            $optionalArgs['Version'] = $ReportGeneratorVersion
-        }
-        $reportGeneratorPath = Install-WhsCITool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @optionalArgs
+        $reportGeneratorPath = Install-WhsCITool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
         if( -not (Test-Path -Path $reportGeneratorPath -PathType Container))
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
@@ -149,14 +139,15 @@ function Invoke-WhsCINUnit2Task
 
         $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
         $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
-        Write-Verbose -Message ('  Path        {0}' -f ($Path -join $separator))
-        Write-Verbose -Message ('  Framework   {0}' -f $frameworkParam)
-        Write-Verbose -Message ('  Include     {0}' -f $includeParam)
-        Write-Verbose -Message ('  Exclude     {0}' -f $excludeParam)
-        Write-Verbose -Message ('  Argument    {0}' -f ($extraArgs -join $separator))
-        Write-Verbose -Message ('              /xml={0}' -f $reportPath)
-        Write-Verbose -Message ('  Filter      {0}' -f $CoverageFilter -join ' ')
-        Write-Verbose -Message ('  Output      {0}' -f $openCoverReport)
+        Write-Verbose -Message ('  Path                {0}' -f ($Path -join $separator))
+        Write-Verbose -Message ('  Framework           {0}' -f $frameworkParam)
+        Write-Verbose -Message ('  Include             {0}' -f $includeParam)
+        Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
+        Write-Verbose -Message ('  Argument            {0}' -f ($extraArgs -join $separator))
+        Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
+        Write-Verbose -Message ('  Filter              {0}' -f $CoverageFilter -join ' ')
+        Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
+        Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $DisableCodeCoverage)
 
         $pathString = ($path -join " ")
         $extraArgString = ($extraArgs -join " ")
@@ -175,10 +166,10 @@ function Invoke-WhsCINUnit2Task
         else
         {
             & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
-        }
-        if( $LastExitCode )
-        {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+            if( $LastExitCode )
+            {
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+            }
         }
     }
 

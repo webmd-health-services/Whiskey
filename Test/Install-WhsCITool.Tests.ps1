@@ -168,6 +168,10 @@ Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
     Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
 }
 
+Describe 'Install-WhsCITool.when given a NuGet Package with an empty version string' {
+    Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
+}
+
 Describe 'Install-WhsCITool.when installing an already installed NuGet package' {
     
     $Global:Error.Clear()
@@ -197,6 +201,16 @@ Describe 'Install-WhsCITool.when installing an already installed module' {
 
 Describe 'Install-WhsCITool.when omitting BUILD number' {
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
+}
+
+Describe 'Install-WhsCITool.when omitting Version' {
+    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '' -ModuleName 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $actualVersion -ForRealsies
+}
+
+Describe 'Install-WhsCITool.when using wildcard version' {
+    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '0.*' -ModuleName 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $actualVersion -ForRealsies
 }
 
 Describe 'Install-WhsCITool.when installing a module under PowerShell 4' {
