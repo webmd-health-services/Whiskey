@@ -139,6 +139,17 @@
 ### Enhancements
 
  * MSBuild task now defaults to minimal output on build servers.
+ * The Pester3 and Pester4 tasks now save the version of Pester downloaded to a `Modules` directory in your build root.
+ * Added ability to publish application packages to multiple ProGet feeds.
+ * The NUnit2 task now saves the NUnit runners package into the `packages` directory in your build root.
+ * The Pester3, Pester4, and NUnit2 tasks now clean the packages they download when a build is run in clean mode (i.e. with the `Clean` switch).
+ * **BREAKING**: The New-WhsCIContext function's interface has changed. 
+   * The `ProGetNuGetFeed` parameter replaced with `NuGetFeedUri`, which should be the URI to the NuGet feed NuGet packages should get published to.
+   * The `ProGetNpmFeed` parameter replaced with `NpmFeedUri`, which should be the URI to the NPM feed where NPM packages should be published to.
+   * The `ProGetUri` parameter was removed.
+   * Added `ProGetAppFeedUri` parameter for the URI to universal ProGet feeds to publish packages to. Supports multiple URIs.
+   * Added `ProGetAppFeedName` parameter for the name of the app feed where packages should be published. Defaults to `Apps`. If publishing to multiple ProGet instances, the feed names must be the same across the two instances.  
+   * Added `PowerShellFeedUri` parameter for the URI to the PowerShell feed where PowerShell modules should be published.
 '@
 
         } # End of PSData hashtable
