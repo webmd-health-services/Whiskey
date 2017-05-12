@@ -171,6 +171,14 @@ function ThenAssembliesAreNotVersioned
     }
 }
 
+function ThenDebugOutputLogged
+{
+    $buildRoot = Get-BuildRoot
+    It 'should write a debug log' {
+        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.debug.log') | should -Exist
+    }
+}
+
 function ThenBinsAreEmpty
 {
     It 'should remove assemblies directories' {
@@ -355,6 +363,7 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects as a developer' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreNotVersioned
+    ThenDebugOutputLogged
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when building multiple real projects as a developer' {
@@ -371,6 +380,8 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects as build server' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
+    ThenDebugOutputLogged
+
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when compilation fails' {
