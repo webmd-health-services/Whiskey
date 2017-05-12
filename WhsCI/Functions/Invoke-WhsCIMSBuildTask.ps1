@@ -108,10 +108,6 @@ function Invoke-WhsCIMSBuildTask
         }
 
         $verbosity = 'm'
-        if( (Test-WhsCIRunByBuildServer) )
-        {
-            $verbosity = 'd'
-        }
         if( $TaskParameter['Verbosity'] )
         {
             $verbosity = $TaskParameter['Verbosity']

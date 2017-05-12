@@ -136,9 +136,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-### Bug Fixes
+### Enhancements
 
-* Fixed: some tasks fail when task paths use wildcards that match multiple items
+ * MSBuild task now defaults to minimal output on build servers.
 '@
 
         } # End of PSData hashtable

@@ -432,7 +432,7 @@ Describe 'Invoke-WhsCIMSBuildTask.when run by developer using default verbosity 
 Describe 'Invoke-WhsCIMSBuildTask.when run by build server using default verbosity output level' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
-    ThenOutputIsDebug
+    ThenOutputIsMinimal
 }
 
 Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
