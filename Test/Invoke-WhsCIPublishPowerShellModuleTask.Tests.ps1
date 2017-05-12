@@ -110,7 +110,7 @@ function Invoke-Publish
 
     if( -not $withNoProgetURI )
     {
-        $publishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.Uri), $ForFeedName
+        $publishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
     }
     if( $withoutRegisteredRepo )
     {
@@ -209,7 +209,7 @@ function Assert-ModuleRegistered
         }
     }
     
-    $expectedPublishLocation = New-Object 'Uri' ([uri]$TaskContext.ProgetSession.Uri), $ExpectedFeedName
+    $expectedPublishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
     It ('should register the Module')  {
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
@@ -356,7 +356,7 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with no ProGet URI.'{
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $context.ProGetSession = 'foo'
-    $errorMatch = 'The property ''Uri'' cannot be found on this object. Verify that the property exists.'
+    $errorMatch = 'The property ''PowerShellFeedUri'' cannot be found on this object. Verify that the property exists.'
     
     Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
@@ -380,7 +380,7 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with non-existent path parame
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsPublishPowerShellModuleTask. with non-directory path parameter' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with non-directory path parameter' {
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $errorMatch = 'must point to a directory'
@@ -389,7 +389,7 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. with non-directory path paramet
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest with custom manifestPath and authentic manifest file' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. reversion manifest with custom manifestPath and authentic manifest file' {
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $existingManifestPath = (Join-Path -path (Split-Path $PSScriptRoot -Parent ) -ChildPath 'WhsCI\WhsCI.psd1')
@@ -403,7 +403,7 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest with custom 
     Assert-ManifestVersion -TaskContext $context -manifestPath $manifestPath
 }
 
-Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest without custom manifestPath' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. reversion manifest without custom manifestPath' {
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     Invoke-Publish -withoutRegisteredRepo -TaskContext $context
@@ -412,7 +412,7 @@ Describe 'Invoke-WhsPublishPowerShellModuleTask. reversion manifest without cust
     Assert-ManifestVersion -TaskContext $context
 }
 
-Describe 'Invoke-WhsPublishPowerShellModuleTask. with invalid manifestPath' {
+Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with invalid manifestPath' {
     Initialize-Test
     $context = New-WhsCITestContext -ForBuildServer
     $manifestPath = 'fubar'

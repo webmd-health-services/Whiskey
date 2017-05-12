@@ -94,16 +94,31 @@ function Invoke-PesterTest
         $WithMissingPath,
 
         [String]
-        $ShouldFailWithMessage
+        $ShouldFailWithMessage,
+
+        [Switch]
+        $WithClean,
+
+        [Switch]
+        $WithInvalidVersion
     )
 
     $defaultVersion = '4.0.3'
     $failed = $false
     $context = New-WhsCIPesterTestContext
     $Global:Error.Clear()
+    if ( $WithInvalidVersion )
+    {
+        $Version = '4.0.999'
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' `
+                                      -MockWith { return $False }`
+                                      -ParameterFilter { $Path -eq $context.BuildRoot }
+    }
     if ( $WithMissingPath )
     {
-        $taskParameter = @{}
+        $taskParameter = @{ 
+                        Version = $defaultVersion 
+                        }
     }
     elseif( -not $Version -or $WithMissingVersion )
     {
@@ -121,10 +136,17 @@ function Invoke-PesterTest
                                     $Path
                                 )
                         }
+    }
+
+    $optionalParams = @{ }
+    if( $WithClean )
+    {
+        $optionalParams['Clean'] = $True
+        Mock -CommandName 'Uninstall-WhsCITool' -ModuleName 'WhsCI' -MockWith { return $true }
     }    
     try
     {
-        Invoke-WhsCIPester4Task -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhsCIPester4Task -TaskContext $context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -149,8 +171,41 @@ function Invoke-PesterTest
     }
     else
     {
+        if( -not $Version )
+        {
+            $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
+            $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
+            $Version = $latestPester.Version 
+            $Version = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
+        }
+        else
+        {
+            $Version = $Version | ConvertTo-WhsCISemanticVersion
+            $Version = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.patch)
+        }
+        $pesterDirectoryName = 'Pester.{0}' -f $Version 
+        if( $PSVersionTable.PSVersion.Major -ge 5 )
+        {
+            $pesterDirectoryName = 'Pester\{0}' -f $Version
+        }
+        $pesterDirectoryName = 'Modules\{0}' -f $pesterDirectoryName
+
+        $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
+
         It 'should pass' {
             $failed | Should Be $false
+        }
+        if( -not $WithClean )
+        {
+            It 'Should pass the build root to the Install tool' {
+                $pesterPath | Should Exist
+           }
+        }
+        else
+        {
+            It 'should attempt to uninstall Pester' {
+                Assert-MockCalled -CommandName 'Uninstall-WhsCITool' -Times 1 -ModuleName 'WhsCI'
+            }            
         }
     }
 }
@@ -182,15 +237,15 @@ Describe 'Invoke-WhsCIPester4Task.when run multiple times in the same build' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild when missing Path Configuration' {
+Describe 'Invoke-WhsCIPester4Task.when missing Path Configuration' {
     $failureMessage = 'Element ''Path'' is mandatory.'
-    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage 
+    Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage  -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIBuild when version parsed from YAML' {
+Describe 'Invoke-WhsCIPester4Task.when version parsed from YAML' {
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
     $failureMessage = 'the major version number must always be ''4'''
-    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -Version ([datetime]'3/4/2003') -ShouldFailWithMessage $failureMessage
+    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -Version ([datetime]'3/4/2003') -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester4Task.when missing Version configuration' {
@@ -204,9 +259,8 @@ Describe 'Invoke-WhsCIPester4Task.when Version property isn''t a version' {
 }
 
 Describe 'Invoke-WhsCIPester4Task.when version of tool doesn''t exist' {
-    $version = '4.0.999'
     $failureMessage = 'does not exist'
-    Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+    Invoke-PesterTest -Path $pesterPassingPath -WithInvalidVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhsCIPester4Task.when a task path is absolute' {
@@ -229,4 +283,8 @@ Describe 'Invoke-WhsCIPester4Task.when version of tool is less than 4.*' {
     $version = '3.4.3'
     $failureMessage = 'the major version number must always be ''4'''
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
+}
+
+Describe 'Invoke-WhsCIPester4Task.when running passing Pester tests with Clean Switch' {
+     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }

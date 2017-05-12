@@ -19,10 +19,7 @@ function Invoke-PowershellInstall
 
         [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
         [Switch]
-        $LikePowerShell4,
-
-        [Switch]
-        $UsingDefaultDownloadRoot
+        $LikePowerShell4
     )
 
     if( -not $ActualVersion )
@@ -63,13 +60,9 @@ function Invoke-PowershellInstall
         }.GetNewClosure()
     }
 
-    $downloadRootParam = @{ }
-    if( -not $UsingDefaultDownloadRoot )
-    {
-        $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
-    }
-
-    $result = Install-WhsCITool @downloadRootParam -ModuleName $ForModule -Version $Version
+    $optionalParams = @{ }
+    $Global:Error.Clear()
+    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
@@ -81,6 +74,12 @@ function Invoke-PowershellInstall
                 Write-Debug -Message ('RequiredVersion  expected  {0}' -f $ActualVersion)
                 Write-Debug -Message ('                 actual    {0}' -f $RequiredVersion)
                 $Name -eq $ForModule -and $RequiredVersion -eq $ActualVersion
+            }
+        }
+
+        It 'should put the modules in $BuildRoot\Modules' {
+            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'WhsCI' -ParameterFilter {
+                $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
             }
         }
     }
@@ -117,29 +116,19 @@ function Invoke-NuGetInstall
         $Package,
         $Version,
 
-        [Switch]
-        $UsingDefaultDownloadRoot,
-
         [switch]
         $invalidPackage
     )
 
-    $downloadRootParam = @{ }
-    if( -not $UsingDefaultDownloadRoot )
-    {
-        $downloadRootParam['DownloadRoot'] = $TestDrive.FullName
-    }
-    $result = Install-WhsCITool @downloadRootParam -NugetPackageName $Package -Version $Version
+    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
             It 'should exist' {                    
-                $result | Should Exist
+                $result | Should -Exist
             }
-            It 'should put it in the right place' {
-                $expectedRegex = 'Packages\\{0}\.{1}' -f [regex]::Escape($Package),[regex]::Escape($Version)
-                
-                $result | Should Match $expectedRegex
+            It 'should get installed into $BuildRoot\packages' {
+                $result | Should -BeLike ('{0}\packages\*' -f $TestDrive.FullName)
             }
         }        
     }
@@ -155,8 +144,6 @@ function Invoke-NuGetInstall
         }
     }
 }
-
-#Need to work out test cases for happy path, bad name/version number that call above function.
 
 Describe 'Install-WhsCITool.when given a NuGet Package' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
@@ -209,30 +196,10 @@ Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
 }
 
-Describe 'Install-WhsCITool.when using default DownloadRoot' {
-    $defaultDownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
-    Mock -CommandName 'Join-Path' `
-         -ModuleName 'WhsCI' `
-         -MockWith { return Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath $ChildPath } `
-         -ParameterFilter { $Path -eq $defaultDownloadRoot }.GetNewClosure()
-
-    Invoke-PowershellInstall -ForModule 'Snafu' -Version '3939.9393' -ActualVersion '3939.9393.0' -LikePowerShell4 -UsingDefaultDownloadRoot
-
-    It 'should use LOCALAPPDATA for default install location' {
-        Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq $defaultDownloadRoot }
-    }
-}
-
 Describe 'Install-WhsCITool.when version doesn''t exist' {
     $Global:Error.Clear()
 
-    $pesterRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\Modules\Pester'
-    '.3.0.0','\3.0.0' | 
-        ForEach-Object { '{0}{1}' -f $pesterRoot,$_ } | 
-        Where-Object { Test-Path -Path $_ -PathType Container } |
-        Remove-Item -Recurse -Force 
-
-    $result = Install-WhsCITool -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
     
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty

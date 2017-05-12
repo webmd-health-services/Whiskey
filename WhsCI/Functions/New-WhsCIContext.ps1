@@ -73,25 +73,25 @@ function New-WhsCIContext
         # The credential to use when authenticating to ProGet. Required if running under a build server.
         $ProGetCredential,
 
-        [Parameter(Mandatory=$true)]
+        [uri[]]
+        # The URI to ProGet. Used to get Application Packages
+        $ProGetAppFeedUri,
+
+        [string]
+        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
+        $ProGetAppFeedName = 'Apps',
+
         [uri]
-        # The URI to ProGet. Used to get NuGet packages, NPM packages, etc.
-        $ProGetUri,
-
-        [Parameter(ParameterSetName='ByBuildServer')]
-        [string]
-        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetAppFeed = 'upack/Apps',
-
-        [Parameter(ParameterSetName='ByBuildServer')]
-        [string]
-        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetNuGetFeed = 'nuget/NuGet',
-
-        [Parameter(ParameterSetName='ByBuildServer')]
-        [string]
-        # The name/path to the feed in ProGet where NPM packages should be uploaded to and downloaded from. The default is `npm/npm`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetNpmFeed = 'npm/npm',
+        # The URI to ProGet to get NuGet Packages
+        $NuGetFeedUri,
+        
+        [uri]
+        # The URI to ProGet to get PowerShell Modules
+        $PowerShellFeedUri,
+        
+        [uri]
+        # The URI to ProGet to get npm Packages
+        $NpmFeedUri,
 
         [string]
         # The place where downloaded tools should be cached. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
@@ -112,21 +112,6 @@ function New-WhsCIContext
         $config = @{} 
     }
 
-    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion -ErrorAction Ignore
-    if( -not $semVersion )
-    {
-        throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config['Version'])
-    }
-
-    $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
-    $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    if( $semVersion.Prerelease )
-    {
-        $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
-    }
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
-
     if( -not $DownloadRoot )
     {
         $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
@@ -146,20 +131,20 @@ function New-WhsCIContext
 
     $bitbucketConnection = $null
     $buildmasterSession = $null
-    $progetSession = $null
-    
+    $progetSession = $null   
     $progetSession = [pscustomobject]@{
-                                            Uri = $ProGetUri;
+                                            
                                             Credential = $null;
-                                            AppFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetAppFeed);
-                                            NpmFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNpmFeed);
-                                            NuGetFeedUri = (New-Object -TypeName 'Uri' -ArgumentList $ProGetUri,$ProGetNuGetFeed);
-                                            AppFeed = $ProGetAppFeed;
-                                            NpmFeed = $ProGetNpmFeed;
-                                            NuGetFeed = $ProGetNuGetFeed;                                            
+                                            AppFeedUri = $ProGetAppFeedUri
+                                            AppFeedName = $ProGetAppFeedName;
+                                            NpmFeedUri = $NpmFeedUri;
+                                            NuGetFeedUri = $NuGetFeedUri;
+                                            PowerShellFeedUri = $PowerShellFeedUri;                                           
                                         }
+
     $publish = $false
     $byBuildServer = Test-WhsCIRunByBuildServer
+    $prereleaseInfo = ''
     if( $byBuildServer )
     {
         if( $PSCmdlet.ParameterSetName -ne 'ByBuildServer' )
@@ -178,7 +163,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
 "@)
         }
         
-        $branch = (Get-Item -Path 'env:GIT_BRANCH').Value -replace '^origin/',''
+        $branch = Get-WhsCIBranch
         $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
         {
@@ -201,7 +186,52 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
         $buildmasterSession = New-BMSession -Uri $BuildMasterUri -ApiKey $BuildMasterApiKey
         $progetSession.Credential = $ProGetCredential
+
+
+        if( $config['PrereleaseMap'] )
+        {
+            $idx = 0
+            foreach( $item in $config['PrereleaseMap'] )
+            {
+                if( $item -isnot [hashtable] -or $item.Count -ne 1 )
+                {
+                    throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a regular expression. The property''s value should be the prerelease identifier to add to the version number on branches that match the regular expression. For example,
+    
+    PrereleaseMap:
+    - "\balpha\b": "alpha"
+    - "\brc\b": "rc"
+    ' -f $ConfigurationPath,$idx)
+                }
+
+                $regex = $item.Keys | Select-Object -First 1
+                if( $branch -match $regex )
+                {
+                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhsCIBuildID)
+                }
+                $idx++
+            }
+        }
     }
+
+    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion -ErrorAction Ignore
+    if( -not $semVersion )
+    {
+        throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config['Version'])
+    }
+
+    if( $prereleaseInfo )
+    {
+        $semVersion = New-Object 'SemVersion.SemanticVersion' $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$prereleaseInfo,$semVersion.Build
+    }
+
+    $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
+    $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    if( $semVersion.Prerelease )
+    {
+        $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
+    }
+    $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
 
     $buildRoot = $ConfigurationPath | Split-Path
     $context = [pscustomobject]@{

@@ -77,7 +77,7 @@ function Invoke-WhsCINUnit2Task
         }
         $frameworkParam = '/framework={0}' -f $frameworkParam
         
-        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version
+        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version -BuildRoot $TaskContext.BuildRoot
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
