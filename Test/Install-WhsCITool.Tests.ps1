@@ -43,6 +43,17 @@ function Invoke-PowershellInstall
             $LikePowerShell5 = $false
         }
 
+        Mock -CommandName 'Find-Module' -ModuleName 'whsCI' -MockWith {
+            return $module = @(
+                                 [pscustomobject]@{
+                                                Version = [Version]$Version                                            
+                                            }
+                                 [pscustomobject]@{
+                                                Version = '0.1.1'
+                                            }
+                              )            
+        }
+
         Mock -CommandName 'Save-Module' -ModuleName 'WhsCI' -MockWith {
             $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
             if( $LikePowerShell4 )
@@ -62,7 +73,7 @@ function Invoke-PowershellInstall
 
     $optionalParams = @{ }
     $Global:Error.Clear()
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
@@ -77,7 +88,7 @@ function Invoke-PowershellInstall
             }
         }
 
-        It 'should put the modules in $BuildRoot\Modules' {
+        It 'should put the modules in $DownloadRoot\Modules' {
             Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'WhsCI' -ParameterFilter {
                 $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
             }
@@ -120,14 +131,14 @@ function Invoke-NuGetInstall
         $invalidPackage
     )
 
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
             It 'should exist' {                    
                 $result | Should -Exist
             }
-            It 'should get installed into $BuildRoot\packages' {
+            It 'should get installed into $DownloadRoot\packages' {
                 $result | Should -BeLike ('{0}\packages\*' -f $TestDrive.FullName)
             }
         }        
@@ -155,6 +166,10 @@ Describe 'Install-WhsCITool.when NuGet Pack is bad' {
 
 Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
     Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
+}
+
+Describe 'Install-WhsCITool.when given a NuGet Package with an empty version string' {
+    Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
 }
 
 Describe 'Install-WhsCITool.when installing an already installed NuGet package' {
@@ -188,6 +203,16 @@ Describe 'Install-WhsCITool.when omitting BUILD number' {
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
 }
 
+Describe 'Install-WhsCITool.when omitting Version' {
+    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '' -ModuleName 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $actualVersion -ForRealsies
+}
+
+Describe 'Install-WhsCITool.when using wildcard version' {
+    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '0.*' -ModuleName 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $actualVersion -ForRealsies
+}
+
 Describe 'Install-WhsCITool.when installing a module under PowerShell 4' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell4
 }
@@ -196,10 +221,25 @@ Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
 }
 
-Describe 'Install-WhsCITool.when version doesn''t exist' {
+Describe 'Install-WhsCITool.when version of module doesn''t exist' {
     $Global:Error.Clear()
 
-    $result = Install-WhsCITool -BuildRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+    
+    It 'shouldn''t return anything' {
+        $result | Should BeNullOrEmpty
+    }
+
+    It 'should write an error' {
+        $Global:Error.Count | Should Be 1
+        $Global:Error[0] | Should Match 'failed to find module'
+    }
+}
+
+Describe 'Install-WhsCITool.for non-existent module when version parameter is empty' {
+    $Global:Error.Clear()
+
+    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
     
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
@@ -207,6 +247,6 @@ Describe 'Install-WhsCITool.when version doesn''t exist' {
 
     It 'should write an error' {
         $Global:Error.Count | Should Be 2
-        $Global:Error[0] | Should Match 'failed to download'
+        $Global:Error[0] | Should Match 'Unable to find any versions'
     }
 }
