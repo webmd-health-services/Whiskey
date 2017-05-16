@@ -92,6 +92,8 @@
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',
+                            'Resolve-WhsCINuGetPackageVersion',
+                            'Resolve-WhsCIPowerShellModuleVersion',
                             'Resolve-WhsCITaskPath',
                             'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer',
