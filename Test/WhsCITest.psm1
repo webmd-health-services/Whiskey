@@ -170,20 +170,13 @@ function New-WhsCITestContext
     $NpmFeedUri = 'https://proget.example.com/npm'
     $NuGetFeedUri = 'https://proget.example.com/nuget'
     $PowerShellFeedUri = 'https://proget.example.com/powershell'
+
     if( $UseActualProGet )
     {
-        
         $progetUris = @('https://proget.dev.webmd.com')
         $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm'
         $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget'
         $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh'
-        
-        <#
-        $progetUris = @('https://proget.example.com')
-        $NpmFeedUri = 'https://proget.example.com'
-        $NuGetFeedUri = 'https://proget.example.com'
-        $PowerShellFeedUri = 'https://proget.example.com'
-        #>
     }
 
     $optionalArgs = @{ }
@@ -254,6 +247,7 @@ function New-WhsCITestContext
 
     if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
     {
+        Remove-Item -Path $context.OutputDirectory -Recurse -Force
         $context.OutputDirectory = $ForOutputDirectory
         New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     }

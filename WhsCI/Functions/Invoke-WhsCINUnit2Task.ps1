@@ -30,19 +30,46 @@ function Invoke-WhsCINUnit2Task
         $TaskParameter,
 
         [Switch]
-        $Clean
+        $Clean,
+
+        [Version]
+        $OpenCoverVersion,
+
+        [Version]
+        $ReportGeneratorVersion,
+
+        [Switch]
+        $DisableCodeCoverage,
+
+        [String[]]
+        $CoverageFilter
      )    
   
     Process
-    {
-        if( $Clean )
-        {
-            return
-        }
-          
+    {              
         Set-StrictMode -version 'latest'        
+     
         $package = 'NUnit.Runners'
         $version = '2.6.4'
+        $openCoverVersionArg  = @{}
+        $reportGeneratorVersionArg = @{}
+        if( $OpenCoverVersion )
+        {
+            $openCoverVersionArg['Version'] = $OpenCoverVersion
+        }
+        if( $ReportGeneratorVersion )
+        {
+            $reportGeneratorVersionArg['Version'] = $ReportGeneratorVersion
+        }
+
+        if( $Clean )
+        {
+            Uninstall-WhsCITool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+            Uninstall-WhsCITool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
+            Uninstall-WhsCITool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
+            return
+        }
+
         # Be sure that the Taskparameter contains a 'Path'.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
@@ -61,13 +88,13 @@ function Invoke-WhsCINUnit2Task
         $includeParam = $null
         if( $TaskParameter.ContainsKey('Include') )
         {
-            $includeParam = '/include={0}' -f ($TaskParameter['Include'] -join ',')
+            $includeParam = '/include=\"{0}\"' -f ($TaskParameter['Include'] -join ',')
         }
         
         $excludeParam = $null
         if( $TaskParameter.ContainsKey('Exclude') )
         {
-            $excludeParam = '/exclude={0}' -f ($TaskParameter['Exclude'] -join ',')
+            $includeParam = '/exclude=\"{0}\"' -f ($TaskParameter['Exclude'] -join ',')
         }
 
         $frameworkParam = '4.0'
@@ -76,8 +103,8 @@ function Invoke-WhsCINUnit2Task
             $frameworkParam = $TaskParameter['Framework']
         }
         $frameworkParam = '/framework={0}' -f $frameworkParam
-        
-        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version -BuildRoot $TaskContext.BuildRoot
+      
+        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
@@ -90,18 +117,59 @@ function Invoke-WhsCINUnit2Task
             Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
 
+        $openCoverPath = Install-WhsCITool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+        if( -not (Test-Path -Path $openCoverPath -PathType Container))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+        }
+        $openCoverPath = Join-Path -Path $openCoverPath -ChildPath 'tools'
+        $openCoverConsolePath = Join-Path -Path $openCoverPath -ChildPath 'OpenCover.Console.exe' -Resolve
+
+        $reportGeneratorPath = Install-WhsCITool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+        if( -not (Test-Path -Path $reportGeneratorPath -PathType Container))
+        {
+            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+        }
+        $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
+        $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
+
+        $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
+        New-Item -Path $coverageReportDir -ItemType 'Directory' -Force | Out-Null
+        $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
+
         $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
         $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
-        Write-Verbose -Message ('  Path        {0}' -f ($Path -join $separator))
-        Write-Verbose -Message ('  Framework   {0}' -f $frameworkParam)
-        Write-Verbose -Message ('  Include     {0}' -f $includeParam)
-        Write-Verbose -Message ('  Exclude     {0}' -f $excludeParam)
-        Write-Verbose -Message ('  Argument    {0}' -f ($extraArgs -join $separator))
-        Write-Verbose -Message ('              /xml={0}' -f $reportPath)
-        & $nunitConsolePath $Path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
-        if( $LastExitCode )
+        Write-Verbose -Message ('  Path                {0}' -f ($Path -join $separator))
+        Write-Verbose -Message ('  Framework           {0}' -f $frameworkParam)
+        Write-Verbose -Message ('  Include             {0}' -f $includeParam)
+        Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
+        Write-Verbose -Message ('  Argument            {0}' -f ($extraArgs -join $separator))
+        Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
+        Write-Verbose -Message ('  Filter              {0}' -f $CoverageFilter -join ' ')
+        Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
+        Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $DisableCodeCoverage)
+
+        $pathString = ($path -join " ")
+        $extraArgString = ($extraArgs -join " ")
+        $coverageFilterString = ($CoverageFilter -join " ")
+        $nunitArgs = "${pathString} /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
+        if( -not $DisableCodeCoverage )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+            & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode'
+            $testsFailed = $LastExitCode;
+            & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir"
+            if( $LastExitCode -or $testsFailed )
+            {
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
+            }
+        }
+        else
+        {
+            & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
+            if( $LastExitCode )
+            {
+                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+            }
         }
     }
 
