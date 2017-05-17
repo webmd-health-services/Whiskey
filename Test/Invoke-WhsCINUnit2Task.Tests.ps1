@@ -155,6 +155,19 @@ function Invoke-NUnitTask
                               }
         }
 
+        if( $WithDisabledCodeCoverage )
+        {
+            $taskParameter.Add('DisableCodeCoverage', $True)
+            #$optionalParams['DisableCodeCoverage'] = $True
+        }
+        if( $CoverageFilter )
+        {
+            #$optionalParams['CoverageFilter'] = $CoverageFilter
+            $taskParameter.Add('CoverageFilter', $CoverageFilter)
+        }
+        $taskParameter.Add('OpenCoverVersion', $WithOpenCoverVersion)
+        $taskParameter.Add('ReportGeneratorVersion', $WithReportGeneratorVersion)
+
         $optionalParams = @{ }
         if( $WhenRunningClean )
         {
@@ -162,15 +175,6 @@ function Invoke-NUnitTask
             #check to be sure that we are only uninstalling the desired version of particular packages on clean
             Install-WhsCITool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -DownloadRoot $context.BuildRoot
         }
-        if( $WithDisabledCodeCoverage )
-        {
-            $optionalParams['DisableCodeCoverage'] = $True
-        }
-        if( $CoverageFilter )
-        {
-            $optionalParams['CoverageFilter'] = $CoverageFilter
-        }
-
 
         $Global:Error.Clear()
         try
