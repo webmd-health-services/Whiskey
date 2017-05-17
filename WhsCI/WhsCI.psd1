@@ -138,9 +138,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-### Enhancements
+### Bug Fixes
 
- * NUnit2 task now runs tests under OpenCover, a code coverage tool. See https://whsconfluence.webmd.net/display/WHS/WhsCI+Tasks#WhsCITasks-NUnit2 for documentation.
+ * Fixed: NUnit2 task is ignoring the `OpenCoverVersion`, `ReportGeneratorVersion`, `DisableCodeCoverage`, and `CoverageFilter` parameters.
 '@
 
         } # End of PSData hashtable
