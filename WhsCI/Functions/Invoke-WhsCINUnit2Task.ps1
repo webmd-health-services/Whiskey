@@ -30,19 +30,7 @@ function Invoke-WhsCINUnit2Task
         $TaskParameter,
 
         [Switch]
-        $Clean,
-
-        [Version]
-        $OpenCoverVersion,
-
-        [Version]
-        $ReportGeneratorVersion,
-
-        [Switch]
-        $DisableCodeCoverage,
-
-        [String[]]
-        $CoverageFilter
+        $Clean
      )    
   
     Process
@@ -53,13 +41,13 @@ function Invoke-WhsCINUnit2Task
         $version = '2.6.4'
         $openCoverVersionArg  = @{}
         $reportGeneratorVersionArg = @{}
-        if( $OpenCoverVersion )
+        if( $TaskParameter['OpenCoverVersion'] )
         {
-            $openCoverVersionArg['Version'] = $OpenCoverVersion
+            $openCoverVersionArg['Version'] = $TaskParameter['OpenCoverVersion']
         }
-        if( $ReportGeneratorVersion )
+        if( $TaskParameter['ReportGeneratorVersion'] )
         {
-            $reportGeneratorVersionArg['Version'] = $ReportGeneratorVersion
+            $reportGeneratorVersionArg['Version'] = $TaskParameter['ReportGeneratorVersion']
         }
 
         if( $Clean )
@@ -145,15 +133,15 @@ function Invoke-WhsCINUnit2Task
         Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
         Write-Verbose -Message ('  Argument            {0}' -f ($extraArgs -join $separator))
         Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
-        Write-Verbose -Message ('  Filter              {0}' -f $CoverageFilter -join ' ')
+        Write-Verbose -Message ('  Filter              {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
         Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
-        Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $DisableCodeCoverage)
+        Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $TaskParameter['DisableCodeCoverage'])
 
         $pathString = ($path -join " ")
         $extraArgString = ($extraArgs -join " ")
-        $coverageFilterString = ($CoverageFilter -join " ")
+        $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
         $nunitArgs = "${pathString} /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
-        if( -not $DisableCodeCoverage )
+        if( -not $TaskParameter['DisableCodeCoverage'] )
         {
             & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode'
             $testsFailed = $LastExitCode;
