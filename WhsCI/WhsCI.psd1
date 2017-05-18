@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.3.0'
+    ModuleVersion = '0.7.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -140,7 +140,7 @@
             ReleaseNotes = @'
 ### Bug Fixes
 
- * Fixed: NUnit2 task is ignoring the `OpenCoverVersion`, `ReportGeneratorVersion`, `DisableCodeCoverage`, and `CoverageFilter` parameters.
+ * Fixed: `Invoke-WhsCIPublishNuGetLibraryTask` updated to only publish to ProGet on appropriate branches when configured by whsbuild.yml's PublishOn property.
 '@
 
         } # End of PSData hashtable

@@ -17,10 +17,7 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-$modules = @(
-                'Carbon',
-                'Pester'
-            )
+$modules = @( 'Pester' )
 
 foreach( $moduleName in $modules )
 {
@@ -39,5 +36,3 @@ foreach( $moduleName in $modules )
 
     Save-Module -Name $moduleName -Path $PSScriptRoot
 }
-
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Carbon') -Force
