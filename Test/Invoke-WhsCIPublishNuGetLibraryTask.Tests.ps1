@@ -189,7 +189,7 @@ function ThenPackageShouldBeCreated
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
             (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.ReleaseVersion)) | Should Exist
         }
-        if( $Context.byBuildServer )
+        if( $Context.Publish )
         {
             if( $ForMultiplePackages )
             {
@@ -201,7 +201,7 @@ function ThenPackageShouldBeCreated
             }
             elseif( $PackageAlreadyExists )
             {
-                It('should not try to publish the package') {
+                It('should not try to publish the package because it already exists') {
                     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
                         return $ScriptBlock.toString().contains('& $nugetPath push')
                     }
@@ -218,7 +218,7 @@ function ThenPackageShouldBeCreated
         }
         else
         {
-            It('should not try to publish the package') {
+            It('should not try to publish the package because publish config is false') {
                 Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
                     return $ScriptBlock.toString().contains('& $nugetPath push')
                 }
