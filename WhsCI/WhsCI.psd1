@@ -140,7 +140,7 @@
             ReleaseNotes = @'
 ### Bug Fixes
 
- * Fixed: `Resolve-WhsCINuGetPackageVersion` updated to properly select package versions when a project has WebMD-based NuGet package dependencies.
+ * Fixed: `Node` task fails when running Mocha NPM scripts (passing the `--no-color` switch to NPM scripts incorrectly).
 '@
 
         } # End of PSData hashtable

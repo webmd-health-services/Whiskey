@@ -119,17 +119,14 @@ function Invoke-WhsCINodeTask
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
-        $installNoColorArg = @()
-        $pruneNoColorArg = @()
-        $runNoColorArgs = @()
+        $noColorArg = @()
         if( (Test-WhsCIRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
         {
-            $pruneNoColorArg = $installNoColorArg = '--no-color'
-            $runNoColorArgs = @( '--', '--no-color' )
+            $noColorArg = '--no-color'
         }
 
         Update-Progress -Status ('npm install') -Step ($stepNum++)
-        & $nodePath $npmPath 'install' '--production=false' $installNoColorArg
+        & $nodePath $npmPath 'install' '--production=false' $noColorArg
         if( $LASTEXITCODE )
         {
             throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
@@ -151,7 +148,7 @@ BuildTasks:
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
-            & $nodePath $npmPath 'run' $script $runNoColorArgs
+            & $nodePath $npmPath 'run' $script $noColorArg
             if( $LASTEXITCODE )
             {
                 throw ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
@@ -224,7 +221,7 @@ BuildTasks:
         }
 
         Update-Progress -Status ('npm prune{0}' -f $productionArgDisplay) -Step ($stepNum++)
-        & $nodePath $npmPath 'prune' $productionArg $pruneNoColorArg
+        & $nodePath $npmPath 'prune' $productionArg $noColorArg
         if( $LASTEXITCODE )
         {
             throw ('NPM command `npm prune{0}` failed, returning exist code {1}.' -f $productionArgDisplay,$LASTEXITCODE)
