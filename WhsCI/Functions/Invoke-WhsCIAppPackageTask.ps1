@@ -65,7 +65,7 @@ function Invoke-WhsCIAppPackageTask
         return
     }
 
-    foreach( $mandatoryName in @( 'Name', 'Description', 'Include', 'Path' ) )
+    foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
     {
         if( -not $TaskParameter.ContainsKey($mandatoryName) )
         {
@@ -218,7 +218,11 @@ function Invoke-WhsCIAppPackageTask
             }
         }
 
-        Copy-ToPackage -Path $TaskParameter['Path']
+        if( $TaskParameter['Path'] )
+        {
+            Copy-ToPackage -Path $TaskParameter['Path']
+        }
+
         if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
         {
 	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem

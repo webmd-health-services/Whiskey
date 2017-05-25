@@ -836,7 +836,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
                               -HasThirdPartyFile 'thirdparty.txt'
 }
 
-foreach( $parameterName in @( 'Name', 'Description', 'Path', 'Include' ) )
+foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 {
     Describe ('Invoke-WhsCIAppPackageTask.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
@@ -1116,7 +1116,7 @@ function ThenPackageShouldInclude
     param(
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Position=0)]
         [string[]]
         $Path
     )
@@ -1134,6 +1134,7 @@ function ThenPackageShouldInclude
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     Expand-Item -Path $packagePath -OutDirectory $expandPath
 
+    $Path += @( 'Arc', 'version.json' )
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
     foreach( $item in $Path )
     {
@@ -1183,4 +1184,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with overr
                               -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
                               -HasThirdPartyRootItem 'thirdparty' `
                               -HasThirdPartyFile 'thirdparty.txt' 
+}
+
+Describe 'Invoke-WhsCIAppPackageTask.when package is empty' {
+    GivenARepositoryWithFiles 'file.txt'
+    WhenPackaging -WithWhitelist "*.txt"
+    ThenPackageShouldInclude
 }

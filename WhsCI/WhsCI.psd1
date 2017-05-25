@@ -140,7 +140,7 @@
             ReleaseNotes = @'
 ### Bug Fixes
 
- * Fixed: `Node` task fails when running Mocha NPM scripts (passing the `--no-color` switch to NPM scripts incorrectly).
+ * Fixed: `AppPackage` task fails when an application is empty (i.e. its `Path` property is missing or has no value).
 '@
 
         } # End of PSData hashtable
