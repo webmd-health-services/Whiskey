@@ -9,6 +9,13 @@ $threwException = $null
 $assembly = $null
 $previousBuildRunAt = $null
 
+$assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
+foreach( $item in @( 'bin', 'obj', 'packages' ) )
+{
+    Get-ChildItem -Path $assemblyRoot -Filter $item -Recurse -Directory |
+        Remove-Item -Recurse -Force
+}
+
 function Get-BuildRoot
 {
     return (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
@@ -123,7 +130,7 @@ function WhenRunningTask
     
     try
     {
-        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean -Verbose | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean | ForEach-Object { Write-Debug $_ ; $_ }
     }
     catch
     {
@@ -161,6 +168,14 @@ function ThenAssembliesAreNotVersioned
                 $_.ProductVersion | Should -Be '0.0.0.0'
                 $_.FileVersion | Should -Be '0.0.0.0'
             }
+    }
+}
+
+function ThenDebugOutputLogged
+{
+    $buildRoot = Get-BuildRoot
+    It 'should write a debug log' {
+        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.debug.log') | should -Exist
     }
 }
 
@@ -348,6 +363,7 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects as a developer' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreNotVersioned
+    ThenDebugOutputLogged
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when building multiple real projects as a developer' {
@@ -364,6 +380,8 @@ Describe 'Invoke-WhsCIMSBuildTask.when building real projects as build server' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
+    ThenDebugOutputLogged
+
 }
 
 Describe 'Invoke-WhsCIMSBuildTask.when compilation fails' {
@@ -425,7 +443,7 @@ Describe 'Invoke-WhsCIMSBuildTask.when run by developer using default verbosity 
 Describe 'Invoke-WhsCIMSBuildTask.when run by build server using default verbosity output level' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
-    ThenOutputIsDebug
+    ThenOutputIsMinimal
 }
 
 Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
@@ -437,7 +455,7 @@ Describe 'Invoke-WhsCIMSbuildTask.when passing extra build properties' {
 Describe 'Invoke-WhsCIMSBuild.when passing custom arguments' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
-    ThenOutput -Is '\d+\.\d+\.\d+\.\d+'
+    ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
 Describe 'Invoke-WhsCIMSBuild.when passing a single custom argument' {

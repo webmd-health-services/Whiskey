@@ -9,12 +9,6 @@ function GivenACommit
         [Switch]
         $ThatIsInvalid
     )
-    <#
-           $gitBranch = 'origin/develop'
-        $filter = { $Path -eq 'env:GIT_BRANCH' }
-        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-    #>
 
     $gitBranchFilter = { $Path -eq 'env:GIT_BRANCH' }
     mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter $gitBranchFilter -MockWith { return $true }
@@ -26,6 +20,7 @@ function GivenACommit
     mock -CommandName 'Get-Item' -ParameterFilter $gitURLFilter -MockWith $urlMock
 
     mock -CommandName 'New-BBServerTag' -ModuleName 'WhsCI' -MockWith { return }
+
     if( -not $ThatIsInvalid )
     {
         mock -CommandName 'Get-WhsCICommitID' -ModuleName 'WhsCI' -MockWith { return "ValidCommitHash" }
@@ -118,7 +113,7 @@ Describe 'Publish-WhsCITag. when attempting to tag without a valid commit.' {
 }
 
 Describe 'Publish-WhsCITag. when $TaskContext.Publish is false' {
-    GivenACommit -WithoutPublishing
+    GivenACommit
     WhenTaggingACommit -WithoutPublishing
     ThenTheCommitShouldNotBeTagged 
 }

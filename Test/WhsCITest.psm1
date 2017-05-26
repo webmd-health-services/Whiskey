@@ -170,20 +170,13 @@ function New-WhsCITestContext
     $NpmFeedUri = 'https://proget.example.com/npm'
     $NuGetFeedUri = 'https://proget.example.com/nuget'
     $PowerShellFeedUri = 'https://proget.example.com/powershell'
+
     if( $UseActualProGet )
     {
-        
         $progetUris = @('https://proget.dev.webmd.com')
         $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm'
         $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget'
         $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh'
-        
-        <#
-        $progetUris = @('https://proget.example.com')
-        $NpmFeedUri = 'https://proget.example.com'
-        $NuGetFeedUri = 'https://proget.example.com'
-        $PowerShellFeedUri = 'https://proget.example.com'
-        #>
     }
 
     $optionalArgs = @{ }
@@ -201,7 +194,7 @@ function New-WhsCITestContext
         $filter = { $Path -eq 'env:GIT_BRANCH' }
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-        Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $true }
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $ForVersion }.GetNewClosure()
     }
     else
@@ -254,6 +247,7 @@ function New-WhsCITestContext
 
     if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
     {
+        Remove-Item -Path $context.OutputDirectory -Recurse -Force
         $context.OutputDirectory = $ForOutputDirectory
         New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     }

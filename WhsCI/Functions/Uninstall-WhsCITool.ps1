@@ -41,8 +41,7 @@ function Uninstall-WhsCITool
         # The name of the NuGet package to uninstall.
         $NuGetPackageName,
 
-        [Parameter(Mandatory=$true)]
-        [version]
+        [String]
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
@@ -54,9 +53,14 @@ function Uninstall-WhsCITool
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
+    
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
+        $Version = Resolve-WhsCIPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
+        if( -not $Version )
+        {
+            return
+        }
         $modulesRoot = Join-Path -Path $BuildRoot -ChildPath 'Modules'
         #Remove modules saved by either PowerShell4 or PowerShell5
         $moduleRoots = @( ('{0}.{1}' -f $ModuleName, $Version), ('{0}\{1}' -f $ModuleName, $Version)  )
@@ -72,6 +76,12 @@ function Uninstall-WhsCITool
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
+        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+        $Version = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
+        if( -not $Version )
+        {
+            return
+        }
         $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName

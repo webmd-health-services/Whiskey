@@ -68,9 +68,15 @@ function Resolve-WhsCITaskPath
             }
         }
 
-        $Path = Resolve-Path -Path $Path | Select-Object -ExpandProperty 'ProviderPath'
-        Write-Debug -Message ('Resolved {0} -> {1}' -f $originalPath,$Path)
-        return $Path
+        $message = 'Resolve {0} ->' -f $originalPath
+        $prefix = ' ' * ($message.Length - 3)
+        Write-Debug -Message $message -Verbose
+        Resolve-Path -Path $Path | 
+            Select-Object -ExpandProperty 'ProviderPath' |
+            ForEach-Object { 
+                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_) -Verbose
+                $_
+            }
     }
 
     end
