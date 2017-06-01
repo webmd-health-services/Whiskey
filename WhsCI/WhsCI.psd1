@@ -146,6 +146,7 @@
 
  * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.
  * Fixed: Build tasks don't run if they have no properites.
+ * Fixed: Pester3 and Pester4 tasks don't fail the build when there are test failures.
 '@
 
         } # End of PSData hashtable
