@@ -670,13 +670,13 @@ Describe 'New-WhsCIContext.when building a Node.js application and should use an
     GivenConfiguration
     GivenPackageJson -AtVersion '0.0.0'
     WhenCreatingContext 
-    ThenVersionMatches ('^{0}\.0\+' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+    ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
 Describe 'New-WhsCIContext.when building a Node.js application and ignoring package.json version number' {
     GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
     GivenPackageJson -AtVersion '1.0.0' 
     WhenCreatingContext 
-    ThenVersionMatches ('^{0}\.0\+' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+    ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
