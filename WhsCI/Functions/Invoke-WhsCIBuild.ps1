@@ -192,13 +192,26 @@ function Invoke-WhsCIBuild
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
-                if( $task -isnot [hashtable] )
+                if( $task -is [string] )
+                {
+                    $taskName = $task
+                    $task = @{ }
+                }
+                elseif( $task -is [hashtable] )
+                {
+                    $taskName = $task.Keys | Select-Object -First 1
+                    $task = $task[$taskName]
+                    if( -not $task )
+                    {
+                        $task = @{ }
+                    }
+                }
+                else
                 {
                     Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
                     continue
                 }
-                $taskName = $task.Keys | Select-Object -First 1
-                $task = $task[$taskName]
+
                 $Context.TaskName = $taskName
                 $Context.TaskIndex = $taskIdx
 

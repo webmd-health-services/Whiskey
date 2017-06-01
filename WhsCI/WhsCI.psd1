@@ -141,6 +141,7 @@
 ### Bug Fixes
 
  * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.
+ * Fixed: Build tasks don't run if they have no properites.
 '@
 
         } # End of PSData hashtable

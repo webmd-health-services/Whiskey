@@ -147,6 +147,9 @@ function New-WhsCITestContext
         [string]
         $ConfigurationPath,
 
+        [string]
+        $ForYaml,
+
         [hashtable]
         $TaskParameter = @{},
 
@@ -211,26 +214,33 @@ function New-WhsCITestContext
 
     if( -not $ConfigurationPath )
     {
-        $configData = @{
-                            'Version' = $ForVersion.ToString()
-                       }
-        if( $ForApplicationName )
-        {
-            $configData['ApplicationName'] = $ForApplicationName
-        }
-
-        if( $ForReleaseName )
-        {
-            $configData['ReleaseName'] = $ForReleaseName
-        }
-
-        if( $ForTaskName )
-        {
-            $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
-        }
-
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
-        $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+        if( $ForYaml )
+        {
+            $ForYaml | Set-Content -Path $ConfigurationPath
+        }
+        else
+        {
+            $configData = @{
+                                'Version' = $ForVersion.ToString()
+                           }
+            if( $ForApplicationName )
+            {
+                $configData['ApplicationName'] = $ForApplicationName
+            }
+
+            if( $ForReleaseName )
+            {
+                $configData['ReleaseName'] = $ForReleaseName
+            }
+
+            if( $ForTaskName )
+            {
+                $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+            }
+
+            $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+        }
     }
     $progetArgs = @{
                     ProGetAppFeedUri = $progetUris;
