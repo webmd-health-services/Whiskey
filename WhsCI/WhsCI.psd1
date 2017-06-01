@@ -138,6 +138,10 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+### Enhancements
+
+ * When building Node.js applications or modules, if there is no version in your `whsbuild.yml` file, we now use the version in your `package.json` file. To have WhsCI generate a version number for you, set the `IgnorePackageJsonVersion` property to `true` in the root of your whsbuild.yml file, e.g. `IgnorePackageJsonVersion: true`.
+
 ### Bug Fixes
 
  * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.

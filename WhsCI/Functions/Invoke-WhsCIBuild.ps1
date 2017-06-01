@@ -156,7 +156,6 @@ function Invoke-WhsCIBuild
 
         [Switch]
         $Clean
-
     )
 
     Set-StrictMode -Version 'Latest'

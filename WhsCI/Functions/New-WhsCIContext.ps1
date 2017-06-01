@@ -213,6 +213,18 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         }
     }
 
+    $buildRoot = $ConfigurationPath | Split-Path
+    $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
+    $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
+    if( -not $config.ContainsKey('Version') -and (Test-Path -Path $packageJsonPath -PathType Leaf) -and -not $ignorePackageJsonVersion )
+    {
+        $config['Version'] = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json | Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+        if( $config['Version'] -eq '0.0.0' )
+        {
+            $config.Remove('Version')
+        }
+    }
+
     [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion -ErrorAction Ignore
     if( -not $semVersion )
     {
@@ -233,7 +245,6 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
     }
     $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
 
-    $buildRoot = $ConfigurationPath | Split-Path
     $context = [pscustomobject]@{
                                     ApplicationName = $appName;
                                     ReleaseName = $releaseName;
