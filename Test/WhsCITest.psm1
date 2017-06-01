@@ -167,16 +167,16 @@ function New-WhsCITestContext
     }
 
     $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
-    $NpmFeedUri = 'https://proget.example.com/npm'
-    $NuGetFeedUri = 'https://proget.example.com/nuget'
+    $NpmFeedUri = 'https://proget.example.com/npm/npm/'
+    $NuGetFeedUri = 'https://proget.example.com/nuget/nuget/'
     $PowerShellFeedUri = 'https://proget.example.com/powershell'
 
     if( $UseActualProGet )
     {
         $progetUris = @('https://proget.dev.webmd.com')
-        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm'
-        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget'
-        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh'
+        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm/'
+        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget/'
+        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh/'
     }
 
     $optionalArgs = @{ }

@@ -140,7 +140,7 @@
             ReleaseNotes = @'
 ### Bug Fixes
 
- * Fixed: `AppPackage` task fails when an application is empty (i.e. its `Path` property is missing or has no value).
+ * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.
 '@
 
         } # End of PSData hashtable
