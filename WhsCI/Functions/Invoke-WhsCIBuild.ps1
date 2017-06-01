@@ -188,6 +188,12 @@ function Invoke-WhsCIBuild
                                      }
 
             $taskIdx = -1
+            if( $config['BuildTasks'] -is [string] )
+            {
+                Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
+                $config['BuildTasks'] = @()
+            }
+
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
@@ -207,7 +213,6 @@ function Invoke-WhsCIBuild
                 }
                 else
                 {
-                    Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
                     continue
                 }
 

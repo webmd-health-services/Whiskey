@@ -496,6 +496,18 @@ function ThenVersionIs
     }
 }
 
+function ThenVersionMatches
+{
+    param(
+        [string]
+        $Version
+    )
+
+    It ('should set version to {0}' -f $Version) {
+        $context.Version | Should -Match $Version
+    }
+}
+
 Describe 'New-WhsCIContext.when run by a developer for an application' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
     WhenCreatingContext -ByDeveloper
@@ -658,13 +670,13 @@ Describe 'New-WhsCIContext.when building a Node.js application and should use an
     GivenConfiguration
     GivenPackageJson -AtVersion '0.0.0'
     WhenCreatingContext 
-    ThenVersionIs ('{0}.0+{1}.{2}' -f (Get-DAte).ToString('yyyy.MMdd'),$env:USERNAME,$env:COMPUTERNAME)
+    ThenVersionMatches ('^{0}\.0\+' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
 Describe 'New-WhsCIContext.when building a Node.js application and ignoring package.json version number' {
     GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
     GivenPackageJson -AtVersion '1.0.0' 
     WhenCreatingContext 
-    ThenVersionIs ('{0}.0+{1}.{2}' -f (Get-DAte).ToString('yyyy.MMdd'),$env:USERNAME,$env:COMPUTERNAME)
+    ThenVersionMatches ('^{0}\.0\+' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
