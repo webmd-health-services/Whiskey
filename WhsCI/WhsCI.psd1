@@ -138,9 +138,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+### Enhancements
+
+ * When building Node.js applications or modules, if there is no version in your `whsbuild.yml` file, we now use the version in your `package.json` file. To have WhsCI generate a version number for you, set the `IgnorePackageJsonVersion` property to `true` in the root of your whsbuild.yml file, e.g. `IgnorePackageJsonVersion: true`.
+
 ### Bug Fixes
 
- * Fixed: `AppPackage` task fails when an application is empty (i.e. its `Path` property is missing or has no value).
+ * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.
+ * Fixed: Build tasks don't run if they have no properites.
+ * Fixed: Pester3 and Pester4 tasks don't fail the build when there are test failures.
 '@
 
         } # End of PSData hashtable

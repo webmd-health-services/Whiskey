@@ -278,6 +278,23 @@ Describe 'Invoke-WhsCIBuild.when running with Clean switch' {
     }
 }
 
+Describe 'Invoke-WhsCIBuild.when task has no properties' {
+    $context = New-WhsCITestContext -ForDeveloper -ForYaml @"
+BuildTasks:
+- PublishNodeModule
+- PublishNodeModule:
+"@
+    $Global:Error.Clear()
+    Mock -CommandName 'Invoke-WhsCIPublishNodeModuleTask' -Verifiable -ModuleName 'WhsCI'
+    Invoke-WhsCIBuild -Context $context
+    It 'should not write an error' {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+    It 'should call the task' {
+        Assert-MockCalled -CommandName 'Invoke-WhsCIPublishNodeModuleTask' -ModuleName 'WhsCI' -Times 2
+    }
+}
+
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
 foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task' | Sort-Object -Property 'Name') )
