@@ -18,6 +18,10 @@ function GivenRunningUnderABuildServer
     {
         mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true }
     }
+    else
+    {
+        mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false }
+    }
 }
 
 function GivenRunningAsADeveloper
