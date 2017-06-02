@@ -27,7 +27,9 @@ function GivenRunningAsADeveloper
 
 function WhenGettingCommitID
 {
+    [cmdletbinding()]
     param(
+        
         [Switch]
         $ThatShouldFail
     )
@@ -106,7 +108,7 @@ Describe 'Get-WhsCICommitID. when running under a build server.' {
 
 Describe 'Get-WhsCICommitID. when being run by a Developer.' {
     GivenRunningAsADeveloper
-    $commitID = WhenGettingCommitID 
+    $commitID = WhenGettingCommitID -ErrorAction SilentlyContinue
     ThenTheCommitIDShouldNotBeObtained -CommitID $commitID -Error 'CommitID is not accessible'
 }
 
