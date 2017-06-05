@@ -156,7 +156,6 @@ function Invoke-WhsCIBuild
 
         [Switch]
         $Clean
-
     )
 
     Set-StrictMode -Version 'Latest'
@@ -189,16 +188,34 @@ function Invoke-WhsCIBuild
                                      }
 
             $taskIdx = -1
+            if( $config['BuildTasks'] -is [string] )
+            {
+                Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
+                $config['BuildTasks'] = @()
+            }
+
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
-                if( $task -isnot [hashtable] )
+                if( $task -is [string] )
                 {
-                    Write-Warning -Message ('It looks like ''{0}'' doesn''t define any build tasks.' -f $Context.ConfigurationPath)
+                    $taskName = $task
+                    $task = @{ }
+                }
+                elseif( $task -is [hashtable] )
+                {
+                    $taskName = $task.Keys | Select-Object -First 1
+                    $task = $task[$taskName]
+                    if( -not $task )
+                    {
+                        $task = @{ }
+                    }
+                }
+                else
+                {
                     continue
                 }
-                $taskName = $task.Keys | Select-Object -First 1
-                $task = $task[$taskName]
+
                 $Context.TaskName = $taskName
                 $Context.TaskIndex = $taskIdx
 

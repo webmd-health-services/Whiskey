@@ -55,7 +55,8 @@ function Invoke-WhsCIPublishNodeModuleTask
     {
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
-    [String]$npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
+
+    $npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
     $nodePath = Install-WhsCINodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
     
     if (!$TaskContext.Publish)
@@ -66,9 +67,7 @@ function Invoke-WhsCIPublishNodeModuleTask
     $nodeRoot = $nodePath | Split-Path
     $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
 
-    $npmConfigPrefix = '//' + $TaskContext.ProGetSession.NpmFeedUri.Authority `
-                    + $TaskContext.ProGetSession.NpmFeedUri.Segments[0] `
-                    + $TaskContext.ProGetSession.NpmFeedUri.Segments[1]
+    $npmConfigPrefix = '//{0}{1}:' -f $npmFeedUri.Authority,$npmFeedUri.LocalPath
 
     $npmUserName = $TaskContext.ProGetSession.Credential.UserName
     $npmEmail = $env:USERNAME + '@webmd.net'
@@ -80,10 +79,19 @@ function Invoke-WhsCIPublishNodeModuleTask
     try
     {
         $packageNpmrc = (New-Item -Path (Join-Path -Path $buildRoot -ChildPath '.npmrc') -ItemType File -Force)
-        Add-Content -Path $packageNpmrc -Value ('registry={0}' -f $npmFeedUri)
-        Add-Content -Path $packageNpmrc -Value ('{0}:_password="{1}"' -f $npmConfigPrefix, $npmPassword)
-        Add-Content -Path $packageNpmrc -Value ('{0}:username={1}' -f $npmConfigPrefix, $npmUserName)
-        Add-Content -Path $packageNpmrc -Value ('{0}:email={1}' -f $npmConfigPrefix, $npmEmail)
+        Add-Content -Path $packageNpmrc -Value ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
+        Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
+        Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
+        Write-Verbose -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
+        Get-Content -Path $packageNpmrc |
+            ForEach-Object {
+                if( $_ -match '_password' )
+                {
+                    return $_ -replace '=(.*)$','=********'
+                }
+                return $_
+            } |
+            Write-Verbose
     
         Invoke-Command -ScriptBlock {
             & $nodePath $npmPath publish
@@ -93,6 +101,7 @@ function Invoke-WhsCIPublishNodeModuleTask
     {
         if (Test-Path $packageNpmrc)
         {
+            Write-Verbose -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
         }
         Pop-Location

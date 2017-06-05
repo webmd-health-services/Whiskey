@@ -147,6 +147,9 @@ function New-WhsCITestContext
         [string]
         $ConfigurationPath,
 
+        [string]
+        $ForYaml,
+
         [hashtable]
         $TaskParameter = @{},
 
@@ -167,16 +170,16 @@ function New-WhsCITestContext
     }
 
     $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
-    $NpmFeedUri = 'https://proget.example.com/npm'
-    $NuGetFeedUri = 'https://proget.example.com/nuget'
+    $NpmFeedUri = 'https://proget.example.com/npm/npm/'
+    $NuGetFeedUri = 'https://proget.example.com/nuget/nuget/'
     $PowerShellFeedUri = 'https://proget.example.com/powershell'
 
     if( $UseActualProGet )
     {
         $progetUris = @('https://proget.dev.webmd.com')
-        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm'
-        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget'
-        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh'
+        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm/'
+        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget/'
+        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh/'
     }
 
     $optionalArgs = @{ }
@@ -211,26 +214,33 @@ function New-WhsCITestContext
 
     if( -not $ConfigurationPath )
     {
-        $configData = @{
-                            'Version' = $ForVersion.ToString()
-                       }
-        if( $ForApplicationName )
-        {
-            $configData['ApplicationName'] = $ForApplicationName
-        }
-
-        if( $ForReleaseName )
-        {
-            $configData['ReleaseName'] = $ForReleaseName
-        }
-
-        if( $ForTaskName )
-        {
-            $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
-        }
-
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
-        $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+        if( $ForYaml )
+        {
+            $ForYaml | Set-Content -Path $ConfigurationPath
+        }
+        else
+        {
+            $configData = @{
+                                'Version' = $ForVersion.ToString()
+                           }
+            if( $ForApplicationName )
+            {
+                $configData['ApplicationName'] = $ForApplicationName
+            }
+
+            if( $ForReleaseName )
+            {
+                $configData['ReleaseName'] = $ForReleaseName
+            }
+
+            if( $ForTaskName )
+            {
+                $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+            }
+
+            $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
+        }
     }
     $progetArgs = @{
                     ProGetAppFeedUri = $progetUris;

@@ -196,23 +196,36 @@ function GivenConfiguration
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
         Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
         Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-        function Get-WhsCIBranch
-        {
-        }
-        Mock -CommandName 'Get-WhsCIBranch' -ModuleName 'WhsCI' -MockWith { return $OnBranch }.GetNewClosure() 
 
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
+        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
+        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return [pscustomobject]@{ Value = $OnBranch } }.GetNewClosure() 
+
+        if( $WithVersion )
+        {
+            Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
+        }
+        else
+        {
+            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return $true }
+            Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return [pscustomobject]@{ Value = '1' } }
+            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return $true }
+            Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return [pscustomobject]@{ Value = 'deadbee' } }
+        }
     }
-    
-
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { 
-        [SemVersion.SemanticVersion]$semVersion = $null
-        if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
+    else
+    {
+        if( $WithVersion )
         {
-            return 
+            Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { 
+                [SemVersion.SemanticVersion]$semVersion = $null
+                if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
+                {
+                    return 
+                }
+                return $semVersion
+            }.GetNewClosure()
         }
-        return $semVersion
-    }.GetNewClosure()
+    }
 
     $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
     $Configuration | ConvertTo-Yaml | Set-Content -Path $configurationPath
@@ -483,6 +496,18 @@ function ThenVersionIs
     }
 }
 
+function ThenVersionMatches
+{
+    param(
+        [string]
+        $Version
+    )
+
+    It ('should set version to {0}' -f $Version) {
+        $context.Version | Should -Match $Version
+    }
+}
+
 Describe 'New-WhsCIContext.when run by a developer for an application' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
     WhenCreatingContext -ByDeveloper
@@ -606,3 +631,52 @@ Describe 'New-WhsCIContext.when a PrereleaseMap has multiple keys' {
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' ; '\bbeta\b' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
 }
+
+function GivenPackageJson
+{
+    param(
+        [string]
+        $AtVersion
+    )
+
+    @"
+{
+  "name": "whs-middle-tier-client",
+  "version": "$($AtVersion)",
+  "description": "Perform web requests to the WHS middle tier (monolith)",
+  "main": "index.js",
+  "engines":{
+    "node": "4.4.7"
+  }
+}
+"@  | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'package.json')
+}
+
+Describe 'New-WhsCIContext.when building a Node module by a developer' {
+    GivenConfiguration
+    GivenPackageJson -AtVersion '9.4.6'
+    WhenCreatingContext -ByDeveloper
+    ThenVersionIs '9.4.6'
+}
+
+Describe 'New-WhsCIContext.when building a Node module by a build server' {
+    GivenConfiguration -ForBuildServer
+    GivenPackageJson -AtVersion '9.4.6'
+    WhenCreatingContext -ByBuildServer
+    ThenVersionIs '9.4.6'
+}
+
+Describe 'New-WhsCIContext.when building a Node.js application and should use an auto-generated version number' {
+    GivenConfiguration
+    GivenPackageJson -AtVersion '0.0.0'
+    WhenCreatingContext 
+    ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+}
+
+Describe 'New-WhsCIContext.when building a Node.js application and ignoring package.json version number' {
+    GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
+    GivenPackageJson -AtVersion '1.0.0' 
+    WhenCreatingContext 
+    ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+}
+

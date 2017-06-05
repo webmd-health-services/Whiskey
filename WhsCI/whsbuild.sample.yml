@@ -84,6 +84,14 @@ DeployPackage: true
 PrereleaseMap:
 - "\balpha\b": alpha
 
+# When building a Node.js application or module, if this file doesn't contain a
+# Version property, the version from your package.json file is used as the version
+# instead. To not pull the version from your package.json file, set this property to
+# true. If you want an auto-generated version number, set this property to true. 
+# Node.js modules should leave this set to false. Node.js applicatoins, that get 
+# deployed, should set this to true.
+IgnorePackageJsonVersion: false
+
 # [The list of build tasks to run.](https://confluence.webmd.net/display/WHS/WhsCI+Tasks)
 BuildTasks:
 

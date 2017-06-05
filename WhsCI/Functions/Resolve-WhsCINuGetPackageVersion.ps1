@@ -22,6 +22,7 @@ function Resolve-WhsCINuGetPackageVersion
     if( -not $Version )
     {
         $Version = & $NugetPath list ('packageid:{0}' -f $NuGetPackageName) |
+                        Where-Object { $_ -match $NuGetPackageName } |
                         Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
                         ForEach-Object { $Matches[1] }
         if( -not $Version )

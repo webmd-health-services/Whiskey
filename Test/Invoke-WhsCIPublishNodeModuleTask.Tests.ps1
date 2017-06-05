@@ -30,21 +30,17 @@ function New-PublishNodeModuleStructure
     if ($ByBuildServer)
     {
         $context = New-WhsCITestContext -ForBuildServer
-        [String]$npmFeedUri = $context.ProGetSession.NpmFeedUri
+        $npmFeedUri = $context.ProGetSession.NpmFeedUri
         $npmUserName = $context.ProGetSession.Credential.UserName
         $npmEmail = $env:USERNAME + '@webmd.net'
         $npmCredPassword = $context.ProGetSession.Credential.GetNetworkCredential().Password
         $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
         $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
-        $npmConfigPrefix = '//' + $context.ProGetSession.NpmFeedUri.Authority `
-                        + $context.ProGetSession.NpmFeedUri.Segments[0] `
-                        + $context.ProGetSession.NpmFeedUri.Segments[1]
-        $npmrcFileLine1 = ('registry={0}' -f $npmFeedUri)
-        $npmrcFileLine2 = ('{0}:_password="{1}"' -f $npmConfigPrefix, $npmPassword)
-        $npmrcFileLine3 = ('{0}:username={1}' -f $npmConfigPrefix, $npmUserName)
-        $npmrcFileLine4 = ('{0}:email={1}' -f $npmConfigPrefix, $npmEmail)
+        $npmConfigPrefix = '//{0}{1}:' -f $npmFeedUri.Authority,$npmFeedUri.LocalPath
+        $npmrcFileLine2 = ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
+        $npmrcFileLine3 = ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
+        $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
         $npmrcFileContents = @"
-$npmrcFileLine1
 $npmrcFileLine2
 $npmrcFileLine3
 $npmrcFileLine4

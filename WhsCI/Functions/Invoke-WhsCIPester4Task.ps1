@@ -93,22 +93,16 @@ function Invoke-WhsCIPester4Task
         $testIdx++
     }
 
+    $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx)
+
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $script = $using:Path
-        $outputRoot = $using:TaskContext.OutputDirectory
-        $testIdx = $using:testIdx
         $pesterModulePath = $using:pesterModulePath
-        $outputFileNameFormat = $using:outputFileNameFormat
+        $outputFile = $using:outputFile
 
         Import-Module -Name $pesterModulePath
-        $outputFile = Join-Path -Path $outputRoot -ChildPath ($outputFileNameFormat -f $testIdx)
-        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
-        $result
-        if( $result.FailedCount )
-        {
-             throw ('Pester tests failed.')
-        }
+        Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     } 
     
     do
@@ -118,4 +112,16 @@ function Invoke-WhsCIPester4Task
     while( -not ($job | Wait-Job -Timeout 1) )
 
     $job | Receive-Job
+
+    $result = [xml](Get-Content -Path $outputFile -Raw)
+
+    if( -not $result )
+    {
+        throw ('Unable to parse Pester output XML report ''{0}''.' -f $outputFile)
+    }
+
+    if( $result.'test-results'.errors -ne '0' -or $result.'test-results'.failures -ne '0' )
+    {
+        throw ('Pester tests failed.')
+    }
 }

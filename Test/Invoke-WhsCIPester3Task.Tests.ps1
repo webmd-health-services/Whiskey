@@ -163,16 +163,17 @@ function Invoke-PesterTest
     Assert-PesterRan -FailureCount $FailureCount -PassingCount $PassingCount -ReportsIn $context.outputDirectory
 
     $shouldFail = $FailureCount -gt 1
-    if( $ShouldFailWithMessage )
+    if( $shouldFail -or $ShouldFailWithMessage )
     {
-        It 'should fail' {
-            $Global:Error[0] | Should Match $ShouldFailWithMessage
+        if( $ShouldFailWithMessage )
+        {
+            It 'should fail' {
+                $Global:Error[0] | Should Match $ShouldFailWithMessage
+            }
         }
-    }
-    elseif( $shouldFail )
-    {
-        It 'should fail and throw a terminating exception' {
-            $shouldFail | Should Be $true
+
+        It 'should throw a terminating exception' {
+            $failed | Should Be $true
         }
     }
     else
