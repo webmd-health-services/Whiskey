@@ -19,7 +19,7 @@ function Set-BBServerCommitBuildStatus
     .DESCRIPTION
     The `Set-BBServerCommitBuildStatus` function sets the build status of a specific commit in Bitbucket Server. The status can be in progress, successful, or failed. When a build status is set, Bitbucket Server will show a blue "in progress" icon for in progress builds, a green checkmark icon for successful builds, and a red failed icon for failed builds.
 
-    Data about the commit is read from the environment set up by supported build servers, which arethe Jenkins and TeamCity. Bitbucket Server must have the commit ID, a key that uniquely identifies this specific build, and a URI that points to the build's report. The build name is optional, but when running under a supported build server, is also pulled from the environment.
+    Data about the commit is read from the environment set up by supported build servers, which is Jenkins. Bitbucket Server must have the commit ID, a key that uniquely identifies this specific build, and a URI that points to the build's report. The build name is optional, but when running under a supported build server, is also pulled from the environment.
 
     If a commit already has a status, this function will overwrite it.
 
@@ -51,8 +51,6 @@ function Set-BBServerCommitBuildStatus
         #
         # If running under Jenkins, the `GIT_COMMIT` environment variable is used.
         #
-        # If runnning under TeamCity, the `BUILD_VCS_NUMBER` environment variable is used.
-        #
         # If not running under a build server, and none of the above environment variables are set, this function write an error and does nothing.
         $CommitID,
 
@@ -61,8 +59,6 @@ function Set-BBServerCommitBuildStatus
         # A value that uniquely identifies the build. The default value is pulled from environment variables that get set by build servers.
         # 
         # If running under Jenkins the `BUILD_TAG` environment variable is used.
-        #
-        # If running under TeamCity, the file defined in `TEAMCITY_BUILD_PROPERTIES_FILE` environment variable is loaded and the `teamcity.buildType.id` and `teamcity.build.id` properties are combined (separated by an underscore) to create a key.
         #
         # If not running under a build server, and none of the above environment variables are set, this function write an error and does nothing.
         $Key,
@@ -73,8 +69,6 @@ function Set-BBServerCommitBuildStatus
         #
         # If running under Jenkins, the `BUILD_URL` environment variable is used.
         #
-        # If running under TeamCity, the URL is constructed from information defined in configuration files that TeamCity creates. A TeamCity build URL format is `SERVER_URI/viewLog.html?buildId=BUILD_ID&buildTypeID=BUILD_TYPE_ID`. `BUILD_TYPE_ID` and `BUILD_ID` are read from the `teamcity.buildType.id` and `teamcity.build.id` properties in the file defined in `TEAMCITY_BUILD_PROPERTIES_FILE` environment variable. `SERVER_URL` is read from the `teamcity.serverUrl` property in the file defined by the `teamcity.configuration.properties.file` property that is defined in the file defined by the `TEAMCITY_BUILD_PROPERTIES_FILE` environment variable.
-        #
         # If not running under a build server, and none of the above environment variables are set, this function write an error and does nothing.
         $BuildUri,
 
@@ -83,8 +77,6 @@ function Set-BBServerCommitBuildStatus
         # The name of the build. The default value is read from environment variables that get set by build servers.
         #
         # If running under Jenkins, the `JOB_NAME` environment variable is used.
-        #
-        # If running under TeamCity, the job name is read from the `teamcity.buildType.id` property in the file defined by the `TEAMCITY_BUILD_PROPERTIES_FILE` environment variable.
         #
         # If not running under a build server, and none of the above environment variables are set, this function write an error and does nothing.
         $Name,
@@ -96,30 +88,41 @@ function Set-BBServerCommitBuildStatus
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     # We're in Jenkins
-    if( (Test-Path 'env:JENKINS_URL') )
+    $body = @{
+                state = $Status.ToUpperInvariant();
+                description = $Description;
+             }
+    if( (Test-Path -Path 'env:JENKINS_URL') )
     {
-        $body = @{
-                    state = $Status.ToUpperInvariant();
-                    key = (Get-Item -Path 'env:BUILD_TAG').Value;
-                    name = (Get-Item -Path 'env:JOB_NAME').Value;
-                    url = (Get-Item -Path 'env:BUILD_URL').Value;
-                    description = $Description;
-                 }
-        $resourcePath = 'commits/{0}' -f (Get-Item -Path 'env:GIT_COMMIT').Value
-    }
-    else
-    {
-        $body = @{
-                    state = $Status.ToUpperInvariant();
-                    key = $Key
-                    name = $Name
-                    url = $BuildUri
-                    description = $Description;
-                 }
-        $resourcePath = 'commits/{0}' -f $CommitID
+        $body.key = (Get-Item -Path 'env:BUILD_TAG').Value;
+        $body.name = (Get-Item -Path 'env:JOB_NAME').Value;
+        $body.url = (Get-Item -Path 'env:BUILD_URL').Value;
+        if( -not $CommitID )
+        {
+            $CommitID = (Get-Item -Path 'env:GIT_COMMIT').Value
+        }
     }
 
+    if( $PSBoundParameters.ContainsKey('Key') )
+    {
+        $body['key'] = $Key
+    }
+
+    if( $PSBoundParameters.ContainsKey('BuildUri') )
+    {
+        $body['url'] = $BuildUri
+    }
+
+    if( $PSBoundParameters.ContainsKey('Name') )
+    {
+        $body['name'] = $Name
+    }
+
+    $resourcePath = 'commits/{0}' -f $CommitID
+
+    Write-Verbose -Message ('Setting ''{0}'' commit''s build status to ''{1}''.' -f $CommitID,$body.state)
     $body | Invoke-BBServerRestMethod -Connection $Connection -Method Post -ApiName 'build-status' -ResourcePath $resourcePath
 }
