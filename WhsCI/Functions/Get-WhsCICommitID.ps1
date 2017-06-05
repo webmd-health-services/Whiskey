@@ -21,17 +21,11 @@ function Get-WhsCICommitID
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     $commitID = $null
-    if( (Test-WhsCIRunByBuildServer) )
+
+    if( -not (Test-Path -Path 'env:GIT_COMMIT') )
     {
-        if( -not (Test-Path -Path 'env:GIT_COMMIT') )
-        {
-            throw ('Environment variable GIT_COMMIT does not exist. Are you sure you''re running under a build server? If you see this message while running tests, you most likely need to mock the `Get-WhsCICommitID` function.')
-        }
-        $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
+        throw ('Environment variable GIT_COMMIT does not exist. Are you sure you''re running under a build server? If you see this message while running tests, you most likely need to mock the `Get-WhsCICommitID` function.')
     }
-    else
-    {
-        Write-Error ('CommitID is not accessible unless you are running under a build server.')
-    }
+    $commitID = (Get-Item -Path 'env:GIT_COMMIT').Value.Substring(0,7)
     return $commitID
 }

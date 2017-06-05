@@ -110,12 +110,6 @@ Describe 'Get-WhsCICommitID. when running under a build server.' {
     ThenTheCommitIDShouldBeObtained -CommitID $commitID
 }
 
-Describe 'Get-WhsCICommitID. when being run by a Developer.' {
-    GivenRunningAsADeveloper
-    $commitID = WhenGettingCommitID -ErrorAction SilentlyContinue
-    ThenTheCommitIDShouldNotBeObtained -CommitID $commitID -Error 'CommitID is not accessible'
-}
-
 Describe 'Get-WhsCICommitID. when the environment variable GIT_BRANCH is unavailable.' {
     GivenRunningUnderABuildServer
     $commitID = WhenGettingCommitID -ThatShouldFail

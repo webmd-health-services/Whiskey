@@ -29,10 +29,7 @@ function Publish-WhsCITag
         $TaskContext,
 
         [String]
-        $TagMessage,
-
-        [Switch]
-        $Force
+        $TagMessage
     )
     
     Set-StrictMode -Version 'Latest'
@@ -59,11 +56,7 @@ function Publish-WhsCITag
     {
         $optionalArgs['Message'] = $TagMessage
     }
-    if( $Force )
-    {
-        $optionalArgs['Force'] = $true
-    }
 
-    New-BBServerTag -Connection $TaskContext.BBServerConnection -ProjectKey $projectKey -RepositoryKey $repoKey -Name $TaskContext.Version.ReleaseVersion -CommitID $commitHash @optionalArgs
+    New-BBServerTag -Connection $TaskContext.BBServerConnection -ProjectKey $projectKey -force -RepositoryKey $repoKey -Name $TaskContext.Version.ReleaseVersion -CommitID $commitHash @optionalArgs
 
 }
