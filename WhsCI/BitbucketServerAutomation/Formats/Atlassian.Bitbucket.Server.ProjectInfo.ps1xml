@@ -15,20 +15,15 @@
 <Configuration>
     <ViewDefinitions>
         <View>
-            <Name>Atlassian.Bitbucket.Server.RepositoryInfo</Name>
+            <Name>Atlassian.Bitbucket.Server.ProjectInfo</Name>
             <ViewSelectedBy>
-                <TypeName>Atlassian.Bitbucket.Server.RepositoryInfo</TypeName>
+                <TypeName>Atlassian.Bitbucket.Server.ProjectInfo</TypeName>
             </ViewSelectedBy>
             <TableControl>
                 <TableHeaders>
                     <TableColumnHeader />
                     <TableColumnHeader />
-                    <TableColumnHeader>
-                        <Width>5</Width>
-                    </TableColumnHeader>
-                    <TableColumnHeader>
-                        <Width>5</Width>
-                    </TableColumnHeader>
+                    <TableColumnHeader />
                     <TableColumnHeader>
                         <Width>5</Width>
                     </TableColumnHeader>
@@ -37,16 +32,13 @@
                     <TableRowEntry>
                         <TableColumnItems>
                             <TableColumnItem>
+                                <PropertyName>key</PropertyName>
+                            </TableColumnItem>
+                            <TableColumnItem>
                                 <PropertyName>name</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                                <PropertyName>state</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>scmId</PropertyName>
-                            </TableColumnItem>
-                            <TableColumnItem>
-                                <PropertyName>forkable</PropertyName>
+                                <PropertyName>description</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
                                 <PropertyName>public</PropertyName>

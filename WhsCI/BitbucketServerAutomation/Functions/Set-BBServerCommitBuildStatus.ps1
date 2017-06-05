@@ -1,3 +1,14 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 function Set-BBServerCommitBuildStatus
 {
@@ -87,7 +98,7 @@ function Set-BBServerCommitBuildStatus
     Set-StrictMode -Version 'Latest'
 
     # We're in Jenkins
-    if( (Test-Path 'env:GIT_COMMIT') )
+    if( (Test-Path 'env:JENKINS_URL') )
     {
         $body = @{
                     state = $Status.ToUpperInvariant();
@@ -100,7 +111,6 @@ function Set-BBServerCommitBuildStatus
     }
     else
     {
-        <#
         $body = @{
                     state = $Status.ToUpperInvariant();
                     key = $Key
@@ -109,7 +119,6 @@ function Set-BBServerCommitBuildStatus
                     description = $Description;
                  }
         $resourcePath = 'commits/{0}' -f $CommitID
-        #>
     }
 
     $body | Invoke-BBServerRestMethod -Connection $Connection -Method Post -ApiName 'build-status' -ResourcePath $resourcePath

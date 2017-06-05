@@ -73,6 +73,7 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'ConvertTo-WhsCISemanticVersion',
+                            'Get-WhsCICommitID',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
@@ -92,6 +93,7 @@
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',
+			    'Publish-WhsCITag',
                             'Resolve-WhsCINuGetPackageVersion',
                             'Resolve-WhsCIPowerShellModuleVersion',
                             'Resolve-WhsCITaskPath',

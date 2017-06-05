@@ -83,6 +83,10 @@ function Assert-NUnitTestsNotRun
 }
 #endregion
 
+function Assert-CommitTagged
+{
+    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 1
+}
 
 function Invoke-Build
 {
@@ -133,8 +137,8 @@ function Invoke-Build
         $threwException = $true
         Write-Error $_
     }    
-
     Assert-CommitMarkedAsInProgress
+
     
     if( $ThatFails )
     {
@@ -144,12 +148,17 @@ function Invoke-Build
 
         Assert-CommitMarkedAsFailed
     }
+    else
+    {
+        Assert-CommitTagged
+    }
 }
 
 #region Mocks
 function New-MockBitbucketServer
 {
     Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' 
 }
 
 function New-MockBuildServer
@@ -342,11 +351,17 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
                         $Status -eq 'Successful'
                     }
                 }
+                It 'should tag the commit' {
+                    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 1
+                }
             }
             else
             {
                 It 'should not set build status' {
                     Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 0
+                }
+                It 'should not tag the commit' {
+                    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 0
                 }
             }
         }
@@ -358,6 +373,7 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
         Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
         Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI'
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+        Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Verifiable
 
         Context 'By Developer' {
             Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
