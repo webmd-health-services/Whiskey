@@ -143,7 +143,10 @@
 ### Enhancements
 
  * An environment name is now required when creating a build context with the `New-WhsCIContext` function. Pass the environment name to its `Environment` parameter.
+ * Added `Argument` property to `PowerShell` task for passing arguments to PowerShell scripts.
+ * The `PowerShell` task now passes the current context object via a named `TaskContext` parameter.
 '@
+
 
         } # End of PSData hashtable
 
