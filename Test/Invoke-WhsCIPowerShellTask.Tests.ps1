@@ -4,118 +4,135 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
-function Assert-ThatTheTask
+$workingDirectory = $null
+$failed = $false
+$scriptName = $null
+
+function Get-WorkingDirectory
+{
+    #if ( $WhenGivenARelativePath )
+    #{
+    #    $itRanPath = Join-Path -Path (Join-Path -Path $InWorkingDirectory -ChildPath $relativePath) -ChildPath 'run'
+    #}
+    #else
+    #{
+    #    $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath 'run'
+    #}
+
+    if( $workingDirectory )
+    {
+        return $workingDirectory
+    }
+
+    return $TestDrive.FullName
+}
+
+function Get-OutputFilePath
+{
+    $path = (Join-Path -Path (Get-WorkingDirectory) -ChildPath 'run')
+    if( -not [IO.Path]::IsPathRooted($path) )
+    {
+        $path = Join-Path -Path $TestDrive.FullName -ChildPath $path
+    }
+    return $path
+}
+
+function GivenAFailingScript
+{
+    GivenAScript 'exit 1'
+}
+
+function GivenAPassingScript
+{
+    GivenAScript ''
+}
+
+function GivenAScript
+{
+    param(
+        [string]
+        $Script
+    )
+
+    $script:scriptName = 'myscript.ps1'
+    $scriptPath = Join-Path -Path $TestDrive.FullName -ChildPath $scriptName
+        
+    @"
+
+New-Item -Path '$( Get-OutputFilePath | Split-Path -Leaf)' -ItemType 'File'
+
+$($Script)
+"@ | Set-Content -Path $scriptPath
+}
+
+function GivenLastExitCode
+{
+    param(
+        $ExitCode
+    )
+
+    $Global:LASTEXITCODE = $ExitCode
+}
+
+function GivenNoWorkingDirectory
+{
+    $script:workingDirectory = $null
+}
+
+function GivenWorkingDirectory
+{
+    param(
+        [string]
+        $Path,
+
+        [Switch]
+        $ThatDoesNotExist
+    )
+
+    $script:workingDirectory = $Path
+
+    $absoluteWorkingDir = $workingDirectory
+    if( -not [IO.Path]::IsPathRooted($absoluteWorkingDir) )
+    {
+        $absoluteWorkingDir = Join-Path -Path $TestDrive.FullName -ChildPath $absoluteWorkingDir
+    }
+
+    if( -not $ThatDoesNotExist -and -not (Test-Path -Path $absoluteWorkingDir -PathType Container) )
+    {
+        New-Item -Path $absoluteWorkingDir -ItemType 'Directory'
+    }
+
+}
+
+function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [string]
-        $ForScript,
-
         [Switch]
-        $ForAPassingScript,
-
-        [Switch]
-        $ForAFailingScript,
-
-        [Switch]
-        $Passes,
-
-        [Switch]
-        $Fails,
-
-        [Switch]
-        $WhenNotGivenAWorkingDirectory,
-
-        [String]
-        $InWorkingDirectory = $TestDrive.FullName,
-
-        [Switch]
-        $DoesNotRun,
-
-        [Switch]
-        $WhenGivenADirectoryThatDoesNotExist,
-
-        [Switch]
-        $WhenGivenARelativePath,
-
-        [Switch]
-        $WhenGivenCleanSwitch
-
+        $InCleanMode
     )
-    $script = 'myscript.ps1'
-    $scriptPath = Join-Path -Path $InWorkingDirectory -ChildPath $script
-        
-        @'
-New-Item -Path 'run' -ItemType 'File'
-'@ | Set-Content -Path $scriptPath
 
-    
-    if( $ForAFailingScript )
-    {
-        'exit 1' | Add-Content -Path $scriptPath
-    }
-
-    if( $ForScript )
-    {
-        $ForScript | Add-Content -Path $scriptPath
-    }
-
-    if( $WhenNotGivenAWorkingDirectory )
-    {
-        $taskParameter = @{
-                            Path = @(
-                                    $script
-                                )
-                      }
-        $context = New-WhsCITestContext -ForDeveloper
-    }
-    elseif( $WhenGivenADirectoryThatDoesNotExist )
-    {
-        $taskParameter = @{
-                            WorkingDirectory = 'C:\I\DO\NOT\EXIST'
-                            Path = @(
-                                    $script
-                                )
+    $taskParameter = @{
+                        Path = @(
+                                $scriptName
+                            )
                         }
-        $context = New-WhsCITestContext -ForDeveloper
-    }
-    elseif( $WhenGivenARelativePath )
+    $workingDirectory = Get-WorkingDirectory
+    if( $workingDirectory )
     {
-        $relativePath = 'relative'
-        $contentPath = Join-Path -Path $TestDrive.FullName -ChildPath $relativePath
-        New-Item -Path $contentPath -ItemType 'Directory'
-        $contentPath = Join-Path -Path $contentPath -ChildPath $script
-        @'
-New-Item -Path 'run' -ItemType 'File'
-'@ | Set-Content -Path $contentPath
-        $taskParameter = @{
-                            WorkingDirectory = $relativePath
-                            Path = @(
-                                    $script
-                                )
-                        }
-        $context = New-WhsCITestContext -ForDeveloper
-
-
+        $taskParameter['WorkingDirectory'] = $workingDirectory
     }
-    else
-    {
-        $taskParameter = @{
-                            WorkingDirectory = $InWorkingDirectory
-                            Path = @(
-                                    $script
-                                )
-                        }
-        $context = New-WhsCITestContext -ForBuildRoot $InWorkingDirectory  -ForDeveloper
-    }
+
+    $context = New-WhsCITestContext -ForDeveloper
     
     $failed = $false
     $CleanParam = @{ }
-    if( $WhenGivenCleanSwitch )
+    if( $InCleanMode )
     {
         $CleanParam['Clean'] = $True
     }
 
+    $script:failed = $false
     try
     {
         Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $taskParameter @CleanParam
@@ -123,107 +140,136 @@ New-Item -Path 'run' -ItemType 'File'
     catch
     {
         Write-Error -ErrorRecord $_
-        $failed = $true
+        $script:failed = $true
     }
+}
 
-    if( $Passes )
-    {
-        It 'should pass' {
-            $failed | Should Be $false
-        }
-    }
+function ThenTheLastErrorMatches
+{
+    param(
+        $Pattern
+    )
 
-    if( $Fails )
-    {
-        It 'should fail' {
-            $failed | Should Be $true
-        }
+    It ("last error message should match /{0}/" -f $Pattern)  {
+        $Global:Error[0] | Should -Match $Pattern
     }
-    if ( $WhenGivenARelativePath )
-    {
-        $itRanPath = Join-Path -Path (Join-Path -Path $InWorkingDirectory -ChildPath $relativePath) -ChildPath 'run'
+}
+
+function ThenTheLastErrorDoesNotMatch
+{
+    param(
+        $Pattern
+    )
+
+    It ("last error message should not match /{0}/" -f $Pattern)  {
+        $Global:Error[0] | Should -Not -Match $Pattern
     }
-    else
-    {
-        $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath 'run'
-    }    
-    if( $DoesNotRun )
-    {
-        It 'should not run' {
-            $itRanPath | Should Not Exist
-        }
+}
+
+function ThenTheScriptRan
+{
+    It 'the script should run' {
+        Get-OutputFilePath | Should -Exist
     }
-    else
-    {
-        It 'should run' {
-            $itRanPath | Should Exist
-        }
+}
+
+function ThenTheScriptDidNotRun
+{
+    It 'the script should not run' {
+        Get-OutputFilePath | Should -Not -Exist
+    }
+}
+
+function ThenTheTaskFails
+{
+    It 'the task should fail' {
+        $failed | Should -Be $true
+    }
+}
+
+function ThenTheTaskPasses
+{
+    It 'the task should pass' {
+        $failed | Should -Be $false
     }
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when script passes' {
-    Assert-ThatTheTask -ForAPassingScript -Passes
+    GivenAPassingScript
+    GivenNoWorkingDirectory
+    WhenTheTaskRuns
+    ThenTheScriptRan
+    ThenTheTaskPasses
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when script fails' {
-    Assert-ThatTheTask -ForAFailingScript -Fails -ErrorAction SilentlyContinue
+    GivenNoWorkingDirectory
+    GivenAFailingScript
+    WhenTheTaskRuns -ErrorAction SilentlyContinue
+    ThenTheScriptRan
+    ThenTheTaskFails
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when script passes after a previous command fails' {
-    $Global:LASTEXITCODE = 1
-    Assert-ThatTheTask -ForAPassingScript -Passes
+    GivenNoWorkingDirectory
+    GivenAPassingScript
+    GivenLastExitCode 1
+    WhenTheTaskRuns
+    ThenTheScriptRan
+    ThenTheTaskPasses
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when script throws a terminating exception' {
-    $script = @'
+    GivenAScript @'
 throw 'fubar!'
 '@ 
-    Assert-ThatTheTask -ForScript $script -Fails -ErrorAction SilentlyContinue
-
-    It 'should handle the script''s error' {
-        $Global:Error[0] | Should Match 'fubar'
-    }
+    WhenTheTaskRuns -ErrorAction SilentlyContinue
+    ThenTheTaskFails
+    ThenTheScriptRan
+    ThenTheLastErrorMatches 'fubar'
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when script''s error action preference is Stop' {
-    $script = @'
+    GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
+throw 'fubar'
 '@ 
-    Assert-ThatTheTask -ForScript $script -Fails -ErrorAction SilentlyContinue
-
-    It 'should handle the script''s error' {
-        $Global:Error[0] | Should Match 'snafu'
-    }
+    WhenTheTaskRuns -ErrorAction SilentlyContinue
+    ThenTheTaskFails
+    ThenTheScriptRan
+    ThenTheLastErrorMatches 'snafu'
+    ThenTheLastErrorDoesNotMatch 'fubar'
+    ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }
 
 Describe 'Invoke-WhsCIBuild.when PowerShell task defined with an absolute working directory' {
-    $absolutePath = Join-Path -path $TestDrive.FullName -ChildPath 'bin'
-    New-Item -Path $absolutePath -ItemType 'Directory' 
-    Assert-ThatTheTask -ForAPassingScript -Passes -InWorkingDirectory $absolutePath 
+    GivenWorkingDirectory (Join-Path -path $TestDrive.FullName -ChildPath 'bin')
+    GivenAPassingScript
+    WhenTheTaskRuns
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }
 
 Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a relative working directory' {
-    Assert-ThatTheTask -ForAPassingScript -Passes -whenGivenARelativePath
-    return
-}
-
-Describe 'Invoke-WhsCIPowerShellTask.when not given a working directory' {
-    Push-Location $TestDrive.FullName
-    try
-    {
-        Assert-ThatTheTask -ForAPassingScript -Passes -WhenNotGivenAWorkingDirectory
-    }
-    finally
-    {
-        Pop-Location
-    }
+    GivenWorkingDirectory 'bin'
+    GivenAPassingScript
+    WhenTheTaskRuns
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when working directory does not exist' {
-    Assert-ThatTheTask -ForAPassingScript -WhenGivenADirectoryThatDoesNotExist -Fails -DoesNotRun -ErrorAction SilentlyContinue
+    GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
+    GivenAPassingScript
+    WhenTheTaskRuns  -ErrorAction SilentlyContinue
+    ThenTheTaskFails
 }
 
 Describe 'Invoke-WhsCIPowerShellTask.when Clean switch is active' {
-    Assert-ThatTheTask -ForAPassingScript -WhenGivenCleanSwitch -Passes -DoesNotRun
+    GivenNoWorkingDirectory
+    GivenAPassingScript
+    WhenTheTaskRuns -InCleanMode
+    ThenTheTaskPasses
+    ThenTheScriptDidNotRun
 }
