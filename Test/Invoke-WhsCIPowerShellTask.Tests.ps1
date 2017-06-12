@@ -46,7 +46,7 @@ function GivenAScript
         $Script,
 
         [string]
-        $WithParam
+        $WithParam = 'param([Parameter(Mandatory=$true)][object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'

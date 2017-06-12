@@ -1,22 +1,6 @@
 
 function Invoke-WhsCIPowerShellTask
 {
-    <#
-    .SYNOPSIS
-    Runs PowerShell commands.
-
-    .DESCRIPTION
-    The `Invoke-WhsCIPowerShellTask` runs PowerShell scripts. Pass the path to the script to the `TaskParameter[''Path'']` parameter. IF the script exists with a non-zero exit code, the task fails (i.e. throws a terminating exception/error).
-    
-    You can pecify an explicit working directory with a `TaskParameter['WorkingDirectory']` element.
-
-    You *must* include paths to the scripts to run with the `Path` parameter.
-
-    .EXAMPLE
-    Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $TaskParameter
-
-    Demonstrates how to use the `Invoke-WhsCIPowerShellTask` function.
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -68,6 +52,10 @@ function Invoke-WhsCIPowerShellTask
     }
 
     $argument = $TaskParameter['Argument']
+    if( -not $argument )
+    {
+        $argument = @{ }
+    }
 
     foreach( $scriptPath in $path )
     {
@@ -81,10 +69,10 @@ function Invoke-WhsCIPowerShellTask
         try
         {
             $Global:LASTEXITCODE = 0
-            & $ScriptPath @argument
+            & $ScriptPath -TaskContext $TaskContext @argument
             if( $Global:LASTEXITCODE )
             {
-                throw ('PowerShell script ''{0}'' failed, exiting with code {1}.' -F $ScriptPath,$Global:LASTEXITCODE)
+                throw ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $ScriptPath,$Global:LASTEXITCODE)
             }
         }
         finally
