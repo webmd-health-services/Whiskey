@@ -93,7 +93,7 @@
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',
-			    'Publish-WhsCITag',
+			                'Publish-WhsCITag',
                             'Resolve-WhsCINuGetPackageVersion',
                             'Resolve-WhsCIPowerShellModuleVersion',
                             'Resolve-WhsCITaskPath',
