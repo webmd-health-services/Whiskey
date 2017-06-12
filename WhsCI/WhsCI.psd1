@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.7.3'
+    ModuleVersion = '0.9.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,13 +142,7 @@
             ReleaseNotes = @'
 ### Enhancements
 
- * When building Node.js applications or modules, if there is no version in your `whsbuild.yml` file, we now use the version in your `package.json` file. To have WhsCI generate a version number for you, set the `IgnorePackageJsonVersion` property to `true` in the root of your whsbuild.yml file, e.g. `IgnorePackageJsonVersion: true`.
-
-### Bug Fixes
-
- * Fixed: PublishNodeModule fails when publishing; it doesn't correctly create the .npmrc file containing the credentials to use when publishing.
- * Fixed: Build tasks don't run if they have no properites.
- * Fixed: Pester3 and Pester4 tasks don't fail the build when there are test failures.
+ * An environment name is now required when creating a build context with the `New-WhsCIContext` function. Pass the environment name to its `Environment` parameter.
 '@
 
         } # End of PSData hashtable
