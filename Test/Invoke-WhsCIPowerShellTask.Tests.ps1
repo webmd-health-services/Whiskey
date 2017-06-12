@@ -10,15 +10,6 @@ $scriptName = $null
 
 function Get-WorkingDirectory
 {
-    #if ( $WhenGivenARelativePath )
-    #{
-    #    $itRanPath = Join-Path -Path (Join-Path -Path $InWorkingDirectory -ChildPath $relativePath) -ChildPath 'run'
-    #}
-    #else
-    #{
-    #    $itRanPath = Join-Path -Path $InWorkingDirectory -ChildPath 'run'
-    #}
-
     if( $workingDirectory )
     {
         return $workingDirectory
@@ -50,14 +41,19 @@ function GivenAPassingScript
 function GivenAScript
 {
     param(
+        [Parameter(Position=0)]
         [string]
-        $Script
+        $Script,
+
+        [string]
+        $WithParam
     )
 
     $script:scriptName = 'myscript.ps1'
     $scriptPath = Join-Path -Path $TestDrive.FullName -ChildPath $scriptName
         
     @"
+$($WithParam)
 
 New-Item -Path '$( Get-OutputFilePath | Split-Path -Leaf)' -ItemType 'File'
 
@@ -109,7 +105,10 @@ function WhenTheTaskRuns
     [CmdletBinding()]
     param(
         [Switch]
-        $InCleanMode
+        $InCleanMode,
+
+        [object]
+        $WithArgument
     )
 
     $taskParameter = @{
@@ -121,6 +120,11 @@ function WhenTheTaskRuns
     if( $workingDirectory )
     {
         $taskParameter['WorkingDirectory'] = $workingDirectory
+    }
+
+    if( $WithArgument )
+    {
+        $taskParameter['Argument'] = $WithArgument
     }
 
     $context = New-WhsCITestContext -ForDeveloper
@@ -272,4 +276,57 @@ Describe 'Invoke-WhsCIPowerShellTask.when Clean switch is active' {
     WhenTheTaskRuns -InCleanMode
     ThenTheTaskPasses
     ThenTheScriptDidNotRun
+}
+
+function ThenFile
+{
+    param(
+        $Path,
+        $HasContent
+    )
+
+    $fullpath = Join-Path -Path (Get-WorkingDirectory) -ChildPath $Path 
+    $fullpath | Should -Exist
+    Get-Content -Path $fullpath | Should -Be $HasContent
+}
+
+Describe 'Invoke-WhsCIPowerShellTask.when passing positional parameters' {
+    GivenNoWorkingDirectory
+    GivenAScript @"
+`$One | Set-Content -Path 'one.txt'
+`$Two | Set-Content -Path 'two.txt'
+"@ -WithParam @"
+param(
+    `$One,
+    `$Two
+)
+"@
+    WhenTheTaskRuns -WithArgument (@( 'fubar', 'snafu' ))
+    ThenTheTaskPasses
+    ThenTheScriptRan
+    It 'should pass parameters to script' {
+        ThenFile 'one.txt' -HasContent 'fubar'
+        ThenFile 'two.txt' -HasContent 'snafu'
+    }
+}
+
+
+Describe 'Invoke-WhsCIPowerShellTask.when passing named parameters' {
+    GivenNoWorkingDirectory
+    GivenAScript @"
+`$One | Set-Content -Path 'one.txt'
+`$Two | Set-Content -Path 'two.txt'
+"@ -WithParam @"
+param(
+    `$One,
+    `$Two
+)
+"@
+    WhenTheTaskRuns -WithArgument @{ 'Two' = 'fubar'; 'One' = 'snafu' }
+    ThenTheTaskPasses
+    ThenTheScriptRan
+    It 'should pass parameters to script' {
+        ThenFile 'one.txt' -HasContent 'snafu'
+        ThenFile 'two.txt' -HasContent 'fubar'
+    }
 }

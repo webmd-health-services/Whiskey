@@ -66,7 +66,9 @@ function Invoke-WhsCIPowerShellTask
     {
         $WorkingDirectory = $TaskContext.BuildRoot
     }
-    
+
+    $argument = $TaskParameter['Argument']
+
     foreach( $scriptPath in $path )
     {
 
@@ -79,7 +81,7 @@ function Invoke-WhsCIPowerShellTask
         try
         {
             $Global:LASTEXITCODE = 0
-            & $ScriptPath
+            & $ScriptPath @argument
             if( $Global:LASTEXITCODE )
             {
                 throw ('PowerShell script ''{0}'' failed, exiting with code {1}.' -F $ScriptPath,$Global:LASTEXITCODE)
