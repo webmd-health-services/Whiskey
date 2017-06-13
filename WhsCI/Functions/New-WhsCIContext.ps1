@@ -40,6 +40,11 @@ function New-WhsCIContext
     param(
         [Parameter(Mandatory=$true)]
         [string]
+        # The environment you're building in.
+        $Environment,
+
+        [Parameter(Mandatory=$true)]
+        [string]
         # The path to the `whsbuild.yml` file that defines build settings and tasks.
         $ConfigurationPath,
 
@@ -246,6 +251,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
     $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
 
     $context = [pscustomobject]@{
+                                    Environment = $Environment;
                                     ApplicationName = $appName;
                                     ReleaseName = $releaseName;
                                     BuildRoot = $buildRoot;

@@ -249,7 +249,7 @@ function New-WhsCITestContext
                     PowerShellFeedUri = $PowerShellFeedUri;
                     }
 
-    $context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
+    $context = New-WhsCIContext -Environment 'verification' -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'
