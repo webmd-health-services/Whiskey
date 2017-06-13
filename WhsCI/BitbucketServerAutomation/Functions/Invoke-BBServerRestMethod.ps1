@@ -1,3 +1,14 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 function Invoke-BBServerRestMethod
 {
@@ -51,6 +62,7 @@ function Invoke-BBServerRestMethod
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
     $uriPath = 'rest/{0}/{1}/{2}' -f $ApiName.Trim('/'),$Connection.ApiVersion.Trim('/'),$ResourcePath.Trim('/')
     $uri = New-Object 'Uri' -ArgumentList $Connection.Uri,$uriPath
@@ -59,6 +71,13 @@ function Invoke-BBServerRestMethod
     if( $InputObject )
     {
         $bodyParam['Body'] = $InputObject | ConvertTo-Json -Depth ([int32]::MaxValue)
+    }
+
+    #$DebugPreference = 'Continue'
+    Write-Debug -Message ('{0} {1}' -f $Method.ToString().ToUpperInvariant(), $uri)
+    if( $bodyParam['Body'] )
+    {
+        Write-Debug -Message $bodyParam['Body']
     }
 
     $credential = $Connection.Credential
@@ -87,6 +106,12 @@ function Invoke-BBServerRestMethod
             }
         }
         
+        if( -not $content )
+        {
+            Write-Error -ErrorRecord $_
+            return
+        }
+
         foreach( $item in $content.errors )
         {
             $message = $item.message
@@ -99,7 +124,7 @@ function Invoke-BBServerRestMethod
                 $message = '{0}: {1}' -f $item.exceptionName,$message
             }
 
-            Write-Error -Message $message
+            Write-Error -Message $message -ErrorAction $ErrorActionPreference
         }
         return
     }

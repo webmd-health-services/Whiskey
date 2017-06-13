@@ -270,6 +270,7 @@ function Invoke-WhsCIBuild
             if( $succeeded )
             {
                 $status = 'Successful'
+                Publish-WhsCITag -TaskContext $Context 
             }
 
             Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status $status

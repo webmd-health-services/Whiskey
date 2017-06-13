@@ -1,11 +1,21 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 @{
-
     # Script module or binary module file associated with this manifest.
-    RootModule = 'BtibucketServerAutomation.psm1'
+    RootModule = 'BitbucketServerAutomation.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.0.0'
+    ModuleVersion = '0.1.0'
 
     # ID used to uniquely identify this module
     GUID = 'ef458b99-5fc4-4802-99a7-0604b71e3dd7'
@@ -55,17 +65,25 @@ The Bitbucket Server Automation module is used to interact with Bitbucket Server
     # TypesToProcess = @()
 
     # Format files (.ps1xml) to be loaded when importing this module
-    FormatsToProcess = @( 'Formats\Atlassian.Bitbucket.Server.RepositoryInfo.ps1xml' )
+    FormatsToProcess = @( 
+                            'Formats\Atlassian.Bitbucket.Server.ProjectInfo.ps1xml',
+                            'Formats\Atlassian.Bitbucket.Server.RepositoryInfo.ps1xml' 
+                        )
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     # NestedModules = @()
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Get-BBServerCommitBuildStatus',
+                            'Get-BBServerProject',
                             'Get-BBServerRepository', 
+                            'Get-BBServerTag',
                             'Invoke-BBServerRestMethod', 
                             'New-BBServerConnection', 
+                            'New-BBServerProject',
                             'New-BBServerRepository', 
+                            'New-BBServerTag',
                             'Remove-BBServerRepository',
                             'Set-BBServerCommitBuildStatus' )
 
@@ -93,19 +111,30 @@ The Bitbucket Server Automation module is used to interact with Bitbucket Server
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            # Tags = @()
+            Tags = @( 'git', 'bitbucket', 'bitbucket server', 'scm', 'devops', 'pipeline' )
 
             # A URL to the license for this module.
-            # LicenseUri = ''
+            LicenseUri = 'http://www.apache.org/licenses/LICENSE-2.0'
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://github.com/pshdo/BitbucketServerAutomation'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = @'
+# Enhancements
+
+* Added `Get-BBServerCommitBuildStatus` function for getting the build status of a commit.
+* Added `Get-BBServerProject` function for getting projects.
+* Added `Get-BBServerTag` function for getting tags in a repository.
+* Added `New-BBServerProject` function for creating projects.
+* Added `New-BBServerTag` function for creating tags in a repository.
+
+# Bug Fixes
+* `Set-BBServerCommitBuildStatus` ignores parameter values when they are passed, i.e. it only works when run under Jenkins.
+'@
 
         } # End of PSData hashtable
 

@@ -47,9 +47,9 @@ PublishOn:
  - release/.*
  - master
  
-# The name of your application in BuildMaster. By default, the `Name` property from the 
-# `NodeAppPackage` or `AppPackage` tasks is used. You should only need to define this 
-# property if your build creates multiple packages.
+# The name of your application in BuildMaster. By default, the `Name` property from 
+# the `NodeAppPackage` or `AppPackage` tasks is used. You should only need to define
+# this property if your build creates multiple packages.
 ApplicationName: APPLICATION_NAME
 
 # The name of the release in BuildMaster. By default, the branch name being built is 
@@ -63,6 +63,26 @@ ReleaseName: RELEASE_NAME
 # `true`. Set to `false` if you don't use BuildMaster to deploy your application or 
 # your application doesn't get deployed.
 DeployPackage: true
+
+# PrereleaseMap is a list of branches to prerelease identifier mappings. Each item
+# is a name/value pair. The name is a regular expression and the value is the 
+# prerelease identifier. If a branch matches the regular expression, its prerelease
+# identifier and an auto-generated version number are automatically added to your 
+# package's semantic version. 
+#
+# You have no control over the prereleae version number.It will not be duplicated 
+# across builds/branches. It is not guaranteed to increment by one between builds 
+# or start at 1. 
+#
+# If a branch matches multiple regular expressions, the first match/prerelease 
+# identifer is used. 
+#
+# In the example below, if a branch contains the word `alpha`, and the version
+# number is 3.2.1 and the prerelease version is 43, the full semantic version would
+# be `3.2.1-alpha.43`. You must also add the branch to the PublishOn element, 
+# otherwise your prerelease package will never get published.
+PrereleaseMap:
+- "\balpha\b": alpha
 
 # When building a Node.js application or module, if this file doesn't contain a
 # Version property, the version from your package.json file is used as the version
@@ -106,8 +126,8 @@ BuildTasks:
 # build server, the package is uploaded to ProGet.
 #
 # The `NodeAppPackage` uses a common, WHS-specific whitelist. You can add items to the 
-# whitelist with the `Include` property (not shown). Your `package.json` file is always 
-# included in your package.
+# whitelist with the `Include` property (not shown). Your `package.json` file is 
+# always included in your package.
 - NodeAppPackage:
     Name: ui-cm
     Description: The Condition Management user-interface.

@@ -10,9 +10,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if( (Get-Module -Name 'BitbucketServerAutomation') )
-{
-    Remove-Module -Name 'BitbucketServerAutomation' -Force
-}
-
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'BitbucketServerAutomation.psd1' -Resolve)
+Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions') -Filter '*.ps1' |
+    ForEach-Object { . $_.FullName }

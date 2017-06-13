@@ -21,6 +21,8 @@ function Assert-Context
     param(
         $Context,
 
+        $Environment,
+
         $SemanticVersion,
 
         [Switch]
@@ -40,6 +42,10 @@ function Assert-Context
 
         $WithProGetPowerShellFeed = 'posh/PoSh'
     )
+
+    It 'should set environment' {
+        $Context.Environment | Should -Be $Environment
+    }
 
     It 'should set configuration path' {
         $Context.ConfigurationPath | Should Be (Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml')
@@ -241,6 +247,9 @@ function WhenCreatingContext
     [CmdletBinding()]
     param(
         [string]
+        $Environment = 'developer',
+
+        [string]
         $ThenCreationFailsWithErrorMessage,
 
         [Switch]
@@ -306,7 +315,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            $script:context = New-WhsCIContext -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
+            $script:context = New-WhsCIContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
         }
         catch
         {
@@ -341,6 +350,9 @@ function ThenBuildServerContextCreated
 {
     [CmdletBinding()]
     param(
+        [string]
+        $Environment = 'developer',
+
         [SemVersion.SemanticVersion]
         $WithSemanticVersion,
 
@@ -384,7 +396,7 @@ function ThenBuildServerContextCreated
         }
 
         $iWasCalled = $true
-        Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
+        Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
 
         It 'should set Bitbucket Server connection' {
             $Context.BBServerConnection | Should Not BeNullOrEmpty
@@ -436,6 +448,9 @@ function ThenDeveloperContextCreated
 {
     [CmdletBinding()]
     param(
+        [string]
+        $Environment = 'developer',
+
         [SemVersion.SemanticVersion]
         $WithSemanticVersion,
 
@@ -453,7 +468,7 @@ function ThenDeveloperContextCreated
     {
         $iWasCalled = $true
 
-        Assert-Context -Context $Context -SemanticVersion $WithSemanticVersion
+        Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion
 
         It 'should not set Bitbucket Server connection' {
             $Context.BBServerConnection | Should BeNullOrEmpty
@@ -510,8 +525,8 @@ function ThenVersionMatches
 
 Describe 'New-WhsCIContext.when run by a developer for an application' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
-    WhenCreatingContext -ByDeveloper
-    ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
+    WhenCreatingContext -ByDeveloper -Environment 'fubar'
+    ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -Environment 'fubar'
 }
 
 Describe 'New-WhsCIContext.when run by developer for a library' {
@@ -532,8 +547,8 @@ Describe 'New-WhsCIContext.when run by developer and version is not a semantic v
 
 Describe 'New-WhsCIContext.when run by the build server' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-    WhenCreatingContext -ByBuildServer
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
+    WhenCreatingContext -ByBuildServer -Environment 'fubar'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop' -Environment 'fubar'
 }
 
 Describe 'New-WhsCIContext.when run by the build server and customizing ProGet feed names' {
