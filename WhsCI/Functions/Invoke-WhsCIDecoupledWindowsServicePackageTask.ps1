@@ -25,7 +25,7 @@ function Invoke-WhsCIDecoupledWindowsServicePackageTask
 
     if( -not $TaskParameter.ContainsKey('BinPath') )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('The Parameter BinPath is mandatory. It should be the path (relative to your whsbuild.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
+        Stop-WhsCITask -TaskContext $TaskContext -Message ('The property BinPath is mandatory. It should be the path (relative to your whsbuild.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
     }
 
     $whitelist = @( 
