@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.9.0'
+    ModuleVersion = '0.10.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -143,10 +143,11 @@
             ReleaseNotes = @'
 ### Enhancements
 
- * An environment name is now required when creating a build context with the `New-WhsCIContext` function. Pass the environment name to its `Environment` parameter.
- * Added `Argument` property to `PowerShell` task for passing arguments to PowerShell scripts.
- * The `PowerShell` task now passes the current context object via a named `TaskContext` parameter.
- * Repositories are now tagged after successful builds on publishing branches.
+ * Updated `BitbucketServerAutomation` module to version 0.2.0
+  * New `Get-BBServerBranch` function for getting the branches in a repository.
+  * New `Get-BBServerFile` function for getting a file from a repository.
+  * New `New-BBServerBranch` function for creating a branch in a repository.
+  * New `Set-BBServerDefaultBranch` function for setting a repository's default branch.
 '@
 
 
