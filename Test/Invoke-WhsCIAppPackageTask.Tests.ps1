@@ -480,6 +480,16 @@ function Assert-NewWhsCIAppPackage
     #endregion
 }
 
+function Get-BuildRoot
+{
+    return Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+}
+
+function Given7ZipIsInstalled
+{
+    Install-WhsCITool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot (Get-BuildRoot)
+}
+
 function Initialize-Test
 {
     param( 
@@ -529,7 +539,7 @@ function Initialize-Test
         $WithNewWhsEnvironmentsJson
     )
 
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    $repoRoot = Get-BuildRoot
     Install-Directory -Path $repoRoot
     if( -not $SourceRoot )
     {
@@ -617,6 +627,14 @@ function Initialize-Test
 
     return $repoRoot
 }
+
+function Then7zipShouldNotExist
+{
+    It 'should delete 7zip NuGet package' {
+        Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Not -Exist
+    }
+}
+
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
@@ -957,6 +975,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
 
 Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
     $file = 'project.json'    
+    Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhsCIAppPackage -ForPath $file `
                               -WhenGivenCleanSwitch `
@@ -964,6 +983,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
                               -ShouldNotCreatePackage `
                               -ShouldNotUploadPackage `
                               -ShouldNotSetPackageVariables
+    Then7zipShouldNotExist
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
