@@ -179,7 +179,9 @@ function Assert-NewWhsCIAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
+                Where-Object { $_ -like '*.upack' } | 
+                Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
     catch
     {

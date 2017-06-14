@@ -245,13 +245,28 @@ function Invoke-WhsCIAppPackageTask
             }
         }
 
-        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
+        $7zipRoot = Install-WhsCITool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot $TaskContext.BuildRoot
+        $7zipRoot = $7zipRoot -replace '16\.2\.1','16.02.1'
+        $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
+
+        $shouldProcessDescription = 'Creating universal package {0}' -f $outFile
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription,$shouldProcessDescription,$shouldProcessDescription) )
+        {
+            & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+        }
+
+        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
+        {
+            $outFile
+        }
 
         # Upload to ProGet
         if( -not $TaskContext.Publish )
         {
             return
         }
+
         foreach($uri in $TaskContext.ProGetSession.AppFeedUri)
         {
             $progetSession = New-ProGetSession -Uri $uri -Credential $TaskContext.ProGetSession.Credential
@@ -266,12 +281,6 @@ function Invoke-WhsCIAppPackageTask
             
         # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
         $TaskContext.PackageVariables['ProGetPackageName'] = $version
-
-        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
-        {
-            $outFile
-        }
     }
     finally
     {
