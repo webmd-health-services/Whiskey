@@ -141,6 +141,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: `AppPackage` task takes *forever* when packaging the HealthCoaching application package. It now uses 7zip to create the application package.
+* Fixed: `NUnit2` task fails when tests are run under OpenCover and there are spaces in an assembly's path.
 '@
 
         } # End of PSData hashtable

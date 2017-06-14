@@ -137,10 +137,10 @@ function Invoke-WhsCINUnit2Task
         Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
         Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $TaskParameter['DisableCodeCoverage'])
 
-        $pathString = ($path -join " ")
+        $pathString = ($path -join '\" \"')
         $extraArgString = ($extraArgs -join " ")
         $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
-        $nunitArgs = "${pathString} /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
+        $nunitArgs = "\""${pathString}\"" /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
         if( -not $TaskParameter['DisableCodeCoverage'] )
         {
             & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode'
