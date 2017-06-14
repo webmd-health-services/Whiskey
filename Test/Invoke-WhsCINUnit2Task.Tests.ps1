@@ -2,9 +2,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
-$failingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
-$passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
-
 function Assert-NUnitTestsRun
 {
     param(
@@ -240,7 +237,7 @@ function Invoke-NUnitTask
         else
         {               
             It 'should download NUnit.Runners' {
-                (Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI\packages\NUnit.Runners.2.6.4') | Should Exist
+                (Join-Path -Path $context.BuildRoot -ChildPath 'packages\NUnit.Runners.2.6.4') | Should Exist
             }
         }
         if( $WithFailingTests -or $WithRunningTests )
@@ -350,12 +347,17 @@ function WhenRunningTask
     $script:context = New-WhsCITestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
+    Get-ChildItem -Path $context.BuildRoot -Include 'bin','obj' -Directory -Recurse | Remove-Item -Recurse -Force
 
     Invoke-WhsCIMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
 
+    # Make sure there are spaces in the path so that we test things get escaped properly.
+    Get-ChildItem -Path $context.BuildRoot -Filter 'Release' -Directory -Recurse |
+        Rename-Item -NewName 'Release Mode'
+
     try
     {
-        $WithParameters['Path'] = 'bin\Release\{0}' -f $assemblyToTest
+        $WithParameters['Path'] = 'bin\Release Mode\{0}' -f $assemblyToTest
         $script:output = Invoke-WhsCINUnit2Task -TaskContext $context -TaskParameter $WithParameters | ForEach-Object { Write-Verbose -Message $_ ; $_ }
         $script:threwException = $false
         $script:thrownError = $null

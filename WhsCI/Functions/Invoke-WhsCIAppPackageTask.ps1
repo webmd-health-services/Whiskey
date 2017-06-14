@@ -60,8 +60,14 @@ function Invoke-WhsCIAppPackageTask
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $7zipPackageName = '7-zip.x64'
+    $7zipVersion = '16.2.1'
+    # The directory name where NuGet puts this package is different than the version number.
+    $7zipDirNameVersion = '16.02.1'
     if( $Clean )
     {
+        Uninstall-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
         return
     }
 
@@ -245,13 +251,28 @@ function Invoke-WhsCIAppPackageTask
             }
         }
 
-        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
+        $7zipRoot = Install-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
+        $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
+        $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
+
+        $shouldProcessDescription = 'Creating universal package {0}' -f $outFile
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription,$shouldProcessDescription,$shouldProcessDescription) )
+        {
+            & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+        }
+
+        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
+        {
+            $outFile
+        }
 
         # Upload to ProGet
         if( -not $TaskContext.Publish )
         {
             return
         }
+
         foreach($uri in $TaskContext.ProGetSession.AppFeedUri)
         {
             $progetSession = New-ProGetSession -Uri $uri -Credential $TaskContext.ProGetSession.Credential
@@ -266,12 +287,6 @@ function Invoke-WhsCIAppPackageTask
             
         # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
         $TaskContext.PackageVariables['ProGetPackageName'] = $version
-
-        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
-        {
-            $outFile
-        }
     }
     finally
     {

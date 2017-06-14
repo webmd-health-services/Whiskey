@@ -87,7 +87,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
         }
         $manifest = Get-Content $manifestPath
         $versionString = "ModuleVersion = '{0}.{1}.{2}'" -f ( $TaskContext.Version.Major, $TaskContext.Version.Minor, $TaskContext.Version.Patch )
-        $manifest = $manifest -replace "ModuleVersion = ('|"")\d+\.\d+\.\d+('|"")", $versionString 
+        $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString 
         $manifest | Set-Content $manifestPath
 
         if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )
