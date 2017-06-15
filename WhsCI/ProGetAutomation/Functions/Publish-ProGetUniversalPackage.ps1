@@ -32,6 +32,7 @@ function Publish-ProGetUniversalPackage
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     $shouldProcessCaption = ('creating {0} package' -f $PackagePath)
     $proGetPackageUri = [String]$ProGetSession.Uri + 'upack/' + $FeedName
@@ -45,22 +46,42 @@ function Publish-ProGetUniversalPackage
     $headers = @{}
     $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))
     $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-    $headers.Add('Authorization', $creds)
     
     $operationDescription = 'Uploading ''{0}'' package to ProGet {1}' -f ($PackagePath | Split-Path -Leaf), $proGetPackageUri
     if( $PSCmdlet.ShouldProcess($operationDescription, $operationDescription, $shouldProcessCaption) )
     {
-    
         Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
     
-        $result = Invoke-RestMethod -Method Put `
-                                    -Uri $proGetPackageUri `
-                                    -ContentType 'application/octet-stream' `
-                                    -Body ([IO.File]::ReadAllBytes($PackagePath)) `
-                                    -Headers $headers
-        if( -not $? -or ($result -and $result.StatusCode -ne 201) )
+        # Invoke-RestMethod runs out memory when uploading 100MB ZIP files (or larger). UploadFile doesn't have that problem.
+        $client = New-Object 'Net.WebClient'
+        $client.Headers.Add('Authorization', $creds)
+        try
         {
-            Write-Error -Message ('Failed to upload ''{0}'' package to {1}:{2}{3}' -f ($PackagePath | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,($result | Format-List * -Force | Out-String))
+            $client.UploadFile($proGetPackageUri, 'PUT', $PackagePath)
+        }
+        catch
+        {
+            $ex = $_.Exception
+            while( $ex.InnerException )
+            {
+                $ex = $ex.InnerException
+            }
+
+            $result = ''
+            if( $ex -is [Net.WebException] )
+            {
+                [Net.HttpWebResponse]$response = $ex.Response
+                $stream = $response.GetResponseStream()
+                $reader = New-Object 'IO.StreamReader' $stream
+                $result = $reader.ReadToEnd()
+            }
+            if( -not $result )
+            {
+                $result = $ex.Message
+            }
+
+            $Global:Error.RemoveAt(0)
+            Write-Error -Message ('Failed to upload ''{0}'' package to {1}{2}{3}' -f ($PackagePath | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,$result)
         }
     }
 }
