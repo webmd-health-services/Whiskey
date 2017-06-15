@@ -71,10 +71,14 @@ function Publish-ProGetUniversalPackage
             if( $ex -is [Net.WebException] )
             {
                 [Net.HttpWebResponse]$response = $ex.Response
-                $stream = $response.GetResponseStream()
-                $reader = New-Object 'IO.StreamReader' $stream
-                $result = $reader.ReadToEnd()
+                if( $response )
+                {
+                    $stream = $response.GetResponseStream()
+                    $reader = New-Object 'IO.StreamReader' $stream
+                    $result = $reader.ReadToEnd()
+                }
             }
+
             if( -not $result )
             {
                 $result = $ex.Message
