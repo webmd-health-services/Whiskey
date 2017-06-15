@@ -140,9 +140,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `AppPackage` task takes *forever* when packaging the HealthCoaching application package. It now uses 7zip to create the application package.
-* Fixed: `NUnit2` task fails when tests are run under OpenCover and there are spaces in an assembly's path.
-* Fixed: `PublishPowerShellModule` task fails if the `ModuleVersion` property of the module's manifest didn't contain a three-part version number. It is now way less strict when updating a module's version number.
+* Fixed: the `AppPackage` task runs out of memory when publishing large packages (>100MB). 
 '@
 
         } # End of PSData hashtable
