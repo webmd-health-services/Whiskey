@@ -1213,3 +1213,9 @@ Describe 'Invoke-WhsCIAppPackageTask.when package is empty' {
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
 }
+
+Describe 'Invoke-WhsCIAppPackageTas.when path contains wildcards' {
+    GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
+    WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
+}
