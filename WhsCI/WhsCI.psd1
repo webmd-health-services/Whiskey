@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.9.3'
+    ModuleVersion = '0.9.4'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -88,12 +88,12 @@
                             'Invoke-WhsCIPowerShellTask',
                             'Invoke-WhsCIPublishFileTask',
                             'Invoke-WhsCIPublishNodeModuleTask',
-			                'Invoke-WhsCIPublishNuGetLibraryTask',
+                            'Invoke-WhsCIPublishNuGetLibraryTask',
                             'Invoke-WhsCIPublishPowerShellModuleTask',
                             'Invoke-WhsCiBuild',
                             'New-WhsCIBuildMasterPackage',
                             'New-WhsCIContext',
-			                'Publish-WhsCITag',
+                            'Publish-WhsCITag',
                             'Resolve-WhsCINuGetPackageVersion',
                             'Resolve-WhsCIPowerShellModuleVersion',
                             'Resolve-WhsCITaskPath',
@@ -140,7 +140,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Upgrading to ProGetAutomation 0.1.2 (from 0.1.1): Publish-ProGetUniversalPackage doesn't handle aborted/canceled requests.
+* Fixed: `AppPackage` task fails when `Path` property contains an item with a wildcard expression that matches multiple items.
 '@
 
         } # End of PSData hashtable

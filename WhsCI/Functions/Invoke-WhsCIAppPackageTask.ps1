@@ -168,57 +168,61 @@ function Invoke-WhsCIAppPackageTask
                     $pathparam = 'ThirdPartyPath'
                 }
 
-                $sourcePath = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
-                if( -not $sourcePath )
+                $sourcePaths = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+                if( -not $sourcePaths )
                 {
     	            return
                 }
-                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
-                $relativePath = $relativePath.Trim("\")
-                if( -not $override )
-                {
-                    $destinationItemName = $relativePath
-                }
 
-                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
-                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
-
-                #if parent doesn't exist in the destination dir, create it
-                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                foreach( $sourcePath in $sourcePaths )
                 {
-                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
-                }
-
-                if( (Test-Path -Path $sourcePath -PathType Leaf) )
-                {
-                    Copy-Item -Path $sourcePath -Destination $destination
-                }
-                else
-                {
-    	            if( $AsThirdPartyItem )
-	                {
-		                $excludeParams = @()
-		                $whitelist = @()
-                        $operationDescription = 'packaging third-party {0}' -f $item
-	                }
-	                else
-	                {
-            	        $excludeParams = Invoke-Command {
-							        '.git'
-							        '.hg'
-							        'obj'
-							        $exclude
-						        } |
-					    ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            	        $operationDescription = 'packaging {0}' -f $item
-		                $whitelist = Invoke-Command {
-						                'upack.json'
-						                $include
-						                } 
-	                }
-                    if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                    $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+                    $relativePath = $relativePath.Trim("\")
+                    if( -not $override )
                     {
-                        robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
+                        $destinationItemName = $relativePath
+                    }
+
+                    $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+                    $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+                    #if parent doesn't exist in the destination dir, create it
+                    if( -not ( Test-Path -Path $parentDestinationPath ) )
+                    {
+                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                    }
+
+                    if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                    {
+                        Copy-Item -Path $sourcePath -Destination $destination
+                    }
+                    else
+                    {
+    	                if( $AsThirdPartyItem )
+	                    {
+		                    $excludeParams = @()
+		                    $whitelist = @()
+                            $operationDescription = 'packaging third-party {0}' -f $item
+	                    }
+	                    else
+	                    {
+            	            $excludeParams = Invoke-Command {
+							            '.git'
+							            '.hg'
+							            'obj'
+							            $exclude
+						            } |
+					        ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+            	            $operationDescription = 'packaging {0}' -f $item
+		                    $whitelist = Invoke-Command {
+						                    'upack.json'
+						                    $include
+						                    } 
+	                    }
+                        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                        {
+                            robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
+                        }
                     }
                 }
             }
