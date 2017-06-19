@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.9.4'
+    ModuleVersion = '0.9.5'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -140,7 +140,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `AppPackage` task fails when `Path` property contains an item with a wildcard expression that matches multiple items.
+* Fixed: BuildMaster release names were truncated if they were on release/* branches; always use full branch names for release names.
 '@
 
         } # End of PSData hashtable
