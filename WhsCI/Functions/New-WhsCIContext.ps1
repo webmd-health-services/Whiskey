@@ -178,14 +178,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
         if( -not $releaseName -and $publish )
         {
-            if( $branch -like 'release/*' )
-            {
-                $releaseName = 'release'
-            }
-            else
-            {
-                $releaseName = $branch
-            }
+            $releaseName = $branch
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri

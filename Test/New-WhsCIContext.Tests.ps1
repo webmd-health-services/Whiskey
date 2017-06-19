@@ -596,7 +596,7 @@ Describe 'New-WhsCIContext.when building on feature branch' {
 Describe 'New-WhsCIContext.when building on release branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release/5.1'
     WhenCreatingContext -ByBuildServer
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release/5.1'
 }
 
 Describe 'New-WhsCIContext.when building on long-lived release branch' {
