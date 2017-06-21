@@ -103,7 +103,7 @@ function Invoke-WhsCIMSBuildTask
 [assembly: System.Reflection.AssemblyVersion("{0}")]
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
 [assembly: System.Reflection.AssemblyInformationalVersion("{1}")]
-"@ -f $TaskContext.Version.Version,$TaskContext.Version | Add-Content -Path $assemblyInfoPath
+"@ -f $TaskContext.Version.Version,$TaskContext.Version.SemVer2 | Add-Content -Path $assemblyInfoPath
                 }
         }
 

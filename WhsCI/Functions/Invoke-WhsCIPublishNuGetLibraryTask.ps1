@@ -59,7 +59,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
         foreach ($path in $paths)
         {
             $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
-            $packageVersion = $TaskContext.Version.ReleaseVersion
+            $packageVersion = $TaskContext.Version.SemVer1
                     
             # Create NuGet package
             & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path

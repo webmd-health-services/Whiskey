@@ -43,6 +43,8 @@ function Assert-Context
         $WithProGetPowerShellFeed = 'posh/PoSh'
     )
 
+    $script:context = $Context
+
     It 'should set environment' {
         $Context.Environment | Should -Be $Environment
     }
@@ -76,16 +78,10 @@ function Assert-Context
         $Context.PackageVariables.Count | Should Be 0
     }
 
-    It 'should set version' {
-        $Context.Version | Should Be $SemanticVersion
-        $Context.Version | Should BeOfType ([SemVersion.SemanticVersion])
-    }
+    ThenSemVer2Is $SemanticVersion
 
     $expectedVersion = ('{0}.{1}.{2}' -f $SemanticVersion.Major,$SemanticVersion.Minor,$SemanticVersion.Patch)
-    It 'should set .NET version' {
-        $Context.Version.Version | Should Be $expectedVersion
-        $Context.Version.Version | Should BeOfType ([version])
-    }
+    ThenVersionIs $expectedVersion
 
     $expectedReleaseVersion = $expectedVersion
     if( $SemanticVersion.Prerelease )
@@ -93,10 +89,7 @@ function Assert-Context
         $expectedReleaseVersion = '{0}-{1}' -f $expectedVersion,$SemanticVersion.Prerelease
     }
 
-    It 'should set NuGet version' {
-        $Context.Version.ReleaseVersion | Should Be $expectedReleaseVersion
-        $Context.Version.ReleaseVersion | Should BeOfType ([SemVersion.SemanticVersion])
-    }
+    ThenSemVer2NoBuildMetadataIs $expectedReleaseVersion
 
     It 'should set raw configuration hashtable' {
         $Context.Configuration | Should BeOfType ([hashtable])
@@ -240,6 +233,59 @@ function GivenConfiguration
 function GivenConfigurationFileDoesNotExist
 {
     $script:configurationPath = 'I\do\not\exist'
+}
+
+function ThenSemVer1Is
+{
+    param(
+        [SemVersion.SemanticVersion]
+        $SemanticVersion
+    )
+
+    It ('should set semantic version v1 to {0}' -f $SemanticVersion) {
+        $context.Version.SemVer1 | Should Be $SemanticVersion
+        $context.Version.SemVer1 | Should BeOfType ([SemVersion.SemanticVersion])
+    }
+}
+
+function ThenSemVer2Is
+{
+    param(
+        [SemVersion.SemanticVersion]
+        $SemanticVersion
+    )
+
+    It ('should set semantic version v2 to {0}' -f $SemanticVersion) {
+        $context.Version.SemVer2 | Should Be $SemanticVersion
+        $context.Version.SemVer2 | Should BeOfType ([SemVersion.SemanticVersion])
+    }
+}
+
+function ThenSemVer2NoBuildMetadataIs
+{
+    param(
+        [SemVersion.SemanticVersion]
+        $SemanticVersion
+    )
+
+    It ('should set semantic version v2 with no build metadata to {0}' -f $SemanticVersion) {
+        $Context.Version.SemVer2NoBuildMetadata | Should Be $SemanticVersion
+        $Context.Version.SemVer2NoBuildMetadata | Should BeOfType ([SemVersion.SemanticVersion])
+    }
+
+}
+
+function ThenVersionIs
+{
+    param(
+        [Version]
+        $ExpectedVersion
+    )
+
+    It ('should set version to {0}' -f $ExpectedVersion) {
+        $Context.Version.Version | Should Be $expectedVersion
+        $Context.Version.Version | Should BeOfType ([version])
+    }
 }
 
 function WhenCreatingContext
@@ -499,18 +545,6 @@ function ThenDeveloperContextCreated
     }
 }
 
-function ThenVersionIs
-{
-    param(
-        [SemVersion.SemanticVersion]
-        $Version
-    )
-
-    It ('should set version to {0}' -f $Version) {
-        $context.Version | Should Be $Version
-    }
-}
-
 function ThenVersionMatches
 {
     param(
@@ -519,7 +553,10 @@ function ThenVersionMatches
     )
 
     It ('should set version to {0}' -f $Version) {
-        $context.Version | Should -Match $Version
+        $context.Version.SemVer2 | Should -Match $Version
+        $context.Version.SemVer2NoBuildMetadata | Should -Match $Version
+        $context.Version.SemVer1 | Should -Match $Version
+        $context.Version.Version | Should -Match $Version
     }
 }
 
@@ -632,14 +669,16 @@ Describe 'New-WhsCIContext.when publishing on custom branch' {
 Describe 'New-WhsCIContext.when run by developer on a prerelease branch' {
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'alpha/2.0' -PublishingOn '^alpha\b'
     WhenCreatingContext -ByDeveloper
-    ThenVersionIs '1.2.3'
+    ThenSemVer2Is '1.2.3'
 }
 
 Describe 'New-WhsCIContext.when publishing on a prerelease branch' {
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     GivenBuildID '93'
     WhenCreatingContext -ByBuildServer
-    ThenVersionIs '1.2.3-alpha.93'
+    ThenSemVer2Is '1.2.3-alpha.93'
+    ThenVersionIs '1.2.3'
+    ThenSemVer1Is '1.2.3-alpha93'
 }
 
 Describe 'New-WhsCIContext.when a PrereleaseMap has multiple keys' {
@@ -671,14 +710,20 @@ Describe 'New-WhsCIContext.when building a Node module by a developer' {
     GivenConfiguration
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByDeveloper
+    ThenSemVer2Is '9.4.6'
     ThenVersionIs '9.4.6'
+    ThenSemVer2NoBuildMetadataIs '9.4.6'
+    ThenSemVer1Is '9.4.6'
 }
 
 Describe 'New-WhsCIContext.when building a Node module by a build server' {
     GivenConfiguration -ForBuildServer
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByBuildServer
+    ThenSemVer2Is '9.4.6'
     ThenVersionIs '9.4.6'
+    ThenSemVer2NoBuildMetadataIs '9.4.6'
+    ThenSemVer1Is '9.4.6'
 }
 
 Describe 'New-WhsCIContext.when building a Node.js application and should use an auto-generated version number' {

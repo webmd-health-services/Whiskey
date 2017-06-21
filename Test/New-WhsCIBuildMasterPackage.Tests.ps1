@@ -177,7 +177,7 @@ function ThenPackageCreated
         }
 
         It 'should create release package with package number' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.Major,$Context.Version.Minor,$Context.Version.Patch) }
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.SemVer2.Major,$Context.Version.SemVer2.Minor,$Context.Version.SemVer2.Patch) }
         }
 
         $expectedVariables = @{

@@ -80,7 +80,7 @@ function Invoke-WhsCIAppPackageTask
     }
 
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
-    $version = [semversion.SemanticVersion]$TaskContext.Version.ReleaseVersion
+    $version = $TaskContext.Version.SemVer2NoBuildMetadata
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
     $path = $TaskParameter['Path']
@@ -128,10 +128,10 @@ function Invoke-WhsCIAppPackageTask
         # Add the version.json file
         @{
             Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.ToString();
-            PrereleaseMetadata = $TaskContext.Version.Prerelease;
-            BuildMetadata = $TaskContext.Version.Build;
-            ReleaseVersion = $TaskContext.Version.ReleaseVersion.ToString();
+            SemanticVersion = $TaskContext.Version.SemVer2.ToString();
+            PrereleaseMetadata = $TaskContext.Version.SemVer2.Prerelease;
+            BuildMetadata = $TaskContext.Version.SemVer2.Build;
+            ReleaseVersion = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage
