@@ -3,6 +3,8 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
 
+$context = $null
+
 function GivenACommit
 {
     param(
@@ -41,7 +43,7 @@ function WhenTaggingACommit
         $WithoutPublishing
     )
 
-    $context = New-WhsCITestContext -ForBuildServer 
+    $script:context = New-WhsCITestContext -ForBuildServer 
 
     if ( $WithoutPublishing )
     {
@@ -75,7 +77,7 @@ function WhenTaggingACommit
 function ThenTheCommitShouldBeTagged
 {
     it 'should tag the commit' {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'WhsCI' -Times 1
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Name -eq $context.Version.SemVer2NoBuildMetadata }
     }
     it 'should not write any errors' {
         $Global:Error | Should beNullOrEmpty

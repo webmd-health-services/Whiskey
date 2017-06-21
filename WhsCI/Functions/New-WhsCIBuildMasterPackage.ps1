@@ -47,7 +47,7 @@ function New-WhsCIBuildMasterPackage
     $buildMasterSession = $TaskContext.BuildMasterSession
     $name = $TaskContext.ApplicationName
     $releaseName = $TaskContext.ReleaseName
-    $version = $TaskContext.Version
+    $version = $TaskContext.Version.SemVer2
 
     $variables = $TaskContext.PackageVariables
 

@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.9.5'
+    ModuleVersion = '0.9.6'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -140,7 +140,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: BuildMaster release names were truncated if they were on release/* branches; always use full branch names for release names.
+* Fixed: NuGet packages on prerelease branches fail to publish to ProGet (they were using SemVer v2 style prerelease identifiers).
 '@
 
         } # End of PSData hashtable
