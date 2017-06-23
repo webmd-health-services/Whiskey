@@ -1,6 +1,7 @@
 
 function Invoke-WhsCIPowerShellTask
 {
+    [Whiskey.Task("PowerShell")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

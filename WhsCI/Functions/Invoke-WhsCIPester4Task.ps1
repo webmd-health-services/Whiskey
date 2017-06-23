@@ -17,6 +17,7 @@ function Invoke-WhsCIPester4Task
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
+    [Whiskey.Task("Pester4")]
     [CmdletBinding()]
     param(
          [Parameter(Mandatory=$true)]

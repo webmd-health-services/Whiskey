@@ -35,6 +35,7 @@ function Invoke-WhsCINodeTask
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
+    [Whiskey.Task("Node")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

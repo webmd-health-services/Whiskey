@@ -1,4 +1,3 @@
-
 function Invoke-WhsCIAppPackageTask
 {
     <#
@@ -45,6 +44,7 @@ function Invoke-WhsCIAppPackageTask
 
     #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
+    [Whiskey.Task("AppPackage")]
     param(
         [Parameter(Mandatory=$true)]
         [object]

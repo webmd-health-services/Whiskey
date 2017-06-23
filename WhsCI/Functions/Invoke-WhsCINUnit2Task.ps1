@@ -19,6 +19,7 @@ function Invoke-WhsCINUnit2Task
     Demonstates how to run the NUnit tests in some assemblies and save the result to a specific file. 
     In this example, the assemblies to run are in `$TaskParameter.path` and the test report will be saved in an xml file relative to the indicated `$TaskContext.OutputDirectory` 
     #>
+    [Whiskey.Task("NUnit2")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
