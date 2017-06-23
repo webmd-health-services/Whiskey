@@ -3,16 +3,21 @@
 
 Describe 'Get-WhiskeyTasks.' {
     $expectedTasks = @{
-                        AppPackage     = 'Invoke-WhsCIAppPackageTask';
-                        MSBuild        = 'Invoke-WhsCIMSBuildTask';
-                        NUnit2         = 'Invoke-WhsCINUnit2Task';
-                        NodeAppPackage = 'Invoke-WhsCINodeAppPackageTask';
-                        Node           = 'Invoke-WhsCINodeTask';
-                        Pester3        = 'Invoke-WhsCIPester3Task';
-                        Pester4        = 'Invoke-WhsCIPester4Task';
-                        PowerShell     = 'Invoke-WhsCIPowerShellTask';
-                        PublishFile    = 'Invoke-WhsCIPublishFileTask';
+                        AppPackage                     = 'Invoke-WhsCIAppPackageTask';
+                        MSBuild                        = 'Invoke-WhsCIMSBuildTask';
+                        NUnit2                         = 'Invoke-WhsCINUnit2Task';
+                        NodeAppPackage                 = 'Invoke-WhsCINodeAppPackageTask';
+                        Node                           = 'Invoke-WhsCINodeTask';
+                        Pester3                        = 'Invoke-WhsCIPester3Task';
+                        Pester4                        = 'Invoke-WhsCIPester4Task';
+                        PowerShell                     = 'Invoke-WhsCIPowerShellTask';
+                        PublishFile                    = 'Invoke-WhsCIPublishFileTask';
+                        DecoupledWindowsServicePackage = 'Invoke-WhsCIDecoupledWindowsServicePackageTask';
+                        PublishNodeModule              = 'Invoke-WhsCIPublishNodeModuleTask';
+                        PublishNuGetLibrary            = 'Invoke-WhsCIPublishNuGetLibraryTask';
+                        PublishPowerShellModule        ='Invoke-WhsCIPublishPowerShellModuleTask';
                         }
+
     $Global:error.Clear()
     $failed = $false
     try

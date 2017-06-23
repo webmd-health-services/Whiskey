@@ -17,6 +17,7 @@ function Invoke-WhsCIPublishNuGetLibraryTask
 
     Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion` using the project's `$Context.BuildConfiguration` configuration.
     #>
+    [Whiskey.Task("PublishNuGetLibrary")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
