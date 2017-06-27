@@ -13,12 +13,6 @@ function Assert-NodePackageCreated
         [string[]]
         $WithThirdPartyPath,
 
-        [Switch]
-        $WhenIncludingArc,
-
-        [Switch]
-        $ThenArcIncluded,
-
         [string]
         $WithPath
     )
@@ -47,11 +41,6 @@ function Assert-NodePackageCreated
     if( $WithExtraFile )
     {
         $taskParameter['Include'] = $WithExtraFile
-    }
-
-    if( $WhenIncludingArc )
-    {
-        $taskParameter['IncludeArc'] = $true
     }
 
     Mock -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Verifiable
@@ -142,19 +131,6 @@ function Assert-NodePackageCreated
             return $nodeModulesCount -eq 1
         }
     }
-
-    $excludeArc = $true
-    $assertion = 'exclude'
-    if( $ThenArcIncluded )
-    {
-        $excludeArc = $false
-        $assertion = 'include'
-    }
-    It ('should {0} Arc' -f $assertion) {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
-            return $TaskParameter['ExcludeArc'] -eq $excludeArc
-        }
-    }
 }
 
 Describe 'Invoke-WhsCINodeAppPackageTask.when called' {
@@ -171,10 +147,6 @@ Describe 'Invoke-WhsCINodeAppPackageTask.when called with duplicate third-party 
 
 Describe 'Invoke-WhsCINodeAppPackageTask.when called with third-party path' {
     Assert-NodePackageCreated -WithThirdPartyPath 'thirdfirst','thirdsecond'
-}
-
-Describe 'Invoke-WhsCINodeAppPackageTask.when including Arc' {
-    Assert-NodePackageCreated -WhenIncludingArc -ThenArcIncluded
 }
 
 Describe 'Invoke-WhsCINodeAppPackageTask.when path includes package.json' {

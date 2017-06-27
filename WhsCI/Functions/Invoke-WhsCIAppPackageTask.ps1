@@ -1,49 +1,6 @@
 
 function Invoke-WhsCIAppPackageTask
 {
-    <#
-    .SYNOPSIS
-    Creates a WHS application deployment package.
-
-    .DESCRIPTION
-    The `Invoke-WhsCIAppPackageTask` function implements the `AppPackage` task, which creates an universal ProGet package for a WHS application. When running on the build server and building on the `develop`, a `release/*`, or the `master` branch, the package is uploaded to ProGet and starts a deploy for the package in BuildMaster. If the application doesn't exist in ProGet, it is created for you. In order for the BuildMaster deploy to start, the application has to exist in BuildMaster, and a `develop`, `release`, or `master` release (for those respective branches) must also exist.
-    
-    The package should contain everything the application needs to install itself and run on any server it is deployed to, with minimal/no pre-requisites installed.
-    
-    The `AppPackage` task has the following elements:
-    
-    * `Name` (**mandatory**): the name of the package. Must 
-    * `Description` (**mandatory**): a short description of the package.
-    * `Path` (**mandatory**): the directories and filenames to include in the package. The paths must relative to the `whsbuild.yml` file (you can change the path root via the `SourceRoot` element). Each item is added to the root of the application package using the name of the directory/file. If you have two paths that have the same name, the second item will replace the first.
-    * `Include` (**mandatory**): a whitlelist of wildcards and file names to include in the package. For any directory in the `Path` parameter, only files that match an item in this whitelist are included in the package.
-    * `Exclude`: a list of wildcards and file names to exclude from the package. Sometimes, a whitelist can be a little greedy and include some files you might not want. Use this element to exclude files.
-    * `ThirdPartyPath`: a list of directores and files that should be included in the package *unfiltered*. These are paths that are copied without using the `Include` or `Exclude` elements. This is useful to include items you depend on but have no control over, like Node.js applications' `node_modules` directory.
-    * `ExcludeArc`: by default, WHS's automation platform, `Arc`, is included in your package. If your application doesn't need Arc, set this element to `true` and it won't be included.
-    * `SourceRoot`: this changes the root path used to resolve the relative paths in the `Path` element. Use this element when your application's root directory isn't the same directory your `whsbuild.yml` file is in. This path should be relative to the `whsbuild.yml` file.
-    
-    Here is a sample `whsbuild.yml` file showing an `AppPackage` task definition:
-    
-    BuildTasks:
-    - WhsInit:
-        Name: WhsInit
-        Description: The WHS application used by WHS's Technology team to bootstrap computers and keep them up-to-date. 
-        Path:
-        - Certificates
-        - WhsInitAutomation
-        - Initialize-Computer.ps1
-        - "Initialize-Whs*Repository.ps1"
-        - Reset-Computer.ps1
-        - Test-Computer.ps1
-        - "Update-Whs*Repository.ps1"
-        - Update-WhsInit.ps1
-        - WhsEnvironments.json
-        Include:
-        - "*.ps81"
-        - "*.crt"
-        - "*.cer"
-        - "*.pfx"
-
-    #>
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     param(
         [Parameter(Mandatory=$true)]
@@ -87,7 +44,6 @@ function Invoke-WhsCIAppPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
-    $excludeArc = $TaskParameter['ExcludeArc']    
     
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
@@ -236,23 +192,6 @@ function Invoke-WhsCIAppPackageTask
         if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
         {
 	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
-        }
-
-        if( -not $excludeArc )
-        {
-            $arcPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'Arc'
-            if( -not (Test-Path -Path $arcPath -PathType Container) )
-            {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to create ''{0}'' package because the Arc platform ''{1}'' does not exist. Arc is required when using the WhsCI module to package your application. See https://confluence.webmd.net/display/WHS/Arc for instructions on how to integrate Arc into your repository. You can exclude Arc from your package by setting the `ExcludeArc` task property in {1} to `true`.' -f $Name,$arcPath,$TaskContext.ConfigurationPath)
-                return
-            }
-
-            $arcDestination = Join-Path -Path $tempPackageRoot -ChildPath 'Arc'
-            $operationDescription = 'packaging Arc'
-            if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
-            {
-                robocopy $arcPath $arcDestination '/MIR' '/NP' '/R:0' | Write-Verbose
-            }
         }
 
         $7zipRoot = Install-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot

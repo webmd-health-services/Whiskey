@@ -1,5 +1,3 @@
-
-# Private function pulled from WhsAutomation module in Arc repository.
 function Invoke-WhsCIMSBuild
 {
     [CmdletBinding(SupportsShouldProcess=$true)]

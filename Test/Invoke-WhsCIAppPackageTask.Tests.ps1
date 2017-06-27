@@ -85,12 +85,6 @@ function Assert-NewWhsCIAppPackage
         $MissingRootItems,
 
         [Switch]
-        $WhenExcludingArc,
-
-        [Switch]
-        $ThenArcNotInPackage,
-
-        [Switch]
         $WhenRunByDeveloper,
 
         [Switch]
@@ -126,10 +120,6 @@ function Assert-NewWhsCIAppPackage
     if( $FromSourceRoot )
     {
         $taskParameter['SourceRoot'] = $FromSourceRoot
-    }
-    if( $WhenExcludingArc )
-    {
-        $taskParameter['ExcludeArc'] = $true
     }
 
     $byWhoArg = @{ 'ByDeveloper' = $true }
@@ -326,30 +316,6 @@ function Assert-NewWhsCIAppPackage
             $upackJsonPath | Should Exist
         }
 
-        $arcPath = Join-Path -Path $packageContentsPath -ChildPath 'Arc'
-        if( $ThenArcNotInPackage )
-        {
-            It 'should not include Arc' {
-                $arcPath | Should Not Exist
-            }
-        }
-        else
-        {
-            $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc' -Resolve
-
-            It 'should include Arc' {
-                $arcPath | Should Exist
-            }
-
-            It ('should include all files in Arc') {
-                foreach( $sourceItem in (Get-ChildItem -Path $arcSourcePath -File -Recurse) )
-                {
-                    $destinationItem = $sourceItem.FullName -replace ([regex]::Escape($arcSourcePath),$arcPath)
-                    $destinationItem | Should Exist
-                }
-            }
-        }
-
         foreach( $itemName in $HasThirdPartyRootItem )
         {
             $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
@@ -503,9 +469,6 @@ function Initialize-Test
         $RootFileName,
 
         [Switch]
-        $WithoutArc,
-
-        [Switch]
         $WhenUploadFails,
         
         [Switch]
@@ -554,17 +517,6 @@ function Initialize-Test
     if( $WithNewWhsEnvironmentsJson )
     {
         New-Item -Path (Join-Path -Path $repoRoot -ChildPath 'WhsEnvironments.json') -ItemType 'File' | Out-Null
-    }
-
-    $arcDestinationPath = Join-Path -Path $repoRoot -ChildPath 'Arc'
-    if( -not $WithoutArc )
-    {
-        $arcSourcePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Arc'
-        robocopy $arcSourcePath $arcDestinationPath '/MIR' | Write-Verbose
-    }
-    else
-    {
-        Get-Item -Path $arcDestinationPath -ErrorAction Ignore | Remove-Item -Recurse -WhatIf
     }
 
     $DirectoryName | ForEach-Object { 
@@ -647,15 +599,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when excluding Arc' {
-    $file = 'project.json'
-    $outputFilePath = Initialize-Test -RootFileName $file
-    Assert-NewWhsCIAppPackage -ForPath $file `
-                              -WhenExcludingArc `
-                              -HasRootItems $file `
-                              -ThenArcNotInPackage
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
@@ -752,36 +695,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exc
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc' {
-    $dirNames = @( 'dir1' )
-    $fileNames = @( 'index.aspx' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
-
-    $Global:Error.Clear()
-
-    Assert-NewWhsCIAppPackage -ForPath $dirNames `
-                              -ThatIncludes $fileNames `
-                              -ShouldFailWithErrorMessage 'does not exist' `
-                              -ShouldNotCreatePackage `
-                              -ShouldNotUploadPackage `
-                              -ErrorAction SilentlyContinue
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when repository doesn''t use Arc and ExcludeArc flag is set' {
-    $dirNames = @( 'dir1' )
-    $fileNames = @( 'index.aspx' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WithoutArc
-
-    $Global:Error.Clear()
-
-    Assert-NewWhsCIAppPackage -ForPath $dirNames `
-                              -ThatIncludes $fileNames `
-                              -WhenExcludingArc `
-                              -ShouldWriteNoErrors `
-                              -ShouldUploadPackage `
-                              -ThenArcNotInPackage
-}
-
 Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
@@ -821,24 +734,6 @@ Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
                               -ShouldNotUploadPackage `
                               -ShouldWriteNoErrors `
                               -ShouldReturnNothing
-}
-
-Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch and not including Arc' {
-    $Global:Error.Clear()
-
-    $dirNames = @( 'dir1' )
-    $fileNames = @( 'html.html' )
-    $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    Assert-NewWhsCIAppPackage -ForPath $dirNames `
-                              -ThatIncludes '*.html' `
-                              -WhenRunByDeveloper `
-                              -WhenExcludingArc `
-                              -ThenArcNotInPackage `
-                              -ShouldNotCreatePackage `
-                              -ShouldNotUploadPackage `
-                              -ShouldWriteNoErrors `
-                              -ShouldReturnNothing
-
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
@@ -1011,10 +906,6 @@ function GivenARepositoryWithFiles
 
     $buildRoot = Get-BuildRoot
 
-    $arcRoot = Join-Path -Path $buildRoot -ChildPath 'Arc'
-    New-Item -Path $arcRoot -ItemType 'Directory' | Out-Null
-    New-Item -Path (Join-Path -Path $arcRoot -ChildPath 'arc.txt') -ItemType 'File' | Out-Null
-
     foreach( $item in $Path )
     {
         $parent = $item | Split-Path
@@ -1039,7 +930,6 @@ function WhenPackaging
         [object[]]
         $ThatExcludes,
         $FromSourceRoot,
-        $ThatExcludesArc,
         [object[]]
         $WithThirdPartyPath,
         $WithVersion = $defaultVersion,
@@ -1076,10 +966,6 @@ function WhenPackaging
     if( $FromSourceRoot )
     {
         $taskParameter['SourceRoot'] = $FromSourceRoot
-    }
-    if( $ThatExcludesArc )
-    {
-        $taskParameter['ExcludeArc'] = $true
     }
 
     $byWhoArg = @{ }
@@ -1156,7 +1042,7 @@ function ThenPackageShouldInclude
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     Expand-Item -Path $packagePath -OutDirectory $expandPath
 
-    $Path += @( 'Arc', 'version.json' )
+    $Path += @( 'version.json' )
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
     foreach( $item in $Path )
     {
