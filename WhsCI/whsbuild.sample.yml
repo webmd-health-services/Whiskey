@@ -21,7 +21,7 @@ Version: 0.0.0
 # `release`, and `master` branches and any branch that starts with `release/`.
 #
 # You can't publish something unless you create a package, so make sure your 
-# `BuildTasks` property contains a `AppPackage` or `NodeAppPackage` task.
+# `BuildTasks` property contains a `ProGetUniversalPackage` task.
 #
 # You may use regular expressions. Make sure to escape any regular expression 
 # operators. If the entire branch name matches one of the items in this list, your 
@@ -48,8 +48,8 @@ PublishOn:
  - master
  
 # The name of your application in BuildMaster. By default, the `Name` property from 
-# the `NodeAppPackage` or `AppPackage` tasks is used. You should only need to define
-# this property if your build creates multiple packages.
+# the `ProGetUniversalPackage` task is used. You should only need to define this 
+# property if your build creates multiple packages.
 ApplicationName: APPLICATION_NAME
 
 # The name of the release in BuildMaster. By default, the branch name being built is 
@@ -58,10 +58,10 @@ ApplicationName: APPLICATION_NAME
 ReleaseName: RELEASE_NAME
 
 # Whether or not to create and deploy your application in BuildMaster. Only applies 
-# if an application package was created (i.e. you have an `AppPackage` or 
-# `NodeAppPackage` build task and you're on a branch that publishes). The default is 
-# `true`. Set to `false` if you don't use BuildMaster to deploy your application or 
-# your application doesn't get deployed.
+# if an application package was created (i.e. you have a `ProGetUniversalPackage` 
+# build task and you're on a branch that publishes). The default is `true`. Set to 
+# `false` if you don't use BuildMaster to deploy your application or your 
+# application doesn't get deployed.
 DeployPackage: true
 
 # PrereleaseMap is a list of branches to prerelease identifier mappings. Each item
@@ -122,15 +122,13 @@ BuildTasks:
     - build-jenkins
     - test-jenkins
     
-# The `NodeAppPackage` creates a package of a Node.js application. If running under a 
-# build server, the package is uploaded to ProGet.
-#
-# The `NodeAppPackage` uses a common, WHS-specific whitelist. You can add items to the 
-# whitelist with the `Include` property (not shown). Your `package.json` file is 
-# always included in your package.
-- NodeAppPackage:
-    Name: ui-cm
-    Description: The Condition Management user-interface.
+# The `ProGetUniversalPackage` task creates a package of a Node.js application. If 
+# running under a build server, the package is uploaded to ProGet.
+- ProGetUniversalPackage:
+    Name: MyApplication
+    Description: My application
     Path:
     - dist
     - src
+    Include:
+    - "*.json"

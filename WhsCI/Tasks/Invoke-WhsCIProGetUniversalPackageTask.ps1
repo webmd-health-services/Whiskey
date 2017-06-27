@@ -1,8 +1,8 @@
 
-function Invoke-WhsCIAppPackageTask
+function Invoke-WhsCIProGetUniversalPackageTask
 {
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
-    [Whiskey.Task("AppPackage")]
+    [Whiskey.Task("ProGetUniversalPackage")]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -59,7 +59,7 @@ function Invoke-WhsCIAppPackageTask
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+Invoke-WhsCIAppPackageTask+{0}' -f $name
+    $tempBaseName = 'WhsCI+Invoke-WhsCIProGetUniversalPackageTask+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose

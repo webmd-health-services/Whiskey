@@ -260,7 +260,7 @@ BuildTasks:
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
-$whatIfTasks = @{ 'AppPackage' = $true; 'NodeAppPackage' = $true; }
+$whatIfTasks = @{ 'ProGetUniversalPackage' = $true; }
 foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task' | Sort-Object -Property 'Name') )
 {
     $taskName = $functionName -replace '^Invoke-WhsCI(.*)Task$','$1'

@@ -3,7 +3,7 @@
 
 Describe 'Get-WhiskeyTasks.' {
     $expectedTasks = @{
-                        AppPackage                     = 'Invoke-WhsCIAppPackageTask';
+                        ProGetUniversalPackage         = 'Invoke-WhsCIProGetUniversalPackageTask';
                         MSBuild                        = 'Invoke-WhsCIMSBuildTask';
                         NUnit2                         = 'Invoke-WhsCINUnit2Task';
                         NodeAppPackage                 = 'Invoke-WhsCINodeAppPackageTask';

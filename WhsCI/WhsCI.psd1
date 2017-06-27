@@ -78,7 +78,7 @@
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
-                            'Invoke-WhsCIAppPackageTask',
+                            'Invoke-WhsCIProGetUniversalPackageTask',
                             'Invoke-WhsCIDecoupledWindowsServicePackageTask',
                             'Invoke-WhsCIMSBuild',
                             'Invoke-WhsCIMSBuildTask',
