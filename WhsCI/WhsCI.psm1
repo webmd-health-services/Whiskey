@@ -1,5 +1,3 @@
-Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions') -Filter '*.ps1' |
-    ForEach-Object { . $_.FullName }
 
 Add-Type -TypeDefinition @"
 
@@ -17,3 +15,6 @@ namespace Whiskey {
 }
 
 "@
+
+Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions') -Filter '*.ps1' |
+    ForEach-Object { . $_.FullName }
