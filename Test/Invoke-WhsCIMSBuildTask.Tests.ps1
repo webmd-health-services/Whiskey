@@ -272,7 +272,7 @@ function ThenOutput
     )
 
     # remove the NuGet output
-    $fullOutput = $output -join [Environment]::NewLine
+    $fullOutput = ($output | Where-Object { $_ -notmatch ('^(Installing|Successfully installed)\b') }) -join [Environment]::NewLine
     $needle = " to packages.config projects"
     $indexOfNeedle = $fullOutput.IndexOf($needle, [StringComparison]::InvariantCultureIgnoreCase)
     if( $indexOfNeedle -ge 0 )
