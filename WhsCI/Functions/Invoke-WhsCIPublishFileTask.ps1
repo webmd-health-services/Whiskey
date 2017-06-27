@@ -1,6 +1,7 @@
 
 function Invoke-WhsCIPublishFileTask
 {
+    [Whiskey.Task("PublishFile")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

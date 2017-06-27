@@ -17,6 +17,7 @@ function Invoke-WhsCIMSBuildTask
     Demonstrates how to call the `WhsCIMSBuildTask`. In this case each path in the `Path` element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
 
     #>
+    [Whiskey.Task("MSBuild")]
     [CmdletBinding()]
     param(
         [object]

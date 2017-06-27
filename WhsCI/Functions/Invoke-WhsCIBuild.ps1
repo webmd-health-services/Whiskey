@@ -192,6 +192,7 @@ function Invoke-WhsCIBuild
                 $config['BuildTasks'] = @()
             }
 
+            $knownTasks = Get-WhiskeyTasks
             foreach( $task in $config['BuildTasks'] )
             {
                 $taskIdx++
@@ -222,32 +223,35 @@ function Invoke-WhsCIBuild
                 $errors = @()
                 $pathIdx = -1
 
-                $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
-                if( (Get-Command -Name $taskFunctionName -ErrorAction Ignore) )
-                {
-                    $optionalParams = @{ }
-                    if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
-                    {
-                        $optionalParams['WhatIf'] = $True
-                    }
-                    if ( $Clean )
-                    {
-                        $optionalParams['Clean'] = $True
-                    }
 
-                    Write-Verbose -Message ('{0}' -f $taskName)
-                    $startedAt = Get-Date
-                    & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
-                    $endedAt = Get-Date
-                    $duration = $endedAt - $startedAt
-                    Write-Verbose ('{0} COMPLETED in {1}' -f $taskName,$duration)
-                    Write-Verbose ('')
-                }
-                else
+                if( -not $knownTasks.Contains($taskName) )
                 {
-                    $knownTasks = @( 'MSBuild','Node','NuGetPack','NUNit2', 'Pester3', 'PowerShell', 'AppPackage', 'NodeAppPackage' ) | Sort-Object
+                    #I'm guessing we no longer need this code because we are going to be supporting a wider variety of tasks. Thus perhaps a different message will be necessary here.
+                    $knownTasks = $knownTasks.Keys | Sort-Object
                     throw ('{0}: BuildTasks[{1}]: ''{2}'' task does not exist. Supported tasks are:{3} * {4}' -f $Context.ConfigurationPath,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
                 }
+
+                $taskFunctionName = $knownTasks[$taskName]
+
+                $optionalParams = @{ }
+                if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
+                {
+                    $optionalParams['WhatIf'] = $True
+                }
+                if ( $Clean )
+                {
+                    $optionalParams['Clean'] = $True
+                }
+
+                Write-Verbose -Message ('{0}' -f $taskName)
+                $startedAt = Get-Date
+                #I feel like this is missing a piece, because the current way that WhsCI tasks are named, they will never be run by this logic.
+                & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
+                $endedAt = Get-Date
+                $duration = $endedAt - $startedAt
+                Write-Verbose ('{0} COMPLETED in {1}' -f $taskName,$duration)
+                Write-Verbose ('')
+
             }
             New-WhsCIBuildMasterPackage -TaskContext $Context
         }

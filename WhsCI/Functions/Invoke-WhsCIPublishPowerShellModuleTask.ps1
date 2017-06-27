@@ -25,6 +25,7 @@ function Invoke-WhsCIPublishPowerShellModuleTask
 
     Demonstrates how to call the `WhsCIPublishPowerShellModuleTask`. In this case  element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
     #> 
+    [Whiskey.Task("PublishPowerShellModule")]
     [CmdletBinding()]
     param(
 

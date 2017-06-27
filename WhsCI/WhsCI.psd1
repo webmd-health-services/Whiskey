@@ -12,7 +12,7 @@
     RootModule = 'WhsCI.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.9.6'
+    ModuleVersion = '0.10.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -73,11 +73,13 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'ConvertTo-WhsCISemanticVersion',
+                            'Get-WhiskeyTasks',
                             'Get-WhsCICommitID',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',
                             'Install-WhsCITool',
                             'Invoke-WhsCIAppPackageTask',
+                            'Invoke-WhsCIDecoupledWindowsServicePackageTask',
                             'Invoke-WhsCIMSBuild',
                             'Invoke-WhsCIMSBuildTask',
                             'Invoke-WhsCINodeAppPackageTask',
@@ -141,8 +143,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: NuGet packages on prerelease branches fail to publish to ProGet (they were using SemVer v2 style prerelease identifiers).
+### Enhancements
+
+ * Updated `BitbucketServerAutomation` module to version 0.2.0
+  * New `Get-BBServerBranch` function for getting the branches in a repository.
+  * New `Get-BBServerFile` function for getting a file from a repository.
+  * New `New-BBServerBranch` function for creating a branch in a repository.
+  * New `Set-BBServerDefaultBranch` function for setting a repository's default branch.
 '@
+
 
         } # End of PSData hashtable
 
