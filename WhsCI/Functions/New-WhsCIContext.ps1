@@ -252,6 +252,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
     
     $context = [pscustomobject]@{
                                     Environment = $Environment;
+                                    Credentials = @{ }
                                     ApplicationName = $appName;
                                     ReleaseName = $releaseName;
                                     BuildRoot = $buildRoot;

@@ -161,10 +161,7 @@ function Invoke-WhsCIBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( $Context.ByBuildServer )
-    {
-        Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status InProgress
-    }
+    Set-WhsCIBuildStatus -Context $Context -Status Started
 
     $succeeded = $false
     Push-Location -Path $Context.BuildRoot
@@ -265,16 +262,17 @@ function Invoke-WhsCIBuild
         }
         Pop-Location
 
-        if( $Context.ByBuildServer )
+        $status = 'Failed'
+        if( $succeeded )
         {
-            $status = 'Failed'
-            if( $succeeded )
-            {
-                $status = 'Successful'
-                Publish-WhsCITag -TaskContext $Context 
-            }
-
-            Set-BBServerCommitBuildStatus -Connection $Context.BBServerConnection -Status $status
+            $status = 'Completed'
         }
+        Set-WhsCIBuildStatus -Context $Context -Status $status
+
+        if( $Context.ByBuildServer -and $succeeded )
+        {
+            Publish-WhsCITag -TaskContext $Context 
+        }
+
     }
 }

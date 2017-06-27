@@ -12,35 +12,17 @@ function Assert-CommitStatusSetTo
     )
 
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
-        
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $expectedUri = 'https://bitbucket.example.com/'
-            $expectedUsername = 'bbserver'
-            $expectedPassword = 'bbserver'
+        Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Status -eq $ExpectedStatus }
+    }
 
-            #$DebugPreference = 'Continue'
-
-            Write-Debug -Message ('Status                          expected  {0}' -f $ExpectedStatus)
-            Write-Debug -Message ('                                actual    {0}' -f $Status)
-
-            Write-Debug -Message ('Connection.Uri                  expected  {0}' -f $expectedUri)
-            Write-Debug -Message ('                                actual    {0}' -f $Connection.Uri)
-
-            Write-Debug -Message ('Connection.Credential.UserName  expected  {0}' -f $expectedUsername)
-            Write-Debug -Message ('                                actual    {0}' -f $Connection.Credential.UserName)
-
-            $Status -eq $ExpectedStatus -and
-            $Connection -ne $null -and
-            $Connection.Uri -eq $expectedUri -and
-            $Connection.Credential.Username -eq $expectedUsername -and
-            $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword 
-        }
+    It 'should pass context when setting build status' {
+        Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Context }
     }
 }
 
 function Assert-CommitMarkedAsInProgress
 {
-    Assert-CommitStatusSetTo 'InProgress'
+    Assert-CommitStatusSetTo 'Started'
 }
 
 function Assert-CommitMarkedAsFailed
@@ -157,7 +139,7 @@ function Invoke-Build
 #region Mocks
 function New-MockBitbucketServer
 {
-    Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Verifiable
     Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' 
 }
 
@@ -181,30 +163,6 @@ function New-MockDeveloperEnvironment
 }
 
 
-function New-NUnitTestAssembly
-{
-    param(
-        [string]
-        $ConfigurationPath,
-
-        [string[]]
-        $AssemblyName
-    )
-
-    $root = $ConfigurationPath | Split-Path
-
-    $sourceAssembly = $passingNUnit2TestAssemblyPath
-
-    $sourceAssembly | Split-Path | Get-ChildItem -Filter 'nunit.framework.dll' | Copy-Item -Destination $root
-
-    foreach( $name in $AssemblyName )
-    {
-        $destinationPath = Join-Path -Path $root -ChildPath $name
-        Install-Directory -Path ($destinationPath | Split-Path)
-        $sourceAssembly | Copy-Item -Destination $destinationPath
-    }
-}
-
 function New-TestWhsBuildFile
 {
     param(
@@ -220,8 +178,6 @@ function New-TestWhsBuildFile
     return $whsbuildymlpath
 }
 #endregion
-
-$passingNUnit2TestAssemblyPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll'
 
 Describe 'Invoke-WhsCIBuild.when running an unknown task' {
     $configPath = New-TestWhsBuildFile -Yaml @'
@@ -251,7 +207,6 @@ BuildTasks:
 '@
 
     New-MSBuildProject -FileName $project -ThatFails
-    New-NUnitTestAssembly -ConfigurationPath $configPath -AssemblyName $assembly
 
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails 2>&1
 
@@ -351,34 +306,20 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
                 }
             }
 
+            It 'should set build status' {
+                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' 
+            }
+            It 'should set build status to in progress' {
+                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Status -eq 'Started' }
+            }
+            It 'should set build status to passed' {
+                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {  $Status -eq 'Completed' }
+            }
+
             if( $WithContext.ByBuildServer )
             {
-                It 'should set build status' {
-                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
-                        [object]::ReferenceEquals($WithContext.BBServerConnection,$Connection)
-                    }
-                }
-                It 'should set build status to in progress' {
-                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
-                        $Status -eq 'InProgress'
-                    }
-                }
-                It 'should set build status to passed' {
-                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {
-                        $Status -eq 'Successful'
-                    }
-                }
                 It 'should tag the commit' {
                     Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 1
-                }
-            }
-            else
-            {
-                It 'should not set build status' {
-                    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 0
-                }
-                It 'should not tag the commit' {
-                    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 0
                 }
             }
         }
@@ -388,7 +329,7 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
         $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
 
         Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
-        Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI'
+        Mock -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI'
         Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
         Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Verifiable
 

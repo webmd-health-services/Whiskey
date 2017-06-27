@@ -97,6 +97,7 @@
                             'Resolve-WhsCINuGetPackageVersion',
                             'Resolve-WhsCIPowerShellModuleVersion',
                             'Resolve-WhsCITaskPath',
+                            'Set-WhsCIBuildStatus',
                             'Stop-WhsCITask',
                             'Test-WhsCIRunByBuildServer',
                             'Uninstall-WhsCITool',

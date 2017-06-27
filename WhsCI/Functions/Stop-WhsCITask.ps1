@@ -10,10 +10,18 @@ function Stop-WhsCITask
 
         [Parameter(Mandatory=$true)]
         [string]
-        $Message
+        $Message,
+
+        [string]
+        $PropertyDescription
     )
 
     Set-StrictMode -Version 'Latest'
 
-    throw '{0}: BuildTasks[{1}]: {2}: {3}' -f $TaskContext.ConfigurationPath,$TaskContext.TaskIndex,$TaskContext.TaskName,$Message
+    if( -not ($PropertyDescription) )
+    {
+        $PropertyDescription = 'BuildTasks[{0}]: {1}' -f $TaskContext.TaskIndex,$TaskContext.TaskName
+    }
+
+    throw '{0}: {1}: {2}' -f $TaskContext.ConfigurationPath,$PropertyDescription,$Message
 }
