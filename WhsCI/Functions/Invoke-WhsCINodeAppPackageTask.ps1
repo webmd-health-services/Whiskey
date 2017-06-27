@@ -68,6 +68,7 @@ function Invoke-WhsCINodeAppPackageTask
         
     This example demonstrates how to include extra files in your package that aren't included by the default whitelist. In addition to the default set of Node.js files, this package will also include and `*.mov` files.
     #>
+    [Whiskey.Task("NodeAppPackage")]
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]

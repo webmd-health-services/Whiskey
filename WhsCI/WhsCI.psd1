@@ -73,6 +73,7 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'ConvertTo-WhsCISemanticVersion',
+                            'Get-WhiskeyTasks',
                             'Get-WhsCICommitID',
                             'Get-WhsCIOutputDirectory',
                             'Install-WhsCINodeJs',

@@ -1,6 +1,7 @@
 
 function Invoke-WhsCIDecoupledWindowsServicePackageTask
 {
+    [Whiskey.Task("DecoupledWindowsServicePackage")]
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]

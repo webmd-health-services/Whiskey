@@ -23,6 +23,7 @@ function Invoke-WhsCIPublishNodeModuleTask
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>
+    [Whiskey.Task("PublishNodeModule")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
