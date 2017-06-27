@@ -82,7 +82,6 @@
                             'Invoke-WhsCIDecoupledWindowsServicePackageTask',
                             'Invoke-WhsCIMSBuild',
                             'Invoke-WhsCIMSBuildTask',
-                            'Invoke-WhsCINodeAppPackageTask',
                             'Invoke-WhsCINodeTask',
                             'Invoke-WhsCINUnit2Task',
                             'Invoke-WhsCIPester3Task',

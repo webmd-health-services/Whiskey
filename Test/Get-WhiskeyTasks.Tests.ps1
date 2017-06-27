@@ -6,7 +6,6 @@ Describe 'Get-WhiskeyTasks.' {
                         ProGetUniversalPackage         = 'Invoke-WhsCIProGetUniversalPackageTask';
                         MSBuild                        = 'Invoke-WhsCIMSBuildTask';
                         NUnit2                         = 'Invoke-WhsCINUnit2Task';
-                        NodeAppPackage                 = 'Invoke-WhsCINodeAppPackageTask';
                         Node                           = 'Invoke-WhsCINodeTask';
                         Pester3                        = 'Invoke-WhsCIPester3Task';
                         Pester4                        = 'Invoke-WhsCIPester4Task';
