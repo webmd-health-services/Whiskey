@@ -3,6 +3,8 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Publish-WhiskeyPesterTestResult.ps1' -Resolve)
+
 function Assert-PesterRan
 {
     param(
@@ -52,6 +54,14 @@ function Assert-PesterRan
 
     It ('should run {0} passing tests' -f $PassingCount) {
         $passed | Should Be $PassingCount
+    }
+
+    foreach( $reportPath in $testReports )
+    {
+        It ('should publish {0} test results' -f $reportPath) {
+            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
+        }
     }
 }
 
@@ -144,6 +154,8 @@ function Invoke-PesterTest
         $Version = $defaultVersion
     }
     
+    Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+
     $optionalParams = @{ }
     if( $WithClean )
     {

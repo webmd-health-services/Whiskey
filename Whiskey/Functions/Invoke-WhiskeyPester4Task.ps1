@@ -114,6 +114,8 @@ function Invoke-WhiskeyPester4Task
 
     $job | Receive-Job
 
+    Publish-WhiskeyPesterTestResult -Path $outputFile
+
     $result = [xml](Get-Content -Path $outputFile -Raw)
 
     if( -not $result )

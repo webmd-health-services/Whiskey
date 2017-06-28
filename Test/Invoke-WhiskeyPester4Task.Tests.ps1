@@ -53,6 +53,14 @@ function Assert-PesterRan
     It ('should run {0} passing tests' -f $PassingCount) {
         $passed | Should Be $PassingCount
     }
+
+    foreach( $reportPath in $testReports )
+    {
+        It ('should publish {0} test results' -f $reportPath) {
+            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
+        }
+    }
 }
 
 function New-WhiskeyPesterTestContext 
@@ -137,6 +145,8 @@ function Invoke-PesterTest
                                 )
                         }
     }
+
+    Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
     $optionalParams = @{ }
     if( $WithClean )
