@@ -1,0 +1,119 @@
+# The version being built. It must be a [Semantic Version](http://semver.org). 
+# Pre-release metadata is allowed. Build metadata is removed. When running on a build 
+# server, the build metadata is replaced with information provided by the build server. 
+# The build metadata uses this format `BUILD_NUMBER.BRANCH.COMMIT_ID`. For example, if 
+# the current build number is `93`, the branch is `release/2.0`, and the commit ID is 
+# `d3833712a970a7b5015725d3e1d0577f7e6475fa`, the build metadata will be 
+# `93.release-2.0.d383371`.
+#
+# If you omit the Version property, a version number is created using this format: 
+# `YEAR.MONTHDAY.BUILD_NUMBER`. For example, if today is 3/9/2017 and the build number 
+# is `93`, the version number would be `2017.309.93`. When running on a build server, 
+# the build metadata is replaced with information provided by the build server. The 
+# build metadaa use the format `BRANCH.COMMIT_ID`. For example, if tthe branch is 
+# `release/2.0`, and the commit ID is `d3833712a970a7b5015725d3e1d0577f7e6475fa`, the 
+# build metadata will be `release-2.0.d383371`.
+Version: 0.0.0
+
+# The branches on which you want to publish a package to ProGet and start a deployment 
+# pipeline in BuildMaster, when running on the build server. If you omit the
+# `PublishOn` property (i.e. by default), publishing will happen on the `develop`, 
+# `release`, and `master` branches and any branch that starts with `release/`.
+#
+# You can't publish something unless you create a package, so make sure your 
+# `BuildTasks` property contains a `ProGetUniversalPackage` task.
+#
+# You may use regular expressions. Make sure to escape any regular expression 
+# operators. If the entire branch name matches one of the items in this list, your 
+# package will be published. For example, given the example list below, your package 
+# would get published on any of these branches:
+# 
+# * develop
+# * release
+# * release/2.0
+# * master
+#
+# Your package would *not* get published on any of these branches:
+#
+# * development
+# * released
+# * master/hotfix
+#
+# The list of branches gets converted to a regular expression using this format:
+# `^(ITEM|ITEM|ITEM)$`.
+PublishOn:
+ - develop
+ - release
+ - release/.*
+ - master
+ 
+# The name of your application in BuildMaster. By default, the `Name` property from 
+# the `ProGetUniversalPackage` task is used. You should only need to define this 
+# property if your build creates multiple packages.
+ApplicationName: APPLICATION_NAME
+
+# The name of the release in BuildMaster. By default, the branch name being built is 
+# used. On release branches, e.g. `release/2.0`, `release/3.1`, the release name is
+# always `release`.
+ReleaseName: RELEASE_NAME
+
+# Whether or not to create and deploy your application in BuildMaster. Only applies 
+# if an application package was created (i.e. you have a `ProGetUniversalPackage` 
+# build task and you're on a branch that publishes). The default is `true`. Set to 
+# `false` if you don't use BuildMaster to deploy your application or your 
+# application doesn't get deployed.
+DeployPackage: true
+
+# PrereleaseMap is a list of branches to prerelease identifier mappings. Each item
+# is a name/value pair. The name is a regular expression and the value is the 
+# prerelease identifier. If a branch matches the regular expression, its prerelease
+# identifier and an auto-generated version number are automatically added to your 
+# package's semantic version. 
+#
+# You have no control over the prereleae version number.It will not be duplicated 
+# across builds/branches. It is not guaranteed to increment by one between builds 
+# or start at 1. 
+#
+# If a branch matches multiple regular expressions, the first match/prerelease 
+# identifer is used. 
+#
+# In the example below, if a branch contains the word `alpha`, and the version
+# number is 3.2.1 and the prerelease version is 43, the full semantic version would
+# be `3.2.1-alpha.43`. You must also add the branch to the PublishOn element, 
+# otherwise your prerelease package will never get published.
+PrereleaseMap:
+- "\balpha\b": alpha
+
+# When building a Node.js application or module, if this file doesn't contain a
+# Version property, the version from your package.json file is used as the version
+# instead. To not pull the version from your package.json file, set this property to
+# true. If you want an auto-generated version number, set this property to true. 
+# Node.js modules should leave this set to false. Node.js applicatoins, that get 
+# deployed, should set this to true.
+IgnorePackageJsonVersion: false
+
+# The `PublishBuildStatusTo` is a list of publishers where you wnat build status
+# information published. Status are published when a build starts, succeeds, and fails. 
+# Build statuses are only published when running under a build server. You can only
+# report this information to Bitbucket Server.
+#
+# The BitbucketServer publisher requires two properties:
+#
+# * Uri: the URI to the Bitbucket Server.
+# * CredentialID: the ID of the credential to use when connecting. Credentials are added
+#   to the context object returned by `New-WhsCITestContext`, e.g. 
+#   `$context.Credentials.Add( 'CREDENTIAL_ID', $credential )
+PublishBuildStatusTo:
+- BitbucketServer:
+    Uri: https://bitbucket.example.com
+    CredentialID: BBServer
+
+# An array of build tasks you want to run during a build, e.g.
+# 
+#     BuildTasks:
+#     - TASK_NAME:
+#         PROPERTY_ONE: VALUE_ONE
+#         PROPERTY_TWO: VALUE_TWO
+#
+# See the documentation for each individual task for YML samples.
+BuildTasks:
