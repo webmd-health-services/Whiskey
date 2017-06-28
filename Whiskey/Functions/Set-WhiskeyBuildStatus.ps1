@@ -20,7 +20,7 @@ function Set-WhiskeyBuildStatus
         return
     }
 
-    $reportingTo = $Context.Configuration['ReportBuildStatusTo']
+    $reportingTo = $Context.Configuration['PublishBuildStatusTo']
 
     if( -not $reportingTo )
     {
@@ -32,7 +32,7 @@ function Set-WhiskeyBuildStatus
     {
         $reporterIdx++
         $reporterName = $reporter.Keys | Select-Object -First 1
-        $propertyDescription = 'ReportBuildStatusTo[{0}]: {1}' -f $reporterIdx,$reporterName
+        $propertyDescription = 'PublishBuildStatusTo[{0}]: {1}' -f $reporterIdx,$reporterName
         $reporterConfig = $reporter[$reporterName]
         switch( $reporterName )
         {
@@ -44,7 +44,7 @@ function Set-WhiskeyBuildStatus
                     Stop-WhiskeyTask -TaskContext $Context -PropertyDescription $propertyDescription -Message (@'
 Property 'Uri' does not exist or does not have a value. Set this property to the Bitbucket Server URI where you want build statuses reported to, e.g.,
  
-    ReportBuildStatusTo:
+    PublishBuildStatusTo:
     - BitbucketServer:
         Uri: BITBUCKET_SERVER_URI
         CredentialID: CREDENTIAL_ID
@@ -57,7 +57,7 @@ Property 'Uri' does not exist or does not have a value. Set this property to the
                     Stop-WhiskeyTask -TaskContext $Context -PropertyDescription $propertyDescription -Message (@'
 Property 'CredentialID' does not exist or does not have a value. Set this property to the ID of the credential to use when connecting to the Bitbucket Server at '{0}', e.g.,
  
-    ReportBuildStatusTo:
+    PublishBuildStatusTo:
     - BitbucketServer:
         Uri: {0}
         CredentialID: CREDENTIAL_ID

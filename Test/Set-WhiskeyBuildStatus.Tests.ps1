@@ -48,7 +48,7 @@ function GivenReporter
         $Reporter
     )
 
-    $context.Configuration['ReportBuildStatusTo'] = @( $Reporter )
+    $context.Configuration['PublishBuildStatusTo'] = @( $Reporter )
 }
 
 function ThenBuildStatusReportedToBitbucketServer

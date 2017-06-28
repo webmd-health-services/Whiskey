@@ -92,42 +92,28 @@ PrereleaseMap:
 # deployed, should set this to true.
 IgnorePackageJsonVersion: false
 
-BuildTasks:
-
-# The `PowerShell` task runs a PowerShell script. 
-- PowerShell:
-    Path: init.ps1
-    
-# The `Pester` task runs Pester tests. (Pester is a testing tool for PowerShell 
-# modules and scripts.)
-- Pester3:
-    # The version of Pester to use. This is mandatory. 3.4.6 is the latest 3.x version.
-    Version: 3.4.6
-    # The path to tests to run. This gets passed to the `Invoke-Pester` function's 
-    # `Script` parameter. Pester runs tests recursively, so if you pass a directory, 
-    # Pester will run all PowerShell scripts whose name matches `*.Tests.ps1`.
-    Path: Test\*.Tests.ps1
-
-# The `Node` task is used to build and test Node.js applications and modules. It:
+# The `PublishBuildStatusTo` is a list of publishers where you wnat build status
+# information published. Status are published when a build starts, succeeds, and fails. 
+# Build statuses are only published when running under a build server. You can only
+# report this information to Bitbucket Server.
 #
-#  * Installs the version of Node.js specified in your `package.json` file
-#  * Install all your dependencies
-#  * Run the NPM scripts/commands given by the `NpmScripts` property
-#  * Generates a license report for all the Node.js modules in use
-#  * Runs a security scan against your dependencies
-- Node:
-    # The NPM commands to run. These must be defined in your `package.json` file.
-    NpmScripts:
-    - build-jenkins
-    - test-jenkins
-    
-# The `ProGetUniversalPackage` task creates a package of a Node.js application. If 
-# running under a build server, the package is uploaded to ProGet.
-- ProGetUniversalPackage:
-    Name: MyApplication
-    Description: My application
-    Path:
-    - dist
-    - src
-    Include:
-    - "*.json"
+# The BitbucketServer publisher requires two properties:
+#
+# * Uri: the URI to the Bitbucket Server.
+# * CredentialID: the ID of the credential to use when connecting. Credentials are added
+#   to the context object returned by `New-WhsCITestContext`, e.g. 
+#   `$context.Credentials.Add( 'CREDENTIAL_ID', $credential )
+PublishBuildStatusTo:
+- BitbucketServer:
+    Uri: https://bitbucket.example.com
+    CredentialID: BBServer
+
+# An array of build tasks you want to run during a build, e.g.
+# 
+#     BuildTasks:
+#     - TASK_NAME:
+#         PROPERTY_ONE: VALUE_ONE
+#         PROPERTY_TWO: VALUE_TWO
+#
+# See the documentation for each individual task for YML samples.
+BuildTasks:
