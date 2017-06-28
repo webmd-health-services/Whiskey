@@ -4,7 +4,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $defaultPackageName = 'WhiskeyTest'
-$defaultDescription = 'A package created to test the Invoke-WhiskeyAppPackageTask function in the Whiskey module.'
+$defaultDescription = 'A package created to test the Invoke-WhiskeyProGetUniversalPackageTask function in the Whiskey module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 $defaultVersion = '1.2.3'
@@ -14,7 +14,7 @@ $threwException = $false
 $preTempDirCount = 0
 $postTempDirCount = 0
 
-function Assert-NewWhiskeyAppPackage
+function Assert-NewWhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     param(
@@ -161,7 +161,7 @@ function Assert-NewWhiskeyAppPackage
         
     function Get-TempDirCount
     {
-        Get-ChildItem -Path $env:TEMP -Filter ('Whiskey+Invoke-WhiskeyAppPackageTask+{0}+*' -f $Name) | 
+        Get-ChildItem -Path $env:TEMP -Filter ('Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+{0}+*' -f $Name) | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
@@ -169,7 +169,7 @@ function Assert-NewWhiskeyAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhiskeyAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
+        $At = Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
                 Where-Object { $_ -like '*.upack' } | 
                 Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
@@ -580,50 +580,50 @@ function Then7zipShouldNotExist
 }
 
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything in a directory' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging root files' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging root files' {
     $file = 'project.json'
     $thirdPartyFile = 'thirdparty.txt'
     $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
-    Assert-NewWhiskeyAppPackage -ForPath $file `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
                               -WithThirdPartyRootItem $thirdPartyFile `
                               -HasThirdPartyRootItem $thirdPartyFile `
                               -HasRootItems $file
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything in a directory as a developer' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything in a directory as a developer' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames `
                                       -AsDeveloper
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging whitelisted files in a directory' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs', 'style.css' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html','*.css' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html','style.css' `
@@ -631,13 +631,13 @@ Describe 'Invoke-WhiskeyAppPackageTask.when packaging whitelisted files in a dir
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging multiple directories' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1','dir2' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -645,13 +645,13 @@ Describe 'Invoke-WhiskeyAppPackageTask.when packaging multiple directories' {
                               -ShouldUploadPackage 
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when whitelist includes items that need to be excluded' {    
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'html2.html','sub' `
                               -HasRootItems 'dir1' `
@@ -660,13 +660,13 @@ Describe 'Invoke-WhiskeyAppPackageTask.when whitelist includes items that need t
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when paths don''t exist' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when paths don''t exist' {
 
     $Global:Error.Clear()
 
     Initialize-Test
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1','dir2' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*' `
                               -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                               -ShouldNotCreatePackage `
@@ -674,12 +674,12 @@ Describe 'Invoke-WhiskeyAppPackageTask.when paths don''t exist' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when path contains known directories to exclude' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
     
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
@@ -687,12 +687,12 @@ Describe 'Invoke-WhiskeyAppPackageTask.when path contains known directories to e
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when package upload fails' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -702,12 +702,12 @@ Describe 'Invoke-WhiskeyAppPackageTask.when package upload fails' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when not uploading to ProGet' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when not uploading to ProGet' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -715,11 +715,11 @@ Describe 'Invoke-WhiskeyAppPackageTask.when not uploading to ProGet' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when using WhatIf switch' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when using WhatIf switch' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    Assert-NewWhiskeyAppPackage -ForPath $dirNames `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $dirNames `
                               -ThatIncludes '*.html' `
                               -WhenRunByDeveloper `
                               -ShouldNotCreatePackage `
@@ -728,12 +728,12 @@ Describe 'Invoke-WhiskeyAppPackageTask.when using WhatIf switch' {
                               -ShouldReturnNothing
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when including third-party items' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
@@ -745,7 +745,7 @@ Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items' {
 
 foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 {
-    Describe ('Invoke-WhiskeyAppPackageTask.when {0} property is omitted' -f $parameterName) {
+    Describe ('Invoke-WhiskeyProGetUniversalPackageTask.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
                         Name = 'Name';
                         Include = 'Include';
@@ -759,7 +759,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
         $threwException = $false
         try
         {
-            Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter $parameter
+            Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $context -TaskParameter $parameter
         }
         catch
         {
@@ -774,13 +774,13 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
     }
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when path to package doesn''t exist' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when path to package doesn''t exist' {
     $context = New-WhiskeyTestContext -ForDeveloper
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
+        { Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -793,7 +793,7 @@ function New-TaskParameter
      @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' }
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when path to third-party item doesn''t exist' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when path to third-party item doesn''t exist' {
     $filter = { $PropertyName -eq 'Path' } 
     Mock -CommandName 'Resolve-WhiskeyTaskPath' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $True }
 
@@ -802,7 +802,7 @@ Describe 'Invoke-WhiskeyAppPackageTask.when path to third-party item doesn''t ex
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
+        { Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -810,12 +810,12 @@ Describe 'Invoke-WhiskeyAppPackageTask.when path to third-party item doesn''t ex
     }
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when application root isn''t the root of the repository' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when application root isn''t the root of the repository' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -SourceRoot 'app'
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'app\dir1' `
@@ -826,7 +826,7 @@ Describe 'Invoke-WhiskeyAppPackageTask.when application root isn''t the root of 
                               -FromSourceRoot 'app'
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when custom application root doesn''t exist' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when custom application root doesn''t exist' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
@@ -837,14 +837,14 @@ Describe 'Invoke-WhiskeyAppPackageTask.when custom application root doesn''t exi
     $parameter = New-TaskParameter
     $parameter['SourceRoot'] = 'app'
 
-    { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
+    { Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
 
     It 'should fail to resolve the path' {
         $Global:Error | Should Match 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
     }
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything with a custom application name' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything with a custom application name' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
 
@@ -852,7 +852,7 @@ Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything with a custom a
                                       -FileName $fileNames `
                                       -OnDevelopBranch
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -860,11 +860,11 @@ Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything with a custom a
                               -ForApplicationName 'foo'
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when given Clean Switch' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when given Clean Switch' {
     $file = 'project.json'    
     Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
-    Assert-NewWhiskeyAppPackage -ForPath $file `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
                               -WhenGivenCleanSwitch `
                               -ShouldReturnNothing `
                               -ShouldNotCreatePackage `
@@ -873,13 +873,13 @@ Describe 'Invoke-WhiskeyAppPackageTask.when given Clean Switch' {
     Then7zipShouldNotExist
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging given a full relative path' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging given a full relative path' {
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))    
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhiskeyAppPackage -ForPath $path -HasRootItems $path 
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $path -HasRootItems $path 
 }
 
 function Get-BuildRoot
@@ -993,7 +993,7 @@ function WhenPackaging
         
     function Get-TempDirCount
     {
-        Get-ChildItem -Path $env:TEMP -Filter 'Whiskey+Invoke-WhiskeyAppPackageTask+*' | 
+        Get-ChildItem -Path $env:TEMP -Filter 'Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+*' | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
@@ -1001,7 +1001,7 @@ function WhenPackaging
     $preTempDirCount = Get-TempDirCount
     try
     {
-        Invoke-WhiskeyAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+        Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
     }
     catch
     {
@@ -1045,22 +1045,22 @@ function ThenPackageShouldInclude
     }
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when packaging given a full relative path with override syntax' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging given a full relative path with override syntax' {
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))
     $forPath = @{ $path = $file }
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhiskeyAppPackage -ForPath $forPath -HasRootItems $file 
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $forPath -HasRootItems $file 
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items with override syntax' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when including third-party items with override syntax' {
     $dirNames = @( 'dir1', 'app\thirdparty')
     $fileNames = @( 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
                               -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
@@ -1068,13 +1068,13 @@ Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items with ove
                               -HasThirdPartyFile 'thirdparty.txt' 
 }
 
-Describe 'Invoke-WhiskeyAppPackageTask.when package is empty' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when package is empty' {
     GivenARepositoryWithFiles 'file.txt'
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
 }
 
-Describe 'Invoke-WhiskeyAppPackageTas.when path contains wildcards' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTas.when path contains wildcards' {
     GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'

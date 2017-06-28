@@ -285,8 +285,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when push command fails' {
     $Global:error.Clear()
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-        Invoke-WebRequest -Uri 'http://httpstat.u/404'
-    } -ParameterFilter { $Uri -notlike 'http://httpstat.u/*' }
+        Invoke-WebRequest -Uri 'http://httpstat.us/404'
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue
     ThenPackageShouldBeCreated -WithoutPushingToProgetError $errorMessage
@@ -306,8 +306,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
     $errorMessage = 'Failure checking if'
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-        Invoke-WebRequest -Uri 'http://httpstat.u/500'
-    } -ParameterFilter { $Uri -notlike 'http://httpstat.u/*' }
+        Invoke-WebRequest -Uri 'http://httpstat.us/500'
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue
     ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 

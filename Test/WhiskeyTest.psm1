@@ -167,9 +167,9 @@ function New-WhiskeyTestContext
     }
 
     $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
-    $NpmFeedUri = 'https://proget.example.com/npm/npm/'
-    $NuGetFeedUri = 'https://proget.example.com/nuget/nuget/'
-    $PowerShellFeedUri = 'https://proget.example.com/powershell'
+    $NpmFeedUri = 'https://registry.npmjs.org/'
+    $NuGetFeedUri = 'https://nuget.org/'
+    $PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
 
     $optionalArgs = @{ }
     $testByBuildServerMock = { return $true }

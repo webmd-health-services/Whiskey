@@ -37,7 +37,7 @@ function Invoke-Publish
         $ForManifestPath,
 
         [Switch]
-        $WithDefaultRepo,
+        $WithNoRepositoryName,
 
         [String]
         $ThatFailsWith,
@@ -68,7 +68,7 @@ function Invoke-Publish
     {
         $ForFeedName = 'thisFeed'
     }
-    if( $WithDefaultRepo )
+    if( $WithNoRepositoryName )
     {
         $TaskParameter = @{ }
     }
@@ -141,6 +141,7 @@ function Invoke-Publish
     catch
     {
         $failed = $True
+        Write-Error -ErrorRecord $_
     }
     if( $ThatFailsWith )
     {
@@ -190,7 +191,7 @@ function Assert-ModuleRegistered
         $ExpectedFeedName,
 
         [switch]
-        $WithDefaultRepo
+        $WithNoRepositoryName
     )
 
     if( -not $ExpectedRepositoryName )
@@ -238,7 +239,7 @@ function Assert-ModulePublished
         $ExpectedPathName = $TestDrive.FullName+'\MyModule',
 
         [switch]
-        $WithDefaultRepo
+        $WithNoRepositoryName
     )
     
     $WhiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin' -Resolve
@@ -293,7 +294,7 @@ function Assert-ManifestVersion
     }
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
@@ -301,28 +302,27 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module.
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with default repository.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing with no repository name'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -WithoutRegisteredRepo -WithDefaultRepo -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context -WithDefaultRepo
-    Assert-ModulePublished -TaskContext $context -WithDefaultRepo
+    Invoke-Publish -WithoutRegisteredRepo -WithNoRepositoryName -TaskContext $context -ThatFailsWith 'Property\ ''RepositoryName''\ is mandatory' -ErrorAction SilentlyContinue
+    Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing previously published module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing previously published module.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -TaskContext $context
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when run by developer, not publishing.' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when run by developer, not publishing.' {
     $context = New-WhiskeyTestContext -ForDeveloper
     Invoke-Publish -TaskContext $context
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with custom repository name.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module with custom repository name.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $repository = 'fubarepo'
@@ -331,7 +331,7 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module 
     Assert-ModulePublished -TaskContext $context -ExpectedRepositoryName $repository
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with custom feed name.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module with custom feed name.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $feed = 'snafeed'
@@ -340,40 +340,40 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module 
     Assert-ModulePublished -TaskContext $context 
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with no ProGet URI.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.with no feed URI'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $context.ProGetSession = 'foo'
     $errorMatch = 'The property ''PowerShellFeedUri'' cannot be found on this object. Verify that the property exists.'
     
-    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch
+    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when Path Parameter is not included' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when Path Parameter is not included' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'Element ''Path'' is mandatory'
 
-    Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch
+    Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with non-existent path parameter' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.with non-existent path parameter' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'does not exist'
 
-    Invoke-Publish -WithNonExistentPath -TaskContext $context -ThatFailsWith $errorMatch
+    Invoke-Publish -WithNonExistentPath -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with non-directory path parameter' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.with non-directory path parameter' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'must point to a directory'
 
-    Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch
+    Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
@@ -400,17 +400,17 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. reversion manifest without 
     Assert-ManifestVersion -TaskContext $context
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with invalid manifestPath' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.with invalid manifestPath' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     $manifestPath = 'fubar'
     $errorMatch = 'Module Manifest Path'
 
-    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch
+    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -WithoutRegisteredRepo -TaskContext $context -WithCleanSwitch

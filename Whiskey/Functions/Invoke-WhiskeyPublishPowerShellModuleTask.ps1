@@ -33,8 +33,8 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
                 Path: mymodule
                 RepositoryName: PSGallery
             ')
-            $repositoryName = $TaskParameter.RepositoryName
         }
+        $repositoryName = $TaskParameter['RepositoryName']
 
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
@@ -68,9 +68,9 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
         $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString 
         $manifest | Set-Content $manifestPath
 
-        if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )
+        if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
         {
-            Register-PSRepository -Name $RepositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
+            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
         }
   
         # Publish-Module needs nuget.exe. If it isn't in the PATH, it tries to install it, which doesn't work when running non-interactively.
