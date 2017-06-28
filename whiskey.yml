@@ -1,6 +1,6 @@
 Version: 0.10.0
 PublishOn: 
-- master
+- nobranchyet
 BuildTasks:
 - PowerShell:
     Path: init.ps1
