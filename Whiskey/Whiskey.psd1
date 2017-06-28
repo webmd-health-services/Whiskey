@@ -79,7 +79,6 @@
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyProGetUniversalPackageTask',
-                            'Invoke-WhiskeyDecoupledWindowsServicePackageTask',
                             'Invoke-WhiskeyMSBuild',
                             'Invoke-WhiskeyMSBuildTask',
                             'Invoke-WhiskeyNodeTask',

@@ -11,7 +11,6 @@ Describe 'Get-WhiskeyTasks.' {
                         Pester4                        = 'Invoke-WhiskeyPester4Task';
                         PowerShell                     = 'Invoke-WhiskeyPowerShellTask';
                         PublishFile                    = 'Invoke-WhiskeyPublishFileTask';
-                        DecoupledWindowsServicePackage = 'Invoke-WhiskeyDecoupledWindowsServicePackageTask';
                         PublishNodeModule              = 'Invoke-WhiskeyPublishNodeModuleTask';
                         PublishNuGetLibrary            = 'Invoke-WhiskeyPublishNuGetLibraryTask';
                         PublishPowerShellModule        ='Invoke-WhiskeyPublishPowerShellModuleTask';
