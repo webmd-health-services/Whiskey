@@ -142,13 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-### Enhancements
-
- * Updated `BitbucketServerAutomation` module to version 0.2.0
-  * New `Get-BBServerBranch` function for getting the branches in a repository.
-  * New `Get-BBServerFile` function for getting a file from a repository.
-  * New `New-BBServerBranch` function for creating a branch in a repository.
-  * New `Set-BBServerDefaultBranch` function for setting a repository's default branch.
+* Added support for writing custom tasks. Add a `[Whiskey.Task("TASK_NAME")]` attribute to a function. Task functions must have three parameters: `[object]$TaskContext`, `[hashtable]$TaskParameter`, and `$Clean`.
 '@
 
 
