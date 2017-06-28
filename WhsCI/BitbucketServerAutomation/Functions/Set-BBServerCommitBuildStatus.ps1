@@ -29,7 +29,7 @@ function Set-BBServerCommitBuildStatus
     Demonstrates how this function should be called when running under a build server. Currently, Jenkins and TeamCity are supported.
 
     .EXAMPLE
-    Set-BBServerCommitBuildStatus -Connection $conn -Status Successful -CommitID 'e24e50bba38db28fb8cf433d00c0d3372f8405cf' -Key 'jenkins-WhsInit-140' -BuildUri 'https://jenkins.dev.webmd.com/job/WhsInit/140/' -Name 'WhsInit' -Verbose
+    Set-BBServerCommitBuildStatus -Connection $conn -Status Successful -CommitID 'e24e50bba38db28fb8cf433d00c0d3372f8405cf' -Key 'jenkins-WhsInit-140' -BuildUri 'https://jenkins.example.com/job/Whiskey/140/' -Name 'Whiskey' -Verbose
 
     Demonstrates how to set the build status for a commit using your own custom commit ID, key, and build URI.
     #>

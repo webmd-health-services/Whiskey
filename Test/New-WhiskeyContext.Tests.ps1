@@ -99,8 +99,9 @@ function Assert-Context
 
     if( -not $DownloadRoot )
     {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
+        $DownloadRoot = $Context.BuildRoot
     }
+
     It 'should set download root' {
         $Context.DownloadRoot | Should Be $DownloadRoot
     }

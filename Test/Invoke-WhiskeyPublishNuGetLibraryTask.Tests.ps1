@@ -267,14 +267,14 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for pub
         $global:counter++    
         if($global:counter -eq 0)
         {
-            Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
+            Invoke-WebRequest -Uri 'http://httpstat.us/404'
         }
         else
         {
             $global:counter = -1
             return $True
         }
-    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ForMultiplePackages
     ThenPackageShouldBeCreated -ForMultiplePackages
@@ -285,8 +285,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when push command fails' {
     $Global:error.Clear()
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-        Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
-    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+        Invoke-WebRequest -Uri 'http://httpstat.u/404'
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.u/*' }
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue
     ThenPackageShouldBeCreated -WithoutPushingToProgetError $errorMessage
@@ -306,8 +306,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
     $errorMessage = 'Failure checking if'
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-        Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/500'
-    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+        Invoke-WebRequest -Uri 'http://httpstat.u/500'
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.u/*' }
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue
     ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
@@ -316,8 +316,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
 Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clean switch' {    
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
     Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-    Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
-    } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
+    Invoke-WebRequest -Uri 'http://httpstat.us/404'
+    } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNuGetPackTask -WithCleanSwitch

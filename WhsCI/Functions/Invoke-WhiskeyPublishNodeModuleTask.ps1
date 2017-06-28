@@ -71,7 +71,7 @@ function Invoke-WhiskeyPublishNodeModuleTask
     $npmConfigPrefix = '//{0}{1}:' -f $npmFeedUri.Authority,$npmFeedUri.LocalPath
 
     $npmUserName = $TaskContext.ProGetSession.Credential.UserName
-    $npmEmail = $env:USERNAME + '@webmd.net'
+    $npmEmail = $env:USERNAME + '@example.com'
     $npmCredPassword = $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)

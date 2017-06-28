@@ -99,7 +99,7 @@ function New-WhiskeyContext
         $NpmFeedUri,
 
         [string]
-        # The place where downloaded tools should be cached. The default is `$env:LOCALAPPDATA\WebMD Health Services\Whiskey`.
+        # The place where downloaded tools should be cached. The default is the build root.
         $DownloadRoot
     )
 
@@ -118,9 +118,10 @@ function New-WhiskeyContext
         $config = @{} 
     }
 
+    $buildRoot = $ConfigurationPath | Split-Path
     if( -not $DownloadRoot )
     {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
+        $DownloadRoot = $buildRoot
     }
 
     $appName = $null
@@ -217,7 +218,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
         }
     }
 
-    $buildRoot = $ConfigurationPath | Split-Path
     $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
     $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
     if( -not $config.ContainsKey('Version') -and (Test-Path -Path $packageJsonPath -PathType Leaf) -and -not $ignorePackageJsonVersion )

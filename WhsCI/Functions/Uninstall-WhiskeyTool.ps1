@@ -5,7 +5,7 @@ function Uninstall-WhiskeyTool
     Removes any specified artifacts of a tool previoulsy installed by the Whiskey module.
 
     .DESCRIPTION
-    The `Uninstall-WhiskeyTool` function removes PowerShell modules or NuGet Packages previously installed in the Whiskey module. PowerShell modules and NuGet packages are removed from `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Modules` and `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Packages` respectively unless specified otherwise. 
+    The `Uninstall-WhiskeyTool` function removes PowerShell modules or NuGet Packages previously installed in the Whiskey module. PowerShell modules are removed from the `Modules` direcory in your build root. NuGet packages are removed from the `packages` directory in your build root.
     
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
 

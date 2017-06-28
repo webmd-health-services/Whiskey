@@ -138,9 +138,6 @@ function New-WhiskeyTestContext
         [SemVersion.SemanticVersion]
         $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
-        [Switch]
-        $UseActualProGet,
-
         [string]
         $BuildConfiguration = 'Release',
 
@@ -173,14 +170,6 @@ function New-WhiskeyTestContext
     $NpmFeedUri = 'https://proget.example.com/npm/npm/'
     $NuGetFeedUri = 'https://proget.example.com/nuget/nuget/'
     $PowerShellFeedUri = 'https://proget.example.com/powershell'
-
-    if( $UseActualProGet )
-    {
-        $progetUris = @('https://proget.dev.webmd.com')
-        $NpmFeedUri = 'https://proget.dev.webmd.com/npm/npm/'
-        $NuGetFeedUri = 'https://proget.dev.webmd.com/nuget/nuget/'
-        $PowerShellFeedUri = 'https://proget.dev.webmd.com/posh/posh/'
-    }
 
     $optionalArgs = @{ }
     $testByBuildServerMock = { return $true }

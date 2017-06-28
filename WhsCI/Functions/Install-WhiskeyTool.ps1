@@ -6,7 +6,7 @@ function Install-WhiskeyTool
     Downloads and installs tools needed by the Whiskey module.
 
     .DESCRIPTION
-    The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
+    The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
     
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
 
@@ -44,8 +44,9 @@ function Install-WhiskeyTool
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
+        [Parameter(Mandatory=$true)]
         [string]
-        # The root directory where the tools should be downloaded. The default is `$env:LOCALAPPDATA\WebMD Health Services\Whiskey`.
+        # The root directory where the tools should be downloaded. The default is your build root.
         #
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
@@ -56,11 +57,6 @@ function Install-WhiskeyTool
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not $DownloadRoot )
-    {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
-    }
-   
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
         $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'

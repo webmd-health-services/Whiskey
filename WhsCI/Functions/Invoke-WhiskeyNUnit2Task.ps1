@@ -5,7 +5,7 @@ function Invoke-WhiskeyNUnit2Task
     Invoke-WhiskeyNUnit2Task runs NUnit tests.
 
     .DESCRIPTION
-    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\packages`).
+    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into a `packages` directory in your build root).
 
     The task should pass the paths to the assemblies to test within the `TaskParameter.Path` parameter.
         

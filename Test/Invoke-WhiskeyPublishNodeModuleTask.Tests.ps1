@@ -32,7 +32,7 @@ function New-PublishNodeModuleStructure
         $context = New-WhiskeyTestContext -ForBuildServer
         $npmFeedUri = $context.ProGetSession.NpmFeedUri
         $npmUserName = $context.ProGetSession.Credential.UserName
-        $npmEmail = $env:USERNAME + '@webmd.net'
+        $npmEmail = $env:USERNAME + '@example.com'
         $npmCredPassword = $context.ProGetSession.Credential.GetNetworkCredential().Password
         $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
         $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)

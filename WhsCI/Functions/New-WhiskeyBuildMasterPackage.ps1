@@ -60,7 +60,7 @@ function New-WhiskeyBuildMasterPackage
     if( -not $release )
     {
         throw (@'
-Unable to create and deploy a release package in BuildMaster. Either the '{0}' application doesn't exist or it doesn't have a '{1}' release. Please contact WHS-LifecycleServices@webmd.net to get BuildMaster pipelines created and configured. 
+Unable to create and deploy a release package in BuildMaster. Either the '{0}' application doesn't exist or it doesn't have a '{1}' release.
  
 If you don't want to publish to BuildMaster, set the `PublishToBuildMaster` property in '{2}' to `false`, e.g.
  
@@ -78,8 +78,6 @@ If you don't want to publish to BuildMaster on this branch, create a `PublishOn`
  
     PublishOn:
     - master
-     
-Full documentation on the `whsbuild.yml` file is at https://confluence.webmd.net/display/WHS/whsbuild.yml.
  
 '@ -f $name,$releaseName,$TaskContext.ConfigurationPath)
     }

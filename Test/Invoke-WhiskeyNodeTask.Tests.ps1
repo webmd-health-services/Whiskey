@@ -280,7 +280,7 @@ module.exports = function(grunt) {
         $byWhoArg['ForDeveloper'] = $true
     }
 
-    return New-WhiskeyTestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg -UseActualProGet
+    return New-WhiskeyTestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg
 }
 
 function Invoke-FailingBuild
