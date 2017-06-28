@@ -141,7 +141,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added support for writing custom tasks. Add a `[Whiskey.Task("TASK_NAME")]` attribute to a function. Task functions must have three parameters: `[object]$TaskContext`, `[hashtable]$TaskParameter`, and `$Clean`.
+***This release contains breaking changes.***
+
+* You can now write custom tasks. Add a `[Whiskey.Task("TASK_NAME")]` attribute to a function. Task functions must have three parameters: `[object]$TaskContext`, `[hashtable]$TaskParameter`, and `$Clean`. Make sure you import `Whiskey` before loading your custom tasks.
+* ***BREAKING*** The default Whiskey configuration file is now `whiskey.yml`. Rename any existing YML files.
+* The `PublishPowerShellModule` task now requires a `RepositoryName` property, which is the name of the Powershell repository to publish the module to, e.g. `PSGallery`.
+* When running under AppVeyor, the `Pester3` and `Pester4` tasks publish their test reports to AppVeyor.
+* Removed the `NodeAppPackage` task.
+* Renamed the `AppPackage` task to `ProGetUniversalPackage`. The `ProGetUniversalPackage` task is generic; it no longer packages any files/directories automatically. It now only packages what you tell it to.
+* Setting a build status in Bitbucket Server no longer happens by default. To report build status, add a `PublishBuildStatusTo` property. See the `whiskey.sample.yml` file for documentation.
 '@
 
 
