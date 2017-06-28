@@ -1,21 +1,19 @@
 
-#& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCiTest.ps1' -Resolve)
+#& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 Describe 'Get-WhiskeyTasks.' {
     $expectedTasks = @{
-                        AppPackage                     = 'Invoke-WhsCIAppPackageTask';
-                        MSBuild                        = 'Invoke-WhsCIMSBuildTask';
-                        NUnit2                         = 'Invoke-WhsCINUnit2Task';
-                        NodeAppPackage                 = 'Invoke-WhsCINodeAppPackageTask';
-                        Node                           = 'Invoke-WhsCINodeTask';
-                        Pester3                        = 'Invoke-WhsCIPester3Task';
-                        Pester4                        = 'Invoke-WhsCIPester4Task';
-                        PowerShell                     = 'Invoke-WhsCIPowerShellTask';
-                        PublishFile                    = 'Invoke-WhsCIPublishFileTask';
-                        DecoupledWindowsServicePackage = 'Invoke-WhsCIDecoupledWindowsServicePackageTask';
-                        PublishNodeModule              = 'Invoke-WhsCIPublishNodeModuleTask';
-                        PublishNuGetLibrary            = 'Invoke-WhsCIPublishNuGetLibraryTask';
-                        PublishPowerShellModule        ='Invoke-WhsCIPublishPowerShellModuleTask';
+                        ProGetUniversalPackage         = 'Invoke-WhiskeyProGetUniversalPackageTask';
+                        MSBuild                        = 'Invoke-WhiskeyMSBuildTask';
+                        NUnit2                         = 'Invoke-WhiskeyNUnit2Task';
+                        Node                           = 'Invoke-WhiskeyNodeTask';
+                        Pester3                        = 'Invoke-WhiskeyPester3Task';
+                        Pester4                        = 'Invoke-WhiskeyPester4Task';
+                        PowerShell                     = 'Invoke-WhiskeyPowerShellTask';
+                        PublishFile                    = 'Invoke-WhiskeyPublishFileTask';
+                        PublishNodeModule              = 'Invoke-WhiskeyPublishNodeModuleTask';
+                        PublishNuGetLibrary            = 'Invoke-WhiskeyPublishNuGetLibraryTask';
+                        PublishPowerShellModule        ='Invoke-WhiskeyPublishPowerShellModuleTask';
                         }
 
     $Global:error.Clear()
@@ -47,3 +45,4 @@ Describe 'Get-WhiskeyTasks.' {
 
 
 }
+

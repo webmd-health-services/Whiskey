@@ -1,0 +1,11 @@
+Version: 0.10.0
+PublishOn: 
+- nobranchyet
+BuildTasks:
+- PowerShell:
+    Path: init.ps1
+- Pester4:
+    Path: Test\*.Tests.ps1
+- PublishPowerShellModule:
+    Path:
+    - Whiskey
