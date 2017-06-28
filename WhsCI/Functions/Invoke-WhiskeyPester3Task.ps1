@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIPester3Task
+function Invoke-WhiskeyPester3Task
 {
     <#
     .SYNOPSIS
@@ -13,7 +13,7 @@ function Invoke-WhsCIPester3Task
     If any tests fail (i.e. if the `FailedCount property on the result object returned by `Invoke-Pester` is greater than 0), this function will throw a terminating error.
 
     .EXAMPLE
-    Invoke-WhsCIPester3Task -TaskContext $context -TaskParameter $taskParameter
+    Invoke-WhiskeyPester3Task -TaskContext $context -TaskParameter $taskParameter
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
@@ -37,26 +37,26 @@ function Invoke-WhsCIPester3Task
 
     if( -not $TaskParameter.Version )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
     }
 
-    $version = $TaskParameter.Version | ConvertTo-WhsCISemanticVersion
+    $version = $TaskParameter.Version | ConvertTo-WhiskeySemanticVersion
     
     if( -not $version )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
     }
     $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
 
     if( $Clean )
     {
-        Uninstall-WhsCITool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
+        Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
     
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
         
         BuildTasks:
         - Pester3:
@@ -65,12 +65,12 @@ function Invoke-WhsCIPester3Task
             - Tests')
     }
 
-    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
-    $pesterModulePath = Install-WhsCITool -ModuleName 'Pester' -Version $version -DownloadRoot $TaskContext.BuildRoot
+    $pesterModulePath = Install-WhiskeyTool -ModuleName 'Pester' -Version $version -DownloadRoot $TaskContext.BuildRoot
     if( -not $pesterModulePath )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
     $testIdx = 0
@@ -112,3 +112,4 @@ function Invoke-WhsCIPester3Task
         throw ('Pester tests failed.')
     }
 }
+

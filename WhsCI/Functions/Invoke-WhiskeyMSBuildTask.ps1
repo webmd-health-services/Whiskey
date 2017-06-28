@@ -1,8 +1,8 @@
-function Invoke-WhsCIMSBuildTask
+function Invoke-WhiskeyMSBuildTask
 {
     <#
     .SYNOPSIS
-    Invoke-WhsCIMSBuildTask builds .NET projects with MSBuild
+    Invoke-WhiskeyMSBuildTask builds .NET projects with MSBuild
 
     .DESCRIPTION
     The MSBuild task is used to build .NET projects with MSBuild from the version of .NET 4 that is installed. Items are built by running the `clean` and `build` target against each file. The TaskParameter should contain a `Path` element that is a list of projects, solutions, or other files to build.  
@@ -12,16 +12,16 @@ function Invoke-WhsCIMSBuildTask
     You *must* include paths to build with the `Path` parameter.
 
     .EXAMPLE
-    Invoke-WhsCIMSBuildTask -TaskContext $TaskContext -TaskParameter $TaskParameter
+    Invoke-WhiskeyMSBuildTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 
-    Demonstrates how to call the `WhsCIMSBuildTask`. In this case each path in the `Path` element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
+    Demonstrates how to call the `WhiskeyMSBuildTask`. In this case each path in the `Path` element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
 
     #>
     [Whiskey.Task("MSBuild")]
     [CmdletBinding()]
     param(
         [object]
-        # The context this task is operating in. Use `New-WhsCIContext` to create context objects.
+        # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
         
         [hashtable]
@@ -43,7 +43,7 @@ function Invoke-WhsCIMSBuildTask
     # Make sure the Taskpath contains a Path parameter.
     if( -not ($TaskParameter.ContainsKey('Path')) -or -not $TaskParameter['Path'] )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whsbuild.yml file, to build with MSBuild.exe, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whsbuild.yml file, to build with MSBuild.exe, e.g. 
         
         BuildTasks:
         - MSBuild:
@@ -52,7 +52,7 @@ function Invoke-WhsCIMSBuildTask
             - MyCsproj.csproj')
     }
 
-    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
     $target = @( 'build' )
     if( $Clean )
@@ -89,7 +89,7 @@ function Invoke-WhsCIMSBuildTask
             }
         }
 
-        if( (Test-WhsCIRunByBuildServer) )
+        if( (Test-WhiskeyRunByBuildServer) )
         {
             $projectPath | 
                 Split-Path | 
@@ -124,7 +124,7 @@ function Invoke-WhsCIMSBuildTask
 
                                         if( $TaskParameter.ContainsKey('OutputDirectory') )
                                         {
-                                            ('OutDir={0}' -f ($TaskParameter['OutputDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force))
+                                            ('OutDir={0}' -f ($TaskParameter['OutputDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force))
                                         }
                                   }
 
@@ -148,7 +148,7 @@ function Invoke-WhsCIMSBuildTask
         Write-Verbose -Message ('      Target      {0}' -f ($target -join $separator))
         Write-Verbose -Message ('      Property    {0}' -f ($property -join $separator))
         Write-Verbose -Message ('      Argument    {0}' -f ($msbuildArgs -join $separator))
-        Invoke-WhsCIMSBuild -Path $projectPath `
+        Invoke-WhiskeyMSBuild -Path $projectPath `
                             -Target $target `
                             -Property $property `
                             -ArgumentList $msbuildArgs `

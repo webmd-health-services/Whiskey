@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIProGetUniversalPackageTask
+function Invoke-WhiskeyProGetUniversalPackageTask
 {
     [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
     [Whiskey.Task("ProGetUniversalPackage")]
@@ -25,7 +25,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
     $7zipDirNameVersion = '16.02.1'
     if( $Clean )
     {
-        Uninstall-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
+        Uninstall-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
         return
     }
 
@@ -33,7 +33,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
     {
         if( -not $TaskParameter.ContainsKey($mandatoryName) )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
         }
     }
 
@@ -49,7 +49,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
     $parentPathParam = @{ }
     if( $TaskParameter.ContainsKey('SourceRoot') )
     {
-        $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
+        $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
     }
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
@@ -59,7 +59,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'WhsCI+Invoke-WhsCIProGetUniversalPackageTask+{0}' -f $name
+    $tempBaseName = 'Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
@@ -125,7 +125,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
                     $pathparam = 'ThirdPartyPath'
                 }
 
-                $sourcePaths = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+                $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
                 if( -not $sourcePaths )
                 {
     	            return
@@ -195,7 +195,7 @@ function Invoke-WhsCIProGetUniversalPackageTask
 	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
         }
 
-        $7zipRoot = Install-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
+        $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
         $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
         $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
 

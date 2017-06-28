@@ -1,4 +1,4 @@
-function Resolve-WhsCIPowerShellModuleVersion
+function Resolve-WhiskeyPowerShellModuleVersion
 {
     [CmdletBinding()]
     param(

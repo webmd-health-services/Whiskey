@@ -1,11 +1,11 @@
-function Invoke-WhsCINUnit2Task
+function Invoke-WhiskeyNUnit2Task
 {
     <#
     .SYNOPSIS
-    Invoke-WhsCINUnit2Task runs NUnit tests.
+    Invoke-WhiskeyNUnit2Task runs NUnit tests.
 
     .DESCRIPTION
-    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\packages`).
+    The NUnit2 task runs NUnit tests. The latest version of NUnit 2 is downloaded from nuget.org for you (into `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\packages`).
 
     The task should pass the paths to the assemblies to test within the `TaskParameter.Path` parameter.
         
@@ -14,7 +14,7 @@ function Invoke-WhsCINUnit2Task
     You *must* include paths to build with the `Path` parameter.
 
     .EXAMPLE
-    Invoke-WhsCINUnit2Task -TaskContext $TaskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyNUnit2Task -TaskContext $TaskContext -TaskParameter $taskParameter
 
     Demonstates how to run the NUnit tests in some assemblies and save the result to a specific file. 
     In this example, the assemblies to run are in `$TaskParameter.path` and the test report will be saved in an xml file relative to the indicated `$TaskContext.OutputDirectory` 
@@ -53,16 +53,16 @@ function Invoke-WhsCINUnit2Task
 
         if( $Clean )
         {
-            Uninstall-WhsCITool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
-            Uninstall-WhsCITool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
-            Uninstall-WhsCITool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
+            Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+            Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
+            Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
             return
         }
 
         # Be sure that the Taskparameter contains a 'Path'.
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
         
             BuildTasks:
             - NUnit2:
@@ -71,7 +71,7 @@ function Invoke-WhsCINUnit2Task
                 - OtherAssembly.dll')
         }
 
-        $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
         $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
 
         $includeParam = $null
@@ -93,31 +93,31 @@ function Invoke-WhsCINUnit2Task
         }
         $frameworkParam = '/framework={0}' -f $frameworkParam
       
-        $nunitRoot = Install-WhsCITool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
+        $nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
         if( -not (Test-Path -Path $nunitRoot -PathType Container) )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
         }
         $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
         $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
         $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
         if( -not ($nunitConsolePath))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
 
-        $openCoverPath = Install-WhsCITool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+        $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
         if( -not (Test-Path -Path $openCoverPath -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
         $openCoverPath = Join-Path -Path $openCoverPath -ChildPath 'tools'
         $openCoverConsolePath = Join-Path -Path $openCoverPath -ChildPath 'OpenCover.Console.exe' -Resolve
 
-        $reportGeneratorPath = Install-WhsCITool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+        $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
         if( -not (Test-Path -Path $reportGeneratorPath -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         }
         $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
         $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
@@ -149,7 +149,7 @@ function Invoke-WhsCINUnit2Task
             & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir"
             if( $LastExitCode -or $testsFailed )
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
             }
         }
         else
@@ -157,7 +157,7 @@ function Invoke-WhsCINUnit2Task
             & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
             if( $LastExitCode )
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
             }
         }
     }

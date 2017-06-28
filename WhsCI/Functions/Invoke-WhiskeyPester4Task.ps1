@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIPester4Task
+function Invoke-WhiskeyPester4Task
 {
     <#
     .SYNOPSIS
@@ -13,7 +13,7 @@ function Invoke-WhsCIPester4Task
     If any tests fail (i.e. if the `FailedCount property on the result object returned by `Invoke-Pester` is greater than 0), this function will throw a terminating error.
 
     .EXAMPLE
-    Invoke-WhsCIPester4Task -TaskContext $context -TaskParameter $taskParameter
+    Invoke-WhiskeyPester4Task -TaskContext $context -TaskParameter $taskParameter
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
@@ -37,15 +37,15 @@ function Invoke-WhsCIPester4Task
     
     if( $TaskParameter.ContainsKey('Version') )
     {
-        $version = $TaskParameter['Version'] | ConvertTo-WhsCISemanticVersion
+        $version = $TaskParameter['Version'] | ConvertTo-WhiskeySemanticVersion
         if( -not $version )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')
         }
 
         if( $version.Major -ne 4)
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Version property''s value ''{0}'' is invalid. It must start with ''4.'' (i.e. the major version number must always be ''4'')."' -f $version)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Version property''s value ''{0}'' is invalid. It must start with ''4.'' (i.e. the major version number must always be ''4'')."' -f $version)
         }
         
         $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
@@ -55,7 +55,7 @@ function Invoke-WhsCIPester4Task
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         if( -not $latestPester )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Unable to find a version of Pester 4 to install. This usually happens if the Find-Module function can''t communicate with the PowerShell Gallery or whatever PowerShell package repositories you have configured. Make sure you have a network connection and that you''ve got a package source installed that has Pester 4. The Register-PackageSource cmdlet installs new package sources.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find a version of Pester 4 to install. This usually happens if the Find-Module function can''t communicate with the PowerShell Gallery or whatever PowerShell package repositories you have configured. Make sure you have a network connection and that you''ve got a package source installed that has Pester 4. The Register-PackageSource cmdlet installs new package sources.')
         }
         $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
         $version = $latestPester.Version 
@@ -63,13 +63,13 @@ function Invoke-WhsCIPester4Task
 
     if( $Clean )
     {
-        Uninstall-WhsCITool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
+        Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
     
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhsCIPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
         
         BuildTasks:
         - Pester4:
@@ -78,13 +78,13 @@ function Invoke-WhsCIPester4Task
             - Tests')
     }
 
-    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
-    $pesterModulePath = Install-WhsCITool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
+    $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
     
     if( -not $pesterModulePath )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
     $testIdx = 0

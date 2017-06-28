@@ -1,12 +1,12 @@
 
-function Invoke-WhsCINodeTask
+function Invoke-WhiskeyNodeTask
 {
     <#
     .SYNOPSIS
     Runs a Node build.
     
     .DESCRIPTION
-    The `Invoke-WhsCINodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `Scripts` property. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
+    The `Invoke-WhiskeyNodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `Scripts` property. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
 
     You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
@@ -31,7 +31,7 @@ function Invoke-WhsCINodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhsCINodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
+    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
@@ -97,14 +97,14 @@ function Invoke-WhsCINodeTask
     $workingDir = $TaskContext.BuildRoot
     if( $TaskParameter.ContainsKey('WorkingDirectory') )
     {
-        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
     Push-Location -Path $workingDir
     try
     {
         Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
-        $nodePath = Install-WhsCINodeJs -RegistryUri $TaskContext.ProGetSession.NpmFeedUri -ApplicationRoot $workingDir
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $TaskContext.ProGetSession.NpmFeedUri -ApplicationRoot $workingDir
         if( -not $nodePath )
         {
             throw ('Node version required for this package failed to install. Please see previous errors for details.')
@@ -121,7 +121,7 @@ function Invoke-WhsCINodeTask
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
         $noColorArg = @()
-        if( (Test-WhsCIRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
+        if( (Test-WhiskeyRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
         {
             $noColorArg = '--no-color'
         }
@@ -135,7 +135,7 @@ function Invoke-WhsCINodeTask
 
         if( -not $npmScripts )
         {
-            Write-WhsCIWarning -TaskContext $TaskContext -Message (@'
+            Write-WhiskeyWarning -TaskContext $TaskContext -Message (@'
 Element 'NpmScripts' is missing or empty. Your build isn''t *doing* anything. The 'NpmScripts' element should be a list of one or more npm scripts to run during your build, e.g.
 
 BuildTasks:
@@ -215,7 +215,7 @@ BuildTasks:
 
         $productionArg = ''
         $productionArgDisplay = ''
-        if( (Test-WhsCIRunByBuildServer) )
+        if( (Test-WhiskeyRunByBuildServer) )
         {
             $productionArg = '--production'
             $productionArgDisplay = ' --production'
@@ -237,3 +237,4 @@ BuildTasks:
         Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }
+

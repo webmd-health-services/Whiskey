@@ -1,5 +1,5 @@
 
-function Write-WhsCIWarning
+function Write-WhiskeyWarning
 {
     [CmdletBinding()]
     param(

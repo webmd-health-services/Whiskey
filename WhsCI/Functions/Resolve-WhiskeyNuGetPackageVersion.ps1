@@ -1,4 +1,4 @@
-function Resolve-WhsCINuGetPackageVersion
+function Resolve-WhiskeyNuGetPackageVersion
 {
     [CmdletBinding()]
     param(

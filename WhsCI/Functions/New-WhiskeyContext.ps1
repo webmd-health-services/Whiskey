@@ -1,12 +1,12 @@
 
-function New-WhsCIContext
+function New-WhiskeyContext
 {
     <#
     .SYNOPSIS
     Creates a context object to use when running builds.
 
     .DESCRIPTION
-    The `New-WhsCIContext` function creates a context object used when running builds. It gets passed to each build task. The YAML file at `ConfigurationPath` is parsed. If it has a `Version` property, it is converted to a semantic version, a classic version, and a NuGet verson (a semantic version without any build metadata). An object is then returned with the following properties:
+    The `New-WhiskeyContext` function creates a context object used when running builds. It gets passed to each build task. The YAML file at `ConfigurationPath` is parsed. If it has a `Version` property, it is converted to a semantic version, a classic version, and a NuGet verson (a semantic version without any build metadata). An object is then returned with the following properties:
 
     * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
@@ -27,12 +27,12 @@ function New-WhsCIContext
     * `BBServerConnection`
 
     .EXAMPLE
-    New-WhsCIContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug'
+    New-WhiskeyContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug'
 
     Demonstrates how to create a context for a developer build.
 
     .EXAMPLE
-    New-WhsCIContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri -BuildMasterUri $bmUri -BuildMasterApiKey $bmApiKey -ProGetCredential $progetCred -ProGetUri $progetUri
+    New-WhiskeyContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri -BuildMasterUri $bmUri -BuildMasterApiKey $bmApiKey -ProGetCredential $progetCred -ProGetUri $progetUri
 
     Demonstrates how to create a context for a build run by a build server.
     #>
@@ -99,7 +99,7 @@ function New-WhsCIContext
         $NpmFeedUri,
 
         [string]
-        # The place where downloaded tools should be cached. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
+        # The place where downloaded tools should be cached. The default is `$env:LOCALAPPDATA\WebMD Health Services\Whiskey`.
         $DownloadRoot
     )
 
@@ -120,7 +120,7 @@ function New-WhsCIContext
 
     if( -not $DownloadRoot )
     {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
+        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
     }
 
     $appName = $null
@@ -149,14 +149,14 @@ function New-WhsCIContext
                                         }
 
     $publish = $false
-    $byBuildServer = Test-WhsCIRunByBuildServer
+    $byBuildServer = Test-WhiskeyRunByBuildServer
     $prereleaseInfo = ''
     if( $byBuildServer )
     {
         if( $PSCmdlet.ParameterSetName -ne 'ByBuildServer' )
         {
             throw (@"
-New-WhsCIContext is being run by a build server, but called using the developer parameter set. When running under a build server, you must supply the following parameters:
+New-WhiskeyContext is being run by a build server, but called using the developer parameter set. When running under a build server, you must supply the following parameters:
 
 * BBServerCredential
 * BBServerUri
@@ -165,11 +165,11 @@ New-WhsCIContext is being run by a build server, but called using the developer 
 * ProGetCredential
 * ProGetUri
 
-Use the `Test-WhsCIRunByBuildServer` function to determine if you're running under a build server or not.
+Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running under a build server or not.
 "@)
         }
         
-        $branch = Get-WhsCIBranch
+        $branch = Get-WhiskeyBranch
         $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
         {
@@ -206,7 +206,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                 if( $branch -match $regex )
                 {
                     Write-Verbose -Message ('     {0}     -match  /{1}/' -f $branch,$regex)
-                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhsCIBuildID)
+                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhiskeyBuildID)
                 }
                 else
                 {
@@ -229,7 +229,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         }
     }
 
-    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhsCISemanticVersion -ErrorAction Ignore
+    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhiskeySemanticVersion -ErrorAction Ignore
     if( -not $semVersion )
     {
         throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config['Version'])
@@ -261,7 +261,7 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                                     BuildMasterSession = $buildmasterSession;
                                     ProGetSession = $progetSession;
                                     BuildConfiguration = $BuildConfiguration;
-                                    OutputDirectory = (Get-WhsCIOutputDirectory -WorkingDirectory $buildRoot);
+                                    OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
                                     TaskName = $null;
                                     TaskIndex = -1;
                                     PackageVariables = @{};

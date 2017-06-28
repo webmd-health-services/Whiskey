@@ -1,7 +1,8 @@
 
-if( (Get-Module -Name 'WhsCI') )
+if( (Get-Module -Name 'Whiskey') )
 {
-    Remove-Module -Name 'WhsCI' -Force
+    Remove-Module -Name 'Whiskey' -Force
 }
 
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'WhsCI.psd1' -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey.psd1' -Resolve)
+

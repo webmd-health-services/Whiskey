@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIDecoupledWindowsServicePackageTask
+function Invoke-WhiskeyDecoupledWindowsServicePackageTask
 {
     [Whiskey.Task("DecoupledWindowsServicePackage")]
     [CmdletBinding(SupportsShouldProcess=$true)]
@@ -26,7 +26,7 @@ function Invoke-WhsCIDecoupledWindowsServicePackageTask
 
     if( -not $TaskParameter.ContainsKey('BinPath') )
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ('The property BinPath is mandatory. It should be the path (relative to your whsbuild.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('The property BinPath is mandatory. It should be the path (relative to your whsbuild.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
     }
 
     $whitelist = @( 
@@ -65,5 +65,5 @@ function Invoke-WhsCIDecoupledWindowsServicePackageTask
     $TaskParameter['Include'] += $whitelist
     $TaskParameter['Path'] = Invoke-Command { $TaskParameter['Path'] ; $path } | Select-Object -Unique
 
-    Invoke-WhsCIAppPackageTask -TaskContext $TaskContext -TaskParameter $TaskParameter
+    Invoke-WhiskeyAppPackageTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 }

@@ -1,7 +1,7 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $buildID = '80'
 $branch = 'origin/feature/fubar'
@@ -50,7 +50,7 @@ function Assert-ConvertsTo
         {
             $inputDesc = '[{0}]{1}' -f $InputObject.GetType().Name.ToLowerInvariant(),$InputObject
         }
-        Describe ('ConvertTo-WhsCISemanticVersion.when passed {0}{1}' -f $inputDesc,$preserveDesc) {
+        Describe ('ConvertTo-WhiskeySemanticVersion.when passed {0}{1}' -f $inputDesc,$preserveDesc) {
             Context 'by build server' {
                 New-MockBuildServerEnvironment
                 $expectedVersion = $ByBuildServer
@@ -66,7 +66,7 @@ function Assert-ConvertsTo
                 }
 
                 It ('should convert to {0}' -f $expectedVersion) {
-                    $InputObject | ConvertTo-WhsCISemanticVersion @preserveBuildMetadataArg | Should Be $expectedVersion
+                    $InputObject | ConvertTo-WhiskeySemanticVersion @preserveBuildMetadataArg | Should Be $expectedVersion
                 }
             }
             Context 'by developer' {
@@ -77,7 +77,7 @@ function Assert-ConvertsTo
                     $expectedVersion = '{0}+{1}' -f $ByDeveloper,$developerBuildMetadata
                 }
                 It ('should convert to {0}' -f $expectedVersion) {
-                    $InputObject | ConvertTo-WhsCISemanticVersion @preserveBuildMetadataArg | Should Be $expectedVersion
+                    $InputObject | ConvertTo-WhiskeySemanticVersion @preserveBuildMetadataArg | Should Be $expectedVersion
                 }
             }
         }
@@ -89,18 +89,18 @@ function New-MockBuildServerEnvironment
     param(
     )
 
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'origin/feature/fubar' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
+    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = '80' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:BUILD_ID' }
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'origin/feature/fubar' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } }.GetNewClosure() -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 }
 
 function New-MockDeveloperEnvironment
 {
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
 }
 
 $testCases = @{

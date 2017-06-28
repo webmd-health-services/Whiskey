@@ -1,11 +1,11 @@
 
-function Invoke-WhsCIBuild
+function Invoke-WhiskeyBuild
 {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [object]
-        # The context for the build. Use `New-WhsCIContext` to create context objects.
+        # The context for the build. Use `New-WhiskeyContext` to create context objects.
         $Context,
 
         [Switch]
@@ -15,7 +15,7 @@ function Invoke-WhsCIBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Set-WhsCIBuildStatus -Context $Context -Status Started
+    Set-WhiskeyBuildStatus -Context $Context -Status Started
 
     $succeeded = $false
     Push-Location -Path $Context.BuildRoot
@@ -98,7 +98,7 @@ function Invoke-WhsCIBuild
 
                 Write-Verbose -Message ('{0}' -f $taskName)
                 $startedAt = Get-Date
-                #I feel like this is missing a piece, because the current way that WhsCI tasks are named, they will never be run by this logic.
+                #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
                 & $taskFunctionName -TaskContext $context -TaskParameter $task @optionalParams
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
@@ -106,7 +106,7 @@ function Invoke-WhsCIBuild
                 Write-Verbose ('')
 
             }
-            New-WhsCIBuildMasterPackage -TaskContext $Context
+            New-WhiskeyBuildMasterPackage -TaskContext $Context
         }
 
         $succeeded = $true
@@ -124,12 +124,13 @@ function Invoke-WhsCIBuild
         {
             $status = 'Completed'
         }
-        Set-WhsCIBuildStatus -Context $Context -Status $status
+        Set-WhiskeyBuildStatus -Context $Context -Status $status
 
         if( $Context.ByBuildServer -and $succeeded )
         {
-            Publish-WhsCITag -TaskContext $Context 
+            Publish-WhiskeyTag -TaskContext $Context 
         }
 
     }
 }
+

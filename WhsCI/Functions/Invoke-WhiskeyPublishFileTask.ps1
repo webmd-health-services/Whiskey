@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIPublishFileTask
+function Invoke-WhiskeyPublishFileTask
 {
     [Whiskey.Task("PublishFile")]
     [CmdletBinding()]
@@ -48,30 +48,30 @@ BuildTasks:
 
     if(!$TaskParameter.ContainsKey('Path'))
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ($pathErrorMessage)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ($pathErrorMessage)
     }
 
-    $sourceFiles = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $sourceFiles = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     if(!$sourceFiles)
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ($pathErrorMessage)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ($pathErrorMessage)
     }
 
     if(!$TaskParameter.ContainsKey('DestinationDirectories'))
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ($destDirErrorMessage)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ($destDirErrorMessage)
     }
     
     if(!$TaskParameter['DestinationDirectories'])
     {
-        Stop-WhsCITask -TaskContext $TaskContext -Message ($destDirErrorMessage)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ($destDirErrorMessage)
     }
 
     foreach($sourceFile in $sourceFiles)
     {
         if((Test-Path -Path $sourceFile -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Path ''{0}'' is directory. The PublishFile task only publishes files. Please remove this path from your ''Path'' property.' -f $sourceFile)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Path ''{0}'' is directory. The PublishFile task only publishes files. Please remove this path from your ''Path'' property.' -f $sourceFile)
         }
     }
     
@@ -84,7 +84,7 @@ BuildTasks:
         
         if(!(Test-Path -Path $destDir -PathType Container))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Failed to create destination directory ''{0}''. Make sure the current user, ''{1}\{2}'' has access to create directories in ''{0}''. If it is a file share, check that the share exists and the share''s permissions.' -f $destDir, $env:USERDOMAIN, $env:USERNAME)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to create destination directory ''{0}''. Make sure the current user, ''{1}\{2}'' has access to create directories in ''{0}''. If it is a file share, check that the share exists and the share''s permissions.' -f $destDir, $env:USERDOMAIN, $env:USERNAME)
         }
     }
 
@@ -96,3 +96,4 @@ BuildTasks:
         }
     }
 }
+

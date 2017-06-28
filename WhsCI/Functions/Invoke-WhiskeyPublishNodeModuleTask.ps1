@@ -1,12 +1,12 @@
 
-function Invoke-WhsCIPublishNodeModuleTask
+function Invoke-WhiskeyPublishNodeModuleTask
 {
     <#
     .SYNOPSIS
     Publishes a Node module package to the target NPM registry
     
     .DESCRIPTION
-    The `Invoke-WhsCIPublishNodeModuleTask` function utilizes NPM's `publish` command to publish Node module packages.
+    The `Invoke-WhiskeyPublishNodeModuleTask` function utilizes NPM's `publish` command to publish Node module packages.
 
     You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
@@ -15,11 +15,11 @@ function Invoke-WhsCIPublishNodeModuleTask
     * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
     
     .EXAMPLE
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $context -TaskParameter @{}
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{}
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `$context.BuildRoot` property. The function would run `npm publish`.
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\WhsBuild.yml' }
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\WhsBuild.yml' }
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>
@@ -54,11 +54,11 @@ function Invoke-WhsCIPublishNodeModuleTask
     $workingDir = $buildRoot
     if($TaskParameter.ContainsKey('WorkingDirectory'))
     {
-        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
     $npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
-    $nodePath = Install-WhsCINodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
     
     if (!$TaskContext.Publish)
     {
@@ -108,3 +108,4 @@ function Invoke-WhsCIPublishNodeModuleTask
         Pop-Location
     }
 }
+

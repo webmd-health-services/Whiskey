@@ -1,5 +1,5 @@
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCiTest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function Invoke-PowershellInstall
 {
@@ -43,7 +43,7 @@ function Invoke-PowershellInstall
             $LikePowerShell5 = $false
         }
 
-        Mock -CommandName 'Find-Module' -ModuleName 'whsCI' -MockWith {
+        Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith {
             return $module = @(
                                  [pscustomobject]@{
                                                 Version = [Version]$Version                                            
@@ -54,7 +54,7 @@ function Invoke-PowershellInstall
                               )            
         }
 
-        Mock -CommandName 'Save-Module' -ModuleName 'WhsCI' -MockWith {
+        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey' -MockWith {
             $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
             if( $LikePowerShell4 )
             {
@@ -73,12 +73,12 @@ function Invoke-PowershellInstall
 
     $optionalParams = @{ }
     $Global:Error.Clear()
-    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
+    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
 
     if( -not $ForRealsies )
     {
         It 'should download the module' {
-            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
                 #$DebugPreference = 'Continue';
                 Write-Debug -Message ('Name             expected  {0}' -f $ForModule)
                 Write-Debug -Message ('                 actual    {0}' -f $Name)
@@ -89,7 +89,7 @@ function Invoke-PowershellInstall
         }
 
         It 'should put the modules in $DownloadRoot\Modules' {
-            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -ParameterFilter {
                 $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
             }
         }
@@ -131,7 +131,7 @@ function Invoke-NuGetInstall
         $invalidPackage
     )
 
-    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
+    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
@@ -156,23 +156,23 @@ function Invoke-NuGetInstall
     }
 }
 
-Describe 'Install-WhsCITool.when given a NuGet Package' {
+Describe 'Install-WhiskeyTool.when given a NuGet Package' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
 }
 
-Describe 'Install-WhsCITool.when NuGet Pack is bad' {
+Describe 'Install-WhiskeyTool.when NuGet Pack is bad' {
     Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction silentlyContinue
 }
 
-Describe 'Install-WhsCITool.when NuGet pack Version is bad' {
+Describe 'Install-WhiskeyTool.when NuGet pack Version is bad' {
     Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
 }
 
-Describe 'Install-WhsCITool.when given a NuGet Package with an empty version string' {
+Describe 'Install-WhiskeyTool.when given a NuGet Package with an empty version string' {
     Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
 }
 
-Describe 'Install-WhsCITool.when installing an already installed NuGet package' {
+Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
     
     $Global:Error.Clear()
 
@@ -184,11 +184,11 @@ Describe 'Install-WhsCITool.when installing an already installed NuGet package' 
     }
 }
 
-Describe 'Install-WhsCITool.when run by developer/build server' {
+Describe 'Install-WhiskeyTool.when run by developer/build server' {
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
 }
 
-Describe 'Install-WhsCITool.when installing an already installed module' {
+Describe 'Install-WhiskeyTool.when installing an already installed module' {
     $Global:Error.Clear()
 
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
@@ -199,32 +199,32 @@ Describe 'Install-WhsCITool.when installing an already installed module' {
     }
 }
 
-Describe 'Install-WhsCITool.when omitting BUILD number' {
+Describe 'Install-WhiskeyTool.when omitting BUILD number' {
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
 }
 
-Describe 'Install-WhsCITool.when omitting Version' {
-    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '' -ModuleName 'Blade'
+Describe 'Install-WhiskeyTool.when omitting Version' {
+    $actualVersion = Resolve-WhiskeyPowerShellModuleVersion -Version '' -ModuleName 'Blade'
     Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $actualVersion -ForRealsies
 }
 
-Describe 'Install-WhsCITool.when using wildcard version' {
-    $actualVersion = Resolve-WhsCIPowerShellModuleVersion -Version '0.*' -ModuleName 'Blade'
+Describe 'Install-WhiskeyTool.when using wildcard version' {
+    $actualVersion = Resolve-WhiskeyPowerShellModuleVersion -Version '0.*' -ModuleName 'Blade'
     Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $actualVersion -ForRealsies
 }
 
-Describe 'Install-WhsCITool.when installing a module under PowerShell 4' {
+Describe 'Install-WhiskeyTool.when installing a module under PowerShell 4' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell4
 }
 
-Describe 'Install-WhsCITool.when installing a module under PowerShell 5' {
+Describe 'Install-WhiskeyTool.when installing a module under PowerShell 5' {
     Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
 }
 
-Describe 'Install-WhsCITool.when version of module doesn''t exist' {
+Describe 'Install-WhiskeyTool.when version of module doesn''t exist' {
     $Global:Error.Clear()
 
-    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
     
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
@@ -236,10 +236,10 @@ Describe 'Install-WhsCITool.when version of module doesn''t exist' {
     }
 }
 
-Describe 'Install-WhsCITool.for non-existent module when version parameter is empty' {
+Describe 'Install-WhiskeyTool.for non-existent module when version parameter is empty' {
     $Global:Error.Clear()
 
-    $result = Install-WhsCITool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
+    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
     
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
@@ -250,3 +250,4 @@ Describe 'Install-WhsCITool.for non-existent module when version parameter is em
         $Global:Error[0] | Should Match 'Unable to find any versions'
     }
 }
+

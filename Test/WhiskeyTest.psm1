@@ -102,7 +102,7 @@ function New-MSBuildProject
 }
 
 
-function New-WhsCITestContext
+function New-WhiskeyTestContext
 {
     param(
         [Switch]
@@ -196,16 +196,16 @@ function New-WhsCITestContext
         $gitBranch = 'origin/develop'
         $filter = { $Path -eq 'env:GIT_BRANCH' }
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $true }
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $ForVersion }.GetNewClosure()
+        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $true }
+        Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $ForVersion }.GetNewClosure()
     }
     else
     {
         $testByBuildServerMock = { return $false }
     }
 
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $testByBuildServerMock
+    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith $testByBuildServerMock
 
     if( $DownloadRoot )
     {
@@ -249,7 +249,7 @@ function New-WhsCITestContext
                     PowerShellFeedUri = $PowerShellFeedUri;
                     }
 
-    $context = New-WhsCIContext -Environment 'verification' -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
+    $context = New-WhiskeyContext -Environment 'verification' -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'
@@ -266,4 +266,5 @@ function New-WhsCITestContext
 }
 
 Export-ModuleMember -Function '*'
+
 

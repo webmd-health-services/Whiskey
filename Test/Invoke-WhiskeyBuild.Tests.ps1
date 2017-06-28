@@ -1,7 +1,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 #region Assertions
 function Assert-CommitStatusSetTo
@@ -12,11 +12,11 @@ function Assert-CommitStatusSetTo
     )
 
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
-        Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Status -eq $ExpectedStatus }
+        Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Status -eq $ExpectedStatus }
     }
 
     It 'should pass context when setting build status' {
-        Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Context }
+        Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Context }
     }
 }
 
@@ -60,14 +60,14 @@ function Assert-NUnitTestsNotRun
     )
 
     It 'should not run NUnit tests' {
-        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhsCIOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 #endregion
 
 function Assert-CommitTagged
 {
-    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 1
+    Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 1
 }
 
 function Invoke-Build
@@ -104,15 +104,15 @@ function Invoke-Build
         $optionalParams['ForVersion'] = $Version
     }
 
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
 
-    $context = New-WhsCITestContext -BuildConfiguration $configuration -ConfigurationPath $WithConfig @optionalParams
+    $context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $WithConfig @optionalParams
 
     $threwException = $false
     try
     {
-        Invoke-WhsCIBuild -Context $context
+        Invoke-WhiskeyBuild -Context $context
     }
     catch
     {
@@ -139,16 +139,16 @@ function Invoke-Build
 #region Mocks
 function New-MockBitbucketServer
 {
-    Mock -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -Verifiable
-    Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' 
+    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
+    Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' 
 }
 
 function New-MockBuildServer
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 
     Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
@@ -158,7 +158,7 @@ function New-MockBuildServer
 
 function New-MockDeveloperEnvironment
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
     Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
 }
 
@@ -179,7 +179,7 @@ function New-TestWhsBuildFile
 }
 #endregion
 
-Describe 'Invoke-WhsCIBuild.when running an unknown task' {
+Describe 'Invoke-WhiskeyBuild.when running an unknown task' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
     - FubarSnafu:
@@ -195,7 +195,7 @@ BuildTasks:
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when a task fails' {
+Describe 'Invoke-WhiskeyBuild.when a task fails' {
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
     $configPath = New-TestWhsBuildFile -Yaml @'
@@ -214,8 +214,8 @@ BuildTasks:
     Assert-NUnitTestsNotRun -ConfigurationPath $configPath
 }
 
-Describe 'Invoke-WhsCIBuild.when New-WhsCIBuildMasterPackage fails' {
-    Mock -CommandName 'New-WhsCIBuildMasterPackage' -ModuleName 'WhsCI' -MockWith `
+Describe 'Invoke-WhiskeyBuild.when New-WhiskeyBuildMasterPackage fails' {
+    Mock -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -MockWith `
         { throw 'Build Master Pipeline failed' }
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
@@ -226,15 +226,15 @@ BuildTasks:
     New-MSBuildProject -FileName $project 
     Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
         
-    it ( 'should call New-WhsCIBuildMasterPackage mock once' ){
-        Assert-MockCalled -CommandName 'New-WhsCIBuildMasterPackage' -ModuleName 'WhsCI' -Times 1     
+    it ( 'should call New-WhiskeyBuildMasterPackage mock once' ){
+        Assert-MockCalled -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -Times 1     
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when running with Clean switch' {
-    $context = New-WhsCITestContext -ForDeveloper
+Describe 'Invoke-WhiskeyBuild.when running with Clean switch' {
+    $context = New-WhiskeyTestContext -ForDeveloper
     $context.Configuration = @{ }
-    Invoke-WhsCIBuild -Context $context -Clean
+    Invoke-WhiskeyBuild -Context $context -Clean
     $withWhatIfSwitchParam = @{ }
 
     it( 'should remove .output dir'){
@@ -242,30 +242,30 @@ Describe 'Invoke-WhsCIBuild.when running with Clean switch' {
     }
 }
 
-Describe 'Invoke-WhsCIBuild.when task has no properties' {
-    $context = New-WhsCITestContext -ForDeveloper -ForYaml @"
+Describe 'Invoke-WhiskeyBuild.when task has no properties' {
+    $context = New-WhiskeyTestContext -ForDeveloper -ForYaml @"
 BuildTasks:
 - PublishNodeModule
 - PublishNodeModule:
 "@
     $Global:Error.Clear()
-    Mock -CommandName 'Invoke-WhsCIPublishNodeModuleTask' -Verifiable -ModuleName 'WhsCI'
-    Invoke-WhsCIBuild -Context $context
+    Mock -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -Verifiable -ModuleName 'Whiskey'
+    Invoke-WhiskeyBuild -Context $context
     It 'should not write an error' {
         $Global:Error | Should -BeNullOrEmpty
     }
     It 'should call the task' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIPublishNodeModuleTask' -ModuleName 'WhsCI' -Times 2
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -ModuleName 'Whiskey' -Times 2
     }
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'ProGetUniversalPackage' = $true; }
-foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task' | Sort-Object -Property 'Name') )
+foreach( $functionName in (Get-Command -Module 'Whiskey' -Name 'Invoke-Whiskey*Task' | Sort-Object -Property 'Name') )
 {
-    $taskName = $functionName -replace '^Invoke-WhsCI(.*)Task$','$1'
+    $taskName = $functionName -replace '^Invoke-Whiskey(.*)Task$','$1'
 
-    Describe ('Invoke-WhsCIBuild.when calling {0} task' -f $taskName) {
+    Describe ('Invoke-WhiskeyBuild.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
         {
@@ -278,13 +278,13 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
             )
 
             It 'should pass context to task' {
-                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'Whiskey' -ParameterFilter {
                     [object]::ReferenceEquals($TaskContext, $WithContext) 
                 }
             }
             
             It 'should pass task parameters' {
-                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'Whiskey' -ParameterFilter {
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
                 }
             }
@@ -292,7 +292,7 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
             if( $WithWhatIfSwitch )
             {
                 It 'should use WhatIf switch' {
-                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'Whiskey' -ParameterFilter {
                         $PSBoundParameters['WhatIf'] -eq $true
                     }
                 }
@@ -300,45 +300,45 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
             else
             {
                 It 'should not use WhatIf switch' {
-                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+                    Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'Whiskey' -ParameterFilter {
                         $PSBoundParameters.ContainsKey('WhatIf') -eq $false
                     }
                 }
             }
 
             It 'should set build status' {
-                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' 
+                Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' 
             }
             It 'should set build status to in progress' {
-                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Status -eq 'Started' }
+                Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Status -eq 'Started' }
             }
             It 'should set build status to passed' {
-                Assert-MockCalled -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI' -ParameterFilter {  $Status -eq 'Completed' }
+                Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -ParameterFilter {  $Status -eq 'Completed' }
             }
 
             if( $WithContext.ByBuildServer )
             {
                 It 'should tag the commit' {
-                    Assert-MockCalled -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Times 1
+                    Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 1
                 }
             }
         }
 
 
         $version = '4.3.5-rc.1'
-        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
+        $taskFunctionName = 'Invoke-Whiskey{0}Task' -f $taskName
 
-        Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
-        Mock -CommandName 'Set-WhsCIBuildStatus' -ModuleName 'WhsCI'
-        Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-        Mock -CommandName 'Publish-WhsCITag' -ModuleName 'WhsCI' -Verifiable
+        Mock -CommandName $taskFunctionName -ModuleName 'Whiskey' -Verifiable
+        Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
+        Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+        Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Verifiable
 
         Context 'By Developer' {
-            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
-            $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
+            $context = New-WhiskeyTestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
             $context.ByDeveloper = $true
             $context.ByBuildServer = $false
-            Invoke-WhsCIBuild -Context $context
+            Invoke-WhiskeyBuild -Context $context
             $withWhatIfSwitchParam = @{ }
             if( $whatIfTasks.ContainsKey($taskName) )
             {
@@ -348,26 +348,27 @@ foreach( $functionName in (Get-Command -Module 'WhsCI' -Name 'Invoke-WhsCI*Task'
         }
 
         Context 'By Jenkins' {
-            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $true }
-            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
-            $context = New-WhsCITestContext -ForBuildServer -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName }
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $true }
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
+            $context = New-WhiskeyTestContext -ForBuildServer -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName }
             $context.ByDeveloper = $false
             $context.ByBuildServer = $true
-            Invoke-WhsCIBuild -Context $context
+            Invoke-WhiskeyBuild -Context $context
             Assert-TaskCalled -WithContext $context
         }
     }
     
-    Describe ('Invoke-WhsCIBuild.when calling {0} task with Clean switch' -f $taskName) {
-        $taskFunctionName = 'Invoke-WhsCI{0}Task' -f $taskName
-        $context = New-WhsCITestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
-        Mock -CommandName $taskFunctionName -ModuleName 'WhsCI' -Verifiable
+    Describe ('Invoke-WhiskeyBuild.when calling {0} task with Clean switch' -f $taskName) {
+        $taskFunctionName = 'Invoke-Whiskey{0}Task' -f $taskName
+        $context = New-WhiskeyTestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
+        Mock -CommandName $taskFunctionName -ModuleName 'Whiskey' -Verifiable
 
-        Invoke-WhsCIBuild -Context $context -Clean
+        Invoke-WhiskeyBuild -Context $context -Clean
         It 'should call task with active Clean switch' {
-            Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName $taskFunctionName -ModuleName 'Whiskey' -ParameterFilter {
                 $PSBoundParameters['Clean'] -eq $true
             }
         }
     }
 }
+

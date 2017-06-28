@@ -1,5 +1,5 @@
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $nvmHome = $env:NVM_HOME
 $restoreNvmHome = $false
@@ -33,22 +33,22 @@ function Assert-ThatInstallNodeJs
 
     if( $OnDeveloperComputer )
     {
-        Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+        Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
     }
     else
     {
-        Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+        Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
     }
 
     $installDir = Join-Path -Path $env:TEMP -ChildPath 'z'
     $installDirParam = @{ NvmInstallDirectory = $installDir }
     if( $WhenUsingDefaultInstallDirectory )
     {
-        Mock -CommandName 'Join-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq $env:APPDATA -and $ChildPath -eq 'nvm'  } -MockWith { Join-Path -Path $installDir -ChildPath 'nvm' }.GetNewClosure()
+        Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $env:APPDATA -and $ChildPath -eq 'nvm'  } -MockWith { Join-Path -Path $installDir -ChildPath 'nvm' }.GetNewClosure()
         $installDirParam = @{ }
     }
 
-    Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Verifiable
 
     $registryUri = 'https://proget.example.com/'
     $testPackageJson = 
@@ -76,7 +76,7 @@ function Assert-ThatInstallNodeJs
         $nodePath = $null
         $expectedNodePath = $null
         $expectedNpmPath = $null
-        $nodePath = Install-WhsCINodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
@@ -137,7 +137,7 @@ function Assert-ThatInstallNodeJs
             }
 
             It 'should set registry' {
-                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -ParameterFilter { $ScriptBlock.ToString() -match 'config\ --global\ set\ registry\ \$RegistryUri' }
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'config\ --global\ set\ registry\ \$RegistryUri' }
             }
 
             It 'should set always-auth' {
@@ -148,7 +148,7 @@ function Assert-ThatInstallNodeJs
         if( $WhenUsingDefaultInstallDirectory )
         {
             It ('should install to {0}' -f $env:APPDATA) {
-                Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'WhsCI' -Times 1 -ParameterFilter { $Path -eq $env:APPDATA }
+                Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Path -eq $env:APPDATA }
             }
         }
     }
@@ -188,30 +188,30 @@ function Assert-ThatInstallNodeJs
 }
 
 
-Describe 'Install-WhsCINodeJs.when run by build server and NVM isn''t installed' {
+Describe 'Install-WhiskeyNodeJs.when run by build server and NVM isn''t installed' {
     Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -PreserveInstall
     Context 'now its installed' {
         Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer
   }
 }
 
-Describe 'Install-WhsCINodeJs.when run on developer computer and NVM isn''t installed' {
+Describe 'Install-WhiskeyNodeJs.when run on developer computer and NVM isn''t installed' {
     Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnDeveloperComputer -ErrorAction SilentlyContinue
 }
 
-Describe 'Install-WhsCINodejs.when using default installation directory' {
+Describe 'Install-WhiskeyNodejs.when using default installation directory' {
     Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -WhenUsingDefaultInstallDirectory
 }
 
-Describe 'Install-WhsCINodejs.should fail when node engine is missing' {
+Describe 'Install-WhiskeyNodejs.should fail when node engine is missing' {
     Assert-ThatInstallNodeJs -InstallsVersion ''
 }
 
-Describe 'Install-WhsCINodejs.should fail when node version is invalid' {
+Describe 'Install-WhiskeyNodejs.should fail when node version is invalid' {
     Assert-ThatInstallNodeJs -InstallsVersion 'fubarsnafu'
 }
 
-Describe 'Install-WhsCINodejs.should fail when node version does not exist' {
+Describe 'Install-WhiskeyNodejs.should fail when node version does not exist' {
     Assert-ThatInstallNodeJs -InstallsVersion '438.4393.329' -ErrorAction SilentlyContinue
 }
 
@@ -219,3 +219,4 @@ if( $restoreNvmHome )
 {
     Set-Item -Path 'env:NVM_HOME' -Value $nvmHome
 }
+

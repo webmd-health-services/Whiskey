@@ -1,7 +1,7 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $projectName ='NUnit2PassingTest.csproj' 
 $context = $null
@@ -41,7 +41,7 @@ function GivenABuiltLibrary
     {
         $forParam = @{ 'ForBuildServer' = $true }
     }
-    $script:context = New-WhsCITestContext -ForBuildRoot $TestDrive.FullName -ForTaskName 'NuGetPack'  @optionalArgs @forParam
+    $script:context = New-WhiskeyTestContext -ForBuildRoot $TestDrive.FullName -ForTaskName 'NuGetPack'  @optionalArgs @forParam
     
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     if( $WithVersion )
@@ -58,8 +58,8 @@ function GivenABuiltLibrary
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
-    Invoke-WhsCIMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
+    Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
+    Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
 }
 
 function WhenRunningNuGetPackTask
@@ -103,7 +103,7 @@ function WhenRunningNuGetPackTask
                           }
         }
         $threwException = $false
-        Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -MockWith { return $True }
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith { return $True }
 
         $optionalParams = @{ }
         if( $WithCleanSwitch )
@@ -120,7 +120,7 @@ function WhenRunningNuGetPackTask
             {
                 $taskParameter['Path'] = 'I\do\not\exist.csproj'
             }
-            Invoke-WhsCIPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
+            Invoke-WhiskeyPublishNuGetLibraryTask -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
 
         }
         catch
@@ -195,7 +195,7 @@ function ThenPackageShouldBeCreated
             if( $ForMultiplePackages )
             {
                 It ('should try to publish multiple packages') {
-                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 4 -ParameterFilter {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 4 -ParameterFilter {
                         return $ScriptBlock.toString().contains('& $nugetPath push')
                     }
                 }
@@ -203,7 +203,7 @@ function ThenPackageShouldBeCreated
             elseif( $PackageAlreadyExists )
             {
                 It('should not try to publish the package because it already exists') {
-                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
                         return $ScriptBlock.toString().contains('& $nugetPath push')
                     }
                 }
@@ -211,7 +211,7 @@ function ThenPackageShouldBeCreated
             else
             {
                 It ('should try to publish the package') {
-                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 2 -ParameterFilter {
+                    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 2 -ParameterFilter {
                         return $ScriptBlock.toString().contains('& $nugetPath push')
                     }
                 }
@@ -220,7 +220,7 @@ function ThenPackageShouldBeCreated
         else
         {
             It('should not try to publish the package because publish config is false') {
-                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
                     return $ScriptBlock.toString().contains('& $nugetPath push')
                 }
             }
@@ -262,8 +262,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a package built in releas
 
 Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for publishing' {
     $global:counter = -1
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
         $global:counter++    
         if($global:counter -eq 0)
         {
@@ -283,8 +283,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for pub
 Describe 'Invoke-PublishNuGetLibraryTask.when push command fails' {
     $errorMessage = 'Failed to publish NuGet package'
     $Global:error.Clear()
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
         Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
     } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
     GivenABuiltLibrary -ForBuildServer
@@ -295,8 +295,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when push command fails' {
 Describe 'Invoke-PublishNuGetLibraryTask.when package already exists' {
     $errorMessage = 'already exists'
     $Global:error.Clear()
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { return $True}
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { return $True}
     GivenABuiltLibrary -ForBuildServer
     WhenRunningNugetPackTask -ThatFailsWithErrorMessage $errorMessage -ErrorAction SilentlyContinue
     ThenPackageShouldBeCreated -PackageAlreadyExists -WithoutPushingToProgetError $errorMessage 
@@ -304,8 +304,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when package already exists' {
 
 Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
     $errorMessage = 'Failure checking if'
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
         Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/500'
     } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
     GivenABuiltLibrary -ForBuildServer
@@ -314,8 +314,8 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
 }
 
 Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clean switch' {    
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'WhsCI' -MockWith { 
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
     Invoke-WebRequest -Uri 'http://lcs01d-whs-04.dev.webmd.com:8099/404'
     } -ParameterFilter { $Uri -notlike 'http://lcs01d-whs-04.dev.webmd.com:8099/*' }
     
@@ -331,7 +331,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clea
     }
 
     It('should not try to publish the package') {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
             return $ScriptBlock.toString().contains('& $nugetPath push')
         }
     }

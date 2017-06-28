@@ -1,31 +1,31 @@
-function Uninstall-WhsCITool
+function Uninstall-WhiskeyTool
 {
     <#
     .SYNOPSIS
-    Removes any specified artifacts of a tool previoulsy installed by the WhsCI module.
+    Removes any specified artifacts of a tool previoulsy installed by the Whiskey module.
 
     .DESCRIPTION
-    The `Uninstall-WhsCITool` function removes PowerShell modules or NuGet Packages previously installed in the WhsCI module. PowerShell modules and NuGet packages are removed from `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules` and `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Packages` respectively unless specified otherwise. 
+    The `Uninstall-WhiskeyTool` function removes PowerShell modules or NuGet Packages previously installed in the Whiskey module. PowerShell modules and NuGet packages are removed from `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Modules` and `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Packages` respectively unless specified otherwise. 
     
-    Users of the `WhsCI` API typcially won't need to use this function. It is called by other `WhsCI` function so they have the tools they need.
+    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
 
     .EXAMPLE
-    Uninstall-WhsCITool -ModuleName 'Pester'
+    Uninstall-WhiskeyTool -ModuleName 'Pester'
 
     Demonstrates how to remove the `Pester` module from the default location.
         
     .EXAMPLE
-    Uninstall-WhsCITool -NugetPackageName 'NUnit.Runners' -Version '2.6.4'
+    Uninstall-WhiskeyTool -NugetPackageName 'NUnit.Runners' -Version '2.6.4'
 
     Demonstrates how to uninstall a specific NuGet Package. In this case, NUnit Runners version 2.6.4 would be removed from the default location. 
 
     .EXAMPLE
-    Uninstall-WhsCITool -ModuleName 'Pester' -Path $forPath
+    Uninstall-WhiskeyTool -ModuleName 'Pester' -Path $forPath
 
     Demonstrates how to remove a Pester module from a specified path location other than the default location. In this case, Pester would be removed from the directory pointed to by the $forPath variable.
     
     .EXAMPLE
-    Uninstall-WhsCITool -ModuleName 'Pester' -DownloadRoot $Root
+    Uninstall-WhiskeyTool -ModuleName 'Pester' -DownloadRoot $Root
 
     Demonstrates how to remove a Pester module from a DownloadRoot. In this case, Pester would be removed from `$Root\Modules`.
     #>
@@ -56,7 +56,7 @@ function Uninstall-WhsCITool
     
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
-        $Version = Resolve-WhsCIPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
+        $Version = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
         if( -not $Version )
         {
             return
@@ -77,7 +77,7 @@ function Uninstall-WhsCITool
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-        $Version = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
+        $Version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
         if( -not $Version )
         {
             return

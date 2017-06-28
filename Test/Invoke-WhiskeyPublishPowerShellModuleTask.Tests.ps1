@@ -1,6 +1,6 @@
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function Initialize-Test
 {
@@ -9,9 +9,9 @@ function Initialize-Test
     $gitBranch = 'origin/develop'
     $filter = { $Path -eq 'env:GIT_BRANCH' }
     $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
     Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
 }
 
 function Invoke-Publish
@@ -114,17 +114,17 @@ function Invoke-Publish
     }
     if( $withoutRegisteredRepo )
     {
-        Mock -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -MockWith { return $false }
+        Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { return $false }
     }
     else
     {
-        Mock -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -MockWith { return $true }
+        Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { return $true }
     }
 
     Add-Type -AssemblyName System.Net.Http
-    Mock -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -MockWith { return }
-    Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:PATH' }
-    Mock -CommandName 'Publish-Module' -ModuleName 'WhsCI' -MockWith { return }
+    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith { return }
+    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:PATH' }
+    Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey' -MockWith { return }
     $optionalParams = @{ }
     if( $WithCleanSwitch )
     {
@@ -136,7 +136,7 @@ function Invoke-Publish
     
     try
     {
-        Invoke-WhsCIPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter @optionalParams
+        Invoke-WhiskeyPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter @optionalParams
     }
     catch
     {
@@ -165,14 +165,14 @@ function Invoke-Publish
 function Assert-ModuleNotPublished
 {    
     It 'should not attempt to register the module'{
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'WhsCI' -Times 0
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
     }    
     It 'should not add NuGet.exe to path' {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 0
     }
     It 'should not attempt to publish the module'{
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
     }
 }
 
@@ -211,7 +211,7 @@ function Assert-ModuleRegistered
     
     $expectedPublishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
     It ('should register the Module')  {
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Repository Name                 expected {0}' -f $ExpectedRepositoryName)
             Write-Debug -Message ('                                actual   {0}' -f $Name)
@@ -253,16 +253,16 @@ function Assert-ModulePublished
         $ExpectedRepositoryName = 'WhsPowerShell'
     }
 
-    $whsCIBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\bin' -Resolve
+    $WhiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin' -Resolve
     It ('should add nuget.exe to path so Publish-Module works') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
-            $Value -eq ('{0};{1}' -f $whsCIBinPath,$env:Path)
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            $Value -eq ('{0};{1}' -f $WhiskeyBinPath,$env:Path)
         }
     }
     
     It ('should publish the Module')  {
         $expectedApiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
             Write-Debug -Message ('                                actual   {0}' -f $Path)
@@ -280,7 +280,7 @@ function Assert-ModulePublished
     }
 
     It ('should put the PATH environment variable back the way it was') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             $Value -eq $env:PATH
         }
     }
@@ -305,56 +305,56 @@ function Assert-ManifestVersion
     }
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module with default repository.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with default repository.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -WithoutRegisteredRepo -WithDefaultRepo -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context -WithDefaultRepo
     Assert-ModulePublished -TaskContext $context -WithDefaultRepo
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing previously published module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing previously published module.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -TaskContext $context
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when run by developer, not publishing.' {
-    $context = New-WhsCITestContext -ForDeveloper
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when run by developer, not publishing.' {
+    $context = New-WhiskeyTestContext -ForDeveloper
     Invoke-Publish -TaskContext $context
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module with custom repository name.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with custom repository name.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $repository = 'fubarepo'
     Invoke-Publish -WithoutRegisteredRepo -ForRepositoryName $repository -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context -ExpectedRepositoryName $repository
     Assert-ModulePublished -TaskContext $context -ExpectedRepositoryName $repository
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module with custom feed name.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module with custom feed name.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $feed = 'snafeed'
     Invoke-Publish -WithoutRegisteredRepo -ForFeedName $feed -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context -ExpectedFeedName $feed 
     Assert-ModulePublished -TaskContext $context 
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with no ProGet URI.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with no ProGet URI.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $context.ProGetSession = 'foo'
     $errorMatch = 'The property ''PowerShellFeedUri'' cannot be found on this object. Verify that the property exists.'
     
@@ -362,37 +362,37 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with no ProGet URI.'{
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when Path Parameter is not included' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when Path Parameter is not included' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'Element ''Path'' is mandatory'
 
     Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with non-existent path parameter' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with non-existent path parameter' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'does not exist'
 
     Invoke-Publish -WithNonExistentPath -TaskContext $context -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with non-directory path parameter' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with non-directory path parameter' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $errorMatch = 'must point to a directory'
 
     Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. reversion manifest with custom manifestPath and authentic manifest file' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. reversion manifest with custom manifestPath and authentic manifest file' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
-    $existingManifestPath = (Join-Path -path (Split-Path $PSScriptRoot -Parent ) -ChildPath 'WhsCI\WhsCI.psd1')
+    $context = New-WhiskeyTestContext -ForBuildServer
+    $existingManifestPath = (Join-Path -path (Split-Path $PSScriptRoot -Parent ) -ChildPath 'Whiskey\Whiskey.psd1')
     New-Item -Name 'Manifest' -Path $TestDrive.FullName -ItemType 'Directory'
     $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'Manifest\manifest.psd1')
     Copy-Item $existingManifestPath $manifestPath
@@ -403,18 +403,18 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. reversion manifest with custo
     Assert-ManifestVersion -TaskContext $context -manifestPath $manifestPath
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. reversion manifest without custom manifestPath' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. reversion manifest without custom manifestPath' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -withoutRegisteredRepo -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context
     Assert-ModulePublished -TaskContext $context
     Assert-ManifestVersion -TaskContext $context
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with invalid manifestPath' {
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. with invalid manifestPath' {
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     $manifestPath = 'fubar'
     $errorMatch = 'Module Manifest Path'
 
@@ -422,9 +422,10 @@ Describe 'Invoke-WhsCIPublishPowerShellModuleTask. with invalid manifestPath' {
     Assert-ModuleNotPublished
 }
 
-Describe 'Invoke-WhsCIPublishPowerShellModuleTask. when publishing new module.'{
+Describe 'Invoke-WhiskeyPublishPowerShellModuleTask. when publishing new module.'{
     Initialize-Test
-    $context = New-WhsCITestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -WithoutRegisteredRepo -TaskContext $context -WithCleanSwitch
     Assert-ModuleNotPublished 
 }
+

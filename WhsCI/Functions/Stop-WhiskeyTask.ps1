@@ -1,5 +1,5 @@
 
-function Stop-WhsCITask
+function Stop-WhiskeyTask
 {
     [CmdletBinding()]
     param(

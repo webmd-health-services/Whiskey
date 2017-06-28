@@ -1,5 +1,5 @@
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $mockPackage = [pscustomobject]@{ }
 $mockRelease = [pscustomobject]@{ }
@@ -17,24 +17,24 @@ function GivenAnApplication
     $deploy = $mockDeploy
 
     $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -MockWith { return $release }.GetNewClosure()
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $package }.GetNewClosure()
-    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -MockWith { return $deploy }.GetNewClosure()
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release }.GetNewClosure()
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return $package }.GetNewClosure()
+    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return $deploy }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
     
-    New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
     
 }
 
 function GivenNoApplication
 {
     $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' 
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' 
-    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' 
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' 
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' 
+    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' 
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
 
-    New-WhsCITestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
 }
 
 function WhenCreatingPackage
@@ -93,7 +93,7 @@ function WhenCreatingPackage
         try
         {
             $Global:Error.Clear()
-            New-WhsCIBuildMasterPackage -TaskContext $Context | Out-Null
+            New-WhiskeyBuildMasterPackage -TaskContext $Context | Out-Null
         }
         catch
         {
@@ -130,11 +130,11 @@ function WhenCreatingPackage
 function ThenItFails
 {
     It 'should not create release package' {
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
     }
 
     It 'should not start deploy' {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
     }
 }
 
@@ -153,31 +153,31 @@ function ThenPackageCreated
     process
     {
         It 'should get the release' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI'
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey'
         }
 
         It 'should get the release using the context''s session' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
         }
 
         It 'should get the release using the context''s release name' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -ParameterFilter { $Name -eq $Context.ReleaseName }
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $Context.ReleaseName }
         }
 
         It 'should create release package' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI'
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey'
         }
 
         It 'should create release package using the context''s session' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
         }
 
         It 'should create release package for the release' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { [object]::ReferenceEquals($mockRelease, $Release) }
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($mockRelease, $Release) }
         }
 
         It 'should create release package with package number' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.SemVer2.Major,$Context.Version.SemVer2.Minor,$Context.Version.SemVer2.Patch) }
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.SemVer2.Major,$Context.Version.SemVer2.Minor,$Context.Version.SemVer2.Patch) }
         }
 
         $expectedVariables = @{
@@ -193,7 +193,7 @@ function ThenPackageCreated
         {
             $variableValue = $expectedVariables[$variableName]
             It ('should create {0} package variable' -f $variableName) {
-                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { 
+                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { 
                     #$DebugPreference = 'Continue'
                     Write-Debug ('Expected  {0}' -f $variableValue)
                     Write-Debug ('Actual    {0}' -f $Variable[$variableName])
@@ -203,15 +203,15 @@ function ThenPackageCreated
         }
 
         It 'should start the package''s release pipeline' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI'
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey'
         }
 
         It 'should start the package''s release pipeline using the context''s session' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
         }
 
         It 'should start the package''s release pipeline using the newly created package' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -ParameterFilter { [object]::ReferenceEquals($mockPackage,$Package) }
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($mockPackage,$Package) }
         }
     }
 }
@@ -228,24 +228,24 @@ function ThenPackageNotCreated
     process
     {
         It 'should not get releases' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -Times 0
         }
         It 'should not create release package' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
         }
         It 'should not start deploy' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
         }
     }
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when called by build server' {
+Describe 'New-WhiskeyBuildMasterPackage.when called by build server' {
     GivenAnApplication |
         WhenCreatingPackage |
         ThenPackageCreated
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
+Describe 'New-WhiskeyBuildMasterPackage.when using custom package variables' {
     $variables = @{ 
                         'Fubar' = 'Snafu';
                         'Snafu' = 'Fubuar';
@@ -255,25 +255,25 @@ Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
         ThenPackageCreated -WithVariables $variables
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when using custom package variables' {
+Describe 'New-WhiskeyBuildMasterPackage.when using custom package variables' {
     GivenAnApplication |
         WhenCreatingPackage -WithNoPackageVersionVariable |
         ThenPackageNotCreated
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
+Describe 'New-WhiskeyBuildMasterPackage.when called by a developer' {
     GivenAnApplication |
         WhenCreatingPackage -ForDeveloper |
         ThenPackageNotCreated
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when called by a developer' {
+Describe 'New-WhiskeyBuildMasterPackage.when called by a developer' {
     GivenAnApplication |
         WhenCreatingPackage -ThatDoesNotGetDeployed |
         ThenPackageNotCreated
 }
 
-Describe 'New-WhsCIBuildMasterPackage.when application doesn''t exist in BuildMaster' {
+Describe 'New-WhiskeyBuildMasterPackage.when application doesn''t exist in BuildMaster' {
     GivenNoApplication |
         WhenCreatingPackage -WithErrorMessage 'unable to create and deploy a release package' -ThenPackageNotCreated -ErrorAction SilentlyContinue |
         ThenItFails

@@ -1,7 +1,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function GivenADecoupledWindowsService
 {
@@ -73,11 +73,11 @@ function WhenPackagingTheService
         $optionalParams['Clean'] = $true
     }
     
-    Mock -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -Verifiable
     $global:Error.Clear()
     try
     {
-        Invoke-WhsCIDecoupledWindowsServicePackageTask -TaskContext $context -TaskParameter $taskParameter @optionalParams
+        Invoke-WhiskeyDecoupledWindowsServicePackageTask -TaskContext $context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
@@ -125,13 +125,13 @@ function ThenTheServiceShouldBePackaged
     }
 
     It 'should include Path paths in package' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
             $missingPaths = $WithPath | Where-Object { $TaskParameter['Path'] -notcontains $_ }
             return -not $missingPaths
         }
     }
     It 'should include services.json in package' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
             $count = $TaskParameter['Path'] | Where-Object { $_ -eq $servicesPath } | Measure-Object | Select-Object -ExpandProperty 'Count'
             $count -eq 1
         }
@@ -139,13 +139,13 @@ function ThenTheServiceShouldBePackaged
     if( -not $WithoutNadAndRabbitMQ )
     {
         It 'should include resources/nad in package' {
-            Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
                 $count = $TaskParameter['Path'] | Where-Object { $_ -eq "$TestDrive\resources\nad" } | Measure-Object | Select-Object -ExpandProperty 'Count'
                 $count -eq 1
             }
         }
         It 'should include resources/rabbitmq in package' {
-            Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
                 $count = $TaskParameter['Path'] | Where-Object { $_ -eq "$TestDrive\resources\rabbitmq" } | Measure-Object | Select-Object -ExpandProperty 'Count'
                 $count -eq 1
             }
@@ -154,13 +154,13 @@ function ThenTheServiceShouldBePackaged
     else
     {
         It 'should not include resources/nad in package' {
-            Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
                 $count = $TaskParameter['Path'] | Where-Object { $_ -eq "$TestDrive\resources\nad" } | Measure-Object | Select-Object -ExpandProperty 'Count'
                 $count -eq 0
             }
         }
         It 'should not include resources/rabbitmq in package' {
-            Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
                 $count = $TaskParameter['Path'] | Where-Object { $_ -eq "$TestDrive\resources\rabbitmq" } | Measure-Object | Select-Object -ExpandProperty 'Count'
                 $count -eq 0
             }
@@ -168,14 +168,14 @@ function ThenTheServiceShouldBePackaged
     }
 
     It 'should include the path to the Bin Directory in the package' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
             $count = $TaskParameter['Path'] | Where-Object { $_ -eq $binPath } | Measure-Object | Select-Object -ExpandProperty 'Count'
             $count -eq 1
         }
     }
 
-    It 'should pass parameters to Invoke-WhsCIAppPackageTask' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+    It 'should pass parameters to Invoke-WhiskeyAppPackageTask' {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Name                expected  {0}' -f $packageName)
             Write-Debug -Message ('                    actual    {0}' -f $TaskParameter['Name'])
@@ -198,7 +198,7 @@ function ThenTheServiceShouldBePackaged
     }
 
     It 'should pass default whitelist' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -ParameterFilter {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
 
             $missing = Invoke-Command { '*.js','*.json' } | Where-Object { $TaskParameter['Include'] -notcontains $_ }
@@ -228,7 +228,7 @@ function ThenTheServiceShouldNotBePackaged
     )
 
     It 'should not package the Decoupled Windows Service' {
-        Assert-MockCalled -CommandName 'Invoke-WhsCIAppPackageTask' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyAppPackageTask' -ModuleName 'Whiskey' -Times 0
     }
 
     if( $WithErrorMessage )
@@ -240,24 +240,24 @@ function ThenTheServiceShouldNotBePackaged
 }
 
 #regular run
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when called' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when called' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $taskParameter = GivenADecoupledWindowsService -WithServicesJsonInBuildRoot
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter
     ThenTheServiceShouldBePackaged -TaskContext $context -TaskParameter $taskParameter -WithServicesJsonInBuildRoot
 }
 
 #without Resources
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when called without any additional resources' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when called without any additional resources' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $taskParameter = GivenADecoupledWindowsService -WithServicesJsonInBuildRoot -WithoutNadAndRabbitMQ
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter
     ThenTheServiceShouldBePackaged -TaskContext $context -TaskParameter $taskParameter -WithServicesJsonInBuildRoot -WithoutNadAndRabbitMQ
 }
 
 #no BinPath
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when BinPath is not included' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when BinPath is not included' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $error = 'BinPath is mandatory.'
     $taskParameter = GivenADecoupledWindowsService -WithServicesJsonInBuildRoot -ExcludingBinPath
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter
@@ -265,24 +265,24 @@ Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when BinPath is not in
 }
 
 #services.json
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when services.json is in BuildRoot' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when services.json is in BuildRoot' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $taskParameter = GivenADecoupledWindowsService -WithServicesJsonInBuildRoot
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter
     ThenTheServiceShouldBePackaged -TaskContext $context -TaskParameter $taskParameter -WithServicesJsonInBuildRoot
 }
 
 #resources/services.json
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when services.json is in resources DIR' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when services.json is in resources DIR' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $taskParameter = GivenADecoupledWindowsService
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter
     ThenTheServiceShouldBePackaged -TaskContext $context -TaskParameter $taskParameter
 }
 
 #clean switch
-Describe 'Invoke-WhsCIDecoupledWindowsServicePackageTask. when run with clean switch' {
-    $context = New-WhsCITestContext -WithMockToolData -ForDeveloper
+Describe 'Invoke-WhiskeyDecoupledWindowsServicePackageTask. when run with clean switch' {
+    $context = New-WhiskeyTestContext -WithMockToolData -ForDeveloper
     $taskParameter = GivenADecoupledWindowsService
     WhenPackagingTheService -TaskContext $context -TaskParameter $taskParameter -WithCleanSwitch
     ThenTheServiceShouldNotBePackaged 

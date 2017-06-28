@@ -1,5 +1,5 @@
 
-function Resolve-WhsCITaskPath
+function Resolve-WhiskeyTaskPath
 {
     [CmdletBinding()]
     param(
@@ -46,7 +46,7 @@ function Resolve-WhsCITaskPath
         $originalPath = $Path
         if( [IO.Path]::IsPathRooted($Path) )
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the ''{3}'' file.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the ''{3}'' file.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
             return
         }
 
@@ -64,7 +64,7 @@ function Resolve-WhsCITaskPath
             }
             else
             {
-                Stop-WhsCITask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist.' -f $PropertyName,$pathIdx,$Path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist.' -f $PropertyName,$pathIdx,$Path)
             }
         }
 
@@ -83,4 +83,5 @@ function Resolve-WhsCITaskPath
     {
     }
 }
+
 

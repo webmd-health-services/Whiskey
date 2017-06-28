@@ -11,7 +11,7 @@ Set-StrictMode -Version Latest
 & (Join-Path -Path $PSScriptRoot -ChildPath 'init.ps1' -Resolve)
 
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
-& (Join-Path -Path $PSScriptRoot -ChildPath 'WhsCI\Import-WhsCI.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whsbuild.yml' -Resolve
 
@@ -26,7 +26,7 @@ $toolParameters = @{
                         'PowerShellFeedUri' = 'https://powershell.example.com/';
                    }
 
-$runningUnderBuildServer = Test-WhsCIRunByBuildServer
+$runningUnderBuildServer = Test-WhiskeyRunByBuildServer
 if( $runningUnderBuildServer )
 {
     $toolParameters['BBServerCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
@@ -44,8 +44,8 @@ try
         $cleanArg['Clean'] = $true
     }
 
-    $context = New-WhsCIContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration @toolParameters
-    Invoke-WhsCIBuild -Context $context @cleanArg
+    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration @toolParameters
+    Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }
 catch

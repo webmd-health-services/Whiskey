@@ -2,7 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $Script:taskFailed = $false
 $Script:taskException = $null
@@ -47,7 +47,7 @@ function GivenUserCannotCreateDestination
     {
         $destinationPath = Join-Path -Path $destinationRoot -ChildPath $item
         Mock -CommandName 'New-Item' `
-             -ModuleName 'WhsCI' `
+             -ModuleName 'Whiskey' `
              -MockWith { Write-Error ('Access to the path ''{0}'' is denied.' -f $item) -ErrorAction SilentlyContinue }.GetNewClosure() `
              -ParameterFilter ([scriptblock]::Create("`$Path -eq '$destinationPath'"))
     }
@@ -67,7 +67,7 @@ function WhenPublishingFiles
         $ByADeveloper
     )
 
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
 
     $optionalParams = @{ }
     if( $ByADeveloper )
@@ -79,7 +79,7 @@ function WhenPublishingFiles
         $optionalParams['ForBuildServer'] = $true
     }
 
-    $taskContext = New-WhsCITestContext @optionalParams
+    $taskContext = New-WhiskeyTestContext @optionalParams
 
     $taskParameter = @{ }
     $taskParameter['Path'] = $Path
@@ -97,7 +97,7 @@ function WhenPublishingFiles
 
     try
     {
-        Invoke-WhsCIPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
+        Invoke-WhiskeyPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
     }
     catch
     {
@@ -158,37 +158,37 @@ function ThenTaskFails
 
 }
 
-Describe 'Invoke-WhsCIPublishFileTask when called by Developer' {
+Describe 'Invoke-WhiskeyPublishFileTask when called by Developer' {
     GivenFiles 'file.txt'
     WhenPublishingFiles 'file.txt' -ByADeveloper
     ThenNothingPublished 
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing a single file' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing a single file' {
     GivenFiles 'one.txt'
     WhenPublishingFiles 'one.txt' 
     ThenFilesPublished 'one.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing multiple files to a single destination' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing multiple files to a single destination' {
     GivenFiles 'one.txt','two.txt'
     WhenPublishingFiles 'one.txt','two.txt'
     ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing files from different directories' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing files from different directories' {
     GivenFiles 'dir1\one.txt','dir2\two.txt'
     WhenPublishingFiles 'dir1\one.txt','dir2\two.txt'
     ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing to multiple destinations' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing to multiple destinations' {
     GivenFiles 'one.txt'
     WhenPublishingFiles 'one.txt' -To 'dir1','dir2'
     ThenFilesPublished 'dir1\one.txt','dir2\one.txt'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing files and user can''t create one of the destination directories' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing files and user can''t create one of the destination directories' {
     GivenFiles 'one.txt'
     GivenUserCannotCreateDestination 'dir2'
     WhenPublishingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
@@ -196,16 +196,17 @@ Describe 'Invoke-WhsCIPublishFileTask.when publishing files and user can''t crea
     ThenNothingPublished -To 'dir1','dir2'
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing nothing' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing nothing' {
     GivenNoFilesToPublish
     WhenPublishingFiles -ErrorAction SilentlyContinue
     ThenTaskFails -WithErrorMessage '''Path'' property is missing'
     ThenNothingPublished
 }
 
-Describe 'Invoke-WhsCIPublishFileTask.when publishing a directory' {
+Describe 'Invoke-WhiskeyPublishFileTask.when publishing a directory' {
     GivenFiles 'dir1\file1.txt'
     WhenPublishingFiles 'dir1' -ErrorAction SilentlyContinue
     ThenTaskFails 'only publishes files'
     ThenNothingPublished
 }
+

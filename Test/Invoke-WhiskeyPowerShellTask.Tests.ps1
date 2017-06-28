@@ -2,7 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $workingDirectory = $null
 $failed = $false
@@ -127,7 +127,7 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhsCITestContext -ForDeveloper
+    $context = New-WhiskeyTestContext -ForDeveloper
     
     $failed = $false
     $CleanParam = @{ }
@@ -139,7 +139,7 @@ function WhenTheTaskRuns
     $script:failed = $false
     try
     {
-        Invoke-WhsCIPowerShellTask -TaskContext $context -TaskParameter $taskParameter @CleanParam
+        Invoke-WhiskeyPowerShellTask -TaskContext $context -TaskParameter $taskParameter @CleanParam
     }
     catch
     {
@@ -198,7 +198,7 @@ function ThenTheTaskPasses
     }
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when script passes' {
+Describe 'Invoke-WhiskeyPowerShellTask.when script passes' {
     GivenAPassingScript
     GivenNoWorkingDirectory
     WhenTheTaskRuns
@@ -206,7 +206,7 @@ Describe 'Invoke-WhsCIPowerShellTask.when script passes' {
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when script fails' {
+Describe 'Invoke-WhiskeyPowerShellTask.when script fails' {
     GivenNoWorkingDirectory
     GivenAFailingScript
     WhenTheTaskRuns -ErrorAction SilentlyContinue
@@ -214,7 +214,7 @@ Describe 'Invoke-WhsCIPowerShellTask.when script fails' {
     ThenTheTaskFails
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when script passes after a previous command fails' {
+Describe 'Invoke-WhiskeyPowerShellTask.when script passes after a previous command fails' {
     GivenNoWorkingDirectory
     GivenAPassingScript
     GivenLastExitCode 1
@@ -223,7 +223,7 @@ Describe 'Invoke-WhsCIPowerShellTask.when script passes after a previous command
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when script throws a terminating exception' {
+Describe 'Invoke-WhiskeyPowerShellTask.when script throws a terminating exception' {
     GivenAScript @'
 throw 'fubar!'
 '@ 
@@ -233,7 +233,7 @@ throw 'fubar!'
     ThenTheLastErrorMatches 'fubar'
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when script''s error action preference is Stop' {
+Describe 'Invoke-WhiskeyPowerShellTask.when script''s error action preference is Stop' {
     GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
@@ -247,7 +247,7 @@ throw 'fubar'
     ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }
 
-Describe 'Invoke-WhsCIBuild.when PowerShell task defined with an absolute working directory' {
+Describe 'Invoke-WhiskeyBuild.when PowerShell task defined with an absolute working directory' {
     GivenWorkingDirectory (Join-Path -path $TestDrive.FullName -ChildPath 'bin')
     GivenAPassingScript
     WhenTheTaskRuns
@@ -255,7 +255,7 @@ Describe 'Invoke-WhsCIBuild.when PowerShell task defined with an absolute workin
     ThenTheScriptRan
 }
 
-Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a relative working directory' {
+Describe 'Invoke-WhiskeyBuild.when PowerShell task defined with a relative working directory' {
     GivenWorkingDirectory 'bin'
     GivenAPassingScript
     WhenTheTaskRuns
@@ -263,14 +263,14 @@ Describe 'Invoke-WhsCIBuild.when PowerShell task defined with a relative working
     ThenTheScriptRan
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when working directory does not exist' {
+Describe 'Invoke-WhiskeyPowerShellTask.when working directory does not exist' {
     GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
     GivenAPassingScript
     WhenTheTaskRuns  -ErrorAction SilentlyContinue
     ThenTheTaskFails
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when Clean switch is active' {
+Describe 'Invoke-WhiskeyPowerShellTask.when Clean switch is active' {
     GivenNoWorkingDirectory
     GivenAPassingScript
     WhenTheTaskRuns -InCleanMode
@@ -290,7 +290,7 @@ function ThenFile
     Get-Content -Path $fullpath | Should -Be $HasContent
 }
 
-Describe 'Invoke-WhsCIPowerShellTask.when passing positional parameters' {
+Describe 'Invoke-WhiskeyPowerShellTask.when passing positional parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
@@ -311,7 +311,7 @@ param(
 }
 
 
-Describe 'Invoke-WhsCIPowerShellTask.when passing named parameters' {
+Describe 'Invoke-WhiskeyPowerShellTask.when passing named parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'

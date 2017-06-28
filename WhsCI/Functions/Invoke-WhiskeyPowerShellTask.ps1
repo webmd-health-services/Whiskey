@@ -1,5 +1,5 @@
 
-function Invoke-WhsCIPowerShellTask
+function Invoke-WhiskeyPowerShellTask
 {
     [Whiskey.Task("PowerShell")]
     [CmdletBinding()]
@@ -24,7 +24,7 @@ function Invoke-WhsCIPowerShellTask
     
     if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhsCITask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
         
             BuildTasks:
             - PowerShell:
@@ -34,13 +34,13 @@ function Invoke-WhsCIPowerShellTask
                 WorkingDirectory: bin')
         }
     
-    $path = $TaskParameter['Path'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     if( $TaskParameter.ContainsKey('WorkingDirectory') )
     {
         if( -not [IO.Path]::IsPathRooted($TaskParameter['WorkingDirectory']))
         {
-            $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+            $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
         } 
         else
         {

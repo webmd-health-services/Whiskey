@@ -1,12 +1,12 @@
 
-function New-WhsCIBuildMasterPackage
+function New-WhiskeyBuildMasterPackage
 {
     <#
     .SYNOPSIS
     Starts an application's BuildMaster pipeline.
 
     .DESCRIPTION
-    The `New-WhsCIBuildMasterPackage` function starts an application's BuildMaster pipeline. The object passed to the `TaskContext` parameter must have the following properties:
+    The `New-WhiskeyBuildMasterPackage` function starts an application's BuildMaster pipeline. The object passed to the `TaskContext` parameter must have the following properties:
 
     * `BuildMasterSession`: a session object representing the instance of BuildMaster to connect to.
     * `ApplicationName`: the name of the application whose pipeline to start. The application *must* exist in BuildMaster.
@@ -18,9 +18,9 @@ function New-WhsCIBuildMasterPackage
     * `PackageVariables`: A hashtable of variables to set in the BuildMaster package that will be created by this function.
 
     .EXAMPLE
-    New-WhsCIBuildMasterPackage -TaskContext $context
+    New-WhiskeyBuildMasterPackage -TaskContext $context
 
-    Demonstrates how to call `New-WhsCIBuildMasterPackage`.
+    Demonstrates how to call `New-WhiskeyBuildMasterPackage`.
     #>
     [CmdletBinding()]
     param(

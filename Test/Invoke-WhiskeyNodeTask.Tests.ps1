@@ -1,7 +1,7 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $originalNodeEnv = $env:NODE_ENV
 $startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
@@ -60,7 +60,7 @@ function Invoke-SuccessfulBuild
         $optionalParams['Clean'] = $True
     }
 
-    Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter @optionalParams
+    Invoke-WhiskeyNodeTask -TaskContext $WithContext -TaskParameter $taskParameter @optionalParams
 
     if( $WithCleanSwitch )
     {
@@ -85,13 +85,13 @@ function Invoke-SuccessfulBuild
 
     $versionRoot = Join-Path -Path $env:APPDATA -ChildPath ('nvm\v{0}' -f $ForVersion)
     It ('should prepend path to Node version to path environment variable') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             $Path -eq 'env:Path' -and $Value -like ('{0};*' -f $versionRoot)
         }
     }
 
     It ('should remove Node version path from path environment variable') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'WhsCI' -Times 1 -ParameterFilter {
+        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             $Path -eq 'env:Path' -and $Value -notlike ('*{0}*' -f $versionRoot)
         }
     }
@@ -163,22 +163,22 @@ function Initialize-NodeProject
 
     if( $ByDeveloper )
     {
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { [pscustomobject]@{ Value = (Join-Path -Path $env:APPDATA -ChildPath 'nvm') } } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $true } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
+        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = (Join-Path -Path $env:APPDATA -ChildPath 'nvm') } } -ParameterFilter { $Path -eq 'env:NVM_HOME' }
         $mock = { return $false }
         Set-Item -Path 'env:NODE_ENV' -Value 'developer'
     }
     else
     {
         $mock = { return $true }
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false } -ParameterFilter { $Path -eq 'env:HOME' }
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $false } -ParameterFilter { $Path -eq 'env:HOME' }
         Set-Item -Path 'env:NODE_ENV' -Value 'production'
     }
 
-    Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith $mock
+    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith $mock
 
     $version = [SemVersion.SemanticVersion]'5.4.3-rc.5+build'
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $version }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null
@@ -206,7 +206,7 @@ function Initialize-NodeProject
     New-Item -Path $buildRoot -ItemType 'Directory' | Out-Null
     New-Item -Path $workingDir -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
 
-    Mock -CommandName 'Set-Item' -ModuleName 'WhsCI' -Verifiable
+    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -Verifiable
 
     if( -not $DevDependency )
     {
@@ -280,7 +280,7 @@ module.exports = function(grunt) {
         $byWhoArg['ForDeveloper'] = $true
     }
 
-    return New-WhsCITestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg -UseActualProGet
+    return New-WhiskeyTestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg -UseActualProGet
 }
 
 function Invoke-FailingBuild
@@ -313,7 +313,7 @@ function Invoke-FailingBuild
 
     try
     {
-        Invoke-WhsCINodeTask -TaskContext $WithContext -TaskParameter $taskParameter
+        Invoke-WhiskeyNodeTask -TaskContext $WithContext -TaskParameter $taskParameter
     }
     catch
     {
@@ -345,43 +345,43 @@ function Invoke-FailingBuild
     }
 }
 
-Describe 'Invoke-WhsCINodeTask.when run by a developer' {
+Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     $context = Initialize-NodeProject -ByDeveloper
     Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -ThatRuns 'build','test'
 }
 
-Describe 'Invoke-WhsCINodeTask.when run by build server' {
+Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
     $context = Initialize-NodeProject -ByBuildServer
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
 }
 
-Describe 'Invoke-WhsCINodeTask.when a build task fails' {
+Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     $context = Initialize-NodeProject -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCINodeTask.when a install fails' {
+Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
     $context = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"' -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCINodeTask.when NODE_ENV is set to production' {
+Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $context = Initialize-NodeProject -ByBuildServer 
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
 }
 
-Describe 'Invoke-WhsCINodeTask.when module has security vulnerability' {
+Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' ) -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCINodeTask.when packageJson has no name' {
+Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     $context = Initialize-NodeProject -WithNoName -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCINodeTask.when user forgets to add any NpmScripts' {
+Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
     $context = Initialize-NodeProject -ByDeveloper
     Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -WarningVariable 'warnings'
     It 'should warn that there were no NPM scripts' {
@@ -389,12 +389,12 @@ Describe 'Invoke-WhsCINodeTask.when user forgets to add any NpmScripts' {
     }
 }
 
-Describe 'Invoke-WhsCINodeTask.when app is not in the root of the repository' {
+Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
     $context = Initialize-NodeProject -ByDeveloper -InSubDirectory 's'
     Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
 }
 
-Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
+Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     $context = Initialize-NodeProject -ByDeveloper 
     $Global:Error.Clear()
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'WorkingDirectory\[0\] .* does not exist' -NpmScript @( 'build' ) -InWorkingDirectory 'idonotexist' -ErrorAction SilentlyContinue
@@ -403,14 +403,14 @@ Describe 'Invoke-WhsCINodeTask.when working directory does not exist' {
     }
 }
 
-Describe 'Invoke-WhsCINodeTask.when run by build server with Clean Switch' {
+Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     $context = Initialize-NodeProject -ByBuildServer
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build'
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
     
 }
 
-Describe 'Invoke-WhsCINodeTask.when run by build server, running Clean on already Clean directory' {
+Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on already Clean directory' {
     $context = Initialize-NodeProject -ByBuildServer
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
     Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch

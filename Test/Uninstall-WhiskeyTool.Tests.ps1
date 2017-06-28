@@ -1,5 +1,5 @@
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCiTest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function GivenAnInstalledPowerShellModule
 {
@@ -21,7 +21,7 @@ function GivenAnInstalledPowerShellModule
     )
 
     $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-    $WithVersion = Resolve-WhsCIPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
+    $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
         $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -46,7 +46,7 @@ function GivenAnInstalledNuGetPackage
         $WithName = 'NUnit.Runners'
 
     )
-    $WithVersion = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
+    $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
     if( -not $WithVersion )
     {
         return
@@ -68,7 +68,7 @@ function WhenUninstallingPowerShellModule
     )
 
     $Global:Error.Clear()
-    Uninstall-WhsCITool -ModuleName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
+    Uninstall-WhiskeyTool -ModuleName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
 }
 
 function WhenUninstallingNuGetPackage
@@ -83,7 +83,7 @@ function WhenUninstallingNuGetPackage
     )
 
     $Global:Error.Clear()
-    Uninstall-WhsCITool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
+    Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
 }
 
 function ThenPowerShellModuleUninstalled
@@ -105,7 +105,7 @@ function ThenPowerShellModuleUninstalled
         $WithName = 'Pester'
     )
 
-    $WithVersion = Resolve-WhsCIPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
+    $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
         $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -191,43 +191,43 @@ function ThenNuGetPackageNotUninstalled
     }
 }
 
-Describe 'Uninstall-WhsCITool.when given an NuGet Package' {
+Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
     GivenAnInstalledNuGetPackage
     WhenUninstallingNuGetPackage
     ThenNuGetPackageUnInstalled
 }
 
-Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 4' {
+Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 4' {
     GivenAnInstalledPowerShellModule -LikePowerShell4
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell4
 }
 
-Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5' {
+Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5' {
     GivenAnInstalledPowerShellModule -LikePowerShell5
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell5
 }
 
-Describe 'Uninstall-WhsCITool.when given an NuGet Package with an empty Version' {
+Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
     GivenAnInstalledNuGetPackage -WithVersion ''
     WhenUninstallingNuGetPackage -WithVersion ''
     ThenNuGetPackageUnInstalled -WithVersion ''
 }
 
-Describe 'Uninstall-WhsCITool.when given an NuGet Package with a wildcard Version' {
+Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
     GivenAnInstalledNuGetPackage -WithVersion '2.*'
     WhenUninstallingNuGetPackage -WithVersion '2.*'
     ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
 }
 
-Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5 witn an empty Version' {
+Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn an empty Version' {
     GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion ''
     WhenUninstallingPowerShellModule -WithVersion ''
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion ''
 }
 
-Describe 'Uninstall-WhsCITool.when given a PowerShell Module under PowerShell 5 witn a wildcard Version' {
+Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn a wildcard Version' {
     GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '4.*'
     WhenUninstallingPowerShellModule -WithVersion '4.*'
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'

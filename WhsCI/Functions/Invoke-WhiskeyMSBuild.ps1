@@ -1,4 +1,4 @@
-function Invoke-WhsCIMSBuild
+function Invoke-WhiskeyMSBuild
 {
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(

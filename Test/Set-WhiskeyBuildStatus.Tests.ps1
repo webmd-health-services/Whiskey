@@ -2,7 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $context = $null
 $byDeveloper = $false
@@ -32,12 +32,12 @@ function GivenNoReporters
 
 function GivenRunByBuildServer
 {
-    $script:context = New-WhsCITestContext -ForBuildServer
+    $script:context = New-WhiskeyTestContext -ForBuildServer
 }
 
 function GivenRunByDeveloper
 {
-    $script:context = New-WhsCITestContext -ForDeveloper
+    $script:context = New-WhiskeyTestContext -ForDeveloper
 }
 
 function GivenReporter
@@ -62,26 +62,26 @@ function ThenBuildStatusReportedToBitbucketServer
     )
 
     It ('should report {0} to Bitbucket Server' -f $ExpectedStatus) {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Status -eq $ExpectedStatus }
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Status -eq $ExpectedStatus }
     }
 
     It ('should report to Bitbucket Server at {0}' -f $At) {
         $expectedUri = $At
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Connection.Uri -eq $expectedUri }
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Uri -eq $expectedUri }
     }
 
     It ('should report to Bitbucket Server as {0}' -f $AsUser) {
         $expectedUsername = $AsUser
         $expectedPassword = $WithPassword
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Connection.Credential.UserName -eq $expectedUsername }
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword }
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Credential.UserName -eq $expectedUsername }
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword }
     }
 }
 
 function ThenNoBuildStatusReported
 {
     It 'should not report build status' {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -Times 0
     }
 }
 
@@ -94,11 +94,11 @@ function WhenReportingBuildStatus
         $Status
     )
 
-    Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'WhsCI'
+    Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey'
     $Global:Error.Clear()
     try
     {
-        Set-WhsCIBuildStatus -Context $context -Status $Status
+        Set-WhiskeyBuildStatus -Context $context -Status $Status
         $script:failed = $false
     }
     catch
@@ -121,7 +121,7 @@ function ThenReportingFailed
 
 }
 
-Describe 'Set-WhsCIBuildStatus.when there are no reporters is present' {
+Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
     Context 'by build server' {
         GivenRunByBuildServer
         GivenNoReporters
@@ -137,7 +137,7 @@ Describe 'Set-WhsCIBuildStatus.when there are no reporters is present' {
     }
 }
 
-Describe 'Set-WhsCIBuildStatus.when reporting build started to Bitbucket Server' {
+Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Server' {
     Context 'by build server' {
         GivenRunByBuildServer
         GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
@@ -154,7 +154,7 @@ Describe 'Set-WhsCIBuildStatus.when reporting build started to Bitbucket Server'
     }
 }
 
-Describe 'Set-WhsCIBuildStatus.when reporting build failed to Bitbucket Server' {
+Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
@@ -162,7 +162,7 @@ Describe 'Set-WhsCIBuildStatus.when reporting build failed to Bitbucket Server' 
     ThenBuildStatusReportedToBitbucketServer Failed -At 'https://whsbitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
-Describe 'Set-WhsCIBuildStatus.when reporting build completed to Bitbucket Server' {
+Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Server' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
@@ -170,14 +170,14 @@ Describe 'Set-WhsCIBuildStatus.when reporting build completed to Bitbucket Serve
     ThenBuildStatusReportedToBitbucketServer Successful -At 'https://whsbitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
-Describe 'Set-WhsCIBuildStatus.when using an unknown reporter' {
+Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
     GivenRunByBuildServer
     GivenReporter  @{ 'Nonsense' = @{ } }
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
     ThenReportingFailed 'unknown\ build\ status\ reporter'
 }
 
-Describe 'Set-WhsCIBuildStatus.when missing credential' {
+Describe 'Set-WhiskeyBuildStatus.when missing credential' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenNoCredentials
@@ -185,16 +185,17 @@ Describe 'Set-WhsCIBuildStatus.when missing credential' {
     ThenReportingFailed 'credential\ ''BBServer1''\ does\ not\ exist'
 }
 
-Describe 'Set-WhsCIBuildStatus.when missing credential ID' {
+Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; } }
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
     ThenReportingFailed 'Property\ ''CredentialID''\ does\ not\ exist'
 }
 
-Describe 'Set-WhsCIBuildStatus.when missing URI' {
+Describe 'Set-WhiskeyBuildStatus.when missing URI' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'CredentialID' = 'fubar' ; } }
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
     ThenReportingFailed 'Property\ ''Uri''\ does\ not\ exist'
 }
+

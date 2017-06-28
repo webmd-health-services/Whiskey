@@ -2,7 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function New-PublishNodeModuleStructure
 {
@@ -17,19 +17,19 @@ function New-PublishNodeModuleStructure
         $WithWorkingDirectoryOverride
     )
 
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
-    Mock -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -ParameterFilter {$ScriptBlock -match 'publish'}
-    Mock -CommandName 'Remove-Item' -ModuleName 'WhsCI' -ParameterFilter {$Path -match '\.npmrc'}
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'}
+    Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
     if ($ByDeveloper)
     {
-        $context = New-WhsCITestContext -ForDeveloper
+        $context = New-WhiskeyTestContext -ForDeveloper
         $npmrcFileContents = ''
     }
     
     if ($ByBuildServer)
     {
-        $context = New-WhsCITestContext -ForBuildServer
+        $context = New-WhiskeyTestContext -ForBuildServer
         $npmFeedUri = $context.ProGetSession.NpmFeedUri
         $npmUserName = $context.ProGetSession.Credential.UserName
         $npmEmail = $env:USERNAME + '@webmd.net'
@@ -75,41 +75,41 @@ $npmrcFileLine4
 
 }
 
-Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Developer' {
+Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Developer' {
     $returnContextParams = New-PublishNodeModuleStructure -ByDeveloper
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
     It 'should not publish the Node module package to the defined registry' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0
     }
 }
 
-Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Developer with defined working directory' {
+Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Developer with defined working directory' {
     $returnContextParams = New-PublishNodeModuleStructure -ByDeveloper -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
     It 'should not publish the Node module package to the defined registry' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'WhsCI' -Times 0
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0
     }
 }
 
-Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
+Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
     $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
     It 'should validate the version is in the appropriate SemVersion.SemanticVersion format' {
-        Assert-MockCalled -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Assert-MockCalled -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -Times 1 -Exactly
     }
 
     It 'should create a temporary .npmrc file in the root of the application build directory' {
@@ -122,27 +122,27 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     }
 
     It 'should publish the Node module package to the defined registry' {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
     }
     
     It 'should remove the temporary config file .npmrc from the build root' {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
                           -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
     }
 }
 
-Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
+Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
     $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
 
     It 'should validate the version is in the appropriate SemVersion.SemanticVersion format' {
-        Assert-MockCalled -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -Times 1 -Exactly
+        Assert-MockCalled -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -Times 1 -Exactly
     }
 
     It 'should create a temporary .npmrc file in the root of the application build directory' {
@@ -155,23 +155,23 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called by Build Server' {
     }
     
     It 'should publish the Node module package to the defined registry' {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
     }
     
     It 'should remove the temporary config file .npmrc from the build root' {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
                           -ParameterFilter {$Path -match '\.npmrc'} -Times 1 -Exactly
     }
 }
 
-Describe 'Invoke-WhsCIPublishNodeModuleTask when called with Clean Switch' {
+Describe 'Invoke-WhiskeyPublishNodeModuleTask when called with Clean Switch' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
 
-    Invoke-WhsCIPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter -Clean
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter -Clean
    
     It 'should not create a temporary .npmrc file in the root of the application build directory' {
         Test-Path -Path $npmrcPath | Should be $False
@@ -182,12 +182,12 @@ Describe 'Invoke-WhsCIPublishNodeModuleTask when called with Clean Switch' {
     }
   
     It 'should not publish the Node module package to the defined registry' {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'WhsCI' `
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0
     }
     
     It 'should not attempt to remove the temporary config file .npmrc from the build root' {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'WhsCI' `
+        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
                           -ParameterFilter {$Path -match '\.npmrc'} -Times 0
     }
 }

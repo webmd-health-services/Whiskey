@@ -1,12 +1,12 @@
 
-function Install-WhsCINodeJs
+function Install-WhiskeyNodeJs
 {
     <#
     .SYNOPSIS
     Installs a specific version of Node.js and returns its path.
 
     .DESCRIPTION
-    The `Install-WhsCINodeJs` function installs a specific version of Node.js and returns the path to its `node.exe` program. It uses NVM to to the installation. If NVM isn't installed/available, it will download it and install it to `%APPDATA%\nvm`.
+    The `Install-WhiskeyNodeJs` function installs a specific version of Node.js and returns the path to its `node.exe` program. It uses NVM to to the installation. If NVM isn't installed/available, it will download it and install it to `%APPDATA%\nvm`.
 
     If the requested version of Node.js is installed, nothing happens, but the path to that version's `node.exe` is still returned.
 
@@ -15,7 +15,7 @@ function Install-WhsCINodeJs
     IF NVM is downloaded, the `NVM_HOME` environment variable for the current user is created to point to where NVM is installed.
 
     .EXAMPLE
-    Install-WhsCINodeJs -Version '4.4.7'
+    Install-WhiskeyNodeJs -Version '4.4.7'
 
     Installs version `4.4.7` of Node.js and returns the path to its `node.exe` file.
     #>
@@ -51,7 +51,7 @@ function Install-WhsCINodeJs
     else
     {
         # On developer computers, NVM should be installed by default. If not, make the dev install it.
-        if( -not (Test-WhsCIRunByBuildServer) )
+        if( -not (Test-WhiskeyRunByBuildServer) )
         {
             Write-Error -Message (@"
 NVM for Windows is not installed. To install it:
@@ -83,7 +83,7 @@ NVM for Windows is not installed. To install it:
 
     if( -not (Test-Path -Path $nvmPath -PathType Leaf) )
     {
-        $tempZipFile = 'WhsCI+Install-WhsCINodeJs+nvm-setup.zip+{0}' -f [IO.Path]::GetRandomFileName()
+        $tempZipFile = 'Whiskey+Install-WhiskeyNodeJs+nvm-setup.zip+{0}' -f [IO.Path]::GetRandomFileName()
         $tempZipFile = Join-Path -Path $env:TEMP -ChildPath $tempZipFile
 
         $nvmUri = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.1/nvm-noinstall.zip'

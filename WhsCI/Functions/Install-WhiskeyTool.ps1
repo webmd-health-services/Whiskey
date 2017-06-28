@@ -1,27 +1,27 @@
 
-function Install-WhsCITool
+function Install-WhiskeyTool
 {
     <#
     .SYNOPSIS
-    Downloads and installs tools needed by the WhsCI module.
+    Downloads and installs tools needed by the Whiskey module.
 
     .DESCRIPTION
-    The `Install-WhsCITool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the WhsCI module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\WhsCI\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
+    The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to `$env:LOCALAPPDATA\WebMD Health Services\Whiskey\Modules`. A `DirectoryInfo` object for the downloaded tool's directory is returned.
     
-    Users of the `WhsCI` API typcially won't need to use this function. It is called by other `WhsCI` function so they ahve the tools they need.
+    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
 
     .EXAMPLE
-    Install-WhsCITool -ModuleName 'Pester'
+    Install-WhiskeyTool -ModuleName 'Pester'
 
     Demonstrates how to install the most recent version of the `Pester` module.
 
     .EXAMPLE
-    Install-WhsCITool -ModuleName 'Pester' -Version 3
+    Install-WhiskeyTool -ModuleName 'Pester' -Version 3
 
     Demonstrates how to instals the most recent version of a specific major version of a module. In this case, Pester version 3.6.4 would be installed (which is the most recent 3.x version of Pester as of this writing).
     
     .EXAMPLE
-    Install-WhsCITool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+    Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
 
     Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed. 
 
@@ -45,7 +45,7 @@ function Install-WhsCITool
         $Version,
 
         [string]
-        # The root directory where the tools should be downloaded. The default is `$env:LOCALAPPDATA\WebMD Health Services\WhsCI`.
+        # The root directory where the tools should be downloaded. The default is `$env:LOCALAPPDATA\WebMD Health Services\Whiskey`.
         #
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
@@ -58,7 +58,7 @@ function Install-WhsCITool
 
     if( -not $DownloadRoot )
     {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
+        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
     }
    
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
@@ -78,7 +78,7 @@ function Install-WhsCITool
             return
         }
 
-        $Version = Resolve-WhsCIPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
+        $Version = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
         if( -not $Version )
         {
             return
@@ -116,7 +116,7 @@ function Install-WhsCITool
     {        
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-        $version = Resolve-WhsCINuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
+        $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
         if( -not $Version )
         {
             return
@@ -132,4 +132,5 @@ function Install-WhsCITool
         return $nuGetRoot
     }
 } 
+
 

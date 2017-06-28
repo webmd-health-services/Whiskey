@@ -1,26 +1,26 @@
 
-function Publish-WhsCITag
+function Publish-WhiskeyTag
 {
     <#
     .SYNOPSIS
     Tags a commit with a Version Tag 
 
     .DESCRIPTION
-    The Publish-WhsCITag function tags a commit with a Version Tag. The commit ID is obtained utilizing the Get-WhsCICommitID funciton. Optionally the user can pass in a Message to add to the Version Tag, or the Force parameter, which will force the commit to be tagged with the Version Tag without considering other commits with similar tags in the Repository.
+    The Publish-WhiskeyTag function tags a commit with a Version Tag. The commit ID is obtained utilizing the Get-WhiskeyCommitID funciton. Optionally the user can pass in a Message to add to the Version Tag, or the Force parameter, which will force the commit to be tagged with the Version Tag without considering other commits with similar tags in the Repository.
     
-    A WhsCI TaskContext is required as it contains all necessary BBServerConnection information as well as the current Release Version which will be used for the Tag Name
+    A Whiskey TaskContext is required as it contains all necessary BBServerConnection information as well as the current Release Version which will be used for the Tag Name
     
     The New-BBServerTag function in the BitbucketServerAutomation Module is called to apply the Tag to the commit.
 
     .EXAMPLE
-    Publish-WhsCITag -TaskContext $context
+    Publish-WhiskeyTag -TaskContext $context
 
-    Demonstrates how to call Publish-WhsCITag with the default setting of a tag with no message
+    Demonstrates how to call Publish-WhiskeyTag with the default setting of a tag with no message
     
     .EXAMPLE
-    Publish-WhsCITag -TaskContext $context -TagMessage 'New Version Tag Message' -Force
+    Publish-WhiskeyTag -TaskContext $context -TagMessage 'New Version Tag Message' -Force
 
-    Demonstrates how to call Publish-WhsCITag with an additional Tag Message which will be applied to the Tag
+    Demonstrates how to call Publish-WhiskeyTag with an additional Tag Message which will be applied to the Tag
     #>
     [CmdletBinding()]
     param(
@@ -45,7 +45,7 @@ function Publish-WhsCITag
     $projectKey = $uri.Segments[1].Trim('/')
     $repoKey = $uri.Segments[2] -replace '\.git$',''
  
-    $commitHash = Get-WhsCICommitID
+    $commitHash = Get-WhiskeyCommitID
     if( -not $commitHash )
     {
         throw ('Unable to identify a valid commit to tag. Are you sure you''re running under a build server?')

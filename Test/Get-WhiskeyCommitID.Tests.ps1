@@ -1,7 +1,7 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 function GivenRunningUnderABuildServer
 {
@@ -9,24 +9,24 @@ function GivenRunningUnderABuildServer
         [Switch]
         $WithGitBranch
     )
-    mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
-    mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -MockWith { return $item = @{
+    mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
+    mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { return $item = @{
                                                                                     Value = 'CommitHash'
                                                                                 }
                                                                 }
     if( $WithGitBranch )
     {
-        mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $true }
+        mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $true }
     }
     else
     {
-        mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -MockWith { return $false }
+        mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $false }
     }
 }
 
 function GivenRunningAsADeveloper
 {
-    mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+    mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
 }
 
 function WhenGettingCommitID
@@ -43,7 +43,7 @@ function WhenGettingCommitID
     $commitID = $null
     try
     {
-        $commitID = Get-WhsCICommitID
+        $commitID = Get-WhiskeyCommitID
     }
     catch
     {
@@ -79,7 +79,7 @@ function ThenTheCommitIDShouldBeObtained
         $Global:Error | Should beNullOrEmpty
     }
     it 'should call Get-Item to get the commitID' {
-        Assert-MockCalled -CommandName 'Get-Item' -ModuleName 'WhsCI' -Times 1
+        Assert-MockCalled -CommandName 'Get-Item' -ModuleName 'Whiskey' -Times 1
     }
 
 
@@ -104,14 +104,15 @@ function ThenTheCommitIDShouldNotBeObtained
 
 }
 
-Describe 'Get-WhsCICommitID. when running under a build server.' {
+Describe 'Get-WhiskeyCommitID. when running under a build server.' {
     GivenRunningUnderABuildServer -WithGitBranch
     $commitID = WhenGettingCommitID
     ThenTheCommitIDShouldBeObtained -CommitID $commitID
 }
 
-Describe 'Get-WhsCICommitID. when the environment variable GIT_BRANCH is unavailable.' {
+Describe 'Get-WhiskeyCommitID. when the environment variable GIT_BRANCH is unavailable.' {
     GivenRunningUnderABuildServer
     $commitID = WhenGettingCommitID -ThatShouldFail
     ThenTheCommitIDShouldNotBeObtained -CommitID $commitID -Error 'Environment variable GIT_COMMIT does not exist'
 }
+

@@ -2,7 +2,7 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $buildServerContext = @{
                             BBServerCredential = (New-Credential -UserName 'bitbucket' -Password 'snafu');
@@ -99,7 +99,7 @@ function Assert-Context
 
     if( -not $DownloadRoot )
     {
-        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\WhsCI'
+        $DownloadRoot = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'WebMD Health Services\Whiskey'
     }
     It 'should set download root' {
         $Context.DownloadRoot | Should Be $DownloadRoot
@@ -131,10 +131,10 @@ function GivenBuildID
         $BuildID
     )
 
-    function Get-WhsCIBuildID
+    function Get-WhiskeyBuildID
     {
     }
-    Mock -CommandName 'Get-WhsCIBuildID' -ModuleName 'WhsCI' -MockWith { $BuildID }.GetNewClosure()
+    Mock -CommandName 'Get-WhiskeyBuildID' -ModuleName 'Whiskey' -MockWith { $BuildID }.GetNewClosure()
 }
 
 function GivenConfiguration
@@ -193,29 +193,29 @@ function GivenConfiguration
         $gitBranch = $OnBranch
         $filter = { $Path -eq 'env:GIT_BRANCH' }
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
         Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
 
-        Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return [pscustomobject]@{ Value = $OnBranch } }.GetNewClosure() 
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
+        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return [pscustomobject]@{ Value = $OnBranch } }.GetNewClosure() 
 
         if( $WithVersion )
         {
-            Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
+            Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
         }
         else
         {
-            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return $true }
-            Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return [pscustomobject]@{ Value = '1' } }
-            Mock -CommandName 'Test-Path' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return $true }
-            Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return [pscustomobject]@{ Value = 'deadbee' } }
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return $true }
+            Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:BUILD_ID' } -MockWith { return [pscustomobject]@{ Value = '1' } }
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return $true }
+            Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_COMMIT' } -MockWith { return [pscustomobject]@{ Value = 'deadbee' } }
         }
     }
     else
     {
         if( $WithVersion )
         {
-            Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { 
+            Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { 
                 [SemVersion.SemanticVersion]$semVersion = $null
                 if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
                 {
@@ -322,13 +322,13 @@ function WhenCreatingContext
     {
         if( $ByDeveloper )
         {
-            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $false }
+            Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
         }
 
         $optionalArgs = @{ }
         if( $ByBuildServer )
         {
-            Mock -CommandName 'Test-WhsCIRunByBuildServer' -ModuleName 'WhsCI' -MockWith { return $true }
+            Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
         }
 
         if( -not $WithNoToolInfo )
@@ -361,7 +361,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            $script:context = New-WhsCIContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
+            $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
         }
         catch
         {
@@ -560,119 +560,119 @@ function ThenVersionMatches
     }
 }
 
-Describe 'New-WhsCIContext.when run by a developer for an application' {
+Describe 'New-WhiskeyContext.when run by a developer for an application' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
     WhenCreatingContext -ByDeveloper -Environment 'fubar'
     ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -Environment 'fubar'
 }
 
-Describe 'New-WhsCIContext.when run by developer for a library' {
+Describe 'New-WhiskeyContext.when run by developer for a library' {
     GivenConfiguration -WithVersion '1.2.3'
     WhenCreatingContext -ByDeveloper 
     ThenDeveloperContextCreated -WithSemanticVersion ('1.2.3+{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME)
 }
 
-Describe 'New-WhsCIContext.when run by developer and configuration file does not exist' {
+Describe 'New-WhiskeyContext.when run by developer and configuration file does not exist' {
     GivenConfigurationFileDoesNotExist
     WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIContext.when run by developer and version is not a semantic version' {
+Describe 'New-WhiskeyContext.when run by developer and version is not a semantic version' {
     GivenConfiguration -WithVersion 'fubar'
     WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'not a valid semantic version' -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIContext.when run by the build server' {
+Describe 'New-WhiskeyContext.when run by the build server' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -Environment 'fubar'
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop' -Environment 'fubar'
 }
 
-Describe 'New-WhsCIContext.when run by the build server and customizing ProGet feed names' {
+Describe 'New-WhiskeyContext.when run by the build server and customizing ProGet feed names' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
 }
 
-Describe 'New-WhsCIContext.when run by the build server and customizing download root' {
+Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName -WithReleaseName 'develop'
 }
 
-Describe 'New-WhsCIContext.when run by build server called with developer parameter set' {
+Describe 'New-WhiskeyContext.when run by build server called with developer parameter set' {
     GivenConfiguration -WithVersion '1.2.3' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
 }
 
-Describe 'New-WhsCIContext.when application name in configuration file' {
+Describe 'New-WhiskeyContext.when application name in configuration file' {
     GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar'
     WhenCreatingContext -ByDeveloper
     ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
 }
 
-Describe 'New-WhsCIContext.when release name in configuration file' {
+Describe 'New-WhiskeyContext.when release name in configuration file' {
     GivenConfiguration -WithVersion '1.2.3' -ForReleaseName 'fubar'
     WhenCreatingContext -ByDeveloper
     ThenDeveloperContextCreated -WithReleaseName 'fubar' -WithSemanticVersion '1.2.3'
 }
 
 
-Describe 'New-WhsCIContext.when building on master branch' {
+Describe 'New-WhiskeyContext.when building on master branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'master'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'master'
 }
 
-Describe 'New-WhsCIContext.when building on feature branch' {
+Describe 'New-WhiskeyContext.when building on feature branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'feature/fubar'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/feature/fubar'
 }
 
-Describe 'New-WhsCIContext.when building on release branch' {
+Describe 'New-WhiskeyContext.when building on release branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release/5.1'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release/5.1'
 }
 
-Describe 'New-WhsCIContext.when building on long-lived release branch' {
+Describe 'New-WhiskeyContext.when building on long-lived release branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
-Describe 'New-WhsCIContext.when building on develop branch' {
+Describe 'New-WhiskeyContext.when building on develop branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'develop'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
 }
 
-Describe 'New-WhsCIContext.when building on hot fix branch' {
+Describe 'New-WhiskeyContext.when building on hot fix branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'hotfix/snafu'
     WhenCreatingContext -ByBuildServer 
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/hotfix/snafu'
 }
 
-Describe 'New-WhsCIContext.when building on bug fix branch' {
+Describe 'New-WhiskeyContext.when building on bug fix branch' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'bugfix/fubarnsafu'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
 }
 
-Describe 'New-WhsCIContext.when publishing on custom branch' {
+Describe 'New-WhiskeyContext.when publishing on custom branch' {
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
 }
 
-Describe 'New-WhsCIContext.when run by developer on a prerelease branch' {
+Describe 'New-WhiskeyContext.when run by developer on a prerelease branch' {
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'alpha/2.0' -PublishingOn '^alpha\b'
     WhenCreatingContext -ByDeveloper
     ThenSemVer2Is '1.2.3'
 }
 
-Describe 'New-WhsCIContext.when publishing on a prerelease branch' {
+Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     GivenBuildID '93'
     WhenCreatingContext -ByBuildServer
@@ -681,7 +681,7 @@ Describe 'New-WhsCIContext.when publishing on a prerelease branch' {
     ThenSemVer1Is '1.2.3-alpha93'
 }
 
-Describe 'New-WhsCIContext.when a PrereleaseMap has multiple keys' {
+Describe 'New-WhiskeyContext.when a PrereleaseMap has multiple keys' {
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' ; '\bbeta\b' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
 }
@@ -706,7 +706,7 @@ function GivenPackageJson
 "@  | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'package.json')
 }
 
-Describe 'New-WhsCIContext.when building a Node module by a developer' {
+Describe 'New-WhiskeyContext.when building a Node module by a developer' {
     GivenConfiguration
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByDeveloper
@@ -716,7 +716,7 @@ Describe 'New-WhsCIContext.when building a Node module by a developer' {
     ThenSemVer1Is '9.4.6'
 }
 
-Describe 'New-WhsCIContext.when building a Node module by a build server' {
+Describe 'New-WhiskeyContext.when building a Node module by a build server' {
     GivenConfiguration -ForBuildServer
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByBuildServer
@@ -726,17 +726,18 @@ Describe 'New-WhsCIContext.when building a Node module by a build server' {
     ThenSemVer1Is '9.4.6'
 }
 
-Describe 'New-WhsCIContext.when building a Node.js application and should use an auto-generated version number' {
+Describe 'New-WhiskeyContext.when building a Node.js application and should use an auto-generated version number' {
     GivenConfiguration
     GivenPackageJson -AtVersion '0.0.0'
     WhenCreatingContext 
     ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
-Describe 'New-WhsCIContext.when building a Node.js application and ignoring package.json version number' {
+Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
     GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
     GivenPackageJson -AtVersion '1.0.0' 
     WhenCreatingContext 
     ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
+
 

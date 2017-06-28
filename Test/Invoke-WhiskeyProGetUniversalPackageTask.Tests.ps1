@@ -1,10 +1,10 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhsCITest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$defaultPackageName = 'WhsCITest'
-$defaultDescription = 'A package created to test the Invoke-WhsCIAppPackageTask function in the WhsCI module.'
+$defaultPackageName = 'WhiskeyTest'
+$defaultDescription = 'A package created to test the Invoke-WhiskeyAppPackageTask function in the Whiskey module.'
 $feedUri = 'snafufurbar'
 $feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 $defaultVersion = '1.2.3'
@@ -14,7 +14,7 @@ $threwException = $false
 $preTempDirCount = 0
 $postTempDirCount = 0
 
-function Assert-NewWhsCIAppPackage
+function Assert-NewWhiskeyAppPackage
 {
     [CmdletBinding()]
     param(
@@ -128,9 +128,9 @@ function Assert-NewWhsCIAppPackage
         $byWhoArg = @{ 'ByBuildServer' = $true }
     }
 
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
+    $taskContext = New-WhiskeyTestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version.SemVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
     $taskContext.Version.SemVer2NoBuildMetadata = ([SemVersion.SemanticVersion]$taskContext.Version.SemVer2)
@@ -161,7 +161,7 @@ function Assert-NewWhsCIAppPackage
         
     function Get-TempDirCount
     {
-        Get-ChildItem -Path $env:TEMP -Filter ('WhsCI+Invoke-WhsCIAppPackageTask+{0}+*' -f $Name) | 
+        Get-ChildItem -Path $env:TEMP -Filter ('Whiskey+Invoke-WhiskeyAppPackageTask+{0}+*' -f $Name) | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
@@ -169,7 +169,7 @@ function Assert-NewWhsCIAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
+        $At = Invoke-WhiskeyAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
                 Where-Object { $_ -like '*.upack' } | 
                 Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
@@ -221,7 +221,7 @@ function Assert-NewWhsCIAppPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.SemVer2NoBuildMetadata-replace '[\\/]','-')
-    $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
+    $outputRoot = Get-WhiskeyOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
     It 'should cleanup temporary directories' {
@@ -335,7 +335,7 @@ function Assert-NewWhsCIAppPackage
     if( $ShouldNotUploadPackage )
     {
         It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -Times 0
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -Times 0
         }
     }
 
@@ -346,7 +346,7 @@ function Assert-NewWhsCIAppPackage
             foreach ( $api in $taskContext.ProGetSession.AppFeedUri )
             {
                 It ('should upload package to {0} ProGet instance with the defined session info' -f $api) {
-                    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+                    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
                         #$DebugPreference = 'Continue'
                         Write-Debug $ProGetSession.Uri
                         Write-Debug $api
@@ -356,14 +356,14 @@ function Assert-NewWhsCIAppPackage
             }
         }
         It 'should upload package to ProGet with session credential' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $ProGetSession.Credential.UserName -eq $taskContext.ProGetSession.Credential.UserName -and
                 $ProGetSession.Credential.GetNetworkCredential().Password -eq $taskContext.ProGetSession.Credential.GetNetworkCredential().Password
             }
         }
 
         It 'should upload the configured package to ProGet' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $version = [semversion.SemanticVersion]$taskContext.Version.SemVer2NoBuildMetadata
                 $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
                 $fixRegex = '[{0}]' -f ($badChars -join '')
@@ -376,7 +376,7 @@ function Assert-NewWhsCIAppPackage
         }
 
         It 'should upload package to the defined ProGet feed' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
+            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $FeedName -eq $taskContext.ProGetSession.AppFeedName
             }
         }
@@ -453,7 +453,7 @@ function Get-BuildRoot
 
 function Given7ZipIsInstalled
 {
-    Install-WhsCITool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot (Get-BuildRoot)
+    Install-WhiskeyTool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot (Get-BuildRoot)
 }
 
 function Initialize-Test
@@ -536,11 +536,11 @@ function Initialize-Test
 
     if ( $WhenUploadFails )
     {
-        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -MockWith { Write-Error 'failed to upload' }
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith { Write-Error 'failed to upload' }
     }
     else
     {
-        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
     }
     
     if( -not $AsDeveloper )
@@ -573,7 +573,7 @@ function Initialize-Test
 
         $filter = { $Path -eq 'env:GIT_BRANCH' }
         $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-        Mock -CommandName 'Get-Item' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith $mock
+        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
         Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
     }
 
@@ -588,50 +588,50 @@ function Then7zipShouldNotExist
 }
 
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging root files' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging root files' {
     $file = 'project.json'
     $thirdPartyFile = 'thirdparty.txt'
     $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
-    Assert-NewWhsCIAppPackage -ForPath $file `
+    Assert-NewWhiskeyAppPackage -ForPath $file `
                               -WithThirdPartyRootItem $thirdPartyFile `
                               -HasThirdPartyRootItem $thirdPartyFile `
                               -HasRootItems $file
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory as a developer' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything in a directory as a developer' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames `
                                       -AsDeveloper
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
                               -ShouldNotUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a directory' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs', 'style.css' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html','*.css' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html','style.css' `
@@ -639,13 +639,13 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging whitelisted files in a direc
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging multiple directories' {
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -653,13 +653,13 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging multiple directories' {
                               -ShouldUploadPackage 
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to be excluded' {    
+Describe 'Invoke-WhiskeyAppPackageTask.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
                                       -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'html2.html','sub' `
                               -HasRootItems 'dir1' `
@@ -668,13 +668,13 @@ Describe 'Invoke-WhsCIAppPackageTask.when whitelist includes items that need to 
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when paths don''t exist' {
+Describe 'Invoke-WhiskeyAppPackageTask.when paths don''t exist' {
 
     $Global:Error.Clear()
 
     Initialize-Test
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1','dir2' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1','dir2' `
                               -ThatIncludes '*' `
                               -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                               -ShouldNotCreatePackage `
@@ -682,12 +682,12 @@ Describe 'Invoke-WhsCIAppPackageTask.when paths don''t exist' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exclude' {
+Describe 'Invoke-WhiskeyAppPackageTask.when path contains known directories to exclude' {
     $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
     $filenames = 'html.html'
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
     
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
@@ -695,12 +695,12 @@ Describe 'Invoke-WhsCIAppPackageTask.when path contains known directories to exc
                               -ShouldUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
+Describe 'Invoke-WhiskeyAppPackageTask.when package upload fails' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -710,12 +710,12 @@ Describe 'Invoke-WhsCIAppPackageTask.when package upload fails' {
                               -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
+Describe 'Invoke-WhiskeyAppPackageTask.when not uploading to ProGet' {
     $dirNames = @( 'dir1'  )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -723,11 +723,11 @@ Describe 'Invoke-WhsCIAppPackageTask.when not uploading to ProGet' {
                               -ShouldNotUploadPackage
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
+Describe 'Invoke-WhiskeyAppPackageTask.when using WhatIf switch' {
     $dirNames = @( 'dir1' )
     $fileNames = @( 'html.html' )
     $repoRoot = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    Assert-NewWhsCIAppPackage -ForPath $dirNames `
+    Assert-NewWhiskeyAppPackage -ForPath $dirNames `
                               -ThatIncludes '*.html' `
                               -WhenRunByDeveloper `
                               -ShouldNotCreatePackage `
@@ -736,12 +736,12 @@ Describe 'Invoke-WhsCIAppPackageTask.when using WhatIf switch' {
                               -ShouldReturnNothing
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
+Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
@@ -753,7 +753,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items' {
 
 foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 {
-    Describe ('Invoke-WhsCIAppPackageTask.when {0} property is omitted' -f $parameterName) {
+    Describe ('Invoke-WhiskeyAppPackageTask.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
                         Name = 'Name';
                         Include = 'Include';
@@ -762,12 +762,12 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
                       }
         $parameter.Remove($parameterName)
 
-        $context = New-WhsCITestContext -ForDeveloper
+        $context = New-WhiskeyTestContext -ForDeveloper
         $Global:Error.Clear()
         $threwException = $false
         try
         {
-            Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter
+            Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter $parameter
         }
         catch
         {
@@ -782,13 +782,13 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when path to package doesn''t exist' {
-    $context = New-WhsCITestContext -ForDeveloper
+Describe 'Invoke-WhiskeyAppPackageTask.when path to package doesn''t exist' {
+    $context = New-WhiskeyTestContext -ForDeveloper
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
+        { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -801,16 +801,16 @@ function New-TaskParameter
      @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exist' {
+Describe 'Invoke-WhiskeyAppPackageTask.when path to third-party item doesn''t exist' {
     $filter = { $PropertyName -eq 'Path' } 
-    Mock -CommandName 'Resolve-whsCITaskPath' -ModuleName 'WhsCI' -ParameterFilter $filter -MockWith { return $True }
+    Mock -CommandName 'Resolve-WhiskeyTaskPath' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $True }
 
-    $context = New-WhsCITestContext -ForDeveloper
+    $context = New-WhiskeyTestContext -ForDeveloper
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
+        { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter (New-TaskParameter) } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -818,12 +818,12 @@ Describe 'Invoke-WhsCIAppPackageTask.when path to third-party item doesn''t exis
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of the repository' {
+Describe 'Invoke-WhiskeyAppPackageTask.when application root isn''t the root of the repository' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -SourceRoot 'app'
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'app\dir1' `
@@ -834,25 +834,25 @@ Describe 'Invoke-WhsCIAppPackageTask.when application root isn''t the root of th
                               -FromSourceRoot 'app'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when custom application root doesn''t exist' {
+Describe 'Invoke-WhiskeyAppPackageTask.when custom application root doesn''t exist' {
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-    $context = New-WhsCITestContext -ForDeveloper
+    $context = New-WhiskeyTestContext -ForDeveloper
 
     $Global:Error.Clear()
 
     $parameter = New-TaskParameter
     $parameter['SourceRoot'] = 'app'
 
-    { Invoke-WhsCIAppPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
+    { Invoke-WhiskeyAppPackageTask -TaskContext $context -TaskParameter $parameter } | Should Throw
 
     It 'should fail to resolve the path' {
         $Global:Error | Should Match 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom application name' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging everything with a custom application name' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
 
@@ -860,7 +860,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                                       -FileName $fileNames `
                                       -OnDevelopBranch
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -HasRootItems $dirNames `
                               -HasFiles 'html.html' `
@@ -868,11 +868,11 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
                               -ForApplicationName 'foo'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
+Describe 'Invoke-WhiskeyAppPackageTask.when given Clean Switch' {
     $file = 'project.json'    
     Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
-    Assert-NewWhsCIAppPackage -ForPath $file `
+    Assert-NewWhiskeyAppPackage -ForPath $file `
                               -WhenGivenCleanSwitch `
                               -ShouldReturnNothing `
                               -ShouldNotCreatePackage `
@@ -881,13 +881,13 @@ Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
     Then7zipShouldNotExist
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging given a full relative path' {
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))    
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhsCIAppPackage -ForPath $path -HasRootItems $path 
+    Assert-NewWhiskeyAppPackage -ForPath $path -HasRootItems $path 
 }
 
 function Get-BuildRoot
@@ -978,15 +978,15 @@ function WhenPackaging
         $byWhoArg['ByBuildServer'] = $true
     }
     
-    Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
 
-    $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
+    $taskContext = New-WhiskeyTestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
     }
     
-    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI'
+    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
     
     $threwException = $false
     $At = $null
@@ -1001,7 +1001,7 @@ function WhenPackaging
         
     function Get-TempDirCount
     {
-        Get-ChildItem -Path $env:TEMP -Filter 'WhsCI+Invoke-WhsCIAppPackageTask+*' | 
+        Get-ChildItem -Path $env:TEMP -Filter 'Whiskey+Invoke-WhiskeyAppPackageTask+*' | 
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
@@ -1009,7 +1009,7 @@ function WhenPackaging
     $preTempDirCount = Get-TempDirCount
     try
     {
-        Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
+        Invoke-WhiskeyAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @whatIfParam
     }
     catch
     {
@@ -1053,40 +1053,40 @@ function ThenPackageShouldInclude
     }
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when WhsEnvironments.json is explicitly included in the package' {
+Describe 'Invoke-WhiskeyAppPackageTask.when WhsEnvironments.json is explicitly included in the package' {
     GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
     WhenPackaging -Paths 'WhsEnvironments.json','file.txt' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file' {
+Describe 'Invoke-WhiskeyAppPackageTask.when repository has a WhsEnvironments.json file' {
     GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
     WhenPackaging -Paths 'file.txt' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
+Describe 'Invoke-WhiskeyAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
     GivenARepositoryWithFiles 'WhsEnvironments.json','dir1\file.txt'
     WhenPackaging -Paths 'file.txt' -FromSourceRoot 'dir1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'WhsEnvironments.json','dir1\file.txt'
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path with override syntax' {
+Describe 'Invoke-WhiskeyAppPackageTask.when packaging given a full relative path with override syntax' {
     $file = 'project.json'
     $directory = 'relative'
     $path = ('{0}\{1}' -f ($directory, $file))
     $forPath = @{ $path = $file }
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
-    Assert-NewWhsCIAppPackage -ForPath $forPath -HasRootItems $file 
+    Assert-NewWhiskeyAppPackage -ForPath $forPath -HasRootItems $file 
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with override syntax' {
+Describe 'Invoke-WhiskeyAppPackageTask.when including third-party items with override syntax' {
     $dirNames = @( 'dir1', 'app\thirdparty')
     $fileNames = @( 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
-    Assert-NewWhsCIAppPackage -ForPath 'dir1' `
+    Assert-NewWhiskeyAppPackage -ForPath 'dir1' `
                               -ThatExcludes 'thirdparty.txt' `
                               -HasRootItems 'dir1' `
                               -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
@@ -1094,13 +1094,13 @@ Describe 'Invoke-WhsCIAppPackageTask.when including third-party items with overr
                               -HasThirdPartyFile 'thirdparty.txt' 
 }
 
-Describe 'Invoke-WhsCIAppPackageTask.when package is empty' {
+Describe 'Invoke-WhiskeyAppPackageTask.when package is empty' {
     GivenARepositoryWithFiles 'file.txt'
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
 }
 
-Describe 'Invoke-WhsCIAppPackageTas.when path contains wildcards' {
+Describe 'Invoke-WhiskeyAppPackageTas.when path contains wildcards' {
     GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'

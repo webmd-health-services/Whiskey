@@ -8,4 +8,4 @@ BuildTasks:
     Path: Test\*.Tests.ps1
 - PublishPowerShellModule:
     Path:
-    - WhsCI
+    - Whiskey
