@@ -13,9 +13,9 @@ function Invoke-WhiskeyNodeTask
     This task accepts these parameters:
 
     * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
-    * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
+    * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
 
-    Here's a sample `whsbuild.yml` using the Node task:
+    Here's a sample `whiskey.yml` using the Node task:
 
         BuildTasks:
         - Node:
@@ -48,7 +48,7 @@ function Invoke-WhiskeyNodeTask
         # The task parameters, which are:
         #
         # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
-        # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
+        # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
         $TaskParameter,
 
         [Switch]
@@ -237,4 +237,5 @@ BuildTasks:
         Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }
+
 

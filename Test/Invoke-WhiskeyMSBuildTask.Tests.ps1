@@ -68,7 +68,7 @@ function GivenProjectsThatCompile
     GivenAProjectThatCompiles 'NUnit2FailingTest'
     $script:path = @( 'NUnit2PassingTest\NUnit2PassingTest.sln', 'NUnit2FailingTest\NUnit2FailingTest.sln' )
     $script:assembly = @( 'NUnit2PassingTest.dll', 'NUnit2FailingTest.dll' )
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whsbuild.yml') -Destination (Get-BuildRoot)
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.yml') -Destination (Get-BuildRoot)
 }
 
 function WhenRunningTask
@@ -487,3 +487,4 @@ Describe 'Invoke-WhiskeyBuild.when using custom targets' {
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
     ThenBothTargetsRun
 }
+

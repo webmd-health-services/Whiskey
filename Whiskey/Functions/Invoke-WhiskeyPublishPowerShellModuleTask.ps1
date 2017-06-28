@@ -7,9 +7,9 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
     .DESCRIPTION
     The "Invoke-WhiskeyPublishPowerShellModuleTask" will publish a PowerShell Module to Proget when being run by the build server. It will only publish new packages, or new versions of packages that are already published on proget.
 
-    By default, it will only publish from the 'develop', 'release', or 'master' branches, but you can specify in the `whsbuild.yml` if you want to publish packages from a specific branch.
+    By default, it will only publish from the 'develop', 'release', or 'master' branches, but you can specify in the `whiskey.yml` if you want to publish packages from a specific branch.
     
-    Here is a sample whsbuild.yml file showing how to specify, in the whsbuild.yml file, what branches the build should publish packages from/on:
+    Here is a sample whiskey.yml file showing how to specify, in the whiskey.yml file, what branches the build should publish packages from/on:
 
         PublishFor:
         -Master
@@ -23,7 +23,7 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
     .EXAMPLE
     Invoke-WhiskeyPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 
-    Demonstrates how to call the `WhiskeyPublishPowerShellModuleTask`. In this case  element in $TaskParameter relative to your whsbuild.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
+    Demonstrates how to call the `WhiskeyPublishPowerShellModuleTask`. In this case  element in $TaskParameter relative to your whiskey.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
     #> 
     [Whiskey.Task("PublishPowerShellModule")]
     [CmdletBinding()]
@@ -62,7 +62,7 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
 
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whsbuild.yml file, to the module directory of the module to publish, e.g. 
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whiskey.yml file, to the module directory of the module to publish, e.g. 
         
             BuildTasks:
             - PublishPowerShellModule:
@@ -110,4 +110,5 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
         }
     }
 }
+
 

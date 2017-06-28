@@ -173,7 +173,7 @@ function New-TestWhsBuildFile
 
     $config = $null
     $root = (Get-Item -Path 'TestDrive:').FullName
-    $whsbuildymlpath = Join-Path -Path $root -ChildPath 'whsbuild.yml'
+    $whsbuildymlpath = Join-Path -Path $root -ChildPath 'whiskey.yml'
     $Yaml | Set-Content -Path $whsbuildymlpath
     return $whsbuildymlpath
 }
@@ -183,7 +183,7 @@ Describe 'Invoke-WhiskeyBuild.when running an unknown task' {
     $configPath = New-TestWhsBuildFile -Yaml @'
 BuildTasks:
     - FubarSnafu:
-        Path: whsbuild.yml
+        Path: whiskey.yml
 '@
     
     $Global:Error.Clear()
@@ -371,4 +371,5 @@ foreach( $functionName in (Get-Command -Module 'Whiskey' -Name 'Invoke-Whiskey*T
         }
     }
 }
+
 

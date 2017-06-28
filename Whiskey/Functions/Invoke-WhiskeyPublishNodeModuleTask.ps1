@@ -12,14 +12,14 @@ function Invoke-WhiskeyPublishNodeModuleTask
 
     This task accepts these parameters:
 
-    * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.
+    * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     
     .EXAMPLE
     Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{}
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `$context.BuildRoot` property. The function would run `npm publish`.
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\WhsBuild.yml' }
+    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>
@@ -35,7 +35,7 @@ function Invoke-WhiskeyPublishNodeModuleTask
         [hashtable]
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
         #
-        # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whsbuild.yml` file was found. Must be relative to the `whsbuild.yml` file.                     
+        # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.                     
         $TaskParameter,
 
         [Switch]
@@ -108,4 +108,5 @@ function Invoke-WhiskeyPublishNodeModuleTask
         Pop-Location
     }
 }
+
 

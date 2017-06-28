@@ -334,7 +334,7 @@ function GivenPassingTests
 {
     $script:solutionToBuild = 'NUnit2PassingTest.sln'
     $script:assemblyToTest = 'NUnit2PassingTest.dll'
-    $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whsbuild.yml'
+    $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whiskey.yml'
 }
 
 function WhenRunningTask
@@ -467,4 +467,5 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running under a custom dotNET framework'
     WhenRunningTask @{ 'Framework' = 'net-4.5' }
     ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
 }
+
 

@@ -26,7 +26,7 @@ function Invoke-WhiskeyDecoupledWindowsServicePackageTask
 
     if( -not $TaskParameter.ContainsKey('BinPath') )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('The property BinPath is mandatory. It should be the path (relative to your whsbuild.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('The property BinPath is mandatory. It should be the path (relative to your whiskey.yml file) to your service''s bin directory. This is usually where your compiled output goes.')
     }
 
     $whitelist = @( 
@@ -67,3 +67,4 @@ function Invoke-WhiskeyDecoupledWindowsServicePackageTask
 
     Invoke-WhiskeyAppPackageTask -TaskContext $TaskContext -TaskParameter $TaskParameter
 }
+

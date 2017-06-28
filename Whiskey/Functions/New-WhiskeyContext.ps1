@@ -27,12 +27,12 @@ function New-WhiskeyContext
     * `BBServerConnection`
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug'
+    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug'
 
     Demonstrates how to create a context for a developer build.
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whsbuild.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri -BuildMasterUri $bmUri -BuildMasterApiKey $bmApiKey -ProGetCredential $progetCred -ProGetUri $progetUri
+    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri -BuildMasterUri $bmUri -BuildMasterApiKey $bmApiKey -ProGetCredential $progetCred -ProGetUri $progetUri
 
     Demonstrates how to create a context for a build run by a build server.
     #>
@@ -45,7 +45,7 @@ function New-WhiskeyContext
 
         [Parameter(Mandatory=$true)]
         [string]
-        # The path to the `whsbuild.yml` file that defines build settings and tasks.
+        # The path to the `whiskey.yml` file that defines build settings and tasks.
         $ConfigurationPath,
 
         [Parameter(Mandatory=$true)]
@@ -279,3 +279,4 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
                                 }
     return $context
 }
+

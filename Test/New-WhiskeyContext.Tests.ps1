@@ -50,7 +50,7 @@ function Assert-Context
     }
 
     It 'should set configuration path' {
-        $Context.ConfigurationPath | Should Be (Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml')
+        $Context.ConfigurationPath | Should Be (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
     }
 
     It 'should set build root' {
@@ -227,7 +227,7 @@ function GivenConfiguration
         }
     }
 
-    $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whsbuild.yml'
+    $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
     $Configuration | ConvertTo-Yaml | Set-Content -Path $configurationPath
 }
 
@@ -740,5 +740,6 @@ Describe 'New-WhiskeyContext.when building a Node.js application and ignoring pa
     WhenCreatingContext 
     ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
+
 
 

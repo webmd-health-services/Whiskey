@@ -203,7 +203,7 @@ function New-WhiskeyTestContext
 
     if( -not $ConfigurationPath )
     {
-        $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whsbuild.yml'
+        $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whiskey.yml'
         if( $ForYaml )
         {
             $ForYaml | Set-Content -Path $ConfigurationPath
@@ -255,5 +255,6 @@ function New-WhiskeyTestContext
 }
 
 Export-ModuleMember -Function '*'
+
 
 

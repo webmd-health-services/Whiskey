@@ -4,7 +4,7 @@ Pester/**
 Test/Assemblies/**/obj/**
 Test/Assemblies/**/bin/**
 Test/Assemblies/**/packages/**
-Test/Pester/whsbuild.yml
-Test/Assemblies/**/whsbuild.yml
+Test/Pester/whiskey.yml
+Test/Assemblies/**/whiskey.yml
 Arc/WhsCI/**
 Modules

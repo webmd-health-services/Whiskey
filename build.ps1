@@ -13,7 +13,7 @@ Set-StrictMode -Version Latest
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
-$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whsbuild.yml' -Resolve
+$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
 Get-ChildItem 'env:' | Out-String | Write-Verbose
 
@@ -53,3 +53,4 @@ catch
     Write-Error -ErrorRecord $_
     exit 1
 }
+
