@@ -140,15 +140,15 @@ Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
 Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Server' {
     Context 'by build server' {
         GivenRunByBuildServer
-        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
         GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
         WhenReportingBuildStatus Started
-        ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://whsbitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+        ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
     }
 
     Context 'by developer' {
         GivenRunByDeveloper
-        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'Credential' = 'BBServer' } }
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'Credential' = 'BBServer' } }
         WhenReportingBuildStatus Started
         ThenNoBuildStatusReported
     }
@@ -156,18 +156,18 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Serve
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server' {
     GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
     WhenReportingBuildStatus Failed
-    ThenBuildStatusReportedToBitbucketServer Failed -At 'https://whsbitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    ThenBuildStatusReportedToBitbucketServer Failed -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Server' {
     GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
     WhenReportingBuildStatus Completed
-    ThenBuildStatusReportedToBitbucketServer Successful -At 'https://whsbitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    ThenBuildStatusReportedToBitbucketServer Successful -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
@@ -179,7 +179,7 @@ Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential' {
     GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenNoCredentials
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
     ThenReportingFailed 'credential\ ''BBServer1''\ does\ not\ exist'
@@ -187,7 +187,7 @@ Describe 'Set-WhiskeyBuildStatus.when missing credential' {
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
     GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://whsbitbucket.example.com' ; } }
+    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; } }
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
     ThenReportingFailed 'Property\ ''CredentialID''\ does\ not\ exist'
 }

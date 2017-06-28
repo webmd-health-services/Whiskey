@@ -361,7 +361,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
-    $context = Initialize-NodeProject -DevDependency '"whs-idonotexist": "^1.0.0"' -ByDeveloper
+    $context = Initialize-NodeProject -DevDependency '"idonotexist": "^1.0.0"' -ByDeveloper
     Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
 }
 

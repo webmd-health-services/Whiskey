@@ -53,7 +53,7 @@ function Assert-ThatInstallNodeJs
     $registryUri = 'https://proget.example.com/'
     $testPackageJson = 
 '{
-  "name": "whsnodetest",
+  "name": "nodetest",
   "version": "0.0.1",
   "description": "TestApp",
   "main": "main.js",

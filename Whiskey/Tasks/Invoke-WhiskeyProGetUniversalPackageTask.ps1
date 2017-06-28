@@ -68,11 +68,6 @@ function Invoke-WhiskeyProGetUniversalPackageTask
 
     try
     {
-        $whsEnvironmentsPath = (Join-Path -Path $TaskContext.BuildRoot -ChildPath 'WhsEnvironments.json')
-        if( Test-Path -Path $whsEnvironmentsPath -PathType Leaf )
-        {
-            Copy-Item -Path $whsEnvironmentsPath -Destination $tempPackageRoot
-        }        
         $shouldProcessCaption = ('creating {0} package' -f $outFile)        
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{

@@ -163,7 +163,7 @@ function New-MockDeveloperEnvironment
 }
 
 
-function New-TestWhsBuildFile
+function New-TestWhiskeyBuildFile
 {
     param(
         [Parameter(ParameterSetName='WithRawYaml')]
@@ -173,14 +173,14 @@ function New-TestWhsBuildFile
 
     $config = $null
     $root = (Get-Item -Path 'TestDrive:').FullName
-    $whsbuildymlpath = Join-Path -Path $root -ChildPath 'whiskey.yml'
-    $Yaml | Set-Content -Path $whsbuildymlpath
-    return $whsbuildymlpath
+    $whiskeyymlpath = Join-Path -Path $root -ChildPath 'whiskey.yml'
+    $Yaml | Set-Content -Path $whiskeyymlpath
+    return $whiskeyymlpath
 }
 #endregion
 
 Describe 'Invoke-WhiskeyBuild.when running an unknown task' {
-    $configPath = New-TestWhsBuildFile -Yaml @'
+    $configPath = New-TestWhiskeyBuildFile -Yaml @'
 BuildTasks:
     - FubarSnafu:
         Path: whiskey.yml
@@ -198,7 +198,7 @@ BuildTasks:
 Describe 'Invoke-WhiskeyBuild.when a task fails' {
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
-    $configPath = New-TestWhsBuildFile -Yaml @'
+    $configPath = New-TestWhiskeyBuildFile -Yaml @'
 BuildTasks:
 - PowerShell:
     Path: idonotexist.ps1
@@ -219,7 +219,7 @@ Describe 'Invoke-WhiskeyBuild.when New-WhiskeyBuildMasterPackage fails' {
         { throw 'Build Master Pipeline failed' }
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
-    $configPath = New-TestWhsBuildFile -Yaml @'
+    $configPath = New-TestWhiskeyBuildFile -Yaml @'
 BuildTasks:
 '@
 

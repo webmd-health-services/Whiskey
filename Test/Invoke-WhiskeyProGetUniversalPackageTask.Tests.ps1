@@ -496,10 +496,7 @@ function Initialize-Test
         $SourceRoot,
 
         [Switch]
-        $AsDeveloper,
-
-        [Switch]
-        $WithNewWhsEnvironmentsJson
+        $AsDeveloper
     )
 
     $repoRoot = Get-BuildRoot
@@ -513,11 +510,6 @@ function Initialize-Test
         $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
     }
     Install-Directory -Path $repoRoot
-
-    if( $WithNewWhsEnvironmentsJson )
-    {
-        New-Item -Path (Join-Path -Path $repoRoot -ChildPath 'WhsEnvironments.json') -ItemType 'File' | Out-Null
-    }
 
     $DirectoryName | ForEach-Object { 
         $dirPath = $_
@@ -1051,24 +1043,6 @@ function ThenPackageShouldInclude
             $expectedPath | Should Exist
         }
     }
-}
-
-Describe 'Invoke-WhiskeyAppPackageTask.when WhsEnvironments.json is explicitly included in the package' {
-    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
-    WhenPackaging -Paths 'WhsEnvironments.json','file.txt' -WithWhitelist '*.txt'
-    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
-}
-
-Describe 'Invoke-WhiskeyAppPackageTask.when repository has a WhsEnvironments.json file' {
-    GivenARepositoryWithFiles 'WhsEnvironments.json','file.txt'
-    WhenPackaging -Paths 'file.txt' -WithWhitelist '*.txt'
-    ThenPackageShouldInclude 'WhsEnvironments.json','file.txt'
-}
-
-Describe 'Invoke-WhiskeyAppPackageTask.when repository has a WhsEnvironments.json file and appliction root isn''t repository root' {
-    GivenARepositoryWithFiles 'WhsEnvironments.json','dir1\file.txt'
-    WhenPackaging -Paths 'file.txt' -FromSourceRoot 'dir1' -WithWhitelist '*.txt'
-    ThenPackageShouldInclude 'WhsEnvironments.json','dir1\file.txt'
 }
 
 Describe 'Invoke-WhiskeyAppPackageTask.when packaging given a full relative path with override syntax' {

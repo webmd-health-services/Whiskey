@@ -1,30 +1,5 @@
 function Invoke-WhiskeyPublishPowerShellModuleTask
 {
-    <#
-    .SYNOPSIS
-    Publishes a Whs PowerShell Module to Proget.
-
-    .DESCRIPTION
-    The "Invoke-WhiskeyPublishPowerShellModuleTask" will publish a PowerShell Module to Proget when being run by the build server. It will only publish new packages, or new versions of packages that are already published on proget.
-
-    By default, it will only publish from the 'develop', 'release', or 'master' branches, but you can specify in the `whiskey.yml` if you want to publish packages from a specific branch.
-    
-    Here is a sample whiskey.yml file showing how to specify, in the whiskey.yml file, what branches the build should publish packages from/on:
-
-        PublishFor:
-        -Master
-        -Develop
-        BuildTasks:
-        - PublishPowerShellModule:
-            Path:
-            - mymodule.ps1            
-  
-
-    .EXAMPLE
-    Invoke-WhiskeyPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
-
-    Demonstrates how to call the `WhiskeyPublishPowerShellModuleTask`. In this case  element in $TaskParameter relative to your whiskey.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
-    #> 
     [Whiskey.Task("PublishPowerShellModule")]
     [CmdletBinding()]
     param(
@@ -49,15 +24,16 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
             return
         }     
         
-        $repositoryName = 'WhsPowerShell'
-        if( $TaskParameter.ContainsKey('RepositoryName') )
+        if( -not $TaskParameter.ContainsKey('RepositoryName') )
         {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''RepositoryName'' is mandatory. It should be the name of the PowerShell repository you want to publish to, e.g.
+            
+            BuildTasks:
+            - PublishPowerShellModule:
+                Path: mymodule
+                RepositoryName: PSGallery
+            ')
             $repositoryName = $TaskParameter.RepositoryName
-        }
-        $feedName = 'nuget/PowerShell'
-        if( $TaskParameter.ContainsKey('FeedName') )
-        {
-            $feedName = $TaskParameter.FeedName
         }
 
         if( -not ($TaskParameter.ContainsKey('Path')))
@@ -66,8 +42,9 @@ function Invoke-WhiskeyPublishPowerShellModuleTask
         
             BuildTasks:
             - PublishPowerShellModule:
-                Path:
-                - mymodule')
+                Path: mymodule
+                RepositoryName: PSGallery
+            ')
         }
 
         $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'        

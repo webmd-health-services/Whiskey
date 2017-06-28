@@ -696,9 +696,9 @@ function GivenPackageJson
 
     @"
 {
-  "name": "whs-middle-tier-client",
+  "name": "middle-tier-client",
   "version": "$($AtVersion)",
-  "description": "Perform web requests to the WHS middle tier (monolith)",
+  "description": "Perform web requests to the middle tier",
   "main": "index.js",
   "engines":{
     "node": "4.4.7"

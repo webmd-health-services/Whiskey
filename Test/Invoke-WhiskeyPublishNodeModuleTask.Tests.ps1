@@ -57,7 +57,7 @@ $npmrcFileLine4
     }
     $testPackageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
     $testPackageJson = '{
-  "name": "whs_publishnodemodule_test",
+  "name": "publishnodemodule_test",
   "version": "1.2.0",
   "main": "index.js",
   "engines": {

@@ -192,21 +192,14 @@ function Assert-ModuleRegistered
         [switch]
         $WithDefaultRepo
     )
-    if ( $WithDefaultRepo )
+
+    if( -not $ExpectedRepositoryName )
     {
-        $ExpectedRepositoryName = 'WhsPowerShell'
-        $ExpectedFeedName = 'nuget/PowerShell'
+        $ExpectedRepositoryName = 'thisRepo'
     }
-    else
+    if ( -not $ExpectedFeedName )
     {
-        if( -not $ExpectedRepositoryName )
-        {
-            $ExpectedRepositoryName = 'thisRepo'
-        }
-        if ( -not $ExpectedFeedName )
-        {
-            $ExpectedFeedName = 'thisFeed'
-        }
+        $ExpectedFeedName = 'thisFeed'
     }
     
     $expectedPublishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
@@ -248,11 +241,6 @@ function Assert-ModulePublished
         $WithDefaultRepo
     )
     
-    if( $WithDefaultRepo )
-    {
-        $ExpectedRepositoryName = 'WhsPowerShell'
-    }
-
     $WhiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin' -Resolve
     It ('should add nuget.exe to path so Publish-Module works') {
         Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {

@@ -24,12 +24,12 @@ function New-BBServerRepository
     Use the `New-BBServerConnection` function to generate the connection object that should get passed to the `Connection` parameter.
 
     .EXAMPLE
-    New-BBServerRepository -Connection $conn -ProjectKey 'whs' -Name 'fubarsnafu'
+    New-BBServerRepository -Connection $conn -ProjectKey 'MOFO' -Name 'fubarsnafu'
 
     Demonstrates how to create a repository.
 
     .EXAMPLE
-    New-BBServerRepository -Connection $conn -ProjectKey 'whs' -Name 'fubarsnafu' -NotForkable -Public
+    New-BBServerRepository -Connection $conn -ProjectKey 'MOFO' -Name 'fubarsnafu' -NotForkable -Public
 
     Demonstrates how to create a repository with different default settings. The repository will be not be forkable and will be public, not private.
     #>

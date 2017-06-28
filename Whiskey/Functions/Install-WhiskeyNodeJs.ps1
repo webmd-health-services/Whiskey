@@ -176,12 +176,12 @@ path: $($nvmSymlink)
             Invoke-Command -ScriptBlock { & $nodePath $npmPath config --global set registry $RegistryUri }
         }
 
-        $whsAlwaysAuth = 'false'
+        $myAlwaysAuth = 'false'
         $alwaysAuth = & $nodePath $npmPath config --global get 'always-auth'
-        if( $alwaysAuth -ne $whsAlwaysAuth )
+        if( $alwaysAuth -ne $myAlwaysAuth )
         {
-            Write-Verbose -Message ('NPM  config  always-auth  {0} -> {1}' -f $alwaysAuth,$whsAlwaysAuth)
-            & $nodePath $npmPath config --global set 'always-auth' $whsAlwaysAuth
+            Write-Verbose -Message ('NPM  config  always-auth  {0} -> {1}' -f $alwaysAuth,$myAlwaysAuth)
+            & $nodePath $npmPath config --global set 'always-auth' $myAlwaysAuth
         }
 
         return $nodePath
