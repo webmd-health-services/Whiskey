@@ -104,6 +104,7 @@ function New-WhsCIContext
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $ConfigurationPath = Resolve-Path -LiteralPath $ConfigurationPath -ErrorAction Ignore
     if( -not $ConfigurationPath )
@@ -178,23 +179,16 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
         $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
         if( -not $releaseName -and $publish )
         {
-            if( $branch -like 'release/*' )
-            {
-                $releaseName = 'release'
-            }
-            else
-            {
-                $releaseName = $branch
-            }
+            $releaseName = $branch
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
         $buildmasterSession = New-BMSession -Uri $BuildMasterUri -ApiKey $BuildMasterApiKey
         $progetSession.Credential = $ProGetCredential
 
-
         if( $config['PrereleaseMap'] )
         {
+            Write-Verbose -Message ('Testing if {0} is a pre-release branch.' -f $branch)
             $idx = 0
             foreach( $item in $config['PrereleaseMap'] )
             {
@@ -211,7 +205,12 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                 $regex = $item.Keys | Select-Object -First 1
                 if( $branch -match $regex )
                 {
+                    Write-Verbose -Message ('     {0}     -match  /{1}/' -f $branch,$regex)
                     $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhsCIBuildID)
+                }
+                else
+                {
+                    Write-Verbose -Message ('     {0}  -notmatch  /{1}/' -f $branch,$regex)
                 }
                 $idx++
             }
@@ -242,14 +241,15 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
     }
 
     $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'Version' -Value $version
-    $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $semVersionNoBuild = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     if( $semVersion.Prerelease )
     {
-        $releaseVersion = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
+        $semVersionNoBuild = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
+        $semVersionV1Prerelease = $semVersion.Prerelease -replace '[^A-Za-z0-90]',''
+        $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersionV1Prerelease
     }
-    $semVersion | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value $releaseVersion
-
+    
     $context = [pscustomobject]@{
                                     Environment = $Environment;
                                     ApplicationName = $appName;
@@ -264,7 +264,12 @@ Use the `Test-WhsCIRunByBuildServer` function to determine if you're running und
                                     TaskName = $null;
                                     TaskIndex = -1;
                                     PackageVariables = @{};
-                                    Version = $semVersion;
+                                    Version = [pscustomobject]@{
+                                                                     SemVer2 = $semVersion;
+                                                                     SemVer2NoBuildMetadata = $semVersionNoBuild;
+                                                                     SemVer1 = $semVersionV1;
+                                                                     Version = $version;
+                                                                }
                                     Configuration = $config;
                                     DownloadRoot = $DownloadRoot;
                                     ByBuildServer = $byBuildServer;

@@ -60,8 +60,14 @@ function Invoke-WhsCIAppPackageTask
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $7zipPackageName = '7-zip.x64'
+    $7zipVersion = '16.2.1'
+    # The directory name where NuGet puts this package is different than the version number.
+    $7zipDirNameVersion = '16.02.1'
     if( $Clean )
     {
+        Uninstall-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
         return
     }
 
@@ -74,7 +80,7 @@ function Invoke-WhsCIAppPackageTask
     }
 
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
-    $version = [semversion.SemanticVersion]$TaskContext.Version.ReleaseVersion
+    $version = $TaskContext.Version.SemVer2NoBuildMetadata
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
     $path = $TaskParameter['Path']
@@ -122,10 +128,10 @@ function Invoke-WhsCIAppPackageTask
         # Add the version.json file
         @{
             Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.ToString();
-            PrereleaseMetadata = $TaskContext.Version.Prerelease;
-            BuildMetadata = $TaskContext.Version.Build;
-            ReleaseVersion = $TaskContext.Version.ReleaseVersion.ToString();
+            SemanticVersion = $TaskContext.Version.SemVer2.ToString();
+            PrereleaseMetadata = $TaskContext.Version.SemVer2.Prerelease;
+            BuildMetadata = $TaskContext.Version.SemVer2.Build;
+            ReleaseVersion = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage
@@ -162,57 +168,61 @@ function Invoke-WhsCIAppPackageTask
                     $pathparam = 'ThirdPartyPath'
                 }
 
-                $sourcePath = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
-                if( -not $sourcePath )
+                $sourcePaths = $sourcePath | Resolve-WhsCITaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+                if( -not $sourcePaths )
                 {
     	            return
                 }
-                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
-                $relativePath = $relativePath.Trim("\")
-                if( -not $override )
-                {
-                    $destinationItemName = $relativePath
-                }
 
-                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
-                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
-
-                #if parent doesn't exist in the destination dir, create it
-                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                foreach( $sourcePath in $sourcePaths )
                 {
-                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
-                }
-
-                if( (Test-Path -Path $sourcePath -PathType Leaf) )
-                {
-                    Copy-Item -Path $sourcePath -Destination $destination
-                }
-                else
-                {
-    	            if( $AsThirdPartyItem )
-	                {
-		                $excludeParams = @()
-		                $whitelist = @()
-                        $operationDescription = 'packaging third-party {0}' -f $item
-	                }
-	                else
-	                {
-            	        $excludeParams = Invoke-Command {
-							        '.git'
-							        '.hg'
-							        'obj'
-							        $exclude
-						        } |
-					    ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            	        $operationDescription = 'packaging {0}' -f $item
-		                $whitelist = Invoke-Command {
-						                'upack.json'
-						                $include
-						                } 
-	                }
-                    if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                    $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+                    $relativePath = $relativePath.Trim("\")
+                    if( -not $override )
                     {
-                        robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
+                        $destinationItemName = $relativePath
+                    }
+
+                    $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+                    $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+                    #if parent doesn't exist in the destination dir, create it
+                    if( -not ( Test-Path -Path $parentDestinationPath ) )
+                    {
+                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                    }
+
+                    if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                    {
+                        Copy-Item -Path $sourcePath -Destination $destination
+                    }
+                    else
+                    {
+    	                if( $AsThirdPartyItem )
+	                    {
+		                    $excludeParams = @()
+		                    $whitelist = @()
+                            $operationDescription = 'packaging third-party {0}' -f $item
+	                    }
+	                    else
+	                    {
+            	            $excludeParams = Invoke-Command {
+							            '.git'
+							            '.hg'
+							            'obj'
+							            $exclude
+						            } |
+					        ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+            	            $operationDescription = 'packaging {0}' -f $item
+		                    $whitelist = Invoke-Command {
+						                    'upack.json'
+						                    $include
+						                    } 
+	                    }
+                        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+                        {
+                            robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
+                        }
                     }
                 }
             }
@@ -245,13 +255,28 @@ function Invoke-WhsCIAppPackageTask
             }
         }
 
-        Get-ChildItem -Path $tempRoot | Compress-Item -OutFile $outFile
+        $7zipRoot = Install-WhsCITool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
+        $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
+        $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
+
+        $shouldProcessDescription = 'Creating universal package {0}' -f $outFile
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription,$shouldProcessDescription,$shouldProcessDescription) )
+        {
+            & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+        }
+
+        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
+        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
+        {
+            $outFile
+        }
 
         # Upload to ProGet
         if( -not $TaskContext.Publish )
         {
             return
         }
+
         foreach($uri in $TaskContext.ProGetSession.AppFeedUri)
         {
             $progetSession = New-ProGetSession -Uri $uri -Credential $TaskContext.ProGetSession.Credential
@@ -266,12 +291,6 @@ function Invoke-WhsCIAppPackageTask
             
         # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
         $TaskContext.PackageVariables['ProGetPackageName'] = $version
-
-        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
-        {
-            $outFile
-        }
     }
     finally
     {

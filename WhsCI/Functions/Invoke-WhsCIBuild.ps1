@@ -172,9 +172,10 @@ function Invoke-WhsCIBuild
     {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
 
-        Write-Verbose -Message ('Building version {0}' -f $Context.Version)
+        Write-Verbose -Message ('Building version {0}' -f $Context.Version.SemVer2)
+        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer2NoBuildMetadata)
         Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.ReleaseVersion)
+        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
 
         $config = $Context.Configuration
 

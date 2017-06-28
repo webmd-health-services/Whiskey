@@ -57,6 +57,6 @@ function Publish-WhsCITag
         $optionalArgs['Message'] = $TagMessage
     }
 
-    New-BBServerTag -Connection $TaskContext.BBServerConnection -ProjectKey $projectKey -force -RepositoryKey $repoKey -Name $TaskContext.Version.ReleaseVersion -CommitID $commitHash @optionalArgs
+    New-BBServerTag -Connection $TaskContext.BBServerConnection -ProjectKey $projectKey -force -RepositoryKey $repoKey -Name $TaskContext.Version.SemVer2NoBuildMetadata -CommitID $commitHash @optionalArgs
 
 }

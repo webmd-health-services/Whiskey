@@ -46,7 +46,7 @@ function GivenABuiltLibrary
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     if( $WithVersion )
     {
-        $Context.Version.ReleaseVersion = $WithVersion
+        $Context.Version.SemVer1 = $WithVersion
     }
 
     $Global:Error.Clear()
@@ -58,6 +58,7 @@ function GivenABuiltLibrary
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
+    Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\WhsCI\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
     Invoke-WhsCIMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
 }
 
@@ -113,7 +114,7 @@ function WhenRunningNuGetPackTask
         {
             if( $WithVersion )
             {
-                $Context.Version.ReleaseVersion = $WithVersion
+                $Context.Version.SemVer1 = $WithVersion
             }
             if( $ForProjectThatDoesNotExist )
             {
@@ -168,7 +169,7 @@ function ThenPackageShouldBeCreated
     {
         if( $WithVersion )
         {
-            $Context.Version.ReleaseVersion = $WithVersion
+            $Context.Version.SemVer1 = $WithVersion
         }
         if( $WithoutPushingToProgetError )
         {
@@ -183,11 +184,11 @@ function ThenPackageShouldBeCreated
             }
         }
         It ('should create NuGet package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.ReleaseVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.SemVer1)) | Should Exist
         }
 
         It ('should create a NuGet symbols package for NUnit2PassingTest') {
-            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.ReleaseVersion)) | Should Exist
+            (Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.SemVer1)) | Should Exist
         }
         if( $Context.Publish )
         {

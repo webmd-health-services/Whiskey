@@ -87,8 +87,8 @@ function Invoke-WhsCIPublishPowerShellModuleTask
             Stop-WhsCITask -TaskContext $TaskContext -Message ('Module Manifest Path {0} is invalid, please check that the {1}.psd1 file is valid and in the correct location.' -f $manifestPath, ($path | Split-Path -Leaf))
         }
         $manifest = Get-Content $manifestPath
-        $versionString = "ModuleVersion = '{0}.{1}.{2}'" -f ( $TaskContext.Version.Major, $TaskContext.Version.Minor, $TaskContext.Version.Patch )
-        $manifest = $manifest -replace "ModuleVersion = ('|"")\d+\.\d+\.\d+('|"")", $versionString 
+        $versionString = "ModuleVersion = '{0}.{1}.{2}'" -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
+        $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString 
         $manifest | Set-Content $manifestPath
 
         if( -not (Get-PSRepository -Name $RepositoryName -ErrorAction Ignore) )

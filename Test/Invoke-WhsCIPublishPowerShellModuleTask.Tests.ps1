@@ -296,7 +296,7 @@ function Assert-ManifestVersion
         [String]
         $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1')
     )
-    $versionString = "'{0}.{1}.{2}'" -f ( $TaskContext.Version.Major, $TaskContext.Version.Minor, $TaskContext.Version.Patch )
+    $versionString = "'{0}.{1}.{2}'" -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
 
     $matches = Select-String $versionString $manifestPath
 

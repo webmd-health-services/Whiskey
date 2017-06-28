@@ -141,12 +141,12 @@ function Assert-NewWhsCIAppPackage
     Mock -CommandName 'ConvertTo-WhsCISemanticVersion' -ModuleName 'WhsCI' -MockWith { return $Version }.GetNewClosure()
 
     $taskContext = New-WhsCITestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version = [SemVersion.SemanticVersion]$Version
-    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'Version' -Value ('{0}.{1}.{2}' -f $taskContext.Version.Major,$taskContext.Version.Minor,$taskContext.Version.Patch)
-    $taskContext.Version | Add-Member -MemberType NoteProperty -Name 'ReleaseVersion' -Value ([SemVersion.SemanticVersion]$taskContext.Version.Version)
-    if( $taskContext.Version.Prerelease )
+    $taskContext.Version.SemVer2 = [SemVersion.SemanticVersion]$Version
+    $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
+    $taskContext.Version.SemVer2NoBuildMetadata = ([SemVersion.SemanticVersion]$taskContext.Version.SemVer2)
+    if( $taskContext.Version.SemVer2.Prerelease )
     {
-        $taskContext.Version.ReleaseVersion = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.ReleaseVersion,$taskContext.Version.Prerelease)
+        $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.SemVer2NoBuildMetadata,$taskContext.Version.SemVer2.Prerelease)
     }
 
     if( $ForApplicationName )
@@ -179,7 +179,9 @@ function Assert-NewWhsCIAppPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams
+        $At = Invoke-WhsCIAppPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
+                Where-Object { $_ -like '*.upack' } | 
+                Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
     catch
     {
@@ -228,7 +230,7 @@ function Assert-NewWhsCIAppPackage
     #region
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
-    $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.ReleaseVersion -replace '[\\/]','-')
+    $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.SemVer2NoBuildMetadata-replace '[\\/]','-')
     $outputRoot = Get-WhsCIOutputDirectory -WorkingDirectory $taskContext.BuildRoot
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
@@ -295,19 +297,19 @@ function Assert-NewWhsCIAppPackage
         }
         It 'version.json should have PrereleaseMetadata property' {
             $version.PrereleaseMetadata | Should BeOfType ([string])
-            $version.PrereleaseMetadata | Should Be $taskContext.Version.Prerelease.ToString()
+            $version.PrereleaseMetadata | Should Be $taskContext.Version.SemVer2.Prerelease.ToString()
         }
         It 'version.json shuld have BuildMetadata property' {
             $version.BuildMetadata | Should BeOfType ([string])
-            $version.BuildMetadata | Should Be $taskContext.Version.Build.ToString()
+            $version.BuildMetadata | Should Be $taskContext.Version.SemVer2.Build.ToString()
         }
         It 'version.json should have full semantic version' {
             $version.SemanticVersion | Should BeOfType ([string])
-            $version.SemanticVersion | Should Be $taskContext.Version.ToString()
+            $version.SemanticVersion | Should Be $taskContext.Version.SemVer2.ToString()
         }
         It 'version.json should have release version' {
             $version.ReleaseVersion | Should BeOfType ([string])
-            $version.ReleaseVersion | Should Be $taskContext.Version.ReleaseVersion.ToString()
+            $version.ReleaseVersion | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
         }
 
         if( $NotHasFiles )
@@ -396,7 +398,7 @@ function Assert-NewWhsCIAppPackage
 
         It 'should upload the configured package to ProGet' {
             Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'WhsCI' -ParameterFilter {
-                $version = [semversion.SemanticVersion]$taskContext.Version.ReleaseVersion
+                $version = [semversion.SemanticVersion]$taskContext.Version.SemVer2NoBuildMetadata
                 $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
                 $fixRegex = '[{0}]' -f ($badChars -join '')
                 $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
@@ -431,12 +433,12 @@ function Assert-NewWhsCIAppPackage
         {
             It 'should set package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
+                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
             }
 
             It 'should set legacy package version package variable' {
                 $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $taskContext.Version.ReleaseVersion.ToString()
+                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
             }
             if( $ForApplicationName )
             {
@@ -468,7 +470,7 @@ function Assert-NewWhsCIAppPackage
         }
 
         It 'should contain version' {
-            $upackInfo.Version | Should Be $taskContext.Version.ReleaseVersion.ToString()
+            $upackInfo.Version | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
         }
 
         It 'should contain description' {
@@ -476,6 +478,16 @@ function Assert-NewWhsCIAppPackage
         }
     }
     #endregion
+}
+
+function Get-BuildRoot
+{
+    return Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+}
+
+function Given7ZipIsInstalled
+{
+    Install-WhsCITool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot (Get-BuildRoot)
 }
 
 function Initialize-Test
@@ -527,7 +539,7 @@ function Initialize-Test
         $WithNewWhsEnvironmentsJson
     )
 
-    $repoRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
+    $repoRoot = Get-BuildRoot
     Install-Directory -Path $repoRoot
     if( -not $SourceRoot )
     {
@@ -615,6 +627,14 @@ function Initialize-Test
 
     return $repoRoot
 }
+
+function Then7zipShouldNotExist
+{
+    It 'should delete 7zip NuGet package' {
+        Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Not -Exist
+    }
+}
+
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging everything in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
@@ -955,6 +975,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when packaging everything with a custom app
 
 Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
     $file = 'project.json'    
+    Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhsCIAppPackage -ForPath $file `
                               -WhenGivenCleanSwitch `
@@ -962,6 +983,7 @@ Describe 'Invoke-WhsCIAppPackageTask.when given Clean Switch' {
                               -ShouldNotCreatePackage `
                               -ShouldNotUploadPackage `
                               -ShouldNotSetPackageVariables
+    Then7zipShouldNotExist
 }
 
 Describe 'Invoke-WhsCIAppPackageTask.when packaging given a full relative path' {
@@ -1190,4 +1212,10 @@ Describe 'Invoke-WhsCIAppPackageTask.when package is empty' {
     GivenARepositoryWithFiles 'file.txt'
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
+}
+
+Describe 'Invoke-WhsCIAppPackageTas.when path contains wildcards' {
+    GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
+    WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
+    ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
 }
