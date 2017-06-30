@@ -818,10 +818,10 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when application root isn''t 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
                               -ThatIncludes '*.html' `
                               -ThatExcludes 'thirdparty.txt' `
-                              -HasRootItems 'app\dir1' `
+                              -HasRootItems 'dir1' `
                               -HasFiles 'html.html' `
                               -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
-                              -HasThirdPartyRootItem 'app\thirdparty','app\thirdpart2' `
+                              -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                               -HasThirdPartyFile 'thirdparty.txt' `
                               -FromSourceRoot 'app'
 }

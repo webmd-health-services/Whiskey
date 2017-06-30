@@ -47,9 +47,11 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     
     $parentPathParam = @{ }
+    $sourceRoot = $TaskContext.BuildRoot
     if( $TaskParameter.ContainsKey('SourceRoot') )
     {
-        $parentPathParam['ParentPath'] = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
+        $sourceRoot = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
+        $parentPathParam['ParentPath'] = $sourceRoot
     }
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
@@ -88,27 +90,27 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         
         function Copy-ToPackage
         {
-	        param(
-		        [Parameter(Mandatory=$true)]
-		        [object[]]
-		        $Path,
-		
-		        [Switch]
-		        $AsThirdPartyItem
-	        )
-	
+            param(
+                [Parameter(Mandatory=$true)]
+                [object[]]
+                $Path,
+        
+                [Switch]
+                $AsThirdPartyItem
+            )
+    
             foreach( $item in $Path )
             {
                 $override = $False
                 if( $item -is [hashtable] )
                 {
-    	            $sourcePath = $null
+                    $sourcePath = $null
                     $override = $True
-    	            foreach( $key in $item.Keys )
-	                {
-		                $destinationItemName = $item[$key]
-		                $sourcePath = $key
-	                }
+                    foreach( $key in $item.Keys )
+                    {
+                        $destinationItemName = $item[$key]
+                        $sourcePath = $key
+                    }
                 }
                 else
                 {
@@ -123,12 +125,12 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                 $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
                 if( -not $sourcePaths )
                 {
-    	            return
+                    return
                 }
 
                 foreach( $sourcePath in $sourcePaths )
                 {
-                    $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($TaskContext.BuildRoot))),''
+                    $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
                     $relativePath = $relativePath.Trim("\")
                     if( -not $override )
                     {
@@ -150,27 +152,29 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                     }
                     else
                     {
-    	                if( $AsThirdPartyItem )
-	                    {
-		                    $excludeParams = @()
-		                    $whitelist = @()
-                            $operationDescription = 'packaging third-party {0}' -f $item
-	                    }
-	                    else
-	                    {
-            	            $excludeParams = Invoke-Command {
-							            '.git'
-							            '.hg'
-							            'obj'
-							            $exclude
-						            } |
-					        ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-            	            $operationDescription = 'packaging {0}' -f $item
-		                    $whitelist = Invoke-Command {
-						                    'upack.json'
-						                    $include
-						                    } 
-	                    }
+                        $destinationDisplay = $destination -replace [regex]::Escape($tempRoot),''
+                        $destinationDisplay = $destinationDisplay.Trim('\')
+                        if( $AsThirdPartyItem )
+                        {
+                            $excludeParams = @()
+                            $whitelist = @()
+                            $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
+                        }
+                        else
+                        {
+                            $excludeParams = Invoke-Command {
+                                        '.git'
+                                        '.hg'
+                                        'obj'
+                                        $exclude
+                                    } |
+                            ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+                            $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
+                            $whitelist = Invoke-Command {
+                                            'upack.json'
+                                            $include
+                                            } 
+                        }
                         if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
                         {
                             robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
@@ -187,7 +191,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
 
         if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
         {
-	        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+            Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
         }
 
         $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
