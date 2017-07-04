@@ -1011,6 +1011,30 @@ function WhenPackaging
     $postTempDirCount = Get-TempDirCount
 }
 
+function Expand-Package
+{
+    param(
+        $PackageName = $defaultPackageName,
+        $PackageVersion = $defaultVersion
+    )
+
+    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
+    $outputRoot = Get-BuildRoot
+    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
+    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
+
+    It 'should create a package' {
+        $packagePath | Should Exist
+    }
+
+    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
+    if( -not (Test-Path -Path $expandPath -PathType Container) )
+    {
+        Expand-Item -Path $packagePath -OutDirectory $expandPath
+    }
+    return $expandPath
+}
+
 function ThenPackageShouldInclude
 {
     param(
@@ -1021,18 +1045,7 @@ function ThenPackageShouldInclude
         $Path
     )
 
-    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
-    $outputRoot = Get-BuildRoot
-    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
-    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
-
-
-    It 'should create a package' {
-        $packagePath | Should Exist
-    }
-
-    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
-    Expand-Item -Path $packagePath -OutDirectory $expandPath
+    $expandPath = Expand-Package -PackageName $PackageName -PackageVersion $PackageVersion
 
     $Path += @( 'version.json' )
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
@@ -1041,6 +1054,24 @@ function ThenPackageShouldInclude
         $expectedPath = Join-Path -Path $packageRoot -ChildPath $item
         It ('should include {0}' -f $item) {
             $expectedPath | Should Exist
+        }
+    }
+}
+
+function ThenPackageShouldNotInclude
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    $expandPath = Expand-Package
+    $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
+
+    foreach( $item in $Path )
+    {
+        It ('package should not include {0}' -f $item) {
+            (Join-Path -Path $packageRoot -ChildPath $item) | Should -Not -Exist
         }
     }
 }
@@ -1078,4 +1109,12 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTas.when path contains wildcards' 
     GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
+}
+
+
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging a directory' {
+    GivenARepositoryWithFiles 'dir1\subdir\file.txt'
+    WhenPackaging -Paths 'dir1\subdir' -WithWhitelist "*.txt"
+    ThenPackageShouldInclude 'dir1\subdir\file.txt'
+    ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
 }

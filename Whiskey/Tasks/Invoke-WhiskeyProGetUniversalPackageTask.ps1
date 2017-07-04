@@ -143,7 +143,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                     #if parent doesn't exist in the destination dir, create it
                     if( -not ( Test-Path -Path $parentDestinationPath ) )
                     {
-                        New-Item -Name $name -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                        New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
                     }
 
                     if( (Test-Path -Path $sourcePath -PathType Leaf) )

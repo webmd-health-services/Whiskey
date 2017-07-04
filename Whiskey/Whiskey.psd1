@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.10.1'
+    ModuleVersion = '0.10.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -141,7 +141,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: the `ProGetUniversalPackage` task ignores the `SourceRoot` property when determing an item's destination path in the package.
+* Fixed: the `ProGetUniversalPackage` task creates extra, empty directories named after the package when `Path` includes directories that are two levels or more under the build root.
 '@
 
 
