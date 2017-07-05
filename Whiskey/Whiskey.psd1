@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.10.3'
+    ModuleVersion = '0.11.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,6 +144,7 @@
             ReleaseNotes = @'
 * Fixed: parsing a whiskey.yml file that contains a single value property, e.g. just the string `BuildTasks`.
 * ***BREAKING***: Builds will now fail if a whiskey.yml file doesn't contain a `BuildTasks` property.
+* Whiskey now runs two pipelines: a build pipeline and a publish pipeline. The build pipeline always runs. The publish pipeline only runs if being run by a build server and running on a branch that publishes.
 '@
 
 

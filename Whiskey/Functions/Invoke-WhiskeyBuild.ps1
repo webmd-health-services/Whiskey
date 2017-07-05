@@ -29,6 +29,13 @@ function Invoke-WhiskeyBuild
         Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
 
         Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
+
+        $config = $Context.Configuration
+        if( $Context.Publish -and $config.ContainsKey('PublishTasks') )
+        {
+            Invoke-WhiskeyPipeline -Context $Context -Name 'PublishTasks'
+        }
+
         New-WhiskeyBuildMasterPackage -TaskContext $Context
 
         $succeeded = $true
