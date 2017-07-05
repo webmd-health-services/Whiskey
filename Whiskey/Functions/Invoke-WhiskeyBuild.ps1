@@ -28,8 +28,6 @@ function Invoke-WhiskeyBuild
         Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
         Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
 
-        $config = $Context.Configuration
-
         Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
         New-WhiskeyBuildMasterPackage -TaskContext $Context
 
