@@ -32,7 +32,10 @@ function Invoke-WhiskeyPipeline
         [Parameter(Mandatory=$true)]
         [string]
         # The name of pipeline to run, e.g. `BuildTasks` would run all the tasks under a property named `BuildTasks`. Pipelines are properties in your `whiskey.yml` file that are lists of Whiskey tasks to run.
-        $Name
+        $Name,
+
+        [Switch]
+        $Clean
     )
 
     Set-StrictMode -Version 'Latest'
@@ -43,11 +46,11 @@ function Invoke-WhiskeyPipeline
     if( -not $config.ContainsKey($Name) )
     {
         Stop-Whiskey -Context $Context -Message ('Pipeline ''{0}'' does not exist. Create a pipeline by defining a ''{0}'' property:
-
-{0}:
-- TASK_ONE
-- TASK_TWO
- 
+        
+    {0}:
+    - TASK_ONE
+    - TASK_TWO
+    
 ' -f $Name)
         return
     }
