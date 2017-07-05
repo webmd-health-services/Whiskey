@@ -143,6 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: parsing a whiskey.yml file that contains a single value property, e.g. just the string `BuildTasks`.
+* ***BREAKING***: Builds will now fail if a whiskey.yml file doesn't contain a `BuildTasks` property.
 '@
 
 
