@@ -3,8 +3,71 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-#region Assertions
-function Assert-CommitStatusSetTo
+$whiskeyYmlPath = $null
+$runByDeveloper = $false
+$runByBuildServer = $false
+
+function GivenPublishingToBuildMasterFails
+{
+    Mock -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -MockWith { throw 'Build Master Pipeline failed' }
+}
+
+function GivenPreviousBuildOutput
+{
+    New-Item -Path (Join-Path -Path ($whiskeyYmlPath | Split-Path) -ChildPath '.output\file.txt') -ItemType 'File' -Force
+}
+
+function GivenRunByBuildServer
+{
+    $script:runByDeveloper = $false
+    $script:runByBuildServer = $true
+}
+
+function GivenRunByDeveloper
+{
+    $script:runByDeveloper = $true
+    $script:runByBuildServer = $false
+}
+
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:version = $Version
+}
+
+function GivenWhiskeyYmlBuildFile
+{
+    param(
+        [Parameter(Position=0)]
+        [string]
+        $Yaml
+    )
+
+    $config = $null
+    $root = (Get-Item -Path 'TestDrive:').FullName
+    $script:whiskeyYmlPath = Join-Path -Path $root -ChildPath 'whiskey.yml'
+    $Yaml | Set-Content -Path $whiskeyYmlPath
+    return $whiskeyymlpath
+}
+
+function ThenBuildFailed
+{
+    ThenCommitNotTagged
+    ThenBuildStatusMarkedAsStarted
+    ThenBuildStatusMarkedAsFailed
+}
+
+function ThenBuildOutputRemoved
+{
+    It ('should remove .output directory') {
+        Join-Path -Path ($whiskeyYmlPath | Split-Path) -ChildPath '.output' | Should -Not -Exist
+    }
+}
+
+function ThenBuildStatusSetTo
 {
     param(
         [string]
@@ -14,23 +77,53 @@ function Assert-CommitStatusSetTo
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
         Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Status -eq $ExpectedStatus }
     }
+}
 
+function ThenBuildStatusMarkedAsCompleted
+{
+    ThenBuildStatusSetTo 'Completed'
+}
+
+function ThenBuildStatusMarkedAsStarted
+{
+    ThenBuildStatusSetTo 'Started'
+    ThenContextPassedWhenSettingBuildStatus
+}
+
+function ThenBuildStatusMarkedAsFailed
+{
+    ThenBuildStatusSetTo 'Failed'
+    ThenContextPassedWhenSettingBuildStatus
+}
+
+function ThenBuildSucceeded
+{
+    It 'should not write any errors' {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+            
+    ThenBuildStatusMarkedAsStarted
+    ThenBuildStatusMarkedAsCompleted
+}
+
+function ThenCommitNotTagged
+{
+    Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 0
+}
+
+function ThenCommitTagged
+{
+    Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 1
+}
+
+function ThenContextPassedWhenSettingBuildStatus
+{
     It 'should pass context when setting build status' {
         Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Context }
     }
 }
 
-function Assert-CommitMarkedAsInProgress
-{
-    Assert-CommitStatusSetTo 'Started'
-}
-
-function Assert-CommitMarkedAsFailed
-{
-    Assert-CommitStatusSetTo 'Failed'
-}
-
-function Assert-DotNetProjectsCompilationFailed
+function ThenDotNetProjectsCompilationFailed
 {
     param(
         [string]
@@ -53,7 +146,7 @@ function Assert-DotNetProjectsCompilationFailed
     }
 }
 
-function Assert-NUnitTestsNotRun
+function ThenNUnitTestsNotRun
 {
     param(
         $ConfigurationPath
@@ -63,88 +156,28 @@ function Assert-NUnitTestsNotRun
         $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
-#endregion
 
-function Assert-CommitTagged
+function ThenThrewException
 {
-    Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 1
+    param(
+        $Pattern
+    )
+
+    It ('should throw a terminating exception that matches /{0}/' -f $Pattern) {
+        $threwException | Should -Be $true
+        $Global:Error | Should -Match $Pattern
+    }
 }
 
-function Invoke-Build
+function WhenRunningBuild
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='Dev')]
         [Switch]
-        $ByJenkins,
-
-        [string]
-        $WithConfig,
-
-        [Switch]
-        $ThatFails,
-
-        [SemVersion.SemanticVersion]
-        $Version = '5.4.1-prerelease+build'
+        $WithCleanSwitch
     )
 
     $environment = $PSCmdlet.ParameterSetName
-    New-MockBuildServer
-    New-MockBitbucketServer
-
-    $configuration = 'FubarSnafu'
-    $optionalParams = @{ }
-    if( $ByJenkins )
-    {
-        $optionalParams['ForBuildServer'] = $true
-    }
-
-    if( $Version )
-    {
-        $optionalParams['ForVersion'] = $Version
-    }
-
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
-
-    $context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $WithConfig @optionalParams
-
-    $threwException = $false
-    try
-    {
-        Invoke-WhiskeyBuild -Context $context
-    }
-    catch
-    {
-        $threwException = $true
-        Write-Error $_
-    }    
-    Assert-CommitMarkedAsInProgress
-
-    
-    if( $ThatFails )
-    {
-        It 'should throw a terminating exception' {
-            $threwException | Should Be $true
-        }
-
-        Assert-CommitMarkedAsFailed
-    }
-    else
-    {
-        Assert-CommitTagged
-    }
-}
-
-#region Mocks
-function New-MockBitbucketServer
-{
-    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
-    Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' 
-}
-
-function New-MockBuildServer
-{
     Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
     Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
@@ -154,116 +187,142 @@ function New-MockBuildServer
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
+
+    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
+    Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' 
+
+    $configuration = 'FubarSnafu'
+    $optionalParams = @{ }
+    if( $runByBuildServer )
+    {
+        $optionalParams['ForBuildServer'] = $true
+    }
+
+    if( $runByDeveloper )
+    {
+        $optionalParams['ForDeveloper'] = $true
+    }
+
+    [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
+    $optionalParams['ForVersion'] = $Version
+
+    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
+    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
+
+    $context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $whiskeyYmlPath @optionalParams
+
+    $Global:Error.Clear()
+    $script:threwException = $false
+    try
+    {
+        $cleanParam = @{}
+        if( $WithCleanSwitch )
+        {
+            $cleanParam['Clean'] = $true
+        }
+        Invoke-WhiskeyBuild -Context $context @cleanParam
+    }
+    catch
+    {
+        $script:threwException = $true
+        Write-Error $_
+    }    
+    # ThenBuildStatusMarkedAsStarted
+    # 
+    # 
+    # if( $ThatFails )
+    # {
+    #     It 'should throw a terminating exception' {
+    #         $threwException | Should Be $true
+    #     }
+    # 
+    #     ThenBuildStatusMarkedAsFailed
+    # }
+    # else
+    # {
+    #     Assert-CommitTagged
+    # }
 }
-
-function New-MockDeveloperEnvironment
-{
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
-    Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $false }
-}
-
-
-function New-TestWhiskeyBuildFile
-{
-    param(
-        [Parameter(ParameterSetName='WithRawYaml')]
-        [string]
-        $Yaml
-    )
-
-    $config = $null
-    $root = (Get-Item -Path 'TestDrive:').FullName
-    $whiskeyymlpath = Join-Path -Path $root -ChildPath 'whiskey.yml'
-    $Yaml | Set-Content -Path $whiskeyymlpath
-    return $whiskeyymlpath
-}
-#endregion
 
 Describe 'Invoke-WhiskeyBuild.when running an unknown task' {
-    $configPath = New-TestWhiskeyBuildFile -Yaml @'
+    GivenWhiskeyYmlBuildFile -Yaml @'
 BuildTasks:
     - FubarSnafu:
         Path: whiskey.yml
 '@
-    
-    $Global:Error.Clear()
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-
-    It 'should write an error' {
-        $Global:Error[0] | Should Match 'not exist'
-    }
+    GivenRunByBuildServer
+    WhenRunningBuild -ErrorAction SilentlyContinue
+    ThenBuildFailed
+    ThenThrewException 'not\ exist'
 }
 
 Describe 'Invoke-WhiskeyBuild.when a task fails' {
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
-    $configPath = New-TestWhiskeyBuildFile -Yaml @'
+    GivenWhiskeyYmlBuildFile -Yaml @'
 BuildTasks:
 - PowerShell:
     Path: idonotexist.ps1
 - NUnit2:
     Path: assembly.dll
 '@
-
+    GivenRunByBuildServer
     New-MSBuildProject -FileName $project -ThatFails
-
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails 2>&1
-
-    Assert-DotNetProjectsCompilationFailed -ConfigurationPath $configPath -ProjectName $project
-    Assert-NUnitTestsNotRun -ConfigurationPath $configPath
+    WhenRunningBuild
+    ThenBuildFailed
+    ThenDotNetProjectsCompilationFailed -ConfigurationPath $whiskeyYmlPath -ProjectName $project
+    ThenNUnitTestsNotRun -ConfigurationPath $whiskeyYmlPath
 }
 
 Describe 'Invoke-WhiskeyBuild.when New-WhiskeyBuildMasterPackage fails' {
-    Mock -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -MockWith `
-        { throw 'Build Master Pipeline failed' }
+    GivenPublishingToBuildMasterFails
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
-    $configPath = New-TestWhiskeyBuildFile -Yaml @'
+    GivenWhiskeyYmlBuildFile -Yaml @'
 BuildTasks:
 '@
-
+    GivenRunByBuildServer
     New-MSBuildProject -FileName $project 
-    Invoke-Build -ByJenkins -WithConfig $configPath -ThatFails -ErrorAction SilentlyContinue
-        
-    it ( 'should call New-WhiskeyBuildMasterPackage mock once' ){
-        Assert-MockCalled -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -Times 1     
-    }
+    WhenRunningBuild -ErrorAction SilentlyContinue
+    ThenBuildStatusMarkedAsFailed
+    ThenBuildStatusMarkedAsStarted
+    ThenCommitNotTagged
+    ThenThrewException 'Build\ Master\ Pipeline\ failed'
 }
 
 Describe 'Invoke-WhiskeyBuild.when running with Clean switch' {
-    $context = New-WhiskeyTestContext -ForDeveloper
-    $context.Configuration = @{ 'BuildTasks' = @( ) }
-    Invoke-WhiskeyBuild -Context $context -Clean
-    $withWhatIfSwitchParam = @{ }
-
-    it( 'should remove .output dir'){
-        $context.OutputDirectory | should not exist
-    }
+    GivenWhiskeyYmlBuildFile -Yaml @'
+BuildTasks:
+'@
+    GivenPreviousBuildOutput
+    GivenRunByDeveloper
+    WhenRunningBuild -WithCleanSwitch
+    ThenBuildOutputRemoved
 }
 
 Describe 'Invoke-WhiskeyBuild.when task has no properties' {
-    $context = New-WhiskeyTestContext -ForDeveloper -ForYaml @"
+    GivenRunByDeveloper
+    GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PublishNodeModule
 - PublishNodeModule:
 "@
-    $Global:Error.Clear()
     Mock -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -Verifiable -ModuleName 'Whiskey'
-    Invoke-WhiskeyBuild -Context $context
-    It 'should not write an error' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
-    It 'should call the task' {
+    WhenRunningBuild
+    ThenBuildSucceeded
+    ThenCommitNotTagged
+    
+    It 'should still call the task' {
         Assert-MockCalled -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -ModuleName 'Whiskey' -Times 2
     }
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
 $whatIfTasks = @{ 'ProGetUniversalPackage' = $true; }
-foreach( $functionName in (Get-Command -Module 'Whiskey' -Name 'Invoke-Whiskey*Task' | Sort-Object -Property 'Name') )
+$tasks = Get-WhiskeyTasks
+foreach( $taskName in ($tasks.Keys) )
 {
-    $taskName = $functionName -replace '^Invoke-Whiskey(.*)Task$','$1'
+    $functionName = $tasks[$taskName]
 
     Describe ('Invoke-WhiskeyBuild.when calling {0} task' -f $taskName) {
 
@@ -371,5 +430,3 @@ foreach( $functionName in (Get-Command -Module 'Whiskey' -Name 'Invoke-Whiskey*T
         }
     }
 }
-
-
