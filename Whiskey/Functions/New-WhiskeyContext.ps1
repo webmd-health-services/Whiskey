@@ -118,6 +118,11 @@ function New-WhiskeyContext
         $config = @{} 
     }
 
+    if( $config -is [string] )
+    {
+        $config = @{ $config = '' }
+    }
+
     $buildRoot = $ConfigurationPath | Split-Path
     if( -not $DownloadRoot )
     {

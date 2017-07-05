@@ -227,13 +227,23 @@ function GivenConfiguration
         }
     }
 
-    $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
-    $Configuration | ConvertTo-Yaml | Set-Content -Path $configurationPath
+    $yaml = $Configuration | ConvertTo-Yaml
+    GivenWhiskeyYml $yaml
 }
 
 function GivenConfigurationFileDoesNotExist
 {
     $script:configurationPath = 'I\do\not\exist'
+}
+
+function GivenWhiskeyYml
+{
+    param(
+        $Yaml
+    )
+
+    $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    $Yaml | Set-Content -Path $configurationPath
 }
 
 function ThenSemVer1Is
@@ -741,5 +751,8 @@ Describe 'New-WhiskeyContext.when building a Node.js application and ignoring pa
     ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
 }
 
-
+Describe 'New-WhiskeyContext.when configuration is just a property name' {
+    GivenWhiskeyYml 'BuildTasks'
+    WhenCreatingContext
+}
 

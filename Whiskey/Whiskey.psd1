@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.10.2'
+    ModuleVersion = '0.10.3'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -85,6 +85,7 @@
                             'Invoke-WhiskeyNUnit2Task',
                             'Invoke-WhiskeyPester3Task',
                             'Invoke-WhiskeyPester4Task',
+                            'Invoke-WhiskeyPipeline',
                             'Invoke-WhiskeyPowerShellTask',
                             'Invoke-WhiskeyPublishFileTask',
                             'Invoke-WhiskeyPublishNodeModuleTask',
@@ -141,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: the `ProGetUniversalPackage` task creates extra, empty directories named after the package when `Path` includes directories that are two levels or more under the build root.
+* Fixed: parsing a whiskey.yml file that contains a single value property, e.g. just the string `BuildTasks`.
 '@
 
 
