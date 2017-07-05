@@ -233,7 +233,7 @@ BuildTasks:
 
 Describe 'Invoke-WhiskeyBuild.when running with Clean switch' {
     $context = New-WhiskeyTestContext -ForDeveloper
-    $context.Configuration = @{ }
+    $context.Configuration = @{ 'BuildTasks' = @( ) }
     Invoke-WhiskeyBuild -Context $context -Clean
     $withWhatIfSwitchParam = @{ }
 
