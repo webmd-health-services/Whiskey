@@ -5,6 +5,7 @@ $mockPackage = [pscustomobject]@{ }
 $mockRelease = [pscustomobject]@{ }
 $mockDeploy = [pscustomobject]@{ }
 $packageVersion = 'version'
+$context = $null
 
 function GivenAnApplication
 {
@@ -22,7 +23,7 @@ function GivenAnApplication
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return $deploy }.GetNewClosure()
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
     
-    New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
     
 }
 
@@ -34,17 +35,13 @@ function GivenNoApplication
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' 
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
 
-    New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
 }
 
 function WhenCreatingPackage
 {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
-        $Context,
-
         [hashtable]
         $WithVariables = @{ },
 
@@ -93,7 +90,7 @@ function WhenCreatingPackage
         try
         {
             $Global:Error.Clear()
-            New-WhiskeyBuildMasterPackage -TaskContext $Context | Out-Null
+            Publish-WhiskeyBuildMasterPackage -TaskContext $context 
         }
         catch
         {
@@ -123,7 +120,6 @@ function WhenCreatingPackage
         }
 
         return $Context
-
     }
 }
 
@@ -142,12 +138,8 @@ function ThenPackageCreated
 {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
-        $Context,
-
         [hashtable]
-        $WithVariables
+        $WithVariables = @{}
     )
 
     process
@@ -220,9 +212,6 @@ function ThenPackageNotCreated
 {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
-        $Context
     )
 
     process
@@ -239,42 +228,42 @@ function ThenPackageNotCreated
     }
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when called by build server' {
-    GivenAnApplication |
-        WhenCreatingPackage |
-        ThenPackageCreated
+Describe 'Publish-WhiskeyBuildMasterPackage.when called by build server' {
+    GivenAnApplication
+    WhenCreatingPackage
+    ThenPackageCreated
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when using custom package variables' {
+Describe 'Publish-WhiskeyBuildMasterPackage.when using custom package variables' {
     $variables = @{ 
                         'Fubar' = 'Snafu';
                         'Snafu' = 'Fubuar';
                    }
-    GivenAnApplication |
-        WhenCreatingPackage -WithVariables $variables |
-        ThenPackageCreated -WithVariables $variables
+    GivenAnApplication
+    WhenCreatingPackage -WithVariables $variables
+    ThenPackageCreated -WithVariables $variables
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when using custom package variables' {
-    GivenAnApplication |
-        WhenCreatingPackage -WithNoPackageVersionVariable |
-        ThenPackageNotCreated
+Describe 'Publish-WhiskeyBuildMasterPackage.when using custom package variables' {
+    GivenAnApplication
+    WhenCreatingPackage -WithNoPackageVersionVariable
+    ThenPackageNotCreated
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when called by a developer' {
-    GivenAnApplication |
-        WhenCreatingPackage -ForDeveloper |
-        ThenPackageNotCreated
+Describe 'Publish-WhiskeyBuildMasterPackage.when called by a developer' {
+    GivenAnApplication
+    WhenCreatingPackage -ForDeveloper
+    ThenPackageNotCreated
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when called by a developer' {
-    GivenAnApplication |
-        WhenCreatingPackage -ThatDoesNotGetDeployed |
-        ThenPackageNotCreated
+Describe 'Publish-WhiskeyBuildMasterPackage.when called by a developer' {
+    GivenAnApplication
+    WhenCreatingPackage -ThatDoesNotGetDeployed
+    ThenPackageNotCreated
 }
 
-Describe 'New-WhiskeyBuildMasterPackage.when application doesn''t exist in BuildMaster' {
-    GivenNoApplication |
-        WhenCreatingPackage -WithErrorMessage 'unable to create and deploy a release package' -ThenPackageNotCreated -ErrorAction SilentlyContinue |
-        ThenItFails
+Describe 'Publish-WhiskeyBuildMasterPackage.when application doesn''t exist in BuildMaster' {
+    GivenNoApplication
+    WhenCreatingPackage -WithErrorMessage 'unable to create and deploy a release package' -ThenPackageNotCreated -ErrorAction SilentlyContinue
+    ThenItFails
 }
