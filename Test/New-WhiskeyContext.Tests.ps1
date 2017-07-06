@@ -7,8 +7,6 @@ Set-StrictMode -Version 'Latest'
 $buildServerContext = @{
                             BBServerCredential = (New-Credential -UserName 'bitbucket' -Password 'snafu');
                             BBServerUri = 'http://bitbucket.example.com/';
-                            BuildMasterUri = 'http://buildmaster.example.com/';
-                            BuildMasterApiKey = 'deadbeef';
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
@@ -461,12 +459,6 @@ function ThenBuildServerContextCreated
             [object]::ReferenceEquals($Context.BBServerConnection.Credential,$buildServerContext['BBServerCredential']) | Should Be $true
         }
 
-        It 'should set BuildMaster session' {
-            $Context.BuildMasterSession | Should Not BeNullOrEmpty
-            $Context.BuildMasterSession.Uri | Should Be $buildServerContext['BuildMasterUri']
-            $Context.BuildMasterSession.ApiKey | Should Be $buildServerContext['BuildMasterApiKey']
-        }
-
         It 'should set ProGet session' {
             $Context.ProGetSession | Should Not BeNullOrEmpty
             [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
@@ -529,10 +521,6 @@ function ThenDeveloperContextCreated
 
         It 'should not set Bitbucket Server connection' {
             $Context.BBServerConnection | Should BeNullOrEmpty
-        }
-
-        It 'should not set BuildMaster session' {
-            $Context.BuildMasterSession| Should BeNullOrEmpty
         }
 
         It 'should set application name' {

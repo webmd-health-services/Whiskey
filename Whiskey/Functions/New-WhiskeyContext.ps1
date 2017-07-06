@@ -20,9 +20,8 @@ function New-WhiskeyContext
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
     * `ApplicatoinName`: the name of the application being built.
 
-    In addition, if you're creating a context while running under a build server, you must supply BuildMaster, ProGet, and Bitbucket Server connection information. That connection information is returned in the following properties:
+    In addition, if you're creating a context while running under a build server, you must supply ProGet and Bitbucket Server connection information. That connection information is returned in the following properties:
 
-    * `BuildMasterSession`
     * `ProGetSession`
     * `BBServerConnection`
 
@@ -32,7 +31,7 @@ function New-WhiskeyContext
     Demonstrates how to create a context for a developer build.
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri -BuildMasterUri $bmUri -BuildMasterApiKey $bmApiKey -ProGetCredential $progetCred -ProGetUri $progetUri
+    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri --ProGetCredential $progetCred -ProGetUri $progetUri
 
     Demonstrates how to create a context for a build run by a build server.
     #>
@@ -62,16 +61,6 @@ function New-WhiskeyContext
         [uri]
         # The URI to Bitbucket Server. Required if running under a build server.
         $BBServerUri,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [uri]
-        # The URI to BuildMaster. Required if running under a build server.
-        $BuildMasterUri,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [string]
-        # The API key to use when using BuildMaster's Release and Package Deployment API. Required if running under a build server.
-        $BuildMasterApiKey,
 
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [pscredential]
@@ -142,7 +131,6 @@ function New-WhiskeyContext
     }
 
     $bitbucketConnection = $null
-    $buildmasterSession = $null
     $progetSession = $null   
     $progetSession = [pscustomobject]@{
                                             
@@ -166,8 +154,6 @@ New-WhiskeyContext is being run by a build server, but called using the develope
 
 * BBServerCredential
 * BBServerUri
-* BuildMasterUri
-* BuildMasterApiKey
 * ProGetCredential
 * ProGetUri
 
@@ -189,7 +175,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
         }
 
         $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
-        $buildmasterSession = New-BMSession -Uri $BuildMasterUri -ApiKey $BuildMasterApiKey
         $progetSession.Credential = $ProGetCredential
 
         if( $config['PrereleaseMap'] )
@@ -263,7 +248,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
                                     BuildRoot = $buildRoot;
                                     ConfigurationPath = $ConfigurationPath;
                                     BBServerConnection = $bitbucketConnection;
-                                    BuildMasterSession = $buildmasterSession;
                                     ProGetSession = $progetSession;
                                     BuildConfiguration = $BuildConfiguration;
                                     OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);

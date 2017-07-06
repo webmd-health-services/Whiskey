@@ -178,8 +178,6 @@ function New-WhiskeyTestContext
         $optionalArgs = @{
                            'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
                            'BBServerUri' = 'https://bitbucket.example.com/'
-                           'BuildMasterUri' = 'https://buildmaster.example.com/'
-                           'BuildMasterApiKey' = 'racecaracecar';
                            'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
                          }
         $gitBranch = 'origin/develop'

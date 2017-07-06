@@ -6,204 +6,209 @@ $mockRelease = [pscustomobject]@{ }
 $mockDeploy = [pscustomobject]@{ }
 $packageVersion = 'version'
 $context = $null
+$version = $null
+$releaseName = $null
+$appName = $null
+$apiKeys = @{ }
+$taskParameter = $null
 
-function GivenAnApplication
+function New-Context
 {
-    [CmdletBinding()]
-    param(
-    )
-
-    $release = $mockRelease
-    $package = $mockPackage
-    $deploy = $mockDeploy
-
-    $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release }.GetNewClosure()
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return $package }.GetNewClosure()
-    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return $deploy }.GetNewClosure()
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
-    
-    $script:context = New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
-    
 }
 
-function GivenNoApplication
+function GivenApiKey
 {
-    $version = [SemVersion.SemanticVersion]'9.8.7-rc.1+build'
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' 
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' 
-    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
+    param(
+        $ID,
+        $ApiKey
+    )
 
-    $script:context = New-WhiskeyTestContext -ForApplicationName 'app name' -ForReleaseName 'release name' -ForBuildServer -ForVersion $version
+    $script:apiKeys = @{ $ID = $ApiKey }
+}
+
+function GivenApplicationName
+{
+    param(
+        $Name
+    )
+
+    $script:appName = $Name
+}
+
+function GivenNoApplicationName
+{
+    $script:appName = $null
+}
+
+function GivenNoReleaseName
+{
+    $script:releaseName = $null
+}
+
+function GivenNoRelease
+{
+    param(
+        [Parameter(Mandatory=$true,Position=0)]
+        [string]
+        $Name,
+        [Parameter(Mandatory=$true)]
+        [string]
+        $ForApplication
+    )
+
+    $script:appName = $ForApplication
+    $script:releaseName = $releaseName
+
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { }
+}
+
+function GivenProperty
+{
+    param(
+        [Parameter(Mandatory=$true,Position=0)]
+        $Property
+    )
+
+    $script:taskParameter = $Property
+}
+
+function GivenRelease
+{
+    param(
+        [Parameter(Mandatory=$true,Position=0)]
+        [string]
+        $Name,
+        [Parameter(Mandatory=$true)]
+        [string]
+        $ForApplication
+    )
+
+    $script:appName = $ForApplication
+    $script:releaseName = $Name
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Application = $Application; Name = $Name } }
+}
+
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:version = $Version
 }
 
 function WhenCreatingPackage
 {
     [CmdletBinding()]
     param(
-        [hashtable]
-        $WithVariables = @{ },
-
         [Switch]
-        $WithNoPackageVersionVariable,
-        
-        [Switch]
-        $ThenPackageNotCreated,
-
-        [string]
-        $WithErrorMessage,
-
-        [Switch]
-        $ForDeveloper,
-
-        [Switch]
-        $ThatDoesNotGetDeployed
+        $InCleanMode
     )
 
-    process
+    $taskParameter['ApplicationName'] = $appName
+    $taskParameter['ReleaseName'] = $releaseName
+
+    $context = [pscustomobject]@{
+                                    ApiKeys = $apiKeys;
+                                    Version = [pscustomobject]@{
+                                                                    'SemVer2' = [SemVersion.SemanticVersion]$version
+                                                                }
+                                    ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml';
+                                    TaskIndex = 0;
+                                    TaskName = 'PublishBuildMasterPackage';
+                                    }
+
+    $package = $mockPackage
+    $deploy = $mockDeploy
+    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Release = $Release; PackageNumber = $PackageNumber; Variable = $Variable } }
+    Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Package = $package } }
+
+    $script:threwException = $false
+    try
     {
-        if( -not $WithNoPackageVersionVariable )
+        $Global:Error.Clear()
+        $cleanParam = @{ }
+        if( $InCleanMode )
         {
-            $context.PackageVariables['ProGetPackageVersion'] = $packageVersion
-            $context.PackageVariables['ProGetPackageName'] = $packageVersion
+            $cleanParam['Clean'] = $true
         }
-
-        if( $WithVariables )
-        {
-            foreach( $key in $WithVariables.Keys )
-            {
-                $Context.PackageVariables[$key] = $WithVariables[$key]
-            }
-        }
-        if( $ForDeveloper )
-        {
-            $Context.ByDeveloper = $True
-        }
-
-        if( $ThatDoesNotGetDeployed )
-        {
-            $Context.Configuration['DeployPackage'] = $false
-        }
-
-        $threwException = $false
-        try
-        {
-            $Global:Error.Clear()
-            Publish-WhiskeyBuildMasterPackage -TaskContext $context 
-        }
-        catch
-        {
-            $threwException = $true
-            Write-Error $_
-        }
-
-        if( $ThenPackageNotCreated )
-        {
-            It 'should throw an exception' {
-                $threwException | Should Be $true
-            }
-
-            It 'should write an errors' {
-                $Global:Error | Should Match $WithErrorMessage
-            }
-        }
-        else
-        {
-            It 'should not throw an exception' {
-                $threwException | Should Be $false
-            }
-
-            It 'should not write any errors' {
-                $Global:Error | Should BeNullOrEmpty
-            }
-        }
-
-        return $Context
+        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter @cleanParam
+    }
+    catch
+    {
+        $script:threwException = $true
+        Write-Error $_
     }
 }
 
-function ThenItFails
-{
-    It 'should not create release package' {
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
-    }
-
-    It 'should not start deploy' {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
-    }
-}
-
-function ThenPackageCreated
+function ThenCreatedPackage
 {
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true,Position=0)]
+        [string]
+        $Name,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $InRelease,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $ForApplication,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $AtUri,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $UsingApiKey,
+
+        [Parameter(Mandatory=$true)]
         [hashtable]
-        $WithVariables = @{}
+        $WithVariables
     )
 
-    process
+    It ('should create package ''{0}''' -f $Name) {
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
+    }
+
+    It ('should create package in release ''{0}''' -f $InRelease) {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Release -eq $InRelease }
+    }
+
+    It ('should create package in application ''{0}''' -f $ForApplication) {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Application -eq $ForApplication }
+    }
+
+    It 'should publish package' {
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' 
+    }
+
+    It ('should create package at ''{0}''' -f $AtUri) {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+    }
+
+    It ('should create package with API key ''{0}''' -f $UsingApiKey) {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+    }
+
+    foreach( $variableName in $WithVariables.Keys )
     {
-        It 'should get the release' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey'
-        }
-
-        It 'should get the release using the context''s session' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
-        }
-
-        It 'should get the release using the context''s release name' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $Context.ReleaseName }
-        }
-
-        It 'should create release package' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey'
-        }
-
-        It 'should create release package using the context''s session' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
-        }
-
-        It 'should create release package for the release' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($mockRelease, $Release) }
-        }
-
-        It 'should create release package with package number' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq ('{0}.{1}.{2}' -f $Context.Version.SemVer2.Major,$Context.Version.SemVer2.Minor,$Context.Version.SemVer2.Patch) }
-        }
-
-        $expectedVariables = @{
-                                    'ProGetPackageVersion' = $packageVersion;
-                                    'ProGetPackageName' = $packageVersion;
-                              }
-        foreach( $key in $WithVariables.Keys )
-        {
-            $expectedVariables[$key] = $WithVariables[$key]
-        }
-
-        foreach( $variableName in $expectedVariables.Keys )
-        {
-            $variableValue = $expectedVariables[$variableName]
-            It ('should create {0} package variable' -f $variableName) {
-                Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
-                    Write-Debug ('Expected  {0}' -f $variableValue)
-                    Write-Debug ('Actual    {0}' -f $Variable[$variableName])
-                    $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
-                }
+        $variableValue = $WithVariables[$variableName]
+        It ('should create package variable ''{0}''' -f $variableName) {
+            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
+                Write-Debug ('Expected  {0}' -f $variableValue)
+                Write-Debug ('Actual    {0}' -f $Variable[$variableName])
+                $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
             }
-        }
-
-        It 'should start the package''s release pipeline' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey'
-        }
-
-        It 'should start the package''s release pipeline using the context''s session' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($Context.BuildMasterSession,$Session) }
-        }
-
-        It 'should start the package''s release pipeline using the newly created package' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { [object]::ReferenceEquals($mockPackage,$Package) }
         }
     }
 }
@@ -216,9 +221,6 @@ function ThenPackageNotCreated
 
     process
     {
-        It 'should not get releases' {
-            Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -Times 0
-        }
         It 'should not create release package' {
             Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
         }
@@ -228,42 +230,78 @@ function ThenPackageNotCreated
     }
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when called by build server' {
-    GivenAnApplication
-    WhenCreatingPackage
-    ThenPackageCreated
+function ThenTaskFails
+{
+    param(
+        $Pattern
+    )
+
+    It 'should throw an exception' {
+        $threwException | Should -Be $true
+    }
+
+    It 'should write an errors' {
+        $Global:Error | Should -Match $Pattern
+    }
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when using custom package variables' {
-    $variables = @{ 
-                        'Fubar' = 'Snafu';
-                        'Snafu' = 'Fubuar';
+Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
+    GivenApiKey 'BuildMaster' 'fubarsnafu'
+    GivenVersion '9.8.3-rc.1+build.deadbee'
+    GivenRelease 'release' -ForApplication 'application'
+    GivenProperty @{
+                        'Uri' = 'https://buildmaster.example.com';
+                        'ApiKeyID' = 'BuildMaster';
+                        'PackageVariables' = @{
+                                                    'One' = 'Two';
+                                                    'Three' = 'Four';
+                                              }
                    }
-    GivenAnApplication
-    WhenCreatingPackage -WithVariables $variables
-    ThenPackageCreated -WithVariables $variables
+    WhenCreatingPackage
+    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when using custom package variables' {
-    GivenAnApplication
-    WhenCreatingPackage -WithNoPackageVersionVariable
+Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in BuildMaster' {
+    GivenNoRelease 'release' -ForApplication 'application'
+    WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenPackageNotCreated
+    ThenTaskFails 'unable\ to\ create\ and\ deploy\ a\ release\ package'
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when called by a developer' {
-    GivenAnApplication
-    WhenCreatingPackage -ForDeveloper
+Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is missing') {
+    GivenNoApplicationName
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
+}
+
+Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missing') {
+    GivenApplicationName 'fubar'
+    GivenNoReleaseName
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
+}
+
+Describe ('Publish-WhiskeyBuildMasterPackage.when Uri property is missing') {
+    GivenRelease 'release' -ForApplication 'fubar'
+    GivenProperty @{ }
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bUri\b.*\bmandatory\b')
+}
+
+Describe ('Publish-WhiskeyBuildMasterPackage.when ApiKeyID property is missing') {
+    GivenRelease 'release' -ForApplication 'fubar'
+    GivenProperty @{ 'Uri' = 'https://buildmaster.example.com' }
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
+}
+
+Describe ('Publish-WhiskeyBuildMasterPackage.when run in clean mode') {
+    GivenNoApplicationName
+    GivenNoReleaseName
+    GivenProperty @{ }
+    WhenCreatingPackage -InCleanMode
     ThenPackageNotCreated
-}
-
-Describe 'Publish-WhiskeyBuildMasterPackage.when called by a developer' {
-    GivenAnApplication
-    WhenCreatingPackage -ThatDoesNotGetDeployed
-    ThenPackageNotCreated
-}
-
-Describe 'Publish-WhiskeyBuildMasterPackage.when application doesn''t exist in BuildMaster' {
-    GivenNoApplication
-    WhenCreatingPackage -WithErrorMessage 'unable to create and deploy a release package' -ThenPackageNotCreated -ErrorAction SilentlyContinue
-    ThenItFails
+    It 'should not throw an exception' {
+        $threwException | Should -Be $false
+    }
 }

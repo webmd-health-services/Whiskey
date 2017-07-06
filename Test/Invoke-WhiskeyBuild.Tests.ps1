@@ -72,16 +72,6 @@ function GivenPublishingPipelineSucceeds
     $script:publishPipelineFails = $false
 }
 
-function GivenPublishingToBuildMasterFails
-{
-    Mock -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -MockWith { throw 'Build Master Pipeline failed' }
-}
-
-function GivenPublishingToBuildMasterSucceeds
-{
-    Mock -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey'
-}
-
 function GivenRunByBuildServer
 {
     $script:runByDeveloper = $false
@@ -117,21 +107,6 @@ function ThenBuildPipelineRan
     It ('should run the BuildTasks pipeline') {
         Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Name -eq 'BuildTasks' }
         Assert-ContextPassedTo 'Invoke-WhiskeyPIpeline' -Times 1
-    }
-}
-
-function ThenBuildMasterPackageNotPublished
-{
-    It ('should not publish BuildMaster package') {
-        Assert-MockCalled -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -Times 0
-    }
-}
-
-function ThenBuildMasterPackagePublished
-{
-    It ('should publish BuildMaster package') {
-        Assert-MockCalled -CommandName 'New-WhiskeyBuildMasterPackage' -ModuleName 'Whiskey' -Times 1
-        Assert-ContextPassedTo 'New-WhiskeyBuildMasterPackage'
     }
 }
 
@@ -287,7 +262,6 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         GivenThereArePublishingTasks
         GivenPublishing
         GivenPublishingPipelineSucceeds
-        GivenPublishingToBuildMasterSucceeds
         WhenRunningBuild
         ThenBuildPipelineRan
         ThenPublishPipelineRan
@@ -297,7 +271,6 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
     Context 'By Build Server' {
         GivenRunByBuildServer
         GivenBuildPipelinePasses
-        GivenPublishingToBuildMasterSucceeds
         GivenPublishing
         GivenThereArePublishingTasks
         WhenRunningBuild
@@ -312,24 +285,20 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
     Context 'By Developer' {
         GivenRunByDeveloper
         GivenBuildPipelineFails
-        GivenPublishingToBuildMasterSucceeds
         GivenPublishingPipelineSucceeds
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
-        ThenBuildMasterPackageNotPublished
         ThenBuildStatusMarkedAsFailed
         ThenCommitNotTagged
     }
     Context 'By Build Server' {
         GivenRunByBuildServer
         GivenBuildPipelineFails 
-        GivenPublishingToBuildMasterSucceeds
         GivenPublishingPipelineSucceeds
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
-        ThenBuildMasterPackageNotPublished
         ThenBuildStatusMarkedAsFailed
         ThenCommitNotTagged
     }
@@ -341,11 +310,9 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         GivenBuildPipelinePasses
         GivenThereArePublishingTasks
         GivenPublishingPipelineFails
-        GivenPublishingToBuildMasterSucceeds
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineRan
-        ThenBuildMasterPackageNotPublished
         ThenBuildStatusMarkedAsFailed
         ThenCommitNotTagged
     }
@@ -353,40 +320,9 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         GivenRunByBuildServer
         GivenBuildPipelinePasses 
         GivenPublishingPipelineFails
-        GivenPublishingToBuildMasterSucceeds
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineRan
-        ThenBuildMasterPackageNotPublished
-        ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
-    }
-}
-
-Describe 'Invoke-WhiskeyBuild.when publishing BuildMaster package fails' {
-    Context 'By Developer' {
-        GivenRunByDeveloper
-        GivenBuildPipelinePasses
-        GivenThereArePublishingTasks
-        GivenPublishingPipelineSucceeds
-        GivenPublishingToBuildMasterFails
-        WhenRunningBuild -ErrorAction SilentlyContinue
-        ThenBuildPipelineRan
-        ThenPublishPipelineRan
-        ThenBuildMasterPackagePublished
-        ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
-    }
-    Context 'By Build Server' {
-        GivenRunByBuildServer
-        GivenBuildPipelinePasses 
-        GivenThereArePublishingTasks
-        GivenPublishingPipelineSucceeds
-        GivenPublishingToBuildMasterFails
-        WhenRunningBuild -ErrorAction SilentlyContinue
-        ThenBuildPipelineRan
-        ThenPublishPipelineRan
-        ThenBuildMasterPackagePublished
         ThenBuildStatusMarkedAsFailed
         ThenCommitNotTagged
     }
@@ -395,7 +331,7 @@ Describe 'Invoke-WhiskeyBuild.when publishing BuildMaster package fails' {
 Describe 'Invoke-WhiskeyBuild.when cleaning' {
     GivenRunByDeveloper
     GivenBuildPipelinePasses
-    GivenPublishingToBuildMasterSucceeds
+    GivenNotPublishing
     GivenPreviousBuildOutput
     WhenRunningBuild -WithCleanSwitch
     ThenBuildOutputRemoved
@@ -405,7 +341,7 @@ Describe 'Invoke-WhiskeyBuild.when cleaning' {
 Describe 'Invoke-WhiskeyBuild.when not cleaning' {
     GivenRunByDeveloper
     GivenBuildPipelinePasses
-    GivenPublishingToBuildMasterSucceeds
+    GivenNotPublishing
     GivenPreviousBuildOutput
     WhenRunningBuild
     ThenBuildOutputNotRemoved
@@ -413,7 +349,6 @@ Describe 'Invoke-WhiskeyBuild.when not cleaning' {
 
 Describe 'Invoke-WhiskeyBuild.when not publishing' {
     GivenRunByBuildServer
-    GivenPublishingToBuildMasterSucceeds
     GivenNotPublishing
     GivenThereArePublishingTasks
     GivenPublishingPipelineSucceeds
@@ -424,13 +359,9 @@ Describe 'Invoke-WhiskeyBuild.when not publishing' {
 
 Describe 'Invoke-WhiskeyBuild.when publishing but no tasks' {
     GivenRunByBuildServer
-    GivenPublishingToBuildMasterSucceeds
     GivenPublishing
     GivenThereAreNoPublishingTasks
     GivenPublishingPipelineSucceeds
     WhenRunningBuild
     ThenPublishPipelineNotRun
 }
-
-# not publishing
-

@@ -21,8 +21,6 @@ function Invoke-WhiskeyBuild
     Push-Location -Path $Context.BuildRoot
     try
     {
-        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-
         Write-Verbose -Message ('Building version {0}' -f $Context.Version.SemVer2)
         Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer2NoBuildMetadata)
         Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
@@ -35,8 +33,6 @@ function Invoke-WhiskeyBuild
         {
             Invoke-WhiskeyPipeline -Context $Context -Name 'PublishTasks'
         }
-
-        New-WhiskeyBuildMasterPackage -TaskContext $Context
 
         $succeeded = $true
     }
@@ -59,7 +55,6 @@ function Invoke-WhiskeyBuild
         {
             Publish-WhiskeyTag -TaskContext $Context 
         }
-
     }
 }
 
