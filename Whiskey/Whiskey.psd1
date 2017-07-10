@@ -149,7 +149,7 @@
 * Whiskey now runs two pipelines: a build pipeline and a publish pipeline. The build pipeline always runs. The publish pipeline only runs if being run by a build server and running on a branch that publishes.
 * ***BREAKING***: Pulishing to BuildMaster no longer happens automagically.
 * Created a `PublishBuildMasterPackage` task for creating a package in BuildMaster and starting a deploy.
-* Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyTask` and `Unregister-WhiskeyTask` functions to register/unregister commands to run before and after each task.
+* Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` functions to register/unregister commands to run before and after each task.
 '@
 
 
