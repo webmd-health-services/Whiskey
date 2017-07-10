@@ -241,6 +241,7 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
     }
     
     $context = [pscustomobject]@{
+                                    ApiKeys = @{ };
                                     Environment = $Environment;
                                     Credentials = @{ }
                                     ApplicationName = $appName;

@@ -113,7 +113,6 @@ function Assert-Context
         $Context.ByDeveloper | Should Be (-not $ByBuildServer)
     }
 
-
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
         $Context.ProGetSession.AppFeedUri | Should Be $progetUris
@@ -121,6 +120,14 @@ function Assert-Context
         $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
         $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
         $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
+    }
+
+    It 'ApiKeys property should exit' {
+        $Context | Get-Member -Name 'ApiKeys' | Should -Not -BeNullOrEmpty
+    }
+
+    It 'ApiKeys property should be a hashtable' {
+        $Context.ApiKeys | Should -BeOfType ([hashtable])
     }
 }
 
