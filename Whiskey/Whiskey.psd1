@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: parsing a whiskey.yml file that contains a single value property, e.g. just the string `BuildTasks`.
+* Fixed: parsing a whiskey.yml file that contains a single value property fails, e.g. just the string `BuildTasks`.
 * ***BREAKING***: Builds will now fail if a whiskey.yml file doesn't contain a `BuildTasks` property.
 * Whiskey now runs two pipelines: a build pipeline and a publish pipeline. The build pipeline always runs. The publish pipeline only runs if being run by a build server and running on a branch that publishes.
 * ***BREAKING***: Pulishing to BuildMaster no longer happens automagically.
