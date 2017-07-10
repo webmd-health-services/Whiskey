@@ -55,12 +55,6 @@ function Invoke-WhiskeyPipeline
         return
     }
 
-    # Tasks that should be called with the WhatIf switch when run by developers
-    # This makes builds go a little faster.
-    $developerWhatIfTasks = @{
-                                'ProGetUniversalPackage' = $true;
-                             }
-
     $taskIdx = -1
     if( $config[$Name] -is [string] )
     {
@@ -110,10 +104,6 @@ function Invoke-WhiskeyPipeline
         $taskFunctionName = $knownTasks[$taskName]
 
         $optionalParams = @{ }
-        if( $Context.ByDeveloper -and $developerWhatIfTasks.ContainsKey($taskName) )
-        {
-            $optionalParams['WhatIf'] = $True
-        }
         if ( $Clean )
         {
             $optionalParams['Clean'] = $True

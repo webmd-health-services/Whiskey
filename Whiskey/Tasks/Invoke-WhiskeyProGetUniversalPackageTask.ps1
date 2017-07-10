@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyProGetUniversalPackageTask
 {
-    [CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName='NoUpload')]
+    [CmdletBinding()]
     [Whiskey.Task("ProGetUniversalPackage")]
     param(
         [Parameter(Mandatory=$true)]
@@ -64,20 +64,19 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $tempBaseName = 'Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
+    New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' -WhatIf:$false | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
 
     try
     {
-        $shouldProcessCaption = ('creating {0} package' -f $outFile)        
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
             name = $name;
             version = $version.ToString();
             title = $name;
             description = $description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath -WhatIf:$false
+        } | ConvertTo-Json | Set-Content -Path $upackJsonPath
         
         # Add the version.json file
         @{
@@ -175,7 +174,9 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                                             $include
                                             } 
                         }
-                        if( $PSCmdlet.ShouldProcess($operationDescription,$operationDescription,$shouldProcessCaption) )
+
+                        Write-Verbose -Message $operationDescription
+                        if( $TaskContext.ByBuildServer )
                         {
                             robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
                         }
@@ -198,14 +199,14 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
         $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
 
-        $shouldProcessDescription = 'Creating universal package {0}' -f $outFile
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription,$shouldProcessDescription,$shouldProcessDescription) )
+        Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
+        if( $TaskContext.ByBuildServer )
         {
             & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
         }
 
-        $shouldProcessDescription = ('returning package path ''{0}''' -f $outFile)
-        if( $PSCmdlet.ShouldProcess($shouldProcessDescription, $shouldProcessDescription, $shouldProcessCaption) )
+        Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
+        if( $TaskContext.ByBuildServer )
         {
             $outFile
         }
@@ -245,7 +246,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
             }
             Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot)
             Start-Sleep -Milliseconds 100
-            Remove-Item -Path $tempRoot -Recurse -Force -WhatIf:$false -ErrorAction Ignore
+            Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction Ignore
         }
         while( $tryNum++ -lt $maxTries )
 

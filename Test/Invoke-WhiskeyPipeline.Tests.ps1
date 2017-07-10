@@ -276,7 +276,6 @@ BuildTasks:
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
-$whatIfTasks = @{ 'ProGetUniversalPackage' = $true; }
 $tasks = Get-WhiskeyTasks
 foreach( $taskName in ($tasks.Keys) )
 {
@@ -287,8 +286,6 @@ foreach( $taskName in ($tasks.Keys) )
         function Assert-TaskCalled
         {
             param(
-                [Switch]
-                $WithWhatIfSwitch,
                 [Switch]
                 $WithCleanSwitch
             )
@@ -308,23 +305,6 @@ foreach( $taskName in ($tasks.Keys) )
                     Write-Debug ('Path  EXPECTED  {0}' -f $TaskParameter['Path'])
                     Write-Debug ('      ACTUAL    {0}' -f $taskName)
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
-                }
-            }
-
-            if( $WithWhatIfSwitch )
-            {
-                It 'should use WhatIf switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters['WhatIf'] -eq $true
-                    }
-                }
-            }
-            else
-            {
-                It 'should not use WhatIf switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters.ContainsKey('WhatIf') -eq $false
-                    }
                 }
             }
 
@@ -362,18 +342,12 @@ foreach( $taskName in ($tasks.Keys) )
     Path: {1}
 '@ -f $pipelineName,$taskName)
 
-        $withWhatIfSwitchParam = @{ }
-        if( $whatIfTasks.ContainsKey($taskName) )
-        {
-            $withWhatIfSwitchParam['WithWhatIfSwitch'] = $true
-        }
-
         Context 'By Developer' {
             GivenRunByDeveloper
             GivenWhiskeyYmlBuildFile $whiskeyYml
             WhenRunningPipeline $pipelineName
             ThenPipelineSucceeded
-            Assert-TaskCalled @withWhatIfSwitchParam
+            Assert-TaskCalled
             # Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
             # $context = New-WhiskeyTestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
             # $context.ByDeveloper = $true
@@ -394,7 +368,7 @@ foreach( $taskName in ($tasks.Keys) )
             GivenWhiskeyYmlBuildFile $whiskeyYml
             WhenRunningPipeline $pipelineName -WithCleanSwitch
             ThenPipelineSucceeded
-            Assert-TaskCalled -WithCleanSwitch @withWhatIfSwitchParam
+            Assert-TaskCalled -WithCleanSwitch
         }
     }
 }
