@@ -1,4 +1,6 @@
 
+$events = @{ }
+
 Add-Type -TypeDefinition @"
 
 namespace Whiskey {

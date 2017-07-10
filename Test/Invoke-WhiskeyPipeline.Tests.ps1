@@ -9,6 +9,46 @@ $runByBuildServer = $false
 $context = $null
 $warnings = $null
 
+function Invoke-PreTaskPlugin
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $TaskName,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter,
+
+        [Switch]
+        $Clean
+    )
+}
+
+function Invoke-PostTaskPlugin
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        [object]
+        $TaskContext,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $TaskName,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter,
+
+        [Switch]
+        $Clean
+    )
+}
+
 function GivenFailingMSBuildProject
 {
     param(
@@ -37,6 +77,14 @@ function GivenRunByDeveloper
 {
     $script:runByDeveloper = $true
     $script:runByBuildServer = $false
+}
+
+function GivenPlugins
+{
+    Register-WhiskeyEvent -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask
+    Mock -CommandName 'Invoke-PostTaskPlugin' -ModuleName 'Whiskey'
+    Register-WhiskeyEvent -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask
+    Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
 }
 
 function GivenWhiskeyYmlBuildFile
@@ -110,6 +158,51 @@ function ThenNUnitTestsNotRun
 
     It 'should not run NUnit tests' {
         $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+    }
+}
+
+function ThenPluginsRan
+{
+    param(
+        $ForTaskNamed,
+
+        $WithParameter,
+
+        [Switch]
+        $InCleanMode
+    )
+
+    foreach( $pluginName in @( 'Invoke-PreTaskPlugin', 'Invoke-PostTaskPlugin' ) )
+    {
+        It ('should run {0}' -f $pluginName) {
+            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { $TaskContext -ne $null }
+            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { $TaskName -eq $ForTaskNamed }
+            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
+                if( $TaskParameter.Count -ne $WithParameter.Count )
+                {
+                    return $false
+                }
+
+                foreach( $key in $WithParameter.Keys )
+                {
+                    if( $TaskParameter[$key] -ne $WithParameter[$key] )
+                    {
+                        return $false
+                    }
+                }
+
+                return $true
+            }
+            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
+                Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
+                Write-Debug ('       actual    {0}' -f [bool]$Clean)
+                [bool]$Clean -eq $InCleanMode.IsPresent
+            }
+        }
+
+        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask
+        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask
     }
 }
 
@@ -275,6 +368,37 @@ BuildTasks:
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
 
+Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
+    Context 'not in clean mode' {
+        GivenRunByDeveloper
+        GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- PowerShell:
+    Path: somefile.ps1
+"@
+        GivenPlugins
+        Mock -CommandName 'Invoke-WhiskeyPowerShellTask' -ModuleName 'Whiskey'
+
+        WhenRunningPipeline 'BuildTasks'
+        ThenPipelineSucceeded
+        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
+    }
+    Context 'in clean mode' {
+        GivenRunByDeveloper
+        GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- PowerShell:
+    Path: somefile.ps1
+"@
+        GivenPlugins
+        Mock -CommandName 'Invoke-WhiskeyPowerShellTask' -ModuleName 'Whiskey'
+
+        WhenRunningPipeline 'BuildTasks' -WithCleanSwitch
+        ThenPipelineSucceeded
+        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' } -InCleanMode
+    }
+}
+
 # Tasks that should be called with the WhatIf parameter when run by developers
 $tasks = Get-WhiskeyTasks
 foreach( $taskName in ($tasks.Keys) )
@@ -327,13 +451,7 @@ foreach( $taskName in ($tasks.Keys) )
         }
 
 
-        # $version = '4.3.5-rc.1'
-        # $functionName = 'Invoke-Whiskey{0}Task' -f $taskName
-
         Mock -CommandName $functionName -ModuleName 'Whiskey'
-        # Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
-        # Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
-        # Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Verifiable
 
         $pipelineName = 'BuildTasks'
         $whiskeyYml = (@'
@@ -348,11 +466,6 @@ foreach( $taskName in ($tasks.Keys) )
             WhenRunningPipeline $pipelineName
             ThenPipelineSucceeded
             Assert-TaskCalled
-            # Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { return $false }
-            # $context = New-WhiskeyTestContext -ForTaskName $taskName -TaskParameter @{ 'Path' = $taskName } -ForDeveloper
-            # $context.ByDeveloper = $true
-            # $context.ByBuildServer = $false
-            # Invoke-WhiskeyPipeline -Context $context -Name 'BuildTasks'
         }
 
         Context 'By Jenkins' {

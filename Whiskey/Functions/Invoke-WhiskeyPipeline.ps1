@@ -109,14 +109,43 @@ function Invoke-WhiskeyPipeline
             $optionalParams['Clean'] = $True
         }
 
-        Write-Verbose -Message ('{0}' -f $taskName)
-        $startedAt = Get-Date
         #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
+        $prefix = '[{0}]' -f $taskName
+        Write-Verbose -Message $prefix
+        if( $events.ContainsKey('BeforeTask') )
+        {
+            $events['BeforeTask'] | ForEach-Object { 
+                $commandName = $_
+                Write-Verbose -Message ('{0}  [OnBeforeTask]  {1}' -f $prefix,$commandName) -Verbose
+                $startedAt = Get-Date
+                & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
+                $endedAt = Get-Date
+                $duration = $endedAt - $startedAt
+                Write-Verbose ('{0}                  COMPLETED in {1}' -f $prefix,$duration) -Verbose
+                Write-Verbose ($prefix) -Verbose
+            }
+        }
+        
+        $startedAt = Get-Date
         & $taskFunctionName -TaskContext $context -TaskParameter $taskItem @optionalParams
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
-        Write-Verbose ('{0} COMPLETED in {1}' -f $taskName,$duration)
-        Write-Verbose ('')
+        Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
+        Write-Verbose ($prefix)
+
+        if( $events.ContainsKey('AfterTask') )
+        {
+            $events['AfterTask'] | ForEach-Object { 
+                $commandName = $_
+                Write-Verbose -Message ('{0}  [OnAfterTask]  {1}' -f $prefix,$commandName) -Verbose
+                $startedAt = Get-Date
+                & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
+                $endedAt = Get-Date
+                $duration = $endedAt - $startedAt
+                Write-Verbose ('{0}                 COMPLETED in {1}' -f $prefix,$duration) -Verbose
+                Write-Verbose ($prefix) -Verbose
+            }
+        }
 
     }
 }
