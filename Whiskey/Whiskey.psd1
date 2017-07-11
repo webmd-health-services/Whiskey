@@ -94,6 +94,7 @@
                             'Invoke-WhiskeyBuild',
                             'New-WhiskeyContext',
                             'Publish-WhiskeyBuildMasterPackage',
+                            'Publish-WhiskeyProGetUniversalPackage',
                             'Publish-WhiskeyTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
@@ -150,6 +151,7 @@
 * ***BREAKING***: Pulishing to BuildMaster no longer happens automagically.
 * Created a `PublishBuildMasterPackage` task for creating a package in BuildMaster and starting a deploy.
 * Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` functions to register/unregister commands to run before and after each task.
+* Created `PublishProGetUniversalPackage` task for publishing universal packages to ProGet.
 '@
 
 

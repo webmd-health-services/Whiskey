@@ -9,7 +9,7 @@ function Test-ProGetFeed
     The `Test-ProGetFeed` function will return `$true` if the requested package feed already exists. The function utilizes ProGet's native API and uses the API key of a `ProGetSession` instead of the preferred PSCredential authentication.
 
     .EXAMPLE
-    Test-ProGetFeed -ProGetSession $ProGetSession -FeedName 'Apps' -FeedType 'ProGet'
+    Test-ProGetFeed -Session $ProGetSession -FeedName 'Apps' -FeedType 'ProGet'
 
     Demonstrates how to call `Test-ProGetFeed`. In this case, a value of `$true` will be returned if a Universal package feed named 'Apps' exists. Otherwise, `$false`
     #>
@@ -18,7 +18,7 @@ function Test-ProGetFeed
         [Parameter(Mandatory=$true)]
         [pscustomobject]
         # The session includes ProGet's URI and the API key. Use `New-ProGetSession` to create session objects
-        $ProGetSession,
+        $Session,
 
         [Parameter(Mandatory=$true)]
         [string]
@@ -34,19 +34,19 @@ function Test-ProGetFeed
 
     Set-StrictMode -Version 'Latest'
 
-    $proGetPackageUri = [String]$ProGetSession.Uri
-    if (!$ProGetSession.ApiKey)
+    $proGetPackageUri = [String]$Session.Uri
+    if (!$Session.ApiKey)
     {
         Write-Error -Message ('Failed to test for package feed ''{0}/{1}''. This function uses the ProGet Native API, which requires an API key. When you create a ProGet session with `New-ProGetSession`, provide an API key via the `ApiKey` parameter' -f $FeedType, $FeedName)
         return
     }
-    $proGetApiKey = $ProGetSession.ApiKey
+    $proGetApiKey = $Session.ApiKey
 
     $Parameters = @{}
     $Parameters['FeedType_Name'] = $FeedType
     $Parameters['Feed_Name'] = $FeedName
 
-    $feedExists = Invoke-ProGetNativeApiMethod -Session $ProGetSession -Name 'Feeds_GetFeed' -Parameter $Parameters
+    $feedExists = Invoke-ProGetNativeApiMethod -Session $Session -Name 'Feeds_GetFeed' -Parameter $Parameters
     if($feedExists -match 'Feed_Id')
     {
         return $true
