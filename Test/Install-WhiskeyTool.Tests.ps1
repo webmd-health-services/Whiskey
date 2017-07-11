@@ -74,7 +74,7 @@ function Invoke-PowershellInstall
     $optionalParams = @{ }
     $Global:Error.Clear()
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
-    
+
     if( -not $ForRealsies )
     {
         It 'should download the module' {

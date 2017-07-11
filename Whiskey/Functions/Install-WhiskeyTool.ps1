@@ -56,7 +56,7 @@ function Install-WhiskeyTool
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
     {
         $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
