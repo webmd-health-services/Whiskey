@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 
 $defaultPackageName = 'WhiskeyTest'
 $defaultDescription = 'A package created to test the Invoke-WhiskeyProGetUniversalPackageTask function in the Whiskey module.'
-$feedUri = 'snafufurbar'
-$feedCredential = New-Credential -UserName 'fubar' -Password 'snafu'
 $defaultVersion = '1.2.3'
 
 $threwException = $false
@@ -96,10 +94,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $ShouldNotSetPackageVariables,
 
         [Switch]
-        $WhenGivenCleanSwitch,
-
-        [switch]
-        $shouldHaveCompressionLevel
+        $WhenGivenCleanSwitch
     )
 
     if( -not $Version )
@@ -1025,6 +1020,21 @@ function Expand-Package
     return $expandPath
 }
 
+function Get-PackageSize
+{
+    param(
+        $PackageName = $defaultPackageName,
+        $PackageVersion = $defaultVersion
+    )
+
+    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
+    $outputRoot = Get-BuildRoot
+    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
+    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
+    $packageLength = (get-item $packagePath).Length
+    return $packageLength
+}
+
 function ThenPackageShouldInclude
 {
     param(
@@ -1063,6 +1073,44 @@ function ThenPackageShouldNotInclude
         It ('package should not include {0}' -f $item) {
             (Join-Path -Path $packageRoot -ChildPath $item) | Should -Not -Exist
         }
+    }
+}
+
+function ThenPackageShouldbeBeCompressed
+{
+    param(
+        $PackageName = $defaultPackageName,
+        $PackageVersion = $defaultVersion,
+        [Parameter(Position=0)]
+        [string[]]
+        $Path,
+
+        [Int]
+        $ExpectedPackageSize
+    )
+
+    $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
+    It ('should have a compressed package size of {0}' -f $ExpectedPackageSize) {
+        $packageSize | Should -Be $ExpectedPackageSize
+    }
+}
+
+function WhenPackagingWithBadCompressionLevelShouldThrowAnError {
+    Param(
+        [object[]]
+        $CompressionLevel
+    )
+    
+    $context = New-WhiskeyTestContext -ForDeveloper
+
+    $Global:Error.Clear()
+
+    It 'should throw an exception' {
+        { Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $context -TaskParameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar'; CompressionLevel = $compressionLevel } } | Should Throw
+    }
+
+    It 'should throw invalid compressionlevel input' {
+        $Global:Error | Should BeLike ('*"{0}" is not a valid Compression Level. it must be an integer between 0-9.*' -f $compressionLevel)
     }
 }
 
@@ -1110,25 +1158,25 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging a directory' {
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
 }
 
-Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel of 3 is included' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel of 9 is included' {
     GivenARepositoryWithFiles 'one.ps1'
-    WhenPackaging -Paths '*.ps1'  -CompressionLevel 3
-    it 'should have compressed at a level of 3' {
-        (Get-Item -Path 'one.ps1').Length -eq 3
-    }
+    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 798
 }
 
 Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel is not included' {
     GivenARepositoryWithFiles 'one.ps1'
-    WhenPackaging -Paths '*.ps1'
-    it 'should have compressed at a level of 1' {
-        (Get-Item -Path 'one.ps1').Length -eq 1
-    }
+    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 809
 }
 
 Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when a bad compressionLevel is included' {
     GivenARepositoryWithFiles 'one.ps1'
-    it 'should have compressed at a level of 1' {
-        (Get-Item -Path 'one.ps1').Length -eq 1
-    }
+    WhenPackagingWithBadCompressionLevelShouldThrowAnError -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good"
+}
+
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel of 7 is included as a string' {
+    GivenARepositoryWithFiles 'one.ps1'
+    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 798
 }

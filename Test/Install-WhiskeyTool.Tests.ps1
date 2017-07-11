@@ -251,3 +251,6 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
     }
 }
 
+Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore to true' {
+    
+}
