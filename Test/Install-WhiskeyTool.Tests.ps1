@@ -74,7 +74,6 @@ function Invoke-PowershellInstall
     $optionalParams = @{ }
     $Global:Error.Clear()
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
-
     if( -not $ForRealsies )
     {
         It 'should download the module' {
@@ -251,6 +250,11 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
     }
 }
 
-Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore to true' {
-    
+Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
+    It 'should set EnableNygetPackageRestore to true' {
+        Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'false'
+        (get-Item -Path 'env:EnableNuGetPackageRestore').Value | should be false
+        Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+         (get-Item -Path 'env:EnableNuGetPackageRestore').Value | should be true
+    }
 }
