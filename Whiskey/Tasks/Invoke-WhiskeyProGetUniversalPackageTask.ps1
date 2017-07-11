@@ -205,7 +205,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
         if( $TaskContext.ByBuildServer )
         {
-            & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*') 
+            & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
         }
 
         Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
