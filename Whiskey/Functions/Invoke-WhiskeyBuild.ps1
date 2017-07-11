@@ -50,11 +50,6 @@ function Invoke-WhiskeyBuild
             $status = 'Completed'
         }
         Set-WhiskeyBuildStatus -Context $Context -Status $status
-
-        if( $Context.ByBuildServer -and $succeeded )
-        {
-            Publish-WhiskeyTag -TaskContext $Context 
-        }
     }
 }
 
