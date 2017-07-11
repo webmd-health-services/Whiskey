@@ -152,6 +152,8 @@
 * Created a `PublishBuildMasterPackage` task for creating a package in BuildMaster and starting a deploy.
 * Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` functions to register/unregister commands to run before and after each task.
 * Created `PublishProGetUniversalPackage` task for publishing universal packages to ProGet.
+* The `ProGetUniversalPackage` task no longer publishes the package to ProGet. It only creates the package. To publish the package, use the new `PublishProGetUniversalPackage` task.
+* ***BREAKING***: `New-WhiskeyContext` no longer has `ProGetAppFeedUri` or `ProGetAppFeedName` parameters. Update your `whiskey.yml` files to include that information as properties on the `PublishProGetUniversalPackage` task.
 '@
 
 

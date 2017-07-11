@@ -230,7 +230,6 @@ function New-WhiskeyTestContext
         }
     }
     $progetArgs = @{
-                    ProGetAppFeedUri = $progetUris;
                     NpmFeedUri = $NpmFeedUri;
                     NuGetFeedUri = $NuGetFeedUri;
                     PowerShellFeedUri = $PowerShellFeedUri;

@@ -67,14 +67,6 @@ function New-WhiskeyContext
         # The credential to use when authenticating to ProGet. Required if running under a build server.
         $ProGetCredential,
 
-        [uri[]]
-        # The URI to ProGet. Used to get Application Packages
-        $ProGetAppFeedUri,
-
-        [string]
-        # The name/path to the feed in ProGet where universal application packages should be uploaded. The default is `upack/App`. Combined with the `ProGetUri` parameter to create the URI to the feed.
-        $ProGetAppFeedName = 'Apps',
-
         [uri]
         # The URI to ProGet to get NuGet Packages
         $NuGetFeedUri,
@@ -135,8 +127,6 @@ function New-WhiskeyContext
     $progetSession = [pscustomobject]@{
                                             
                                             Credential = $null;
-                                            AppFeedUri = $ProGetAppFeedUri
-                                            AppFeedName = $ProGetAppFeedName;
                                             NpmFeedUri = $NpmFeedUri;
                                             NuGetFeedUri = $NuGetFeedUri;
                                             PowerShellFeedUri = $PowerShellFeedUri;                                           
@@ -254,7 +244,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
                                     OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
                                     TaskName = $null;
                                     TaskIndex = -1;
-                                    PackageVariables = @{};
                                     Version = [pscustomobject]@{
                                                                      SemVer2 = $semVersion;
                                                                      SemVer2NoBuildMetadata = $semVersionNoBuild;

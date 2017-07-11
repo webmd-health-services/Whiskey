@@ -20,7 +20,6 @@ Get-ChildItem 'env:' | Out-String | Write-Verbose
 $configuration = 'Release'
 
 $toolParameters = @{
-                        'ProGetAppFeedUri' = 'https://proget.example.com/';
                         'NpmFeedUri' = 'https://npm.example.com/';
                         'NuGetFeedUri' = 'https://nuget.example.com/';
                         'PowerShellFeedUri' = 'https://powershell.example.com/';
@@ -31,8 +30,6 @@ if( $runningUnderBuildServer )
 {
     $toolParameters['BBServerCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
     $toolParameters['BBServerUri'] = 'https://bitbucketserver.example.com/'
-    $toolParameters['BuildMasterUri'] = 'https://buildmaster.example.com/'
-    $toolParameters['BuildMasterApiKey'] = 'letmein'
     $toolParameters['ProGetCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
 }
 

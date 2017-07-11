@@ -33,7 +33,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     {
         if( -not $TaskParameter.ContainsKey($mandatoryName) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''{0}'' is mandatory.' -f $mandatoryName)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryName)
         }
     }
 
@@ -210,27 +210,6 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         {
             $outFile
         }
-
-        # Upload to ProGet
-        if( -not $TaskContext.Publish )
-        {
-            return
-        }
-
-        foreach($uri in $TaskContext.ProGetSession.AppFeedUri)
-        {
-            $progetSession = New-ProGetSession -Uri $uri -Credential $TaskContext.ProGetSession.Credential
-            Publish-ProGetUniversalPackage -ProGetSession $progetSession -FeedName  $TaskContext.ProGetSession.AppFeedName -PackagePath $outFile -ErrorAction Stop
-        }
-        
-        $TaskContext.PackageVariables['ProGetPackageVersion'] = $version            
-        if ( -not $TaskContext.ApplicationName ) 
-        {
-            $TaskContext.ApplicationName = $name
-        }
-            
-        # Legacy. Must do this until all plans/pipelines reference/use the ProGetPackageVersion property instead.
-        $TaskContext.PackageVariables['ProGetPackageName'] = $version
     }
     finally
     {
