@@ -96,7 +96,10 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $ShouldNotSetPackageVariables,
 
         [Switch]
-        $WhenGivenCleanSwitch
+        $WhenGivenCleanSwitch,
+
+        [switch]
+        $shouldHaveCompressionLevel
     )
 
     if( -not $Version )
@@ -914,7 +917,9 @@ function WhenPackaging
         $WithVersion = $defaultVersion,
         $WithApplicationName,
         [Switch]
-        $ByDeveloper
+        $ByDeveloper,
+        [object[]]
+        $CompressionLevel
     )
 
     $taskParameter = @{ }
@@ -945,6 +950,10 @@ function WhenPackaging
     if( $FromSourceRoot )
     {
         $taskParameter['SourceRoot'] = $FromSourceRoot
+    }
+    if( $CompressionLevel )
+    {
+        $taskParameter['CompressionLevel'] = $CompressionLevel
     }
 
     $byWhoArg = @{ }
@@ -1099,4 +1108,27 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging a directory' {
     WhenPackaging -Paths 'dir1\subdir' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir1\subdir\file.txt'
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
+}
+
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel of 3 is included' {
+    GivenARepositoryWithFiles 'one.ps1'
+    WhenPackaging -Paths '*.ps1'  -CompressionLevel 3
+    it 'should have compressed at a level of 3' {
+        (Get-Item -Path 'one.ps1').Length -eq 3
+    }
+}
+
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel is not included' {
+    GivenARepositoryWithFiles 'one.ps1'
+    WhenPackaging -Paths '*.ps1'
+    it 'should have compressed at a level of 1' {
+        (Get-Item -Path 'one.ps1').Length -eq 1
+    }
+}
+
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when a bad compressionLevel is included' {
+    GivenARepositoryWithFiles 'one.ps1'
+    it 'should have compressed at a level of 1' {
+        (Get-Item -Path 'one.ps1').Length -eq 1
+    }
 }

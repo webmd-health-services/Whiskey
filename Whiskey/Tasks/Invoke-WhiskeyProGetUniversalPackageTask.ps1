@@ -45,7 +45,11 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
+    [int]$compressionLevel = $TaskParameter['CompressionLevel']
     
+    if( -not $compressionLevel ){
+        $compressionLevel = 1;
+    }
     $parentPathParam = @{ }
     $sourceRoot = $TaskContext.BuildRoot
     if( $TaskParameter.ContainsKey('SourceRoot') )
@@ -202,7 +206,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
         if( $TaskContext.ByBuildServer )
         {
-            & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+            & $7zExePath 'a' '-tzip' '-mx{0}' $outFile (Join-Path -Path $tempRoot -ChildPath '*') -f $compressionLevel
         }
 
         Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
