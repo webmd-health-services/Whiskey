@@ -116,13 +116,13 @@ function Invoke-WhiskeyPipeline
         {
             $events['BeforeTask'] | ForEach-Object { 
                 $commandName = $_
-                Write-Verbose -Message ('{0}  [OnBeforeTask]  {1}' -f $prefix,$commandName) -Verbose
+                Write-Verbose -Message ('{0}  [OnBeforeTask]  {1}' -f $prefix,$commandName)
                 $startedAt = Get-Date
                 & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}                  COMPLETED in {1}' -f $prefix,$duration) -Verbose
-                Write-Verbose ($prefix) -Verbose
+                Write-Verbose ('{0}                  COMPLETED in {1}' -f $prefix,$duration)
+                Write-Verbose ($prefix)
             }
         }
         
@@ -137,13 +137,13 @@ function Invoke-WhiskeyPipeline
         {
             $events['AfterTask'] | ForEach-Object { 
                 $commandName = $_
-                Write-Verbose -Message ('{0}  [OnAfterTask]  {1}' -f $prefix,$commandName) -Verbose
+                Write-Verbose -Message ('{0}  [OnAfterTask]  {1}' -f $prefix,$commandName)
                 $startedAt = Get-Date
                 & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}                 COMPLETED in {1}' -f $prefix,$duration) -Verbose
-                Write-Verbose ($prefix) -Verbose
+                Write-Verbose ('{0}                 COMPLETED in {1}' -f $prefix,$duration)
+                Write-Verbose ($prefix)
             }
         }
 
