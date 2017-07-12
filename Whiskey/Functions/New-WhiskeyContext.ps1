@@ -23,7 +23,6 @@ function New-WhiskeyContext
     In addition, if you're creating a context while running under a build server, you must supply ProGet and Bitbucket Server connection information. That connection information is returned in the following properties:
 
     * `ProGetSession`
-    * `BBServerConnection`
 
     .EXAMPLE
     New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug'
@@ -31,7 +30,7 @@ function New-WhiskeyContext
     Demonstrates how to create a context for a developer build.
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -BBServerCredential $bbCred -BBServerUri $bbUri --ProGetCredential $progetCred -ProGetUri $progetUri
+    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -ProGetCredential $progetCred
 
     Demonstrates how to create a context for a build run by a build server.
     #>
@@ -51,16 +50,6 @@ function New-WhiskeyContext
         [string]
         # The configuration to use when compiling code, e.g. `Debug`, `Release`.
         $BuildConfiguration,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [pscredential]
-        # The credential to use when authenticating to Bitbucket Server. Required if running under a build server.
-        $BBServerCredential,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [uri]
-        # The URI to Bitbucket Server. Required if running under a build server.
-        $BBServerUri,
 
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [pscredential]
@@ -125,7 +114,6 @@ function New-WhiskeyContext
     $bitbucketConnection = $null
     $progetSession = $null   
     $progetSession = [pscustomobject]@{
-                                            
                                             Credential = $null;
                                             NpmFeedUri = $NpmFeedUri;
                                             NuGetFeedUri = $NuGetFeedUri;
@@ -142,10 +130,7 @@ function New-WhiskeyContext
             throw (@"
 New-WhiskeyContext is being run by a build server, but called using the developer parameter set. When running under a build server, you must supply the following parameters:
 
-* BBServerCredential
-* BBServerUri
 * ProGetCredential
-* ProGetUri
 
 Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running under a build server or not.
 "@)
@@ -164,7 +149,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
             $releaseName = $branch
         }
 
-        $bitbucketConnection = New-BBServerConnection -Credential $BBServerCredential -Uri $BBServerUri
         $progetSession.Credential = $ProGetCredential
 
         if( $config['PrereleaseMap'] )
@@ -238,7 +222,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
                                     ReleaseName = $releaseName;
                                     BuildRoot = $buildRoot;
                                     ConfigurationPath = $ConfigurationPath;
-                                    BBServerConnection = $bitbucketConnection;
                                     ProGetSession = $progetSession;
                                     BuildConfiguration = $BuildConfiguration;
                                     OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);

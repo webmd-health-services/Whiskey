@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $buildServerContext = @{
-                            BBServerCredential = (New-Credential -UserName 'bitbucket' -Password 'snafu');
-                            BBServerUri = 'http://bitbucket.example.com/';
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
@@ -438,12 +436,6 @@ function ThenBuildServerContextCreated
         $iWasCalled = $true
         Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
 
-        It 'should set Bitbucket Server connection' {
-            $Context.BBServerConnection | Should Not BeNullOrEmpty
-            $Context.BBServerConnection.Uri | Should Be $buildServerContext['BBServerUri']
-            [object]::ReferenceEquals($Context.BBServerConnection.Credential,$buildServerContext['BBServerCredential']) | Should Be $true
-        }
-
         It 'should set ProGet session' {
             $Context.ProGetSession | Should Not BeNullOrEmpty
             [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
@@ -503,10 +495,6 @@ function ThenDeveloperContextCreated
         $iWasCalled = $true
 
         Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion
-
-        It 'should not set Bitbucket Server connection' {
-            $Context.BBServerConnection | Should BeNullOrEmpty
-        }
 
         It 'should set application name' {
             $Context.ApplicationName | Should Be $WithApplicationName
