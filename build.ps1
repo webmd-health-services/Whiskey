@@ -28,8 +28,6 @@ $toolParameters = @{
 $runningUnderBuildServer = Test-WhiskeyRunByBuildServer
 if( $runningUnderBuildServer )
 {
-    $toolParameters['BBServerCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
-    $toolParameters['BBServerUri'] = 'https://bitbucketserver.example.com/'
     $toolParameters['ProGetCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
 }
 
