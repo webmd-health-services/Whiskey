@@ -252,7 +252,6 @@ function WhenRunningPipeline
     Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
 
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
-    Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' 
 
     $configuration = 'FubarSnafu'
     $optionalParams = @{ }
