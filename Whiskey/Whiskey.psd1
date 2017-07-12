@@ -95,7 +95,7 @@
                             'New-WhiskeyContext',
                             'Publish-WhiskeyBuildMasterPackage',
                             'Publish-WhiskeyProGetUniversalPackage',
-                            'Publish-WhiskeyTag',
+                            'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
                             'Resolve-WhiskeyPowerShellModuleVersion',
