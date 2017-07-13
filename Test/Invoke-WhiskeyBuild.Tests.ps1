@@ -149,20 +149,6 @@ function ThenBuildStatusMarkedAsFailed
     ThenBuildStatusSetTo 'Failed'
 }
 
-function ThenCommitNotTagged
-{
-    It 'should not tag the commit ' {
-        Assert-MockCalled -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey' -Times 0
-    }
-}
-
-function ThenCommitTagged
-{
-    It ('should tag the commit') {
-        Assert-ContextPassedTo 'Publish-WhiskeyTag'
-    }
-}
-
 function ThenContextPassedWhenSettingBuildStatus
 {
     ThenMockCalled 'Set-WhiskeyBuildStatus' -Times 2
@@ -191,7 +177,6 @@ function WhenRunningBuild
         $WithCleanSwitch
     )
 
-    Mock -CommandName 'Publish-WhiskeyTag' -ModuleName 'Whiskey'
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
 
     Mock -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
@@ -266,7 +251,6 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         ThenBuildPipelineRan
         ThenPublishPipelineRan
         ThenBuildStatusMarkedAsCompleted
-        ThenCommitNotTagged
     }
     Context 'By Build Server' {
         GivenRunByBuildServer
@@ -277,7 +261,6 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         ThenBuildPipelineRan
         ThenPublishPipelineRan
         ThenBuildStatusMarkedAsCompleted
-        ThenCommitTagged
     }
 }
 
@@ -290,7 +273,6 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
         ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
     }
     Context 'By Build Server' {
         GivenRunByBuildServer
@@ -300,7 +282,6 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
         ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
     }
 }
 
@@ -314,7 +295,6 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         ThenBuildPipelineRan
         ThenPublishPipelineRan
         ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
     }
     Context 'By Build Server' {
         GivenRunByBuildServer
@@ -324,7 +304,6 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         ThenBuildPipelineRan
         ThenPublishPipelineRan
         ThenBuildStatusMarkedAsFailed
-        ThenCommitNotTagged
     }
 }
 

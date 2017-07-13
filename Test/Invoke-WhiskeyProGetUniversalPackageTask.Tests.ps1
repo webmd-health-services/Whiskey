@@ -11,7 +11,8 @@ $threwException = $false
 
 $preTempDirCount = 0
 $postTempDirCount = 0
-function ThenTaskFails {
+function ThenTaskFails 
+{
     Param(
         [String]
         $error
@@ -21,7 +22,8 @@ function ThenTaskFails {
             $Global:Error | Should match $error
         }
 }
-function ThenTaskSucceeds {
+function ThenTaskSucceeds 
+{
         It ('should not throw an error message') {
             $Global:Error | Should BeNullOrEmpty
         }
@@ -51,9 +53,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         [string]
         $Version,
 
-        [Switch]
-        $WithNoProGetParameters,
-
         [string[]]
         $HasRootItems,
 
@@ -69,12 +68,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         [Switch]
         $ShouldNotCreatePackage,
         
-        [Switch]
-        $ShouldNotUploadPackage,
-
-        [Switch]
-        $ShouldUploadPackage,
-
         [Switch]
         $ShouldWriteNoErrors,
 
@@ -103,9 +96,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         $WhenRunByBuildServer,
-
-        [Switch]
-        $ShouldNotSetPackageVariables,
 
         [Switch]
         $WhenGivenCleanSwitch
@@ -337,95 +327,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         }
     }
 
-    if( $ShouldNotUploadPackage )
-    {
-        It 'should not upload package to ProGet' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -Times 0
-        }
-    }
-
-    if( $ShouldUploadPackage )
-    {
-        if( -not $ShouldFailWithErrorMessage )
-        {
-            foreach ( $api in $taskContext.ProGetSession.AppFeedUri )
-            {
-                It ('should upload package to {0} ProGet instance with the defined session info' -f $api) {
-                    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-                        #$DebugPreference = 'Continue'
-                        Write-Debug $ProGetSession.Uri
-                        Write-Debug $api
-                        $ProGetSession.Uri -eq $api
-                    }
-                }
-            }
-        }
-        It 'should upload package to ProGet with session credential' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-                $ProGetSession.Credential.UserName -eq $taskContext.ProGetSession.Credential.UserName -and
-                $ProGetSession.Credential.GetNetworkCredential().Password -eq $taskContext.ProGetSession.Credential.GetNetworkCredential().Password
-            }
-        }
-
-        It 'should upload the configured package to ProGet' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-                $version = [semversion.SemanticVersion]$taskContext.Version.SemVer2NoBuildMetadata
-                $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
-                $fixRegex = '[{0}]' -f ($badChars -join '')
-                $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
-                $outDirectory = $TaskContext.OutputDirectory
-                $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
-
-                $PackagePath -eq $outFile
-            }
-        }
-
-        It 'should upload package to the defined ProGet feed' {
-            Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-                $FeedName -eq $taskContext.ProGetSession.AppFeedName
-            }
-        }
-
-        if( $ShouldNotSetPackageVariables )
-        {
-            It 'should not set package version package variable' {
-                $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $false
-            }
-
-            It 'should not set legacy package version package variable' {
-                $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $false
-            }
-            
-            It 'should not set package Application name' {
-                $taskContext.ApplicationName | Should BeNullOrEmpty
-            }         
-        }
-        else
-        {
-            It 'should set package version package variable' {
-                $taskContext.PackageVariables.ContainsKey('ProGetPackageVersion') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageVersion'] | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
-            }
-
-            It 'should set legacy package version package variable' {
-                $taskContext.PackageVariables.ContainsKey('ProGetPackageName') | Should Be $true
-                $taskContext.PackageVariables['ProGetPackageName'] | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
-            }
-            if( $ForApplicationName )
-            {
-                It 'should not set package Application Name' {
-                    $taskContext.ApplicationName | Should Be $ForApplicationName
-                }            
-            }
-            else
-            {           
-                It 'should set package application name' {
-                    $taskContext.ApplicationName | Should Be $Name
-                }
-            }
-        }
-    }
-
     Context 'upack.json' {
         $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
         It 'should be valid json' {
@@ -449,11 +350,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         }
     }
     #endregion
-}
-
-function Get-BuildRoot
-{
-    return Join-Path -Path $TestDrive.FullName -ChildPath 'Repo'
 }
 
 function Given7ZipIsInstalled
@@ -531,15 +427,6 @@ function Initialize-Test
         New-Item -Path (Join-Path -Path $SourceRoot -ChildPath $itemName) -ItemType 'File' | Out-Null
     }
 
-    if ( $WhenUploadFails )
-    {
-        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith { Write-Error 'failed to upload' }
-    }
-    else
-    {
-        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
-    }
-    
     if( -not $AsDeveloper )
     {
         $gitBranch = 'origin/develop'
@@ -641,7 +528,6 @@ function WhenPackaging
         [object[]]
         $CompressionLevel
     )
-
     $taskParameter = @{ }
     if( $WithPackageName )
     {
@@ -707,7 +593,6 @@ function WhenPackaging
             Measure-Object | 
             Select-Object -ExpandProperty Count
     }
-
     $preTempDirCount = Get-TempDirCount
     try
     {
@@ -830,7 +715,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything in 
                                             -ThatIncludes '*.html' `
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html' `
-                                            -ShouldUploadPackage `
                                             -WhenRunByBuildServer
 }
 
@@ -858,7 +742,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything in 
                                             -HasFiles 'html.html' `
                                             -WhenRunByDeveloper `
                                             -ShouldNotCreatePackage `
-                                            -ShouldNotUploadPackage `
                                             -ShouldWriteNoErrors `
                                             -ShouldReturnNothing
 }
@@ -874,7 +757,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging whitelisted fi
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html','style.css' `
                                             -NotHasFiles 'code.cs' `
-                                            -ShouldUploadPackage `
                                             -WhenRunByBuildServer
 }
 
@@ -889,7 +771,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging multiple direc
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles 'code.cs' `
-                                            -ShouldUploadPackage `
                                             -WhenRunByBuildServer
 }
 
@@ -905,7 +786,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when whitelist includes items
                                             -HasRootItems 'dir1' `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles 'html2.html','sub' `
-                                            -ShouldUploadPackage `
                                             -WhenRunByBuildServer
 }
 
@@ -919,7 +799,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when paths don''t exist' {
                                             -ThatIncludes '*' `
                                             -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                                             -ShouldNotCreatePackage `
-                                            -ShouldNotUploadPackage `
                                             -ErrorAction SilentlyContinue `
                                             -WhenRunByBuildServer
 }
@@ -934,23 +813,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when path contains known dire
                                             -HasRootItems 'dir1' `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles '.git','.hg','obj' `
-                                            -ShouldUploadPackage `
-                                            -WhenRunByBuildServer
-}
-
-Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when package upload fails' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -WhenUploadFails
-
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-                                            -ThatIncludes '*.html' `
-                                            -HasRootItems $dirNames `
-                                            -HasFiles 'html.html' `
-                                            -ShouldUploadPackage `
-                                            -ShouldFailWithErrorMessage 'failed to upload' `
-                                            -ShouldNotSetPackageVariables `
-                                            -ErrorAction SilentlyContinue `
                                             -WhenRunByBuildServer
 }
 
@@ -996,7 +858,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 
         It 'should fail' {
             $threwException | Should Be $true
-            $Global:Error | Should BeLike ('*Element ''{0}'' is mandatory.' -f $parameterName)
+            $Global:Error | Should BeLike ('*Property ''{0}'' is mandatory.' -f $parameterName)
         }
     }
 }
@@ -1076,7 +938,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything wit
                                             -ThatIncludes '*.html' `
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html' `
-                                            -ShouldUploadPackage `
                                             -ForApplicationName 'foo' `
                                             -WhenRunByBuildServer
 }
@@ -1089,8 +950,6 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when given Clean Switch' {
                                             -WhenGivenCleanSwitch `
                                             -ShouldReturnNothing `
                                             -ShouldNotCreatePackage `
-                                            -ShouldNotUploadPackage `
-                                            -ShouldNotSetPackageVariables `
                                             -WhenRunByBuildServer
     Then7zipShouldNotExist
 }

@@ -5,12 +5,9 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $buildServerContext = @{
-                            BBServerCredential = (New-Credential -UserName 'bitbucket' -Password 'snafu');
-                            BBServerUri = 'http://bitbucket.example.com/';
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
-$progetUris = @( $progetUri, [uri]'https://proget.another.example.com/' )
 $configurationPath = $null
 $context = $null
 
@@ -31,8 +28,6 @@ function Assert-Context
         $ApplicationName,
 
         $ReleaseName,
-
-        $WithProGetAppFeed = 'Apps', 
 
         $WithProGetNpmFeed = 'npm/npm',
 
@@ -69,11 +64,6 @@ function Assert-Context
 
     It 'should have TaskIndex property' {
         $Context.TaskIndex | Should Be -1
-    }
-
-    It 'should have PackageVariables property' {
-        $Context.PackageVariables | Should BeOfType ([hashtable])
-        $Context.PackageVariables.Count | Should Be 0
     }
 
     ThenSemVer2Is $SemanticVersion
@@ -115,8 +105,6 @@ function Assert-Context
 
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.AppFeedUri | Should Be $progetUris
-        $Context.ProGetSession.AppFeedName | Should Be $WithProGetAppFeed
         $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
         $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
         $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
@@ -320,8 +308,6 @@ function WhenCreatingContext
         [Switch]
         $ByBuildServer,
 
-        $WithProGetAppFeed = 'Apps', 
-
         $WithProGetNpmFeed = 'npm/npm',
 
         $WithProGetNuGetFeed = 'nuget/NuGet',
@@ -350,10 +336,6 @@ function WhenCreatingContext
         if( -not $WithNoToolInfo )
         {
             $optionalArgs = $buildServerContext.Clone()
-            if( $WithProGetAppFeed )
-            {
-                $optionalArgs['ProGetAppFeedName'] = $WithProGetAppFeed
-            }
             if( $WithProGetNpmFeed )
             {
                 $optionalArgs['NpmFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNpmFeed
@@ -377,7 +359,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' -ProGetAppFeedUri $progetUris @optionalArgs
+            $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' @optionalArgs
         }
         catch
         {
@@ -421,8 +403,6 @@ function ThenBuildServerContextCreated
         [String]
         $WithReleaseName = $null,
 
-        $WithProGetAppFeed, 
-
         $WithProGetNpmFeed,
 
         $WithProGetNuGetFeed,
@@ -440,10 +420,6 @@ function ThenBuildServerContextCreated
     process
     {
         $optionalArgs = @{}
-        if( $WithProGetAppFeed )
-        {
-            $optionalArgs['WithProGetAppFeed'] = $WithProGetAppFeed
-        }
         if( $WithProGetNpmFeed )
         {
             $optionalArgs['WithProGetNpmFeed'] = $WithProGetNpmFeed
@@ -459,12 +435,6 @@ function ThenBuildServerContextCreated
 
         $iWasCalled = $true
         Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
-
-        It 'should set Bitbucket Server connection' {
-            $Context.BBServerConnection | Should Not BeNullOrEmpty
-            $Context.BBServerConnection.Uri | Should Be $buildServerContext['BBServerUri']
-            [object]::ReferenceEquals($Context.BBServerConnection.Credential,$buildServerContext['BBServerCredential']) | Should Be $true
-        }
 
         It 'should set ProGet session' {
             $Context.ProGetSession | Should Not BeNullOrEmpty
@@ -525,10 +495,6 @@ function ThenDeveloperContextCreated
         $iWasCalled = $true
 
         Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion
-
-        It 'should not set Bitbucket Server connection' {
-            $Context.BBServerConnection | Should BeNullOrEmpty
-        }
 
         It 'should set application name' {
             $Context.ApplicationName | Should Be $WithApplicationName
@@ -596,8 +562,8 @@ Describe 'New-WhiskeyContext.when run by the build server' {
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing ProGet feed names' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-    WhenCreatingContext -ByBuildServer -WithProgetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetAppFeed 'fubar' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
+    WhenCreatingContext -ByBuildServer -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
 }
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {

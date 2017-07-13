@@ -29,17 +29,17 @@ function Invoke-ProGetNativeApiMethod
         # The name of the API method to use. The list can be found at `http://inedo.com/support/documentation/proget/reference/api/native` or in your ProGet installation at `/reference/api/native` 
         $Name,
 
-        [Microsoft.PowerShell.Commands.WebRequestMethod]
-        # The HTTP/web method to use. The default is `POST`.
-        $Method = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post,
-
-        [Parameter(Mandatory=$true)]
         [hashtable]
         $Parameter
     )
 
     Set-StrictMode -Version 'Latest'
 
-    Invoke-ProGetRestMethod -Session $Session -Name ('json/{0}' -f $Name) -Method $Method -Parameter $Parameter -AsJson
+    if( -not $Parameter )
+    {
+        $Parameter = @{}
+    }
+    
+    Invoke-ProGetRestMethod -Session $Session -Path ('/api/json/{0}' -f $Name) -Method Post -Parameter $Parameter -AsJson
 
 }

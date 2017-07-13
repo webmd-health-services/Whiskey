@@ -94,7 +94,8 @@
                             'Invoke-WhiskeyBuild',
                             'New-WhiskeyContext',
                             'Publish-WhiskeyBuildMasterPackage',
-                            'Publish-WhiskeyTag',
+                            'Publish-WhiskeyProGetUniversalPackage',
+                            'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
                             'Resolve-WhiskeyPowerShellModuleVersion',
@@ -150,9 +151,12 @@
 * ***BREAKING***: Pulishing to BuildMaster no longer happens automagically.
 * Created a `PublishBuildMasterPackage` task for creating a package in BuildMaster and starting a deploy.
 * Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` functions to register/unregister commands to run before and after each task.
+* Created `PublishProGetUniversalPackage` task for publishing universal packages to ProGet.
+* The `ProGetUniversalPackage` task no longer publishes the package to ProGet. It only creates the package. To publish the package, use the new `PublishProGetUniversalPackage` task.
+* ***BREAKING***: `New-WhiskeyContext` no longer has `ProGetAppFeedUri` or `ProGetAppFeedName` parameters. Update your `whiskey.yml` files to include that information as properties on the `PublishProGetUniversalPackage` task.
+* ***BREAKING***: Whiskey no longer tags a successful build in Bitbucket Server by default. This functionality was converted into a `PublishBitbucketServerTag` task. Add this task to the `PublishTasks` pipeline in your `whiskey.yml` file.
+* ***BREAKING***: `New-WhiskeyContext` no longer has `BBServerCredential` or `BBServerUri` parameters, since it no longer tags successful builds in Bitbucket Server. Use the `PublishBitbucketServerTag` task in your `PublishTasks` pipeline instead.
 '@
-
-
         } # End of PSData hashtable
 
     } # End of PrivateData hashtable
@@ -162,6 +166,4 @@
 
     # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
     # DefaultCommandPrefix = ''
-
 }
-

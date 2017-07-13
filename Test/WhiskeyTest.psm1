@@ -176,8 +176,6 @@ function New-WhiskeyTestContext
     if( $PSCmdlet.ParameterSetName -eq 'ByBuildServer' )
     {
         $optionalArgs = @{
-                           'BBServerCredential' = (New-Credential -UserName 'bbserver' -Password 'bbserver');
-                           'BBServerUri' = 'https://bitbucket.example.com/'
                            'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
                          }
         $gitBranch = 'origin/develop'
@@ -230,7 +228,6 @@ function New-WhiskeyTestContext
         }
     }
     $progetArgs = @{
-                    ProGetAppFeedUri = $progetUris;
                     NpmFeedUri = $NpmFeedUri;
                     NuGetFeedUri = $NuGetFeedUri;
                     PowerShellFeedUri = $PowerShellFeedUri;
