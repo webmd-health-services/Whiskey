@@ -47,7 +47,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     [int]$compressionLevel = 1
     if($TaskParameter['CompressionLevel'] -and -not [int]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) ){
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"{0}" is not a valid Compression Level. it must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ComressionLevel: ''{0}'' is not a valid Compression Level. it must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
     }
     $parentPathParam = @{ }
     $sourceRoot = $TaskContext.BuildRoot

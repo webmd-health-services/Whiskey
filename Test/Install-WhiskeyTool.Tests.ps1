@@ -252,10 +252,10 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
 }
 
 Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
-    It 'should set EnableNygetPackageRestore to true' {
-        Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'false'
-        (get-Item -Path 'env:EnableNuGetPackageRestore').Value | should be false
+        Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
         Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-         (get-Item -Path 'env:EnableNuGetPackageRestore').Value | should be true
-    }
+        It 'should enable NuGet package restore' {
+         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
+         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
+        }
 }
