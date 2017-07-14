@@ -45,7 +45,10 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
-    
+    $compressionLevel = 1
+    if($TaskParameter['CompressionLevel'] -and -not [int]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) ){
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ComressionLevel: ''{0}'' is not a valid Compression Level. it must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
+    }
     $parentPathParam = @{ }
     $sourceRoot = $TaskContext.BuildRoot
     if( $TaskParameter.ContainsKey('SourceRoot') )
@@ -202,7 +205,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
         if( $TaskContext.ByBuildServer )
         {
-            & $7zExePath 'a' '-tzip' '-mx1' $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+            & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
         }
 
         Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)

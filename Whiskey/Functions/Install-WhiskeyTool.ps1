@@ -120,7 +120,7 @@ function Install-WhiskeyTool
 
         $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
         $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-        
+        Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
         if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
         {
            & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput
@@ -128,5 +128,3 @@ function Install-WhiskeyTool
         return $nuGetRoot
     }
 } 
-
-
