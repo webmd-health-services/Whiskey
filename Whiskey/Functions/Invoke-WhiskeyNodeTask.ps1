@@ -211,7 +211,7 @@ BuildTasks:
 
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
-        ConvertTo-Json -InputObject $newReport -Depth ([int32]::MaxValue) | Set-Content -Path $licensePath
+        ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
 
         $productionArg = ''
         $productionArgDisplay = ''

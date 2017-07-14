@@ -156,6 +156,7 @@
 * ***BREAKING***: `New-WhiskeyContext` no longer has `ProGetAppFeedUri` or `ProGetAppFeedName` parameters. Update your `whiskey.yml` files to include that information as properties on the `PublishProGetUniversalPackage` task.
 * ***BREAKING***: Whiskey no longer tags a successful build in Bitbucket Server by default. This functionality was converted into a `PublishBitbucketServerTag` task. Add this task to the `PublishTasks` pipeline in your `whiskey.yml` file.
 * ***BREAKING***: `New-WhiskeyContext` no longer has `BBServerCredential` or `BBServerUri` parameters, since it no longer tags successful builds in Bitbucket Server. Use the `PublishBitbucketServerTag` task in your `PublishTasks` pipeline instead.
+* Fixed: Calling any REST API that has a body in its request fails under PowerShell 5.1 (i.e. the max value for the `ConvertTo-Json` cmdlet's `Depth` parameter is `100` in PowerShell 5.1).
 '@
         } # End of PSData hashtable
 
