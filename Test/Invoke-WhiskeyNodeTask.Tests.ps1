@@ -8,7 +8,7 @@ $startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
 
 $defaultPackageName = 'fubarsnafu'
 
-function Invoke-SuccessfulBuild
+function WhenBuildIsStarted
 {
     [CmdletBinding()]
     param(
@@ -31,8 +31,12 @@ function Invoke-SuccessfulBuild
         $ByBuildServer,
 
         [Switch]
-        $WithCleanSwitch
+        $WithCleanSwitch,
+
+        [string]
+        $npmRegistryUri
     )
+    $Global:Error.Clear()
     $optionalParams = @{ }
     if( -not $ByDeveloper -and -not $ByBuildServer )
     {
@@ -59,9 +63,19 @@ function Invoke-SuccessfulBuild
     {
         $optionalParams['Clean'] = $True
     }
-
-    Invoke-WhiskeyNodeTask -TaskContext $WithContext -TaskParameter $taskParameter @optionalParams
-
+    if ( $npmRegistryUri )
+    {
+        $taskParameter['npmRegistryUri'] = $npmRegistryUri
+    }
+    try
+    {
+        Invoke-WhiskeyNodeTask -TaskContext $WithContext -TaskParameter $taskParameter @optionalParams
+    }
+    catch
+    {
+        Write-Error -ErrorRecord $_
+        return
+    }
     if( $WithCleanSwitch )
     {
         It ('should remove the node_modules directory') {
@@ -74,13 +88,6 @@ function Invoke-SuccessfulBuild
             }
         }
         return
-    }
-
-    foreach( $taskName in $ThatRuns )
-    {
-        It ('should run the {0} task' -f $taskName) {
-            (Join-Path -Path $InWorkingDirectory -ChildPath $taskName) | Should Exist
-        }
     }
 
     $versionRoot = Join-Path -Path $env:APPDATA -ChildPath ('nvm\v{0}' -f $ForVersion)
@@ -279,55 +286,30 @@ module.exports = function(grunt) {
     {
         $byWhoArg['ForDeveloper'] = $true
     }
-
     return New-WhiskeyTestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg
 }
 
-function Invoke-FailingBuild
-{
-    [CmdletBinding()]
+function ThenBuildSucceeds {
+    It 'should not throw an error' {
+        $Global:Error.Count | Should Be 0
+        $Global:Error | Should BeNullOrEmpty
+    }
+}
+
+function ThenBuildFails {
     param(
         [object]
         $WithContext,
 
         [string]
-        $ThatFailsWithMessage,
+        $expectedError,
 
-        [string[]]
-        $NpmScript = @( 'fail', 'build', 'test' ),
+        [switch]
+        $whoseScriptsPass,
 
-        [Switch]
-        $WhoseScriptsPass,
-
-        [string]
-        $InWorkingDirectory
+        [object[]]
+        $NpmScript
     )
-
-    $failed = $false
-    $failure = $null
-    $taskParameter = @{ NpmScripts = $NpmScript }
-    if( $InWorkingDirectory )
-    {
-        $taskParameter['WorkingDirectory'] = $InWorkingDirectory
-    }
-
-    try
-    {
-        Invoke-WhiskeyNodeTask -TaskContext $WithContext -TaskParameter $taskParameter
-    }
-    catch
-    {
-        $failed = $true
-        $failure = $_
-        Write-Error -ErrorRecord $_
-    }
-
-    It 'should throw an exception' {
-        $failed | Should Be $True
-        $failure | Should Not BeNullOrEmpty
-        $failure | Should Match $ThatFailsWithMessage
-    }
-
     foreach( $script in $NpmScript )
     {
         if( $WhoseScriptsPass )
@@ -343,47 +325,59 @@ function Invoke-FailingBuild
             }
         }
     }
+    It 'should throw an error' {
+        $Global:Error.Count | Should Not Be 0
+        $Global:Error | Where-Object { $_ -match $expectedError } | Should -not -BeNullOrEmpty
+    }
+    $Global:Error.Clear()
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     $context = Initialize-NodeProject -ByDeveloper
-    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -ThatRuns 'build','test'
+    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build','test'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
     $context = Initialize-NodeProject -ByBuildServer
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     $context = Initialize-NodeProject -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ run\b.*\bfailed' -ErrorAction SilentlyContinue
+    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'fail'
+    ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -WithContext $context -NpmScript 'fail'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
     $context = Initialize-NodeProject -DevDependency '"idonotexist": "^1.0.0"' -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'npm\ install\b.*failed' -ErrorAction SilentlyContinue
+    WhenBuildIsStarted -WithContext $context -ByDeveloper
+    ThenBuildFails -expectedError 'npm\ install\b.*failed'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $context = Initialize-NodeProject -ByBuildServer 
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' ) -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'found the following security vulnerabilities' -NpmScript @( 'build' ) -WhoseScriptsPass -ErrorAction SilentlyContinue
+    WhenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper
+    ThenBuildFails -expectedError 'found the following security vulnerabilities' -WithContext $context -ThatRuns 'build', 'test' -WhoseScriptsPass
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     $context = Initialize-NodeProject -WithNoName -ByDeveloper
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'name is missing or doesn''t have a value' -NpmScript @( 'build' )  -ErrorAction SilentlyContinue
+    WhenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper
+    ThenBuildFails -expectedError 'name is missing or doesn''t have a value'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
     $context = Initialize-NodeProject -ByDeveloper
-    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -WarningVariable 'warnings'
+    WhenBuildIsStarted -WithContext $context -ByDeveloper -WarningVariable 'warnings'
     It 'should warn that there were no NPM scripts' {
         $warnings | Should Match ([regex]::Escape('Element ''NpmScripts'' is missing or empty'))
     }
@@ -391,30 +385,46 @@ Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
 
 Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
     $context = Initialize-NodeProject -ByDeveloper -InSubDirectory 's'
-    Invoke-SuccessfulBuild -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
+    WhenBuildIsStarted -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     $context = Initialize-NodeProject -ByDeveloper 
-    $Global:Error.Clear()
-    Invoke-FailingBuild -WithContext $context -ThatFailsWithMessage 'WorkingDirectory\[0\] .* does not exist' -NpmScript @( 'build' ) -InWorkingDirectory 'idonotexist' -ErrorAction SilentlyContinue
-    It 'should write one error' {
-        $Global:Error.Count | Should Be 1
-    }
+    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build', 'test' -InWorkingDirectory 'idonotexist'
+    ThenBuildFails -expectedError 'WorkingDirectory\[0\] .* does not exist'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     $context = Initialize-NodeProject -ByBuildServer
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build'
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
-    
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build'
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
+    $context = Initialize-NodeProject -ByBuildServer
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
+    $context = Initialize-NodeProject -ByBuildServer
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri  'http://thisis@abadurl.notreal/'
+    ThenBuildFails -expectedError 'NPM command `npm install` failed with exit code 1.'
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
+    $context = Initialize-NodeProject -ByBuildServer
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on already Clean directory' {
     $context = Initialize-NodeProject -ByBuildServer
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
-    Invoke-SuccessfulBuild -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
-    
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
+    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    ThenBuildSucceeds -WithContext $context -ThatRuns 'test','build'
 }
 
 if( $startedWithNodeEnv )
