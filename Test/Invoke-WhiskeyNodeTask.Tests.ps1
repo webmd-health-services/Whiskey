@@ -289,14 +289,16 @@ module.exports = function(grunt) {
     return New-WhiskeyTestContext -ForBuildRoot $buildRoot -ForTaskName 'Node' -ForVersion $version @byWhoArg
 }
 
-function ThenBuildSucceeds {
+function ThenBuildSucceeds 
+{
     It 'should not throw an error' {
         $Global:Error.Count | Should Be 0
         $Global:Error | Should BeNullOrEmpty
     }
 }
 
-function ThenBuildFails {
+function ThenBuildFails 
+{
     param(
         [object]
         $WithContext,
