@@ -11,6 +11,7 @@ $releaseName = $null
 $appName = $null
 $apiKeys = @{ }
 $taskParameter = $null
+$releaseId = 483
 
 function GivenApiKey
 {
@@ -76,7 +77,8 @@ function GivenRelease
 
     $script:appName = $ForApplication
     $script:releaseName = $Name
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Application = $Application; Name = $Name } }
+    $releaseId = $script:releaseId
+    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Application = $Application; Name = $Name; id = $releaseId  } }.GetNewClosure()
 }
 
 function GivenVersion
@@ -167,7 +169,7 @@ function ThenCreatedPackage
 
     It ('should create package in release ''{0}''' -f $InRelease) {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release -eq $InRelease }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release.id -eq $releaseId }
     }
 
     It ('should create package in application ''{0}''' -f $ForApplication) {
