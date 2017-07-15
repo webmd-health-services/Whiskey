@@ -137,6 +137,7 @@ function WhenTheTaskRuns
         $CleanParam['Clean'] = $True
     }
 
+    $Global:Error.Clear()
     $script:failed = $false
     try
     {
@@ -231,7 +232,7 @@ throw 'fubar!'
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'fubar'
+    ThenTheLastErrorMatches 'terminating\ exception'
 }
 
 Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop' {
@@ -243,7 +244,7 @@ throw 'fubar'
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'snafu'
+    ThenTheLastErrorMatches 'terminating\ exception'
     ThenTheLastErrorDoesNotMatch 'fubar'
     ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }

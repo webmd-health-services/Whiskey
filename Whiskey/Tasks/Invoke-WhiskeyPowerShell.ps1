@@ -58,27 +58,53 @@ function Invoke-WhiskeyPowerShell
         $argument = @{ }
     }
 
+    $moduleRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
     foreach( $scriptPath in $path )
     {
 
         if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
         {
-            throw ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $ScriptPath,$WorkingDirectory)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $ScriptPath,$WorkingDirectory)
         }
 
-        Push-Location $WorkingDirectory
-        try
-        {
+        $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-ExitCode-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
+        $job = Start-Job -ScriptBlock {
+            $workingDirectory = $using:WorkingDirectory
+            $scriptPath = $using:ScriptPath
+            $argument = $using:argument
+            $taskContext = $using:TaskContext
+            $moduleRoot = $using:moduleRoot
+            $resultPath = $using:resultPath
+
+            Import-Module -Name $moduleRoot
+
+            $VerbosePreference = $using:VerbosePreference
+
+            Set-Location $workingDirectory
             $Global:LASTEXITCODE = 0
-            & $ScriptPath -TaskContext $TaskContext @argument
-            if( $Global:LASTEXITCODE )
-            {
-                throw ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $ScriptPath,$Global:LASTEXITCODE)
-            }
+            & $scriptPath -TaskContext $taskContext @argument
+            $Global:LASTEXITCODE | Set-Content -Path $resultPath
         }
-        finally
+
+        do
         {
-            Pop-Location
+            $job | Receive-Job
         }
+        while( -not ($job | Wait-Job -Timeout 1) )
+
+        $job | Receive-Job
+
+        if( -not (Test-Path -Path $resultPath -PathType Leaf) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
+        }
+                    
+        [int]$exitCode = Get-Content -Path $resultPath | Select-Object -First 1
+        
+        if( $exitCode )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $scriptPath,$exitCode)
+        }
+
     }
 }
