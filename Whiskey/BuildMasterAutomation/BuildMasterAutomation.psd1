@@ -12,13 +12,13 @@
     RootModule = 'BuildMasterAutomation.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.0.0'
+    ModuleVersion = '0.2.1'
 
     # ID used to uniquely identify this module
     GUID = 'cc5a1865-e5f8-45f2-b0d3-317a1611a965'
 
     # Author of this module
-    Author = 'Lifecycle Services'
+    Author = 'WebMD Health Services'
 
     # Company or vendor of this module
     CompanyName = 'WebMD Health Services'
@@ -27,7 +27,9 @@
     Copyright = '(c) 2017 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
-    # Description = ''
+    Description = @'
+The BuildMasterAutomation module is a PowerShell module for working with BuildMaster web APIs. BuildMaster is an application deployment automation tool by Inedo software. This module wraps its web APIs in a PowerShell interface. It allows you to read and create applications, releases, packages, etc. If this module doesn't have a function for a specific API endpoint, it has generic `Invoke-BMRestMethod` and `Invoke-BMNativeApimethod` functions that take the pain out of creating the proper web requests.
+'@
 
     # Minimum version of the Windows PowerShell engine required by this module
     # PowerShellVersion = ''
@@ -68,15 +70,16 @@
     # Functions to export from this module
     FunctionsToExport = @(
                             'Add-BMObjectParameter',
+                            'Disable-BMApplication',
                             'Get-BMApplication',
                             'Get-BMRelease',
-                            'Get-BMReleasePackage',
+                            'Get-BMPackage',
                             'Invoke-BMNativeApiMethod',
                             'Invoke-BMRestMethod',
                             'New-BMApplication',
                             'New-BMPipeline',
                             'New-BMRelease',
-                            'New-BMReleasePackage',
+                            'New-BMPackage',
                             'New-BMSession',
                             'Publish-BMReleasePackage'
                          )
@@ -105,19 +108,21 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            # Tags = @()
+            Tags = @( 'buildmaster', 'inedo', 'devops', 'automation', 'pipeline', 'deploy' )
 
             # A URL to the license for this module.
-            # LicenseUri = ''
+            LicenseUri = 'https://www.apache.org/licenses/LICENSE-2.0'
 
             # A URL to the main website for this project.
-            # ProjectUri = ''
+            ProjectUri = 'https://github.com/webmd-health-services/BuildMasterAutomation'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
-            # ReleaseNotes = ''
+            ReleaseNotes = @'
+Fixed: Calling any REST API that has a body in its request fails under PowerShell 5.1.
+'@
 
         } # End of PSData hashtable
 

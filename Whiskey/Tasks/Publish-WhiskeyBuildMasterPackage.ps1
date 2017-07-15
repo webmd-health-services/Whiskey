@@ -64,9 +64,9 @@ function Publish-WhiskeyBuildMasterPackage
     $release | Format-List | Out-String | Write-Verbose
 
     $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
-    $package = New-BMReleasePackage -Session $buildMasterSession -Release $releaseName -PackageNumber $packageName -Variable $variables
+    $package = New-BMPackage -Session $buildMasterSession -Release $releaseName -PackageNumber $packageName -Variable $variables
     $package | Format-List | Out-String | Write-Verbose
 
-    $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package
+    $deployment = Publish-BMPackage -Session $buildMasterSession -Package $package
     $deployment | Format-List | Out-String | Write-Verbose
 }

@@ -111,7 +111,7 @@ function WhenCreatingPackage
 
     $package = $mockPackage
     $deploy = $mockDeploy
-    Mock -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Release = $Release; PackageNumber = $PackageNumber; Variable = $Variable } }
+    Mock -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Release = $Release; PackageNumber = $PackageNumber; Variable = $Variable } }
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Package = $package } }
 
     $script:threwException = $false
@@ -162,12 +162,12 @@ function ThenCreatedPackage
     )
 
     It ('should create package ''{0}''' -f $Name) {
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
     }
 
     It ('should create package in release ''{0}''' -f $InRelease) {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Release -eq $InRelease }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release -eq $InRelease }
     }
 
     It ('should create package in application ''{0}''' -f $ForApplication) {
@@ -180,13 +180,13 @@ function ThenCreatedPackage
 
     It ('should create package at ''{0}''' -f $AtUri) {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
         Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
     }
 
     It ('should create package with API key ''{0}''' -f $UsingApiKey) {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-        Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
         Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
     }
 
@@ -194,7 +194,7 @@ function ThenCreatedPackage
     {
         $variableValue = $WithVariables[$variableName]
         It ('should create package variable ''{0}''' -f $variableName) {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { 
+            Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
                 Write-Debug ('Expected  {0}' -f $variableValue)
                 Write-Debug ('Actual    {0}' -f $Variable[$variableName])
@@ -213,7 +213,7 @@ function ThenPackageNotCreated
     process
     {
         It 'should not create release package' {
-            Assert-MockCalled -CommandName 'New-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
+            Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -Times 0
         }
         It 'should not start deploy' {
             Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0

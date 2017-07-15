@@ -37,7 +37,7 @@ function Get-BMRelease
 
     Demonstrates how to get a specific release for an application by passing the release's name to the `Name` parameter.  In this example, the '4.1' release will be returned, if it exists.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='AllReleases')]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -62,7 +62,6 @@ function Get-BMRelease
         # * The application name as a string.
         $Application,
 
-        [Parameter(ParameterSetName='ByApplication')]
         [string]
         # The name of the release to get. 
         $Name
@@ -81,12 +80,13 @@ function Get-BMRelease
         elseif( $PSCmdlet.ParameterSetName -eq 'ByApplication' )
         {
             $parameter | Add-BMObjectParameter -Name 'application' -Value $Application
-            if( $Name )
-            {
-                $parameter['releaseName'] = $Name
-            }
         }
 
-        Invoke-BMRestMethod -Session $Session -Name 'releases' -Parameter $parameter              
+        if( $Name )
+        {
+            $parameter['releaseName'] = $Name
+        }
+
+        Invoke-BMRestMethod -Session $Session -Name 'releases' -Parameter $parameter
     }
 }
