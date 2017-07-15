@@ -2,6 +2,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\Invoke-WhiskeyPowerShell.ps1' -Resolve)
 
 $whiskeyYmlPath = $null
 $runByDeveloper = $false
@@ -376,7 +377,7 @@ BuildTasks:
     Path: somefile.ps1
 "@
         GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShellTask' -ModuleName 'Whiskey'
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
 
         WhenRunningPipeline 'BuildTasks'
         ThenPipelineSucceeded
@@ -390,7 +391,7 @@ BuildTasks:
     Path: somefile.ps1
 "@
         GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShellTask' -ModuleName 'Whiskey'
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
 
         WhenRunningPipeline 'BuildTasks' -WithCleanSwitch
         ThenPipelineSucceeded

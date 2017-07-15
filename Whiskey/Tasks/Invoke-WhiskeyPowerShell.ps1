@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyPowerShellTask
+function Invoke-WhiskeyPowerShell
 {
     [Whiskey.Task("PowerShell")]
     [CmdletBinding()]
