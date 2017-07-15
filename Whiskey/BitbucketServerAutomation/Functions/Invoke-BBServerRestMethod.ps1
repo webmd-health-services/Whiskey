@@ -70,7 +70,7 @@ function Invoke-BBServerRestMethod
     $bodyParam = @{ }
     if( $InputObject )
     {
-        $bodyParam['Body'] = $InputObject | ConvertTo-Json -Depth ([int32]::MaxValue)
+        $bodyParam['Body'] = $InputObject | ConvertTo-Json -Depth 100
     }
 
     #$DebugPreference = 'Continue'

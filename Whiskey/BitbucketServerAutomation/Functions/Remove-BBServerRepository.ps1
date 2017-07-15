@@ -22,22 +22,22 @@ function Remove-BBServerRepository
     Use the `New-BBServerConnection` function to create a connection object to pass to the `Connection` parameter.
 
     .EXAMPLE
-    Remove-BBServerRepository -Connection $conn -ProjectKey 'MOFO' -Name 'fubarsnafu'
+    Remove-BBServerRepository -Connection $conn -ProjectKey 'BBSA' -Name 'fubarsnafu'
 
     Demonstrates how to delete a repository. Because deleting a repository is a high-impact operation, you will asked to confirm the deletion.
 
     .EXAMPLE
-    Remove-BBServerRepository -Connection $conn -ProjectKey 'MOFO' -Name 'fubarsnafu' -Force
+    Remove-BBServerRepository -Connection $conn -ProjectKey 'BBSA' -Name 'fubarsnafu' -Force
 
     Demonstrates how to delete a repository, skipping any confirmation dialogs. This can be dangerous since deletions can't be undone. Use the `Force` switch with care.
 
     .EXAMPLE
-    Get-BBServerRepository -Connection $conn -ProjectKey 'MOFO' -Name 'snafu' | Remove-BBServerRepository -Connection $conn
+    Get-BBServerRepository -Connection $conn -ProjectKey 'BBSA' -Name 'snafu' | Remove-BBServerRepository -Connection $conn
 
     Demonstrates that you can pipe objects returned by `Get-BBServerRepository` to `Remove-BBServerRepository`. When you pipe repository objects, you don't have to provide the project key
 
     .EXAMPLE
-    'fubarsnafu' | Remove-BBServerRepository -Connection $conn -ProjectKey 'MOFO'
+    'fubarsnafu' | Remove-BBServerRepository -Connection $conn -ProjectKey 'BBSA'
 
     Demonstrates that you can pipe repository names to `Remove-BBServerRepository`. When you do, you *must* also provide the project key.
     #>

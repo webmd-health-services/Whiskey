@@ -35,9 +35,9 @@ function Get-BBServerRepository
      * `links`: an object with two properties: `clone` an array of URLs you can use to clone; and `self` an HTTP URL for viewing the repository in a web browser
 
     .EXAMPLE
-    Get-BBServerRepository -Connection $conn -ProjectKey 'MOFO'
+    Get-BBServerRepository -Connection $conn -ProjectKey 'BBSA'
 
-    Demonstrates how to get all the repositories under the `MOFO` project.
+    Demonstrates how to get all the repositories under the `BBSA` project.
     #>
     [CmdletBinding()]
     param(
