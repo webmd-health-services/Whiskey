@@ -324,8 +324,7 @@ module.exports = function(grunt) {
 function ThenBuildSucceeds 
 {
     It 'should not throw an error' {
-        $Global:Error.Count | Should Be 0
-        $Global:Error | Should BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -notmatch '*npm WARN*' }  | Should BeNullOrEmpty
     }
 }
 
@@ -357,8 +356,6 @@ function ThenBuildFails
         }
     }
     It 'should throw an error' {
-        write-host $Global:Error
-        $Global:Error.Count | Should Not Be 0
         $Global:Error | Where-Object { $_ -match $expectedError } | Should -not -BeNullOrEmpty
     }
     $Global:Error.Clear()
