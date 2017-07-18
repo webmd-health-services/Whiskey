@@ -8,7 +8,7 @@ $startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
 
 $defaultPackageName = 'fubarsnafu'
 
-function WhenBuildIsStarted
+function GivenBuildIsStarted
 {
     [CmdletBinding()]
     param(
@@ -336,50 +336,50 @@ function ThenBuildFails
 
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     $context = Initialize-NodeProject -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build','test'
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     $context = Initialize-NodeProject -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'fail'
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'fail' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -WithContext $context -NpmScript 'fail'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
     $context = Initialize-NodeProject -DevDependency '"idonotexist": "^1.0.0"' -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ByDeveloper
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildFails -expectedError 'npm\ install\b.*failed'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
     $env:NODE_ENV = 'production'
     $context = Initialize-NodeProject -ByBuildServer 
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     $context = Initialize-NodeProject -Dependency @( '"minimatch": "3.0.0"' ) -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper
+    GivenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildFails -expectedError 'found the following security vulnerabilities' -WithContext $context -ThatRuns 'build', 'test' -WhoseScriptsPass
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     $context = Initialize-NodeProject -WithNoName -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper
+    GivenBuildIsStarted -WithContext $context -ThatRuns 'build', 'test' -ByDeveloper -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildFails -expectedError 'name is missing or doesn''t have a value'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
     $context = Initialize-NodeProject -ByDeveloper
-    WhenBuildIsStarted -WithContext $context -ByDeveloper -WarningVariable 'warnings'
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -WarningVariable 'warnings' -npmRegistryUri 'http://registry.npmjs.org/'
     It 'should warn that there were no NPM scripts' {
         $warnings | Should Match ([regex]::Escape('Element ''NpmScripts'' is missing or empty'))
     }
@@ -387,45 +387,45 @@ Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
 
 Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
     $context = Initialize-NodeProject -ByDeveloper -InSubDirectory 's'
-    WhenBuildIsStarted -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test'
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -InWorkingDirectory 's' -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     $context = Initialize-NodeProject -ByDeveloper 
-    WhenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build', 'test' -InWorkingDirectory 'idonotexist'
+    GivenBuildIsStarted -WithContext $context -ByDeveloper -ThatRuns 'build', 'test' -InWorkingDirectory 'idonotexist' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildFails -expectedError 'WorkingDirectory\[0\] .* does not exist'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build'
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build' -npmRegistryUri 'http://registry.npmjs.org/'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri  'http://thisis@abadurl.notreal/'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test' -npmRegistryUri  'http://thisis@abadurl.notreal/'
     ThenBuildFails -expectedError 'NPM command `npm install` failed with exit code 1.'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
-    ThenBuildSucceeds -WithContext $context -ThatRuns 'build','test'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build','test'
+    ThenBuildFails -expectedError 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on already Clean directory' {
     $context = Initialize-NodeProject -ByBuildServer
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch
-    WhenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'build' -WithCleanSwitch -npmRegistryUri 'http://registry.npmjs.org/'
+    GivenBuildIsStarted -WithContext $context -ByBuildServer -ThatRuns 'test' -WithCleanSwitch -npmRegistryUri 'http://registry.npmjs.org/'
     ThenBuildSucceeds -WithContext $context -ThatRuns 'test','build'
 }
 

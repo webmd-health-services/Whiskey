@@ -32,7 +32,7 @@ function Invoke-WhiskeyNodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
+    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
@@ -75,7 +75,7 @@ function Invoke-WhiskeyNodeTask
     }
     $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if(-not $npmRegistryUri) {
-        $npmRegistryUri = $TaskContext.ProGetSession.NpmFeedUri
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
     }
     $npmScripts = $TaskParameter['NpmScripts']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
