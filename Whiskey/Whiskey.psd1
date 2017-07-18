@@ -159,6 +159,7 @@
 * Fixed: Modules disappear from scope when they are re-imported by scripts run in the `PowerShell` task because scripts are run in the Whiskey module's scope. The PowerShell task now runs PowerShell task in a new PowerShell process. Update your scripts so they work when run in a new PowerShell session.
 * Added a `CompressionLevel` property to the `ProGetUniversalPackage` task to control the compression level of the package. The default is `1` (low compression, larger file size). 
 * Fixed: the `ProGetUniversalPackage` task fails when installing the 7-zip NuGet package if automatic NuGet package restore isn't enabled globally. It now creates a process-level `EnableNuGetPackageRestore` environment variable and sets its value to `true`.
+* Fixed: the `PublishProGetUniversalPackage` task doesn't fail if publishing to ProGet fails.
 '@
         } # End of PSData hashtable
 

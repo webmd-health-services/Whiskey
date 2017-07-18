@@ -10,6 +10,7 @@ $credential = $null
 $feedName = $null
 $path = $null
 $threwException = $false
+$noAccessToProGet = $null
 
 function GivenNoPath
 {
@@ -44,9 +45,15 @@ function GivenCredential
         $WithID
     )
 
+    $script:noAccessToProGet = $false
     $password = ConvertTo-SecureString -AsPlainText -Force -String $Credential
     $script:credential = New-Object 'Management.Automation.PsCredential' $Credential,$password
     $script:credentialID = $WithID
+}
+
+function GivenNoAccessToProGet
+{
+    $script:noAccessToProGet = $true
 }
 
 function GivenNoParameters
@@ -193,7 +200,13 @@ function WhenPublishingPackage
         $parameter['Path'] = $path
     }
 
-    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
+    $mock = { }
+    if( $noAccessToProGet )
+    {
+        $mock = { Write-Error -Message 'Failed to upload package to some uri.' }
+    }
+
+    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
 
     $script:threwException = $false
     try
@@ -261,4 +274,13 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when there is no upack files' {
     GivenUniversalFeed 'universal'
     WhenPublishingPackage -ErrorAction SilentlyContinue
     ThenTaskFailed 'no packages'
+}
+
+Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permission' {
+    GivenProGetIsAt 'my uri'
+    GivenUpackFile 'my.upack'
+    GivenCredential 'fubatr' -WithID 'id'
+    GivenNoAccessToProGet
+    WhenPublishingPackage -ErrorAction SilentlyContinue
+    ThenTaskFAiled 'Failed to upload'
 }

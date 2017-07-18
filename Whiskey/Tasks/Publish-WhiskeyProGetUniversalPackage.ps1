@@ -73,6 +73,6 @@ function Publish-WhiskeyProGetUniversalPackage
     foreach( $package in $packages )
     {
         Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}  {1}' -f (' ' * $taskPrefix.Length),$package)
-        Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package
+        Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package -ErrorAction Stop
     }
 }
