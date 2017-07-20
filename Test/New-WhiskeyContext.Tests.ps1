@@ -8,7 +8,6 @@ $buildServerContext = @{
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
-$npmRegistryUri = [uri]'http://registry.npmjs.org/'
 $configurationPath = $null
 $context = $null
 
@@ -31,8 +30,6 @@ function Assert-Context
         $ReleaseName,
 
         $WithProGetNpmFeed = 'npm/npm',
-
-        $WithProGetNuGetFeed = 'nuget/NuGet',
 
         $WithProGetPowerShellFeed = 'posh/PoSh'
     )
@@ -106,7 +103,6 @@ function Assert-Context
 
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
         $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
     }
 
@@ -310,8 +306,6 @@ function WhenCreatingContext
 
         $WithProGetNpmFeed = 'npm/npm',
 
-        $WithProGetNuGetFeed = 'nuget/NuGet',
-
         $WithPowerShellNuGetFeed = 'posh/PoSh',
 
         $WithDownloadRoot,
@@ -336,10 +330,6 @@ function WhenCreatingContext
         if( -not $WithNoToolInfo )
         {
             $optionalArgs = $buildServerContext.Clone()
-            if( $WithProGetNuGetFeed )
-            {
-                $optionalArgs['NuGetFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNuGetFeed
-            }
             if( $WithPowerShellNuGetFeed )
             {
                 $optionalArgs['PowerShellFeedUri'] = New-Object 'uri' $progetUri, $WithPowerShellNuGetFeed
@@ -401,8 +391,6 @@ function ThenBuildServerContextCreated
 
         $WithProGetNpmFeed,
 
-        $WithProGetNuGetFeed,
-
         $WithPowerShellNuGetFeed,
 
         $WithDownloadRoot
@@ -419,10 +407,6 @@ function ThenBuildServerContextCreated
         if( $WithProGetNpmFeed )
         {
             $optionalArgs['WithProGetNpmFeed'] = $WithProGetNpmFeed
-        }
-        if( $WithProGetNuGetFeed )
-        {
-            $optionalArgs['WithProGetNuGetFeed'] = $WithProGetNuGetFeed
         }
         if( $WithPowerShellNuGetFeed )
         {
@@ -558,8 +542,8 @@ Describe 'New-WhiskeyContext.when run by the build server' {
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing ProGet feed names' {
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-    WhenCreatingContext -ByBuildServer -WithProGetNpmFeed 'snafu' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithProGetNuGetFeed 'fubarsnafu' -WithPowerShellNuGetFeed 'snafubar'
+    WhenCreatingContext -ByBuildServer -WithProGetNpmFeed 'snafu' -WithPowerShellNuGetFeed 'snafubar'
+    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithPowerShellNuGetFeed 'snafubar'
 }
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {

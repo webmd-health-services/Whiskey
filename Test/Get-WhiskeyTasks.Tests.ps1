@@ -1,7 +1,22 @@
 
-#& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-Describe 'Get-WhiskeyTasks.' {
+function global:MyTask
+{
+    [Whiskey.Task("TaskOne")]
+    param(
+    )
+}
+
+function global:MyTask2
+{
+    [Whiskey.Task("TaskTwo")]
+    [Whiskey.Task("TaskThree")]
+    param(
+    )
+}
+
+Describe 'Get-WhiskeyTasks' {
     $expectedTasks = @{
                         ProGetUniversalPackage         = 'Invoke-WhiskeyProGetUniversalPackageTask';
                         MSBuild                        = 'Invoke-WhiskeyMSBuildTask';
@@ -11,8 +26,10 @@ Describe 'Get-WhiskeyTasks.' {
                         Pester4                        = 'Invoke-WhiskeyPester4Task';
                         PublishFile                    = 'Invoke-WhiskeyPublishFileTask';
                         PublishNodeModule              = 'Invoke-WhiskeyPublishNodeModuleTask';
-                        PublishNuGetLibrary            = 'Invoke-WhiskeyPublishNuGetLibraryTask';
-                        PublishPowerShellModule        ='Invoke-WhiskeyPublishPowerShellModuleTask';
+                        PublishPowerShellModule        = 'Invoke-WhiskeyPublishPowerShellModuleTask';
+                        TaskOne = 'MyTask';
+                        TaskTwo = 'MyTask2';
+                        TAskThree = 'MyTask2';
                         }
 
     $Global:error.Clear()
@@ -36,6 +53,7 @@ Describe 'Get-WhiskeyTasks.' {
         $tasks.Count | should -BeGreaterThan ($expectedTasks.Count - 1)
          $expectedTasks.Count 
     }
+
     foreach ($key in $expectedTasks.keys)
     {
         it ('it should return the {0} task' -f $key) {
@@ -46,3 +64,4 @@ Describe 'Get-WhiskeyTasks.' {
 
 }
 
+Remove-Item -Path 'function:MyTask*'

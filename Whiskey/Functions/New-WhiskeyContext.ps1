@@ -57,10 +57,6 @@ function New-WhiskeyContext
         $ProGetCredential,
 
         [uri]
-        # The URI to ProGet to get NuGet Packages
-        $NuGetFeedUri,
-        
-        [uri]
         # The URI to ProGet to get PowerShell Modules
         $PowerShellFeedUri,
 
@@ -111,7 +107,6 @@ function New-WhiskeyContext
     $progetSession = $null   
     $progetSession = [pscustomobject]@{
                                             Credential = $null;
-                                            NuGetFeedUri = $NuGetFeedUri;
                                             PowerShellFeedUri = $PowerShellFeedUri;                                           
                                         }
 
