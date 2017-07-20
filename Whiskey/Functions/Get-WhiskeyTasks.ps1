@@ -21,12 +21,11 @@ function Get-WhiskeyTasks
     
     foreach( $item in (Get-Command -CommandType Function) )
     {
-        $attr = $item.ScriptBlock.Attributes | Where-Object { $_ -is [Whiskey.TaskAttribute] }
-        if( -not $attr )
-        {
-            continue
-        }
-        $knownTasks[$attr.Name] = $item.Name
+        $item.ScriptBlock.Attributes | 
+            Where-Object { $_ -is [Whiskey.TaskAttribute] } |
+            ForEach-Object {
+                $knownTasks[$_.Name] = $item.Name
+            }
     }
     
     return $knownTasks
