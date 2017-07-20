@@ -122,6 +122,7 @@ function WhenBuildIsStarted
     {
         $taskParameter['npmRegistryUri'] = $script:npmRegistryUri
     }
+    $Global:Error.Clear()
     try
     {
         Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter @optionalParams
@@ -324,7 +325,7 @@ module.exports = function(grunt) {
 function ThenBuildSucceeds 
 {
     It 'should not throw an error' {
-        $Global:Error | Where-Object { $_ -notmatch 'npm WARN' }  | Should BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -notmatch 'npm.*WARN' } | Where-Object { $_ -notmatch 'WARN.*npm' }  | Should BeNullOrEmpty
     }
 }
 
@@ -358,7 +359,6 @@ function ThenBuildFails
     It 'should throw an error' {
         $Global:Error | Where-Object { $_ -match $expectedError } | Should -not -BeNullOrEmpty
     }
-    $Global:Error.Clear()
 }
 function cleanup {
     $script:context = $null
