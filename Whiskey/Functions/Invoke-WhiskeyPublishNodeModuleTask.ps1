@@ -57,8 +57,12 @@ function Invoke-WhiskeyPublishNodeModuleTask
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
-    $npmFeedUri = $TaskContext.ProGetSession.NpmFeedUri
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmFeedUri -ApplicationRoot $workingDir
+    $npmRegistryUri = $TaskParameter['npmRegistryUri']
+    if (-not $npmRegistryUri) 
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
+    }
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
     
     if (!$TaskContext.Publish)
     {
@@ -68,7 +72,7 @@ function Invoke-WhiskeyPublishNodeModuleTask
     $nodeRoot = $nodePath | Split-Path
     $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
 
-    $npmConfigPrefix = '//{0}{1}:' -f $npmFeedUri.Authority,$npmFeedUri.LocalPath
+    $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
     $npmUserName = $TaskContext.ProGetSession.Credential.UserName
     $npmEmail = $env:USERNAME + '@example.com'

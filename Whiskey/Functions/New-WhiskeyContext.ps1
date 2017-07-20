@@ -63,10 +63,6 @@ function New-WhiskeyContext
         [uri]
         # The URI to ProGet to get PowerShell Modules
         $PowerShellFeedUri,
-        
-        [uri]
-        # The URI to ProGet to get npm Packages
-        $NpmFeedUri,
 
         [string]
         # The place where downloaded tools should be cached. The default is the build root.
@@ -115,7 +111,6 @@ function New-WhiskeyContext
     $progetSession = $null   
     $progetSession = [pscustomobject]@{
                                             Credential = $null;
-                                            NpmFeedUri = $NpmFeedUri;
                                             NuGetFeedUri = $NuGetFeedUri;
                                             PowerShellFeedUri = $PowerShellFeedUri;                                           
                                         }

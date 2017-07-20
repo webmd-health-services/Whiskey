@@ -14,7 +14,8 @@ function Invoke-WhiskeyNodeTask
 
     * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
     * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-
+    * `NpmRegistryUri` the uri to set a custom npm registry
+    
     Here's a sample `whiskey.yml` using the Node task:
 
         BuildTasks:
@@ -31,7 +32,7 @@ function Invoke-WhiskeyNodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test' }
+    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
@@ -49,6 +50,7 @@ function Invoke-WhiskeyNodeTask
         #
         # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+        # * `NpmRegistryUri` the uri to set a custom npm registry
         $TaskParameter,
 
         [Switch]
@@ -71,7 +73,11 @@ function Invoke-WhiskeyNodeTask
         }
         return
     }
-
+    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
+    if (-not $npmRegistryUri) 
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
+    }
     $npmScripts = $TaskParameter['NpmScripts']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
     $numSteps = 5 + $npmScriptCount
@@ -104,7 +110,7 @@ function Invoke-WhiskeyNodeTask
     try
     {
         Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $TaskContext.ProGetSession.NpmFeedUri -ApplicationRoot $workingDir
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
         if( -not $nodePath )
         {
             throw ('Node version required for this package failed to install. Please see previous errors for details.')

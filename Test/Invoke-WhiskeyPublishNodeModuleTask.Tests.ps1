@@ -4,6 +4,8 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$npmRegistryUri = [uri]'http://registry.npmjs.org/'
+
 function New-PublishNodeModuleStructure
 {
     param(
@@ -30,13 +32,13 @@ function New-PublishNodeModuleStructure
     if ($ByBuildServer)
     {
         $context = New-WhiskeyTestContext -ForBuildServer
-        $npmFeedUri = $context.ProGetSession.NpmFeedUri
+        $npmRegistryUri = $script:npmRegistryUri
         $npmUserName = $context.ProGetSession.Credential.UserName
         $npmEmail = $env:USERNAME + '@example.com'
         $npmCredPassword = $context.ProGetSession.Credential.GetNetworkCredential().Password
         $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
         $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
-        $npmConfigPrefix = '//{0}{1}:' -f $npmFeedUri.Authority,$npmFeedUri.LocalPath
+        $npmConfigPrefix = '//{0}{1}:' -f $npmRegistryUri.Authority,$npmRegistryUri.LocalPath
         $npmrcFileLine2 = ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
         $npmrcFileLine3 = ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
         $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
@@ -48,6 +50,7 @@ $npmrcFileLine4
     }
     
     $taskParameter = @{}
+    $taskParameter['NpmRegistryUri'] = $npmRegistryUri
     $workingDir = $context.BuildRoot
     if ($WithWorkingDirectoryOverride)
     {
