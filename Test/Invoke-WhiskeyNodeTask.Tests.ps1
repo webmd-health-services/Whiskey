@@ -18,8 +18,10 @@ $inSubDirectory = $null
 $inWorkingDirectory = $null
 $UsingNodeVersion = '^4.4.7'
 $runScripts = @()
+$failed = $null
 
-function GivenNpmRegistryUri {
+function GivenNpmRegistryUri 
+{
     param (
         [string]
         $registry
@@ -27,14 +29,16 @@ function GivenNpmRegistryUri {
     $Script:npmRegistryUri = $registry
 }
 
-function GivenEnvironment {
+function GivenEnvironment 
+{
     param (
         [string]
         $env
     )
     $env:NODE_ENV = $env
 }
-function GivenNpmScriptsToRun {
+function GivenNpmScriptsToRun 
+{
     param (
         [string[]]
         $scripts
@@ -42,10 +46,12 @@ function GivenNpmScriptsToRun {
     $script:runScripts = $scripts
 }
 
-function GivenWithCleanSwitch {
+function GivenWithCleanSwitch 
+{
     $script:withCleanSwitch = $true
 }
-function GivenSubDirectory {
+function GivenSubDirectory 
+{
     param (
         [string]
         $subDirectory
@@ -53,20 +59,24 @@ function GivenSubDirectory {
     $script:inSubDirectory = $subDirectory
 }
 
-function GivenWorkingDirectory {
+function GivenWorkingDirectory 
+{
     param (
         [string]
         $inWorkingDirectory
     )
     $script:InWorkingDirectory = $inWorkingDirectory
 }
-function GivenBuildByDeveloper {
+function GivenBuildByDeveloper 
+{
     $script:ByDeveloper = $true
 }
-function GivenBuildByBuildServer {
+function GivenBuildByBuildServer 
+{
     $script:ByDeveloper = $false
 }
-function GivenDevDependency {
+function GivenDevDependency 
+{
     param(
         [object[]]
         $DevDependency 
@@ -74,7 +84,8 @@ function GivenDevDependency {
     $script:devDependency = $DevDependency
 }
 
-function GivenDependency {
+function GivenDependency 
+{
     param(
         [object[]]
         $Dependency 
@@ -82,7 +93,8 @@ function GivenDependency {
     $script:dependency = $Dependency
 }
 
-function GivenNoName {
+function GivenNoName 
+{
     $script:WithNoName = $true
 }
 
@@ -123,12 +135,14 @@ function WhenBuildIsStarted
         $taskParameter['npmRegistryUri'] = $script:npmRegistryUri
     }
     $Global:Error.Clear()
+    $script:failed = $false
     try
     {
         Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter @optionalParams
     }
     catch
     {
+        $script:failed = $true
         Write-Error -ErrorRecord $_
         return
     }
@@ -324,8 +338,8 @@ module.exports = function(grunt) {
 
 function ThenBuildSucceeds 
 {
-    It 'should not throw an error' {
-        $Global:Error | Where-Object { $_ -notmatch 'npm.*WARN' } | Where-Object { $_ -notmatch 'WARN.*npm' }  | Should BeNullOrEmpty
+    It 'should not fail' {
+        $failed | Should -Be $false
     }
 }
 
@@ -356,11 +370,13 @@ function ThenBuildFails
             }
         }
     }
-    It 'should throw an error' {
+    It 'should throw an exception' {
+        $failed | Should -Be $true
         $Global:Error | Where-Object { $_ -match $expectedError } | Should -not -BeNullOrEmpty
     }
 }
-function cleanup {
+function cleanup 
+{
     $script:context = $null
     $script:npmRegistryUri = $null
     $script:devDependency = @()
@@ -371,6 +387,7 @@ function cleanup {
     $script:UsingNodeVersion = '^4.4.7'
     $script:withCleanSwitch = $false
     $script:runScripts = @()
+    $script:failed = $null
 }
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     GivenBuildByDeveloper

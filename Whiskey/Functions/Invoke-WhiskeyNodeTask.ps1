@@ -74,7 +74,8 @@ function Invoke-WhiskeyNodeTask
         return
     }
     $npmRegistryUri = $TaskParameter['NpmRegistryUri']
-    if(-not $npmRegistryUri) {
+    if (-not $npmRegistryUri) 
+    {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
     }
     $npmScripts = $TaskParameter['NpmScripts']
