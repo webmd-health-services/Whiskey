@@ -8,6 +8,7 @@ $buildServerContext = @{
                             ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
                         }
 $progetUri = [uri]'https://proget.example.com/'
+$npmRegistryUri = [uri]'http://registry.npmjs.org/'
 $configurationPath = $null
 $context = $null
 
@@ -105,7 +106,6 @@ function Assert-Context
 
     It 'should set ProGet URIs' {
         $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.NpmFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNpmFeed)
         $Context.ProGetSession.NuGetFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetNuGetFeed)
         $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
     }
@@ -336,10 +336,6 @@ function WhenCreatingContext
         if( -not $WithNoToolInfo )
         {
             $optionalArgs = $buildServerContext.Clone()
-            if( $WithProGetNpmFeed )
-            {
-                $optionalArgs['NpmFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNpmFeed
-            }
             if( $WithProGetNuGetFeed )
             {
                 $optionalArgs['NuGetFeedUri'] = New-Object 'uri' $progetUri, $WithProGetNuGetFeed

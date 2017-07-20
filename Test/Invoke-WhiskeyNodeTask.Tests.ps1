@@ -324,7 +324,7 @@ module.exports = function(grunt) {
 function ThenBuildSucceeds 
 {
     It 'should not throw an error' {
-        $Global:Error | Where-Object { $_ -notmatch '*npm WARN*' }  | Should BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -notmatch 'npm WARN' }  | Should BeNullOrEmpty
     }
 }
 
