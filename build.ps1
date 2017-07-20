@@ -21,7 +21,6 @@ $configuration = 'Release'
 
 $toolParameters = @{
                         'NpmFeedUri' = 'https://npm.example.com/';
-                        'NuGetFeedUri' = 'https://nuget.example.com/';
                         'PowerShellFeedUri' = 'https://powershell.example.com/';
                    }
 

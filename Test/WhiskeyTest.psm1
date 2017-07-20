@@ -168,7 +168,6 @@ function New-WhiskeyTestContext
 
     $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
     $NpmFeedUri = 'https://registry.npmjs.org/'
-    $NuGetFeedUri = 'https://nuget.org/'
     $PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
 
     $optionalArgs = @{ }
@@ -229,7 +228,6 @@ function New-WhiskeyTestContext
     }
     $progetArgs = @{
                     NpmFeedUri = $NpmFeedUri;
-                    NuGetFeedUri = $NuGetFeedUri;
                     PowerShellFeedUri = $PowerShellFeedUri;
                     }
 

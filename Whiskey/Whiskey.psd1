@@ -162,6 +162,7 @@
 * Fixed: the `PublishProGetUniversalPackage` task doesn't fail if publishing to ProGet fails.
 * ***BREAKING***: `PublishNuGetLibrary` task now requires the URI where it should publish NuGet packages. This used to be passed to the `New-WhiskeyContext` function's `NuGetFeedUri` parameter.
 * ***BREAKING***: `PublishNuGetLibrary` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. API keys are added to the context object's ApiKeys property, e.g. `$context.ApiKeys.Add( API_KEY_ID, 'apikey'`. The context object is returned by `New-WhiskeyContext`.
+* ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetLibrary` task.
 '@
         } # End of PSData hashtable
 
