@@ -109,43 +109,45 @@ function Invoke-WhiskeyPipeline
             $optionalParams['Clean'] = $True
         }
 
-        #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
-        $prefix = '[{0}]' -f $taskName
-        Write-Verbose -Message $prefix
-        if( $events.ContainsKey('BeforeTask') )
+        function Invoke-Event
         {
-            $events['BeforeTask'] | ForEach-Object { 
-                $commandName = $_
-                Write-Verbose -Message ('{0}  [OnBeforeTask]  {1}' -f $prefix,$commandName)
+            param(
+                $Prefix,
+                $EventName
+            )
+
+            if( -not $events.ContainsKey($EventName) )
+            {
+                return
+            }
+
+            foreach( $commandName in $events[$EventName] )
+            {
+                Write-Verbose -Message $prefix
+                Write-Verbose -Message ('{0}  [On{1}]  {2}' -f $prefix,$EventName,$commandName)
                 $startedAt = Get-Date
                 & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}                  COMPLETED in {1}' -f $prefix,$duration)
-                Write-Verbose ($prefix)
+                Write-Verbose ('{0}  {1}  COMPLETED in {2}' -f $prefix,(' ' * ($EventName.Length + 4)),$duration)
             }
         }
-        
+
+        #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
+        $prefix = '[{0}]' -f $taskName
+        Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
+        Invoke-Event -EventName ('Before{0}Task' -f $taskName) -Prefix $prefix
+
+        Write-Verbose -Message $prefix
         $startedAt = Get-Date
         & $taskFunctionName -TaskContext $context -TaskParameter $taskItem @optionalParams
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
         Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
+
+        Invoke-Event -Prefix $prefix -EventName 'AfterTask'
+        Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $taskName)
         Write-Verbose ($prefix)
-
-        if( $events.ContainsKey('AfterTask') )
-        {
-            $events['AfterTask'] | ForEach-Object { 
-                $commandName = $_
-                Write-Verbose -Message ('{0}  [OnAfterTask]  {1}' -f $prefix,$commandName)
-                $startedAt = Get-Date
-                & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
-                $endedAt = Get-Date
-                $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}                 COMPLETED in {1}' -f $prefix,$duration)
-                Write-Verbose ($prefix)
-            }
-        }
-
+        Write-Verbose ''
     }
 }

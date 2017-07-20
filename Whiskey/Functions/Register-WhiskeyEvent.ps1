@@ -46,15 +46,26 @@ function Register-WhiskeyEvent
         [string]
         [ValidateSet('BeforeTask','AfterTask')]
         # When the command should be run; what events does it respond to?
-        $Event
+        $Event,
+
+        [string]
+        # Only fire the event for a specific task.
+        $TaskName
     )
 
     Set-StrictMode -Version 'Latest'
 
-    if( -not $events[$Event] )
+    $eventName = $Event
+    if( $TaskName )
     {
-        $events[$Event] = New-Object -TypeName 'Collections.Generic.List[string]'
+        $eventType = $Event -replace 'Task$',''
+        $eventName = '{0}{1}Task' -f $eventType,$TaskName
     }
 
-    $events[$Event].Add( $CommandName )
+    if( -not $events[$eventName] )
+    {
+        $events[$eventName] = New-Object -TypeName 'Collections.Generic.List[string]'
+    }
+
+    $events[$eventName].Add( $CommandName )
 }
