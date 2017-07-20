@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyPublishNuGetLibraryTask
+function Publish-WhiskeyNuGetPackage
 {
     <#
     .SYNOPSIS
@@ -39,19 +39,47 @@ function Invoke-WhiskeyPublishNuGetLibraryTask
         {
             return
         }
+
         if( -not ($TaskParameter.ContainsKey('Path')))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
-        
-            BuildTasks:
-                - NuGetPack:
-                    Path:
-                    - MyProject.csproj
-                    - MyNuspec.nuspec')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+            
+    BuildTasks:
+    - PublishNuGetPackage:
+        Path:
+        - MyProject.csproj
+        - MyNuspec.nuspec')
         }
 
         $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
        
+        $source = $TaskParameter['Uri']
+        if( -not $source )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Uri'' is mandatory. It should be the URI where NuGet packages should be published, e.g. 
+            
+    BuildTasks:
+    - PublishNuGetPackage:
+        Uri: https://nuget.org
+    ')
+        }
+
+        $apiKeyID = $TaskParameter['ApiKeyID']
+        if( -not $apiKeyID )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It should be the ID/name of the API key to use when publishing NuGet packages to {0}, e.g.:
+            
+    BuildTasks:
+    - PublishNuGetPackage:
+        Uri: {0}
+        ApiKeyID: API_KEY_ID
+             
+API keys are added to the `ApiKeys` property on the context object returned by `New-WhiskeyContext`, e.g. `$context.ApiKeys.Add( ''API_KEY_ID'', $apiKey )`.
+
+            ' -f $source)
+        }
+        $apiKey = Get-WhiskeyApiKey -TaskContext $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
+
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         if( -not $nugetPath )
         {
@@ -80,13 +108,7 @@ function Invoke-WhiskeyPublishNuGetLibraryTask
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
             }
-            if( !$TaskContext.Publish )
-            {
-                continue
-            }
 
-            $source = $TaskContext.ProGetSession.NuGetFeedUri
-            $apiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName,$TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
             $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             
             # Make sure this version doesn't exist.
@@ -116,8 +138,9 @@ function Invoke-WhiskeyPublishNuGetLibraryTask
             }
 
             # Publish package and symbols to NuGet
-            Invoke-Command -ScriptBlock { & $nugetPath push $packagePath -Source $source -ApiKey $apiKey}
-            Invoke-Command -ScriptBlock { & $nugetPath push $symbolsPackagePath -Source $source -ApiKey $apiKey}
+            Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey
+            Invoke-WhiskeyNuGetPush -Path $symbolsPackagePath -Uri $source -ApiKey $apiKey
+            
             try
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
