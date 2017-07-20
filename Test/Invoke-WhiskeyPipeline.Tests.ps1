@@ -82,9 +82,20 @@ function GivenRunByDeveloper
 
 function GivenPlugins
 {
-    Register-WhiskeyEvent -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask
+    param(
+        [string]
+        $ForSpecificTask
+    )
+
+    $taskNameParam = @{ }
+    if( $ForSpecificTask )
+    {
+        $taskNameParam['TaskName'] = $ForSpecificTask
+    }
+
+    Register-WhiskeyEvent -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask @taskNameParam
     Mock -CommandName 'Invoke-PostTaskPlugin' -ModuleName 'Whiskey'
-    Register-WhiskeyEvent -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask
+    Register-WhiskeyEvent -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask @taskNameParam
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
 }
 
@@ -170,40 +181,54 @@ function ThenPluginsRan
         $WithParameter,
 
         [Switch]
-        $InCleanMode
+        $InCleanMode,
+
+        [int]
+        $Times = 1
     )
 
     foreach( $pluginName in @( 'Invoke-PreTaskPlugin', 'Invoke-PostTaskPlugin' ) )
     {
-        It ('should run {0}' -f $pluginName) {
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { $TaskContext -ne $null }
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { $TaskName -eq $ForTaskNamed }
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
-                if( $TaskParameter.Count -ne $WithParameter.Count )
-                {
-                    return $false
-                }
-
-                foreach( $key in $WithParameter.Keys )
-                {
-                    if( $TaskParameter[$key] -ne $WithParameter[$key] )
+        if( $Times -eq 0 )
+        {
+            It ('should not run plugin for ''{0}'' task' -f $ForTaskNamed) {
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times 0 -ParameterFilter { $TaskName -eq $ForTaskNamed }
+            }
+        }
+        else
+        {
+            It ('should run {0}' -f $pluginName) {
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
+                    if( $TaskParameter.Count -ne $WithParameter.Count )
                     {
                         return $false
                     }
-                }
 
-                return $true
-            }
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
-                #$DebugPreference = 'Continue'
-                Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
-                Write-Debug ('       actual    {0}' -f [bool]$Clean)
-                [bool]$Clean -eq $InCleanMode.IsPresent
+                    foreach( $key in $WithParameter.Keys )
+                    {
+                        if( $TaskParameter[$key] -ne $WithParameter[$key] )
+                        {
+                            return $false
+                        }
+                    }
+
+                    return $true
+                }
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
+                    #$DebugPreference = 'Continue'
+                    Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
+                    Write-Debug ('       actual    {0}' -f [bool]$Clean)
+                    [bool]$Clean -eq $InCleanMode.IsPresent
+                }
             }
         }
 
         Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask
+        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask -TaskName $ForTaskNamed
         Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask
+        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask -TaskName $ForTaskNamed
     }
 }
 
@@ -397,6 +422,25 @@ BuildTasks:
         ThenPipelineSucceeded
         ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' } -InCleanMode
     }
+}
+
+Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
+    GivenRunByDeveloper
+    GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- PowerShell:
+    Path: somefile.ps1
+- MSBuild:
+    Path: fubar.ps1
+"@
+    GivenPlugins -ForSpecificTask 'PowerShell'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    Mock -CommandName 'Invoke-WhiskeyMsBuildTask' -ModuleName 'Whiskey'
+
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+    ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
+    ThenPluginsRan -ForTaskNamed 'MSBuild' -Times 0
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers

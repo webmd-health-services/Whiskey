@@ -19,20 +19,31 @@ function Unregister-WhiskeyEvent
         [string]
         [ValidateSet('BeforeTask','AfterTask')]
         # When the command should be run; what events does it respond to?
-        $Event
+        $Event,
+
+        [string]
+        # The specific task whose events to unregister.
+        $TaskName
     )
 
     Set-StrictMode -Version 'Latest'
 
-    if( -not $events[$Event] )
+    $eventName = $Event
+    if( $TaskName )
+    {
+        $eventType = $Event -replace 'Task$',''
+        $eventName = '{0}{1}Task' -f $eventType,$TaskName
+    }
+
+    if( -not $events[$eventName] )
     {
         return
     }
 
-    if( -not $Events[$Event].Contains( $CommandName ) )
+    if( -not $Events[$eventName].Contains( $CommandName ) )
     {
         return
     }
 
-    $events[$Event].Remove( $CommandName )
+    $events[$eventName].Remove( $CommandName )
 }
