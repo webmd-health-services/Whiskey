@@ -60,7 +60,12 @@ function Invoke-WhiskeyPublishNodeModuleTask
     $npmRegistryUri = $TaskParameter['npmRegistryUri']
     if (-not $npmRegistryUri) 
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry where the module should be published. E.g.,
+        
+        BuildTasks:
+        - PublishNodeModule:
+            NpmRegistryUri: https://registry.npmjs.org/
+        '
     }
     $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
     

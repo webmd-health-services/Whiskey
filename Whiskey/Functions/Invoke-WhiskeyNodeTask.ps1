@@ -76,7 +76,12 @@ function Invoke-WhiskeyNodeTask
     $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry from which Node.js packages should be downloaded. E.g.,
+        
+        BuildTasks:
+        - Node:
+            NpmRegistryUri: https://registry.npmjs.org/
+        '
     }
     $npmScripts = $TaskParameter['NpmScripts']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
