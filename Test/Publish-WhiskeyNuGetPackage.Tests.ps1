@@ -12,6 +12,7 @@ $packageExists = $false
 $publishFails = $false
 $packageExistsCheckFails = $false
 $threwException = $false
+$path = $null
 
 function InitTest
 {
@@ -23,64 +24,23 @@ function InitTest
     $script:packageExists = $false
     $script:publishFails = $false
     $script:packageExistsCheckFails = $false
+    $script:path = $null
 }
 
-function GivenABuiltLibrary
+function GivenANuGetPackage
 {
     param(
-        [Switch]
-        $ThatDoesNotExist,
-
-        [Switch]
-        $InReleaseMode,
-
-        [string]
-        $WithVersion = $defaultVersion
+        [string[]]
+        $Path
     )
 
-    $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest'
-    robocopy $projectRoot $TestDrive.FullName '/MIR' '/R:0'
+    $outputRoot = Join-Path -Path $TestDRive.FullName -ChildPath '.output'
+    New-Item -Path $outputRoot -ItemType 'Directory' 
 
-    # Make sure output directory gets created by the task
-    $buildConfig = 'Debug'
-    if( $InReleaseMode )
+    foreach( $item in $Path )
     {
-        $buildConfig = 'Release'
+        New-Item -Path (Join-Path -Path $outputRoot -ChildPath $item) -ItemType 'File' -Force
     }
-
-    #New-WhiskeyTestContext -ForBuildRoot $TestDrive.FullName -ForTaskName 'NuGetPack' -ForDeveloper | Format-List | Out-String | Write-Verbose -Verbose
-        
-    $script:context = [pscustomobject]@{
-                                            Version = [pscustomobject]@{
-                                                                            SemVer1 = $WithVersion;
-                                                                       }
-                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
-                                            BuildConfiguration = $buildConfig;
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                            BuildRoot = $TestDrive.FullName;
-                                            TaskIndex = 1;
-                                            TaskName = 'PublishNuGetPackage';
-                                            ApiKeys = @{ }
-                                        }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' 
-    
-    Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
-    if( $WithVersion )
-    {
-        $Context.Version.SemVer1 = $WithVersion
-    }
-
-    $Global:Error.Clear()
-    $project = Join-Path -Path $TestDrive.FullName -ChildPath $projectName -Resolve
-    
-    $propertyArg = @{}
-    if( $InReleaseMode )
-    {
-        $propertyArg['Property'] = 'Configuration=Release'
-    }
-
-    Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
-    Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
 }
 
 function GivenNoApiKey
@@ -91,6 +51,15 @@ function GivenNoApiKey
 function GivenNoUri
 {
     $script:nugetUri = $null
+}
+
+function GivenPath
+{
+    param(
+        $Path
+    )
+
+    $script:path = $Path
 }
 
 function GivenPackageAlreadyPublished
@@ -125,100 +94,96 @@ function WhenRunningNuGetPackTask
         $WithCleanSwitch
     )
 
-    process 
-    {        
-        $Global:Error.Clear()        
-        if( $ForMultiplePackages )
-        {
-            $taskParameter = @{
-                            Path = @(
-                                        $projectName,
-                                        $projectName
-                                    )
-                          }
-        }
-        else 
-        {
-            $taskParameter = @{
-                            Path = @(
-                                        $projectName
-                                    )
-                          }
-        }
+    $script:context = [pscustomobject]@{
+                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
+                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+                                            BuildRoot = $TestDrive.FullName;
+                                            Version = @{
+                                                            SemVer1 = '1.2.3';
+                                                        }
+                                            TaskIndex = 1;
+                                            TaskName = 'PublishNuGetPackage';
+                                            ApiKeys = @{ }
+                                        }        
+    $taskParameter = @{ }
 
-        if( $apiKey )
-        {
-            $taskParameter['ApiKeyID'] = 'fubarsnafu'
-            $context.ApiKeys['fubarsnafu'] = $apiKey
-        }
-
-        if( $nugetUri )
-        {
-            $taskParameter['Uri'] = $nugetUri
-        }
-
-        Mock -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey'
-        if( $packageExists )
-        {
-            Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey'
-        }
-        elseif( $publishFails )
-        {
-            Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-                Invoke-WebRequest -Uri 'http://httpstat.us/404'
-            } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
-        }
-        elseif( $packageExistsCheckFails )
-        {
-            Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-                Invoke-WebRequest -Uri 'http://httpstat.us/500'
-            } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
-        }
-        else
-        {
-            $global:counter = 0
-            Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-                #$DebugPreference = 'Continue'
-                Write-Debug $global:counter
-                if($global:counter -eq 0)
-                {
-                    $global:counter++    
-                    Write-Debug $global:counter
-                    Invoke-WebRequest -Uri 'http://httpstat.us/404'
-                }
-                $global:counter = 0
-            } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
-        }
-
-        $optionalParams = @{ }
-        if( $WithCleanSwitch )
-        {
-            $optionalParams['Clean'] = $True
-        }
-        $script:threwException = $false
-        try
-        {
-            if( $WithVersion )
-            {
-                $Context.Version.SemVer1 = $WithVersion
-            }
-            if( $ForProjectThatDoesNotExist )
-            {
-                $taskParameter['Path'] = 'I\do\not\exist.csproj'
-            }
-
-            $Global:error.Clear()
-            Publish-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
-
-        }
-        catch
-        {
-            $script:threwException = $true
-            Write-Error $_
-        }
-
-        Remove-Variable -Name 'counter' -Scope 'Global' -ErrorAction Ignore
+    if( $path )
+    {
+        $taskParameter['Path'] = $path
     }
+                                            
+    if( $apiKey )
+    {
+        $taskParameter['ApiKeyID'] = 'fubarsnafu'
+        $context.ApiKeys['fubarsnafu'] = $apiKey
+    }
+
+    if( $nugetUri )
+    {
+        $taskParameter['Uri'] = $nugetUri
+    }
+
+    Mock -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey'
+    if( $packageExists )
+    {
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey'
+    }
+    elseif( $publishFails )
+    {
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
+            Invoke-WebRequest -Uri 'http://httpstat.us/404'
+        } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
+    }
+    elseif( $packageExistsCheckFails )
+    {
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
+            Invoke-WebRequest -Uri 'http://httpstat.us/500'
+        } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
+    }
+    else
+    {
+        $global:counter = 0
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
+            #$DebugPreference = 'Continue'
+            Write-Debug $global:counter
+            if($global:counter -eq 0)
+            {
+                $global:counter++    
+                Write-Debug $global:counter
+                Invoke-WebRequest -Uri 'http://httpstat.us/404'
+            }
+            $global:counter = 0
+        } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
+    }
+
+    $optionalParams = @{ }
+    if( $WithCleanSwitch )
+    {
+        $optionalParams['Clean'] = $True
+    }
+    $script:threwException = $false
+    try
+    {
+        if( $WithVersion )
+        {
+            $Context.Version.SemVer1 = $WithVersion
+        }
+        if( $ForProjectThatDoesNotExist )
+        {
+            $taskParameter['Path'] = 'I\do\not\exist.csproj'
+        }
+
+        $Global:error.Clear()
+        Publish-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
+
+    }
+    catch
+    {
+        $script:threwException = $true
+        Write-Error $_
+    }
+
+    Remove-Variable -Name 'counter' -Scope 'Global' -ErrorAction Ignore
 }
 
 function ThenTaskThrowsAnException
@@ -246,37 +211,26 @@ function ThenTaskSucceeds
     }
 }
 
-function ThenPackageCreated
+function ThenPackagePublished
 {
     param(
-        [string]
-        $WithVersion
-    )
-
-    if( $WithVersion )
-    {
-        $Context.Version.SemVer1 = $WithVersion
-    }
-
-    It ('should create NuGet package') {
-        $packagePath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.SemVer1)
-        $packagePath | Should Exist
-    }
-
-    It ('should create NuGet symbols package') {
-        $packagePath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.SemVer1)
-        $packagePath | Should Exist
-    }
- }
-
- function ThenPackagePublished
- {
-    param(
+        $Path,
         $Times = 1
     )
 
-    It ('should publish {0} packages' -f $Times) {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -Times ($Times * 2) 
+    foreach( $item in $Path )
+    {
+        It ('should publish package ''{0}''' -f $Path) {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
+                $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $item)
+                Write-Debug -Message ('Path  expected  {0}' -f $expectedPath)
+                $Path | Where-Object { 
+                                        Write-Debug -Message ('      actual    {0}' -f $_)
+                                        $_ -eq $expectedPath 
+                                     } 
+           } 
+        }
     }
 
     It ('should publish to {0}' -f $nugetUri) {
@@ -296,72 +250,36 @@ function ThenPackageNotPublished
     }
 }
 
-function ThenPackageNotCreated
-{
-    It 'should not create any .nupkg files' {
-        (Join-Path -Path $context.OutputDirectory -ChildPath '*.nupkg') | Should Not Exist
-    }
-}
-
-Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with an invalid project' {
+Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
     InitTest
-    GivenABuiltLibrary
-    WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskThrowsAnException 'does not exist'
-}
-
-Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package' {
-    InitTest
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNuGetPackTask
-    ThenPackageCreated
-    ThenPackagePublished
-    ThenTaskSucceeds
-}
-
-Describe 'Publish-WhiskeyNuGetPackage.when passed a version' {
-    InitTest
-    $version = '4.5.6-rc1'
-    GivenABuiltLibrary -WithVersion $version
-    WhenRunningNugetPackTask
-    ThenPackageCreated -WithVersion $version
-    ThenPackagePublished
-    ThenTaskSucceeds
-}
-
-Describe 'Publish-WhiskeyNuGetPackage.when creating a package built in release mode' {
-    InitTest
-    GivenABuiltLibrary -InReleaseMode
-    WhenRunningNugetPackTask
-    ThenPackageCreated
-    ThenPackagePublished
+    ThenPackagePublished 'Fubar.nupkg'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
     InitTest
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg','Snafu.nupkg'
     WhenRunningNugetPackTask -ForMultiplePackages
-    ThenPackageCreated
-    ThenPackagePublished -Times 2
+    ThenPackagePublished 'Fubar.nupkg'
+    ThenPackagePublished 'Snafu.nupkg'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
     InitTest
     GivenPackagePublishFails
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failed to publish NuGet package'
-    ThenPackageCreated
-    ThenPackagePublished
+    ThenPackagePublished 'Fubar.nupkg'
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
     InitTest
     GivenPackageAlreadyPublished
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'already exists'
     ThenPackageNotPublished
@@ -370,7 +288,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
 Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     InitTest
     GivenTheCheckIfThePackageExistsFails
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failure checking if'
     ThenPackageNotPublished
@@ -378,7 +296,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with Clean switch' {    
     InitTest
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNuGetPackTask -WithCleanSwitch
     ThenTaskSucceeds
 
@@ -386,24 +304,32 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with Clean s
         $Global:Error | Should BeNullOrEmpty
     }
 
-    ThenPackageNotCreated
     ThenPackageNotPublished
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
     InitTest
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     GivenNoUri
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
+    ThenPackageNotPublished
     ThenTaskThrowsAnException '\bURI\b.*\bmandatory\b'
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
     InitTest
-    GivenABuiltLibrary
+    GivenANuGetPackage 'Fubar.nupkg'
     GivenNoApiKey
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
+    ThenPackageNotPublished
     ThenTaskThrowsAnException '\bApiKeyID\b.*\bmandatory\b'
+}
+
+Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
+    InitTest
+    GivenANuGetPackage 'someotherdir\MyPack.nupkg'
+    GivenPath '.output\someotherdir\MyPack.nupkg'
+    WhenRunningNuGetPackTask
+    ThenTaskSucceeds
+    ThenPackagePublished 'someotherdir\MyPack.nupkg'
 }

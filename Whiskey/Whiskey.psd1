@@ -166,6 +166,7 @@
 * ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetPackage` task.
 * Tasks can now have multiple names. Add multiple task attributes to a task.
 * Created `NuGetPack` task for creating NuGet packages.
+* ***BREAKING***: The `PublishNuGetPackage` task no longer creates the NuGet package. Use the `NuGetPack` task.
 '@
         } # End of PSData hashtable
 

@@ -48,13 +48,7 @@ function Publish-WhiskeyNuGetPackage
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
-            
-    BuildTasks:
-    - PublishNuGetPackage:
-        Path:
-        - MyProject.csproj
-        - MyNuspec.nuspec')
+        $TaskParameter['Path'] = '.output\*.nupkg'
     }
 
     $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -96,26 +90,6 @@ API keys are added to the `ApiKeys` property on the context object returned by `
     {
         $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
         $packageVersion = $TaskContext.Version.SemVer1
-                    
-        # Create NuGet package
-        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $TaskContext.BuildConfiguration) $path
-
-        # Make sure package was created.
-        $filename = '{0}.{1}.nupkg' -f $projectName,$packageVersion
-        $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
-        if( -not (Test-Path -Path $packagePath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' but the expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
-        }
-
-        # Make sure symbols package was created
-        $filename = '{0}.{1}.symbols.nupkg' -f $projectName,$packageVersion
-        $symbolsPackagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
-        if( -not (Test-Path -Path $symbolsPackagePath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
-        }
-
         $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             
         # Make sure this version doesn't exist.
@@ -145,8 +119,7 @@ API keys are added to the `ApiKeys` property on the context object returned by `
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey
-        Invoke-WhiskeyNuGetPush -Path $symbolsPackagePath -Uri $source -ApiKey $apiKey
+        Invoke-WhiskeyNuGetPush -Path $path -Uri $source -ApiKey $apiKey
             
         try
         {
@@ -157,7 +130,4 @@ API keys are added to the `ApiKeys` property on the context object returned by `
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to publish NuGet package {0} {1} to {2}. When we checked if that package existed, we got a {3} HTTP status code. Please see build output for more information.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
         }
     }
-
 } 
-
-
