@@ -160,9 +160,10 @@
 * Added a `CompressionLevel` property to the `ProGetUniversalPackage` task to control the compression level of the package. The default is `1` (low compression, larger file size). 
 * Fixed: the `ProGetUniversalPackage` task fails when installing the 7-zip NuGet package if automatic NuGet package restore isn't enabled globally. It now creates a process-level `EnableNuGetPackageRestore` environment variable and sets its value to `true`.
 * Fixed: the `PublishProGetUniversalPackage` task doesn't fail if publishing to ProGet fails.
-* ***BREAKING***: `PublishNuGetLibrary` task now requires the URI where it should publish NuGet packages. This used to be passed to the `New-WhiskeyContext` function's `NuGetFeedUri` parameter.
-* ***BREAKING***: `PublishNuGetLibrary` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. API keys are added to the context object's ApiKeys property, e.g. `$context.ApiKeys.Add( API_KEY_ID, 'apikey'`. The context object is returned by `New-WhiskeyContext`.
-* ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetLibrary` task.
+* Renamed the `PublishNuGetLibrary` task to `PublishNuGetPackage`. You can continue to use the old name, but it will eventually be removed.
+* ***BREAKING***: `PublishNuGetPackage` task now requires the URI where it should publish NuGet packages. This used to be passed to the `New-WhiskeyContext` function's `NuGetFeedUri` parameter.
+* ***BREAKING***: `PublishNuGetPackage` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. API keys are added to the context object's ApiKeys property, e.g. `$context.ApiKeys.Add( API_KEY_ID, 'apikey'`. The context object is returned by `New-WhiskeyContext`.
+* ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetPackage` task.
 * Tasks can now have multiple names. Add multiple task attributes to a task.
 '@
         } # End of PSData hashtable

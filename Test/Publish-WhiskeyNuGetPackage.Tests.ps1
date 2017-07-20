@@ -59,7 +59,7 @@ function GivenABuiltLibrary
                                             ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
                                             BuildRoot = $TestDrive.FullName;
                                             TaskIndex = 1;
-                                            TaskName = 'PublishNuGetLibrary';
+                                            TaskName = 'PublishNuGetPackage';
                                             ApiKeys = @{ }
                                         }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' 
@@ -303,7 +303,7 @@ function ThenPackageNotCreated
     }
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with an invalid project' {
+Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with an invalid project' {
     InitTest
     GivenABuiltLibrary
     WhenRunningNuGetPackTask -ForProjectThatDoesNotExist -ErrorAction SilentlyContinue
@@ -311,7 +311,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with an i
     ThenTaskThrowsAnException 'does not exist'
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package' {
+Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package' {
     InitTest
     GivenABuiltLibrary
     WhenRunningNuGetPackTask
@@ -320,7 +320,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package' {
     ThenTaskSucceeds
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when passed a version' {
+Describe 'Publish-WhiskeyNuGetPackage.when passed a version' {
     InitTest
     $version = '4.5.6-rc1'
     GivenABuiltLibrary -WithVersion $version
@@ -330,7 +330,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when passed a version' {
     ThenTaskSucceeds
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating a package built in release mode' {
+Describe 'Publish-WhiskeyNuGetPackage.when creating a package built in release mode' {
     InitTest
     GivenABuiltLibrary -InReleaseMode
     WhenRunningNugetPackTask
@@ -339,7 +339,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a package built in releas
     ThenTaskSucceeds
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for publishing' {
+Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
     InitTest
     GivenABuiltLibrary
     WhenRunningNugetPackTask -ForMultiplePackages
@@ -348,7 +348,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating multiple packages for pub
     ThenTaskSucceeds
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when publishing fails' {
+Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
     InitTest
     GivenPackagePublishFails
     GivenABuiltLibrary
@@ -358,7 +358,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when publishing fails' {
     ThenPackagePublished
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when package already exists' {
+Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
     InitTest
     GivenPackageAlreadyPublished
     GivenABuiltLibrary
@@ -367,7 +367,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when package already exists' {
     ThenPackageNotPublished
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
+Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     InitTest
     GivenTheCheckIfThePackageExistsFails
     GivenABuiltLibrary
@@ -376,7 +376,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating WebRequest fails' {
     ThenPackageNotPublished
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clean switch' {    
+Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with Clean switch' {    
     InitTest
     GivenABuiltLibrary
     WhenRunningNuGetPackTask -WithCleanSwitch
@@ -390,7 +390,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when creating a NuGet package with Clea
     ThenPackageNotPublished
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when URI property is missing' {
+Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
     InitTest
     GivenABuiltLibrary
     GivenNoUri
@@ -399,7 +399,7 @@ Describe 'Invoke-PublishNuGetLibraryTask.when URI property is missing' {
     ThenTaskThrowsAnException '\bURI\b.*\bmandatory\b'
 }
 
-Describe 'Invoke-PublishNuGetLibraryTask.when ApiKeyID property is missing' {
+Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
     InitTest
     GivenABuiltLibrary
     GivenNoApiKey
