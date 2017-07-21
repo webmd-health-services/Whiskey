@@ -128,7 +128,7 @@ function WhenBuildIsStarted
     }
     if ( $script:withCleanSwitch )
     {
-        $optionalParams['Clean'] = $True
+        $context.RunMode = 'Clean'
     }
     if ( $script:npmRegistryUri )
     {
@@ -138,7 +138,7 @@ function WhenBuildIsStarted
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter @optionalParams
+        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter
     }
     catch
     {

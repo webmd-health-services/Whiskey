@@ -27,10 +27,7 @@ function Publish-WhiskeyNuGetPackage
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -39,11 +36,6 @@ function Publish-WhiskeyNuGetPackage
     if( $TaskContext.TaskName -eq 'PublishNuGetLibrary' )
     {
         Write-Warning -Message ('We have renamed the ''PublishNuGetLibrary'' task to ''PublishNuGetPackage''. Please rename the task in ''{0}''. In a future version of Whiskey, the `PublishNuGetLibrary` name will no longer work.' -f $TaskContext.ConfigurationPath)
-    }
-
-    if( $Clean )
-    {
-        return
     }
 
     if( -not ($TaskParameter.ContainsKey('Path')))

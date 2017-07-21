@@ -36,7 +36,7 @@ function Invoke-WhiskeyNodeTask
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
-    [Whiskey.Task("Node")]
+    [Whiskey.Task("Node",SupportsClean=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -51,16 +51,13 @@ function Invoke-WhiskeyNodeTask
         # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
         # * `NpmRegistryUri` the uri to set a custom npm registry
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
         if( Test-Path $nodeModulesPath -PathType Container )

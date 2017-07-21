@@ -105,8 +105,6 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode,
 
         [object]
         $WithArgument
@@ -131,17 +129,12 @@ function WhenTheTaskRuns
     $context = New-WhiskeyTestContext -ForDeveloper
     
     $failed = $false
-    $CleanParam = @{ }
-    if( $InCleanMode )
-    {
-        $CleanParam['Clean'] = $True
-    }
 
     $Global:Error.Clear()
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyPowerShell -TaskContext $context -TaskParameter $taskParameter @CleanParam
+        Invoke-WhiskeyPowerShell -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -270,14 +263,6 @@ Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {
     GivenAPassingScript
     WhenTheTaskRuns  -ErrorAction SilentlyContinue
     ThenTheTaskFails
-}
-
-Describe 'Invoke-WhiskeyPowerShell.when Clean switch is active' {
-    GivenNoWorkingDirectory
-    GivenAPassingScript
-    WhenTheTaskRuns -InCleanMode
-    ThenTheTaskPasses
-    ThenTheScriptDidNotRun
 }
 
 function ThenFile

@@ -94,8 +94,6 @@ function WhenCreatingPackage
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode
     )
 
     $taskParameter['ApplicationName'] = $appName
@@ -120,12 +118,7 @@ function WhenCreatingPackage
     try
     {
         $Global:Error.Clear()
-        $cleanParam = @{ }
-        if( $InCleanMode )
-        {
-            $cleanParam['Clean'] = $true
-        }
-        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter @cleanParam
+        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -289,14 +282,4 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ApiKeyID property is missing')
     GivenProperty @{ 'Uri' = 'https://buildmaster.example.com' }
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
-}
-
-Describe ('Publish-WhiskeyBuildMasterPackage.when run in clean mode') {
-    GivenNoApplicationName
-    GivenProperty @{ }
-    WhenCreatingPackage -InCleanMode
-    ThenPackageNotCreated
-    It 'should not throw an exception' {
-        $threwException | Should -Be $false
-    }
 }

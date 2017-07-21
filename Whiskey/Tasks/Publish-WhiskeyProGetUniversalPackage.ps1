@@ -10,10 +10,7 @@ function Publish-WhiskeyProGetUniversalPackage
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

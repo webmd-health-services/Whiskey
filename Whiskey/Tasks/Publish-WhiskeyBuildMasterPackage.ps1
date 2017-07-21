@@ -10,19 +10,11 @@ function Publish-WhiskeyBuildMasterPackage
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    if( $Clean )
-    {
-        return
-    }
 
     $applicationName = $TaskParameter['ApplicationName']
     if( -not $applicationName )

@@ -17,7 +17,7 @@ function Invoke-WhiskeyPester4Task
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
-    [Whiskey.Task("Pester4")]
+    [Whiskey.Task("Pester4",SupportsClean=$true)]
     [CmdletBinding()]
     param(
          [Parameter(Mandatory=$true)]
@@ -26,10 +26,7 @@ function Invoke-WhiskeyPester4Task
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-        
-        [Switch]
-        $Clean        
+        $TaskParameter
     )
     
     Set-StrictMode -Version 'Latest'
@@ -61,7 +58,7 @@ function Invoke-WhiskeyPester4Task
         $version = $latestPester.Version 
     }
 
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return

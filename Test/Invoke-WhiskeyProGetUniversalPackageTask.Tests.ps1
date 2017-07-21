@@ -98,7 +98,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $WhenRunByBuildServer,
 
         [Switch]
-        $WhenGivenCleanSwitch
+        $WhenCleaning
     )
 
     if( -not $Version )
@@ -152,10 +152,9 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $Global:Error.Clear()
 
-    $optionalParams = @{ }
-    if( $WhenGivenCleanSwitch )
+    if( $WhenCleaning )
     {
-        $optionalParams['Clean'] = $true
+        $taskContext.RunMode = 'Clean'
     }
         
     function Get-TempDirCount
@@ -168,7 +167,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $preTempDirCount = Get-TempDirCount
     try
     {
-        $At = Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $taskContext -TaskParameter $taskParameter @optionalParams |
+        $At = Invoke-WhiskeyProGetUniversalPackageTask -TaskContext $taskContext -TaskParameter $taskParameter |
                 Where-Object { $_ -like '*.upack' } | 
                 Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
@@ -509,6 +508,7 @@ function GivenARepositoryWithFiles
 
 function WhenPackaging
 {
+    [CmdletBinding()]
     param(
         $WithPackageName = $defaultPackageName,
         $WithDescription = $defaultDescription,
@@ -942,12 +942,12 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when packaging everything wit
                                             -WhenRunByBuildServer
 }
 
-Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when given Clean Switch' {
+Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when cleaning' {
     $file = 'project.json'    
     Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-                                            -WhenGivenCleanSwitch `
+                                            -WhenCleaning `
                                             -ShouldReturnNothing `
                                             -ShouldNotCreatePackage `
                                             -WhenRunByBuildServer
@@ -1021,7 +1021,7 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when compressionLevel is not 
 
 Describe 'Invoke-WhiskeyProGetUniversalPackageTask.when a bad compressionLevel is included' {
     GivenARepositoryWithFiles 'one.ps1'
-    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good"
+    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
     ThenTaskFails 'not a valid Compression Level'
 }
 

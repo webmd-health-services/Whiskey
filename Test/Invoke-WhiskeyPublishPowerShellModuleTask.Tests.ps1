@@ -24,9 +24,6 @@ function Invoke-Publish
         [Switch]
         $withoutRegisteredRepo,
 
-        [Switch]
-        $withoutPublish,
-
         [String]
         $ForRepositoryName,
 
@@ -52,10 +49,7 @@ function Invoke-Publish
         $WithNonExistentPath,
 
         [Switch]
-        $WithoutPathParameter,
-
-        [Switch]
-        $WithCleanSwitch
+        $WithoutPathParameter
     )
     
     
@@ -125,18 +119,13 @@ function Invoke-Publish
     Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith { return }
     Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:PATH' }
     Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey' -MockWith { return }
-    $optionalParams = @{ }
-    if( $WithCleanSwitch )
-    {
-        $optionalParams['Clean'] = $True
-    }
     
     $Global:Error.Clear()
     $failed = $False
     
     try
     {
-        Invoke-WhiskeyPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter @optionalParams
+        Invoke-WhiskeyPublishPowerShellModuleTask -TaskContext $TaskContext -TaskParameter $TaskParameter
     }
     catch
     {
@@ -316,12 +305,6 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing previously p
     Assert-ModulePublished -TaskContext $context
 }
 
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when run by developer, not publishing.' {
-    $context = New-WhiskeyTestContext -ForDeveloper
-    Invoke-Publish -TaskContext $context
-    Assert-ModuleNotPublished
-}
-
 Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module with custom repository name.'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -409,11 +392,3 @@ Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.with invalid manifestPath' {
     Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
-
-Describe 'Invoke-WhiskeyPublishPowerShellModuleTask.when publishing new module.'{
-    Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -WithoutRegisteredRepo -TaskContext $context -WithCleanSwitch
-    Assert-ModuleNotPublished 
-}
-

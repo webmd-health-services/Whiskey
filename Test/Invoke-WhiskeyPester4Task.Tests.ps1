@@ -148,15 +148,14 @@ function Invoke-PesterTest
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
-    $optionalParams = @{ }
     if( $WithClean )
     {
-        $optionalParams['Clean'] = $True
+        $context.RunMode = 'Clean'
         Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
     }    
     try
     {
-        Invoke-WhiskeyPester4Task -TaskContext $context -TaskParameter $taskParameter @optionalParams
+        Invoke-WhiskeyPester4Task -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {

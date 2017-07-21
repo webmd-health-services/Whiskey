@@ -10,17 +10,11 @@ function Invoke-WhiskeyPowerShell
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
     
     Set-StrictMode -Version 'Latest'
-    if( $Clean )
-    {
-        return
-    }
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     if( -not ($TaskParameter.ContainsKey('Path')))
         {

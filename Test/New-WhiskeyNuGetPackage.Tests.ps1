@@ -86,8 +86,6 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $WithCleanSwitch
     )
 
     $script:context = [pscustomobject]@{
@@ -115,15 +113,11 @@ function WhenRunningNuGetPackTask
     }
 
     $optionalParams = @{ }
-    if( $WithCleanSwitch )
-    {
-        $optionalParams['Clean'] = $True
-    }
     $script:threwException = $false
     try
     {
         $Global:error.Clear()
-        New-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter @optionalParams
+        New-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter
 
     }
     catch
@@ -214,17 +208,4 @@ Describe 'New-WhiskeyNuGetPackage.when creating multiple packages for publishing
     WhenRunningNugetPackTask 
     ThenPackageCreated
     ThenTaskSucceeds
-}
-
-Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package with Clean switch' {    
-    InitTest
-    GivenABuiltLibrary
-    WhenRunningNuGetPackTask -WithCleanSwitch
-    ThenTaskSucceeds
-
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-
-    ThenPackageNotCreated
 }

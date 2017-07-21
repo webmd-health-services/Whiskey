@@ -26,10 +26,7 @@ function Register-WhiskeyEvent
 
                 [Parameter(Mandatory=$true)]
                 [hashtable]
-                $TaskParameter,
-
-                [Switch]
-                $Clean
+                $TaskParameter
             )
         }
 

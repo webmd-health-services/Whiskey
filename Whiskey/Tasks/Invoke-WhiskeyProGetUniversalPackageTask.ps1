@@ -2,7 +2,7 @@
 function Invoke-WhiskeyProGetUniversalPackageTask
 {
     [CmdletBinding()]
-    [Whiskey.Task("ProGetUniversalPackage")]
+    [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -10,10 +10,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -23,7 +20,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $7zipVersion = '16.2.1'
     # The directory name where NuGet puts this package is different than the version number.
     $7zipDirNameVersion = '16.02.1'
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
         return

@@ -26,19 +26,11 @@ function New-WhiskeyNuGetPackage
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
-
-    if( $Clean )
-    {
-        return
-    }
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {

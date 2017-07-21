@@ -120,17 +120,16 @@ function WhenRunningTask
         $WithParameter['Path'] = $path
     }
 
-    $clean = @{}
     $script:threwException = $false
     $script:output = $null
     if( $InCleanMode )
     {
-        $clean['Clean'] = $true
+        $context.RunMode = 'Clean'
     }
     
     try
     {
-        $script:output = Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter $WithParameter @clean | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter $WithParameter | ForEach-Object { Write-Debug $_ ; $_ }
     }
     catch
     {

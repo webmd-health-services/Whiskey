@@ -10,16 +10,8 @@ function Invoke-WhiskeyPublishFileTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean        
+        $TaskParameter
     )
-
-    if( $Clean )
-    {
-        return
-    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState

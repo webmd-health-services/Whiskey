@@ -165,10 +165,9 @@ function Invoke-NUnitTask
         $taskParameter.Add('OpenCoverVersion', $WithOpenCoverVersion)
         $taskParameter.Add('ReportGeneratorVersion', $WithReportGeneratorVersion)
 
-        $optionalParams = @{ }
         if( $WhenRunningClean )
         {
-            $optionalParams['Clean'] = $True
+            $context.RunMode = 'Clean'
             #check to be sure that we are only uninstalling the desired version of particular packages on clean
             Install-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -DownloadRoot $context.BuildRoot
         }
@@ -176,7 +175,7 @@ function Invoke-NUnitTask
         $Global:Error.Clear()
         try
         {
-            Invoke-WhiskeyNUnit2Task -TaskContext $context -TaskParameter $taskParameter @optionalParams -ErrorAction SilentlyContinue
+            Invoke-WhiskeyNUnit2Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
         }
         catch
         {
