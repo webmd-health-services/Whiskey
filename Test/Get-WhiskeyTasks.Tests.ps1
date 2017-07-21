@@ -29,14 +29,14 @@ Describe 'Get-WhiskeyTasks' {
                         PublishPowerShellModule        = 'Invoke-WhiskeyPublishPowerShellModuleTask';
                         TaskOne = 'MyTask';
                         TaskTwo = 'MyTask2';
-                        TAskThree = 'MyTask2';
-                        }
+                        TaskThree = 'MyTask2';
+                    }
 
     $Global:error.Clear()
     $failed = $false
     try
     {
-        $tasks = Get-WhiskeyTasks
+        $tasks = Get-WhiskeyTask
     }
     catch
     {
@@ -49,15 +49,22 @@ Describe 'Get-WhiskeyTasks' {
     it 'should not write error' {
         $Global:error | should beNullOrEmpty
     }
+
     it 'should return the right number of WhiskeyTasks' {
         $tasks.Count | should -BeGreaterThan ($expectedTasks.Count - 1)
-         $expectedTasks.Count 
     }
 
-    foreach ($key in $expectedTasks.keys)
+    It ('should return the attribute') {
+        $tasks | Should -BeOfType ([Whiskey.TaskAttribute])
+    }
+
+    foreach( $task in $tasks )
     {
-        it ('it should return the {0} task' -f $key) {
-            $tasks[$key] | should be $expectedTasks[$key]
+        if( $expectedTasks.ContainsKey($task.Name) )
+        {
+            it ('it should return the {0} task' -f $task.Name) {
+                $task.CommandName | should -Be $expectedTasks[$task.Name]
+            }
         }
     }
 

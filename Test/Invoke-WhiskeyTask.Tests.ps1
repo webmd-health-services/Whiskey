@@ -25,10 +25,7 @@ function Invoke-PreTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
 }
@@ -46,12 +43,8 @@ function Invoke-PostTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
-
 }
 
 function GivenFailingMSBuildProject
@@ -202,9 +195,6 @@ function ThenPluginsRan
 
         $WithParameter,
 
-        [Switch]
-        $InCleanMode,
-
         [int]
         $Times = 1
     )
@@ -237,12 +227,6 @@ function ThenPluginsRan
                     }
 
                     return $true
-                }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
-                    Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
-                    Write-Debug ('       actual    {0}' -f [bool]$Clean)
-                    [bool]$Clean -eq $InCleanMode.IsPresent
                 }
             }
         }
@@ -328,32 +312,30 @@ function WhenRunningTask
         [hashtable]
         $Parameter,
 
-        [Switch]
-        $WithCleanSwitch
+        [string]
+        $InRunMode
     )
 
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
     Mock -CommandName 'invoke-PostTaskPlugin' -ModuleName 'Whiskey'
 
-    $script:context = [pscustomobject]@{
-                                            ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
-                                            PipelineName = 'Build';
-                                            TaskName = $null;
-                                            TaskIndex = 1;
-                                            BuildRoot = $TestDrive.FullName;
-                                            TaskDefaults = $taskDefaults;
-                                       }
+    $script:context = New-WhiskeyContextObject
+    $context.ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    $context.PipelineName = 'Build';
+    $context.TaskName = $null;
+    $context.TaskIndex = 1;
+    $context.BuildRoot = $TestDrive.FullName;
+    $context.TaskDefaults = $taskDefaults;
+    if( $InRunMode )
+    {
+        $context.RunMode = $InRunMode;
+    }
 
     $Global:Error.Clear()
     $script:threwException = $false
     try
     {
-        $cleanParam = @{}
-        if( $WithCleanSwitch )
-        {
-            $cleanParam['Clean'] = $true
-        }
-        Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter @cleanParam -WarningVariable 'warnings'
+        Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
         $script:warnings = $warnings
     }
     catch
@@ -378,23 +360,12 @@ Describe 'Invoke-WhiskeyTask.when a task fails' {
 }
 
 Describe 'Invoke-WhiskeyTask.when there are registered event handlers' {
-    Context 'not in clean mode' {
-        Init
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-        WhenRunningTask 'PowerShell' -Parameter @{ Path = 'somefile.ps1' }
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-    }
-    Context 'in clean mode' {
-        Init
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-
-        WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1' } -WithCleanSwitch
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' } -InCleanMode
-    }
+    Init
+    GivenPlugins
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ Path = 'somefile.ps1' }
+    ThenPipelineSucceeded
+    ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
 }
 
 Describe 'Invoke-WhiskeyTask.when there are task-specific registered event handlers' {
@@ -428,18 +399,17 @@ Describe 'Invoke-WhiskeyTask.when there are task defaults' {
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
-$tasks = Get-WhiskeyTasks
-foreach( $taskName in ($tasks.Keys) )
+$tasks = Get-WhiskeyTask
+foreach( $task in ($tasks) )
 {
-    $functionName = $tasks[$taskName]
+    $taskName = $task.Name
+    $functionName = $task.CommandName
 
     Describe ('Invoke-WhiskeyTask.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
         {
             param(
-                [Switch]
-                $WithCleanSwitch
             )
 
             $context = $script:context
@@ -459,25 +429,7 @@ foreach( $taskName in ($tasks.Keys) )
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
                 }
             }
-
-            if( $WithCleanSwitch )
-            {
-                It 'should use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters['Clean'] -eq $true
-                    }
-                }
-            }
-            else
-            {
-                It 'should not use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters.ContainsKey('Clean') -eq $false
-                    }
-                }
-            }
         }
-
 
         Mock -CommandName $functionName -ModuleName 'Whiskey'
 
@@ -488,18 +440,94 @@ foreach( $taskName in ($tasks.Keys) )
     Path: {1}
 '@ -f $pipelineName,$taskName)
 
-        Context 'In Default Mode' {
-            Init
-            WhenRunningTask $taskName -Parameter @{ Path = $taskName }
-            ThenPipelineSucceeded
-            Assert-TaskCalled
+        Init
+        WhenRunningTask $taskName -Parameter @{ Path = $taskName }
+        ThenPipelineSucceeded
+        Assert-TaskCalled
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when run in clean mode' {
+    try
+    {
+        $global:cleanTaskRan = $false
+        function global:TaskThatSupportsClean
+        {
+            [Whiskey.TaskAttribute("MyCleanTask",SupportsClean=$true)]
+            param(
+            )
+
+            $global:cleanTaskRan = $true
         }
 
-        Context 'In Clean Mode' {
-            Init
-            WhenRunningTask $taskName -Parameter @{ Path = $taskName } -WithCleanSwitch
-            ThenPipelineSucceeded
-            Assert-TaskCalled -WithCleanSwitch
+        $global:taskRan = $false
+        function global:SomeTask
+        {
+            [Whiskey.TaskAttribute("MyTask")]
+            param(
+            )
+
+            $global:taskRan = $true
         }
+
+        Init
+        WhenRunningTask 'MyTask' @{ } -InRunMode 'Clean'
+        It 'should not run task that does not support clean' {
+            $global:taskRan | Should -Be $false
+        }
+        WhenRunningTask 'MyCleanTask' @{ } -InRunMode 'Clean'
+        It ('should run task that supports clean') {
+            $global:cleanTaskRan | Should Be $true
+        }
+    }
+    finally
+    {
+        Remove-Item 'function:TaskThatSupportsClean'
+        Remove-Item 'function:SomeTask'
+        Remove-Item 'variable:cleanTaskRan'
+        Remove-Item 'variable:taskRan'
+    }
+}
+
+
+Describe 'Invoke-WhiskeyTask.when run in initialize mode' {
+    try
+    {
+        $global:initializeTaskRan = $false
+        function global:TaskThatSupportsInitialize
+        {
+            [Whiskey.TaskAttribute("MyInitializeTask",SupportsInitialize=$true)]
+            param(
+            )
+
+             $global:initializeTaskRan = $true
+        }
+
+        $global:taskRan = $false
+        function global:SomeTask
+        {
+            [Whiskey.TaskAttribute("MyTask")]
+            param(
+            )
+
+            $global:taskRan = $true
+        }
+
+        $global:taskRan = $false
+        WhenRunningTask 'MyTask' @{ } -InRunMode 'Initialize'
+        It 'should not run task that does not support initializes' {
+            $global:taskRan | Should -Be $false
+        }
+        WhenRunningTask 'MyInitializeTask' @{ } -InRunMode 'Initialize'
+        It ('should run task that supports initialize') {
+            $global:initializeTaskRan | Should Be $true
+        }
+    }
+    finally
+    {
+        Remove-Item 'function:TaskThatSupportsInitialize'
+        Remove-Item 'function:SomeTask'
+        Remove-Item 'variable:initializeTaskRan'
+        Remove-Item 'variable:taskRan'
     }
 }

@@ -1,7 +1,7 @@
 
 $events = @{ }
 
-$type = [AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('Whiskey.TaskAttribute') }
+$type = [AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('Whiskey.TaskAttribute') } | Select-Object -First 1
 
 if( -not $type )
 {
@@ -15,6 +15,8 @@ namespace Whiskey {
         {
             Name = name;
         }
+
+        public string CommandName { get; set; }
 
         public string Name { get; private set; }
 

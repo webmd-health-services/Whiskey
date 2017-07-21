@@ -23,10 +23,7 @@ function Invoke-PreTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 }
 
@@ -43,10 +40,7 @@ function Invoke-PostTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 }
 
@@ -180,9 +174,6 @@ function ThenPluginsRan
 
         $WithParameter,
 
-        [Switch]
-        $InCleanMode,
-
         [int]
         $Times = 1
     )
@@ -215,12 +206,6 @@ function ThenPluginsRan
                     }
 
                     return $true
-                }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
-                    Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
-                    Write-Debug ('       actual    {0}' -f [bool]$Clean)
-                    [bool]$Clean -eq $InCleanMode.IsPresent
                 }
             }
         }
@@ -260,10 +245,7 @@ function WhenRunningPipeline
     [CmdletBinding()]
     param(
         [string]
-        $Name,
-
-        [Switch]
-        $WithCleanSwitch
+        $Name
     )
 
     $environment = $PSCmdlet.ParameterSetName
@@ -303,12 +285,7 @@ function WhenRunningPipeline
     $script:threwException = $false
     try
     {
-        $cleanParam = @{}
-        if( $WithCleanSwitch )
-        {
-            $cleanParam['Clean'] = $true
-        }
-        Invoke-WhiskeyPipeline -Context $context -Name $Name @cleanParam -WarningVariable 'warnings'
+        Invoke-WhiskeyPipeline -Context $context -Name $Name -WarningVariable 'warnings'
         $script:warnings = $warnings
     }
     catch
@@ -394,34 +371,18 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
-    Context 'not in clean mode' {
-        GivenRunByDeveloper
-        GivenWhiskeyYmlBuildFile @"
+    GivenRunByDeveloper
+    GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PowerShell:
     Path: somefile.ps1
 "@
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenPlugins
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
 
-        WhenRunningPipeline 'BuildTasks'
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-    }
-    Context 'in clean mode' {
-        GivenRunByDeveloper
-        GivenWhiskeyYmlBuildFile @"
-BuildTasks:
-- PowerShell:
-    Path: somefile.ps1
-"@
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-
-        WhenRunningPipeline 'BuildTasks' -WithCleanSwitch
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' } -InCleanMode
-    }
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+    ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
@@ -444,18 +405,17 @@ BuildTasks:
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
-$tasks = Get-WhiskeyTasks
-foreach( $taskName in ($tasks.Keys) )
+$tasks = Get-WhiskeyTask
+foreach( $task in $tasks )
 {
-    $functionName = $tasks[$taskName]
+    $taskName = $task.Name
+    $functionName = $task.CommandName
 
     Describe ('Invoke-WhiskeyPipeline.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
         {
             param(
-                [Switch]
-                $WithCleanSwitch
             )
 
             $context = $script:context
@@ -475,25 +435,7 @@ foreach( $taskName in ($tasks.Keys) )
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
                 }
             }
-
-            if( $WithCleanSwitch )
-            {
-                It 'should use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters['Clean'] -eq $true
-                    }
-                }
-            }
-            else
-            {
-                It 'should not use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters.ContainsKey('Clean') -eq $false
-                    }
-                }
-            }
         }
-
 
         Mock -CommandName $functionName -ModuleName 'Whiskey'
 
@@ -518,14 +460,6 @@ foreach( $taskName in ($tasks.Keys) )
             WhenRunningPipeline $pipelineName
             ThenPipelineSucceeded
             Assert-TaskCalled
-        }
-    
-        Context 'With Clean Switch' {
-            GivenRunByDeveloper
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName -WithCleanSwitch
-            ThenPipelineSucceeded
-            Assert-TaskCalled -WithCleanSwitch
         }
     }
 }

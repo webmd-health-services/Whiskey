@@ -73,7 +73,7 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'ConvertTo-WhiskeySemanticVersion',
-                            'Get-WhiskeyTasks',
+                            'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
                             'Get-WhiskeyOutputDirectory',
                             'Install-WhiskeyNodeJs',
@@ -170,6 +170,8 @@
 * ***BREAKING***: The `PublishNuGetPackage` task no longer creates the NuGet package. Use the `NuGetPack` task.
 * Created `Invoke-WhiskeyTask` function for running tasks.
 * Default task property values can now be set via the `TaskDefaults` hashtable on the Whiskey context object. If a task doesn't have a property, but the `TaskDefaults` property does, the value from `TaskDefaults` is used.
+* ***BREAKDING***: Running a task in clean mode is now opt-in. Set the `SupportsClean` property on your task's `TaskAttribute` to run your task during clean mode. Use the `$TaskContext.ShouldClean()` method to determine if you're running in clean mode or not.
+* Created new `Initialize` run mode. This mode is intended for tasks to install or initialize any tools it uses. For example, if a project uses Pester to run PowerShell scripts, the `PowerShell` task should just install Pester when run in Initialize mode. That way, developers get Pester installed without needing to run an entire build. To opt-in to Initialize mode, set the `SupportsInitialize` property on your task's `TaskAttribute` to `true`. Use the `$TaskContext.ShouldInitialize()` function to determine if you're running in initialize mode or not.
 '@
         } # End of PSData hashtable
 

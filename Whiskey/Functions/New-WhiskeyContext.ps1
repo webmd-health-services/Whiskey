@@ -204,36 +204,28 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
         $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersionV1Prerelease
     }
     
-    $context = [pscustomobject]@{
-                                    ApiKeys = @{ };
-                                    Environment = $Environment;
-                                    Credentials = @{ }
-                                    ApplicationName = $appName;
-                                    ReleaseName = $releaseName;
-                                    BuildRoot = $buildRoot;
-                                    ConfigurationPath = $ConfigurationPath;
-                                    ProGetSession = $progetSession;
-                                    BuildConfiguration = $BuildConfiguration;
-                                    OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
-                                    TaskName = $null;
-                                    TaskIndex = -1;
-                                    PipelineName = '';
-                                    TaskDefaults = @{ };
-                                    Version = [pscustomobject]@{
-                                                                     SemVer2 = $semVersion;
-                                                                     SemVer2NoBuildMetadata = $semVersionNoBuild;
-                                                                     SemVer1 = $semVersionV1;
-                                                                     Version = $version;
-                                                                }
-                                    Configuration = $config;
-                                    DownloadRoot = $DownloadRoot;
-                                    ByBuildServer = $byBuildServer;
-                                    ByDeveloper = (-not $byBuildServer);
-                                    Publish = $publish;
-                                    RunMode = 'Build';
+    $context = New-WhiskeyContextObject
+
+    $context.Environment = $Environment;
+    $context.ApplicationName = $appName;
+    $context.ReleaseName = $releaseName;
+    $context.BuildRoot = $buildRoot;
+    $context.ConfigurationPath = $ConfigurationPath;
+    $context.ProGetSession = $progetSession;
+    $context.BuildConfiguration = $BuildConfiguration;
+    $context.OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
+    $context.Version = [pscustomobject]@{
+                                        SemVer2 = $semVersion;
+                                        SemVer2NoBuildMetadata = $semVersionNoBuild;
+                                        SemVer1 = $semVersionV1;
+                                        Version = $version;
                                 }
-    $context | Add-Member -MemberType ScriptMethod -Name 'ShouldClean' -Value { return $this.RunMode -eq 'Clean' }
-    $context | Add-Member -MemberType ScriptMethod -Name 'ShouldInitialize' -Value { return $this.RunMode -eq 'Initialize' }
+    $context.Configuration = $config;
+    $context.DownloadRoot = $DownloadRoot;
+    $context.ByBuildServer = $byBuildServer;
+    $context.ByDeveloper = (-not $byBuildServer);
+    $context.Publish = $publish;
+    $context.RunMode = 'Build';
 
     return $context
 }
