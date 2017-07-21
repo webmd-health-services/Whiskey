@@ -519,8 +519,8 @@ Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
 Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
     GivenBuildByBuildServer
     GivenNpmScriptsToRun 'build','test'
-    WhenBuildIsStarted
-    ThenBuildFails -expectedError 'The parameter ''NpmRegistryUri'' is required please add a valid npm registry uri'
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
+    ThenBuildFails -expectedError 'property ''NpmRegistryUri'' is mandatory'
     cleanup
 }
 
