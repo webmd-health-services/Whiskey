@@ -10,6 +10,7 @@ $buildServerContext = @{
 $progetUri = [uri]'https://proget.example.com/'
 $configurationPath = $null
 $context = $null
+$runMode = $null
 
 function Assert-Context
 {
@@ -112,6 +113,16 @@ function Assert-Context
 
     It 'ApiKeys property should be a hashtable' {
         $Context.ApiKeys | Should -BeOfType ([hashtable])
+    }
+
+    It ('should have ShouldClean method') {
+        $Context | Get-Member -Name 'ShouldClean' | Should -BE $true
+        $Context.ShouldClean() | Should -Be $false
+    }
+
+    It ('should have ShouldInitialize method') {
+        $Context | Get-Member -Name 'ShouldInitialize' | Should -BE $true
+        $Context.ShouldClean() | Should -Be $false
     }
 }
 
@@ -225,6 +236,15 @@ function GivenConfigurationFileDoesNotExist
     $script:configurationPath = 'I\do\not\exist'
 }
 
+function GivenRunMode
+{
+    param(
+        $RunMode
+    )
+
+    $script:runMode = $RunMode
+}
+
 function GivenWhiskeyYml
 {
     param(
@@ -233,6 +253,11 @@ function GivenWhiskeyYml
 
     $script:configurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
     $Yaml | Set-Content -Path $configurationPath
+}
+
+function Init
+{
+    $script:runMode = $null
 }
 
 function ThenSemVer1Is
@@ -346,6 +371,10 @@ function WhenCreatingContext
         try
         {
             $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' @optionalArgs
+            if( $runMode )
+            {
+                $context.RunMode = $runMode
+            }
         }
         catch
         {
@@ -497,6 +526,28 @@ function ThenDeveloperContextCreated
     }
 }
 
+function ThenShouldCleanIs
+{
+    param(
+        $ExpectedValue
+    )
+
+    It ('ShouldClean() should be ''{0}''' -f $ExpectedValue) {
+        $context.ShouldClean() | Should -Be $ExpectedValue
+    }
+}
+
+function ThenShouldInitializeIs
+{
+    param(
+        $ExpectedValue
+    )
+
+    It ('ShouldInitialize() should be ''{0}''' -f $ExpectedValue) {
+        $context.ShouldInitialize() | Should -Be $ExpectedValue
+    }
+}
+
 function ThenVersionMatches
 {
     param(
@@ -513,57 +564,67 @@ function ThenVersionMatches
 }
 
 Describe 'New-WhiskeyContext.when run by a developer for an application' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu'
     WhenCreatingContext -ByDeveloper -Environment 'fubar'
     ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -Environment 'fubar'
 }
 
 Describe 'New-WhiskeyContext.when run by developer for a library' {
+    Init
     GivenConfiguration -WithVersion '1.2.3'
     WhenCreatingContext -ByDeveloper 
     ThenDeveloperContextCreated -WithSemanticVersion ('1.2.3+{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME)
 }
 
 Describe 'New-WhiskeyContext.when run by developer and configuration file does not exist' {
+    Init
     GivenConfigurationFileDoesNotExist
     WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhiskeyContext.when run by developer and version is not a semantic version' {
+    Init
     GivenConfiguration -WithVersion 'fubar'
     WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'not a valid semantic version' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhiskeyContext.when run by the build server' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -Environment 'fubar'
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop' -Environment 'fubar'
 }
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing ProGet feed names' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithProGetNpmFeed 'snafu' -WithPowerShellNuGetFeed 'snafubar'
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithPowerShellNuGetFeed 'snafubar'
 }
 
 Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName -WithReleaseName 'develop'
 }
 
 Describe 'New-WhiskeyContext.when run by build server called with developer parameter set' {
+    Init
     GivenConfiguration -WithVersion '1.2.3' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhiskeyContext.when application name in configuration file' {
+    Init
     GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar'
     WhenCreatingContext -ByDeveloper
     ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
 }
 
 Describe 'New-WhiskeyContext.when release name in configuration file' {
+    Init
     GivenConfiguration -WithVersion '1.2.3' -ForReleaseName 'fubar'
     WhenCreatingContext -ByDeveloper
     ThenDeveloperContextCreated -WithReleaseName 'fubar' -WithSemanticVersion '1.2.3'
@@ -571,60 +632,70 @@ Describe 'New-WhiskeyContext.when release name in configuration file' {
 
 
 Describe 'New-WhiskeyContext.when building on master branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'master'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'master'
 }
 
 Describe 'New-WhiskeyContext.when building on feature branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'feature/fubar'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/feature/fubar'
 }
 
 Describe 'New-WhiskeyContext.when building on release branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release/5.1'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release/5.1'
 }
 
 Describe 'New-WhiskeyContext.when building on long-lived release branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'release'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'release'
 }
 
 Describe 'New-WhiskeyContext.when building on develop branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'develop'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop'
 }
 
 Describe 'New-WhiskeyContext.when building on hot fix branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'hotfix/snafu'
     WhenCreatingContext -ByBuildServer 
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/hotfix/snafu'
 }
 
 Describe 'New-WhiskeyContext.when building on bug fix branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer -OnBranch 'bugfix/fubarnsafu'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' #-WithReleaseName 'origin/bugfix/fubarnsafu'
 }
 
 Describe 'New-WhiskeyContext.when publishing on custom branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0'
     WhenCreatingContext -ByBuildServer
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3' -WithReleaseName 'feature/3.0'
 }
 
 Describe 'New-WhiskeyContext.when run by developer on a prerelease branch' {
+    Init
     GivenConfiguration -WithVersion '1.2.3' -OnBranch 'alpha/2.0' -PublishingOn '^alpha\b'
     WhenCreatingContext -ByDeveloper
     ThenSemVer2Is '1.2.3'
 }
 
 Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
+    Init
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     GivenBuildID '93'
     WhenCreatingContext -ByBuildServer
@@ -634,6 +705,7 @@ Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
 }
 
 Describe 'New-WhiskeyContext.when a PrereleaseMap has multiple keys' {
+    Init
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' ; '\bbeta\b' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
 }
@@ -659,6 +731,7 @@ function GivenPackageJson
 }
 
 Describe 'New-WhiskeyContext.when building a Node module by a developer' {
+    Init
     GivenConfiguration
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByDeveloper
@@ -669,6 +742,7 @@ Describe 'New-WhiskeyContext.when building a Node module by a developer' {
 }
 
 Describe 'New-WhiskeyContext.when building a Node module by a build server' {
+    Init
     GivenConfiguration -ForBuildServer
     GivenPackageJson -AtVersion '9.4.6'
     WhenCreatingContext -ByBuildServer
@@ -679,6 +753,7 @@ Describe 'New-WhiskeyContext.when building a Node module by a build server' {
 }
 
 Describe 'New-WhiskeyContext.when building a Node.js application and should use an auto-generated version number' {
+    Init
     GivenConfiguration
     GivenPackageJson -AtVersion '0.0.0'
     WhenCreatingContext 
@@ -686,6 +761,7 @@ Describe 'New-WhiskeyContext.when building a Node.js application and should use 
 }
 
 Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
+    Init
     GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
     GivenPackageJson -AtVersion '1.0.0' 
     WhenCreatingContext 
@@ -693,7 +769,33 @@ Describe 'New-WhiskeyContext.when building a Node.js application and ignoring pa
 }
 
 Describe 'New-WhiskeyContext.when configuration is just a property name' {
+    Init
     GivenWhiskeyYml 'BuildTasks'
     WhenCreatingContext
 }
 
+Describe 'New-WhiskeyContext.when run mode is ''Clean''' {
+    Init
+    GivenRunMode 'Clean'
+    GivenConfiguration
+    WhenCreatingContext
+    ThenShouldCleanIs $true
+    ThenShouldInitializeIs $false
+}
+
+Describe 'New-WhiskeyContext.when run mode is ''Initialize''' {
+    Init
+    GivenRunMode 'Initialize'
+    GivenConfiguration
+    WhenCreatingContext
+    ThenShouldCleanIs $false
+    ThenShouldInitializeIs $true
+}
+
+Describe 'New-WhiskeyContext.when run mode is default' {
+    Init
+    GivenConfiguration
+    WhenCreatingContext
+    ThenShouldCleanIs $false
+    ThenShouldInitializeIs $false
+}
