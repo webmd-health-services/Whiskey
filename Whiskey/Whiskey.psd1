@@ -90,6 +90,7 @@
                             'Invoke-WhiskeyPublishNodeModuleTask',
                             'Invoke-WhiskeyPublishPowerShellModuleTask',
                             'Invoke-WhiskeyBuild',
+                            'Invoke-WhiskeyTask',
                             'New-WhiskeyContext',
                             'Publish-WhiskeyBuildMasterPackage',
                             'Publish-WhiskeyNuGetPackage',
@@ -167,6 +168,8 @@
 * Tasks can now have multiple names. Add multiple task attributes to a task.
 * Created `NuGetPack` task for creating NuGet packages.
 * ***BREAKING***: The `PublishNuGetPackage` task no longer creates the NuGet package. Use the `NuGetPack` task.
+* Created `Invoke-WhiskeyTask` function for running tasks.
+* Default task property values can now be set via the `TaskDefaults` hashtable on the Whiskey context object. If a task doesn't have a property, but the `TaskDefaults` property does, the value from `TaskDefaults` is used.
 '@
         } # End of PSData hashtable
 
