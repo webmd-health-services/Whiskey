@@ -1,4 +1,6 @@
 
+$VerbosePreference = 'SilentlyContinue'
+
 if( (Get-Module -Name 'Whiskey') )
 {
     Remove-Module -Name 'Whiskey' -Force
