@@ -217,6 +217,8 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
                                     OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
                                     TaskName = $null;
                                     TaskIndex = -1;
+                                    PipelineName = '';
+                                    TaskDefaults = @{ };
                                     Version = [pscustomobject]@{
                                                                      SemVer2 = $semVersion;
                                                                      SemVer2NoBuildMetadata = $semVersionNoBuild;

@@ -42,6 +42,7 @@ function Invoke-WhiskeyPipeline
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $config = $Context.Configuration
+    $Context.PipelineName = $Name
 
     if( -not $config.ContainsKey($Name) )
     {
@@ -62,7 +63,6 @@ function Invoke-WhiskeyPipeline
         $config[$Name] = @()
     }
 
-    $knownTasks = Get-WhiskeyTasks
     foreach( $taskItem in $config[$Name] )
     {
         $taskIdx++
@@ -85,23 +85,7 @@ function Invoke-WhiskeyPipeline
             continue
         }
 
-        $Context.TaskName = $taskName
         $Context.TaskIndex = $taskIdx
-
-        $errorPrefix = '{0}: {1}[{2}]: {3}: ' -f $Context.ConfigurationPath,$Name,$taskIdx,$taskName
-
-        $errors = @()
-        $pathIdx = -1
-
-
-        if( -not $knownTasks.Contains($taskName) )
-        {
-            #I'm guessing we no longer need this code because we are going to be supporting a wider variety of tasks. Thus perhaps a different message will be necessary here.
-            $knownTasks = $knownTasks.Keys | Sort-Object
-            throw ('{0}: {1}[{2}]: ''{3}'' task does not exist. Supported tasks are:{4} * {5}' -f $Context.ConfigurationPath,$Name,$taskIdx,$taskName,[Environment]::NewLine,($knownTasks -join ('{0} * ' -f [Environment]::NewLine)))
-        }
-
-        $taskFunctionName = $knownTasks[$taskName]
 
         $optionalParams = @{ }
         if ( $Clean )
@@ -109,45 +93,6 @@ function Invoke-WhiskeyPipeline
             $optionalParams['Clean'] = $True
         }
 
-        function Invoke-Event
-        {
-            param(
-                $Prefix,
-                $EventName
-            )
-
-            if( -not $events.ContainsKey($EventName) )
-            {
-                return
-            }
-
-            foreach( $commandName in $events[$EventName] )
-            {
-                Write-Verbose -Message $prefix
-                Write-Verbose -Message ('{0}  [On{1}]  {2}' -f $prefix,$EventName,$commandName)
-                $startedAt = Get-Date
-                & $commandName -TaskContext $Context -TaskName $taskName -TaskParameter $taskItem @optionalParams 
-                $endedAt = Get-Date
-                $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}  {1}  COMPLETED in {2}' -f $prefix,(' ' * ($EventName.Length + 4)),$duration)
-            }
-        }
-
-        #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
-        $prefix = '[{0}]' -f $taskName
-        Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
-        Invoke-Event -EventName ('Before{0}Task' -f $taskName) -Prefix $prefix
-
-        Write-Verbose -Message $prefix
-        $startedAt = Get-Date
-        & $taskFunctionName -TaskContext $context -TaskParameter $taskItem @optionalParams
-        $endedAt = Get-Date
-        $duration = $endedAt - $startedAt
-        Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
-
-        Invoke-Event -Prefix $prefix -EventName 'AfterTask'
-        Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $taskName)
-        Write-Verbose ($prefix)
-        Write-Verbose ''
+        Invoke-WhiskeyTask -TaskContext $Context -Name $taskName -Parameter $taskItem @optionalParams
     }
 }

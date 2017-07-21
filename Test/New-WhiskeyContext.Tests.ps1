@@ -65,6 +65,14 @@ function Assert-Context
         $Context.TaskIndex | Should Be -1
     }
 
+    It 'should have PipelineName property' {
+        $Context.PipelineName | Should -Be ''
+    }
+
+    It 'should have TaskDefaults property' {
+        $Context.TaskDefaults | Should -BeOfType ([hashtable])
+    }
+
     ThenSemVer2Is $SemanticVersion
 
     $expectedVersion = ('{0}.{1}.{2}' -f $SemanticVersion.Major,$SemanticVersion.Minor,$SemanticVersion.Patch)
