@@ -17,6 +17,7 @@ function Publish-WhiskeyProGetUniversalPackage
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $exampleTask = 'PublishTasks:
         - PublishProGetUniversalPackage:
