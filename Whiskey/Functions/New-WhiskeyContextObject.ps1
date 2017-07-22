@@ -27,7 +27,7 @@ function New-WhiskeyContextObject
                                     PipelineName = '';
                                     TaskDefaults = @{ };
                                     Version = (New-WhiskeyVersionObject);
-                                    Configuration = $null;
+                                    Configuration = @{ };
                                     DownloadRoot = '';
                                     ByBuildServer = $false;
                                     ByDeveloper = $true;

@@ -74,16 +74,7 @@ function New-WhiskeyContext
         throw ('Configuration file path ''{0}'' does not exist.' -f $PSBoundParameters['ConfigurationPath'])
     }
 
-    $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
-    if( -not $config )
-    {
-        $config = @{} 
-    }
-
-    if( $config -is [string] )
-    {
-        $config = @{ $config = '' }
-    }
+    $config = Import-WhiskeyYaml -Path $ConfigurationPath
 
     $buildRoot = $ConfigurationPath | Split-Path
     if( -not $DownloadRoot )

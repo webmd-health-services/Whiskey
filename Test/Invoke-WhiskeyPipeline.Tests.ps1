@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\Invoke-WhiskeyPowerShell.ps1' -Resolve)
 
 $whiskeyYmlPath = $null
-$runByDeveloper = $false
-$runByBuildServer = $false
 $context = $null
 $warnings = $null
 
@@ -60,18 +58,6 @@ function GivenMSBuildProject
     )
 
     New-MSBuildProject -FileName $project -ThatFails
-}
-
-function GivenRunByBuildServer
-{
-    $script:runByDeveloper = $false
-    $script:runByBuildServer = $true
-}
-
-function GivenRunByDeveloper
-{
-    $script:runByDeveloper = $true
-    $script:runByBuildServer = $false
 }
 
 function GivenPlugins
@@ -249,38 +235,12 @@ function WhenRunningPipeline
     )
 
     $environment = $PSCmdlet.ParameterSetName
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
-
-    Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
-
-    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
-
     $configuration = 'FubarSnafu'
     $optionalParams = @{ }
-    if( $runByBuildServer )
-    {
-        $optionalParams['ForBuildServer'] = $true
-    }
-
-    if( $runByDeveloper )
-    {
-        $optionalParams['ForDeveloper'] = $true
-    }
 
     [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
-    $optionalParams['ForVersion'] = $Version
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
-
-    $script:context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $whiskeyYmlPath @optionalParams
-
+    $script:context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
     $Global:Error.Clear()
     $script:threwException = $false
     try
@@ -301,7 +261,6 @@ BuildTasks:
     - FubarSnafu:
         Path: whiskey.yml
 '@
-    GivenRunByBuildServer
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenThrewException 'not\ exist'
@@ -317,7 +276,6 @@ BuildTasks:
 - NUnit2:
     Path: assembly.dll
 '@
-    GivenRunByBuildServer
     GivenFailingMSBuildProject $project
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
     ThenPipelineFailed
@@ -326,7 +284,6 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PublishNodeModule
@@ -342,7 +299,6 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 "@
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
@@ -351,7 +307,6 @@ Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and not a YAML object' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks
 "@
@@ -361,7 +316,6 @@ BuildTasks
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and is a YAML object' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 "@
@@ -371,7 +325,6 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PowerShell:
@@ -386,7 +339,6 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PowerShell:
@@ -446,20 +398,9 @@ foreach( $task in $tasks )
     Path: {1}
 '@ -f $pipelineName,$taskName)
 
-        Context 'By Developer' {
-            GivenRunByDeveloper
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName
-            ThenPipelineSucceeded
-            Assert-TaskCalled
-        }
-
-        Context 'By Jenkins' {
-            GivenRunByBuildServer
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName
-            ThenPipelineSucceeded
-            Assert-TaskCalled
-        }
+        GivenWhiskeyYmlBuildFile $whiskeyYml
+        WhenRunningPipeline $pipelineName
+        ThenPipelineSucceeded
+        Assert-TaskCalled
     }
 }

@@ -164,7 +164,11 @@ function New-WhiskeyTestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    if( -not $ConfigurationPath )
+    if( $ConfigurationPath )
+    {
+        $configData = Import-WhiskeyYaml -Path $ConfigurationPath
+    }
+    else
     {
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whiskey.yml'
         if( $ForYaml )
@@ -194,7 +198,7 @@ function New-WhiskeyTestContext
             $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
         }
     }
-    
+
     $context = New-WhiskeyContextObject
     $context.BuildRoot = $ForBuildRoot
     $context.Environment = 'Verificaiton'
@@ -203,6 +207,7 @@ function New-WhiskeyTestContext
     $context.ProGetSession.Credential = New-Object 'pscredential' 'proget',(ConvertTo-SecureString -String 'proget' -AsPlainText -Force)
     $context.ProGetSession.PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
     $context.DownloadRoot = $context.BuildRoot
+    $context.Configuration = $configData
 
     if( -not $ForOutputDirectory )
     {
@@ -253,6 +258,7 @@ function New-WhiskeyTestContext
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
 
 Export-ModuleMember -Function '*'
 

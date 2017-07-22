@@ -54,7 +54,7 @@ function Invoke-WhiskeyPipeline
     }
 
     $taskIdx = -1
-    if( $config[$Name] -is [string] )
+    if( $config[$Name] -is [string]  )
     {
         Write-Warning -Message ('It looks like pipeline ''{0}'' doesn''t have any tasks.' -f $Context.ConfigurationPath)
         $config[$Name] = @()
