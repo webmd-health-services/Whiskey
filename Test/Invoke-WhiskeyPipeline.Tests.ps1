@@ -332,12 +332,12 @@ BuildTasks:
 - PublishNodeModule
 - PublishNodeModule:
 "@
-    Mock -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -Verifiable -ModuleName 'Whiskey'
+    Mock -CommandName 'Publish-WhiskeyNodeModule' -Verifiable -ModuleName 'Whiskey'
     WhenRunningPipeline 'BuildTasks'
     ThenPipelineSucceeded
     
     It 'should still call the task' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -ModuleName 'Whiskey' -Times 2
+        Assert-MockCalled -CommandName 'Publish-WhiskeyNodeModule' -ModuleName 'Whiskey' -Times 2
     }
 }
 

@@ -87,7 +87,6 @@
                             'Invoke-WhiskeyPester4Task',
                             'Invoke-WhiskeyPipeline',
                             'Invoke-WhiskeyPublishFileTask',
-                            'Invoke-WhiskeyPublishNodeModuleTask',
                             'Invoke-WhiskeyPublishPowerShellModuleTask',
                             'Invoke-WhiskeyBuild',
                             'Invoke-WhiskeyTask',

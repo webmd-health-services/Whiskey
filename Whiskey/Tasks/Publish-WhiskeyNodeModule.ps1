@@ -1,12 +1,12 @@
 
-function Invoke-WhiskeyPublishNodeModuleTask
+function Publish-WhiskeyNodeModule
 {
     <#
     .SYNOPSIS
     Publishes a Node module package to the target NPM registry
     
     .DESCRIPTION
-    The `Invoke-WhiskeyPublishNodeModuleTask` function utilizes NPM's `publish` command to publish Node module packages.
+    The `Publish-WhiskeyNodeModule` function utilizes NPM's `publish` command to publish Node module packages.
 
     You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
@@ -15,11 +15,11 @@ function Invoke-WhiskeyPublishNodeModuleTask
     * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     
     .EXAMPLE
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{}
+    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{}
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `$context.BuildRoot` property. The function would run `npm publish`.
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
+    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>

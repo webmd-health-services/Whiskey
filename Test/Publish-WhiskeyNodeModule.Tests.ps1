@@ -78,38 +78,38 @@ $npmrcFileLine4
 
 }
 
-Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Developer' {
+Describe 'PublishNodeModule.when called by Developer' {
     $returnContextParams = New-PublishNodeModuleStructure -ByDeveloper
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyTask -TaskContext $taskContext -Name 'PublishNodeModule' -Parameter $taskParameter
 
     It 'should not publish the Node module package to the defined registry' {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0
     }
 }
 
-Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Developer with defined working directory' {
+Describe 'PublishNodeModule.when called by Developer with defined working directory' {
     $returnContextParams = New-PublishNodeModuleStructure -ByDeveloper -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyTask -TaskContext $taskContext -Name 'PublishNodeModule' -Parameter $taskParameter
 
     It 'should not publish the Node module package to the defined registry' {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -Times 0
     }
 }
 
-Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Build Server' {
+Describe 'PublishNodeModule.when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
     $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'PublishNodeModule'
 
     It 'should validate the version is in the appropriate SemVersion.SemanticVersion format' {
         Assert-MockCalled -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -Times 1 -Exactly
@@ -135,14 +135,14 @@ Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Build Server' {
     }
 }
 
-Describe 'Invoke-WhiskeyPublishNodeModuleTask when called by Build Server' {
+Describe 'PublishNodeModule.when called by Build Server' {
     $returnContextParams = New-PublishNodeModuleStructure -ByBuildServer -WithWorkingDirectoryOverride
     $taskContext = $returnContextParams.TaskContext
     $taskParameter = $returnContextParams.TaskParameter
     $npmrcPath = Join-Path -Path $taskContext.BuildRoot -ChildPath '.npmrc'
     $npmrcFileContents = $returnContextParams.NpmrcFileContents
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $taskContext -TaskParameter $taskParameter
+    Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'PublishNodeModule'
 
     It 'should validate the version is in the appropriate SemVersion.SemanticVersion format' {
         Assert-MockCalled -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -Times 1 -Exactly
