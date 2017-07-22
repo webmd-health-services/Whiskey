@@ -8,26 +8,27 @@ $npmRegistryUri = $null
 $defaultCredID = 'NpmCredentialID'
 $defaultUserName = 'npm'
 $defaultPassword = 'npm1'
+$defaultEmailAddress = 'publishnodemodule@example.com'
 $credID = $null
 $credential = $null
 $parameter = $null
 $context = $null
 $workingDirectory = $null
 $threwException = $false
+$email = $null
 
 function GivenNoCredentialID
 {
-    param(
-    )
-
     $script:credID = $null
+}
+
+function GivenNoEmailAddress
+{
+    $script:email = $null
 }
 
 function GivenNoNpmRegistryUri
 {
-    param(
-    )
-
     $script:npmRegistryUri = $null
 }
 
@@ -49,6 +50,7 @@ function Init
     $script:context = $null
     $script:workingDirectory = $null
     $script:npmRegistryUri = [uri]'http://registry.npmjs.org/'
+    $script:email = $defaultEmailAddress
 }
 
 function New-PublishNodeModuleStructure
@@ -121,14 +123,13 @@ function ThenNpmrcCreated
 
     $npmRegistryUri = $script:npmRegistryUri
     $npmUserName = $credential.UserName
-    $npmEmail = $env:USERNAME + '@example.com'
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
     $npmConfigPrefix = '//{0}{1}:' -f $npmRegistryUri.Authority,$npmRegistryUri.LocalPath
     $npmrcFileLine2 = ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
     $npmrcFileLine3 = ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
-    $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
+    $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $email)
     $npmrcFileContents = @"
 $npmrcFileLine2
 $npmrcFileLine3
@@ -178,6 +179,11 @@ function WhenPublishingNodeModule
         $context.Credentials[$credID] = $credential
     }
 
+    if( $email )
+    {
+        $parameter['EmailAddress'] = $email
+    }
+
     $script:threwException = $false
     try
     {
@@ -216,11 +222,18 @@ Describe 'PublishNodeModule.when NPM registry URI property is missing' {
     ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
 }
 
-
 Describe 'PublishNodeModule.when credential ID property missing' {
     Init
     GivenNoCredentialID
     New-PublishNodeModuleStructure
-    WhenPublishingNodeModule #-ErrorAction SilentlyContinue
+    WhenPublishingNodeModule -ErrorAction SilentlyContinue
     ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+}
+
+Describe 'PublishNodeModule.when email address property missing' {
+    Init
+    GivenNoEmailAddress
+    New-PublishNodeModuleStructure
+    WhenPublishingNodeModule -ErrorAction SilentlyContinue
+    ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
 }

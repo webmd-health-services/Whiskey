@@ -86,7 +86,18 @@ function Publish-WhiskeyNodeModule
     }
     $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
-    $npmEmail = $env:USERNAME + '@example.com'
+    $npmEmail = $TaskParameter['EmailAddress']
+    if( -not $npmEmail )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
+    
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: {0}
+        CredentialID: {1}
+        EmailAddress: somebody@example.com
+    ' -f $npmRegistryUri,$credentialID)
+    }
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
