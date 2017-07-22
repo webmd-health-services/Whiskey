@@ -36,7 +36,7 @@ function Invoke-WhiskeyPublishNodeModuleTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
         #
         # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.                     
-        $TaskParamete
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
