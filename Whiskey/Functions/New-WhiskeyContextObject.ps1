@@ -16,7 +16,10 @@ function New-WhiskeyContextObject
                                     ReleaseName ='';
                                     BuildRoot = '';
                                     ConfigurationPath = '';
-                                    ProGetSession = $null;
+                                    ProGetSession = [pscustomobject]@{
+                                                                        Credential = $null;
+                                                                        PowerShellFeedUri = '';
+                                                                     }
                                     BuildConfiguration = '';
                                     OutputDirectory = '';
                                     TaskName = '';

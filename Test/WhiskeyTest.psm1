@@ -105,9 +105,6 @@ function New-MSBuildProject
 function New-WhiskeyTestContext
 {
     param(
-        [Switch]
-        $WithMockToolData,
-
         [string]
         $ForBuildRoot,
 
@@ -124,7 +121,8 @@ function New-WhiskeyTestContext
         $ForApplicationName,
 
         [string]
-        $ForReleaseName,        
+        $ForReleaseName,
+                
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         [Alias('ByBuildServer')]
@@ -166,35 +164,6 @@ function New-WhiskeyTestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    $progetUris = @( 'https://proget.example.com', 'https://proget.another.example.com' )
-    $PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
-
-    $optionalArgs = @{ }
-    $testByBuildServerMock = { return $true }
-    if( $PSCmdlet.ParameterSetName -eq 'ByBuildServer' )
-    {
-        $optionalArgs = @{
-                           'ProGetCredential' = (New-Credential -UserName 'proget' -Password 'proget');
-                         }
-        $gitBranch = 'origin/develop'
-        $filter = { $Path -eq 'env:GIT_BRANCH' }
-        $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
-        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $true }
-        Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $ForVersion }.GetNewClosure()
-    }
-    else
-    {
-        $testByBuildServerMock = { return $false }
-    }
-
-    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith $testByBuildServerMock
-
-    if( $DownloadRoot )
-    {
-        $optionalArgs['DownloadRoot'] = $DownloadRoot
-    }
-
     if( -not $ConfigurationPath )
     {
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whiskey.yml'
@@ -225,22 +194,58 @@ function New-WhiskeyTestContext
             $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath
         }
     }
-    $progetArgs = @{
-                    PowerShellFeedUri = $PowerShellFeedUri;
-                    }
+    
+    $context = New-WhiskeyContextObject
+    $context.BuildRoot = $ForBuildRoot
+    $context.Environment = 'Verificaiton'
+    $context.ConfigurationPath = $ConfigurationPath
+    $context.BuildConfiguration = $BuildConfiguration
+    $context.ProGetSession.Credential = New-Object 'pscredential' 'proget',(ConvertTo-SecureString -String 'proget' -AsPlainText -Force)
+    $context.ProGetSession.PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
+    $context.DownloadRoot = $context.BuildRoot
 
-    $context = New-WhiskeyContext -Environment 'verification' -ConfigurationPath $ConfigurationPath -BuildConfiguration $BuildConfiguration @optionalArgs @progetArgs
+    if( -not $ForOutputDirectory )
+    {
+        $ForOutputDirectory = Join-Path -Path $context.BuildRoot -ChildPath '.output'
+    }
+    $context.OutputDirectory = $ForOutputDirectory
+
+    if( $DownloadRoot )
+    {
+        $context.DownloadRoot
+    }
+
+    $context.Publish = $context.ByBuildServer = $PSCmdlet.ParameterSetName -eq 'ByBuildServer'
+    $context.ByDeveloper = $PSCmdlet.ParameterSetName -eq 'ByDeveloper'
+
+    if( $ForTaskName )
+    {
+        $context.TaskName = $ForTaskName
+    }
+
     if( $InReleaseMode )
     {
         $context.BuildConfiguration = 'Release'
     }
 
-    if( $ForOutputDirectory -and $context.OutputDirectory -ne $ForOutputDirectory )
+    if( $ForReleaseName )
+    {
+        $context.ReleaseName = $ForReleaseName
+    }
+
+    if( $ForVersion )
+    {
+        $context.Version.SemVer2 = $ForVersion
+        $context.Version.SemVer2NoBuildMetadata = New-Object 'SemVersion.SemanticVersion' $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch,$ForVersion.Prerelease,$null
+        $context.Version.SemVer1 = New-Object 'SemVersion.SemanticVersion' $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch,($ForVersion.Prerelease -replace '[^A-Za-z0-9]',''),$null
+        $context.Version.Version = [version]('{0}.{1}.{2}' -f $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch)
+    }
+
+    if( (Test-Path -Path $context.OutputDirectory) )
     {
         Remove-Item -Path $context.OutputDirectory -Recurse -Force
-        $context.OutputDirectory = $ForOutputDirectory
-        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
     }
+    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
 
     return $context
 }
