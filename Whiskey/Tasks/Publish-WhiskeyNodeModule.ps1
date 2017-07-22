@@ -49,17 +49,17 @@ function Publish-WhiskeyNodeModule
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
-    $npmRegistryUri = $TaskParameter['npmRegistryUri']
+    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry where the module should be published. E.g.,
         
-        BuildTasks:
-        - PublishNodeModule:
-            NpmRegistryUri: https://registry.npmjs.org/
-        '
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: https://registry.npmjs.org/
+    '
     }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $buildRoot
     
     if (!$TaskContext.Publish)
     {
@@ -71,16 +71,30 @@ function Publish-WhiskeyNodeModule
 
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
-    $npmUserName = $TaskContext.ProGetSession.Credential.UserName
+    $credentialID = $TaskParameter['CredentialID']
+    if( -not $credentialID )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
+    
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: {0}
+        CredentialID: NpmCredential
+    
+    Credentials are added to the `Credentials` property on the build''s context object, e.g. `$context.Credentials[''NpmCredential''] = $credential`. Use `New-WhiskeyContext` to create a context object.
+    ' -f $npmRegistryUri)
+    }
+    $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'
+    $npmUserName = $credential.UserName
     $npmEmail = $env:USERNAME + '@example.com'
-    $npmCredPassword = $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password
+    $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
 
     Push-Location $workingDir
     try
     {
-        $packageNpmrc = (New-Item -Path (Join-Path -Path $buildRoot -ChildPath '.npmrc') -ItemType File -Force)
+        $packageNpmrc = New-Item -Path '.npmrc' -ItemType File -Force
         Add-Content -Path $packageNpmrc -Value ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
         Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
         Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)

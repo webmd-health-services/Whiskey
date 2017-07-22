@@ -133,7 +133,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
 
-    $taskContext = New-WhiskeyTestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg
+    $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' @byWhoArg
     $taskContext.Version.SemVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
     $taskContext.Version.SemVer2NoBuildMetadata = ([SemVersion.SemanticVersion]$taskContext.Version.SemVer2)
@@ -574,7 +574,7 @@ function WhenPackaging
     
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$WithVersion }.GetNewClosure()
 
-    $taskContext = New-WhiskeyTestContext -WithMockToolData -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
+    $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' @byWhoArg -ForVersion $WithVersion
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
