@@ -93,6 +93,7 @@ function Invoke-PowershellInstall
                 $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
             }
         }
+        return
     }
 
     Context 'the module' {
@@ -107,14 +108,7 @@ function Invoke-PowershellInstall
         }
 
         It 'should put it in the right place' {
-            if( $LikePowerShell4 -or ($ForRealsies -and $PSVersionTable.PSVersion -lt [version]'5.0'))
-            {
-                $expectedRegex = 'Modules\\{0}\.{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
-            }
-            else
-            {
-                $expectedRegex = 'Modules\\{0}\\{1}\\{0}\.psd1$' -f [regex]::Escape($ForModule),[regex]::Escape($ActualVersion)
-            }
+            $expectedRegex = 'Modules\\{0}$' -f [regex]::Escape($ForModule)
             $result | Should Match $expectedRegex
         }
     }
@@ -246,7 +240,7 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
     }
 
     It 'should write an error' {
-        $Global:Error.Count | Should Be 2
+        $Global:Error.Count | Should Be 1
         $Global:Error[0] | Should Match 'Unable to find any versions'
     }
 }

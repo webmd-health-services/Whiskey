@@ -38,7 +38,7 @@ function Resolve-WhiskeyPowerShellModuleVersion
     }
     else
     {
-        $Version = Find-Module -Name $ModuleName | Select-Object -ExpandProperty 'Version'
+        $Version = Find-Module -Name $ModuleName -ErrorAction Ignore | Select-Object -ExpandProperty 'Version'
         if( -not $Version )
         {
             Write-Error -Message ('Unable to find any versions of the {0} module on the PowerShell Gallery. You can browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName)
