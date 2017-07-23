@@ -240,7 +240,7 @@ function WhenRunningPipeline
 
     [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
 
-    $script:context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
     $Global:Error.Clear()
     $script:threwException = $false
     try

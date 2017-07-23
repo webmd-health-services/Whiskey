@@ -94,10 +94,6 @@ function Assert-Context
         $Context.DownloadRoot | Should Be $DownloadRoot
     }
 
-    It 'should set build configuration' {
-        $Context.BuildConfiguration | Should Be 'fubar'
-    }
-
     It 'should set build server flag' {
         $Context.ByBuildServer | Should Be $ByBuildServer
         $Context.ByDeveloper | Should Be (-not $ByBuildServer)
@@ -350,7 +346,7 @@ function WhenCreatingContext
         $threwException = $false
         try
         {
-            $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath -BuildConfiguration 'fubar' @optionalArgs
+            $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $ConfigurationPath @optionalArgs
             if( $runMode )
             {
                 $context.RunMode = $runMode

@@ -135,9 +135,6 @@ function New-WhiskeyTestContext
         $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
         [string]
-        $BuildConfiguration = 'Release',
-
-        [string]
         $ConfigurationPath,
 
         [string]
@@ -204,7 +201,6 @@ function New-WhiskeyTestContext
     $context.BuildRoot = $ForBuildRoot
     $context.Environment = 'Verificaiton'
     $context.ConfigurationPath = $ConfigurationPath
-    $context.BuildConfiguration = $BuildConfiguration
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
 
@@ -225,11 +221,6 @@ function New-WhiskeyTestContext
     if( $ForTaskName )
     {
         $context.TaskName = $ForTaskName
-    }
-
-    if( $InReleaseMode )
-    {
-        $context.BuildConfiguration = 'Release'
     }
 
     if( $ForReleaseName )
@@ -258,6 +249,7 @@ function New-WhiskeyTestContext
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyMSBuildConfiguration.ps1' -Resolve)
 
 Export-ModuleMember -Function '*'
 

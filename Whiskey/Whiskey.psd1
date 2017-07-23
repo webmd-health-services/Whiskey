@@ -178,6 +178,7 @@
 * Created an `Add-WhiskeyCredential` function for adding credentials needed by build tasks.
 * ***BREAKING***: The `PublishPowerShellModule` task now requires a `RepositoryUri` property, which should be the URI where the module should be published.
 * ***BREAKING***: The `PublishPowerShellModule` task now requires an `ApiKeyID` property, which is the ID of the API key to use when publishing. Use the `Add-WhiskeyApiKey` function to add API keys to the build.
+* ***BREAKING***: `New-WhiskeyContext` no longer has a `BuildConfiguration` parameter. Builds are now always run in `Debug` configuration on developer computers and in `Release` configuration on build servers.
 '@
         } # End of PSData hashtable
 

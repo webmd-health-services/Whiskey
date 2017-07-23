@@ -109,6 +109,7 @@ function Invoke-NUnitTask
         }
         $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
         $context = New-WhiskeyTestContext -ForBuildRoot (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -ForDeveloper @inReleaseParam -ForOutputDirectory $outputDirectory
+        $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
         $threwException = $false
         $Global:Error.Clear()
 
@@ -138,7 +139,7 @@ function Invoke-NUnitTask
         {
             $taskParameter = @{
                                 Path = @(
-                                            'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
+                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
                                         )
                               }
         }        
@@ -146,8 +147,8 @@ function Invoke-NUnitTask
         {
             $taskParameter = @{
                                 Path = @(
-                                            'NUnit2PassingTest\bin\Release\NUnit2PassingTest.dll',
-                                            'NUnit2FailingTest\bin\Release\NUnit2FailingTest.dll'
+                                            ('NUnit2PassingTest\bin\{0}\NUnit2PassingTest.dll' -f $configuration),
+                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
                                         )
                               }
         }
@@ -277,7 +278,6 @@ Describe 'Invoke-WhiskeyNUnit2Task.when the Clean Switch is active' {
 }
 
 Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests' { 
-    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { $false }
     Invoke-NUnitTask -WithRunningTests -InReleaseMode
 }
 
@@ -343,20 +343,22 @@ function WhenRunningTask
         $WithParameters = @{ }
     )
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
-    $script:context = New-WhiskeyTestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
+    $script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     Get-ChildItem -Path $context.BuildRoot -Include 'bin','obj' -Directory -Recurse | Remove-Item -Recurse -Force
 
+    $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
+
     Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
 
     # Make sure there are spaces in the path so that we test things get escaped properly.
-    Get-ChildItem -Path $context.BuildRoot -Filter 'Release' -Directory -Recurse |
-        Rename-Item -NewName 'Release Mode'
+    Get-ChildItem -Path $context.BuildRoot -Filter $configuration -Directory -Recurse |
+        Rename-Item -NewName ('{0} Mode' -f $configuration)
 
     try
     {
-        $WithParameters['Path'] = 'bin\Release Mode\{0}' -f $assemblyToTest
+        $WithParameters['Path'] = 'bin\{0} Mode\{1}' -f $configuration,$assemblyToTest
         $script:output = Invoke-WhiskeyNUnit2Task -TaskContext $context -TaskParameter $WithParameters | ForEach-Object { Write-Verbose -Message $_ ; $_ }
         $script:threwException = $false
         $script:thrownError = $null

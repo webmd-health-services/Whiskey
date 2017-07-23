@@ -111,8 +111,10 @@ function Invoke-WhiskeyMSBuildTask
             $verbosity = $TaskParameter['Verbosity']
         }
 
+        $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
+
         $property = Invoke-Command {
-                                        ('Configuration={0}' -f $TaskContext.BuildConfiguration)
+                                        ('Configuration={0}' -f $configuration)
 
                                         if( $TaskParameter.ContainsKey('Property') )
                                         {
@@ -152,7 +154,7 @@ function Invoke-WhiskeyMSBuildTask
                             -ErrorVariable 'errors'
         if( $errors )
         {
-            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$TaskContext.BuildConfiguration)
+            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$configuration)
         }
     }
 }

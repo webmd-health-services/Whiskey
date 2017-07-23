@@ -1,22 +1,6 @@
 
 function New-WhiskeyNuGetPackage
 {
-    <#
-    .SYNOPSIS
-    Creates a NuGet package from .NET .csproj files.
-
-    .DESCRIPTION
-    The `Invoke-WhiskeyNuGetPackTask` runs `nuget.exe` against a list of .csproj files, which create a .nupkg file from that project's build output. The package can be uploaded to NuGet, ProGet, or other package management repository that supports NuGet.
-
-    You must supply the path to the .csproj files to pack with the `$TaskParameter.Path` parameter, the directory where the packaged .nupkg files go with the `$Context.OutputDirectory` parameter, the version being packaged with the `$Context.Version` parameter, and the build configuration (e.g. `Debug` or `Release`) via the `$Context.BuildConfiguration` parameter.
-
-    You *must* include paths to build with the `Path` parameter.
-
-    .EXAMPLE
-    Invoke-WhiskeyNuGetPackageTask -Context $TaskContext -TaskParameter $TaskParameter
-
-    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion` using the project's `$Context.BuildConfiguration` configuration.
-    #>
     [Whiskey.Task("NuGetPack")]
     [CmdletBinding()]
     param(
@@ -58,11 +42,8 @@ function New-WhiskeyNuGetPackage
         $packageVersion = $TaskContext.Version.SemVer1
                     
         # Create NuGet package
-        $configuration = 'Debug'
-        if( $TaskContext.ByBuildServer )
-        {
-            $configuration = 'Release'
-        }
+        $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
+
         & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $configuration) $path
 
         # Make sure package was created.

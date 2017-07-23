@@ -10,7 +10,6 @@ function New-WhiskeyContext
 
     * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
-    * `BuildConfiguration`: the build configuration to use when compiling code. Set from the parameter by the same name.
     * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
     * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
     * `ReleaseVersion`: the semantic version with all build metadata stripped away, i.e. the version and pre-release only.
@@ -21,7 +20,7 @@ function New-WhiskeyContext
     * `ApplicatoinName`: the name of the application being built.
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug'
+    New-WhiskeyContext -Path '.\whiskey.yml' 
 
     Demonstrates how to create a context for a developer build.
     #>
@@ -36,11 +35,6 @@ function New-WhiskeyContext
         [string]
         # The path to the `whiskey.yml` file that defines build settings and tasks.
         $ConfigurationPath,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The configuration to use when compiling code, e.g. `Debug`, `Release`.
-        $BuildConfiguration,
 
         [string]
         # The place where downloaded tools should be cached. The default is the build root.
@@ -166,7 +160,6 @@ function New-WhiskeyContext
     $context.ReleaseName = $releaseName;
     $context.BuildRoot = $buildRoot;
     $context.ConfigurationPath = $ConfigurationPath;
-    $context.BuildConfiguration = $BuildConfiguration;
     $context.OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
     $context.Version = [pscustomobject]@{
                                         SemVer2 = $semVersion;

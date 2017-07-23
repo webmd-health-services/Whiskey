@@ -27,7 +27,7 @@ try
         $cleanArg['Clean'] = $true
     }
 
-    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration
+    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
     Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }

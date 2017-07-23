@@ -16,7 +16,6 @@ function New-WhiskeyContextObject
                                     ReleaseName ='';
                                     BuildRoot = '';
                                     ConfigurationPath = '';
-                                    BuildConfiguration = '';
                                     OutputDirectory = '';
                                     TaskName = '';
                                     TaskIndex = -1;
