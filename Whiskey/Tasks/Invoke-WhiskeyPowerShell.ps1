@@ -70,7 +70,10 @@ function Invoke-WhiskeyPowerShell
             $moduleRoot = $using:moduleRoot
             $resultPath = $using:resultPath
 
-            Import-Module -Name $moduleRoot
+            Invoke-Command -ScriptBlock { 
+                                            $VerbosePreference = 'SilentlyContinue';
+                                            Import-Module -Name $moduleRoot
+                                        }
 
             $VerbosePreference = $using:VerbosePreference
 

@@ -85,7 +85,11 @@ function Invoke-WhiskeyPester3Task
         $pesterModulePath = $using:pesterModulePath
         $outputFile = $using:outputFile
 
-        Import-Module -Name $pesterModulePath
+        Invoke-Command -ScriptBlock {
+                                        $VerbosePreference = 'SilentlyContinue'
+                                        Import-Module -Name $pesterModulePath
+                                    }
+
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     } 
     

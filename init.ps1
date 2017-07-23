@@ -25,6 +25,11 @@ $modules = @( 'Pester', 'Carbon' )
 $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Modules'
 New-Item -Path $modulesRoot -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
 
+& {
+        $VerbosePreference = 'SilentlyContinue'
+        Import-Module 'PackageManagement'
+  }
+
 foreach( $moduleName in $modules )
 {
     $moduleRootPath = Join-Path -Path $modulesRoot -ChildPath $moduleName
