@@ -63,8 +63,8 @@ function Uninstall-WhiskeyTool
         }
         $modulesRoot = Join-Path -Path $BuildRoot -ChildPath 'Modules'
         #Remove modules saved by either PowerShell4 or PowerShell5
-        $moduleRoots = @( ('{0}.{1}' -f $ModuleName, $Version), ('{0}\{1}' -f $ModuleName, $Version)  )
-        forEach ($item in $moduleRoots)
+        $moduleRoots = @( ('{0}\{1}' -f $ModuleName, $Version), ('{0}' -f $ModuleName)  )
+        foreach ($item in $moduleRoots)
         {
             $removeModule = (Join-Path -Path $modulesRoot -ChildPath $item )
             if( Test-Path -Path $removeModule -PathType Container )
