@@ -2,16 +2,29 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$feedUri = $null
+$apikey = $null
+$apikeyID = $null
+
+function GivenNoApiKey
+{
+    $script:apikey = $null
+    $script:apikeyID = $null
+}
+
+function GivenNoFeedUri
+{
+    $script:feedUri = $null
+}
+
 function Initialize-Test
 {
     param(
     )
-    $gitBranch = 'origin/develop'
-    $filter = { $Path -eq 'env:GIT_BRANCH' }
-    $mock = { [pscustomobject]@{ Value = $gitBranch } }.GetNewClosure()
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'Get-Item' -ParameterFilter $filter -MockWith $mock
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]'1.2.3' }
+
+    $script:feedUri = 'https://powershell.example.com'
+    $script:apikey = 'fubar:snauf'
+    $script:apikeyID = 'PowerShellExampleCom'
 }
 
 function Invoke-Publish
@@ -104,7 +117,7 @@ function Invoke-Publish
 
     if( -not $withNoProgetURI )
     {
-        $publishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
+        $publishLocation = $feedUri
     }
     if( $withoutRegisteredRepo )
     {
@@ -122,6 +135,17 @@ function Invoke-Publish
     
     $Global:Error.Clear()
     $failed = $False
+
+    if( $feedUri )
+    {
+        $TaskParameter['RepositoryUri'] = $feedUri
+    }
+
+    if( $apikeyID )
+    {
+        $TaskParameter['ApiKeyID'] = $apikeyID
+        Add-WhiskeyApiKey -Context $TaskContext -ID $apikeyID -Value $apikey
+    }
     
     try
     {
@@ -192,7 +216,6 @@ function Assert-ModuleRegistered
         $ExpectedFeedName = 'thisFeed'
     }
     
-    $expectedPublishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
     It ('should register the Module')  {
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
@@ -206,8 +229,8 @@ function Assert-ModuleRegistered
             Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
 
             $Name -eq $ExpectedRepositoryName -and
-            $SourceLocation -eq $expectedPublishLocation -and
-            $PublishLocation -eq $expectedPublishLocation
+            $SourceLocation -eq $feedUri -and
+            $PublishLocation -eq $feedUri
 
         }
     }
@@ -239,7 +262,7 @@ function Assert-ModulePublished
     }
     
     It ('should publish the Module')  {
-        $expectedApiKey = ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        $expectedApiKey = $apikey
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
@@ -323,11 +346,21 @@ Describe 'Publish-WhiskeyPowerShellModule.when publishing new module with custom
     Assert-ModulePublished -TaskContext $context 
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when no feed URI'{
+Describe 'Publish-WhiskeyPowerShellModule.when no feed URI' {
     Initialize-Test
+    GivenNoFeedUri
     $context = New-WhiskeyTestContext -ForBuildServer
-    $context.ProGetSession = 'foo'
-    $errorMatch = 'The property ''PowerShellFeedUri'' cannot be found on this object. Verify that the property exists.'
+    $errorMatch = '\bRepositoryUri\b.*\bmandatory\b'
+    
+    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
+    Assert-ModuleNotPublished
+}
+
+Describe 'Publish-WhiskeyPowerShellModule.when no API key' {
+    Initialize-Test
+    GivenNoApiKey
+    $context = New-WhiskeyTestContext -ForBuildServer
+    $errorMatch = '\bApiKeyID\b.*\bmandatory\b'
     
     Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
@@ -354,7 +387,7 @@ Describe 'Publish-WhiskeyPowerShellModule.when non-existent path parameter' {
 Describe 'Publish-WhiskeyPowerShellModule.when non-directory path parameter' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = 'must point to a directory'
+    $errorMatch = 'path to the root directory of a PowerShell module'
 
     Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished

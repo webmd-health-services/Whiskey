@@ -176,6 +176,8 @@
 * ***BREAKING***: the `PublishNodeModule` task now requires an `EmailAddress` property that is the e-mail address to use when publishing node modules.
 * Created an `Add-WhiskeyApiKey` function for adding API keys needed by build tasks.
 * Created an `Add-WhiskeyCredential` function for adding credentials needed by build tasks.
+* ***BREAKING***: The `PublishPowerShellModule` task now requires a `RepositoryUri` property, which should be the URI where the module should be published.
+* ***BREAKING***: The `PublishPowerShellModule` task now requires an `ApiKeyID` property, which is the ID of the API key to use when publishing. Use the `Add-WhiskeyApiKey` function to add API keys to the build.
 '@
         } # End of PSData hashtable
 

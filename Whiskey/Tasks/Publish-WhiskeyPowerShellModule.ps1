@@ -40,12 +40,25 @@ function Publish-WhiskeyPowerShellModule
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'        
-    $publishLocation = $TaskContext.ProgetSession.PowerShellFeedUri
     if( -not (Test-Path $path -PathType Container) )
     {
-        throw('Element ''Path'' must point to a directory, specifically the module directory of the module to publish.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Path ''{0}'' isn''t a directory. It must be the path to the root directory of a Powershell module. The directory name must match the name of the module.' -f $path)
     }
                 
+    $publishLocation = $TaskParameter['RepositoryUri']
+    if( -not $publishLocation )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''RepositoryUri'' is mandatory. It must be the URI to the PowerShall repository to publish to.')
+    }
+
+    $apiKeyID = $TaskParameter['ApiKeyID']
+    if( -not $apiKeyID )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It must be the ID of the API key to use when publishing to ''{0}''. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $publishLocation)
+    }
+
+    $apiKey = Get-WhiskeyApiKey -TaskContext $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
+
     $manifestPath = '{0}\{1}.psd1' -f $path,($path | Split-Path -Leaf)
     if( $TaskParameter.ContainsKey('ModuleManifestPath') )
     {
@@ -55,6 +68,7 @@ function Publish-WhiskeyPowerShellModule
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Module Manifest Path {0} is invalid, please check that the {1}.psd1 file is valid and in the correct location.' -f $manifestPath, ($path | Split-Path -Leaf))
     }
+
     $manifest = Get-Content $manifestPath
     $versionString = "ModuleVersion = '{0}.{1}.{2}'" -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
     $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString 
@@ -71,7 +85,7 @@ function Publish-WhiskeyPowerShellModule
     Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $binPath,$env:PATH)
     try
     {
-        Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey ('{0}:{1}' -f $TaskContext.ProGetSession.Credential.UserName, $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password)
+        Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey $apiKey
     }
     finally
     {
