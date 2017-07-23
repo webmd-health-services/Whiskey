@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyProGetUniversalPackageTask
+function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true)]
@@ -61,7 +61,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+{0}' -f $name
+    $tempBaseName = 'Whiskey+New-WhiskeyProGetUniversalPackage+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose

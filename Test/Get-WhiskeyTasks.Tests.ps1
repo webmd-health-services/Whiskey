@@ -18,7 +18,7 @@ function global:MyTask2
 
 Describe 'Get-WhiskeyTasks' {
     $expectedTasks = @{
-                        ProGetUniversalPackage         = 'Invoke-WhiskeyProGetUniversalPackageTask';
+                        ProGetUniversalPackage         = 'New-WhiskeyProGetUniversalPackage';
                         MSBuild                        = 'Invoke-WhiskeyMSBuildTask';
                         NUnit2                         = 'Invoke-WhiskeyNUnit2Task';
                         Node                           = 'Invoke-WhiskeyNodeTask';
@@ -26,7 +26,7 @@ Describe 'Get-WhiskeyTasks' {
                         Pester4                        = 'Invoke-WhiskeyPester4Task';
                         PublishFile                    = 'Invoke-WhiskeyPublishFileTask';
                         PublishNodeModule              = 'Publish-WhiskeyNodeModule';
-                        PublishPowerShellModule        = 'Invoke-WhiskeyPublishPowerShellModuleTask';
+                        PublishPowerShellModule        = 'Publish-WhiskeyPowerShellModule';
                         TaskOne = 'MyTask';
                         TaskTwo = 'MyTask2';
                         TaskThree = 'MyTask2';
