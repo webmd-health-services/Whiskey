@@ -29,7 +29,7 @@ function Publish-WhiskeyProGetUniversalPackage
         
         $exampleTask
         
-        Add credentials to the `Credentials` property on the context returned by `New-WhiskeyContext`, e.g. `$context.Credentials['ProGetCredential'] = `$credential`."
+        Use the `Add-WhiskeyCredential` function to add credentials to the build."
     }
     
     if( -not $TaskParameter['Uri'] )

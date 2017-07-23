@@ -134,7 +134,7 @@ function WhenTaggingACommit
         $taskParameter['CredentialID'] = $credentialID
         if( $credential )
         {
-            $context.Credentials[$credentialID] = $credential
+            Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
         }
     }
 

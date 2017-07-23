@@ -81,7 +81,7 @@ function Publish-WhiskeyNodeModule
         NpmRegistryUri: {0}
         CredentialID: NpmCredential
     
-    Credentials are added to the `Credentials` property on the build''s context object, e.g. `$context.Credentials[''NpmCredential''] = $credential`. Use `New-WhiskeyContext` to create a context object.
+    Use the `Add-WhiskeyCredential` function to add the credential to the build.
     ' -f $npmRegistryUri)
     }
     $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'

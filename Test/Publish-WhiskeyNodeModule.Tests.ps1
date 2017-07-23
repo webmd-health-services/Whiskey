@@ -176,7 +176,7 @@ function WhenPublishingNodeModule
 
     if( $credID -and $credential )
     {
-        $context.Credentials[$credID] = $credential
+        Add-WhiskeyCredential -Context $context -ID $credID -Credential $credential
     }
 
     if( $email )

@@ -3,7 +3,7 @@ function Add-WhiskeyApiKey
 {
     <#
     .SYNOPSIS
-    Adds an API key to Whiskey's credential store.
+    Adds an API key to Whiskey's API key store.
 
     .DESCRIPTION
     The `Add-WhiskeyApiKey` function adds an API key to Whiskey's API key store. Tasks that need API keys usually have a property where you provide the ID of the API key to use. You provide Whiskey the value of the API Key with this function.

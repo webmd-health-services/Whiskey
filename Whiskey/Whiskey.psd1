@@ -73,6 +73,7 @@
     # Functions to export from this module
     FunctionsToExport = @( 
                             'Add-WhiskeyApiKey',
+                            'Add-WhiskeyCredential',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
@@ -171,9 +172,10 @@
 * Default task property values can now be set via the `TaskDefaults` hashtable on the Whiskey context object. If a task doesn't have a property, but the `TaskDefaults` property does, the value from `TaskDefaults` is used.
 * ***BREAKING***: Running a task in clean mode is now opt-in. Set the `SupportsClean` property on your task's `TaskAttribute` to run your task during clean mode. Use the `$TaskContext.ShouldClean()` method to determine if you're running in clean mode or not.
 * Created new `Initialize` run mode. This mode is intended for tasks to install or initialize any tools it uses. For example, if a project uses Pester to run PowerShell scripts, the `PowerShell` task should just install Pester when run in Initialize mode. That way, developers get Pester installed without needing to run an entire build. To opt-in to Initialize mode, set the `SupportsInitialize` property on your task's `TaskAttribute` to `true`. Use the `$TaskContext.ShouldInitialize()` function to determine if you're running in initialize mode or not.
-* ***BREAKING***: the `PublishNodeModule` task now requires a `CredentialID` property that is the ID of the credential to use when publishing. Credentials are added to the context's `Credentials` property.
+* ***BREAKING***: the `PublishNodeModule` task now requires a `CredentialID` property that is the ID of the credential to use when publishing. Use the `Add-WhiskeyCredential` to add credentials to the build.
 * ***BREAKING***: the `PublishNodeModule` task now requires an `EmailAddress` property that is the e-mail address to use when publishing node modules.
 * Created an `Add-WhiskeyApiKey` function for adding API keys needed by build tasks.
+* Created an `Add-WhiskeyCredential` function for adding credentials needed by build tasks.
 '@
         } # End of PSData hashtable
 
