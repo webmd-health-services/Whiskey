@@ -1,4 +1,4 @@
-function Invoke-WhiskeyPublishPowerShellModuleTask
+function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task("PublishPowerShellModule")]
     [CmdletBinding()]
