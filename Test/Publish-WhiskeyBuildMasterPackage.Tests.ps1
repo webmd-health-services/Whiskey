@@ -9,9 +9,10 @@ $context = $null
 $version = $null
 $releaseName = $null
 $appName = $null
-$apiKeys = @{ }
 $taskParameter = $null
 $releaseId = 483
+$apiKeyID = $null
+$apiKey = $null
 
 function GivenApiKey
 {
@@ -20,7 +21,8 @@ function GivenApiKey
         $ApiKey
     )
 
-    $script:apiKeys = @{ $ID = $ApiKey }
+    $script:apiKeyID = $ID
+    $script:ApiKey = $ApiKey
 }
 
 function GivenApplicationName
@@ -94,22 +96,16 @@ function WhenCreatingPackage
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode
     )
 
     $taskParameter['ApplicationName'] = $appName
 
-    $context = [pscustomobject]@{
-                                    ApiKeys = $apiKeys;
-                                    Version = [pscustomobject]@{
-                                                                    'SemVer2' = [SemVersion.SemanticVersion]$version
-                                                                }
-                                    ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml';
-                                    TaskIndex = 0;
-                                    TaskName = 'PublishBuildMasterPackage';
-                                    ReleaseName = $releaseName;
-                               }
+    $script:context = New-WhiskeyTestContext -ForVersion $version -ForReleaseName $releaseName -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
+
+    if( $apiKeyID )
+    {
+        Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
+    }
 
     $package = $mockPackage
     $deploy = $mockDeploy
@@ -120,12 +116,7 @@ function WhenCreatingPackage
     try
     {
         $Global:Error.Clear()
-        $cleanParam = @{ }
-        if( $InCleanMode )
-        {
-            $cleanParam['Clean'] = $true
-        }
-        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter @cleanParam
+        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -289,14 +280,4 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ApiKeyID property is missing')
     GivenProperty @{ 'Uri' = 'https://buildmaster.example.com' }
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
-}
-
-Describe ('Publish-WhiskeyBuildMasterPackage.when run in clean mode') {
-    GivenNoApplicationName
-    GivenProperty @{ }
-    WhenCreatingPackage -InCleanMode
-    ThenPackageNotCreated
-    It 'should not throw an exception' {
-        $threwException | Should -Be $false
-    }
 }

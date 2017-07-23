@@ -1,12 +1,12 @@
 
-function Invoke-WhiskeyPublishNodeModuleTask
+function Publish-WhiskeyNodeModule
 {
     <#
     .SYNOPSIS
     Publishes a Node module package to the target NPM registry
     
     .DESCRIPTION
-    The `Invoke-WhiskeyPublishNodeModuleTask` function utilizes NPM's `publish` command to publish Node module packages.
+    The `Publish-WhiskeyNodeModule` function utilizes NPM's `publish` command to publish Node module packages.
 
     You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
@@ -15,11 +15,11 @@ function Invoke-WhiskeyPublishNodeModuleTask
     * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     
     .EXAMPLE
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{}
+    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{}
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `$context.BuildRoot` property. The function would run `npm publish`.
 
-    Invoke-WhiskeyPublishNodeModuleTask -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
+    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>
@@ -36,16 +36,8 @@ function Invoke-WhiskeyPublishNodeModuleTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
         #
         # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.                     
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
-
-    if( $Clean )
-    {
-        return
-    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -57,17 +49,17 @@ function Invoke-WhiskeyPublishNodeModuleTask
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
-    $npmRegistryUri = $TaskParameter['npmRegistryUri']
+    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry where the module should be published. E.g.,
         
-        BuildTasks:
-        - PublishNodeModule:
-            NpmRegistryUri: https://registry.npmjs.org/
-        '
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: https://registry.npmjs.org/
+    '
     }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $buildRoot
     
     if (!$TaskContext.Publish)
     {
@@ -79,16 +71,41 @@ function Invoke-WhiskeyPublishNodeModuleTask
 
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
-    $npmUserName = $TaskContext.ProGetSession.Credential.UserName
-    $npmEmail = $env:USERNAME + '@example.com'
-    $npmCredPassword = $TaskContext.ProGetSession.Credential.GetNetworkCredential().Password
+    $credentialID = $TaskParameter['CredentialID']
+    if( -not $credentialID )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
+    
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: {0}
+        CredentialID: NpmCredential
+    
+    Use the `Add-WhiskeyCredential` function to add the credential to the build.
+    ' -f $npmRegistryUri)
+    }
+    $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'
+    $npmUserName = $credential.UserName
+    $npmEmail = $TaskParameter['EmailAddress']
+    if( -not $npmEmail )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
+    
+    BuildTasks:
+    - PublishNodeModule:
+        NpmRegistryUri: {0}
+        CredentialID: {1}
+        EmailAddress: somebody@example.com
+    ' -f $npmRegistryUri,$credentialID)
+    }
+    $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
 
     Push-Location $workingDir
     try
     {
-        $packageNpmrc = (New-Item -Path (Join-Path -Path $buildRoot -ChildPath '.npmrc') -ItemType File -Force)
+        $packageNpmrc = New-Item -Path '.npmrc' -ItemType File -Force
         Add-Content -Path $packageNpmrc -Value ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
         Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
         Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)

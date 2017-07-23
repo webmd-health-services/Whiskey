@@ -10,17 +10,11 @@ function Invoke-WhiskeyPowerShell
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
     
     Set-StrictMode -Version 'Latest'
-    if( $Clean )
-    {
-        return
-    }
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     if( -not ($TaskParameter.ContainsKey('Path')))
         {
@@ -76,7 +70,10 @@ function Invoke-WhiskeyPowerShell
             $moduleRoot = $using:moduleRoot
             $resultPath = $using:resultPath
 
-            Import-Module -Name $moduleRoot
+            Invoke-Command -ScriptBlock { 
+                                            $VerbosePreference = 'SilentlyContinue';
+                                            Import-Module -Name $moduleRoot
+                                        }
 
             $VerbosePreference = $using:VerbosePreference
 

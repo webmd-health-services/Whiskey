@@ -1,8 +1,8 @@
 
-function Invoke-WhiskeyProGetUniversalPackageTask
+function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("ProGetUniversalPackage")]
+    [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -10,10 +10,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -23,7 +20,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $7zipVersion = '16.2.1'
     # The directory name where NuGet puts this package is different than the version number.
     $7zipDirNameVersion = '16.02.1'
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
         return
@@ -64,7 +61,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
     $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'Whiskey+Invoke-WhiskeyProGetUniversalPackageTask+{0}' -f $name
+    $tempBaseName = 'Whiskey+New-WhiskeyProGetUniversalPackage+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
@@ -84,10 +81,11 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         # Add the version.json file
         @{
             Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.SemVer2.ToString();
+            SemVer2 = $TaskContext.Version.SemVer2.ToString();
+            SemVer2NoBuildMetadata = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
             PrereleaseMetadata = $TaskContext.Version.SemVer2.Prerelease;
             BuildMetadata = $TaskContext.Version.SemVer2.Build;
-            ReleaseVersion = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
+            SemVer1 = $TaskContext.Version.SemVer1.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage
@@ -158,19 +156,13 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                         $destinationDisplay = $destinationDisplay.Trim('\')
                         if( $AsThirdPartyItem )
                         {
-                            $excludeParams = @()
+                            $exclude = @()
                             $whitelist = @()
                             $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                         }
                         else
                         {
-                            $excludeParams = Invoke-Command {
-                                        '.git'
-                                        '.hg'
-                                        'obj'
-                                        $exclude
-                                    } |
-                            ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
                                             'upack.json'
@@ -179,10 +171,7 @@ function Invoke-WhiskeyProGetUniversalPackageTask
                         }
 
                         Write-Verbose -Message $operationDescription
-                        if( $TaskContext.ByBuildServer )
-                        {
-                            robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
-                        }
+                        Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                     }
                 }
             }
@@ -203,16 +192,10 @@ function Invoke-WhiskeyProGetUniversalPackageTask
         $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
 
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
-        if( $TaskContext.ByBuildServer )
-        {
-            & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
-        }
+        & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
 
         Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
-        if( $TaskContext.ByBuildServer )
-        {
-            $outFile
-        }
+        $outFile
     }
     finally
     {

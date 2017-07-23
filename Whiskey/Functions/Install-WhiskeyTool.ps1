@@ -62,17 +62,18 @@ function Install-WhiskeyTool
         $modulesRoot = Join-Path -Path $DownloadRoot -ChildPath 'Modules'
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Ignore | Out-Null
 
-        $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\*.psd1' -f $ModuleName,$Version)
-        if( $PSVersionTable.PSVersion -lt [version]'5.0' )
-        {
-            $expectedPath = Join-Path -Path $modulesRoot -ChildPath ('{0}.{1}\*.psd1' -f $ModuleName,$Version)
-        }
+        $expectedPath = Join-Path -Path $modulesRoot -ChildPath $ModuleName
 
         if( (Test-Path -Path $expectedPath -PathType Leaf) )
         {
             Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
             return
         }
+
+        Invoke-Command -ScriptBlock {
+                                        $VerbosePreference = 'SilentlyContinue'
+                                        Import-Module -Name 'PackageManagement'
+                                    }
 
         $Version = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $ModuleName -Version $Version
         if( -not $Version )
@@ -82,31 +83,12 @@ function Install-WhiskeyTool
 
         Save-Module -Name $ModuleName -RequiredVersion $Version -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
 
-        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $ModuleName,$Version)
-        if( (Test-Path -Path $moduleRoot -PathType Leaf) )
-        {
-            return $moduleRoot
-        }
-
-        # Looks like we're on PowerShell 4
-        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $ModuleName
-        if( -not (Test-Path -Path $moduleRoot -PathType Container) )
+        if( -not (Test-Path -Path $expectedPath -PathType Container) )
         {
             Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
-            return
         }
 
-        $moduleRootName = '{0}.{1}' -f $ModuleName,$Version
-        Rename-Item -Path $moduleRoot -NewName $moduleRootName
-        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $moduleRootName
-        $moduleRoot = Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $ModuleName)
-        if( -not (Test-Path -Path $moduleRoot -PathType Leaf) )
-        {
-            Write-Error -Message ('Failed to install {0} {1}: it downloaded successfully, but we failed to rename it to {2}.' -f $ModuleName,$Version,$moduleRootName)
-            return
-        }
-
-        return $moduleRoot
+        return $expectedPath
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {        

@@ -72,13 +72,14 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Add-WhiskeyApiKey',
+                            'Add-WhiskeyCredential',
                             'ConvertTo-WhiskeySemanticVersion',
-                            'Get-WhiskeyTasks',
+                            'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
                             'Get-WhiskeyOutputDirectory',
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
-                            'Invoke-WhiskeyProGetUniversalPackageTask',
                             'Invoke-WhiskeyMSBuild',
                             'Invoke-WhiskeyMSBuildTask',
                             'Invoke-WhiskeyNodeTask',
@@ -86,9 +87,6 @@
                             'Invoke-WhiskeyPester3Task',
                             'Invoke-WhiskeyPester4Task',
                             'Invoke-WhiskeyPipeline',
-                            'Invoke-WhiskeyPublishFileTask',
-                            'Invoke-WhiskeyPublishNodeModuleTask',
-                            'Invoke-WhiskeyPublishPowerShellModuleTask',
                             'Invoke-WhiskeyBuild',
                             'Invoke-WhiskeyTask',
                             'New-WhiskeyContext',
@@ -153,7 +151,7 @@
 * Added support for running custom plugins before/after Whiskey runs each task. Use the `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` functions to register/unregister commands to run before and after each task or specific tasks.
 * Created `PublishProGetUniversalPackage` task for publishing universal packages to ProGet.
 * The `ProGetUniversalPackage` task no longer publishes the package to ProGet. It only creates the package. To publish the package, use the new `PublishProGetUniversalPackage` task.
-* ***BREAKING***: `New-WhiskeyContext` no longer has `ProGetAppFeedUri` or `ProGetAppFeedName` parameters. Update your `whiskey.yml` files to include that information as properties on the `PublishProGetUniversalPackage` task.
+* ***BREAKING***: `New-WhiskeyContext` no longer has `ProGetAppFeedUri`, `ProGetAppFeedName`, `ProGetCredential`, or `PowerShellFeedUri` parameters. This information was moved to the tasks that require them. Update your `whiskey.yml` files to include that information as properties on the `PublishProGetUniversalPackage` and `PublishPowerShellModule` tasks.
 * ***BREAKING***: Whiskey no longer tags a successful build in Bitbucket Server by default. This functionality was converted into a `PublishBitbucketServerTag` task. Add this task to the `PublishTasks` pipeline in your `whiskey.yml` file.
 * ***BREAKING***: `New-WhiskeyContext` no longer has `BBServerCredential` or `BBServerUri` parameters, since it no longer tags successful builds in Bitbucket Server. Use the `PublishBitbucketServerTag` task in your `PublishTasks` pipeline instead.
 * Fixed: `Node` task fails under PowerShell 5.1 because the max value for the `ConvertTo-Json` cmdlet's `Depth` parameter is `100` in PowerShell 5.1, and the `Node` task was using `[int]::MaxValue`.
@@ -163,13 +161,28 @@
 * Fixed: the `PublishProGetUniversalPackage` task doesn't fail if publishing to ProGet fails.
 * Renamed the `PublishNuGetLibrary` task to `PublishNuGetPackage`. You can continue to use the old name, but it will eventually be removed.
 * ***BREAKING***: `PublishNuGetPackage` task now requires the URI where it should publish NuGet packages. This used to be passed to the `New-WhiskeyContext` function's `NuGetFeedUri` parameter.
-* ***BREAKING***: `PublishNuGetPackage` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. API keys are added to the context object's ApiKeys property, e.g. `$context.ApiKeys.Add( API_KEY_ID, 'apikey'`. The context object is returned by `New-WhiskeyContext`.
+* ***BREAKING***: `PublishNuGetPackage` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. Add API keys with the `Add-WhiskeyApiKey` function.
 * ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetPackage` task.
 * Tasks can now have multiple names. Add multiple task attributes to a task.
 * Created `NuGetPack` task for creating NuGet packages.
 * ***BREAKING***: The `PublishNuGetPackage` task no longer creates the NuGet package. Use the `NuGetPack` task.
 * Created `Invoke-WhiskeyTask` function for running tasks.
 * Default task property values can now be set via the `TaskDefaults` hashtable on the Whiskey context object. If a task doesn't have a property, but the `TaskDefaults` property does, the value from `TaskDefaults` is used.
+* ***BREAKING***: Running a task in clean mode is now opt-in. Set the `SupportsClean` property on your task's `TaskAttribute` to run your task during clean mode. Use the `$TaskContext.ShouldClean()` method to determine if you're running in clean mode or not.
+* Created new `Initialize` run mode. This mode is intended for tasks to install or initialize any tools it uses. For example, if a project uses Pester to run PowerShell scripts, the `PowerShell` task should just install Pester when run in Initialize mode. That way, developers get Pester installed without needing to run an entire build. To opt-in to Initialize mode, set the `SupportsInitialize` property on your task's `TaskAttribute` to `true`. Use the `$TaskContext.ShouldInitialize()` function to determine if you're running in initialize mode or not.
+* ***BREAKING***: the `PublishNodeModule` task now requires a `CredentialID` property that is the ID of the credential to use when publishing. Use the `Add-WhiskeyCredential` to add credentials to the build.
+* ***BREAKING***: the `PublishNodeModule` task now requires an `EmailAddress` property that is the e-mail address to use when publishing node modules.
+* Created an `Add-WhiskeyApiKey` function for adding API keys needed by build tasks.
+* Created an `Add-WhiskeyCredential` function for adding credentials needed by build tasks.
+* ***BREAKING***: The `PublishPowerShellModule` task now requires a `RepositoryUri` property, which should be the URI where the module should be published.
+* ***BREAKING***: The `PublishPowerShellModule` task now requires an `ApiKeyID` property, which is the ID of the API key to use when publishing. Use the `Add-WhiskeyApiKey` function to add API keys to the build.
+* ***BREAKING***: `New-WhiskeyContext` no longer has a `BuildConfiguration` parameter. Builds are now always run in `Debug` configuration on developer computers and in `Release` configuration on build servers.
+* ***BREAKING***: The `Pester3` and `Pester4` tasks now save Pester to `Modules\Pester` on PowerShell 4.
+* ***BREAKING***: Task functions are no longer public. Use `Invoke-WhiskeyTask` to run a task from a custom task.
+* ***BREAKING***: Format of the version.json file included in ProGet packages has changed. `SemanticVersion` property renamed to `SemVer2`. `ReleaseVersion` property renamed to `SemVer2NoBuildMetadata`. Added a `SemVer` property.
+* ***BREAKING***: The `PublishFile` task now always publishes. To only publish on a build server (the old behavior), move your `PublishFile` tasks to the `PublishTasks` pipeline in your `whiskey.yml` file.
+* Tasks can now be targed to only run when a developer runs the build or when a build server runs the build. Add an `OnlyBy` property to your task and set its value to `Developer` or `BuildServer`.
+* ***BREAKING***: The `ProGetUniversalPackage` task now packages when run by a developer. To only run on the build server, add an `OnlyBy` property whose value is `BuildServer` to the `ProGetUniversalPackage` task in your `whiskey.yml` file.
 '@
         } # End of PSData hashtable
 

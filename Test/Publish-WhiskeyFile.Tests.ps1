@@ -55,31 +55,17 @@ function GivenUserCannotCreateDestination
 
 function WhenPublishingFiles
 {
+    [CmdletBinding()]
     param(
         [Parameter(Position=0)]
         [string[]]
         $Path,
 
         [string[]]
-        $To,
-
-        [Switch]
-        $ByADeveloper
+        $To
     )
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
-
-    $optionalParams = @{ }
-    if( $ByADeveloper )
-    {
-        $optionalParams['ForDeveloper'] = $true
-    }
-    else
-    {
-        $optionalParams['ForBuildServer'] = $true
-    }
-
-    $taskContext = New-WhiskeyTestContext @optionalParams
+    $taskContext = New-WhiskeyTestContext -ForBuildServer
 
     $taskParameter = @{ }
     $taskParameter['Path'] = $Path
@@ -97,7 +83,7 @@ function WhenPublishingFiles
 
     try
     {
-        Invoke-WhiskeyPublishFileTask -TaskContext $taskContext -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'PublishFile'
     }
     catch
     {
@@ -158,37 +144,31 @@ function ThenTaskFails
 
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask when called by Developer' {
-    GivenFiles 'file.txt'
-    WhenPublishingFiles 'file.txt' -ByADeveloper
-    ThenNothingPublished 
-}
-
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing a single file' {
+Describe 'Publish-WhiskeyFile.when publishing a single file' {
     GivenFiles 'one.txt'
     WhenPublishingFiles 'one.txt' 
     ThenFilesPublished 'one.txt'
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing multiple files to a single destination' {
+Describe 'Publish-WhiskeyFile.when publishing multiple files to a single destination' {
     GivenFiles 'one.txt','two.txt'
     WhenPublishingFiles 'one.txt','two.txt'
     ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing files from different directories' {
+Describe 'Publish-WhiskeyFile.when publishing files from different directories' {
     GivenFiles 'dir1\one.txt','dir2\two.txt'
     WhenPublishingFiles 'dir1\one.txt','dir2\two.txt'
     ThenFilesPublished 'one.txt','two.txt'
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing to multiple destinations' {
+Describe 'Publish-WhiskeyFile.when publishing to multiple destinations' {
     GivenFiles 'one.txt'
     WhenPublishingFiles 'one.txt' -To 'dir1','dir2'
     ThenFilesPublished 'dir1\one.txt','dir2\one.txt'
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing files and user can''t create one of the destination directories' {
+Describe 'Publish-WhiskeyFile.when publishing files and user can''t create one of the destination directories' {
     GivenFiles 'one.txt'
     GivenUserCannotCreateDestination 'dir2'
     WhenPublishingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
@@ -196,14 +176,14 @@ Describe 'Invoke-WhiskeyPublishFileTask.when publishing files and user can''t cr
     ThenNothingPublished -To 'dir1','dir2'
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing nothing' {
+Describe 'Publish-WhiskeyFile.when publishing nothing' {
     GivenNoFilesToPublish
     WhenPublishingFiles -ErrorAction SilentlyContinue
     ThenTaskFails -WithErrorMessage '''Path'' property is missing'
     ThenNothingPublished
 }
 
-Describe 'Invoke-WhiskeyPublishFileTask.when publishing a directory' {
+Describe 'Publish-WhiskeyFile.when publishing a directory' {
     GivenFiles 'dir1\file1.txt'
     WhenPublishingFiles 'dir1' -ErrorAction SilentlyContinue
     ThenTaskFails 'only publishes files'

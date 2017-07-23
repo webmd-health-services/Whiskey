@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyPublishFileTask
+function Publish-WhiskeyFile
 {
     [Whiskey.Task("PublishFile")]
     [CmdletBinding()]
@@ -10,24 +10,11 @@ function Invoke-WhiskeyPublishFileTask
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean        
+        $TaskParameter
     )
-
-    if( $Clean )
-    {
-        return
-    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    if(!$TaskContext.Publish)
-    {
-        return
-    } 
 
     $pathErrorMessage = @'
 'Path' property is missing. Please set it to the list of files to publish, e.g.

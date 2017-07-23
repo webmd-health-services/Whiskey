@@ -108,8 +108,6 @@ function WhenBuildIsStarted
     $Global:Error.Clear()
     $optionalParams = @{ }
 
-    Initialize-NodeProject 
-    
     $taskParameter = @{ }
 
     if( $script:runScripts )
@@ -128,7 +126,7 @@ function WhenBuildIsStarted
     }
     if ( $script:withCleanSwitch )
     {
-        $optionalParams['Clean'] = $True
+        $context.RunMode = 'Clean'
     }
     if ( $script:npmRegistryUri )
     {
@@ -138,7 +136,7 @@ function WhenBuildIsStarted
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter @optionalParams
+        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter
     }
     catch
     {
@@ -393,6 +391,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -402,6 +401,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -411,6 +411,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'fail'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -NpmScript 'fail'
     cleanup
@@ -420,6 +421,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
     GivenBuildByDeveloper
     GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'npm\ install\b.*failed'
     cleanup
@@ -430,6 +432,7 @@ Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -440,6 +443,7 @@ Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     GivenDependency -Dependency @( '"minimatch": "3.0.0"' )
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'found the following security vulnerabilities' -WhoseScriptsPass
     cleanup
@@ -450,6 +454,7 @@ Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'name is missing or doesn''t have a value'
     cleanup
@@ -458,6 +463,7 @@ Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
 Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+    Initialize-NodeProject 
     WhenBuildIsStarted -WarningVariable 'warnings'
 
     It 'should warn that there were no NPM scripts' {
@@ -471,6 +477,7 @@ Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' 
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -481,18 +488,23 @@ Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     GivenWorkingDirectory -InWorkingDirectory 'idonotexist'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'WorkingDirectory\[0\] .* does not exist'
     cleanup
 }
 
+function GivenInstalledNodeModules
+{
+    New-Item -it file -Path (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\module\bin\something.js') -Force
+}
+
 Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build'
-    WhenBuildIsStarted
+    Initialize-NodeProject
+    GivenInstalledNodeModules
     GivenWithCleanSwitch
-    GivenNpmScriptsToRun 'test'
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -502,6 +514,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
@@ -511,6 +524,7 @@ Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://thisis@abadurl.notreal/'
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'NPM command `npm install` failed with exit code 1.'
     cleanup
@@ -519,6 +533,7 @@ Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
 Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
     GivenBuildByBuildServer
     GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
     WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'property ''NpmRegistryUri'' is mandatory'
     cleanup
@@ -529,8 +544,10 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on alre
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenWithCleanSwitch
     GivenNpmScriptsToRun 'build'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     GivenNpmScriptsToRun 'test'
+    Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup

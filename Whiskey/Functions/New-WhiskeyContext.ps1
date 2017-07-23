@@ -10,7 +10,6 @@ function New-WhiskeyContext
 
     * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
-    * `BuildConfiguration`: the build configuration to use when compiling code. Set from the parameter by the same name.
     * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
     * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
     * `ReleaseVersion`: the semantic version with all build metadata stripped away, i.e. the version and pre-release only.
@@ -20,21 +19,12 @@ function New-WhiskeyContext
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
     * `ApplicatoinName`: the name of the application being built.
 
-    In addition, if you're creating a context while running under a build server, you must supply ProGet and Bitbucket Server connection information. That connection information is returned in the following properties:
-
-    * `ProGetSession`
-
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug'
+    New-WhiskeyContext -Path '.\whiskey.yml' 
 
     Demonstrates how to create a context for a developer build.
-
-    .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' -BuildConfiguration 'debug' -ProGetCredential $progetCred
-
-    Demonstrates how to create a context for a build run by a build server.
     #>
-    [CmdletBinding(DefaultParameterSetName='ByDeveloper')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [string]
@@ -45,20 +35,6 @@ function New-WhiskeyContext
         [string]
         # The path to the `whiskey.yml` file that defines build settings and tasks.
         $ConfigurationPath,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The configuration to use when compiling code, e.g. `Debug`, `Release`.
-        $BuildConfiguration,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [pscredential]
-        # The credential to use when authenticating to ProGet. Required if running under a build server.
-        $ProGetCredential,
-
-        [uri]
-        # The URI to ProGet to get PowerShell Modules
-        $PowerShellFeedUri,
 
         [string]
         # The place where downloaded tools should be cached. The default is the build root.
@@ -74,16 +50,7 @@ function New-WhiskeyContext
         throw ('Configuration file path ''{0}'' does not exist.' -f $PSBoundParameters['ConfigurationPath'])
     }
 
-    $config = Get-Content -Path $ConfigurationPath -Raw | ConvertFrom-Yaml
-    if( -not $config )
-    {
-        $config = @{} 
-    }
-
-    if( $config -is [string] )
-    {
-        $config = @{ $config = '' }
-    }
+    $config = Import-WhiskeyYaml -Path $ConfigurationPath
 
     $buildRoot = $ConfigurationPath | Split-Path
     if( -not $DownloadRoot )
@@ -104,28 +71,12 @@ function New-WhiskeyContext
     }
 
     $bitbucketConnection = $null
-    $progetSession = $null   
-    $progetSession = [pscustomobject]@{
-                                            Credential = $null;
-                                            PowerShellFeedUri = $PowerShellFeedUri;                                           
-                                        }
 
     $publish = $false
     $byBuildServer = Test-WhiskeyRunByBuildServer
     $prereleaseInfo = ''
     if( $byBuildServer )
     {
-        if( $PSCmdlet.ParameterSetName -ne 'ByBuildServer' )
-        {
-            throw (@"
-New-WhiskeyContext is being run by a build server, but called using the developer parameter set. When running under a build server, you must supply the following parameters:
-
-* ProGetCredential
-
-Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running under a build server or not.
-"@)
-        }
-        
         $branch = Get-WhiskeyBranch
         $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
@@ -138,8 +89,6 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
         {
             $releaseName = $branch
         }
-
-        $progetSession.Credential = $ProGetCredential
 
         if( $config['PrereleaseMap'] )
         {
@@ -204,33 +153,27 @@ Use the `Test-WhiskeyRunByBuildServer` function to determine if you're running u
         $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersionV1Prerelease
     }
     
-    $context = [pscustomobject]@{
-                                    ApiKeys = @{ };
-                                    Environment = $Environment;
-                                    Credentials = @{ }
-                                    ApplicationName = $appName;
-                                    ReleaseName = $releaseName;
-                                    BuildRoot = $buildRoot;
-                                    ConfigurationPath = $ConfigurationPath;
-                                    ProGetSession = $progetSession;
-                                    BuildConfiguration = $BuildConfiguration;
-                                    OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
-                                    TaskName = $null;
-                                    TaskIndex = -1;
-                                    PipelineName = '';
-                                    TaskDefaults = @{ };
-                                    Version = [pscustomobject]@{
-                                                                     SemVer2 = $semVersion;
-                                                                     SemVer2NoBuildMetadata = $semVersionNoBuild;
-                                                                     SemVer1 = $semVersionV1;
-                                                                     Version = $version;
-                                                                }
-                                    Configuration = $config;
-                                    DownloadRoot = $DownloadRoot;
-                                    ByBuildServer = $byBuildServer;
-                                    ByDeveloper = (-not $byBuildServer);
-                                    Publish = $publish;
+    $context = New-WhiskeyContextObject
+
+    $context.Environment = $Environment;
+    $context.ApplicationName = $appName;
+    $context.ReleaseName = $releaseName;
+    $context.BuildRoot = $buildRoot;
+    $context.ConfigurationPath = $ConfigurationPath;
+    $context.OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
+    $context.Version = [pscustomobject]@{
+                                        SemVer2 = $semVersion;
+                                        SemVer2NoBuildMetadata = $semVersionNoBuild;
+                                        SemVer1 = $semVersionV1;
+                                        Version = $version;
                                 }
+    $context.Configuration = $config;
+    $context.DownloadRoot = $DownloadRoot;
+    $context.ByBuildServer = $byBuildServer;
+    $context.ByDeveloper = (-not $byBuildServer);
+    $context.Publish = $publish;
+    $context.RunMode = 'Build';
+
     return $context
 }
 

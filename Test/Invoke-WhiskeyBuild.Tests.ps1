@@ -124,6 +124,17 @@ function ThenBuildOutputRemoved
     }
 }
 
+function ThenBuildRunInMode
+{
+    param(
+        $ExpectedRunMode
+    )
+
+    It ('should run in ''{0}'' mode' -f $ExpectedRunMode) {
+        $context.RunMode | Should -Be $ExpectedRunMode
+    }
+}
+
 function ThenBuildStatusSetTo
 {
     param(
@@ -174,7 +185,10 @@ function WhenRunningBuild
     [CmdletBinding()]
     param(
         [Switch]
-        $WithCleanSwitch
+        $WithCleanSwitch,
+
+        [Switch]
+        $WithInitializeSwitch
     )
 
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
@@ -207,31 +221,29 @@ function WhenRunningBuild
         $config['PublishTasks'] = $publishingTasks
     }
 
-    $script:context = [pscustomobject]@{
-                                    BuildRoot = $TestDrive.FullName;
-                                    Version = [pscustomobject]@{
-                                                                    'SemVer2' = '';
-                                                                    'SemVer2NoBuildMetadata' = '';
-                                                                    'Version' = '';
-                                                                    'SemVer1' = '';
-                                                               }
-                                    Configuration = $config;
-                                    OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
-                                    ByDeveloper = $runByDeveloper;
-                                    ByBuildServer = $runByBuildServer;
-                                    Publish = $publish;
-                                }
+    $script:context = New-WhiskeyContextObject 
+    $context.BuildRoot = $TestDrive.FullName;
+    $context.Configuration = $config;
+    $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
+    $context.ByDeveloper = $runByDeveloper;
+    $context.ByBuildServer = $runByBuildServer;
+    $context.Publish = $publish;
+    $context.RunMode = 'Build';
 
     $Global:Error.Clear()
     $script:threwException = $false
     try
     {
-        $cleanParam = @{}
+        $modeParam = @{}
         if( $WithCleanSwitch )
         {
-            $cleanParam['Clean'] = $true
+            $modeParam['Clean'] = $true
         }
-        Invoke-WhiskeyBuild -Context $context @cleanParam
+        elseif( $WithInitializeSwitch )
+        {
+            $modeparam['Initialize'] = $true
+        }
+        Invoke-WhiskeyBuild -Context $context @modeParam
     }
     catch
     {
@@ -314,16 +326,26 @@ Describe 'Invoke-WhiskeyBuild.when cleaning' {
     GivenPreviousBuildOutput
     WhenRunningBuild -WithCleanSwitch
     ThenBuildOutputRemoved
+    ThenBuildRunInMode 'Clean'
 }
 
+Describe 'Invoke-WhiskeyBuild.when initializaing' {
+    GivenRunByDeveloper
+    GivenBuildPipelinePasses
+    GivenNotPublishing
+    GivenPreviousBuildOutput
+    WhenRunningBuild -WithInitializeSwitch
+    ThenBuildRunInMode 'Initialize'
+}
 
-Describe 'Invoke-WhiskeyBuild.when not cleaning' {
+Describe 'Invoke-WhiskeyBuild.when in default run mode' {
     GivenRunByDeveloper
     GivenBuildPipelinePasses
     GivenNotPublishing
     GivenPreviousBuildOutput
     WhenRunningBuild
     ThenBuildOutputNotRemoved
+    ThenBuildRunInMode 'Build'
 }
 
 Describe 'Invoke-WhiskeyBuild.when not publishing' {

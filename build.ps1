@@ -10,7 +10,10 @@ Set-StrictMode -Version Latest
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'init.ps1' -Resolve)
 
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
+Invoke-Command -ScriptBlock {
+                                $VerbosePreference = 'SilentlyContinue'
+                                Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
+                            }
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
@@ -18,16 +21,6 @@ $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 Get-ChildItem 'env:' | Out-String | Write-Verbose
 
 $configuration = 'Release'
-
-$toolParameters = @{
-                        'PowerShellFeedUri' = 'https://powershell.example.com/';
-                   }
-
-$runningUnderBuildServer = Test-WhiskeyRunByBuildServer
-if( $runningUnderBuildServer )
-{
-    $toolParameters['ProGetCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
-}
 
 try
 {
@@ -37,7 +30,7 @@ try
         $cleanArg['Clean'] = $true
     }
 
-    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration @toolParameters
+    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
     Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }

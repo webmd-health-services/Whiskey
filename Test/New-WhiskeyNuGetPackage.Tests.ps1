@@ -86,24 +86,19 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $WithCleanSwitch
     )
 
-    $script:context = [pscustomobject]@{
-                                            Version = [pscustomobject]@{
-                                                                            SemVer1 = '1.2.3';
-                                                                       }
-                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                            BuildRoot = $TestDrive.FullName;
-                                            ByBuildServer = $byBuildServer;
-                                            ByDeveloper = !$byBuildServer;
-                                            TaskIndex = 1;
-                                            TaskName = 'NuGetPack';
-                                            ApiKeys = @{ }
-                                        }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' 
+    $byItDepends = @{}
+    if( $byBuildServer )
+    {
+        $byItDepends['ForBuildServer'] = $true
+    }
+    else
+    {
+        $byItDepends['ForDeveloper'] = $true
+    }
+            
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' @byItDepends -ForTaskName 'NuGetPack'
     
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 
@@ -115,15 +110,11 @@ function WhenRunningNuGetPackTask
     }
 
     $optionalParams = @{ }
-    if( $WithCleanSwitch )
-    {
-        $optionalParams['Clean'] = $True
-    }
     $script:threwException = $false
     try
     {
         $Global:error.Clear()
-        New-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter @optionalParams
+        New-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter
 
     }
     catch
@@ -214,17 +205,4 @@ Describe 'New-WhiskeyNuGetPackage.when creating multiple packages for publishing
     WhenRunningNugetPackTask 
     ThenPackageCreated
     ThenTaskSucceeds
-}
-
-Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package with Clean switch' {    
-    InitTest
-    GivenABuiltLibrary
-    WhenRunningNuGetPackTask -WithCleanSwitch
-    ThenTaskSucceeds
-
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-
-    ThenPackageNotCreated
 }

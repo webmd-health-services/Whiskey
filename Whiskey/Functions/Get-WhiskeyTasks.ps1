@@ -1,32 +1,23 @@
 
 
-function Get-WhiskeyTasks
+function Get-WhiskeyTask
 {
-    <#
-    .SYNOPSIS
-
-    .DESCRIPTION
-    
-    .EXAMPLE
-    
-    #>
     [CmdLetBinding()]
+    [OutputType([Whiskey.TaskAttribute])]
     param()
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    $knownTasks = @{ }
-    [Management.Automation.FunctionInfo]$item = $null;
+    [Management.Automation.FunctionInfo]$functionInfo = $null;
     
-    foreach( $item in (Get-Command -CommandType Function) )
+    foreach( $functionInfo in (Get-Command -CommandType Function) )
     {
-        $item.ScriptBlock.Attributes | 
+        $functionInfo.ScriptBlock.Attributes | 
             Where-Object { $_ -is [Whiskey.TaskAttribute] } |
             ForEach-Object {
-                $knownTasks[$_.Name] = $item.Name
+                $_.CommandName = $functionInfo.Name
+                $_
             }
     }
-    
-    return $knownTasks
 }

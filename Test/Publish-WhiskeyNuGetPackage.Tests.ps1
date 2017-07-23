@@ -88,23 +88,10 @@ function WhenRunningNuGetPackTask
         $ForMultiplePackages,
 
         [string]
-        $WithVersion,
-
-        [Switch]
-        $WithCleanSwitch
+        $WithVersion
     )
 
-    $script:context = [pscustomobject]@{
-                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                            BuildRoot = $TestDrive.FullName;
-                                            Version = @{
-                                                            SemVer1 = '1.2.3';
-                                                        }
-                                            TaskIndex = 1;
-                                            TaskName = 'PublishNuGetPackage';
-                                            ApiKeys = @{ }
-                                        }        
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
     $taskParameter = @{ }
 
     if( $path )
@@ -115,7 +102,7 @@ function WhenRunningNuGetPackTask
     if( $apiKey )
     {
         $taskParameter['ApiKeyID'] = 'fubarsnafu'
-        $context.ApiKeys['fubarsnafu'] = $apiKey
+        Add-WhiskeyApiKey -Context $context -ID 'fubarsnafu' -Value $apiKey
     }
 
     if( $nugetUri )
@@ -157,10 +144,6 @@ function WhenRunningNuGetPackTask
     }
 
     $optionalParams = @{ }
-    if( $WithCleanSwitch )
-    {
-        $optionalParams['Clean'] = $True
-    }
     $script:threwException = $false
     try
     {
@@ -174,7 +157,7 @@ function WhenRunningNuGetPackTask
         }
 
         $Global:error.Clear()
-        Publish-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter @optionalParams | Out-Null 
+        Publish-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter | Out-Null 
 
     }
     catch
@@ -291,19 +274,6 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     GivenANuGetPackage 'Fubar.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failure checking if'
-    ThenPackageNotPublished
-}
-
-Describe 'Publish-WhiskeyNuGetPackage.when creating a NuGet package with Clean switch' {    
-    InitTest
-    GivenANuGetPackage 'Fubar.nupkg'
-    WhenRunningNuGetPackTask -WithCleanSwitch
-    ThenTaskSucceeds
-
-    It 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-
     ThenPackageNotPublished
 }
 

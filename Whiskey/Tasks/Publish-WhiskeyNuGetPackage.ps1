@@ -8,14 +8,14 @@ function Publish-WhiskeyNuGetPackage
     .DESCRIPTION
     The `Invoke-WhiskeyNuGetPackTask` runs `nuget.exe` against a list of .csproj files, which create a .nupkg file from that project's build output. The package can be uploaded to NuGet, ProGet, or other package management repository that supports NuGet.
 
-    You must supply the path to the .csproj files to pack with the `$TaskParameter.Path` parameter, the directory where the packaged .nupkg files go with the `$Context.OutputDirectory` parameter, the version being packaged with the `$Context.Version` parameter, and the build configuration (e.g. `Debug` or `Release`) via the `$Context.BuildConfiguration` parameter.
+    You must supply the path to the .csproj files to pack with the `$TaskParameter.Path` parameter, the directory where the packaged .nupkg files go with the `$Context.OutputDirectory` parameter, and the version being packaged with the `$Context.Version` parameter.
 
     You *must* include paths to build with the `Path` parameter.
 
     .EXAMPLE
     Invoke-WhiskeyNuGetPackageTask -Context $TaskContext -TaskParameter $TaskParameter
 
-    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion` using the project's `$Context.BuildConfiguration` configuration.
+    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion`.
     #>
     [Whiskey.Task("PublishNuGetLibrary")]
     [Whiskey.Task("PublishNuGetPackage")]
@@ -27,10 +27,7 @@ function Publish-WhiskeyNuGetPackage
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -39,11 +36,6 @@ function Publish-WhiskeyNuGetPackage
     if( $TaskContext.TaskName -eq 'PublishNuGetLibrary' )
     {
         Write-Warning -Message ('We have renamed the ''PublishNuGetLibrary'' task to ''PublishNuGetPackage''. Please rename the task in ''{0}''. In a future version of Whiskey, the `PublishNuGetLibrary` name will no longer work.' -f $TaskContext.ConfigurationPath)
-    }
-
-    if( $Clean )
-    {
-        return
     }
 
     if( -not ($TaskParameter.ContainsKey('Path')))
@@ -74,7 +66,7 @@ function Publish-WhiskeyNuGetPackage
         Uri: {0}
         ApiKeyID: API_KEY_ID
              
-API keys are added to the `ApiKeys` property on the context object returned by `New-WhiskeyContext`, e.g. `$context.ApiKeys.Add( ''API_KEY_ID'', $apiKey )`.
+Use the `Add-WhiskeyApiKey` function to add the API key to the build.
 
             ' -f $source)
     }

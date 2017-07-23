@@ -5,8 +5,6 @@ Set-StrictMode -Version 'Latest'
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\Invoke-WhiskeyPowerShell.ps1' -Resolve)
 
 $whiskeyYmlPath = $null
-$runByDeveloper = $false
-$runByBuildServer = $false
 $context = $null
 $warnings = $null
 
@@ -23,10 +21,7 @@ function Invoke-PreTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 }
 
@@ -43,10 +38,7 @@ function Invoke-PostTaskPlugin
 
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
 }
 
@@ -66,18 +58,6 @@ function GivenMSBuildProject
     )
 
     New-MSBuildProject -FileName $project -ThatFails
-}
-
-function GivenRunByBuildServer
-{
-    $script:runByDeveloper = $false
-    $script:runByBuildServer = $true
-}
-
-function GivenRunByDeveloper
-{
-    $script:runByDeveloper = $true
-    $script:runByBuildServer = $false
 }
 
 function GivenPlugins
@@ -180,9 +160,6 @@ function ThenPluginsRan
 
         $WithParameter,
 
-        [Switch]
-        $InCleanMode,
-
         [int]
         $Times = 1
     )
@@ -215,12 +192,6 @@ function ThenPluginsRan
                     }
 
                     return $true
-                }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -ParameterFilter { 
-                    #$DebugPreference = 'Continue'
-                    Write-Debug ('Clean  expected  {0}' -f $InCleanMode.IsPresent)
-                    Write-Debug ('       actual    {0}' -f [bool]$Clean)
-                    [bool]$Clean -eq $InCleanMode.IsPresent
                 }
             }
         }
@@ -260,55 +231,21 @@ function WhenRunningPipeline
     [CmdletBinding()]
     param(
         [string]
-        $Name,
-
-        [Switch]
-        $WithCleanSwitch
+        $Name
     )
 
     $environment = $PSCmdlet.ParameterSetName
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
-
-    Mock -CommandName 'Test-Path' -ParameterFilter { $Path -eq 'env:JENKINS_URL' } -MockWith { $true }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = '80' } } -ParameterFilter { $Path -eq 'env:BUILD_ID' }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'origin/develop' } } -ParameterFilter { $Path -eq 'env:GIT_BRANCH' }
-    Mock -CommandName 'Get-Item' -MockWith { [pscustomobject]@{ Value = 'deadbeefdeadbeefdeadbeefdeadbeef' } } -ParameterFilter { $Path -eq 'env:GIT_COMMIT' }
-
-    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Verifiable
-
     $configuration = 'FubarSnafu'
     $optionalParams = @{ }
-    if( $runByBuildServer )
-    {
-        $optionalParams['ForBuildServer'] = $true
-    }
-
-    if( $runByDeveloper )
-    {
-        $optionalParams['ForDeveloper'] = $true
-    }
 
     [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
-    $optionalParams['ForVersion'] = $Version
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_BRANCH' } -MockWith { return $true }
-
-    $script:context = New-WhiskeyTestContext -BuildConfiguration $configuration -ConfigurationPath $whiskeyYmlPath @optionalParams
-
+    $script:context = New-WhiskeyTestContext -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
     $Global:Error.Clear()
     $script:threwException = $false
     try
     {
-        $cleanParam = @{}
-        if( $WithCleanSwitch )
-        {
-            $cleanParam['Clean'] = $true
-        }
-        Invoke-WhiskeyPipeline -Context $context -Name $Name @cleanParam -WarningVariable 'warnings'
+        Invoke-WhiskeyPipeline -Context $context -Name $Name -WarningVariable 'warnings'
         $script:warnings = $warnings
     }
     catch
@@ -324,7 +261,6 @@ BuildTasks:
     - FubarSnafu:
         Path: whiskey.yml
 '@
-    GivenRunByBuildServer
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenThrewException 'not\ exist'
@@ -340,7 +276,6 @@ BuildTasks:
 - NUnit2:
     Path: assembly.dll
 '@
-    GivenRunByBuildServer
     GivenFailingMSBuildProject $project
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
     ThenPipelineFailed
@@ -349,23 +284,21 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PublishNodeModule
 - PublishNodeModule:
 "@
-    Mock -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -Verifiable -ModuleName 'Whiskey'
+    Mock -CommandName 'Publish-WhiskeyNodeModule' -Verifiable -ModuleName 'Whiskey'
     WhenRunningPipeline 'BuildTasks'
     ThenPipelineSucceeded
     
     It 'should still call the task' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPublishNodeModuleTask' -ModuleName 'Whiskey' -Times 2
+        Assert-MockCalled -CommandName 'Publish-WhiskeyNodeModule' -ModuleName 'Whiskey' -Times 2
     }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 "@
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
@@ -374,7 +307,6 @@ Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and not a YAML object' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks
 "@
@@ -384,7 +316,6 @@ BuildTasks
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and is a YAML object' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 "@
@@ -394,38 +325,20 @@ BuildTasks:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
-    Context 'not in clean mode' {
-        GivenRunByDeveloper
-        GivenWhiskeyYmlBuildFile @"
+    GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PowerShell:
     Path: somefile.ps1
 "@
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenPlugins
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
 
-        WhenRunningPipeline 'BuildTasks'
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-    }
-    Context 'in clean mode' {
-        GivenRunByDeveloper
-        GivenWhiskeyYmlBuildFile @"
-BuildTasks:
-- PowerShell:
-    Path: somefile.ps1
-"@
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-
-        WhenRunningPipeline 'BuildTasks' -WithCleanSwitch
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' } -InCleanMode
-    }
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+    ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
-    GivenRunByDeveloper
     GivenWhiskeyYmlBuildFile @"
 BuildTasks:
 - PowerShell:
@@ -444,18 +357,17 @@ BuildTasks:
 }
 
 # Tasks that should be called with the WhatIf parameter when run by developers
-$tasks = Get-WhiskeyTasks
-foreach( $taskName in ($tasks.Keys) )
+$tasks = Get-WhiskeyTask
+foreach( $task in $tasks )
 {
-    $functionName = $tasks[$taskName]
+    $taskName = $task.Name
+    $functionName = $task.CommandName
 
     Describe ('Invoke-WhiskeyPipeline.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
         {
             param(
-                [Switch]
-                $WithCleanSwitch
             )
 
             $context = $script:context
@@ -475,25 +387,7 @@ foreach( $taskName in ($tasks.Keys) )
                     return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
                 }
             }
-
-            if( $WithCleanSwitch )
-            {
-                It 'should use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters['Clean'] -eq $true
-                    }
-                }
-            }
-            else
-            {
-                It 'should not use Clean switch' {
-                    Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                        $PSBoundParameters.ContainsKey('Clean') -eq $false
-                    }
-                }
-            }
         }
-
 
         Mock -CommandName $functionName -ModuleName 'Whiskey'
 
@@ -504,28 +398,9 @@ foreach( $taskName in ($tasks.Keys) )
     Path: {1}
 '@ -f $pipelineName,$taskName)
 
-        Context 'By Developer' {
-            GivenRunByDeveloper
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName
-            ThenPipelineSucceeded
-            Assert-TaskCalled
-        }
-
-        Context 'By Jenkins' {
-            GivenRunByBuildServer
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName
-            ThenPipelineSucceeded
-            Assert-TaskCalled
-        }
-    
-        Context 'With Clean Switch' {
-            GivenRunByDeveloper
-            GivenWhiskeyYmlBuildFile $whiskeyYml
-            WhenRunningPipeline $pipelineName -WithCleanSwitch
-            ThenPipelineSucceeded
-            Assert-TaskCalled -WithCleanSwitch
-        }
+        GivenWhiskeyYmlBuildFile $whiskeyYml
+        WhenRunningPipeline $pipelineName
+        ThenPipelineSucceeded
+        Assert-TaskCalled
     }
 }

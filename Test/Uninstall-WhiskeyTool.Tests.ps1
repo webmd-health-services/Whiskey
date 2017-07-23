@@ -24,7 +24,7 @@ function GivenAnInstalledPowerShellModule
     $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
-        $Name = '{0}.{1}' -f $WithName, $WithVersion
+        $Name = '{0}' -f $WithName
     }
     elseif( $LikePowerShell5 )
     {
@@ -108,7 +108,7 @@ function ThenPowerShellModuleUninstalled
     $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
     if( $LikePowerShell4 )
     {        
-        $Name = '{0}.{1}' -f $WithName, $WithVersion
+        $Name = '{0}' -f $WithName
     }
     elseif( $LikePowerShell5 )
     {
@@ -216,8 +216,8 @@ Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Versio
 }
 
 Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
-    GivenAnInstalledNuGetPackage -WithVersion '2.*'
-    WhenUninstallingNuGetPackage -WithVersion '2.*'
+    GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+    WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
     ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
 }
 

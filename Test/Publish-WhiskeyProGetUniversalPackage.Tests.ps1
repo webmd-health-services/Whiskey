@@ -166,14 +166,8 @@ function WhenPublishingPackage
     param(
     )
 
-    $context = [pscustomobject]@{
-                                    BuildRoot = $TestDrive.FullName;
-                                    Credentials = @{ }
-                                    OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output')
-                                    TaskIndex = 1;
-                                    TaskName = 'PublishProGetUniversalPackage';
-                                    ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
-                                }
+    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory
+
     $parameter = @{ }
 
     if( $credentialID )
@@ -181,7 +175,7 @@ function WhenPublishingPackage
         $parameter['CredentialID'] = $credentialID
         if( $credential )
         {
-            $context.Credentials[$credentialID] = $credential
+            Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
         }
     }
 
