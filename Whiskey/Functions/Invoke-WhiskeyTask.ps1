@@ -101,16 +101,44 @@ function Invoke-WhiskeyTask
 
     #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
     $prefix = '[{0}]' -f $Name
-
+    
     if( $TaskContext.ShouldClean() -and -not $task.SupportsClean )
     {
-        Write-Verbose -Message ('{0}  SKIPPED  SupportsClean = $false' -f $prefix)
+        Write-Verbose -Message ('{0}  SKIPPED  SupportsClean: $false' -f $prefix)
         return
     }
-    elseif( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+    if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
     {
-        Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize = $false' -f $prefix)
+        Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
         return
+    }
+
+    $onlyBy = $Parameter['OnlyBy']
+    if( $onlyBy )
+    {
+        switch( $onlyBy )
+        {
+            'Developer'
+            {
+                if( -not $TaskContext.ByDeveloper )
+                {
+                    Write-Verbose -Message ('{0}  SKIPPED  OnlyBy: {1}; ByBuildServer: {2}' -f $prefix,$onlyBy,$TaskContext.ByBuildServer)
+                    return
+                }
+            }
+            'BuildServer'
+            {
+                if( -not $TaskContext.ByBuildServer )
+                {
+                    Write-Verbose -Message ('{0}  SKIPPED  OnlyBy: {1}; ByDeveloper: {2}' -f $prefix,$onlyBy,$TaskContext.ByDeveloper)
+                    return
+                }
+            }
+            default
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyBy'' has an invalid value: ''{0}''. Valid values are ''Developer'' (to only run the task when the build is being run by a developer) or ''BuildServer'' (to only run the task when the build is being run by a build server).' -f $onlyBy)
+            }
+        }
     }
 
     Invoke-Event -EventName 'BeforeTask' -Prefix $prefix

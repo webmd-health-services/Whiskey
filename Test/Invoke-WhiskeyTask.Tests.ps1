@@ -249,6 +249,17 @@ function ThenShouldWarn
     }
 }
 
+function ThenTaskNotRun
+{
+    param(
+        $CommandName
+    )
+
+    It ('should not run task ''{0}''' -f $CommandName) {
+        Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -Times 0
+    }
+}
+
 function ThenTaskRanWithParameter
 {
     param(
@@ -319,12 +330,16 @@ function WhenRunningTask
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
     Mock -CommandName 'invoke-PostTaskPlugin' -ModuleName 'Whiskey'
 
-    $script:context = New-WhiskeyContextObject
-    $context.ConfigurationPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    $byItDepends = @{ 'ForDeveloper' = $true }
+    if( $runByBuildServer )
+    {
+        $byItDepends = @{ 'ForBuildServer' = $true }
+    }
+
+    $script:context = New-WhiskeyTestContext @byItDepends
     $context.PipelineName = 'Build';
     $context.TaskName = $null;
     $context.TaskIndex = 1;
-    $context.BuildRoot = $TestDrive.FullName;
     $context.TaskDefaults = $taskDefaults;
     if( $InRunMode )
     {
@@ -398,7 +413,51 @@ Describe 'Invoke-WhiskeyTask.when there are task defaults' {
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Fubar' = @{ 'Snfau' = 'myvalue'; 'Key2' = 'value1' }; 'Key3' = 'Value3'; 'NotADefault' = 'NotADefault' }
 }
 
-# Tasks that should be called with the WhatIf parameter when run by developers
+Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being run by build server' {
+    Init
+    GivenRunByBuildServer
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+    ThenPipelineSucceeded
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being run by developer' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+}
+
+Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by build server' {
+    Init
+    GivenRunByBuildServer
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'BuildServer' }
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyBy' = 'BuildServer' }
+}
+
+Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by developer' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'BuildServer' }
+    ThenPipelineSucceeded
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyBy has an invalid value' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Somebody' } -ErrorAction SilentlyContinue
+    ThenThrewException 'invalid value'
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
 $tasks = Get-WhiskeyTask
 foreach( $task in ($tasks) )
 {
