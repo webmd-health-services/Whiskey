@@ -61,25 +61,10 @@ function WhenPublishingFiles
         $Path,
 
         [string[]]
-        $To,
-
-        [Switch]
-        $ByADeveloper
+        $To
     )
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith {return [SemVersion.SemanticVersion]'1.1.1-rc.1+build'}.GetNewClosure()
-
-    $optionalParams = @{ }
-    if( $ByADeveloper )
-    {
-        $optionalParams['ForDeveloper'] = $true
-    }
-    else
-    {
-        $optionalParams['ForBuildServer'] = $true
-    }
-
-    $taskContext = New-WhiskeyTestContext @optionalParams
+    $taskContext = New-WhiskeyTestContext -ForBuildServer
 
     $taskParameter = @{ }
     $taskParameter['Path'] = $Path
@@ -156,12 +141,6 @@ function ThenTaskFails
         $Script:taskException | Should Match $WithErrorMessage
     }
 
-}
-
-Describe 'Invoke-WhiskeyPublishFileTask when called by Developer' {
-    GivenFiles 'file.txt'
-    WhenPublishingFiles 'file.txt' -ByADeveloper
-    ThenNothingPublished 
 }
 
 Describe 'Invoke-WhiskeyPublishFileTask.when publishing a single file' {

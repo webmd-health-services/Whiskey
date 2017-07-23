@@ -181,6 +181,7 @@
 * ***BREAKING***: The `Pester3` and `Pester4` tasks now save Pester to `Modules\Pester` on PowerShell 4.
 * ***BREAKING***: Task functions are no longer public. Use `Invoke-WhiskeyTask` to run a task from a custom task.
 * ***BREAKING***: Format of the version.json file included in ProGet packages has changed. `SemanticVersion` property renamed to `SemVer2`. `ReleaseVersion` property renamed to `SemVer2NoBuildMetadata`. Added a `SemVer` property.
+* ***BREAKING***: The `PublishFile` task now always publishes. To only publish on a build server (the old behavior), move your `PublishFile` tasks to the `PublishTasks` pipeline in your `whiskey.yml` file.
 '@
         } # End of PSData hashtable
 
