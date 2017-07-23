@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyPublishFileTask
+function Publish-WhiskeyFile
 {
     [Whiskey.Task("PublishFile")]
     [CmdletBinding()]

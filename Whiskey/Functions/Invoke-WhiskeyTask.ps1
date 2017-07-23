@@ -27,6 +27,7 @@ function Invoke-WhiskeyTask
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     function Invoke-Event
     {

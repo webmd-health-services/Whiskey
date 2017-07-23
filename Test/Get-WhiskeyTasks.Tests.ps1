@@ -24,7 +24,7 @@ Describe 'Get-WhiskeyTasks' {
                         Node                           = 'Invoke-WhiskeyNodeTask';
                         Pester3                        = 'Invoke-WhiskeyPester3Task';
                         Pester4                        = 'Invoke-WhiskeyPester4Task';
-                        PublishFile                    = 'Invoke-WhiskeyPublishFileTask';
+                        PublishFile                    = 'Publish-WhiskeyFile';
                         PublishNodeModule              = 'Publish-WhiskeyNodeModule';
                         PublishPowerShellModule        = 'Publish-WhiskeyPowerShellModule';
                         TaskOne = 'MyTask';
