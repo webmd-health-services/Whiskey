@@ -120,6 +120,7 @@ function WhenTaggingACommit
                                             TaskName = 'PublishBitbucketServerTag';
                                             ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
                                        }
+    $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' -ForVersion $version -ForBuildServer
 
     mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 

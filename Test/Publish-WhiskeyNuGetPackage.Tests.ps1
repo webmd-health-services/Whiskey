@@ -91,17 +91,7 @@ function WhenRunningNuGetPackTask
         $WithVersion
     )
 
-    $script:context = [pscustomobject]@{
-                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                            BuildRoot = $TestDrive.FullName;
-                                            Version = @{
-                                                            SemVer1 = '1.2.3';
-                                                        }
-                                            TaskIndex = 1;
-                                            TaskName = 'PublishNuGetPackage';
-                                            ApiKeys = @{ }
-                                        }        
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
     $taskParameter = @{ }
 
     if( $path )

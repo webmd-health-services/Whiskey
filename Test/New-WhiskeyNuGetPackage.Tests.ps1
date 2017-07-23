@@ -88,20 +88,17 @@ function WhenRunningNuGetPackTask
     param(
     )
 
-    $script:context = [pscustomobject]@{
-                                            Version = [pscustomobject]@{
-                                                                            SemVer1 = '1.2.3';
-                                                                       }
-                                            OutputDirectory = (Join-Path -Path $TestDRive.FullName -ChildPath '.output');
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                            BuildRoot = $TestDrive.FullName;
-                                            ByBuildServer = $byBuildServer;
-                                            ByDeveloper = !$byBuildServer;
-                                            TaskIndex = 1;
-                                            TaskName = 'NuGetPack';
-                                            ApiKeys = @{ }
-                                        }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' 
+    $byItDepends = @{}
+    if( $byBuildServer )
+    {
+        $byItDepends['ForBuildServer'] = $true
+    }
+    else
+    {
+        $byItDepends['ForDeveloper'] = $true
+    }
+            
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' @byItDepends -ForTaskName 'NuGetPack'
     
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 

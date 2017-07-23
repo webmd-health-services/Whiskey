@@ -66,7 +66,7 @@ function Publish-WhiskeyNuGetPackage
         Uri: {0}
         ApiKeyID: API_KEY_ID
              
-API keys are added to the `ApiKeys` property on the context object returned by `New-WhiskeyContext`, e.g. `$context.ApiKeys.Add( ''API_KEY_ID'', $apiKey )`.
+Use the `Add-WhiskeyApiKey` function to add the API key to the build.
 
             ' -f $source)
     }

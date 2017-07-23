@@ -41,5 +41,5 @@ function Add-WhiskeyCredential
 
     Set-StrictMode -Version 'Latest'
 
-    $Context.Credentials[$ID] = $Value
+    $Context.Credentials[$ID] = $Credential
 }

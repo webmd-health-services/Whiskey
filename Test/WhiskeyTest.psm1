@@ -149,7 +149,10 @@ function New-WhiskeyTestContext
         $TaskParameter = @{},
 
         [string]
-        $DownloadRoot
+        $DownloadRoot,
+
+        [Switch]
+        $IgnoreExistingOutputDirectory
     )
 
     Set-StrictMode -Version 'Latest'
@@ -246,7 +249,7 @@ function New-WhiskeyTestContext
         $context.Version.Version = [version]('{0}.{1}.{2}' -f $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch)
     }
 
-    if( (Test-Path -Path $context.OutputDirectory) )
+    if( -not $IgnoreExistingOutputDirectory -and (Test-Path -Path $context.OutputDirectory) )
     {
         Remove-Item -Path $context.OutputDirectory -Recurse -Force
     }
