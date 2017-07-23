@@ -642,13 +642,27 @@ function ThenPackageShouldbeBeCompressed
         $Path,
 
         [Int]
-        $ExpectedPackageSize
+        $GreaterThan,
+
+        [int]
+        $LessThanOrEqualTo
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
-    It ('should have a compressed package size of {0}' -f $ExpectedPackageSize) {
-        $packageSize | Should -Be $ExpectedPackageSize
+    if( $GreaterThan )
+    {
+        It ('should have a compressed package size greater than {0}' -f $GreaterThan) {
+            $packageSize | Should -BeGreaterThan $GreaterThan
+        }
     }
+
+    if( $LessThanOrEqualTo )
+    {
+        It ('should have a compressed package size less than or equal to {0}' -f $LessThanOrEqualTo) {
+            $packageSize | Should -Not -BeGreaterThan $LessThanOrEqualTo
+        }
+    }
+
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging everything in a directory' {
@@ -927,13 +941,13 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory' {
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 9 is included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 797
+    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel is not included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 808
+    ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 800
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is included' {
@@ -945,5 +959,5 @@ Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is inclu
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is included as a string' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 797
+    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
 }
