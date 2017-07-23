@@ -19,16 +19,6 @@ Get-ChildItem 'env:' | Out-String | Write-Verbose
 
 $configuration = 'Release'
 
-$toolParameters = @{
-                        'PowerShellFeedUri' = 'https://powershell.example.com/';
-                   }
-
-$runningUnderBuildServer = Test-WhiskeyRunByBuildServer
-if( $runningUnderBuildServer )
-{
-    $toolParameters['ProGetCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
-}
-
 try
 {
     $cleanArg = @{ }
@@ -37,7 +27,7 @@ try
         $cleanArg['Clean'] = $true
     }
 
-    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration @toolParameters
+    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration
     Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }

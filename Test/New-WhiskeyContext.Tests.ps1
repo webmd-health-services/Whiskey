@@ -4,9 +4,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$buildServerContext = @{
-                            ProGetCredential = (New-Credential -UserName 'proget' -Password 'snafu');
-                        }
 $progetUri = [uri]'https://proget.example.com/'
 $configurationPath = $null
 $context = $null
@@ -28,11 +25,7 @@ function Assert-Context
 
         $ApplicationName,
 
-        $ReleaseName,
-
-        $WithProGetNpmFeed = 'npm/npm',
-
-        $WithProGetPowerShellFeed = 'posh/PoSh'
+        $ReleaseName
     )
 
     $script:context = $Context
@@ -108,11 +101,6 @@ function Assert-Context
     It 'should set build server flag' {
         $Context.ByBuildServer | Should Be $ByBuildServer
         $Context.ByDeveloper | Should Be (-not $ByBuildServer)
-    }
-
-    It 'should set ProGet URIs' {
-        $Context.ProGetSession | Should Not BeNullOrEmpty
-        $Context.ProGetSession.PowerShellFeedUri | Should Be (New-Object -TypeName 'Uri' -ArgumentList $progetUri,$WithProGetPowerShellFeed)
     }
 
     It 'ApiKeys property should exit' {
@@ -337,14 +325,7 @@ function WhenCreatingContext
         [Switch]
         $ByBuildServer,
 
-        $WithProGetNpmFeed = 'npm/npm',
-
-        $WithPowerShellNuGetFeed = 'posh/PoSh',
-
-        $WithDownloadRoot,
-
-        [Switch]
-        $WithNoToolInfo
+        $WithDownloadRoot
     )
 
     process
@@ -358,15 +339,6 @@ function WhenCreatingContext
         if( $ByBuildServer )
         {
             Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
-        }
-
-        if( -not $WithNoToolInfo )
-        {
-            $optionalArgs = $buildServerContext.Clone()
-            if( $WithPowerShellNuGetFeed )
-            {
-                $optionalArgs['PowerShellFeedUri'] = New-Object 'uri' $progetUri, $WithPowerShellNuGetFeed
-            }
         }
 
         if( $WithDownloadRoot )
@@ -426,10 +398,6 @@ function ThenBuildServerContextCreated
         [String]
         $WithReleaseName = $null,
 
-        $WithProGetNpmFeed,
-
-        $WithPowerShellNuGetFeed,
-
         $WithDownloadRoot
     )
 
@@ -441,22 +409,10 @@ function ThenBuildServerContextCreated
     process
     {
         $optionalArgs = @{}
-        if( $WithProGetNpmFeed )
-        {
-            $optionalArgs['WithProGetNpmFeed'] = $WithProGetNpmFeed
-        }
-        if( $WithPowerShellNuGetFeed )
-        {
-            $optionalArgs['WithProGetPowerShellFeed'] = $WithPowerShellNuGetFeed
-        }
 
         $iWasCalled = $true
         Assert-Context -Environment $Environment -Context $Context -SemanticVersion $WithSemanticVersion -ByBuildServer -DownloadRoot $WithDownloadRoot @optionalArgs
 
-        It 'should set ProGet session' {
-            $Context.ProGetSession | Should Not BeNullOrEmpty
-            [object]::ReferenceEquals($Context.ProGetSession.Credential,$buildServerContext['ProGetCredential']) | Should Be $true
-        }
         if( $WithReleaseName )
         {
             It 'should set publish' {
@@ -604,24 +560,11 @@ Describe 'New-WhiskeyContext.when run by the build server' {
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithReleaseName 'develop' -Environment 'fubar'
 }
 
-Describe 'New-WhiskeyContext.when run by the build server and customizing ProGet feed names' {
-    Init
-    GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-    WhenCreatingContext -ByBuildServer -WithProGetNpmFeed 'snafu' -WithPowerShellNuGetFeed 'snafubar'
-    ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithProGetNpmFeed 'snafu' -WithReleaseName 'develop' -WithPowerShellNuGetFeed 'snafubar'
-}
-
 Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {
     Init
     GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
     WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
     ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName -WithReleaseName 'develop'
-}
-
-Describe 'New-WhiskeyContext.when run by build server called with developer parameter set' {
-    Init
-    GivenConfiguration -WithVersion '1.2.3' -ForBuildServer
-    WhenCreatingContext -ByBuildServer -WithNoToolInfo -ThenCreationFailsWithErrorMessage 'developer parameter set' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhiskeyContext.when application name in configuration file' {

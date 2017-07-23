@@ -1,6 +1,4 @@
 
-
-
 function New-AssemblyInfo
 {
     param(
@@ -207,8 +205,6 @@ function New-WhiskeyTestContext
     $context.Environment = 'Verificaiton'
     $context.ConfigurationPath = $ConfigurationPath
     $context.BuildConfiguration = $BuildConfiguration
-    $context.ProGetSession.Credential = New-Object 'pscredential' 'proget',(ConvertTo-SecureString -String 'proget' -AsPlainText -Force)
-    $context.ProGetSession.PowerShellFeedUri = 'https://powershellgallery.com/api/v2/'
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
 
