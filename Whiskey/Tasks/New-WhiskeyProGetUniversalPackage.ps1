@@ -156,19 +156,13 @@ function New-WhiskeyProGetUniversalPackage
                         $destinationDisplay = $destinationDisplay.Trim('\')
                         if( $AsThirdPartyItem )
                         {
-                            $excludeParams = @()
+                            $exclude = @()
                             $whitelist = @()
                             $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                         }
                         else
                         {
-                            $excludeParams = Invoke-Command {
-                                        '.git'
-                                        '.hg'
-                                        'obj'
-                                        $exclude
-                                    } |
-                            ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
+                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
                                             'upack.json'
@@ -179,7 +173,7 @@ function New-WhiskeyProGetUniversalPackage
                         Write-Verbose -Message $operationDescription
                         if( $TaskContext.ByBuildServer )
                         {
-                            robocopy $sourcePath $destination '/MIR' '/NP' '/R:0' $whitelist $excludeParams | Write-Verbose
+                            Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                         }
                     }
                 }

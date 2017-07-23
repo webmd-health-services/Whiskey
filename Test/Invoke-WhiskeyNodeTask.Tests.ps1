@@ -108,8 +108,6 @@ function WhenBuildIsStarted
     $Global:Error.Clear()
     $optionalParams = @{ }
 
-    Initialize-NodeProject 
-    
     $taskParameter = @{ }
 
     if( $script:runScripts )
@@ -390,6 +388,7 @@ function cleanup
     $script:failed = $null
 }
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
@@ -399,6 +398,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
+    Initialize-NodeProject 
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
@@ -408,6 +408,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'fail'
@@ -417,6 +418,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -426,6 +428,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
+    Initialize-NodeProject 
     GivenEnvironment 'production'
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -436,6 +439,7 @@ Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenDependency -Dependency @( '"minimatch": "3.0.0"' )
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -446,6 +450,7 @@ Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
+    Initialize-NodeProject 
     GivenNoName
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -456,6 +461,7 @@ Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     WhenBuildIsStarted -WarningVariable 'warnings'
@@ -467,6 +473,7 @@ Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
+    Initialize-NodeProject 
     GivenSubDirectory -inWorkingDirectory 's'
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -477,6 +484,7 @@ Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' 
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
+    Initialize-NodeProject 
     GivenBuildByDeveloper
     GivenWorkingDirectory -InWorkingDirectory 'idonotexist'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -486,19 +494,24 @@ Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     cleanup
 }
 
+function GivenInstalledNodeModules
+{
+    New-Item -it file -Path (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\module\bin\something.js') -Force
+}
+
 Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
+    Initialize-NodeProject
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build'
-    WhenBuildIsStarted
+    GivenInstalledNodeModules
     GivenWithCleanSwitch
-    GivenNpmScriptsToRun 'test'
     WhenBuildIsStarted
     ThenBuildSucceeds
     cleanup
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
+    Initialize-NodeProject 
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
@@ -508,6 +521,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
+    Initialize-NodeProject 
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://thisis@abadurl.notreal/'
     GivenNpmScriptsToRun 'build','test'
@@ -517,6 +531,7 @@ Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
+    Initialize-NodeProject 
     GivenBuildByBuildServer
     GivenNpmScriptsToRun 'build','test'
     WhenBuildIsStarted -ErrorAction SilentlyContinue
@@ -525,6 +540,7 @@ Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on already Clean directory' {
+    Initialize-NodeProject 
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenWithCleanSwitch
