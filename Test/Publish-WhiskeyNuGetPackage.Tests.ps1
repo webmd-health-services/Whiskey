@@ -112,7 +112,7 @@ function WhenRunningNuGetPackTask
     if( $apiKey )
     {
         $taskParameter['ApiKeyID'] = 'fubarsnafu'
-        $context.ApiKeys['fubarsnafu'] = $apiKey
+        Add-WhiskeyApiKey -Context $context -ID 'fubarsnafu' -Value $apiKey
     }
 
     if( $nugetUri )

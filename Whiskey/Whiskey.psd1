@@ -72,6 +72,7 @@
 
     # Functions to export from this module
     FunctionsToExport = @( 
+                            'Add-WhiskeyApiKey',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
@@ -161,7 +162,7 @@
 * Fixed: the `PublishProGetUniversalPackage` task doesn't fail if publishing to ProGet fails.
 * Renamed the `PublishNuGetLibrary` task to `PublishNuGetPackage`. You can continue to use the old name, but it will eventually be removed.
 * ***BREAKING***: `PublishNuGetPackage` task now requires the URI where it should publish NuGet packages. This used to be passed to the `New-WhiskeyContext` function's `NuGetFeedUri` parameter.
-* ***BREAKING***: `PublishNuGetPackage` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. API keys are added to the context object's ApiKeys property, e.g. `$context.ApiKeys.Add( API_KEY_ID, 'apikey'`. The context object is returned by `New-WhiskeyContext`.
+* ***BREAKING***: `PublishNuGetPackage` now requires an `ApiKeyID` property that is the ID/name of the API key to use when publshing NuGet packages. Add API keys with the `Add-WhiskeyApiKey` function.
 * ***BREAKING***: The `NuGetFeedUri` parameters was removed from the `New-WhiskeyContext` function. The NuGet feed URI is now a `Uri` property on the `PublishNuGetPackage` task.
 * Tasks can now have multiple names. Add multiple task attributes to a task.
 * Created `NuGetPack` task for creating NuGet packages.
@@ -172,6 +173,7 @@
 * Created new `Initialize` run mode. This mode is intended for tasks to install or initialize any tools it uses. For example, if a project uses Pester to run PowerShell scripts, the `PowerShell` task should just install Pester when run in Initialize mode. That way, developers get Pester installed without needing to run an entire build. To opt-in to Initialize mode, set the `SupportsInitialize` property on your task's `TaskAttribute` to `true`. Use the `$TaskContext.ShouldInitialize()` function to determine if you're running in initialize mode or not.
 * ***BREAKING***: the `PublishNodeModule` task now requires a `CredentialID` property that is the ID of the credential to use when publishing. Credentials are added to the context's `Credentials` property.
 * ***BREAKING***: the `PublishNodeModule` task now requires an `EmailAddress` property that is the e-mail address to use when publishing node modules.
+* Created an `Add-WhiskeyApiKey` function for adding API keys needed by build tasks.
 '@
         } # End of PSData hashtable
 
