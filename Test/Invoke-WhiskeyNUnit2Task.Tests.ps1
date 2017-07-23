@@ -343,7 +343,7 @@ function WhenRunningTask
         $WithParameters = @{ }
     )
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
-    $script:context = New-WhiskeyTestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory
+    $script:context = New-WhiskeyTestContext -ForDeveloper -BuildConfiguration 'Release' -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     Get-ChildItem -Path $context.BuildRoot -Include 'bin','obj' -Directory -Recurse | Remove-Item -Recurse -Force

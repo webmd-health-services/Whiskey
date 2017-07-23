@@ -86,7 +86,7 @@ function Invoke-WhiskeyMSBuildTask
             }
         }
 
-        if( (Test-WhiskeyRunByBuildServer) )
+        if( $TaskContext.ByBuildServer )
         {
             $projectPath | 
                 Split-Path | 

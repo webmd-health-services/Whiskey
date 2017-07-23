@@ -5,6 +5,8 @@ Set-StrictMode -Version 'Latest'
 
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Publish-WhiskeyPesterTestResult.ps1' -Resolve)
 
+$context = $null
+
 function Assert-PesterRan
 {
     param(
@@ -65,6 +67,11 @@ function Assert-PesterRan
     }
 }
 
+function GivenTestContext
+{
+    $script:context = New-WhiskeyPesterTestContext
+}
+
 function New-WhiskeyPesterTestContext 
 {
     param()
@@ -115,7 +122,6 @@ function Invoke-PesterTest
 
     $defaultVersion = '3.4.3'
     $failed = $false
-    $context = New-WhiskeyPesterTestContext
     $Global:Error.Clear()
     if ( $WithInvalidVersion )
     {
@@ -219,19 +225,23 @@ $pesterPassingPath = 'PassingTests'
 $pesterFailingConfig = 'FailingTests' 
 
 Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests' {
+    GivenTestContext
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when running failing Pester tests' {
     $failureMessage = 'Pester tests failed'
+    GivenTestContext
     Invoke-PesterTest -Path $pesterFailingConfig -FailureCount 4 -PassingCount 0 -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when running multiple test scripts' {
+    GivenTestContext
     Invoke-PesterTest -Path $pesterFailingConfig,$pesterPassingPath -FailureCount 4 -PassingCount 4 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when run multiple times in the same build' {
+    GivenTestContext
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 4  
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 8  
 
@@ -243,32 +253,38 @@ Describe 'Invoke-WhiskeyPester3Task.when run multiple times in the same build' {
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when missing Path Configuration' {
+    GivenTestContext
     $failureMessage = 'Element ''Path'' is mandatory.'
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when version parsed from YAML' {
+    GivenTestContext
     # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4 -Version ([datetime]'3/4/2003')
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when missing Version configuration' {
+    GivenTestContext
     $failureMessage = 'is mandatory'
     Invoke-PesterTest -Path $pesterPassingPath -WithMissingVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when Version property isn''t a version' {
+    GivenTestContext
     $version = 'fubar'
     $failureMessage = 'isn''t a valid version'
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when version of tool doesn''t exist' {
+    GivenTestContext
     $failureMessage = 'does not exist'
     Invoke-PesterTest -Path $pesterPassingPath -WithInvalidVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when a task path is absolute' {
+    GivenTestContext
     $Global:Error.Clear()
     $path = 'C:\FubarSnafu'
     $failureMessage = 'absolute'
@@ -276,6 +292,7 @@ Describe 'Invoke-WhiskeyPester3Task.when a task path is absolute' {
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with Clean Switch' {
+    GivenTestContext
     Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 0 -withClean
 }
 
