@@ -134,9 +134,10 @@ function Assert-NewWhiskeyProGetUniversalPackage
     Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
 
     $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' @byWhoArg
-    $taskContext.Version.SemVer2 = [SemVersion.SemanticVersion]$Version
+    $semVer2 = [SemVersion.SemanticVersion]$Version
+    $taskContext.Version.SemVer2 = $semVer2
     $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
-    $taskContext.Version.SemVer2NoBuildMetadata = ([SemVersion.SemanticVersion]$taskContext.Version.SemVer2)
+    $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}.{1}.{2}' -f $semVer2.Major,$semVer2.Minor,$semVer2.Patch)
     if( $taskContext.Version.SemVer2.Prerelease )
     {
         $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.SemVer2NoBuildMetadata,$taskContext.Version.SemVer2.Prerelease)
@@ -287,13 +288,17 @@ function Assert-NewWhiskeyProGetUniversalPackage
             $version.BuildMetadata | Should BeOfType ([string])
             $version.BuildMetadata | Should Be $taskContext.Version.SemVer2.Build.ToString()
         }
-        It 'version.json should have full semantic version' {
-            $version.SemanticVersion | Should BeOfType ([string])
-            $version.SemanticVersion | Should Be $taskContext.Version.SemVer2.ToString()
+        It 'version.json should have v2 semantic version' {
+            $version.SemVer2 | Should BeOfType ([string])
+            $version.SemVer2 | Should Be $taskContext.Version.SemVer2.ToString()
         }
-        It 'version.json should have release version' {
-            $version.ReleaseVersion | Should BeOfType ([string])
-            $version.ReleaseVersion | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
+        It 'version.json should have v1 semantic version' {
+            $version.SemVer1 | Should BeOfType ([string])
+            $version.SemVer1 | Should Be $taskContext.Version.SemVer1.ToString()
+        }
+        It 'version.json should have v2 semantic version without build metadata' {
+            $version.SemVer2NoBuildMetadata | Should BeOfType ([string])
+            $version.SemVer2NoBuildMetadata | Should Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
         }
 
         if( $NotHasFiles )
@@ -1010,13 +1015,13 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory' {
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 9 is included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 793
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 797
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel is not included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 804
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 808
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is included' {
@@ -1028,5 +1033,5 @@ Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is inclu
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is included as a string' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 793
+    ThenPackageShouldbeBeCompressed 'one.ps1' -ExpectedPackageSize 797
 }

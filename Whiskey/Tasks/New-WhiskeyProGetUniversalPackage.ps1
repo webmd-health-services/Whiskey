@@ -81,10 +81,11 @@ function New-WhiskeyProGetUniversalPackage
         # Add the version.json file
         @{
             Version = $TaskContext.Version.Version.ToString();
-            SemanticVersion = $TaskContext.Version.SemVer2.ToString();
+            SemVer2 = $TaskContext.Version.SemVer2.ToString();
+            SemVer2NoBuildMetadata = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
             PrereleaseMetadata = $TaskContext.Version.SemVer2.Prerelease;
             BuildMetadata = $TaskContext.Version.SemVer2.Build;
-            ReleaseVersion = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
+            SemVer1 = $TaskContext.Version.SemVer1.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage

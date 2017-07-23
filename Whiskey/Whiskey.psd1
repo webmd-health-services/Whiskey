@@ -180,6 +180,7 @@
 * ***BREAKING***: `New-WhiskeyContext` no longer has a `BuildConfiguration` parameter. Builds are now always run in `Debug` configuration on developer computers and in `Release` configuration on build servers.
 * ***BREAKING***: The `Pester3` and `Pester4` tasks now save Pester to `Modules\Pester` on PowerShell 4.
 * ***BREAKING***: Task functions are no longer public. Use `Invoke-WhiskeyTask` to run a task from a custom task.
+* ***BREAKING***: Format of the version.json file included in ProGet packages has changed. `SemanticVersion` property renamed to `SemVer2`. `ReleaseVersion` property renamed to `SemVer2NoBuildMetadata`. Added a `SemVer` property.
 '@
         } # End of PSData hashtable
 
