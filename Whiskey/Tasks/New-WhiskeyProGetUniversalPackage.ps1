@@ -171,10 +171,7 @@ function New-WhiskeyProGetUniversalPackage
                         }
 
                         Write-Verbose -Message $operationDescription
-                        if( $TaskContext.ByBuildServer )
-                        {
-                            Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
-                        }
+                        Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                     }
                 }
             }
@@ -195,16 +192,10 @@ function New-WhiskeyProGetUniversalPackage
         $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
 
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
-        if( $TaskContext.ByBuildServer )
-        {
-            & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
-        }
+        & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
 
         Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
-        if( $TaskContext.ByBuildServer )
-        {
-            $outFile
-        }
+        $outFile
     }
     finally
     {

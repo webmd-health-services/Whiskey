@@ -182,6 +182,7 @@
 * ***BREAKING***: Format of the version.json file included in ProGet packages has changed. `SemanticVersion` property renamed to `SemVer2`. `ReleaseVersion` property renamed to `SemVer2NoBuildMetadata`. Added a `SemVer` property.
 * ***BREAKING***: The `PublishFile` task now always publishes. To only publish on a build server (the old behavior), move your `PublishFile` tasks to the `PublishTasks` pipeline in your `whiskey.yml` file.
 * Tasks can now be targed to only run when a developer runs the build or when a build server runs the build. Add an `OnlyBy` property to your task and set its value to `Developer` or `BuildServer`.
+* ***BREAKING***: The `ProGetUniversalPackage` task now packages when run by a developer. To only run on the build server, add an `OnlyBy` property whose value is `BuildServer` to the `ProGetUniversalPackage` task in your `whiskey.yml` file.
 '@
         } # End of PSData hashtable
 
