@@ -94,9 +94,13 @@ function Invoke-BBServerRestMethod
     {
         [Net.WebException]$ex = $_.Exception
         $response = $ex.Response
-        $reader = New-Object 'IO.StreamReader' $response.GetResponseStream()
-        $content = $reader.ReadToEnd() | ConvertFrom-Json
-        $reader.Dispose()
+        $content = ''
+        if( $response )
+        {
+            $reader = New-Object 'IO.StreamReader' $response.GetResponseStream()
+            $content = $reader.ReadToEnd() | ConvertFrom-Json
+            $reader.Dispose()
+        }
 
         for( $idx = 0; $idx -lt $errors.Count; ++$idx )
         {
