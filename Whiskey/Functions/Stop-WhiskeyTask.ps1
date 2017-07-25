@@ -13,6 +13,9 @@ function Stop-WhiskeyTask
         $Message,
 
         [string]
+        $PropertyName,
+
+        [string]
         $PropertyDescription
     )
 
@@ -23,5 +26,10 @@ function Stop-WhiskeyTask
         $PropertyDescription = 'BuildTasks[{0}]: {1}' -f $TaskContext.TaskIndex,$TaskContext.TaskName
     }
 
-    throw '{0}: {1}: {2}' -f $TaskContext.ConfigurationPath,$PropertyDescription,$Message
+    if( $PropertyName )
+    {
+        $PropertyName = ': {0}' -f $PropertyName
+    }
+
+    throw '{0}: {1}{2}: {3}' -f $TaskContext.ConfigurationPath,$PropertyDescription,$PropertyName,$Message
 }

@@ -75,6 +75,7 @@
                             'Add-WhiskeyApiKey',
                             'Add-WhiskeyCredential',
                             'ConvertTo-WhiskeySemanticVersion',
+                            'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
                             'Get-WhiskeyCredential',
@@ -185,6 +186,7 @@
 * Tasks can now be targed to only run when a developer runs the build or when a build server runs the build. Add an `OnlyBy` property to your task and set its value to `Developer` or `BuildServer`.
 * ***BREAKING***: The `ProGetUniversalPackage` task now packages when run by a developer. To only run on the build server, add an `OnlyBy` property whose value is `BuildServer` to the `ProGetUniversalPackage` task in your `whiskey.yml` file.
 * Created `Get-WhiskeyCredential` function for retrieving a credential from Whiskey's credential store.
+* Created `Get-WhiskeyApiKey` function for retrieving an API key from Whiskey's API key store.
 '@
         } # End of PSData hashtable
 
