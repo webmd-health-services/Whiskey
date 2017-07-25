@@ -57,7 +57,7 @@ function Publish-WhiskeyPowerShellModule
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It must be the ID of the API key to use when publishing to ''{0}''. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $publishLocation)
     }
 
-    $apiKey = Get-WhiskeyApiKey -TaskContext $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
+    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
     $manifestPath = '{0}\{1}.psd1' -f $path,($path | Split-Path -Leaf)
     if( $TaskParameter.ContainsKey('ModuleManifestPath') )

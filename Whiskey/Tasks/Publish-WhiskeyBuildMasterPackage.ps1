@@ -40,7 +40,7 @@ function Publish-WhiskeyBuildMasterPackage
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It should be the ID of the API key to use when publishing the package to BuildMaster. Use the `Add-WhiskeyApiKey` to add your API key.')
     }
 
-    $apiKey = Get-WhiskeyApiKey -TaskContext $TaskContext -ID $TaskParameter['ApiKeyID'] -PropertyName 'ApiKeyID'
+    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $TaskParameter['ApiKeyID'] -PropertyName 'ApiKeyID'
     $buildMasterSession = New-BMSession -Uri $TaskParameter['Uri'] -ApiKey $apiKey
 
     $version = $TaskContext.Version.SemVer2

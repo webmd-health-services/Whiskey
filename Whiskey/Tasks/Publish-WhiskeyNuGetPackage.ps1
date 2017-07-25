@@ -70,7 +70,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
 
             ' -f $source)
     }
-    $apiKey = Get-WhiskeyApiKey -TaskContext $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
+    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
     $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
     if( -not $nugetPath )
