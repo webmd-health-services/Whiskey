@@ -77,6 +77,7 @@
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
+                            'Get-WhiskeyCredential',
                             'Get-WhiskeyOutputDirectory',
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
@@ -183,6 +184,7 @@
 * ***BREAKING***: The `PublishFile` task now always publishes. To only publish on a build server (the old behavior), move your `PublishFile` tasks to the `PublishTasks` pipeline in your `whiskey.yml` file.
 * Tasks can now be targed to only run when a developer runs the build or when a build server runs the build. Add an `OnlyBy` property to your task and set its value to `Developer` or `BuildServer`.
 * ***BREAKING***: The `ProGetUniversalPackage` task now packages when run by a developer. To only run on the build server, add an `OnlyBy` property whose value is `BuildServer` to the `ProGetUniversalPackage` task in your `whiskey.yml` file.
+* Created `Get-WhiskeyCredential` function for retrieving a credential from Whiskey's credential store.
 '@
         } # End of PSData hashtable
 

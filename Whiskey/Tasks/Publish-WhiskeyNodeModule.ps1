@@ -84,7 +84,7 @@ function Publish-WhiskeyNodeModule
     Use the `Add-WhiskeyCredential` function to add the credential to the build.
     ' -f $npmRegistryUri)
     }
-    $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'
+    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
     $npmEmail = $TaskParameter['EmailAddress']
     if( -not $npmEmail )

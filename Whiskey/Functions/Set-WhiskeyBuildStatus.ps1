@@ -65,7 +65,7 @@ Property 'CredentialID' does not exist or does not have a value. Set this proper
 Use the `Add-WhiskeyCredential` function to add the credential to the build.`
 '@ -f $uri)
                 }
-                $credential = Get-WhiskeyCredential -TaskContext $Context -ID $credID -PropertyName 'CredentialID' -PropertyDescription $propertyDescription
+                $credential = Get-WhiskeyCredential -Context $Context -ID $credID -PropertyName 'CredentialID' -PropertyDescription $propertyDescription
                 $conn = New-BBServerConnection -Credential $credential -Uri $uri
                 $statusMap = @{
                                     'Started' = 'INPROGRESS';

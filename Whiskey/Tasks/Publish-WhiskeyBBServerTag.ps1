@@ -71,7 +71,7 @@ function Publish-WhiskeyBBServerTag
     }
  
     $credentialID = $TaskParameter['CredentialID']
-    $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $credentialID -PropertyName 'CredentialID'
+    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
     $connection = New-BBServerConnection -Credential $credential -Uri $TaskParameter['Uri']
     $tag = $TaskContext.Version.SemVer2NoBuildMetadata
     Write-Verbose -Message ('[PublishBitbucketServerTag]  [{0}]  [{1}]  [{2}]  {3} -> {4}' -f $TaskParameter['Uri'],$projectKey,$repoKey,$commitHash,$tag)

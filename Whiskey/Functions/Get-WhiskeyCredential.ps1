@@ -5,7 +5,7 @@ function Get-WhiskeyCredential
     param(
         [Parameter(Mandatory=$true)]
         [object]
-        $TaskContext,
+        $Context,
 
         [Parameter(Mandatory=$true)]
         [string]
@@ -21,7 +21,7 @@ function Get-WhiskeyCredential
 
     Set-StrictMode -Version 'Latest'
 
-    if( -not $TaskContext.Credentials.ContainsKey($ID) )
+    if( -not $Context.Credentials.ContainsKey($ID) )
     {
         $propertyDescriptionParam = @{ }
         if( $PropertyDescription )
@@ -33,5 +33,5 @@ function Get-WhiskeyCredential
                          @propertyDescriptionParam
     }
 
-    return $TaskContext.Credentials[$ID]
+    return $Context.Credentials[$ID]
 }

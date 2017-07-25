@@ -48,7 +48,7 @@ function Publish-WhiskeyProGetUniversalPackage
         "
     }
     
-    $credential = Get-WhiskeyCredential -TaskContext $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
+    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
 
     $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
 
