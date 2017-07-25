@@ -13,6 +13,7 @@ $publishFails = $false
 $packageExistsCheckFails = $false
 $threwException = $false
 $path = $null
+$version = $null
 
 function InitTest
 {
@@ -25,12 +26,14 @@ function InitTest
     $script:publishFails = $false
     $script:packageExistsCheckFails = $false
     $script:path = $null
+    $script:version = $defaultVersion
 }
 
 function GivenANuGetPackage
 {
     param(
         [string[]]
+        [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?\.nupkg')]
         $Path
     )
 
@@ -77,6 +80,15 @@ function GivenTheCheckIfThePackageExistsFails
     $script:packageExistsCheckFails = $true
 }
 
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:version = $Version
+}
+
 function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
@@ -85,13 +97,10 @@ function WhenRunningNuGetPackTask
         $ForProjectThatDoesNotExist,
 
         [Switch]
-        $ForMultiplePackages,
-
-        [string]
-        $WithVersion
+        $ForMultiplePackages
     )
 
-    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
+    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
     $taskParameter = @{ }
 
     if( $path )
@@ -147,10 +156,6 @@ function WhenRunningNuGetPackTask
     $script:threwException = $false
     try
     {
-        if( $WithVersion )
-        {
-            $Context.Version.SemVer1 = $WithVersion
-        }
         if( $ForProjectThatDoesNotExist )
         {
             $taskParameter['Path'] = 'I\do\not\exist.csproj'
@@ -197,6 +202,8 @@ function ThenTaskSucceeds
 function ThenPackagePublished
 {
     param(
+        $Name,
+        $Version,
         $Path,
         $Times = 1
     )
@@ -213,6 +220,16 @@ function ThenPackagePublished
                                         $_ -eq $expectedPath 
                                      } 
            } 
+        }
+
+        It ('should check the correct URI for the package to exist') {
+            $expectedUriWildcard = '*/{0}/{1}' -f $Name,$Version
+            Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -ParameterFilter { 
+                #$DebugPreference = 'Continue'
+                Write-Debug -Message ('Uri   expected   {0}' -f $expectedUriWildcard)
+                Write-Debug -Message ('      actual     {0}' -f $Uri)
+                $Uri -like $expectedUriWildcard
+             }.GetNewClosure()
         }
     }
 
@@ -235,34 +252,47 @@ function ThenPackageNotPublished
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
     InitTest
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenVersion '1.2.3'
+    GivenANuGetPackage 'Fubar.1.2.3.nupkg'
     WhenRunningNuGetPackTask
-    ThenPackagePublished 'Fubar.nupkg'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -Version '1.2.3'
     ThenTaskSucceeds
 }
 
+
+Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerlease metadata' {
+    InitTest
+    GivenVersion '1.2.3-preleasee45'
+    GivenANuGetPackage 'Fubar.1.2.3-preleasee45.nupkg'
+    WhenRunningNuGetPackTask
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3-preleasee45.nupkg' -Version '1.2.3-preleasee45'
+    ThenTaskSucceeds
+}
 Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
     InitTest
-    GivenANuGetPackage 'Fubar.nupkg','Snafu.nupkg'
+    GivenVersion '3.4.5'
+    GivenANuGetPackage 'Fubar.3.4.5.nupkg','Snafu.3.4.5.nupkg'
     WhenRunningNugetPackTask -ForMultiplePackages
-    ThenPackagePublished 'Fubar.nupkg'
-    ThenPackagePublished 'Snafu.nupkg'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.3.4.5.nupkg' -Version '3.4.5'
+    ThenPackagePublished -Name 'Snafu' -Path 'Snafu.3.4.5.nupkg' -Version '3.4.5'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
     InitTest
+    GivenVersion '9.0.1'
     GivenPackagePublishFails
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenANuGetPackage 'Fubar.9.0.1.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failed to publish NuGet package'
-    ThenPackagePublished 'Fubar.nupkg'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.9.0.1.nupkg' -Version '9.0.1'
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
     InitTest
+    GivenVersion '2.3.4'
     GivenPackageAlreadyPublished
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenANuGetPackage 'Fubar.2.3.4.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'already exists'
     ThenPackageNotPublished
@@ -270,8 +300,9 @@ Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     InitTest
+    GivenVersion '5.6.7'
     GivenTheCheckIfThePackageExistsFails
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenANuGetPackage 'Fubar.5.6.7.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failure checking if'
     ThenPackageNotPublished
@@ -279,7 +310,8 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
     InitTest
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenVersion '8.9.0'
+    GivenANuGetPackage 'Fubar.8.9.0.nupkg'
     GivenNoUri
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
     ThenPackageNotPublished
@@ -288,7 +320,8 @@ Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
     InitTest
-    GivenANuGetPackage 'Fubar.nupkg'
+    GivenVersion '1.2.3'
+    GivenANuGetPackage 'Fubar.1.2.3.nupkg'
     GivenNoApiKey
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
     ThenPackageNotPublished
@@ -297,9 +330,10 @@ Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
     InitTest
-    GivenANuGetPackage 'someotherdir\MyPack.nupkg'
-    GivenPath '.output\someotherdir\MyPack.nupkg'
+    GivenVersion '4.5.6'
+    GivenANuGetPackage 'someotherdir\MyPack.4.5.6.nupkg'
+    GivenPath '.output\someotherdir\MyPack.4.5.6.nupkg'
     WhenRunningNuGetPackTask
     ThenTaskSucceeds
-    ThenPackagePublished 'someotherdir\MyPack.nupkg'
+    ThenPackagePublished -Name 'MyPack' -Path 'someotherdir\MyPack.4.5.6.nupkg' -Version '4.5.6'
 }

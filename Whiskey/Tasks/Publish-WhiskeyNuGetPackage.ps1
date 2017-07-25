@@ -81,6 +81,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
     foreach ($path in $paths)
     {
         $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
+        $projectName = $projectName -replace '\.\d+\.\d+\.\d+(-.*)?$',''
         $packageVersion = $TaskContext.Version.SemVer1
         $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             

@@ -187,6 +187,7 @@
 * ***BREAKING***: The `ProGetUniversalPackage` task now packages when run by a developer. To only run on the build server, add an `OnlyBy` property whose value is `BuildServer` to the `ProGetUniversalPackage` task in your `whiskey.yml` file.
 * Created `Get-WhiskeyCredential` function for retrieving a credential from Whiskey's credential store.
 * Created `Get-WhiskeyApiKey` function for retrieving an API key from Whiskey's API key store.
+* Fixed: NuGet libraries always reported as not published (using the wrong URL to check for existence).
 '@
         } # End of PSData hashtable
 
