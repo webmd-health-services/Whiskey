@@ -86,6 +86,8 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
+        [Switch]
+        $Symbols
     )
 
     $byItDepends = @{}
@@ -107,6 +109,11 @@ function WhenRunningNuGetPackTask
     if( $path )
     {
         $taskParameter['Path'] = $path
+    }
+
+    if( $Symbols )
+    {
+        $taskParameter['Symbols'] = $true
     }
 
     $optionalParams = @{ }
@@ -152,16 +159,31 @@ function ThenTaskSucceeds
 function ThenPackageCreated
 {
     param(
+        [Switch]
+        $Symbols
     )
 
-    It ('should create NuGet package') {
-        $packagePath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.SemVer1)
-        $packagePath | Should Exist
-    }
+    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.SemVer1)
+    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.SemVer1)
+    if( $Symbols )
+    {
+        It ('should create NuGet symbols package') {
+            $symbolsPath | Should -Exist
+        }
 
-    It ('should create NuGet symbols package') {
-        $packagePath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.SemVer1)
-        $packagePath | Should Exist
+        It ('should create a non-symbols package') {
+            $nonSymbolsPath | Should -Exist
+        }
+    }
+    else
+    {
+        It ('should create NuGet package') {
+            $nonSymbolsPath | Should -Exist
+        }
+
+        It ('should not create a symbols package') {
+            $symbolsPath | Should -Not -Exist
+        }
     }
  }
 
@@ -187,6 +209,14 @@ Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package' {
     WhenRunningNuGetPackTask
     ThenTaskSucceeds
     ThenPackageCreated
+}
+
+Describe 'New-WhiskeyNuGetPackage.when creating a symbols NuGet package' {
+    InitTest
+    GivenABuiltLibrary
+    WhenRunningNuGetPackTask -Symbols
+    ThenTaskSucceeds
+    ThenPackageCreated -Symbols
 }
 
 Describe 'New-WhiskeyNuGetPackage.when creating a package built in release mode' {

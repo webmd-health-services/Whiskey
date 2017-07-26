@@ -29,6 +29,15 @@ function New-WhiskeyNuGetPackage
     }
 
     $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+
+    $symbols = $TaskParameter['Symbols']
+    $symbolsArg = ''
+    $symbolsFileNameSuffix = ''
+    if( $symbols )
+    {
+        $symbolsArg = '-Symbols'
+        $symbolsFileNameSuffix = '.symbols'
+    }
        
     $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
     if( -not $nugetPath )
@@ -44,22 +53,15 @@ function New-WhiskeyNuGetPackage
         # Create NuGet package
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
 
-        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory -Symbols -Properties ('Configuration={0}' -f $configuration) $path
+        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory $symbolsArg -Properties ('Configuration={0}' -f $configuration) $path
 
         # Make sure package was created.
-        $filename = '{0}.{1}.nupkg' -f $projectName,$packageVersion
+        $filename = '{0}.{1}{2}.nupkg' -f $projectName,$packageVersion,$symbolsFileNameSuffix
+
         $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
         if( -not (Test-Path -Path $packagePath -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' but the expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
-        }
-
-        # Make sure symbols package was created
-        $filename = '{0}.{1}.symbols.nupkg' -f $projectName,$packageVersion
-        $symbolsPackagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
-        if( -not (Test-Path -Path $symbolsPackagePath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' to create a symbols package but the expected NuGet symbols package ''{1}'' does not exist.' -f $path,$symbolsPackagePath)
         }
     }
 }
