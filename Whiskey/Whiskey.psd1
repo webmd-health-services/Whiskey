@@ -189,6 +189,7 @@
 * Created `Get-WhiskeyApiKey` function for retrieving an API key from Whiskey's API key store.
 * Fixed: NuGet libraries always reported as not published (using the wrong URL to check for existence).
 * ***BREAKING***: The `NuGetPack` task no longer generates symbol packages by default. If you want to generate symbol packages, set the task's `Symbols` property to `true`.
+* ***BREAKING***: The `PublishNuGetPackage` task now ignores symbols packages (i.e. `*.symbols.nupkg`). To publish symbol packages *insted* of non-symbol packages, set the tasks' `Symbols` property to `true`.
 '@
         } # End of PSData hashtable
 

@@ -33,12 +33,12 @@ function GivenANuGetPackage
 {
     param(
         [string[]]
-        [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?\.nupkg')]
+        [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?(\.symbols)?\.nupkg')]
         $Path
     )
 
     $outputRoot = Join-Path -Path $TestDRive.FullName -ChildPath '.output'
-    New-Item -Path $outputRoot -ItemType 'Directory' 
+    New-Item -Path $outputRoot -ItemType 'Directory'  -ErrorAction Ignore
 
     foreach( $item in $Path )
     {
@@ -97,7 +97,10 @@ function WhenRunningNuGetPackTask
         $ForProjectThatDoesNotExist,
 
         [Switch]
-        $ForMultiplePackages
+        $ForMultiplePackages,
+
+        [Switch]
+        $Symbols
     )
 
     $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
@@ -117,6 +120,11 @@ function WhenRunningNuGetPackTask
     if( $nugetUri )
     {
         $taskParameter['Uri'] = $nugetUri
+    }
+
+    if( $Symbols )
+    {
+        $taskParameter['Symbols'] = $true
     }
 
     Mock -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey'
@@ -245,8 +253,25 @@ function ThenPackagePublished
 
 function ThenPackageNotPublished
 {
+    param(
+        $Path
+    )
+
+    $expectedPath = $Path
     It('should not publish the package') {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -Times 0
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
+            #$DebugPreference = 'Continue'
+
+            if( -not $expectedPath )
+            {
+                Write-Debug 'No Path'
+                return $True
+            }
+
+            Write-Debug ('Path  expected  *\{0}' -f $expectedPath)
+            Write-Debug ('      actual    {0}' -f $Path)
+            return $Path -like ('*\{0}' -f $expectedPath)
+        }
     }
 }
 
@@ -259,7 +284,6 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
     ThenTaskSucceeds
 }
 
-
 Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerlease metadata' {
     InitTest
     GivenVersion '1.2.3-preleasee45'
@@ -268,6 +292,18 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerl
     ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3-preleasee45.nupkg' -Version '1.2.3-preleasee45'
     ThenTaskSucceeds
 }
+
+Describe 'Publish-WhiskeyNuGetPackage.when publishing a symbols NuGet package' {
+    InitTest
+    GivenVersion '1.2.3'
+    GivenANuGetPackage 'Fubar.1.2.3.symbols.nupkg'
+    GivenANuGetPackage 'Fubar.1.2.3.nupkg'
+    WhenRunningNuGetPackTask -Symbols
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.symbols.nupkg' -Version '1.2.3'
+    ThenPackageNotPublished -Path 'Fubar.1.2.3.nupkg'
+    ThenTaskSucceeds
+}
+
 Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
     InitTest
     GivenVersion '3.4.5'
@@ -336,4 +372,12 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
     WhenRunningNuGetPackTask
     ThenTaskSucceeds
     ThenPackagePublished -Name 'MyPack' -Path 'someotherdir\MyPack.4.5.6.nupkg' -Version '4.5.6'
+}
+
+Describe 'Publish-WhiskeyNuGetPackage.when there are only symbols packages' {
+    InitTest
+    GivenANuGetPackage 'Package.1.2.3.symbols.nupkg'
+    WhenRunningNuGetPackTask
+    ThenTaskSucceeds
+    ThenPackageNotPublished
 }

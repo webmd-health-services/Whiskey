@@ -43,7 +43,21 @@ function Publish-WhiskeyNuGetPackage
         $TaskParameter['Path'] = '.output\*.nupkg'
     }
 
-    $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $publishSymbols = $TaskParameter['Symbols']
+
+    $paths = $TaskParameter['Path'] | 
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' | 
+                Where-Object { 
+                    $wildcard = '*.symbols.nupkg' 
+                    if( $publishSymbols )
+                    {
+                        $_ -like $wildcard
+                    }
+                    else
+                    {
+                        $_ -notlike $wildcard
+                    }
+                }
        
     $source = $TaskParameter['Uri']
     if( -not $source )
@@ -81,7 +95,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
     foreach ($path in $paths)
     {
         $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
-        $projectName = $projectName -replace '\.\d+\.\d+\.\d+(-.*)?$',''
+        $projectName = $projectName -replace '\.\d+\.\d+\.\d+(-.*)?(\.symbols)?',''
         $packageVersion = $TaskContext.Version.SemVer1
         $packageUri = '{0}/package/{1}/{2}' -f $source,$projectName,$packageVersion
             
