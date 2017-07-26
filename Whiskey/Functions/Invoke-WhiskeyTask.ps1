@@ -31,6 +31,7 @@ function Invoke-WhiskeyTask
 
     function Invoke-Event
     {
+        [CmdletBinding()]
         param(
             $Prefix,
             $EventName
@@ -141,18 +142,35 @@ function Invoke-WhiskeyTask
         }
     }
 
-    Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
-    Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix
+    $originalGlobalErrorAction = $Global:ErrorActionPreference
+    $originalErrorAction = $ErrorActionPreference
 
-    Write-Verbose -Message $prefix
-    $startedAt = Get-Date
-    & $task.CommandName -TaskContext $TaskContext -TaskParameter $Parameter
-    $endedAt = Get-Date
-    $duration = $endedAt - $startedAt
-    Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
+    try
+    {
+        $Global:ErrorActionPreference = $ErrorActionPreference = [Management.Automation.ActionPreference]::Stop
+        if( $Parameter['IgnoreErrors'] )
+        {
+            $Global:ErrorActionPreference = $ErrorActionPreference = [Management.Automation.ActionPreference]::Continue
+        }
 
-    Invoke-Event -Prefix $prefix -EventName 'AfterTask'
-    Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name)
-    Write-Verbose ($prefix)
-    Write-Verbose ''
+        Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
+        Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix
+
+        Write-Verbose -Message $prefix
+        $startedAt = Get-Date
+        & $task.CommandName -TaskContext $TaskContext -TaskParameter $Parameter
+        $endedAt = Get-Date
+        $duration = $endedAt - $startedAt
+        Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
+
+        Invoke-Event -Prefix $prefix -EventName 'AfterTask'
+        Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name)
+        Write-Verbose ($prefix)
+        Write-Verbose ''
+    }
+    finally
+    {
+        $Global:ErrorActionPreference = $originalGlobalErrorAction
+        $ErrorActionPreference = $originalErrorAction
+    }
 }

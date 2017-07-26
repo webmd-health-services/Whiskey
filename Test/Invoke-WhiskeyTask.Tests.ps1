@@ -145,9 +145,9 @@ function ThenBuildOutputRemoved
 
 function ThenPipelineSucceeded
 {
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    #It 'should not write any errors' {
+    #    $Global:Error | Should -BeNullOrEmpty
+    #}
 
     It 'should not throw an exception' {
         $threwException | Should -Be $false
@@ -211,8 +211,14 @@ function ThenPluginsRan
         {
             It ('should run {0}' -f $pluginName) {
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
+                if( $ForTaskNamed )
+                {
+                    Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
+                }
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
+                    $DebugPreference = 'Continue'
+                    Write-Debug ('Count  expected  {0}' -f $WithParameter.Count)
+                    Write-Debug ('       actual    {0}' -f $TaskParameter.Count)
                     if( $TaskParameter.Count -ne $WithParameter.Count )
                     {
                         return $false
@@ -456,6 +462,24 @@ Describe 'Invoke-WhiskeyTask.when OnlyBy has an invalid value' {
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Somebody' } -ErrorAction SilentlyContinue
     ThenThrewException 'invalid value'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when ignore errors is turned on' {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey' -MockWith { Write-Error -Message 'Fubar!' }
+    GivenPlugins 
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1' ; IgnoreErrors = $true } -ErrorAction SilentlyContinue
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; IgnoreErrors = $true; }
+    ThenPluginsRan -WithParameter @{ Path = 'somefile.ps1' ; IgnoreErrors = $true }
+}
+
+Describe 'Invoke-WhiskeyTask.when ignore errors is turned off' {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey' -MockWith { Write-Error -Message 'Fubar!' }
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1' } -ErrorAction SilentlyContinue
+    ThenThrewException 'Fubar!'
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
 }
 
 $tasks = Get-WhiskeyTask
