@@ -47,7 +47,7 @@ function Publish-WhiskeyBuildMasterPackage
 
     $variables = $TaskParameter['PackageVariables']
 
-    $release = Get-BMRelease -Session $buildMasterSession -Application $applicationName -Name $releaseName
+    $release = Get-BMRelease -Session $buildMasterSession -Application $applicationName -Name $releaseName -ErrorAction Stop
     if( -not $release )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to create and deploy a release package in BuildMaster. Either the ''{0}'' application doesn''t exist or it doesn''t have a ''{1}'' release.' -f $applicationName,$releaseName)
@@ -56,9 +56,9 @@ function Publish-WhiskeyBuildMasterPackage
     $release | Format-List | Out-String | Write-Verbose
 
     $packageName = '{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch
-    $package = New-BMPackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables
+    $package = New-BMPackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables -ErrorAction Stop
     $package | Format-List | Out-String | Write-Verbose
 
-    $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package
+    $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package -ErrorAction Stop
     $deployment | Format-List | Out-String | Write-Verbose
 }

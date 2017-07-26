@@ -190,6 +190,8 @@
 * Fixed: NuGet libraries always reported as not published (using the wrong URL to check for existence).
 * ***BREAKING***: The `NuGetPack` task no longer generates symbol packages by default. If you want to generate symbol packages, set the task's `Symbols` property to `true`.
 * ***BREAKING***: The `PublishNuGetPackage` task now ignores symbols packages (i.e. `*.symbols.nupkg`). To publish symbol packages *insted* of non-symbol packages, set the tasks' `Symbols` property to `true`.
+* ***BREAKING***: All errors that occur during a task or its plugins will fail a build. To continue a build even if a task writes errors, set the `IgnoreErrors` task property to `true`. 
+* Fixed: `PublishBuildMasterPackage` doesn't fail a build if creating a package or starting a pipeline fail.
 '@
         } # End of PSData hashtable
 

@@ -195,6 +195,13 @@ function ThenCreatedPackage
             }
         }
     }
+
+    It ('should fail the build if BuildMaster calls fail') {
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
+        
+    }
 }
 
 function ThenPackageNotCreated
