@@ -132,10 +132,10 @@
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            # Tags = @()
+            Tags = @( 'build', 'pipeline', 'devops', 'ci', 'cd', 'continuous-integration', 'continuous-delivery', 'continuous-deploy' )
 
             # A URL to the license for this module.
-            # LicenseUri = ''
+            LicenseUri = 'https://www.apache.org/licenses/LICENSE-2.0'
 
             # A URL to the main website for this project.
             ProjectUri = 'https://github.com/webmd-health-services/Whiskey'
