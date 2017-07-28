@@ -3,6 +3,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\Invoke-WhiskeyPowerShell.ps1' -Resolve)
 
 $workingDirectory = $null
 $failed = $false
@@ -104,8 +105,6 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode,
 
         [object]
         $WithArgument
@@ -130,16 +129,12 @@ function WhenTheTaskRuns
     $context = New-WhiskeyTestContext -ForDeveloper
     
     $failed = $false
-    $CleanParam = @{ }
-    if( $InCleanMode )
-    {
-        $CleanParam['Clean'] = $True
-    }
 
+    $Global:Error.Clear()
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyPowerShellTask -TaskContext $context -TaskParameter $taskParameter @CleanParam
+        Invoke-WhiskeyPowerShell -TaskContext $context -TaskParameter $taskParameter
     }
     catch
     {
@@ -198,7 +193,7 @@ function ThenTheTaskPasses
     }
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when script passes' {
+Describe 'Invoke-WhiskeyPowerShell.when script passes' {
     GivenAPassingScript
     GivenNoWorkingDirectory
     WhenTheTaskRuns
@@ -206,7 +201,7 @@ Describe 'Invoke-WhiskeyPowerShellTask.when script passes' {
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when script fails' {
+Describe 'Invoke-WhiskeyPowerShell.when script fails' {
     GivenNoWorkingDirectory
     GivenAFailingScript
     WhenTheTaskRuns -ErrorAction SilentlyContinue
@@ -214,7 +209,7 @@ Describe 'Invoke-WhiskeyPowerShellTask.when script fails' {
     ThenTheTaskFails
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when script passes after a previous command fails' {
+Describe 'Invoke-WhiskeyPowerShell.when script passes after a previous command fails' {
     GivenNoWorkingDirectory
     GivenAPassingScript
     GivenLastExitCode 1
@@ -223,17 +218,17 @@ Describe 'Invoke-WhiskeyPowerShellTask.when script passes after a previous comma
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when script throws a terminating exception' {
+Describe 'Invoke-WhiskeyPowerShell.when script throws a terminating exception' {
     GivenAScript @'
 throw 'fubar!'
 '@ 
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'fubar'
+    ThenTheLastErrorMatches 'terminating\ exception'
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when script''s error action preference is Stop' {
+Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop' {
     GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
@@ -242,7 +237,7 @@ throw 'fubar'
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'snafu'
+    ThenTheLastErrorMatches 'terminating\ exception'
     ThenTheLastErrorDoesNotMatch 'fubar'
     ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }
@@ -263,19 +258,11 @@ Describe 'Invoke-WhiskeyBuild.when PowerShell task defined with a relative worki
     ThenTheScriptRan
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when working directory does not exist' {
+Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {
     GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
     GivenAPassingScript
     WhenTheTaskRuns  -ErrorAction SilentlyContinue
     ThenTheTaskFails
-}
-
-Describe 'Invoke-WhiskeyPowerShellTask.when Clean switch is active' {
-    GivenNoWorkingDirectory
-    GivenAPassingScript
-    WhenTheTaskRuns -InCleanMode
-    ThenTheTaskPasses
-    ThenTheScriptDidNotRun
 }
 
 function ThenFile
@@ -290,7 +277,7 @@ function ThenFile
     Get-Content -Path $fullpath | Should -Be $HasContent
 }
 
-Describe 'Invoke-WhiskeyPowerShellTask.when passing positional parameters' {
+Describe 'Invoke-WhiskeyPowerShell.when passing positional parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
@@ -311,7 +298,7 @@ param(
 }
 
 
-Describe 'Invoke-WhiskeyPowerShellTask.when passing named parameters' {
+Describe 'Invoke-WhiskeyPowerShell.when passing named parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'

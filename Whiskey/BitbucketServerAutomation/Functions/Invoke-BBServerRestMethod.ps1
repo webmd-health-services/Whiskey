@@ -70,7 +70,7 @@ function Invoke-BBServerRestMethod
     $bodyParam = @{ }
     if( $InputObject )
     {
-        $bodyParam['Body'] = $InputObject | ConvertTo-Json -Depth ([int32]::MaxValue)
+        $bodyParam['Body'] = $InputObject | ConvertTo-Json -Depth 100
     }
 
     #$DebugPreference = 'Continue'
@@ -94,9 +94,13 @@ function Invoke-BBServerRestMethod
     {
         [Net.WebException]$ex = $_.Exception
         $response = $ex.Response
-        $reader = New-Object 'IO.StreamReader' $response.GetResponseStream()
-        $content = $reader.ReadToEnd() | ConvertFrom-Json
-        $reader.Dispose()
+        $content = ''
+        if( $response )
+        {
+            $reader = New-Object 'IO.StreamReader' $response.GetResponseStream()
+            $content = $reader.ReadToEnd() | ConvertFrom-Json
+            $reader.Dispose()
+        }
 
         for( $idx = 0; $idx -lt $errors.Count; ++$idx )
         {

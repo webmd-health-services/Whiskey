@@ -1,15 +1,15 @@
 
-function New-BMReleasePackage
+function New-BMPackage
 {
     <#
     .SYNOPSIS
     Creates a new package for a release.
 
     .DESCRIPTION
-    The `New-BMReleasePackage` creates a new package/version/build of an application. In order to deploy an application, the application must have a release. Then you create packages in that release, and each package is then deployed using the release's pipeline.
+    The `New-BMPackage` creates a new package/version/build of an application. In order to deploy an application, the application must have a release. Then you create packages in that release, and each package is then deployed using the release's pipeline.
 
     .EXAMPLE
-    New-BMReleasePackage -Session $session -Release $release
+    New-BMPackage -Session $session -Release $release
 
     Demonstrates how to create a new package in the `$release` release. BuildMaster detects what application based on the release (since releases are always tied to applications). Verion numbers and package numbers are incremented and handled based on the release settings.
 
@@ -19,12 +19,12 @@ function New-BMReleasePackage
     * A release ID integer.
 
     .EXAMPLE
-    New-BMReleasePackage -Session $session -ReleaseName '53' -Application $applicatoin
+    New-BMPackage -Session $session -ReleaseName '53' -Application $applicatoin
 
     Demonstrates how to create a new package by using the release's name. Since release names are only unique within an application, you must also specify the application via the `Application` parameter.
 
     .EXAMPLE
-    New-BMReleasePackage -Session $session -Release $release -PacakgeName '56.develop' -Variable @{ ProGetPackageName = '17.1.54+developer.deadbee' }
+    New-BMPackage -Session $session -Release $release -PacakgeName '56.develop' -Variable @{ ProGetPackageName = '17.1.54+developer.deadbee' }
 
     Demonstrates how to create a release with a specific name, `56.develop`, and with a package-level variable, `ProGetPackageName`.
     #>

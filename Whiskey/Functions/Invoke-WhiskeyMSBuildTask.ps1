@@ -17,7 +17,7 @@ function Invoke-WhiskeyMSBuildTask
     Demonstrates how to call the `WhiskeyMSBuildTask`. In this case each path in the `Path` element in $TaskParameter relative to your whiskey.yml file, will be built with MSBuild.exe given the build configuration contained in $TaskContext.
 
     #>
-    [Whiskey.Task("MSBuild")]
+    [Whiskey.Task("MSBuild",SupportsClean=$true)]
     [CmdletBinding()]
     param(
         [object]
@@ -28,10 +28,7 @@ function Invoke-WhiskeyMSBuildTask
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
         # 
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whiskey.yml file they were taken from.
-        $TaskParameter,
-
-        [Switch]
-        $Clean
+        $TaskParameter
     )
   
     Set-StrictMode -version 'latest'  
@@ -55,7 +52,7 @@ function Invoke-WhiskeyMSBuildTask
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     
     $target = @( 'build' )
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         $target = 'clean'
     }
@@ -73,7 +70,7 @@ function Invoke-WhiskeyMSBuildTask
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
-            if( $Clean )
+            if( $TaskContext.ShouldClean() )
             {
                 $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
@@ -89,7 +86,7 @@ function Invoke-WhiskeyMSBuildTask
             }
         }
 
-        if( (Test-WhiskeyRunByBuildServer) )
+        if( $TaskContext.ByBuildServer )
         {
             $projectPath | 
                 Split-Path | 
@@ -114,8 +111,10 @@ function Invoke-WhiskeyMSBuildTask
             $verbosity = $TaskParameter['Verbosity']
         }
 
+        $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
+
         $property = Invoke-Command {
-                                        ('Configuration={0}' -f $TaskContext.BuildConfiguration)
+                                        ('Configuration={0}' -f $configuration)
 
                                         if( $TaskParameter.ContainsKey('Property') )
                                         {
@@ -155,7 +154,7 @@ function Invoke-WhiskeyMSBuildTask
                             -ErrorVariable 'errors'
         if( $errors )
         {
-            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$TaskContext.BuildConfiguration)
+            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$configuration)
         }
     }
 }

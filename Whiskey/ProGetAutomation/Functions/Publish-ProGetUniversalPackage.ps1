@@ -9,16 +9,16 @@ function Publish-ProGetUniversalPackage
     The `Publish-ProGetUniversalPackage` function will upload a package to the specified Proget instance/feed.
 
     .EXAMPLE
-    Publish-ProGetUniversalPackage -ProGetSession $ProGetSession -FeedName 'Apps' -PackagePath 'C:\ProGetPackages\TestPackage.upack'
+    Publish-ProGetUniversalPackage -Session $ProGetSession -FeedName 'Apps' -PackagePath 'C:\ProGetPackages\TestPackage.upack'
 
-    Demonstrates how to call `Publish-ProGetUniversalPackage`. In this case, the package named 'TestPackage.upack' will be published to the 'Apps' feed located at $ProGetSession.Uri using the #ProGetSession.Credential authentication credentials
+    Demonstrates how to call `Publish-ProGetUniversalPackage`. In this case, the package named 'TestPackage.upack' will be published to the 'Apps' feed located at $Session.Uri using the $Session.Credential authentication credentials
     #>
     [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [pscustomobject]
         # The session includes ProGet's URI and the credentials to use when utilizing ProGet's API.
-        $ProGetSession,
+        $Session,
 
         [Parameter(Mandatory=$true)]
         [string]
@@ -35,13 +35,13 @@ function Publish-ProGetUniversalPackage
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     $shouldProcessCaption = ('creating {0} package' -f $PackagePath)
-    $proGetPackageUri = [String]$ProGetSession.Uri + 'upack/' + $FeedName
-    if (!$ProGetSession.Credential)
+    $proGetPackageUri = [String]$Session.Uri + 'upack/' + $FeedName
+    if (!$Session.Credential)
     {
         Write-Error -Message ('Unable to upload ''{0}'' package to ProGet at {1}. Uploading a package requires ProGet credentials (i.e. a username and password), but the credential on the ProGet session is missing. Please use `New-ProGetSession` to create a session and pass a credential that can upload universal packages via the `Credential` parameter.' -f ($PackagePath | Split-Path -Leaf), $proGetPackageUri)
         return
     }
-    $proGetCredential = $ProGetSession.Credential
+    $proGetCredential = $Session.Credential
 
     $headers = @{}
     $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))

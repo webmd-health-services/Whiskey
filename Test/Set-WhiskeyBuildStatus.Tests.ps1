@@ -19,7 +19,7 @@ function GivenCredential
         $Credential
     )
 
-    $context.Credentials.Add( $ID, $Credential )
+    Add-WhiskeyCredential -Context $context -ID $ID -Credential $Credential
 }
 
 function GivenNoCredentials

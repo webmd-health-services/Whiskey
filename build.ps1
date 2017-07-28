@@ -10,31 +10,18 @@ Set-StrictMode -Version Latest
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'init.ps1' -Resolve)
 
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
+Invoke-Command -ScriptBlock {
+                                $VerbosePreference = 'SilentlyContinue'
+                                Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Modules\Carbon' -Resolve) -Force
+                            }
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
-Get-ChildItem 'env:' | Out-String | Write-Verbose
-
-$configuration = 'Release'
-
-$toolParameters = @{
-                        'ProGetAppFeedUri' = 'https://proget.example.com/';
-                        'NpmFeedUri' = 'https://npm.example.com/';
-                        'NuGetFeedUri' = 'https://nuget.example.com/';
-                        'PowerShellFeedUri' = 'https://powershell.example.com/';
-                   }
-
-$runningUnderBuildServer = Test-WhiskeyRunByBuildServer
-if( $runningUnderBuildServer )
-{
-    $toolParameters['BBServerCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
-    $toolParameters['BBServerUri'] = 'https://bitbucketserver.example.com/'
-    $toolParameters['BuildMasterUri'] = 'https://buildmaster.example.com/'
-    $toolParameters['BuildMasterApiKey'] = 'letmein'
-    $toolParameters['ProGetCredential'] = New-Credential -Username 'fubar' -Password 'snafu'
-}
+Get-ChildItem 'env:' | 
+    Where-Object { $_.Name -ne 'POWERSHELL_GALLERY_API_KEY' } |
+    Out-String | 
+    Write-Verbose
 
 try
 {
@@ -44,7 +31,11 @@ try
         $cleanArg['Clean'] = $true
     }
 
-    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath -BuildConfiguration $configuration @toolParameters
+    $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
+    if( (Test-Path -Path 'env:POWERSHELL_GALLERY_API_KEY') )
+    {
+        Add-WhiskeyApiKey -Context $context -ID 'PowerShellGallery' -Value $env:POWERSHELL_GALLERY_API_KEY
+    }
     Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }

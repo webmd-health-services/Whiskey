@@ -47,23 +47,6 @@ PublishOn:
  - release/.*
  - master
  
-# The name of your application in BuildMaster. By default, the `Name` property from 
-# the `ProGetUniversalPackage` task is used. You should only need to define this 
-# property if your build creates multiple packages.
-ApplicationName: APPLICATION_NAME
-
-# The name of the release in BuildMaster. By default, the branch name being built is 
-# used. On release branches, e.g. `release/2.0`, `release/3.1`, the release name is
-# always `release`.
-ReleaseName: RELEASE_NAME
-
-# Whether or not to create and deploy your application in BuildMaster. Only applies 
-# if an application package was created (i.e. you have a `ProGetUniversalPackage` 
-# build task and you're on a branch that publishes). The default is `true`. Set to 
-# `false` if you don't use BuildMaster to deploy your application or your 
-# application doesn't get deployed.
-DeployPackage: true
-
 # PrereleaseMap is a list of branches to prerelease identifier mappings. Each item
 # is a name/value pair. The name is a regular expression and the value is the 
 # prerelease identifier. If a branch matches the regular expression, its prerelease
@@ -117,3 +100,16 @@ PublishBuildStatusTo:
 #
 # See the documentation for each individual task for YML samples.
 BuildTasks:
+
+# An array of tasks you want to run when publishing, e.g.
+# 
+#     BuildTasks:
+#     - TASK_NAME:
+#         PROPERTY_ONE: VALUE_ONE
+#         PROPERTY_TWO: VALUE_TWO
+#
+# Publishing happens when run under a build server and building on a publishing branch.
+# Publishing branches are configured with the `PublishOn` property.
+#
+# See the documentation for each individual task for YML samples.
+PublishTasks:

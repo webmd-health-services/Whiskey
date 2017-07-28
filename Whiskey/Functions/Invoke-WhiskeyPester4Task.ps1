@@ -17,7 +17,7 @@ function Invoke-WhiskeyPester4Task
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
-    [Whiskey.Task("Pester4")]
+    [Whiskey.Task("Pester4",SupportsClean=$true)]
     [CmdletBinding()]
     param(
          [Parameter(Mandatory=$true)]
@@ -26,10 +26,7 @@ function Invoke-WhiskeyPester4Task
     
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $TaskParameter,
-        
-        [Switch]
-        $Clean        
+        $TaskParameter
     )
     
     Set-StrictMode -Version 'Latest'
@@ -52,6 +49,11 @@ function Invoke-WhiskeyPester4Task
     }
     else
     {
+        & {
+                $VerbosePreference = 'SilentlyContinue'
+                Import-Module -Name 'PackageManagement'
+          }
+
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         if( -not $latestPester )
         {
@@ -61,7 +63,7 @@ function Invoke-WhiskeyPester4Task
         $version = $latestPester.Version 
     }
 
-    if( $Clean )
+    if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
@@ -102,7 +104,11 @@ function Invoke-WhiskeyPester4Task
         $pesterModulePath = $using:pesterModulePath
         $outputFile = $using:outputFile
 
-        Import-Module -Name $pesterModulePath
+        Invoke-Command -ScriptBlock {
+                                        $VerbosePreference = 'SilentlyContinue'
+                                        Import-Module -Name $pesterModulePath
+                                    }
+
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     } 
     

@@ -15,7 +15,7 @@
     RootModule = 'BitbucketServerAutomation.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.2.0'
+    ModuleVersion = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID = 'ef458b99-5fc4-4802-99a7-0604b71e3dd7'
@@ -79,17 +79,21 @@ The Bitbucket Server Automation module is used to interact with Bitbucket Server
                             'Get-BBServerCommitBuildStatus',
                             'Get-BBServerFile',
                             'Get-BBServerProject',
+                            'Get-BBServerPullRequestSetting',
                             'Get-BBServerRepository', 
                             'Get-BBServerTag',
-                            'Invoke-BBServerRestMethod', 
+                            'Invoke-BBServerRestMethod',
+                            'Move-BBServerRepository',
                             'New-BBServerBranch',
                             'New-BBServerConnection', 
                             'New-BBServerProject',
                             'New-BBServerRepository', 
                             'New-BBServerTag',
                             'Remove-BBServerRepository',
+                            'Rename-BBServerRepository',
                             'Set-BBServerCommitBuildStatus',
-                            'Set-BBServerDefaultBranch' )
+                            'Set-BBServerDefaultBranch',
+                            'Set-BBServerPullRequestSetting' )
 
     # Cmdlets to export from this module
     CmdletsToExport = '*'
@@ -121,19 +125,18 @@ The Bitbucket Server Automation module is used to interact with Bitbucket Server
             LicenseUri = 'http://www.apache.org/licenses/LICENSE-2.0'
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/pshdo/BitbucketServerAutomation'
+            ProjectUri = 'https://github.com/webmd-health-services/BitbucketServerAutomation'
 
             # A URL to an icon representing this module.
             # IconUri = ''
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-# Enhancements
-
-* New `Get-BBServerBranch` function for getting the branches in a repository.
-* New `Get-BBServerFile` function for getting a file from a repository.
-* New `New-BBServerBranch` function for creating a branch in a repository.
-* New `Set-BBServerDefaultBranch` function for setting a repository's default branch.
+* Added `Get-BBServerPullRequestSetting` function for getting the pull request settings for a repository.
+* Added `Set-BBServerPullRequestSetting` function for setting the pull request settings for a repository.
+* Added `Move-BBServerRepository` function for moving repositories between projects.
+* Added `Rename-BBServerRepository` function for renaming an existing repository.
+* Fixed: in some failure scenarios, the web requests error handler fails.
 '@
 
         } # End of PSData hashtable

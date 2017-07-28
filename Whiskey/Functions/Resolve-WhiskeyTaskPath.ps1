@@ -70,11 +70,11 @@ function Resolve-WhiskeyTaskPath
 
         $message = 'Resolve {0} ->' -f $originalPath
         $prefix = ' ' * ($message.Length - 3)
-        Write-Debug -Message $message -Verbose
+        Write-Debug -Message $message
         Resolve-Path -Path $Path | 
             Select-Object -ExpandProperty 'ProviderPath' |
             ForEach-Object { 
-                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_) -Verbose
+                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
                 $_
             }
     }
