@@ -18,9 +18,10 @@ Invoke-Command -ScriptBlock {
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
-Get-ChildItem 'env:' | Out-String | Write-Verbose
-
-$configuration = 'Release'
+Get-ChildItem 'env:' | 
+    Where-Object { $_.Name -ne 'POWERSHELL_GALLERY_API_KEY' } |
+    Out-String | 
+    Write-Verbose
 
 try
 {
@@ -31,6 +32,10 @@ try
     }
 
     $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
+    if( (Test-Path -Path 'env:POWERSHELL_GALLERY_API_KEY') )
+    {
+        Add-WhiskeyApiKey -Context $context -ID 'PowerShellGallery' -Value $env:POWERSHELL_GALLERY_API_KEY
+    }
     Invoke-WhiskeyBuild -Context $context @cleanArg
     exit 0
 }

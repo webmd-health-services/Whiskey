@@ -1,6 +1,8 @@
 Version: 0.11.0
+
 PublishOn: 
-- nobranchyet
+- master
+
 BuildTasks:
 - PowerShell:
     Path: init.ps1
@@ -9,5 +11,7 @@ BuildTasks:
     
 PublishTasks:
 - PublishPowerShellModule:
-    Path:
-    - Whiskey
+    RepositoryName: PSGallery
+    RepositoryUri: https://powershellgallery.com/
+    Path: Whiskey
+    ApiKeyID: PowerShellGallery
