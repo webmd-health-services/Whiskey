@@ -230,6 +230,10 @@ function ThenTheCommitShouldBeTagged
     it ('should tag the commit in Bitbucket Server repository ''{0}''' -f $InRepository) {
         Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $RepositoryKey -eq $InRepository }
     }
+
+    it ('should fail the build if creating tag fails') {
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ErrorActionPreference -eq [Management.Automation.ActionPreference]::Stop }
+    }
 }
 
 function ThenTheCommitShouldNotBeTagged
