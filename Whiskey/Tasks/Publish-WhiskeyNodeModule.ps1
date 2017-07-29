@@ -49,10 +49,10 @@ function Publish-WhiskeyNodeModule
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
-    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
+    $npmRegistryUri = [uri]$TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry where the module should be published. E.g.,
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory and must be a URI. It should be the URI to the registry where the module should be published. E.g.,
         
     BuildTasks:
     - PublishNodeModule:

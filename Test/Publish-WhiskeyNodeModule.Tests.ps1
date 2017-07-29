@@ -49,7 +49,7 @@ function Init
     $script:parameter = @{ }
     $script:context = $null
     $script:workingDirectory = $null
-    $script:npmRegistryUri = [uri]'http://registry.npmjs.org/'
+    $script:npmRegistryUri = 'http://registry.npmjs.org/'
     $script:email = $defaultEmailAddress
 }
 
@@ -121,7 +121,7 @@ function ThenNpmrcCreated
         Test-Path -Path $npmrcPath | Should be $true
     }
 
-    $npmRegistryUri = $script:npmRegistryUri
+    $npmRegistryUri = [uri]$script:npmRegistryUri
     $npmUserName = $credential.UserName
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
