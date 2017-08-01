@@ -469,4 +469,15 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running under a custom dotNET framework'
     ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
 }
 
+Describe 'Invoke-WhiskeyNUnit2Task.when running with custom OpenCover arguments' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( 'showunvisited' ) }
+    ThenOutput -Contains '====Unvisited Classes===='
+}
 
+Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator arguments' {
+    GivenPassingTests
+    WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( 'reporttypes:Latex', 'verbosity:Info' ) }
+    ThenOutput -Contains 'Initializing report builders for report types: Latex'
+    ThenOutput -DoesNotContain 'Preprocessing report', 'Initiating parser for OpenCover'
+}
