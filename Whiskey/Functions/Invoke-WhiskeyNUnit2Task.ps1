@@ -46,18 +46,9 @@ function Invoke-WhiskeyNUnit2Task
     {
         $reportGeneratorVersionArg['Version'] = $TaskParameter['ReportGeneratorVersion']
     }
-
-    $openCoverArgs = @()
-    if( $TaskParameter['OpenCoverArgument'] )
-    {
-        $openCoverArgs += $TaskParameter['OpenCoverArgument'] | ForEach-Object {if( $_.StartsWith('-')) { $_ } else { ('-' + $_) } }
-    }
-
-    $reportGeneratorArgs = @()
-    if( $TaskParameter['ReportGeneratorArgument'] )
-    {
-        $reportGeneratorArgs += $TaskParameter['ReportGeneratorArgument'] | ForEach-Object {if( $_.StartsWith('-')) { $_ } else { ('-' + $_) } }
-    }
+    
+    $openCoverArgs = $TaskParameter['OpenCoverArgument']
+    $reportGeneratorArgs = $TaskParameter['ReportGeneratorArgument']
     
     if( $TaskContext.ShouldClean() )
     {
