@@ -29,11 +29,11 @@ function Invoke-WhiskeyNUnit2Task
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
-     )    
-  
-    Set-StrictMode -version 'latest'        
+    )
+    
+    Set-StrictMode -version 'latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-     
+    
     $package = 'NUnit.Runners'
     $version = '2.6.4'
     $openCoverVersionArg  = @{}
@@ -47,17 +47,26 @@ function Invoke-WhiskeyNUnit2Task
         $reportGeneratorVersionArg['Version'] = $TaskParameter['ReportGeneratorVersion']
     }
     
-    $openCoverArgs = $TaskParameter['OpenCoverArgument']
-    $reportGeneratorArgs = $TaskParameter['ReportGeneratorArgument']
+    $openCoverArgs = @()
+    if( $TaskParameter['OpenCoverArgument'] )
+    {
+        $openCoverArgs += $TaskParameter['OpenCoverArgument']
+    }
+    
+    $reportGeneratorArgs = @()
+    if( $TaskParameter['ReportGeneratorArgument'] )
+    {
+        $reportGeneratorArgs += $TaskParameter['ReportGeneratorArgument']
+    }
     
     if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
         Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
-        Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version                
+        Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
-
+    
     # Be sure that the Taskparameter contains a 'Path'.
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
@@ -120,7 +129,7 @@ function Invoke-WhiskeyNUnit2Task
     }
     $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
-
+    
     $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
     New-Item -Path $coverageReportDir -ItemType 'Directory' -Force | Out-Null
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
@@ -136,8 +145,8 @@ function Invoke-WhiskeyNUnit2Task
     Write-Verbose -Message ('  Filter              {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
     Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
     Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $TaskParameter['DisableCodeCoverage'])
-    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs | Out-String))
-    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs | Out-String))
+    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
+    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
     
     $pathString = ($path -join '\" \"')
     $extraArgString = ($extraArgs -join " ")
@@ -145,9 +154,9 @@ function Invoke-WhiskeyNUnit2Task
     $nunitArgs = "\""${pathString}\"" /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
     if( -not $TaskParameter['DisableCodeCoverage'] )
     {
-        & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' @openCoverArgs
+        & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
         $testsFailed = $LastExitCode;
-        & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir" @reportGeneratorArgs
+        & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir" $reportGeneratorArgs
         if( $LastExitCode -or $testsFailed )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
