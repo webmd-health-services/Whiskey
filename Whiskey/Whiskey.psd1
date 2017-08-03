@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.11.0'
+    ModuleVersion = '0.12.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -191,6 +191,7 @@
 * ***BREAKING***: The `NuGetPack` task no longer generates symbol packages by default. If you want to generate symbol packages, set the task's `Symbols` property to `true`.
 * ***BREAKING***: The `PublishNuGetPackage` task now ignores symbols packages (i.e. `*.symbols.nupkg`). To publish symbol packages *insted* of non-symbol packages, set the tasks' `Symbols` property to `true`.
 * Fixed: `PublishBuildMasterPackage` doesn't fail a build if creating a package or starting a pipeline fail.
+* Update `Invoke-WhiskeyNUnit2Task` to add support for custom OpenCover and ReportGenerator command-line arguments.
 '@
         } # End of PSData hashtable
 
