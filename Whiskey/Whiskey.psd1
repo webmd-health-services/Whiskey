@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.11.2'
+    ModuleVersion = '0.12.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -145,7 +145,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `PublishNodeModule` task always fails.
+* Updated `Invoke-WhiskeyNUnit2Task` to add support for custom OpenCover and ReportGenerator command-line arguments.
 '@
         } # End of PSData hashtable
 
