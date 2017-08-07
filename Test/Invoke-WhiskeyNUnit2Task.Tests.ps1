@@ -308,7 +308,6 @@ Describe 'Invoke-WhiskeyNUnit2Task when NUnit Console Path is invalid and Join-P
 }
 
 Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with disabled code coverage' { 
-    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { $false }
     Invoke-NUnitTask -WithRunningTests -InReleaseMode -WithDisabledCodeCoverage
 }
 
@@ -317,7 +316,6 @@ Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with coverage filter
                     '-[NUnit2FailingTest]*',
                     '+[NUnit2PassingTest]*'
                     )
-    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { $false }
     Invoke-NUnitTask -WithRunningTests -InReleaseMode -CoverageFilter $coverageFilter
 }
 

@@ -9,7 +9,6 @@ function GivenRunningUnderABuildServer
         [Switch]
         $WithGitBranch
     )
-    mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
     mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -MockWith { return $item = @{
                                                                                     Value = 'CommitHash'
                                                                                 }
@@ -22,11 +21,6 @@ function GivenRunningUnderABuildServer
     {
         mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { return $false }
     }
-}
-
-function GivenRunningAsADeveloper
-{
-    mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
 }
 
 function WhenGettingCommitID

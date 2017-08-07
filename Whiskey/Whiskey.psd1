@@ -101,7 +101,6 @@
                             'Resolve-WhiskeyTaskPath',
                             'Set-WhiskeyBuildStatus',
                             'Stop-WhiskeyTask',
-                            'Test-WhiskeyRunByBuildServer',
                             'Uninstall-WhiskeyTool',
                             'Unregister-WhiskeyEvent',
                             'Write-CommandOutput'
@@ -145,6 +144,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
+* Removed `Test-WhiskeyRunByBuildServer` function. You should use the `ByBuildServer` or `ByDeveloper` properties on the build's context object (which is returned by `New-WhiskeyContext`).
 '@
         } # End of PSData hashtable
 

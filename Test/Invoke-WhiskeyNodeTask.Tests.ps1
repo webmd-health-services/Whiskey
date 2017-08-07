@@ -228,10 +228,7 @@ function Initialize-NodeProject
         Set-Item -Path 'env:NODE_ENV' -Value 'production'
     }
 
-    Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith $mock
-
     $version = [SemVersion.SemanticVersion]'5.4.3-rc.5+build'
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $version }.GetNewClosure()
 
     $empty = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $empty -ItemType 'Directory' | Out-Null

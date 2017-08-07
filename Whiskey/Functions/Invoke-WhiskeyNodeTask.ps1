@@ -112,7 +112,7 @@ function Invoke-WhiskeyNodeTask
     try
     {
         Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
         if( -not $nodePath )
         {
             throw ('Node version required for this package failed to install. Please see previous errors for details.')
@@ -129,7 +129,7 @@ function Invoke-WhiskeyNodeTask
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
         $noColorArg = @()
-        if( (Test-WhiskeyRunByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
+        if( ($TaskContext.ByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
         {
             $noColorArg = '--no-color'
         }
@@ -223,7 +223,7 @@ BuildTasks:
 
         $productionArg = ''
         $productionArgDisplay = ''
-        if( (Test-WhiskeyRunByBuildServer) )
+        if( $TaskContext.ByBuildServer )
         {
             $productionArg = '--production'
             $productionArgDisplay = ' --production'
