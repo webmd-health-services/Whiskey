@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.12.0'
+    ModuleVersion = '0.13.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -79,7 +79,6 @@
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCommitID',
                             'Get-WhiskeyCredential',
-                            'Get-WhiskeyOutputDirectory',
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyMSBuild',
@@ -145,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Updated `Invoke-WhiskeyNUnit2Task` to add support for custom OpenCover and ReportGenerator command-line arguments.
+* Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
 '@
         } # End of PSData hashtable
 

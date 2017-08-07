@@ -208,7 +208,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.SemVer2NoBuildMetadata-replace '[\\/]','-')
-    $outputRoot = Get-WhiskeyOutputDirectory -WorkingDirectory $taskContext.BuildRoot
+    $outputRoot = $taskContext.OutputDirectory
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
     It 'should cleanup temporary directories' {

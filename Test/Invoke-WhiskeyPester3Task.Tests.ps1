@@ -77,13 +77,13 @@ function New-WhiskeyPesterTestContext
     param()
     process
     {
-        $outputRoot = Get-WhiskeyOutputDirectory -WorkingDirectory $TestDrive.FullName
+        $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.\.output'
         if( -not (Test-Path -Path $outputRoot -PathType Container) )
         {
-            New-Item -Path $outputRoot -ItemType 'Directory'
+            New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
         }
         $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
-        $context = New-WhiskeyTestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
+        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
         return $context
     }
 }
@@ -245,10 +245,9 @@ Describe 'Invoke-WhiskeyPester3Task.when run multiple times in the same build' {
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 4  
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 8  
 
-    $outputRoot = Get-WhiskeyOutputDirectory -WorkingDirectory $TestDrive.FullName
     It 'should create multiple report files' {
-        Join-Path -Path $outputRoot -ChildPath 'pester-00.xml' | Should Exist
-        Join-Path -Path $outputRoot -ChildPath 'pester-01.xml' | Should Exist
+        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-00.xml' | Should Exist
+        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-01.xml' | Should Exist
     }
 }
 

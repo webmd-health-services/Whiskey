@@ -160,7 +160,12 @@ function New-WhiskeyContext
     $context.ReleaseName = $releaseName;
     $context.BuildRoot = $buildRoot;
     $context.ConfigurationPath = $ConfigurationPath;
-    $context.OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
+
+    $context.OutputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
+    if( -not (Test-Path -Path $context.OutputDirectory -PathType Container) )
+    {
+        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force | Out-Null
+    }    
     $context.Version = [pscustomobject]@{
                                         SemVer2 = $semVersion;
                                         SemVer2NoBuildMetadata = $semVersionNoBuild;

@@ -180,11 +180,10 @@ function ThenDotNetProjectsCompilationFailed
 function ThenNUnitTestsNotRun
 {
     param(
-        $ConfigurationPath
     )
 
     It 'should not run NUnit tests' {
-        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $context.OutputDirectory | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 
