@@ -38,15 +38,43 @@ function Convert-ValueToProperType {
         if (!($Value -is [string])) {
             return $Value
         }
-        $types = @([int], [long], [double], [boolean], [datetime])
+        $culture = 
+        $types = @([int], [long], [double], [boolean], [decimal])
         foreach($i in $types){
             $parsedValue = New-Object -TypeName $i.FullName
-            Write-Debug -Message ('Trying to parse {0} as a {1}.' -f $Value,$parsedValue.GetType().FullName)
-            if( $i::TryParse($Value,[ref]$parsedValue) )
-            {
+            if ($i.IsAssignableFrom([boolean])){
+                $result = $i::TryParse($Value,[ref]$parsedValue) 
+            } else {
+                $result = $i::TryParse($Value, [Globalization.NumberStyles]::Any, [Globalization.CultureInfo]::CurrentCulture, [ref]$parsedValue)
+                if( -not $result )
+                {
+                    $result = $i::TryParse($Value, [Globalization.NumberStyles]::Any, [Globalization.CultureInfo]::InvariantCulture, [ref]$parsedValue)
+                }
+            }
+            if( $result ) {
                 return $parsedValue
             }
         }
+
+        # From the YAML spec: http://yaml.org/type/timestamp.html
+        $regex = @'
+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] # (ymd)
+|[0-9][0-9][0-9][0-9] # (year)
+ -[0-9][0-9]? # (month)
+ -[0-9][0-9]? # (day)
+ ([Tt]|[ \t]+)[0-9][0-9]? # (hour)
+ :[0-9][0-9] # (minute)
+ :[0-9][0-9] # (second)
+ (\.[0-9]*)? # (fraction)
+ (([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)? # (time zone)
+'@
+        if( [Text.RegularExpressions.Regex]::IsMatch($Value, $regex, [Text.RegularExpressions.RegexOptions]::IgnorePatternWhitespace) ) {
+            [DateTime]$datetime = [DateTime]::MinValue
+            if( ([DateTime]::TryParse($Value,[ref]$datetime)) ) {
+                return $datetime
+            }
+        }
+            
         return $Value
     }
 }
@@ -55,12 +83,13 @@ function Convert-YamlMappingToHashtable {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [YamlDotNet.RepresentationModel.YamlMappingNode]$Node
+        [YamlDotNet.RepresentationModel.YamlMappingNode]$Node,
+        [switch] $Ordered
     )
     PROCESS {
-        $ret = @{}
+        if ($Ordered) { $ret = [ordered]@{} } else { $ret = @{} }
         foreach($i in $Node.Children.Keys) {
-            $ret[$i.Value] = Convert-YamlDocumentToPSObject $Node.Children[$i]
+            $ret[$i.Value] = Convert-YamlDocumentToPSObject $Node.Children[$i] -Ordered:$Ordered
         }
         return $ret
     }
@@ -77,7 +106,7 @@ function Convert-YamlSequenceToArray {
         foreach($i in $Node.Children){
             $ret.Add((Convert-YamlDocumentToPSObject $i))
         }
-        return $ret
+        return ,$ret
     }
 }
 
@@ -85,12 +114,13 @@ function Convert-YamlDocumentToPSObject {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [System.Object]$Node
+        [System.Object]$Node, 
+        [switch]$Ordered
     )
     PROCESS {
         switch($Node.GetType().FullName){
             "YamlDotNet.RepresentationModel.YamlMappingNode"{
-                return Convert-YamlMappingToHashtable $Node
+                return Convert-YamlMappingToHashtable $Node -Ordered:$Ordered
             }
             "YamlDotNet.RepresentationModel.YamlSequenceNode" {
                 return Convert-YamlSequenceToArray $Node
@@ -121,7 +151,7 @@ function Convert-ListToGenericList {
     for($i=0; $i -lt $Data.Count; $i++) {
         $Data[$i] = Convert-PSObjectToGenericObject $Data[$i]
     }
-    return $Data
+    return ,$Data
 }
 
 function Convert-PSCustomObjectToDictionary {
@@ -143,16 +173,10 @@ function Convert-PSObjectToGenericObject {
     )
     # explicitly cast object to its type. Without this, it gets wrapped inside a powershell object
     # which causes YamlDotNet to fail
-
-    if( $Data -is [System.Management.Automation.PSCustomObject] )
-    {
-        return Convert-PSCustomObjectToDictionary -Data $Data
-    }
-
     $data = $data -as $data.GetType().FullName
     switch($data.GetType()) {
         ($_.FullName -eq "System.Management.Automation.PSCustomObject") {
-            return Convert-PSCustomObjectToDictionary -Data $Data
+            return Convert-PSCustomObjectToDictionary $data
         }
         default {
             if (([System.Collections.IDictionary].IsAssignableFrom($_))){
@@ -170,8 +194,10 @@ function ConvertFrom-Yaml {
     Param(
         [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
         [string]$Yaml,
-        [switch]$AllDocuments=$false
+        [switch]$AllDocuments=$false,
+        [switch]$Ordered
     )
+    
     PROCESS {
         if(!$Yaml){
             return
@@ -181,14 +207,14 @@ function ConvertFrom-Yaml {
             return
         }
         if($documents.Count -eq 1){
-            return Convert-YamlDocumentToPSObject $documents[0].RootNode
+            return Convert-YamlDocumentToPSObject $documents[0].RootNode -Ordered:$Ordered
         }
         if(!$AllDocuments) {
-            return Convert-YamlDocumentToPSObject $documents[0].RootNode
+            return Convert-YamlDocumentToPSObject $documents[0].RootNode -Ordered:$Ordered
         }
         $ret = @()
         foreach($i in $documents) {
-            $ret += Convert-YamlDocumentToPSObject $i.RootNode
+            $ret += Convert-YamlDocumentToPSObject $i.RootNode -Ordered:$Ordered
         }
         return $ret
     }
@@ -201,17 +227,23 @@ function ConvertTo-Yaml {
         [System.Object]$Data,
         [Parameter(Mandatory=$false)]
         [string]$OutFile,
+        [switch]$JsonCompatible=$false,
         [switch]$Force=$false
     )
     BEGIN {
         $d = [System.Collections.Generic.List[object]](New-Object "System.Collections.Generic.List[object]")
     }
     PROCESS {
-        $d.Add($data)
+        if($data -ne $null) {
+            $d.Add($data)
+        }
     }
     END {
-        if($d -eq $null){
+        if($d -eq $null -or $d.Count -eq 0){
             return
+        }
+        if($d.Count -eq 1) {
+            $d = $d[0]
         }
         $norm = Convert-PSObjectToGenericObject $d
         if($OutFile) {
@@ -226,8 +258,14 @@ function ConvertTo-Yaml {
         } else {
             $wrt = New-Object "System.IO.StringWriter"
         }
+
+        $options = 0
+        if ($JsonCompatible) {
+            # No indent options :~(
+            $options = [YamlDotNet.Serialization.SerializationOptions]::JsonCompatible
+        }
         try {
-            $serializer = New-Object "YamlDotNet.Serialization.Serializer" 0
+            $serializer = New-Object "YamlDotNet.Serialization.Serializer" $options
             $serializer.Serialize($wrt, $norm)
         } finally {
             $wrt.Close()
