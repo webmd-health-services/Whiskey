@@ -257,12 +257,6 @@ Describe 'Invoke-WhiskeyPester3Task.when missing Path Configuration' {
     Invoke-PesterTest -Path $pesterPassingPath -PassingCount 0 -WithMissingPath -ShouldFailWithMessage $failureMessage -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when version parsed from YAML' {
-    GivenTestContext
-    # When some versions look like a date and aren't quoted strings, YAML parsers turns them into dates.
-    Invoke-PesterTest -Path $pesterPassingPath -FailureCount 0 -PassingCount 4 -Version ([datetime]'3/4/2003')
-}
-
 Describe 'Invoke-WhiskeyPester3Task.when missing Version configuration' {
     GivenTestContext
     $failureMessage = 'is mandatory'
