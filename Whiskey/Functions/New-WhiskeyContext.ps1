@@ -132,15 +132,10 @@ function New-WhiskeyContext
         }
     }
 
-    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhiskeySemanticVersion -ErrorAction Ignore
+    $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -OnBuildServer:$byBuildServer -ErrorAction Stop
     if( -not $semVersion )
     {
-        throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config['Version'])
-    }
-
-    if( $prereleaseInfo )
-    {
-        $semVersion = New-Object 'SemVersion.SemanticVersion' $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$prereleaseInfo,$semVersion.Build
+        Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
     }
 
     $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch

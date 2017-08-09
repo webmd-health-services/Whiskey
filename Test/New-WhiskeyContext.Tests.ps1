@@ -194,7 +194,7 @@ function GivenConfiguration
 
         if( $WithVersion )
         {
-            Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
+            Mock -CommandName 'New-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
         }
         else
         {
@@ -208,11 +208,11 @@ function GivenConfiguration
     {
         if( $WithVersion )
         {
-            Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { 
+            Mock -CommandName 'New-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { 
                 [SemVersion.SemanticVersion]$semVersion = $null
                 if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
                 {
-                    return 
+                    return
                 }
                 return $semVersion
             }.GetNewClosure()
@@ -546,7 +546,7 @@ Describe 'New-WhiskeyContext.when run by developer and configuration file does n
 Describe 'New-WhiskeyContext.when run by developer and version is not a semantic version' {
     Init
     GivenConfiguration -WithVersion 'fubar'
-    WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'not a valid semantic version' -ErrorAction SilentlyContinue
+    WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'unable\ to\ create\ the\ semantic\ version' -ErrorAction SilentlyContinue
 }
 
 Describe 'New-WhiskeyContext.when run by the build server' {
@@ -646,7 +646,7 @@ Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
     GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
     GivenBuildID '93'
     WhenCreatingContext -ByBuildServer
-    ThenSemVer2Is '1.2.3-alpha.93'
+    ThenSemVer2Is '1.2.3-alpha.93+93.alpha02.0.deadbee'
     ThenVersionIs '1.2.3'
     ThenSemVer1Is '1.2.3-alpha93'
 }

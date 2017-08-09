@@ -143,8 +143,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
-* Removed `Test-WhiskeyRunByBuildServer` function. You should use the `ByBuildServer` or `ByDeveloper` properties on the build's context object (which is returned by `New-WhiskeyContext`).
+* ***BREAKING CHANGE***: Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
+* ***BREAKING CHANGE***: Removed `Test-WhiskeyRunByBuildServer` function. You should use the `ByBuildServer` or `ByDeveloper` properties on the build's context object (which is returned by `New-WhiskeyContext`).
+* ***BREAKING CHANGE***: The `ConvertTo-WhiskeySemanticVersion` function now tries to convert its input into a semantic version. It no longer also tries to create a version number for the current build. It is now safe to use this function to convert objects to version numbers.
 '@
         } # End of PSData hashtable
 

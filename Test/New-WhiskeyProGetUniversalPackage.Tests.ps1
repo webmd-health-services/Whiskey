@@ -123,8 +123,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $byWhoArg = @{ $PSCmdlet.ParameterSetName = $true }
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
-
     $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
