@@ -38,6 +38,7 @@ function Get-WhiskeyBuildMetadata
         $jobName = 
         $scmUri = 
         $scmID = 
+        $buildServerName = 
         $scmBranch = ''
 
     if( (Test-Path -Path 'env:JENKINS_URL') )
@@ -49,15 +50,22 @@ function Get-WhiskeyBuildMetadata
         $scmUri = Get-EnvironmentVariable 'GIT_URL'
         $scmID = Get-EnvironmentVariable 'GIT_COMMIT'
         $scmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
+        $buildServerName = 'Jenkins'
     }
 
-    return [pscustomobject]@{
+    $info = [pscustomobject]@{
                                 BuildNumber = $buildNumber;
                                 BuildID = $buildID;
+                                BuildServerName = $buildServerName;
                                 BuildUri = $buildUri;
                                 JobName = $jobName;
                                 ScmBranch = $scmBranch;
                                 ScmCommitID = $scmID;
                                 ScmUri = $scmUri;
                             }
+    $info |
+        Add-Member -MemberType ScriptProperty -Name 'IsJenkins' -Value { return $this.BuildServerName -eq 'Jenkins' } -PassThru |
+        Add-Member -MemberType ScriptProperty -Name 'IsDeveloper' -Value { return $this.BuildServerName -eq '' } -PassThru |
+        Add-Member -MemberType ScriptProperty -Name 'IsBuildServer' -Value { return -not $this.IsDeveloper } -PassThru 
 }
+

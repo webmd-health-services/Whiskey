@@ -118,6 +118,33 @@ InModuleScope 'Whiskey' {
         }
     }
 
+    function ThenBuildServerIs
+    {
+        param(
+            $Name
+        )
+
+        $buildInfo = $script:buildInfo
+        $scriptPropertyName = 'Is{0}' -f $Name
+
+        It ('should be running by {0}' -f $Name) {
+            $buildInfo.BuildServerName | Should Be $Name
+            $buildInfo.$scriptPropertyName | Should Be $true
+            $buildInfo.IsDeveloper | Should Be $false
+            $buildInfo.IsBuildServer | Should Be $true
+        }
+    }
+
+    function ThenRunByDeveloper
+    {
+        $buildInfo = $script:buildInfo
+        It ('should be running as developer') {
+            $buildInfo.BuildServerName | Should BeNullOrEmpty
+            $buildInfo.IsDeveloper | Should Be $true
+            $buildInfo.IsBuildServer | Should Be $false
+        }
+    }
+
     function WhenGettingBuildMetadata
     {
         $script:buildInfo = Get-WhiskeyBuildMetadata
@@ -128,6 +155,7 @@ InModuleScope 'Whiskey' {
         GivenJenkinsEnvironment -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'origin/master'
         WhenGettingBuildMetadata
         ThenBuildMetadataIs -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'origin/master'
+        ThenBuildServerIs 'Jenkins'
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when run by a developer' {
@@ -135,5 +163,6 @@ InModuleScope 'Whiskey' {
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
         ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -GitUri '' -GitCommit '' -GitBranch ''
+        ThenRunByDeveloper
     }
 }
