@@ -83,6 +83,6 @@ InModuleScope -ModuleName 'Whiskey' {
     '1.32'             | Assert-ConvertsTo -ByBuildServer ('1.32.0+{0}' -f $buildServerBuildMetadata)       -ByDeveloper ('1.32.0+{0}' -f $developerBuildMetadata)
     '1.32.4'           | Assert-ConvertsTo -ByBuildServer ('1.32.4+{0}' -f $buildServerBuildMetadata)     -ByDeveloper ('1.32.4+{0}' -f $developerBuildMetadata)
     '1.0130'           | Assert-ConvertsTo -ByBuildServer ('1.130.0+{0}' -f $buildServerBuildMetadata)      -ByDeveloper ('1.130.0+{0}' -f $developerBuildMetadata)
-    '1.5.6'            | Assert-ConvertsTo -Prerelease 'rc.4' -ByBuildServer ('1.5.6+{0}' -f $buildServerBuildMetadata)      -ByDeveloper ('1.5.6+{0}' -f $developerBuildMetadata)
+    '1.5.6'            | Assert-ConvertsTo -Prerelease 'rc.4' -ByBuildServer ('1.5.6-rc.4+{0}' -f $buildServerBuildMetadata)      -ByDeveloper ('1.5.6-rc.4+{0}' -f $developerBuildMetadata)
     (@{})['Version']   | Assert-ConvertsTo -Prerelease 'rc.4' -ByBuildServer ('{0}.80-rc.4+{1}' -f $dateBasedVersion,$buildServerBuildMetadata)      -ByDeveloper ('{0}.0-rc.4+{1}' -f $dateBasedVersion,$developerBuildMetadata)
 }
