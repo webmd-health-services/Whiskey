@@ -28,6 +28,45 @@ InModuleScope 'Whiskey' {
 
     }
 
+    function GivenAppVeyorEnvironment
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory=$true)]
+            $BuildNumber,
+            [Parameter(Mandatory=$true)]
+            $BuildID,
+            [Parameter(Mandatory=$true)]
+            $ProjectName,
+            [Parameter(Mandatory=$true)]
+            $ProjectSlug,
+            [Parameter(Mandatory=$true)]
+            $ScmProvider,
+            [Parameter(Mandatory=$true)]
+            $ScmRepoName,
+            [Parameter(Mandatory=$true)]
+            $ScmBranch,
+            [Parameter(Mandatory=$true)]
+            $ScmCommit,
+            [Parameter(Mandatory=$true)]
+            $AccountName,
+            [Parameter(Mandatory=$true)]
+            $BuildVersion
+        )
+
+        GivenEnvironmentVariable 'APPVEYOR' 'True'
+        GivenEnvironmentVariable 'APPVEYOR_BUILD_NUMBER' $BuildNumber
+        GivenEnvironmentVariable 'APPVEYOR_BUILD_ID' $BuildID
+        GivenEnvironmentVariable 'APPVEYOR_PROJECT_NAME' $ProjectName
+        GivenEnvironmentVariable 'APPVEYOR_PROJECT_SLUG' $ProjectSlug
+        GivenEnvironmentVariable 'APPVEYOR_REPO_PROVIDER' $ScmProvider
+        GivenEnvironmentVariable 'APPVEYOR_REPO_NAME' $ScmRepoName
+        GivenEnvironmentVariable 'APPVEYOR_REPO_BRANCH' $ScmBranch
+        GivenEnvironmentVariable 'APPVEYOR_REPO_COMMIT' $ScmCommit
+        GivenEnvironmentVariable 'APPVEYOR_ACCOUNT_NAME' $AccountName
+        GivenEnvironmentVariable 'APPVEYOR_BUILD_VERSION' $BuildVersion
+    }
+
     function GivenJenkinsEnvironment
     {
         [CmdletBinding()]
@@ -85,11 +124,11 @@ InModuleScope 'Whiskey' {
             [Parameter(Mandatory=$true)]
             $BuildUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
-            $GitUri,
+            $ScmUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
-            $GitCommit,
+            $ScmCommit,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
-            $GitBranch
+            $ScmBranch
         )
 
         $buildInfo = $script:buildInfo
@@ -115,15 +154,15 @@ InModuleScope 'Whiskey' {
         }
 
         It ('should set SCM URI') {
-            $buildInfo.ScmUri | Should Be $GitUri
+            $buildInfo.ScmUri | Should Be $ScmUri
         }
 
         It ('should set SCM commit ID') {
-            $buildInfo.ScmCommitID | Should Be $GitCommit
+            $buildInfo.ScmCommitID | Should Be $ScmCommit
         }
 
         It ('should set SCM branch') {
-            $buildInfo.ScmBranch | Should Be $GitBranch
+            $buildInfo.ScmBranch | Should Be $ScmBranch
         }
     }
 
@@ -174,9 +213,9 @@ InModuleScope 'Whiskey' {
                             -BuildID 'jenkins_Fubar_27' `
                             -JobName 'Fubar' `
                             -BuildUri 'https://build.example.com' `
-                            -GitUri 'https://git.example.com' `
-                            -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
-                            -GitBranch 'master' `
+                            -ScmUri 'https://git.example.com' `
+                            -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                            -ScmBranch 'master' `
                             -JobUri 'https://job.example.com' 
         ThenBuildServerIs 'Jenkins'
     }
@@ -185,7 +224,32 @@ InModuleScope 'Whiskey' {
         Init
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -GitUri '' -GitCommit '' -GitBranch '' -JobUri ''
+        ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -ScmUri '' -ScmCommit '' -ScmBranch '' -JobUri ''
         ThenRunByDeveloper
     }
+
+    Describe 'Get-WhiskeyBuildMetadata.when running under AppVeyor' {
+        Init
+        GivenAppVeyorEnvironment -BuildNumber '112' `
+                                 -BuildID '10187821' `
+                                 -ProjectName 'WhiskeyName' `
+                                 -ProjectSlug 'whiskeyslug' `
+                                 -ScmProvider 'gitHub' `
+                                 -ScmRepoName 'webmd-health-services/Whiskey' `
+                                 -ScmBranch 'master' `
+                                 -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                                 -AccountName 'whs' `
+                                 -BuildVersion '1.1.1+112' 
+        WhenGettingBuildMetadata
+        ThenBuildMetadataIs -BuildNumber '112' `
+                            -BuildID '10187821' `
+                            -JobName 'WhiskeyName' `
+                            -BuildUri 'https://ci.appveyor.com/project/whs/whiskeyslug/build/1.1.1+112' `
+                            -ScmUri 'https://github.com/webmd-health-services/Whiskey.git' `
+                            -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                            -ScmBranch 'master' `
+                            -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug' 
+        ThenBuildServerIs 'AppVeyor'
+    }
+
 }

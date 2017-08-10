@@ -47,6 +47,36 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.ScmBranch = $buildInfo.ScmBranch -replace '^origin/',''
         $buildInfo.BuildServerName = 'Jenkins'
     }
+    elseif( (Test-Path -Path 'env:APPVEYOR') )
+    {
+        $buildInfo.BuildNumber = Get-EnvironmentVariable 'APPVEYOR_BUILD_NUMBER'
+        $buildInfo.BuildID = Get-EnvironmentVariable 'APPVEYOR_BUILD_ID'
+        $accountName = Get-EnvironmentVariable 'APPVEYOR_ACCOUNT_NAME'
+        $projectSlug = Get-EnvironmentVariable 'APPVEYOR_PROJECT_SLUG'
+        $projectUri = 'https://ci.appveyor.com/project/{0}/{1}' -f $accountName,$projectSlug
+        $buildVersion = Get-EnvironmentVariable 'APPVEYOR_BUILD_VERSION'
+        $buildUri = '{0}/build/{1}' -f $projectUri,$buildVersion
+        $buildInfo.BuildUri = $buildUri
+        $buildInfo.JobName = Get-EnvironmentVariable 'APPVEYOR_PROJECT_NAME'
+        $buildInfo.JobUri = $projectUri
+        $baseUri = ''
+        switch( (Get-EnvironmentVariable 'APPVEYOR_REPO_PROVIDER') )
+        {
+            'gitHub'
+            {
+                $baseUri = 'https://github.com'
+            }
+            default
+            {
+                Write-Error -Message ('Unsupported AppVeyor source control provider ''{0}''. If you''d like us to add support for this provider, please submit a new issue at https://github.com/webmd-health-services/Whiskey/issues. Copy/paste your environment variables from this build''s output into your issue.' -f $_)
+            }
+        }
+        $repoName = Get-EnvironmentVariable 'APPVEYOR_REPO_NAME'
+        $buildInfo.ScmUri = '{0}/{1}.git' -f $baseUri,$repoName
+        $buildInfo.ScmCommitID = Get-EnvironmentVariable 'APPVEYOR_REPO_COMMIT'
+        $buildInfo.ScmBranch = Get-EnvironmentVariable 'APPVEYOR_REPO_BRANCH'
+        $buildInfo.BuildServerName = 'AppVeyor'
+    }
 
     return $buildInfo
 }
