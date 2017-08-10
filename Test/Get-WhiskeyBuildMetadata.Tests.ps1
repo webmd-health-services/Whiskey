@@ -25,6 +25,7 @@ InModuleScope 'Whiskey' {
         )
 
         Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:JENKINS_URL' } -MockWith { return $false }
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:APPVEYOR' } -MockWith { return $false }
 
     }
 
