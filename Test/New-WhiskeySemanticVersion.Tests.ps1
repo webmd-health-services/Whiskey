@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 
 InModuleScope -ModuleName 'Whiskey' {
     $buildID = '80'
-    $branch = 'origin/feature/fubar'
+    $branch = 'feature/fubar'
     $commitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
     $appBuildMetadata = 'feature-fubar.deadbee'
     $buildServerBuildMetadata = '80.feature-fubar.deadbee'
@@ -42,28 +42,23 @@ InModuleScope -ModuleName 'Whiskey' {
 
             Describe ('New-WhiskeySemanticVersion.when passed {0}' -f $inputDesc) {
                 Context 'by build server' {
-                    New-MockBuildServerEnvironment
+                    $buildInfo = New-WhiskeyBuildMetadataObject
+                    $buildInfo.BuildNumber = $buildID
+                    $buildInfo.ScmBranch = $branch
+                    $buildInfo.ScmCommitID = $commitID
+                    $buildInfo.BuildServerName = 'Jenkins'
                     It ('should convert to {0}' -f $ByBuildServer) {
-                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -OnBuildServer | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
                     }
                 }
                 Context 'by developer' {
+                    $buildInfo = New-WhiskeyBuildMetadataObject
                     It ('should convert to {0}' -f $ByDeveloper) {
-                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
                     }
                 }
             }
         }
-    }
-
-    function New-MockBuildServerEnvironment
-    {
-        param(
-        )
-
-        Mock -CommandName 'Get-WhiskeyBranch' -ModuleName 'Whiskey' -MockWith { return 'feature/fubar' }
-        Mock -CommandName 'Get-WhiskeyBuildID' -ModuleName 'Whiskey' -MockWith { return '80' }
-        Mock -CommandName 'Get-WhiskeyCommitID' -ModuleName 'Whiskey' -MockWith { return 'deadbeefdeadbeefdeadbeefdeadbeef' }
     }
 
     $testCases = @{

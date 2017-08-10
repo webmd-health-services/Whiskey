@@ -27,8 +27,9 @@ function New-WhiskeySemanticVersion
         [string]
         $Prerelease,
 
-        [Switch]
-        $OnBuildServer
+        [Parameter(Mandatory=$true)]
+        [object]
+        $BuildMetadata
     )
 
     Set-StrictMode -Version 'Latest'
@@ -41,22 +42,21 @@ function New-WhiskeySemanticVersion
     else
     {
         $patch = '0'
-        if( $OnBuildServer )
+        if( $BuildMetadata.IsBuildServer )
         {
-            $patch = Get-WhiskeyBuildID
+            $patch = $BuildMetadata.BuildNumber
         }
         $today = Get-Date
         $semVersion = New-Object 'SemVersion.SemanticVersion' $today.Year,$today.ToString('MMdd'),$patch,$Prerelease
     }
 
-    $buildMetadata = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
-    if( $OnBuildServer )
+    $buildInfo = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
+    if( $BuildMetadata.IsBuildServer )
     {
-        $branch = Get-WhiskeyBranch
+        $branch = $BuildMetadata.ScmBranch
         $branch = $branch -replace '[^A-Za-z0-9-]','-'
-        $commitID = Get-WhiskeyCommitID
-        $buildID = Get-WhiskeyBuildID
-        $buildMetadata = '{0}.{1}.{2}' -f $buildID,$branch,$commitID
+        $commitID = $BuildMetadata.ScmCommitID.Substring(0,7)
+        $buildInfo = '{0}.{1}.{2}' -f $BuildMetadata.BuildNumber,$branch,$commitID
     }
 
     if( -not $Prerelease )
@@ -64,5 +64,5 @@ function New-WhiskeySemanticVersion
         $Prerelease = $semVersion.Prerelease
     }
 
-    return New-Object 'SemVersion.SemanticVersion' $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$Prerelease,$buildMetadata
+    return New-Object 'SemVersion.SemanticVersion' $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$Prerelease,$buildInfo
 }

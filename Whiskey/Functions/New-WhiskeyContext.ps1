@@ -72,12 +72,13 @@ function New-WhiskeyContext
 
     $bitbucketConnection = $null
 
+    $buildMetadata = Get-WhiskeyBuildMetadata
     $publish = $false
-    $byBuildServer = Test-WhiskeyRunByBuildServer
+    $byBuildServer = $buildMetadata.IsBuildServer
     $prereleaseInfo = ''
     if( $byBuildServer )
     {
-        $branch = Get-WhiskeyBranch
+        $branch = $buildMetadata.ScmBranch
         $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
         if( $config.ContainsKey( 'PublishOn' ) )
         {
@@ -110,7 +111,7 @@ function New-WhiskeyContext
                 if( $branch -match $regex )
                 {
                     Write-Verbose -Message ('     {0}     -match  /{1}/' -f $branch,$regex)
-                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhiskeyBuildID)
+                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],$buildMetadata.BuildNumber
                 }
                 else
                 {
@@ -132,7 +133,7 @@ function New-WhiskeyContext
         }
     }
 
-    $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -OnBuildServer:$byBuildServer -ErrorAction Stop
+    $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
     if( -not $semVersion )
     {
         Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
@@ -173,6 +174,7 @@ function New-WhiskeyContext
     $context.ByDeveloper = (-not $byBuildServer);
     $context.Publish = $publish;
     $context.RunMode = 'Build';
+    $context.BuildMetadata = $buildMetadata
 
     return $context
 }

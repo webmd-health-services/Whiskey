@@ -28,6 +28,7 @@ function New-WhiskeyContextObject
                                     ByDeveloper = $true;
                                     Publish = $false;
                                     RunMode = 'Build';
+                                    BuildMetadata = (New-WhiskeyBuildMetadataObject);
                                 }
     $context | Add-Member -MemberType ScriptMethod -Name 'ShouldClean' -Value { return $this.RunMode -eq 'Clean' }
     $context | Add-Member -MemberType ScriptMethod -Name 'ShouldInitialize' -Value { return $this.RunMode -eq 'Initialize' }

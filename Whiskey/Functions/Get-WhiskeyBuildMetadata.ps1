@@ -32,41 +32,21 @@ function Get-WhiskeyBuildMetadata
         Get-Item -Path ('env:{0}' -f $Name) | Select-Object -ExpandProperty 'Value'
     }
 
-    $buildNumber = 
-        $buildID = 
-        $buildUri = 
-        $jobName = 
-        $scmUri = 
-        $scmID = 
-        $buildServerName = 
-        $scmBranch = ''
+    $buildInfo = New-WhiskeyBuildMetadataObject
 
     if( (Test-Path -Path 'env:JENKINS_URL') )
     {
-        $buildNumber = Get-EnvironmentVariable 'BUILD_NUMBER'
-        $buildID = Get-EnvironmentVariable 'BUILD_TAG'
-        $buildUri = Get-EnvironmentVariable 'BUILD_URL'
-        $jobName = Get-EnvironmentVariable 'JOB_NAME'
-        $scmUri = Get-EnvironmentVariable 'GIT_URL'
-        $scmID = Get-EnvironmentVariable 'GIT_COMMIT'
-        $scmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
-        $scmBranch = $scmBranch -replace '^origin/',''
-        $buildServerName = 'Jenkins'
+        $buildInfo.BuildNumber = Get-EnvironmentVariable 'BUILD_NUMBER'
+        $buildInfo.BuildID = Get-EnvironmentVariable 'BUILD_TAG'
+        $buildInfo.BuildUri = Get-EnvironmentVariable 'BUILD_URL'
+        $buildInfo.JobName = Get-EnvironmentVariable 'JOB_NAME'
+        $buildInfo.ScmUri = Get-EnvironmentVariable 'GIT_URL'
+        $buildInfo.ScmCommitID = Get-EnvironmentVariable 'GIT_COMMIT'
+        $buildInfo.ScmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
+        $buildInfo.ScmBranch = $scmBranch -replace '^origin/',''
+        $buildInfo.BuildServerName = 'Jenkins'
     }
 
-    $info = [pscustomobject]@{
-                                BuildNumber = $buildNumber;
-                                BuildID = $buildID;
-                                BuildServerName = $buildServerName;
-                                BuildUri = $buildUri;
-                                JobName = $jobName;
-                                ScmBranch = $scmBranch;
-                                ScmCommitID = $scmID;
-                                ScmUri = $scmUri;
-                            }
-    $info |
-        Add-Member -MemberType ScriptProperty -Name 'IsJenkins' -Value { return $this.BuildServerName -eq 'Jenkins' } -PassThru |
-        Add-Member -MemberType ScriptProperty -Name 'IsDeveloper' -Value { return $this.BuildServerName -eq '' } -PassThru |
-        Add-Member -MemberType ScriptProperty -Name 'IsBuildServer' -Value { return -not $this.IsDeveloper } -PassThru 
+    return $buildInfo
 }
 

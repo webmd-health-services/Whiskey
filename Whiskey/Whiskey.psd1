@@ -77,7 +77,6 @@
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
-                            'Get-WhiskeyCommitID',
                             'Get-WhiskeyCredential',
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
