@@ -77,6 +77,39 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.ScmBranch = Get-EnvironmentVariable 'APPVEYOR_REPO_BRANCH'
         $buildInfo.BuildServerName = 'AppVeyor'
     }
+    elseif( (Test-Path -Path 'env:TEAMCITY_BUILD_PROPERTIES_FILE') )
+    {
+        function Import-TeamCityProperty
+        {
+            [OutputType([hashtable])]
+            param(
+                $Path
+            )
+
+            $properties = @{ }
+            Get-Content -Path $Path |
+                Where-Object { $_ -match '^([^=]+)=(.*)$' } |
+                ForEach-Object { $properties[$Matches[1]] = $Matches[2] -replace '\\(.)','$1' }
+            $properties
+        }
+
+        $buildInfo.BuildNumber = Get-EnvironmentVariable 'BUILD_NUMBER'
+        $buildInfo.ScmCommitID = Get-EnvironmentVariable 'BUILD_VCS_NUMBER'
+        $buildPropertiesPath = Get-EnvironmentVariable 'TEAMCITY_BUILD_PROPERTIES_FILE'
+
+        $buildProperties = Import-TeamCityProperty -Path $buildPropertiesPath
+        $buildInfo.BuildID = $buildProperties['teamcity.build.id']
+        $buildInfo.JobName = $buildProperties['teamcity.buildType.id']
+        
+        $configProperties = Import-TeamCityProperty -Path $buildProperties['teamcity.configuration.properties.file']
+        $buildInfo.ScmBranch = $configProperties['vcsroot.branch'] -replace '^refs/heads/',''
+        $buildInfo.ScmUri = $configProperties['vcsroot.url']
+        $buildInfo.BuildServerName = 'TeamCity'
+
+        $serverUri = $configProperties['teamcity.serverUrl']
+        $buildInfo.JobUri = '{0}/viewType.html?buildTypeId={1}' -f $serverUri,$buildInfo.JobName
+        $buildInfo.BuildUri = '{0}/viewLog.html?buildId={1}&buildTypeId={2}' -f $serverUri,$buildInfo.BuildID,$buildInfo.JobName
+    }
 
     return $buildInfo
 }

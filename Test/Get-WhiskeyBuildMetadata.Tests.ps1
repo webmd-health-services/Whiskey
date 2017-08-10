@@ -25,7 +25,8 @@ InModuleScope 'Whiskey' {
         )
 
         Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:JENKINS_URL' } -MockWith { return $false }
-        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:APPVEYOR' } -MockWith { return $false }
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:TEAMCITY_BUILD_PROPERTIES_FILE' } -MockWith { return $false }
+        GivenNotRunningUnderAppVeyor
 
     }
 
@@ -90,6 +91,7 @@ InModuleScope 'Whiskey' {
             $GitBranch
         )
 
+        GivenNotRunningUnderAppVeyor
         GivenEnvironmentVariable 'JENKINS_URL' 'https://jenkins.example.com'
         GivenEnvironmentVariable 'BUILD_NUMBER' $BuildNumber
         GivenEnvironmentVariable 'BUILD_TAG' $BuildID
@@ -104,6 +106,62 @@ InModuleScope 'Whiskey' {
         }
     }
 
+    function GivenNotRunningUnderAppVeyor
+    {
+        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:APPVEYOR' } -MockWith { return $false }
+    }
+
+    function GivenTeamCityEnvironment
+    {
+        param(
+            [Parameter(Mandatory=$true)]
+            $BuildNumber,
+            [Parameter(Mandatory=$true)]
+            $VcsNumber,
+            [Parameter(Mandatory=$true)]
+            $ProjectName,
+            [Parameter(Mandatory=$true)]
+            $VcsBranch,
+            [Parameter(Mandatory=$true)]
+            $VcsUri,
+            [Parameter(Mandatory=$true)]
+            $ServerUri,
+            [Parameter(Mandatory=$true)]
+            $BuildTypeID,
+            [Parameter(Mandatory=$true)]
+            $BuildID
+        )
+
+        GivenNotRunningUnderAppVeyor
+        GivenEnvironmentVariable 'BUILD_NUMBER' $BuildNumber
+        GivenEnvironmentVariable 'BUILD_VCS_NUMBER' $VcsNumber
+        GivenEnvironmentVariable 'TEAMCITY_PROJECT_NAME' $ProjectName
+
+        function GivenProperty
+        {
+            param(
+                $Path,
+                $Name,
+                $Value
+            )
+
+            $Value = $Value -replace '([:\\])','\$1'
+            ('{0}={1}' -f $Name,$Value) | Add-Content -Path $Path
+        }
+
+        $buildPropertiesPath = Join-Path -Path $TestDrive.FullName -ChildPath 'teamcity.build890238409.properties'
+        $configPropertiesPath = Join-Path -Path $TestDrive.FullName -ChildPath 'teamcity.config890238409.properties'
+
+        # teamcity.configuration.properties.fileJoin-Path -Path $TestDrive.FullName -ChildPath 'teamcity.build.properties.file'
+        GivenEnvironmentVariable 'TEAMCITY_BUILD_PROPERTIES_FILE' $buildPropertiesPath
+        GivenProperty $buildPropertiesPath 'teamcity.build.id' $BuildID
+        GivenProperty $buildPropertiesPath 'teamcity.configuration.properties.file' $configPropertiesPath
+        GivenProperty $buildPropertiesPath 'teamcity.buildType.id' $BuildTypeID
+
+        GivenProperty $configPropertiesPath 'vcsroot.branch' $VcsBranch
+        GivenProperty $configPropertiesPath 'vcsroot.url' $VcsUri
+        GivenProperty $configPropertiesPath 'teamcity.serverUrl' $ServerUri
+    }
 
     function Init
     {
@@ -251,6 +309,27 @@ InModuleScope 'Whiskey' {
                             -ScmBranch 'master' `
                             -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug' 
         ThenBuildServerIs 'AppVeyor'
+    }
+
+    Describe 'Get-WhiskeyBuildMetadata.when running under TeamCity' {
+        GivenTeamCityEnvironment -BuildNumber '13' `
+                                 -VcsNumber 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                                 -ProjectName 'TeamCityWhiskeyAdapter' `
+                                 -VcsBranch 'refs/heads/master' `
+                                 -VcsUri 'https://git.example.com' `
+                                 -ServerUri 'https://teamcity.example.com' `
+                                 -BuildTypeID 'TeamCityWhiskeyAdapter_Build' `
+                                 -BuildID '30' 
+        WhenGettingBuildMetadata
+        ThenBuildMetadataIs -BuildNumber '13' `
+                            -BuildID '30' `
+                            -JobName 'TeamCityWhiskeyAdapter_Build' `
+                            -JobUri 'https://teamcity.example.com/viewType.html?buildTypeId=TeamCityWhiskeyAdapter_Build' `
+                            -BuildUri 'https://teamcity.example.com/viewLog.html?buildId=30&buildTypeId=TeamCityWhiskeyAdapter_Build' `
+                            -ScmUri 'https://git.example.com' `
+                            -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                            -ScmBranch 'master' 
+        ThenBuildServerIs 'TeamCity'
     }
 
 }
