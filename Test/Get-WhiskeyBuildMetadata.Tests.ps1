@@ -154,7 +154,7 @@ InModuleScope 'Whiskey' {
         Init
         GivenJenkinsEnvironment -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'origin/master'
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'origin/master'
+        ThenBuildMetadataIs -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'master'
         ThenBuildServerIs 'Jenkins'
     }
 

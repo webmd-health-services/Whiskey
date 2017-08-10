@@ -50,6 +50,7 @@ function Get-WhiskeyBuildMetadata
         $scmUri = Get-EnvironmentVariable 'GIT_URL'
         $scmID = Get-EnvironmentVariable 'GIT_COMMIT'
         $scmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
+        $scmBranch = $scmBranch -replace '^origin/',''
         $buildServerName = 'Jenkins'
     }
 
