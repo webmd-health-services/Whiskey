@@ -39,6 +39,8 @@ InModuleScope 'Whiskey' {
             [Parameter(Mandatory=$true)]
             $JobName,
             [Parameter(Mandatory=$true)]
+            $JobUri,
+            [Parameter(Mandatory=$true)]
             $BuildUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
             $GitUri,
@@ -52,6 +54,7 @@ InModuleScope 'Whiskey' {
         GivenEnvironmentVariable 'BUILD_NUMBER' $BuildNumber
         GivenEnvironmentVariable 'BUILD_TAG' $BuildID
         GivenEnvironmentVariable 'JOB_NAME' $JobName
+        GivenEnvironmentVariable 'JOB_URL' $JobUri
         GivenEnvironmentVariable 'BUILD_URL' $BuildUri
         if( $PSCmdlet.ParameterSetName -eq 'WithGitScm' )
         {
@@ -78,6 +81,8 @@ InModuleScope 'Whiskey' {
             [Parameter(Mandatory=$true)]
             $JobName,
             [Parameter(Mandatory=$true)]
+            $JobUri,
+            [Parameter(Mandatory=$true)]
             $BuildUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
             $GitUri,
@@ -99,6 +104,10 @@ InModuleScope 'Whiskey' {
 
         It ('should set job name') {
             $buildInfo.JobName | Should Be $JobName
+        }
+
+        It ('should set job URI') {
+            $buildInfo.JobUri | Should Be $JobUri
         }
 
         It ('should set build URI') {
@@ -152,9 +161,23 @@ InModuleScope 'Whiskey' {
 
     Describe 'Get-WhiskeyBuildMetadata.when running under Jenkins' {
         Init
-        GivenJenkinsEnvironment -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'origin/master'
+        GivenJenkinsEnvironment -BuildNumber '27' `
+                                -BuildID 'jenkins_Fubar_27' `
+                                -JobName 'Fubar' `
+                                -BuildUri 'https://build.example.com' `
+                                -GitUri 'https://git.example.com' `
+                                -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                                -GitBranch 'origin/master' `
+                                -JobUri 'https://job.example.com'
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber '27' -BuildID 'jenkins_Fubar_27' -JobName 'Fubar' -BuildUri 'https://build.example.com' -GitUri 'https://git.example.com' -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' -GitBranch 'master'
+        ThenBuildMetadataIs -BuildNumber '27' `
+                            -BuildID 'jenkins_Fubar_27' `
+                            -JobName 'Fubar' `
+                            -BuildUri 'https://build.example.com' `
+                            -GitUri 'https://git.example.com' `
+                            -GitCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
+                            -GitBranch 'master' `
+                            -JobUri 'https://job.example.com' 
         ThenBuildServerIs 'Jenkins'
     }
 
@@ -162,7 +185,7 @@ InModuleScope 'Whiskey' {
         Init
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -GitUri '' -GitCommit '' -GitBranch ''
+        ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -GitUri '' -GitCommit '' -GitBranch '' -JobUri ''
         ThenRunByDeveloper
     }
 }

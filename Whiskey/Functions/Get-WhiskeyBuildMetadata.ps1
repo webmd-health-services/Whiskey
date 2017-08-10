@@ -40,10 +40,11 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.BuildID = Get-EnvironmentVariable 'BUILD_TAG'
         $buildInfo.BuildUri = Get-EnvironmentVariable 'BUILD_URL'
         $buildInfo.JobName = Get-EnvironmentVariable 'JOB_NAME'
+        $buildInfo.JobUri = Get-EnvironmentVariable 'JOB_URL'
         $buildInfo.ScmUri = Get-EnvironmentVariable 'GIT_URL'
         $buildInfo.ScmCommitID = Get-EnvironmentVariable 'GIT_COMMIT'
         $buildInfo.ScmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
-        $buildInfo.ScmBranch = $scmBranch -replace '^origin/',''
+        $buildInfo.ScmBranch = $buildInfo.ScmBranch -replace '^origin/',''
         $buildInfo.BuildServerName = 'Jenkins'
     }
 

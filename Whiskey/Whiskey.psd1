@@ -145,6 +145,8 @@
 * ***BREAKING CHANGE***: Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
 * ***BREAKING CHANGE***: Removed `Test-WhiskeyRunByBuildServer` function. You should use the `ByBuildServer` or `ByDeveloper` properties on the build's context object (which is returned by `New-WhiskeyContext`).
 * ***BREAKING CHANGE***: The `ConvertTo-WhiskeySemanticVersion` function now tries to convert its input into a semantic version. It no longer also tries to create a version number for the current build. It is now safe to use this function to convert objects to version numbers.
+* Build metadata is now available on a `BuildMetadata` property on build context objects returned by `New-WhiskeyContext`. This includes information like build number, job name, source control information, etc.
+* Fixed: setting a build status in Bitbucket Server doesn't replace previous statuses. If any build of a commit has ever failed, Bitbucket Server shows that commit as failed.
 '@
         } # End of PSData hashtable
 

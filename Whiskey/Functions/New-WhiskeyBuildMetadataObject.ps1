@@ -13,6 +13,7 @@ function New-WhiskeyBuildMetadataObject
                                 BuildServerName = '';
                                 BuildUri = '';
                                 JobName = '';
+                                JobUri = '';
                                 ScmBranch = '';
                                 ScmCommitID = '';
                                 ScmUri = '';
