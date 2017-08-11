@@ -45,9 +45,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $Name = $defaultPackageName,
 
         [string]
-        $ForApplicationName,
-
-        [string]
         $Description = $defaultDescription,
 
         [string]
@@ -133,11 +130,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.SemVer2NoBuildMetadata,$taskContext.Version.SemVer2.Prerelease)
     }
 
-    if( $ForApplicationName )
-    {
-        $taskContext.ApplicationName = $ForApplicationName
-    }
-    
     $threwException = $false
     $At = $null
 
@@ -856,21 +848,6 @@ Describe 'New-WhiskeyProGetUniversalPackage.when custom application root doesn''
     { Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'ProGetUniversalPackage' } | Should Throw
 
     ThenTaskFails 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
-}
-
-Describe 'New-WhiskeyProGetUniversalPackage.when packaging everything with a custom application name' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-                                      -FileName $fileNames `
-                                      -OnDevelopBranch
-
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-                                            -ThatIncludes '*.html' `
-                                            -HasRootItems $dirNames `
-                                            -HasFiles 'html.html' `
-                                            -ForApplicationName 'foo' 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when cleaning' {

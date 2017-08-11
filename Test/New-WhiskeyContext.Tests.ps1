@@ -23,9 +23,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [Switch]
             $ByBuildServer,
 
-            $DownloadRoot,
-
-            $ApplicationName
+            $DownloadRoot
         )
 
         It 'should set environment' {
@@ -133,8 +131,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [String]
             $OnBranch = 'develop',
 
-            $ForApplicationName,
-
             [string[]]
             $PublishingOn,
 
@@ -155,11 +151,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         if( $WithVersion )
         {
             $Configuration['Version'] = $WithVersion
-        }
-
-        if( $ForApplicationName )
-        {
-            $Configuration['ApplicationName'] = $ForApplicationName
         }
 
         if( $PublishingOn )
@@ -394,9 +385,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $Environment = 'developer',
 
             [SemVersion.SemanticVersion]
-            $WithSemanticVersion,
-
-            $WithApplicationName = $null
+            $WithSemanticVersion
         )
 
         begin
@@ -409,10 +398,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $iWasCalled = $true
 
             Assert-Context -Environment $Environment -Context $script:Context -SemanticVersion $WithSemanticVersion
-
-            It 'should set application name' {
-                $script:Context.ApplicationName | Should Be $WithApplicationName
-            }
         }
 
         end
@@ -520,9 +505,9 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when application name in configuration file' {
         Init
-        GivenConfiguration -WithVersion '1.2.3' -ForApplicationName 'fubar'
+        GivenConfiguration -WithVersion '1.2.3'
         WhenCreatingContext -ByDeveloper
-        ThenDeveloperContextCreated -WithApplicationName 'fubar' -WithSemanticVersion '1.2.3'
+        ThenDeveloperContextCreated -WithSemanticVersion '1.2.3'
         ThenDoesNotPublish
     }
 

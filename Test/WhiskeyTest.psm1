@@ -115,9 +115,6 @@ function New-WhiskeyTestContext
         [switch]
         $InReleaseMode,
 
-        [string]
-        $ForApplicationName,
-
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         [Alias('ByBuildServer')]
@@ -175,11 +172,6 @@ function New-WhiskeyTestContext
             $configData = @{
                                 'Version' = $ForVersion.ToString()
                            }
-            if( $ForApplicationName )
-            {
-                $configData['ApplicationName'] = $ForApplicationName
-            }
-
             if( $ForTaskName )
             {
                 $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )

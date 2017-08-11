@@ -12,7 +12,6 @@ function New-WhiskeyContextObject
                                     ApiKeys = @{ };
                                     Environment = '';
                                     Credentials = @{ }
-                                    ApplicationName = '';
                                     BuildRoot = '';
                                     ConfigurationPath = '';
                                     OutputDirectory = '';

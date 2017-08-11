@@ -58,12 +58,6 @@ function New-WhiskeyContext
         $DownloadRoot = $buildRoot
     }
 
-    $appName = $null
-    if( $config.ContainsKey('ApplicationName') )
-    {
-        $appName = $config['ApplicationName']
-    }
-
     $bitbucketConnection = $null
 
     $buildMetadata = Get-WhiskeyBuildMetadata
@@ -148,7 +142,6 @@ function New-WhiskeyContext
     $context = New-WhiskeyContextObject
 
     $context.Environment = $Environment;
-    $context.ApplicationName = $appName;
     $context.BuildRoot = $buildRoot;
     $context.ConfigurationPath = $ConfigurationPath;
 
