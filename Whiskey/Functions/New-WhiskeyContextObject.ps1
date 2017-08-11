@@ -13,7 +13,6 @@ function New-WhiskeyContextObject
                                     Environment = '';
                                     Credentials = @{ }
                                     ApplicationName = '';
-                                    ReleaseName ='';
                                     BuildRoot = '';
                                     ConfigurationPath = '';
                                     OutputDirectory = '';
