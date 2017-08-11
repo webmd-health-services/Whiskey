@@ -72,8 +72,8 @@ function New-WhiskeyContext
         {
             foreach( $publishRegex in $config['PublishOn'] )
             {
-                $publish = $branch -match $publishRegex
-                Write-Verbose -Message ('Publish  {0,-5}  ''{1}'' -match /{2}/' -f $publish,$branch,$publishRegex) -Verbose
+                $publish = $branch -like $publishRegex
+                Write-Verbose -Message ('Publish  {0,-5}  ''{1}'' -like /{2}/' -f $publish,$branch,$publishRegex)
                 if( $publish )
                 {
                     break

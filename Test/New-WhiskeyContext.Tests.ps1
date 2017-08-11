@@ -569,7 +569,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when publishing on custom branch' {
         Init
-        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3\.0'
+        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'feature/3.0' -ForBuildServer -PublishingOn 'feature/3.0'
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3'
         ThenPublishes
@@ -577,14 +577,14 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and building on one of them' {
         Init
-        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'fubarsnafu' -ForBuildServer -PublishingOn @( 'feature/3\.0', 'fubar' ) 
+        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'fubarsnafu' -ForBuildServer -PublishingOn @( 'feature/3.0', 'fubar*' ) 
         WhenCreatingContext -ByBuildServer
         ThenPublishes
     }
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and not building on one of them' {
         Init
-        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3\.0', '^master$' ) 
+        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3.0', 'master' ) 
         WhenCreatingContext -ByBuildServer
         ThenDoesNotPublish
     }

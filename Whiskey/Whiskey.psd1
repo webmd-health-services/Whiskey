@@ -150,6 +150,7 @@
 * Added support for running builds under AppVeyor.
 * Added support for running builds under TeamCity.
 * ***BREAKING CHANGE***: Whiskey no longer publishes on `develop`, `release`, `release/*`, or `master` branches by default. Publishing only happens if you supply a `PublishOn` property in your whiskey.yml file.
+* ***BREAKING CHANGE***: PublishOn property now uses wildcards instead of regular expressions.
 * ***BREAKING CHANGE***: PublishBuildMasterPackage task now requires a `ReleaseName` property.
 * ***BREAKING CHANGE***: Build context object no longer has a ReleaseName property.
 * ***BREAKING CHANGE***: Build context object no longer has an ApplicationName property.
