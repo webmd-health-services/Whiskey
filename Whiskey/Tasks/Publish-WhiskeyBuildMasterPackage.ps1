@@ -25,7 +25,7 @@ function Publish-WhiskeyBuildMasterPackage
     $releaseName = $TaskParameter['ReleaseName']
     if( -not $releaseName )
     {
-        $releaseName = $TaskContext.ReleaseName
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ReleaseName'' is mandatory. It must be set to the release name in the BuildMaster application where the package should be published.')
     }
 
     $buildmasterUri = $TaskParameter['Uri']

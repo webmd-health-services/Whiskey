@@ -39,6 +39,11 @@ function GivenNoApplicationName
     $script:appName = $null
 }
 
+function GivenNoReleaseName
+{
+    $script:releaseName = $null
+}
+
 function GivenNoRelease
 {
     param(
@@ -98,13 +103,23 @@ function WhenCreatingPackage
     param(
     )
 
+    if( -not $taskParameter )
+    {
+        $taskParameter = @{ }
+    }
+
     $taskParameter['ApplicationName'] = $appName
 
-    $script:context = New-WhiskeyTestContext -ForVersion $version -ForReleaseName $releaseName -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
+    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
 
     if( $apiKeyID )
     {
         Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
+    }
+
+    if( $releaseName )
+    {
+        $taskParameter['ReleaseName'] = $releaseName
     }
 
     $package = $mockPackage
@@ -265,14 +280,12 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is mi
     ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when customizing ReleaseName property') {
-    GivenApiKey 'BuildMaster' 'fubarsnafu'
+Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missing') {
     GivenVersion '9.8.3-rc.1+build.deadbee'
     GivenApplicationName 'fubar'
-    GivenRelease 'snafu' -ForApplication 'fubar'
-    GivenProperty @{ 'ReleaseName' = 'hello' ; Uri = 'https://buildmaster.example.com'; 'ApiKeyID' = 'BuildMaster' }
-    WhenCreatingPackage 
-    ThenCreatedPackage '9.8.3' -InRelease 'hello' -ForApplication 'fubar' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ }
+    GivenNoReleaseName
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
 }
 
 Describe ('Publish-WhiskeyBuildMasterPackage.when Uri property is missing') {
