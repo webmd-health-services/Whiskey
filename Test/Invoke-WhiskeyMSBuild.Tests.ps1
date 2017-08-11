@@ -129,7 +129,7 @@ function WhenRunningTask
     
     try
     {
-        $script:output = Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter $WithParameter | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' | ForEach-Object { Write-Debug $_ ; $_ }
     }
     catch
     {
@@ -356,7 +356,7 @@ function ThenWritesError
     }
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when building real projects as a developer' {
+Describe 'MSBuild Task.when building real projects as a developer' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenNuGetPackagesRestored
@@ -365,7 +365,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when building real projects as a developer' 
     ThenDebugOutputLogged
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when building multiple real projects as a developer' {
+Describe 'MSBuild Task.when building multiple real projects as a developer' {
     GivenProjectsThatCompile
     WhenRunningTask -AsDeveloper
     ThenNuGetPackagesRestored
@@ -373,7 +373,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when building multiple real projects as a de
     ThenAssembliesAreNotVersioned
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when building real projects as build server' {
+Describe 'MSBuild Task.when building real projects as build server' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
     ThenNuGetPackagesRestored
@@ -383,7 +383,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when building real projects as build server'
 
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when compilation fails' {
+Describe 'MSBuild Task.when compilation fails' {
     GivenAProjectThatDoesNotCompile
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenNuGetPackagesRestored
@@ -392,7 +392,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when compilation fails' {
     ThenWritesError '\bMSBuild\b.*\btarget\b.*\bconfiguration failed\.'
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when Path parameter is empty' {
+Describe 'MSBuild Task.when Path parameter is empty' {
     GivenNoPathToBuild
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -401,7 +401,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when Path parameter is empty' {
     ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when Path parameter is not provided' {
+Describe 'MSBuild Task.when Path parameter is not provided' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithNoPath -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -410,7 +410,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when Path parameter is not provided' {
     ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when Path Parameter does not exist' {
+Describe 'MSBuild Task.when Path Parameter does not exist' {
     GivenAProjectThatDoesNotExist
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -419,7 +419,7 @@ Describe 'Invoke-WhiskeyMSBuildTask.when Path Parameter does not exist' {
     ThenWritesError ([regex]::Escape('does not exist.'))
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when cleaning build output' {
+Describe 'MSBuild Task.when cleaning build output' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenProjectsCompiled
@@ -427,63 +427,62 @@ Describe 'Invoke-WhiskeyMSBuildTask.when cleaning build output' {
     ThenBinsAreEmpty
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when customizing output level' {
+Describe 'MSBuild Task.when customizing output level' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
     ThenOutputIsEmpty
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when run by developer using default verbosity output level' {
+Describe 'MSBuild Task.when run by developer using default verbosity output level' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenOutputIsMinimal
 }
 
-Describe 'Invoke-WhiskeyMSBuildTask.when run by build server using default verbosity output level' {
+Describe 'MSBuild Task.when run by build server using default verbosity output level' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
     ThenOutputIsMinimal
 }
 
-Describe 'Invoke-WhiskeyMSbuildTask.when passing extra build properties' {
+Describe 'MSBuild Task.when passing extra build properties' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
     ThenOutput -Contains 'Fubar=Snafu'
 }
 
-Describe 'Invoke-WhiskeyMSBuild.when passing custom arguments' {
+Describe 'MSBuild Task.when passing custom arguments' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
-Describe 'Invoke-WhiskeyMSBuild.when passing a single custom argument' {
+Describe 'MSBuild Task.when passing a single custom argument' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
-Describe 'Invoke-WhiskeyMSBuild.when run with no CPU parameter' {
+Describe 'MSBuild Task.when run with no CPU parameter' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
     ThenOutput -Contains '\n\ {5}\d>'
 }
 
-Describe 'Invoke-WhiskeyMSBuild.when run with CPU parameter' {
+Describe 'MSBuild Task.when run with CPU parameter' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
     ThenOutput -DoesNotContain '^\ {5}\d>'
 }
 
-Describe 'Invoke-WhiskeyBuild.when using custom output directory' {
+Describe 'MSBuild Task.when using custom output directory' {
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
     ThenProjectsCompiled -To '.myoutput'
 }
 
-Describe 'Invoke-WhiskeyBuild.when using custom targets' {
+Describe 'MSBuild Task.when using custom targets' {
     GivenCustomMSBuildScriptWithMultipleTargets
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
     ThenBothTargetsRun
 }
-

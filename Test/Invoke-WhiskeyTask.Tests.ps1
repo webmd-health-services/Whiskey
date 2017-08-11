@@ -386,7 +386,7 @@ Describe 'Invoke-WhiskeyTask.when there are task-specific registered event handl
     Init
     GivenPlugins -ForSpecificTask 'PowerShell'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-WhiskeyMsBuildTask' -ModuleName 'Whiskey'
+    Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ Path = 'somefile.ps1' }
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }

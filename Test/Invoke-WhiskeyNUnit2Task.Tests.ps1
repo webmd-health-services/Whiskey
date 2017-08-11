@@ -121,7 +121,7 @@ function Invoke-NUnitTask
                                         'NUnit2PassingTest\NUnit2PassingTest.sln'   
                                     )
                           }
-            Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter $taskParameter
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
         }
         if( $WithNoPath )
         {
@@ -348,7 +348,7 @@ function WhenRunningTask
 
     $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
 
-    Invoke-WhiskeyMSBuildTask -TaskContext $context -TaskParameter @{ 'Path' = $solutionToBuild }
+    Invoke-WhiskeyTask -TaskContext $context -Parameter @{ 'Path' = $solutionToBuild } -Name 'MSBuild'
 
     # Make sure there are spaces in the path so that we test things get escaped properly.
     Get-ChildItem -Path $context.BuildRoot -Filter $configuration -Directory -Recurse |

@@ -80,8 +80,6 @@
                             'Get-WhiskeyCredential',
                             'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
-                            'Invoke-WhiskeyMSBuild',
-                            'Invoke-WhiskeyMSBuildTask',
                             'Invoke-WhiskeyNodeTask',
                             'Invoke-WhiskeyNUnit2Task',
                             'Invoke-WhiskeyPester3Task',

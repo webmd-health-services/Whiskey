@@ -347,7 +347,7 @@ BuildTasks:
 "@
     GivenPlugins -ForSpecificTask 'PowerShell'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-WhiskeyMsBuildTask' -ModuleName 'Whiskey'
+    Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
 
     WhenRunningPipeline 'BuildTasks'
     ThenPipelineSucceeded
