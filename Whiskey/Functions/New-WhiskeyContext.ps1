@@ -71,17 +71,17 @@ function New-WhiskeyContext
         if( $config.ContainsKey( 'PublishOn' ) )
         {
             Write-Verbose -Message ('PublishOn')
-            foreach( $publishRegex in $config['PublishOn'] )
+            foreach( $publishWildcard in $config['PublishOn'] )
             {
-                $publish = $branch -like $publishRegex
+                $publish = $branch -like $publishWildcard
                 if( $publish )
                 {
-                    Write-Verbose -Message ('           {0}    -like  {1}' -f $branch,$publishRegex)
+                    Write-Verbose -Message ('           {0}    -like  {1}' -f $branch,$publishWildcard)
                     break
                 }
                 else
                 {
-                    Write-Verbose -Message ('           {0} -notlike  {1}' -f $branch,$publishRegex)
+                    Write-Verbose -Message ('           {0} -notlike  {1}' -f $branch,$publishWildcard)
                 }
             }
         }
@@ -89,28 +89,28 @@ function New-WhiskeyContext
         if( $config['PrereleaseMap'] )
         {
             $idx = 0
-            Write-Verbose -Message ('Prerelease Map')
+            Write-Verbose -Message ('PrereleaseMap')
             foreach( $item in $config['PrereleaseMap'] )
             {
                 if( $item -isnot [hashtable] -or $item.Count -ne 1 )
                 {
-                    throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a regular expression. The property''s value should be the prerelease identifier to add to the version number on branches that match the regular expression. For example,
+                    throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a wildcard. The property''s value should be the prerelease identifier to add to the version number on branches that match the wildcard. For example,
     
     PrereleaseMap:
-    - "\balpha\b": "alpha"
-    - "\brc\b": "rc"
+    - "alpha/*": "alpha"
+    - "release/*": "rc"
     ' -f $ConfigurationPath,$idx)
                 }
 
-                $regex = $item.Keys | Select-Object -First 1
-                if( $branch -like $regex )
+                $wildcard = $item.Keys | Select-Object -First 1
+                if( $branch -like $wildcard )
                 {
-                    Write-Verbose -Message ('                {0}     -like  {1}' -f $branch,$regex)
-                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],$buildMetadata.BuildNumber
+                    Write-Verbose -Message ('               {0}     -like  {1}' -f $branch,$wildcard)
+                    $prereleaseInfo = '{0}.{1}' -f $item[$wildcard],$buildMetadata.BuildNumber
                 }
                 else
                 {
-                    Write-Verbose -Message ('                {0}  -notlike  {1}' -f $branch,$regex)
+                    Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch,$wildcard)
                 }
                 $idx++
             }
