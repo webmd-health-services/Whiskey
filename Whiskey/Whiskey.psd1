@@ -153,6 +153,9 @@
 * ***BREAKING CHANGE***: Build context object no longer has a ReleaseName property.
 * ***BREAKING CHANGE***: Build context object no longer has an ApplicationName property.
 * ***BREAKING CHANGE***: PrereleaseMap configuration property now uses wildcards instead of regular expressions to match branch names.
+* Added `Version` property to MSBuild task. Use this property to specify which version of MSBuild to use. The default is now the most recent (i.e. highest) version installed.
+* Added `NoFileLogger` property to MSBuild task. Use this property to disable writing debug logs to the output directory.
+* Added `NoMaxCpuCountArgument` property to MSBuild task. Use this property to not pass the `/maxcpucount` parameter to MSBuild.
 '@
         } # End of PSData hashtable
 

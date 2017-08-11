@@ -30,96 +30,10 @@ function Invoke-WhiskeyMSBuild
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whiskey.yml file they were taken from.
         $TaskParameter
     )
-  
-    function Invoke-WhiskeyMSBuild
-    {
-        [CmdletBinding(SupportsShouldProcess=$true)]
-        param(
-            [Parameter(Position=0,Mandatory=$true)]
-            [Alias('ProjectFile')]
-            [string]
-            # The project file to run.
-            $Path,
-    
-            [Parameter(Position=1,Mandatory=$false)]
-            [Alias('Targets')]
-            [string[]]
-            # The targets to run.  Seperate multipe targets by commas.
-            $Target,
-    
-            [Parameter(Mandatory=$false)]
-            [Alias('Properties')]
-            [string[]]
-            # The properties to pass.  Seperate multiple name=value pairs with commas.
-            $Property = @(),
-    
-            [Switch]
-            # Use 32-bit MSBuild
-            $Use32Bit,
 
-            [string[]]
-            # Extra arguments to pass to MSBuild.
-            $ArgumentList = @()
-        )
-
-        #Requires -Version 3
-        Set-StrictMode -Version 'Latest'
-        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-        $pathToMSBuild = "${env:ProgramFiles(x86)}\MSBuild\12.0\bin\amd64\MSBuild.exe"
-        if( -not (Test-Path $pathToMSBuild) )
-        {
-            $pathToMSBuild = "${env:SystemRoot}\Microsoft.Net\Framework64\v4.0.30319\MSBuild.exe"
-        }
-        if( $Use32Bit -or -not (Test-Path $pathToMSBuild) )
-        {
-            $pathToMSBuild = "${env:ProgramFiles(x86)}\MSBuild\12.0\bin\MSBuild.exe"
-            if( -not (Test-Path $pathToMSBuild) )
-            {
-                $pathToMSBuild = "${env:SystemRoot}\Microsoft.Net\Framework\v4.0.30319\MSBuild.exe"
-            }
-        }
-
-        if( -not (Test-path $pathToMSBuild) )
-        {
-            Write-Error "Unable to find MSBuild.  Has it been installed?"
-            return
-        }
-        Write-Verbose "    Found MSBuild at '$pathToMSBuild'."
-
-        if( $Target )
-        {
-            $ArgumentList += "/t:{0}" -f ($Target -join ';')
-        }
-
-        if( $Property )
-        {
-            foreach( $item in $Property )
-            {
-                $name,$value = $item -split '=',2
-                $value = $value.Trim('"')
-                $value = $value.Trim("'")
-                if( $value.EndsWith( '\' ) )
-                {
-                    $value += '\'
-                }
-                $ArgumentList += "/p:$name=""{0}""" -f ($value -replace ' ','%20')
-            }
-        }
-
-        if( $pscmdlet.ShouldProcess($Path, $ArgumentList) )
-        {
-            & $pathToMSBuild $ArgumentList /nologo $Path
-            if( $LASTEXITCODE -ne 0 )
-            {
-                Write-Error ("MSBuild exited with code {0}." -f $LASTEXITCODE)
-            }
-        }
-    }
-
-    Set-StrictMode -version 'latest'  
+    Set-StrictMode -version 'Latest'  
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     #setup
     $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
     
@@ -134,8 +48,26 @@ function Invoke-WhiskeyMSBuild
             - MySolution.sln
             - MyCsproj.csproj')
     }
-
+    
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+
+    $toolsVersionRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
+    $availableVersions = Get-ChildItem -Path $toolsVersionRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending
+    $version = $TaskParameter['Version']
+    if( -not $version )
+    {
+        $version = $availableVersions | Select-Object -First 1
+    }
+
+    $versionRegPath = Join-Path -Path $toolsVersionRegPath -ChildPath $version
+    if( -not (Test-Path -Path $versionRegPath -PathType Container) )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild {0} is not installed. Installed versions are: {1}' -f $version,($availableVersions -join ', '))
+    }
+
+    $msbuildExePath = Get-ItemProperty -Path $versionRegPath -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
+    $msbuildExePath = Join-Path -Path $msbuildExePath -ChildPath 'MSBuild.exe'
+    Write-Verbose -Message ('{0}' -f $msbuildExePath)
     
     $target = @( 'build' )
     if( $TaskContext.ShouldClean() )
@@ -158,16 +90,16 @@ function Invoke-WhiskeyMSBuild
         {
             if( $TaskContext.ShouldClean() )
             {
-                $packageDirectoryPath = join-path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
+                $packageDirectoryPath = Join-Path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
-                    Write-Verbose -Message ('    Removing NuGet packages at {0}.' -f $packageDirectoryPath)
+                    Write-Verbose -Message ('  Removing NuGet packages at {0}.' -f $packageDirectoryPath)
                     Remove-Item $packageDirectoryPath -Recurse -Force
                 }
             }
             else
             {
-                Write-Verbose -Message ('    Restoring NuGet packages.')
+                Write-Verbose -Message ('  Restoring NuGet packages.')
                 & $nugetPath restore $projectPath
             }
         }
@@ -214,10 +146,18 @@ function Invoke-WhiskeyMSBuild
                                   }
 
         $cpuArg = '/maxcpucount'
-        if( $TaskParameter['CpuCount'] )
+        $cpuCount = $TaskParameter['CpuCount']
+        if( $cpuCount )
         {
             $cpuArg = '/maxcpucount:{0}' -f $TaskParameter['CpuCount']
         }
+
+        if( $TaskParameter['NoMaxCpuCountArgument'] )
+        {
+            $cpuArg = ''
+        }
+
+        $noFileLogger = $TaskParameter['NoFileLogger']
 
         $projectFileName = $projectPath | Split-Path -Leaf
         $logFilePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('msbuild.{0}.debug.log' -f $projectFileName)
@@ -225,23 +165,35 @@ function Invoke-WhiskeyMSBuild
                                             ('/verbosity:{0}' -f $verbosity)
                                             $cpuArg
                                             $TaskParameter['Argument']
-                                            '/filelogger9'
-                                            ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
+                                            if( -not $noFileLogger )
+                                            {
+                                                '/filelogger9'
+                                                ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
+                                            }
                                       } | Where-Object { $_ }
-        $separator = '{0}VERBOSE:                   ' -f [Environment]::NewLine
-        Write-Verbose -Message ('    Building')
-        Write-Verbose -Message ('      Target      {0}' -f ($target -join $separator))
-        Write-Verbose -Message ('      Property    {0}' -f ($property -join $separator))
-        Write-Verbose -Message ('      Argument    {0}' -f ($msbuildArgs -join $separator))
-        Invoke-WhiskeyMSBuild -Path $projectPath `
-                            -Target $target `
-                            -Property $property `
-                            -ArgumentList $msbuildArgs `
-                            -ErrorVariable 'errors'
-        if( $errors )
+        $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
+        Write-Verbose -Message ('  Target      {0}' -f ($target -join $separator))
+        Write-Verbose -Message ('  Property    {0}' -f ($property -join $separator))
+        Write-Verbose -Message ('  Argument    {0}' -f ($msbuildArgs -join $separator))
+
+        $propertyArgs = $property | ForEach-Object { 
+            $item = $_
+            $name,$value = $item -split '=',2
+            $value = $value.Trim('"')
+            $value = $value.Trim("'")
+            if( $value.EndsWith( '\' ) )
+            {
+                $value = '{0}\' -f $value
+            }
+            '/p:{0}="{1}"' -f $name,($value -replace ' ','%20')
+        }
+
+        $targetArg = '/t:{0}' -f ($target -join ';')
+
+        & $msbuildExePath $projectPath $targetArg $propertyArgs $msbuildArgs /nologo
+        if( $LASTEXITCODE -ne 0 )
         {
-            throw ('Building ''{0}'' MSBuild project''s ''{1}'' target(s) in ''{2}'' configuration failed.' -f $projectPath,($target -join ';'),$configuration)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild exited with code {0}.' -f $LASTEXITCODE)
         }
     }
 }
-

@@ -8,6 +8,7 @@ $path = $null
 $threwException = $null
 $assembly = $null
 $previousBuildRunAt = $null
+$version = $null
 
 $assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
 foreach( $item in @( 'bin', 'obj', 'packages' ) )
@@ -42,6 +43,18 @@ function GivenAProjectThatCompiles
     $script:assembly = '{0}.dll' -f $ProjectName
 }
 
+function GivenProject
+{
+    param(
+        $Project
+    )
+
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot\project.msbuild'
+    New-Item -Path $path -ItemType 'File' -Force
+    $Project | Set-Content -Path $path -Force
+    $script:path = $path | Split-Path -Leaf
+}
+
 function GivenAProjectThatDoesNotCompile
 {
     GivenAProjectThatCompiles
@@ -69,6 +82,20 @@ function GivenProjectsThatCompile
     $script:path = @( 'NUnit2PassingTest\NUnit2PassingTest.sln', 'NUnit2FailingTest\NUnit2FailingTest.sln' )
     $script:assembly = @( 'NUnit2PassingTest.dll', 'NUnit2FailingTest.dll' )
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.yml') -Destination (Get-BuildRoot)
+}
+
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:version = $Version
+}
+
+function Init
+{
+    $script:version = $null
 }
 
 function WhenRunningTask
@@ -107,13 +134,12 @@ function WhenRunningTask
         $optionalParams['ForBuildServer'] = $true
     }
 
-    $version = @{ }
     if( $AtVersion )
     {
-        $version['ForVersion'] = $AtVersion
+        $optionalParams['ForVersion'] = $AtVersion
     }
 
-    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot') @version
+    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
 
     if( -not $WithNoPath )
     {
@@ -126,7 +152,13 @@ function WhenRunningTask
     {
         $context.RunMode = 'Clean'
     }
+
+    if( $version )
+    {
+        $WithParameter['Version'] = $version
+    }
     
+    $Global:Error.Clear()
     try
     {
         $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' | ForEach-Object { Write-Debug $_ ; $_ }
@@ -213,6 +245,14 @@ function ThenNuGetPackagesNotRestored
 {
     It 'should not restore NuGet packages' {
         Get-ChildItem -Path (Get-BuildRoot) -Filter 'packages' -Recurse | Should -BeNullOrEmpty
+    }
+}
+
+function ThenOutputNotLogged
+{
+    $buildRoot = Get-BuildRoot
+    It 'should write a debug log' {
+        Join-Path -Path $buildRoot -ChildPath ('.output\*.log') | should -Not -Exist
     }
 }
 
@@ -357,6 +397,7 @@ function ThenWritesError
 }
 
 Describe 'MSBuild Task.when building real projects as a developer' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenNuGetPackagesRestored
@@ -366,6 +407,7 @@ Describe 'MSBuild Task.when building real projects as a developer' {
 }
 
 Describe 'MSBuild Task.when building multiple real projects as a developer' {
+    Init
     GivenProjectsThatCompile
     WhenRunningTask -AsDeveloper
     ThenNuGetPackagesRestored
@@ -374,6 +416,7 @@ Describe 'MSBuild Task.when building multiple real projects as a developer' {
 }
 
 Describe 'MSBuild Task.when building real projects as build server' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
     ThenNuGetPackagesRestored
@@ -384,15 +427,17 @@ Describe 'MSBuild Task.when building real projects as build server' {
 }
 
 Describe 'MSBuild Task.when compilation fails' {
+    Init
     GivenAProjectThatDoesNotCompile
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenNuGetPackagesRestored
     ThenProjectsNotCompiled
     ThenTaskFailed
-    ThenWritesError '\bMSBuild\b.*\btarget\b.*\bconfiguration failed\.'
+    ThenWritesError 'MSBuild\ exited\ with\ code\ 1'
 }
 
 Describe 'MSBuild Task.when Path parameter is empty' {
+    Init
     GivenNoPathToBuild
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -402,6 +447,7 @@ Describe 'MSBuild Task.when Path parameter is empty' {
 }
 
 Describe 'MSBuild Task.when Path parameter is not provided' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithNoPath -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -411,6 +457,7 @@ Describe 'MSBuild Task.when Path parameter is not provided' {
 }
 
 Describe 'MSBuild Task.when Path Parameter does not exist' {
+    Init
     GivenAProjectThatDoesNotExist
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenProjectsNotCompiled
@@ -420,6 +467,7 @@ Describe 'MSBuild Task.when Path Parameter does not exist' {
 }
 
 Describe 'MSBuild Task.when cleaning build output' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenProjectsCompiled
@@ -428,61 +476,125 @@ Describe 'MSBuild Task.when cleaning build output' {
 }
 
 Describe 'MSBuild Task.when customizing output level' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
     ThenOutputIsEmpty
 }
 
 Describe 'MSBuild Task.when run by developer using default verbosity output level' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenOutputIsMinimal
 }
 
 Describe 'MSBuild Task.when run by build server using default verbosity output level' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
     ThenOutputIsMinimal
 }
 
 Describe 'MSBuild Task.when passing extra build properties' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
     ThenOutput -Contains 'Fubar=Snafu'
 }
 
 Describe 'MSBuild Task.when passing custom arguments' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
 Describe 'MSBuild Task.when passing a single custom argument' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
 Describe 'MSBuild Task.when run with no CPU parameter' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
     ThenOutput -Contains '\n\ {5}\d>'
 }
 
 Describe 'MSBuild Task.when run with CPU parameter' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
     ThenOutput -DoesNotContain '^\ {5}\d>'
 }
 
 Describe 'MSBuild Task.when using custom output directory' {
+    Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
     ThenProjectsCompiled -To '.myoutput'
 }
 
 Describe 'MSBuild Task.when using custom targets' {
+    Init
     GivenCustomMSBuildScriptWithMultipleTargets
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
     ThenBothTargetsRun
 }
+
+Describe 'MSBuild Task.when using invalid version of MSBuild' {
+    Init
+    GivenAProjectThatCompiles 
+    GivenVersion 'some.bad.version'
+    WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenWritesError -Pattern 'some\.bad\.version\b.*is\ not\ installed'
+}
+
+Describe 'MSBuild Task.when customizing version of MSBuild' {
+    Init
+    GivenProject @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="Build">
+        <Message Importance="High" Text="`$(MSBuildBinPath)" />
+    </Target>
+</Project>
+"@ 
+    $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
+    $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+    $expectedPath = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
+    GivenVersion $version
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; } 
+    ThenOutput -Contains ([regex]::Escape($expectedPath.TrimEnd('\')))
+}
+
+Describe 'MSBuild Task.when disabling multi-CPU builds' {
+    Init
+    GivenProject @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="Build">
+    </Target>
+</Project>
+"@ 
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true; Verbosity = 'diag' }
+    ThenOutput -Contains ('MSBuildNodeCount = 1')
+}
+
+Describe 'MSBuild Task.when disabling file logger' {
+    Init
+    GivenProject @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="Build">
+    </Target>
+</Project>
+"@ 
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
+    ThenOutputNotLogged
+}
+
