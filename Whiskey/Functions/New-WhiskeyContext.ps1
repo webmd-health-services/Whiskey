@@ -70,21 +70,26 @@ function New-WhiskeyContext
 
         if( $config.ContainsKey( 'PublishOn' ) )
         {
+            Write-Verbose -Message ('PublishOn')
             foreach( $publishRegex in $config['PublishOn'] )
             {
                 $publish = $branch -like $publishRegex
-                Write-Verbose -Message ('Publish  {0,-5}  ''{1}'' -like /{2}/' -f $publish,$branch,$publishRegex)
                 if( $publish )
                 {
+                    Write-Verbose -Message ('           {0}    -like  {1}' -f $branch,$publishRegex)
                     break
+                }
+                else
+                {
+                    Write-Verbose -Message ('           {0} -notlike  {1}' -f $branch,$publishRegex)
                 }
             }
         }
 
         if( $config['PrereleaseMap'] )
         {
-            Write-Verbose -Message ('Testing if {0} is a pre-release branch.' -f $branch)
             $idx = 0
+            Write-Verbose -Message ('Prerelease Map')
             foreach( $item in $config['PrereleaseMap'] )
             {
                 if( $item -isnot [hashtable] -or $item.Count -ne 1 )
@@ -98,14 +103,14 @@ function New-WhiskeyContext
                 }
 
                 $regex = $item.Keys | Select-Object -First 1
-                if( $branch -match $regex )
+                if( $branch -like $regex )
                 {
-                    Write-Verbose -Message ('     {0}     -match  /{1}/' -f $branch,$regex)
+                    Write-Verbose -Message ('                {0}     -like  {1}' -f $branch,$regex)
                     $prereleaseInfo = '{0}.{1}' -f $item[$regex],$buildMetadata.BuildNumber
                 }
                 else
                 {
-                    Write-Verbose -Message ('     {0}  -notmatch  /{1}/' -f $branch,$regex)
+                    Write-Verbose -Message ('                {0}  -notlike  {1}' -f $branch,$regex)
                 }
                 $idx++
             }

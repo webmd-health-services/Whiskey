@@ -591,7 +591,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when run by developer on a prerelease branch' {
         Init
-        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'alpha/2.0' -PublishingOn '^alpha\b'
+        GivenConfiguration -WithVersion '1.2.3' -OnBranch 'master' -PublishingOn 'master'
         WhenCreatingContext -ByDeveloper
         ThenSemVer2Is '1.2.3'
         ThenDoesNotPublish
@@ -599,17 +599,26 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
         Init
-        GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer -BuildNumber '93'
+        GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( 'alpha/*' ); 'PrereleaseMap' = @( @{ 'beta/*' = 'beta' } ; @{ 'alpha/*' = 'alpha' } ); } -OnBranch 'alpha/2.0' -ForBuildServer -BuildNumber '93'
         WhenCreatingContext -ByBuildServer
-        ThenSemVer2Is '1.2.3-alpha.93+93.alpha02.0.deadbee'
+        ThenSemVer2Is '1.2.3-alpha.93+93.alpha-2.0.deadbee'
         ThenVersionIs '1.2.3'
         ThenSemVer1Is '1.2.3-alpha93'
     }
 
     Describe 'New-WhiskeyContext.when a PrereleaseMap has multiple keys' {
         Init
-        GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( '^alpha\b' ); 'PrereleaseMap' = @( @{ '\balpha\b' = 'alpha' ; '\bbeta\b' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
+        GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( 'alpha/*' ); 'PrereleaseMap' = @( @{ 'alpha/*' = 'alpha' ; 'beta/*' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
         WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
+    }
+
+    Describe 'New-WhiskeyContext.when there prerelease branches but not building on one of them' {
+        Init
+        GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( 'alphabet' ); 'PrereleaseMap' = @( @{ 'alpha' = 'alpha' } ); } -OnBranch 'alphabet' -ForBuildServer -BuildNumber '94'
+        WhenCreatingContext -ByBuildServer
+        ThenSemVer2Is '1.2.3+94.master.deadbee'
+        ThenVersionIs '1.2.3'
+        ThenSemVer1Is '1.2.3'
     }
 
     function GivenPackageJson

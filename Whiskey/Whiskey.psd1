@@ -154,6 +154,7 @@
 * ***BREAKING CHANGE***: PublishBuildMasterPackage task now requires a `ReleaseName` property.
 * ***BREAKING CHANGE***: Build context object no longer has a ReleaseName property.
 * ***BREAKING CHANGE***: Build context object no longer has an ApplicationName property.
+* ***BREAKING CHANGE***: PrereleaseMap configuration property now uses wildcards instead of regular expressions to match branch names.
 '@
         } # End of PSData hashtable
 
