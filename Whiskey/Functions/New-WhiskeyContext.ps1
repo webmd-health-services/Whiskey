@@ -64,12 +64,6 @@ function New-WhiskeyContext
         $appName = $config['ApplicationName']
     }
 
-    $releaseName = $null
-    if( $config.ContainsKey('ReleaseName') )
-    {
-        $releaseName = $config['ReleaseName']
-    }
-
     $bitbucketConnection = $null
 
     $buildMetadata = Get-WhiskeyBuildMetadata
@@ -79,16 +73,18 @@ function New-WhiskeyContext
     if( $byBuildServer )
     {
         $branch = $buildMetadata.ScmBranch
-        $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
+
         if( $config.ContainsKey( 'PublishOn' ) )
         {
-            $publishOn = $config['PublishOn']
-        }
-
-        $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
-        if( -not $releaseName -and $publish )
-        {
-            $releaseName = $branch
+            foreach( $publishRegex in $config['PublishOn'] )
+            {
+                $publish = $branch -match $publishRegex
+                Write-Verbose -Message ('Publish  {0,-5}  ''{1}'' -match /{2}/' -f $publish,$branch,$publishRegex) -Verbose
+                if( $publish )
+                {
+                    break
+                }
+            }
         }
 
         if( $config['PrereleaseMap'] )
@@ -153,7 +149,6 @@ function New-WhiskeyContext
 
     $context.Environment = $Environment;
     $context.ApplicationName = $appName;
-    $context.ReleaseName = $releaseName;
     $context.BuildRoot = $buildRoot;
     $context.ConfigurationPath = $ConfigurationPath;
 

@@ -149,6 +149,7 @@
 * Fixed: setting a build status in Bitbucket Server doesn't replace previous statuses. If any build of a commit has ever failed, Bitbucket Server shows that commit as failed.
 * Added support for running builds under AppVeyor.
 * Added support for running builds under TeamCity.
+* ***BREAKING CHANGE***: Whiskey no longer publishes on `develop`, `release`, `release/*`, or `master` branches by default. Publishing only happens if you supply a `PublishOn` property in your whiskey.yml file.
 '@
         } # End of PSData hashtable
 
