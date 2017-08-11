@@ -36,6 +36,8 @@ function Invoke-WhiskeyBuild
         Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
 
         $config = $Context.Configuration
+        Write-Verbose -Message ('Publish?       {0}' -f $Context.Publish)
+        Write-Verbose -Message ('PublishTasks?  {0}' -f $config.ContainsKey('PublishTasks'))
         if( $Context.Publish -and $config.ContainsKey('PublishTasks') )
         {
             Invoke-WhiskeyPipeline -Context $Context -Name 'PublishTasks'
