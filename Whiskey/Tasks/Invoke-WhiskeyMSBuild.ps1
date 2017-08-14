@@ -51,22 +51,24 @@ function Invoke-WhiskeyMSBuild
     
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
-    $toolsVersionRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-    $availableVersions = Get-ChildItem -Path $toolsVersionRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending
+    $msbuildInfos = Get-MSBuild | Sort-Object -Descending 'Version'
     $version = $TaskParameter['Version']
-    if( -not $version )
+    if( $version )
     {
-        $version = $availableVersions | Select-Object -First 1
+        $msbuildInfo = $msbuildInfos | Where-Object { $_.Name -eq $version }
+    }
+    else
+    {
+        $msbuildInfo = $msbuildInfos | Select-Object -First 1
     }
 
-    $versionRegPath = Join-Path -Path $toolsVersionRegPath -ChildPath $version
-    if( -not (Test-Path -Path $versionRegPath -PathType Container) )
+    if( -not $msbuildInfo )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild {0} is not installed. Installed versions are: {1}' -f $version,($availableVersions -join ', '))
+        $msbuildVersionNumbers = $msbuildInfos | Select-Object -ExpandProperty 'Name'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild {0} is not installed. Installed versions are: {1}' -f $version,($msbuildVersionNumbers -join ', '))
     }
 
-    $msbuildExePath = Get-ItemProperty -Path $versionRegPath -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
-    $msbuildExePath = Join-Path -Path $msbuildExePath -ChildPath 'MSBuild.exe'
+    $msbuildExePath = $msbuildInfo.Path
     Write-Verbose -Message ('{0}' -f $msbuildExePath)
     
     $target = @( 'build' )

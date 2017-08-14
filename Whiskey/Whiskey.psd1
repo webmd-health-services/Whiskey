@@ -51,7 +51,7 @@
     # RequiredModules = @()
 
     # Assemblies that must be loaded prior to importing this module
-    RequiredAssemblies = @( 'bin\SemanticVersion.dll' )
+    RequiredAssemblies = @( 'bin\SemanticVersion.dll', 'bin\YamlDotNet.dll' )
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
     #ScriptsToProcess = @()
@@ -66,8 +66,8 @@
     NestedModules = @( 
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'powershell-yaml',
-                        'ProGetAutomation'
+                        'ProGetAutomation',
+                        'VSSetup'
                      )
 
     # Functions to export from this module
@@ -156,6 +156,7 @@
 * Added `Version` property to MSBuild task. Use this property to specify which version of MSBuild to use. The default is now the most recent (i.e. highest) version installed.
 * Added `NoFileLogger` property to MSBuild task. Use this property to disable writing debug logs to the output directory.
 * Added `NoMaxCpuCountArgument` property to MSBuild task. Use this property to not pass the `/maxcpucount` parameter to MSBuild.
+* Added support for building with MSBuild 15.0.
 '@
         } # End of PSData hashtable
 
