@@ -67,6 +67,7 @@
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
                         'ProGetAutomation',
+                        'powershell-yaml',
                         'VSSetup'
                      )
 
