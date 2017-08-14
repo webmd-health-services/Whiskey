@@ -66,8 +66,8 @@
     NestedModules = @( 
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'powershell-yaml',
                         'ProGetAutomation',
+                        'powershell-yaml',
                         'VSSetup'
                      )
 
@@ -75,6 +75,7 @@
     FunctionsToExport = @( 
                             'Add-WhiskeyApiKey',
                             'Add-WhiskeyCredential',
+                            'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
@@ -158,6 +159,7 @@
 * Added `NoFileLogger` property to MSBuild task. Use this property to disable writing debug logs to the output directory.
 * Added `NoMaxCpuCountArgument` property to MSBuild task. Use this property to not pass the `/maxcpucount` parameter to MSBuild.
 * Added support for building with MSBuild 15.0.
+* Added `ConvertFrom-WhiskeyYamlScalar` function for converting configuration properties into booleans, integers, floating-point numbers, and date/times according to the YAML specification.
 '@
         } # End of PSData hashtable
 
