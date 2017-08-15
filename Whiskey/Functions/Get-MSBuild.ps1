@@ -19,21 +19,26 @@ function Get-MSBuild
 
     Get-VSSetupInstance |
         ForEach-Object {
-            $msbuildPath = Join-Path -Path $_.InstallationPath -ChildPath 'MSBuild\*\Bin\MSBuild.exe'
-            if( -not (Test-Path -Path $msbuildPath -PathType Leaf) )
+            # Prefer 64-bit binaries
+            Join-Path -Path $_.InstallationPath -ChildPath 'MSBuild\*\Bin\amd64\MSBuild.exe'
+            Join-Path -Path $_.InstallationPath -ChildPath 'MSBuild\*\Bin\MSBuild.exe'
+        } |
+        Where-Object { Test-Path -Path $_ -PathType Leaf } |
+        # Prefer 64-bit binaries.
+        Select-Object -First 1 |
+        Resolve-Path |
+        Get-Item |
+        ForEach-Object {
+            $name = $_.Directory.Parent.Name
+            [version]$version = $null
+            if( -not [version]::TryParse($name,[ref]$version) )
             {
-                return 
+                $name = $_.Directory.Parent.Parent.Name
             }
-                                                
-            Resolve-Path -Path $msbuildPath |
-                Get-Item |
-                ForEach-Object {
-                    $name = $_.Directory.Parent.Name
-                    [pscustomobject]@{
-                                        Name =  $name;
-                                        Version = [version]$name;
-                                        Path = $_.FullName
-                                    }
-                }
+            [pscustomobject]@{
+                                Name =  $name;
+                                Version = [version]$name;
+                                Path = $_.FullName
+                            }
         }
 }
