@@ -928,7 +928,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel is not include
 Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
-    ThenTaskFails 'not a valid Compression Level'
+    ThenTaskFails 'not a valid compression level'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is included as a string' {

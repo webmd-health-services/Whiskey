@@ -43,7 +43,7 @@ function Publish-WhiskeyNuGetPackage
         $TaskParameter['Path'] = '.output\*.nupkg'
     }
 
-    $publishSymbols = $TaskParameter['Symbols']
+    $publishSymbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
 
     $paths = $TaskParameter['Path'] | 
                 Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' | 

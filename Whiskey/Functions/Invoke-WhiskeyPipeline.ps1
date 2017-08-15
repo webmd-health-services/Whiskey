@@ -68,7 +68,7 @@ function Invoke-WhiskeyPipeline
             $taskName = $taskItem
             $taskItem = @{ }
         }
-        elseif( $taskItem -is [hashtable] )
+        elseif( ($taskItem | Get-Member -Name 'Keys') )
         {
             $taskName = $taskItem.Keys | Select-Object -First 1
             $taskItem = $taskItem[$taskName]

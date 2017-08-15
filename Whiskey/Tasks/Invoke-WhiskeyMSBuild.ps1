@@ -148,18 +148,18 @@ function Invoke-WhiskeyMSBuild
                                   }
 
         $cpuArg = '/maxcpucount'
-        $cpuCount = $TaskParameter['CpuCount']
+        $cpuCount = $TaskParameter['CpuCount'] | ConvertFrom-WhiskeyYamlScalar
         if( $cpuCount )
         {
             $cpuArg = '/maxcpucount:{0}' -f $TaskParameter['CpuCount']
         }
 
-        if( $TaskParameter['NoMaxCpuCountArgument'] )
+        if( ($TaskParameter['NoMaxCpuCountArgument'] | ConvertFrom-WhiskeyYamlScalar) )
         {
             $cpuArg = ''
         }
 
-        $noFileLogger = $TaskParameter['NoFileLogger']
+        $noFileLogger = $TaskParameter['NoFileLogger'] | ConvertFrom-WhiskeyYamlScalar
 
         $projectFileName = $projectPath | Split-Path -Leaf
         $logFilePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('msbuild.{0}.debug.log' -f $projectFileName)

@@ -51,7 +51,7 @@
     # RequiredModules = @()
 
     # Assemblies that must be loaded prior to importing this module
-    RequiredAssemblies = @( 'bin\SemanticVersion.dll' )
+    RequiredAssemblies = @( 'bin\SemanticVersion.dll', 'bin\YamlDotNet.dll' )
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
     #ScriptsToProcess = @()
@@ -67,7 +67,6 @@
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
                         'ProGetAutomation',
-                        'powershell-yaml',
                         'VSSetup'
                      )
 
@@ -160,6 +159,7 @@
 * Added `NoMaxCpuCountArgument` property to MSBuild task. Use this property to not pass the `/maxcpucount` parameter to MSBuild.
 * Added support for building with MSBuild 15.0.
 * Added `ConvertFrom-WhiskeyYamlScalar` function for converting configuration properties into booleans, integers, floating-point numbers, and date/times according to the YAML specification.
+* ***BREAKING CHANGE***: Switched from `powershell-yaml` module to `YamlDotNet` library to parse YAML files. The `powershell-yaml` module tries to convert all scalars to strongly-typed objects, which causes pain.
 '@
         } # End of PSData hashtable
 

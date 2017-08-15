@@ -597,4 +597,3 @@ Describe 'MSBuild Task.when disabling file logger' {
     WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
     ThenOutputNotLogged
 }
-
