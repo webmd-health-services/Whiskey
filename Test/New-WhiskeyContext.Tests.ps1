@@ -76,7 +76,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer2NoBuildMetadataIs $expectedReleaseVersion
 
         It 'should set raw configuration hashtable' {
-            $Context.Configuration | Should BeOfType ([hashtable])
+            $Context.Configuration | Should -BeOfType ([Collections.Generic.Dictionary[object,object]])
             $Context.Configuration.ContainsKey('SomProperty') | Should Be $true
             $Context.Configuration['SomProperty'] | Should Be 'SomeValue'
         }

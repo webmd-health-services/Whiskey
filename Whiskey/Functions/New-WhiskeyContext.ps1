@@ -92,7 +92,7 @@ function New-WhiskeyContext
             Write-Verbose -Message ('PrereleaseMap')
             foreach( $item in $config['PrereleaseMap'] )
             {
-                if( $item -isnot [hashtable] -or $item.Count -ne 1 )
+                if( -not ($item | Get-Member -Name 'Count') -or -not ($item | Get-Member 'Keys') -or $item.Count -ne 1 )
                 {
                     throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a wildcard. The property''s value should be the prerelease identifier to add to the version number on branches that match the wildcard. For example,
     
@@ -124,7 +124,7 @@ function New-WhiskeyContext
         $config['Version'] = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json | Select-Object -ExpandProperty 'version' -ErrorAction Ignore
         if( $config['Version'] -eq '0.0.0' )
         {
-            $config.Remove('Version')
+            [void]$config.Remove('Version')
         }
     }
 
