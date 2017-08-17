@@ -10,6 +10,7 @@ $context = $null
 $warnings = $null
 $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
+$output = $null
 $taskDefaults = @{ }
 
 function Invoke-PreTaskPlugin
@@ -127,6 +128,7 @@ function GivenWhiskeyYmlBuildFile
 function Init
 {
     $script:taskDefaults = @{ }
+    $script:output = $null
 }
 
 function ThenPipelineFailed
@@ -349,7 +351,7 @@ function WhenRunningTask
     $script:threwException = $false
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
         $script:warnings = $warnings
     }
     catch
@@ -430,6 +432,13 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
 }
 
+function ThenNoOutput
+{
+    It 'should not return anything' {
+        $output | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'Invoke-WhiskeyTask.when task has property variables' {
     Init
     GivenRunByDeveloper
@@ -437,6 +446,7 @@ Describe 'Invoke-WhiskeyTask.when task has property variables' {
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
     ThenPipelineSucceeded
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = $env:COMPUTERNAME; }
+    ThenNoOutput
 }
 
 Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by build server' {

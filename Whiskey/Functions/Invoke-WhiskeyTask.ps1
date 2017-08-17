@@ -141,7 +141,7 @@ function Invoke-WhiskeyTask
         Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
     }
 
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter
+    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
     Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
     Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix
