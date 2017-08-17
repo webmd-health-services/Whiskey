@@ -74,6 +74,7 @@
     FunctionsToExport = @( 
                             'Add-WhiskeyApiKey',
                             'Add-WhiskeyCredential',
+                            'Add-WhiskeyVariable',
                             'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
@@ -97,6 +98,7 @@
                             'Resolve-WhiskeyNuGetPackageVersion',
                             'Resolve-WhiskeyPowerShellModuleVersion',
                             'Resolve-WhiskeyTaskPath',
+                            'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
@@ -162,6 +164,8 @@
 * ***BREAKING CHANGE***: Switched from `powershell-yaml` module to `YamlDotNet` library to parse YAML files. The `powershell-yaml` module tries to convert all scalars to strongly-typed objects, which causes pain.
 * ***BREAKING CHANGE***: Renamed `PublishFile` task to `CopyFile`.
 * `CopyFile` task now supports wildcards in the `DestinationDirectory` property. Any path with wildcards *must* exist.
+* Created `Resolve-WhiskeyVariable` function for replacing variables in strings, arrays, and hashtables. Variables are tokens in strings whose foramt is `$(NAME)`.
+* Created `Add-WhiskeyVariable` function for adding variables to a build.
 '@
         } # End of PSData hashtable
 
