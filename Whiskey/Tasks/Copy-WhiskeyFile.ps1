@@ -108,7 +108,7 @@ BuildTasks:
     {
         foreach($sourceFile in $sourceFiles)
         {
-            Write-Verbose ('{0} -> {1}' -f $sourceFile,$destDir) -Verbose
+            Write-Verbose ('{0} -> {1}' -f $sourceFile,$destDir)
             Copy-Item -Path $sourceFile -Destination $destDir
         }
     }
