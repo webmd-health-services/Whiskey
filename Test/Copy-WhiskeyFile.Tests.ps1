@@ -99,6 +99,7 @@ function WhenCopyingFiles
 
     try
     {
+        $Global:Error.Clear()
         Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'CopyFile'
     }
     catch
