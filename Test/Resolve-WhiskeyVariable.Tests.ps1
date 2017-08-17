@@ -223,3 +223,14 @@ Describe 'Resolve-WhiskeyVariable.when ignoring errors' {
     ThenValueIs '$(i do not exist)'
     ThenNoErrors
 }
+
+Describe 'Resolve-WhiskeyVariable.when using well-known variables' {
+    Init
+    WhenResolving '$(WHISKEY_MSBUILD_CONFIGURATION)'
+    $expectedValue = 'Debug'
+    if( $context.ByBuildServer )
+    {
+        $expectedValue = 'Release'
+    }
+    ThenValueIs $expectedValue
+}
