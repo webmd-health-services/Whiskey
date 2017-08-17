@@ -430,6 +430,15 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
 }
 
+Describe 'Invoke-WhiskeyTask.when task has property variables' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = $env:COMPUTERNAME; }
+}
+
 Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by build server' {
     Init
     GivenRunByBuildServer

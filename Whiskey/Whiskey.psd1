@@ -164,6 +164,7 @@
 * ***BREAKING CHANGE***: Switched from `powershell-yaml` module to `YamlDotNet` library to parse YAML files. The `powershell-yaml` module tries to convert all scalars to strongly-typed objects, which causes pain.
 * ***BREAKING CHANGE***: Renamed `PublishFile` task to `CopyFile`.
 * `CopyFile` task now supports wildcards in the `DestinationDirectory` property. Any path with wildcards *must* exist.
+* Dynamic variables can now be defined and used in task property values. You can use environment variables, well-known Whiskey variables (see the help for `Resolve-WhiskeyVariable` for the list), and your own variables. Use the `Add-WhiskeyVariable` function to add your own variables.
 * Created `Resolve-WhiskeyVariable` function for replacing variables in strings, arrays, and hashtables. Variables are tokens in strings whose foramt is `$(NAME)`.
 * Created `Add-WhiskeyVariable` function for adding variables to a build.
 '@
