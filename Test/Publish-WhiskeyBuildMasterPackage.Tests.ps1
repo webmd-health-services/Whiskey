@@ -258,10 +258,10 @@ function ThenTaskFails
 Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
     Init
     GivenProperty @{
-                        'PackageVariables' = @{
+                        'PackageVariable' = @{
                                                     'One' = 'Two';
                                                     'Three' = 'Four';
-                                              }
+                                             }
                    }
     WhenCreatingPackage
     ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }

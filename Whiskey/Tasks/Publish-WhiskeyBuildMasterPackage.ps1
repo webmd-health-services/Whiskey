@@ -45,7 +45,7 @@ function Publish-WhiskeyBuildMasterPackage
 
     $version = $TaskContext.Version.SemVer2
 
-    $variables = $TaskParameter['PackageVariables']
+    $variables = $TaskParameter['PackageVariable']
 
     $release = Get-BMRelease -Session $buildMasterSession -Application $applicationName -Name $releaseName -ErrorAction Stop
     if( -not $release )

@@ -167,6 +167,9 @@
 * Dynamic variables can now be defined and used in task property values. You can use environment variables, well-known Whiskey variables (see the help for `Resolve-WhiskeyVariable` for the list), and your own variables. Use the `Add-WhiskeyVariable` function to add your own variables.
 * Created `Resolve-WhiskeyVariable` function for replacing variables in strings, arrays, and hashtables. Variables are tokens in strings whose foramt is `$(NAME)`.
 * Created `Add-WhiskeyVariable` function for adding variables to a build.
+* ***BREAKING CHANGE***: Renamed `CopyFile` task's `DestinationDirectories` property to `DestinationDirectory`.
+* ***BREAKING CHANGE***: Renamed `Node` task's `NpmScripts` property to `NpmScript`.
+* ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
 '@
         } # End of PSData hashtable
 

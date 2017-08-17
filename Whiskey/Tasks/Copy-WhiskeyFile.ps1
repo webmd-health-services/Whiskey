@@ -25,12 +25,12 @@ BuildTasks:
     Destination: \\computer\share
 '@
     $destDirErrorMessage = @'
-'DestinationDirectories' property is missing. Please set it to the list of target locations to copy to, e.g.
+'DestinationDirectory' property is missing. Please set it to the list of target locations to copy to, e.g.
 
 BuildTasks:
 - CopyFile:
     Path: myfile.txt
-    DestinationDirectories: \\computer\share
+    DestinationDirectory: \\computer\share
 '@
 
     if(!$TaskParameter.ContainsKey('Path'))
@@ -44,12 +44,12 @@ BuildTasks:
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ($pathErrorMessage)
     }
 
-    if(!$TaskParameter.ContainsKey('DestinationDirectories'))
+    if(!$TaskParameter.ContainsKey('DestinationDirectory'))
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ($destDirErrorMessage)
     }
     
-    if(!$TaskParameter['DestinationDirectories'])
+    if(!$TaskParameter['DestinationDirectory'])
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ($destDirErrorMessage)
     }
@@ -63,7 +63,7 @@ BuildTasks:
     }
     
     $idx = 0
-    $destinations = $TaskParameter['DestinationDirectories'] |
+    $destinations = $TaskParameter['DestinationDirectory'] |
                         ForEach-Object {
 
                             $path = $_
@@ -78,7 +78,7 @@ BuildTasks:
                                 $path = Resolve-Path -Path $path -ErrorAction Ignore | Select-Object -ExpandProperty 'ProviderPath'
                                 if( -not $path )
                                 {
-                                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('DestinationDirectories[{0}]:  Wildcard pattern ''{1}'' doesn''t point to an existing directory.' -f $idx, $_)
+                                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('DestinationDirectory[{0}]:  Wildcard pattern ''{1}'' doesn''t point to an existing directory.' -f $idx, $_)
                                 }
                                 $path
                             }

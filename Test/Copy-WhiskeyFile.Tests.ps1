@@ -91,7 +91,7 @@ function WhenCopyingFiles
     {
         $To = Get-BuildRoot
     }
-    $taskParameter['DestinationDirectories'] = $To
+    $taskParameter['DestinationDirectory'] = $To
 
     $taskContext.BuildRoot = Get-BuildRoot
     $Script:taskFailed = $false

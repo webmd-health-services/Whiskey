@@ -112,7 +112,7 @@ function WhenBuildIsStarted
 
     if( $script:runScripts )
     {
-        $taskParameter['NpmScripts'] = $script:runScripts
+        $taskParameter['NpmScript'] = $script:runScripts
     }
     
     if( $script:InWorkingDirectory )
@@ -457,14 +457,14 @@ Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScripts' {
+Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScript' {
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     Initialize-NodeProject 
     WhenBuildIsStarted -WarningVariable 'warnings'
 
     It 'should warn that there were no NPM scripts' {
-        $warnings | Should Match ([regex]::Escape('Element ''NpmScripts'' is missing or empty'))
+        $warnings | Should Match ([regex]::Escape('Property ''NpmScript'' is missing or empty'))
     }
     cleanup
 }

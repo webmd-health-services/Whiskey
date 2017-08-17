@@ -12,7 +12,7 @@ function Invoke-WhiskeyNodeTask
 
     This task accepts these parameters:
 
-    * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
+    * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
     * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     * `NpmRegistryUri` the uri to set a custom npm registry
     
@@ -20,7 +20,7 @@ function Invoke-WhiskeyNodeTask
 
         BuildTasks:
         - Node:
-          NpmScripts:
+          NpmScript:
           - build
           - test
 
@@ -32,7 +32,7 @@ function Invoke-WhiskeyNodeTask
     * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
-    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScripts = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
+    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScript = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
@@ -48,7 +48,7 @@ function Invoke-WhiskeyNodeTask
         [hashtable]
         # The task parameters, which are:
         #
-        # * `NpmScripts`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
+        # * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
         # * `NpmRegistryUri` the uri to set a custom npm registry
         $TaskParameter
@@ -80,7 +80,7 @@ function Invoke-WhiskeyNodeTask
             NpmRegistryUri: https://registry.npmjs.org/
         '
     }
-    $npmScripts = $TaskParameter['NpmScripts']
+    $npmScripts = $TaskParameter['NpmScript']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
     $numSteps = 5 + $npmScriptCount
     $stepNum = 0
@@ -144,11 +144,11 @@ function Invoke-WhiskeyNodeTask
         if( -not $npmScripts )
         {
             Write-WhiskeyWarning -TaskContext $TaskContext -Message (@'
-Element 'NpmScripts' is missing or empty. Your build isn''t *doing* anything. The 'NpmScripts' element should be a list of one or more npm scripts to run during your build, e.g.
+Property 'NpmScript' is missing or empty. Your build isn''t *doing* anything. The 'NpmScript' property should be a list of one or more npm scripts to run during your build, e.g.
 
 BuildTasks:
 - Node:
-  NpmScripts:
+  NpmScript:
   - build
   - test           
 '@)
