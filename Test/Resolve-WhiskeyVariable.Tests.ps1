@@ -68,14 +68,23 @@ function ThenValueIs
 
         foreach( $key in $Expected.Keys )
         {
-            if( (Get-Member 'Keys' -InputObject $Expected[$key] ) )
+            if( $Expected[$key] -eq $null )
             {
-                Test-Hashtable -Expected $Expected[$key] -Actual $Actual[$key]
+                It ('should leave value as null') {
+                    $Actual[$key] | Should -BeNullOrEmpty
+                }
             }
             else
             {
-                It ('should replace variables in keys') {
-                    $Actual[$key] | Should -Be $Expected[$key]
+                if( (Get-Member 'Keys' -InputObject $Expected[$key] ) )
+                {
+                    Test-Hashtable -Expected $Expected[$key] -Actual $Actual[$key]
+                }
+                else
+                {
+                    It ('should replace variables in keys') {
+                        $Actual[$key] | Should -Be $Expected[$key]
+                    }
                 }
             }
         }
@@ -84,6 +93,13 @@ function ThenValueIs
     if( -not $Actual )
     {
         $Actual = $result
+    }
+
+    if( $ExpectedValue -eq $null )
+    {
+        It ('should return null') {
+            $Actual | Should -BeNullOrEmpty
+        }
     }
 
     $expectedType = $ExpectedValue.GetType()
@@ -233,4 +249,10 @@ Describe 'Resolve-WhiskeyVariable.when using well-known variables' {
         $expectedValue = 'Release'
     }
     ThenValueIs $expectedValue
+}
+
+Describe 'Resolve-WhiskeyVariable.when hashtable key value is empty' {
+    Init
+    WhenResolving @{ 'Path' = $null }
+    ThenValueIs @{ 'Path' = $null }
 }

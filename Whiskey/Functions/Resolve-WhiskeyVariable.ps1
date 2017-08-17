@@ -69,6 +69,7 @@ function Resolve-WhiskeyVariable
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [AllowNull()]
         [object]
         # The object on which to perform variable replacement/substitution. If the value is a string, all variables in the string are replaced with their values.
         #
@@ -118,6 +119,11 @@ function Resolve-WhiskeyVariable
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+        if( $InputObject -eq $null )
+        {
+            return $InputObject
+        }
 
         if( (Get-Member -Name 'Keys' -InputObject $InputObject) )
         {
