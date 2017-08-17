@@ -160,6 +160,7 @@
 * Added support for building with MSBuild 15.0.
 * Added `ConvertFrom-WhiskeyYamlScalar` function for converting configuration properties into booleans, integers, floating-point numbers, and date/times according to the YAML specification.
 * ***BREAKING CHANGE***: Switched from `powershell-yaml` module to `YamlDotNet` library to parse YAML files. The `powershell-yaml` module tries to convert all scalars to strongly-typed objects, which causes pain.
+* ***BREAKING CHANGE***: Renamed `PublishFile` task to `CopyFile`.
 '@
         } # End of PSData hashtable
 

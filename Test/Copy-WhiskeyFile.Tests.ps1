@@ -31,7 +31,7 @@ function GivenFiles
     }
 }
 
-function GivenNoFilesToPublish
+function GivenNoFilesToCopy
 {
 }
 
@@ -53,7 +53,7 @@ function GivenUserCannotCreateDestination
     }
 }
 
-function WhenPublishingFiles
+function WhenCopyingFiles
 {
     [CmdletBinding()]
     param(
@@ -83,7 +83,7 @@ function WhenPublishingFiles
 
     try
     {
-        Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'PublishFile'
+        Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'CopyFile'
     }
     catch
     {
@@ -92,7 +92,7 @@ function WhenPublishingFiles
     }
 }
 
-function ThenNothingPublished
+function ThenNothingCopied
 {
     param(
         [string[]]
@@ -112,7 +112,7 @@ function ThenNothingPublished
     }
 }
 
-function ThenFilesPublished
+function ThenFilesCopied
 {
     param(
         [string[]]
@@ -144,49 +144,49 @@ function ThenTaskFails
 
 }
 
-Describe 'Publish-WhiskeyFile.when publishing a single file' {
+Describe 'CopyFile Task.when copying a single file' {
     GivenFiles 'one.txt'
-    WhenPublishingFiles 'one.txt' 
-    ThenFilesPublished 'one.txt'
+    WhenCopyingFiles 'one.txt' 
+    ThenFilesCopied 'one.txt'
 }
 
-Describe 'Publish-WhiskeyFile.when publishing multiple files to a single destination' {
+Describe 'CopyFile Task.when copying multiple files to a single destination' {
     GivenFiles 'one.txt','two.txt'
-    WhenPublishingFiles 'one.txt','two.txt'
-    ThenFilesPublished 'one.txt','two.txt'
+    WhenCopyingFiles 'one.txt','two.txt'
+    ThenFilesCopied 'one.txt','two.txt'
 }
 
-Describe 'Publish-WhiskeyFile.when publishing files from different directories' {
+Describe 'CopyFile Task.when copying files from different directories' {
     GivenFiles 'dir1\one.txt','dir2\two.txt'
-    WhenPublishingFiles 'dir1\one.txt','dir2\two.txt'
-    ThenFilesPublished 'one.txt','two.txt'
+    WhenCopyingFiles 'dir1\one.txt','dir2\two.txt'
+    ThenFilesCopied 'one.txt','two.txt'
 }
 
-Describe 'Publish-WhiskeyFile.when publishing to multiple destinations' {
+Describe 'CopyFile Task.when copying to multiple destinations' {
     GivenFiles 'one.txt'
-    WhenPublishingFiles 'one.txt' -To 'dir1','dir2'
-    ThenFilesPublished 'dir1\one.txt','dir2\one.txt'
+    WhenCopyingFiles 'one.txt' -To 'dir1','dir2'
+    ThenFilesCopied 'dir1\one.txt','dir2\one.txt'
 }
 
-Describe 'Publish-WhiskeyFile.when publishing files and user can''t create one of the destination directories' {
+Describe 'CopyFile Task.when copying files and user can''t create one of the destination directories' {
     GivenFiles 'one.txt'
     GivenUserCannotCreateDestination 'dir2'
-    WhenPublishingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
+    WhenCopyingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
     ThenTaskFails -WithErrorMessage 'Failed to create destination directory'
-    ThenNothingPublished -To 'dir1','dir2'
+    ThenNothingCopied -To 'dir1','dir2'
 }
 
-Describe 'Publish-WhiskeyFile.when publishing nothing' {
-    GivenNoFilesToPublish
-    WhenPublishingFiles -ErrorAction SilentlyContinue
+Describe 'CopyFile Task.when copying nothing' {
+    GivenNoFilesToCopy
+    WhenCopyingFiles -ErrorAction SilentlyContinue
     ThenTaskFails -WithErrorMessage '''Path'' property is missing'
-    ThenNothingPublished
+    ThenNothingCopied
 }
 
-Describe 'Publish-WhiskeyFile.when publishing a directory' {
+Describe 'CopyFile Task.when copying a directory' {
     GivenFiles 'dir1\file1.txt'
-    WhenPublishingFiles 'dir1' -ErrorAction SilentlyContinue
-    ThenTaskFails 'only publishes files'
-    ThenNothingPublished
+    WhenCopyingFiles 'dir1' -ErrorAction SilentlyContinue
+    ThenTaskFails 'only copies files'
+    ThenNothingCopied
 }
 

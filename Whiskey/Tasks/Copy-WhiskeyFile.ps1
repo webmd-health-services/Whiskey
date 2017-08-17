@@ -1,7 +1,7 @@
 
-function Publish-WhiskeyFile
+function Copy-WhiskeyFile
 {
-    [Whiskey.Task("PublishFile")]
+    [Whiskey.Task("CopyFile")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -17,18 +17,18 @@ function Publish-WhiskeyFile
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $pathErrorMessage = @'
-'Path' property is missing. Please set it to the list of files to publish, e.g.
+'Path' property is missing. Please set it to the list of files to copy, e.g.
 
 BuildTasks:
-- PublishFile:
+- CopyFile:
     Path: myfile.txt
     Destination: \\computer\share
 '@
     $destDirErrorMessage = @'
-'DestinationDirectories' property is missing. Please set it to the list of target locations to publish to, e.g.
+'DestinationDirectories' property is missing. Please set it to the list of target locations to copy to, e.g.
 
 BuildTasks:
-- PublishFile:
+- CopyFile:
     Path: myfile.txt
     DestinationDirectories: \\computer\share
 '@
@@ -58,7 +58,7 @@ BuildTasks:
     {
         if((Test-Path -Path $sourceFile -PathType Container))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Path ''{0}'' is directory. The PublishFile task only publishes files. Please remove this path from your ''Path'' property.' -f $sourceFile)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Path ''{0}'' is directory. The CopyFile task only copies files. Please remove this path from your ''Path'' property.' -f $sourceFile)
         }
     }
     
