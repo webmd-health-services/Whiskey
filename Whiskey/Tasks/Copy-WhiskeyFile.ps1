@@ -62,8 +62,37 @@ BuildTasks:
         }
     }
     
-    foreach ($destDir in $TaskParameter['DestinationDirectories'])
+    $idx = 0
+    $destinations = $TaskParameter['DestinationDirectories'] |
+                        ForEach-Object {
+
+                            $path = $_
+
+                            if( -not [IO.Path]::IsPathRooted($path) )
+                            {
+                                $path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
+                            }
+
+                            if( [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($path) )
+                            {
+                                $path = Resolve-Path -Path $path -ErrorAction Ignore | Select-Object -ExpandProperty 'ProviderPath'
+                                if( -not $path )
+                                {
+                                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('DestinationDirectories[{0}]:  Wildcard pattern ''{1}'' doesn''t point to an existing directory.' -f $idx, $_)
+                                }
+                                $path
+                            }
+                            else
+                            {
+                                $path
+                            }
+                            
+                            $idx++
+                        }
+
+    foreach ($destDir in $destinations)
     {
+
         if(!(Test-Path -Path $destDir -PathType Container))
         {
             $null = New-Item -Path $destDir -ItemType 'Directory' -Force
@@ -75,10 +104,11 @@ BuildTasks:
         }
     }
 
-    foreach( $destDir in $TaskParameter['DestinationDirectories'] )
+    foreach( $destDir in $destinations )
     {
         foreach($sourceFile in $sourceFiles)
         {
+            Write-Verbose ('{0} -> {1}' -f $sourceFile,$destDir) -Verbose
             Copy-Item -Path $sourceFile -Destination $destDir
         }
     }

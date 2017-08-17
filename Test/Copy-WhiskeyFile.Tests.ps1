@@ -35,6 +35,23 @@ function GivenNoFilesToCopy
 {
 }
 
+function GivenDirectories
+{
+    param(
+        [string[]]
+        $Path
+    )
+
+    foreach( $item in $Path )
+    {
+        if( -not ([IO.Path]::IsPathRooted($item)) )
+        {
+            $item = Join-Path -Path $TestDrive.FullName -ChildPath $item
+        }
+        New-Item -Path $item -ItemType 'Directory' -Force | Out-Null
+    }
+}
+
 function GivenUserCannotCreateDestination
 {
     param(
@@ -42,7 +59,7 @@ function GivenUserCannotCreateDestination
         $To
     )
 
-    $destinationRoot = Get-DestinationRoot
+    $destinationRoot = Get-BuildRoot
     foreach( $item in $To )
     {
         $destinationPath = Join-Path -Path $destinationRoot -ChildPath $item
@@ -69,11 +86,10 @@ function WhenCopyingFiles
 
     $taskParameter = @{ }
     $taskParameter['Path'] = $Path
-    $destinationRoot = Get-DestinationRoot
-    $To = $To | ForEach-Object { Join-Path -Path $destinationRoot -ChildPath $_ }
+
     if( -not $To )
     {
-        $To = $destinationRoot
+        $To = Get-BuildRoot
     }
     $taskParameter['DestinationDirectories'] = $To
 
@@ -116,17 +132,36 @@ function ThenFilesCopied
 {
     param(
         [string[]]
-        $Path
+        $Path,
+
+        [string[]]
+        $To
     )
 
-    $destinationRoot = Get-DestinationRoot
+    if( -not $To )
+    {
+        $To = Get-BuildRoot
+    }
+    else
+    {
+        $To = $To | ForEach-Object { 
+            if( [IO.Path]::IsPathRooted($_) )
+            {
+                return $_
+            }
+            Join-Path -Path (Get-BuildRoot) -ChildPath $_ 
+        }
+    }
 
     It 'should copy files' {
         foreach( $item in $Path )
         {
-            Join-Path -Path $destinationRoot -ChildPath $item  |
-                Get-Item |
-                Should Not BeNullOrEmpty
+            foreach( $destItem in $To )
+            {
+                Join-Path -Path $To -ChildPath $item  |
+                    Get-Item |
+                    Should Not BeNullOrEmpty
+            }
         }
     }
 }
@@ -146,26 +181,26 @@ function ThenTaskFails
 
 Describe 'CopyFile Task.when copying a single file' {
     GivenFiles 'one.txt'
-    WhenCopyingFiles 'one.txt' 
-    ThenFilesCopied 'one.txt'
+    WhenCopyingFiles 'one.txt' -To 'Destination'
+    ThenFilesCopied 'one.txt' -To 'Destination'
 }
 
 Describe 'CopyFile Task.when copying multiple files to a single destination' {
     GivenFiles 'one.txt','two.txt'
-    WhenCopyingFiles 'one.txt','two.txt'
-    ThenFilesCopied 'one.txt','two.txt'
+    WhenCopyingFiles 'one.txt','two.txt' -To 'Destination'
+    ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
 }
 
 Describe 'CopyFile Task.when copying files from different directories' {
     GivenFiles 'dir1\one.txt','dir2\two.txt'
-    WhenCopyingFiles 'dir1\one.txt','dir2\two.txt'
-    ThenFilesCopied 'one.txt','two.txt'
+    WhenCopyingFiles 'dir1\one.txt','dir2\two.txt' -To 'Destination'
+    ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
 }
 
 Describe 'CopyFile Task.when copying to multiple destinations' {
     GivenFiles 'one.txt'
     WhenCopyingFiles 'one.txt' -To 'dir1','dir2'
-    ThenFilesCopied 'dir1\one.txt','dir2\one.txt'
+    ThenFilesCopied 'one.txt' -To 'dir1','dir2'
 }
 
 Describe 'CopyFile Task.when copying files and user can''t create one of the destination directories' {
@@ -190,3 +225,25 @@ Describe 'CopyFile Task.when copying a directory' {
     ThenNothingCopied
 }
 
+Describe 'CopyFile Task.when destination directory contains wildcards' {
+    GivenFiles 'file1.txt'
+    GivenDirectories 'Destination','OtherDestination','Destination2'
+    WhenCopyingFiles 'file1.txt' -To '..\Dest*'
+    ThenFilesCopied 'file1.txt'
+    ThenFilesCopied 'file1.txt' -To '..\Destination2','..\Destination'
+    ThenNothingCopied -To '..\OtherDestination'
+}
+
+Describe 'CopyFile Task.when destination directory contains wildcards and doesn''t exist' {
+    GivenFiles 'file1.txt'
+    WhenCopyingFiles 'file1.txt' -To '..\Dest*'
+    ThenTaskFails -WithErrorMessage 'Wildcard pattern ''\.\.\\Dest\*'' doesn''t'
+}
+
+Describe 'CopyFile Task.when destination directory is an absolute path' {
+    GivenFiles 'file1.txt'
+    $destination = Join-Path -Path $TestDrive.FullName -ChildPath 'Absolute'
+    GivenDirectories $destination
+    WhenCopyingFiles 'file1.txt' -To $destination
+    ThenFilesCopied 'file1.txt' -To $destination
+}
