@@ -19,6 +19,7 @@ function Publish-WhiskeyNuGetPackage
     #>
     [Whiskey.Task("PublishNuGetLibrary")]
     [Whiskey.Task("PublishNuGetPackage")]
+    [Whiskey.Task("NuGetPush")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -33,9 +34,9 @@ function Publish-WhiskeyNuGetPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
-    if( $TaskContext.TaskName -eq 'PublishNuGetLibrary' )
+    if( @( 'PublishNuGetLibrary', 'PublishNuGetPackage') -contains $TaskContext.TaskName )
     {
-        Write-Warning -Message ('We have renamed the ''PublishNuGetLibrary'' task to ''PublishNuGetPackage''. Please rename the task in ''{0}''. In a future version of Whiskey, the `PublishNuGetLibrary` name will no longer work.' -f $TaskContext.ConfigurationPath)
+        Write-Warning -Message ('We have renamed the ''{0}'' task to ''NuGetPush''. Please rename the task in ''{1}''. In a future version of Whiskey, the `PublishNuGetLibrary` name will no longer work.' -f $TaskContext.TaskName,$TaskContext.ConfigurationPath)
     }
 
     if( -not ($TaskParameter.ContainsKey('Path')))

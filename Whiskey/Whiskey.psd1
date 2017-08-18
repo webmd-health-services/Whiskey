@@ -170,6 +170,7 @@
 * ***BREAKING CHANGE***: Renamed `Node` task's `NpmScripts` property to `NpmScript`.
 * ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
 * Added `NuGetRestore` task for restoring NuGet packages.
+* Renaming `PublishNuGetPackage` task to `NuGetPush`.
 '@
         } # End of PSData hashtable
 
