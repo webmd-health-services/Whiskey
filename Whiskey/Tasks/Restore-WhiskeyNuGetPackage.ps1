@@ -61,14 +61,7 @@ function Restore-WhiskeyNuGetPackage
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
-    $versionParam = @{ }
-    if( $TaskParameter['Version'] )
-    {
-        $versionParam['Version'] = $TaskParameter['Version']
-    }
-    
-    $nuGetPath = Install-WhiskeyTool -NuGetPackageName 'NuGet.CommandLine' -DownloadRoot $TaskContext.BuildRoot @versionParam
-    $nuGetPath = Join-Path -Path $nuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
 
     foreach( $item in $path )
     {
