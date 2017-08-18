@@ -169,6 +169,7 @@
 * ***BREAKING CHANGE***: Renamed `CopyFile` task's `DestinationDirectories` property to `DestinationDirectory`.
 * ***BREAKING CHANGE***: Renamed `Node` task's `NpmScripts` property to `NpmScript`.
 * ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
+* Added `NuGetRestore` task for restoring NuGet packages.
 '@
         } # End of PSData hashtable
 
