@@ -102,8 +102,7 @@
                             'Set-WhiskeyBuildStatus',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
-                            'Unregister-WhiskeyEvent',
-                            'Write-CommandOutput'
+                            'Unregister-WhiskeyEvent'
                          );
 
     # Cmdlets to export from this module
