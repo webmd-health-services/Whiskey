@@ -16,7 +16,12 @@ InModuleScope -ModuleName 'Whiskey' {
         param(
             [Parameter(ValueFromPipeline=$true)]
             $InputObject,
+            [string]
+            $Path,
 
+            [string]
+            $PathVersion,
+            
             [string]
             $ByBuildServer,
 
@@ -30,6 +35,18 @@ InModuleScope -ModuleName 'Whiskey' {
         process
         {
             $inputDesc = 'nothing'
+            if( $path )
+            {
+                if( $path -like '*.json')
+                {
+                    New-Item $path -type file -value ('{{"version":"{0}"}}' -f $PathVersion)
+                }
+                if( $path -like '*.psd1')
+                {
+                    New-Item $path -type file -value ('@{{ModuleVersion = "{0}" }}' -f $pathVersion) 
+                }
+                $inputDesc = 'a path to obtain a version from {0}' -f $path            
+            }
             if( $InputObject )
             {
                 $inputDesc = '[{0}]{1}' -f $InputObject.GetType().Name.ToLowerInvariant(),$InputObject
@@ -48,22 +65,26 @@ InModuleScope -ModuleName 'Whiskey' {
                     $buildInfo.ScmCommitID = $commitID
                     $buildInfo.BuildServerName = 'Jenkins'
                     It ('should convert to {0}' -f $ByBuildServer) {
-                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+                        New-WhiskeySemanticVersion -Version $InputObject -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
                     }
                 }
                 Context 'by developer' {
                     $buildInfo = New-WhiskeyBuildMetadataObject
                     It ('should convert to {0}' -f $ByDeveloper) {
-                        New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+                        New-WhiskeySemanticVersion -Version $InputObject -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
                     }
                 }
+            }
+            if( $path )
+            {
+                remove-item $path
             }
         }
     }
 
     $testCases = @{
-                    '3.2.1+build.info' = '3.2.1';
-                  }
+        '3.2.1+build.info' = '3.2.1';
+    }
 
     '3.2.1+build.info' | Assert-ConvertsTo -ByBuildServer ('3.2.1+{0}' -f $buildServerBuildMetadata)  -ByDeveloper ('3.2.1+{0}' -f $developerBuildMetadata)
     '3.2.1+build.info' | Assert-ConvertsTo -ByBuildServer ('3.2.1+{0}' -f $buildServerBuildMetadata)  -ByDeveloper ('3.2.1+{0}' -f $developerBuildMetadata) 
@@ -80,4 +101,8 @@ InModuleScope -ModuleName 'Whiskey' {
     '1.0130'           | Assert-ConvertsTo -ByBuildServer ('1.130.0+{0}' -f $buildServerBuildMetadata)      -ByDeveloper ('1.130.0+{0}' -f $developerBuildMetadata)
     '1.5.6'            | Assert-ConvertsTo -Prerelease 'rc.4' -ByBuildServer ('1.5.6-rc.4+{0}' -f $buildServerBuildMetadata)      -ByDeveloper ('1.5.6-rc.4+{0}' -f $developerBuildMetadata)
     (@{})['Version']   | Assert-ConvertsTo -Prerelease 'rc.4' -ByBuildServer ('{0}.80-rc.4+{1}' -f $dateBasedVersion,$buildServerBuildMetadata)      -ByDeveloper ('{0}.0-rc.4+{1}' -f $dateBasedVersion,$developerBuildMetadata)
+    Assert-ConvertsTo -Path './package.json' -PathVersion '1.23.80' -ByBuildServer ('1.23.80+{0}' -f $buildServerBuildMetadata) -ByDeveloper ('1.23.80+{0}' -f $developerBuildMetadata)
+    Assert-ConvertsTo -Path './package.psd1' -PathVersion '1.23.80' -ByBuildServer ('1.23.80+{0}' -f $buildServerBuildMetadata) -ByDeveloper ('1.23.80+{0}' -f $developerBuildMetadata)
+    Assert-ConvertsTo -Prerelease 'rc.4' -Path './package.json' -PathVersion '1.23.80' -ByBuildServer ('1.23.80-rc.4+{0}' -f $buildServerBuildMetadata) -ByDeveloper ('1.23.80-rc.4+{0}' -f $developerBuildMetadata)
+    Assert-ConvertsTo -Prerelease 'rc.4' -Path './package.psd1' -PathVersion '1.23.80' -ByBuildServer ('1.23.80-rc.4+{0}' -f $buildServerBuildMetadata) -ByDeveloper ('1.23.80-rc.4+{0}' -f $developerBuildMetadata)  
 }
