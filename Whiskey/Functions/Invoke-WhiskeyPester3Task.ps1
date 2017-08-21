@@ -8,19 +8,19 @@ function Invoke-WhiskeyPester3Task
     .DESCRIPTION
     The `Invoke-Pester3Task` runs tests using Pester 3. You pass the path(s) to test to the `Path` parameter, which are passed directly to the `Invoke-Pester` function's `Script` parameter. Additional configuration information can be included in the `$TaskContext` such as:
 
-    * `$TaskContext.Version`: The version of Pester 3 to use. Can be a version between 3.0 but less than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
+    * `$TaskParameter.Version`: The version of Pester 3 to use. Can be a version between 3.0 but less than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
 
     If any tests fail (i.e. if the `FailedCount property on the result object returned by `Invoke-Pester` is greater than 0), this function will throw a terminating error.
 
     .EXAMPLE
     Invoke-WhiskeyPester3Task -TaskContext $context -TaskParameter $taskParameter
 
-    Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
+    Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskParameter.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
     [Whiskey.Task("Pester3",SupportsClean=$true)]
     [CmdletBinding()]
     param(
-         [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true)]
         [object]
         $TaskContext,
     
@@ -32,18 +32,36 @@ function Invoke-WhiskeyPester3Task
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not $TaskParameter.Version )
+    if( $TaskParameter.ContainsKey('Version') )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property ''Version'' is mandatory. It should be set to the version of Pester 3 you want to use. It should be greater than or equal to 3.0.3 and less than 4.0.0. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester')
-    }
+        $version = $TaskParameter['Version'] | ConvertTo-WhiskeySemanticVersion
+        if( -not $version )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')
+        }
 
-    $version = $TaskParameter.Version | ConvertTo-WhiskeySemanticVersion
-    
-    if( -not $version )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.BUILD.')
+        if( $version.Major -ne 3)
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Version property''s value ''{0}'' is invalid. It must start with ''3.'' (i.e. the major version number must always be ''3'')."' -f $version)
+        }
+        
+        $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
     }
-    $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
+    else
+    {
+        & {
+                $VerbosePreference = 'SilentlyContinue'
+                Import-Module -Name 'PackageManagement'
+          }
+
+        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '3.*' } ) 
+        if( -not $latestPester )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find a version of Pester 3 to install. This usually happens if the Find-Module function can''t communicate with the PowerShell Gallery or whatever PowerShell package repositories you have configured. Make sure you have a network connection and that you''ve got a package source installed that has Pester 4. The Register-PackageSource cmdlet installs new package sources.')
+        }
+        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $version = $latestPester.Version 
+    }
 
     if( $TaskContext.ShouldClean() )
     {
