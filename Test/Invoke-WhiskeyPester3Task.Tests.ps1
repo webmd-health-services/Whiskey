@@ -197,7 +197,7 @@ function Invoke-PesterTest
     {
         $version = $Version | ConvertTo-WhiskeySemanticVersion
         $version = '{0}.{1}.{2}' -f ($Version.Major, $version.Minor, $version.patch)
-        $pesterDirectoryName = 'Modules\Pester.{0}' -f $Version 
+        $pesterDirectoryName = 'Modules\Pester' -f $Version
         if( $PSVersionTable.PSVersion.Major -ge 5 )
         {
             $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
