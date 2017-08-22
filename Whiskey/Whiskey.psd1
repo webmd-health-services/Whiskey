@@ -171,6 +171,7 @@
 * ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
 * Added `NuGetRestore` task for restoring NuGet packages.
 * Renaming `PublishNuGetPackage` task to `NuGetPush`.
+* Creating `Pipeline` task that runs other pipelines as part of another pipeline.
 '@
         } # End of PSData hashtable
 
