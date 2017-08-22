@@ -45,9 +45,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $Name = $defaultPackageName,
 
         [string]
-        $ForApplicationName,
-
-        [string]
         $Description = $defaultDescription,
 
         [string]
@@ -123,8 +120,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $byWhoArg = @{ $PSCmdlet.ParameterSetName = $true }
 
-    Mock -CommandName 'ConvertTo-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return $Version }.GetNewClosure()
-
     $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
@@ -135,11 +130,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}-{1}' -f $taskContext.Version.SemVer2NoBuildMetadata,$taskContext.Version.SemVer2.Prerelease)
     }
 
-    if( $ForApplicationName )
-    {
-        $taskContext.ApplicationName = $ForApplicationName
-    }
-    
     $threwException = $false
     $At = $null
 
@@ -208,7 +198,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     $packageContentsPath = Join-Path -Path $expandPath -ChildPath 'package'
     $packageName = '{0}.{1}.upack' -f $Name,($taskContext.Version.SemVer2NoBuildMetadata-replace '[\\/]','-')
-    $outputRoot = Get-WhiskeyOutputDirectory -WorkingDirectory $taskContext.BuildRoot
+    $outputRoot = $taskContext.OutputDirectory
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
     It 'should cleanup temporary directories' {
@@ -860,21 +850,6 @@ Describe 'New-WhiskeyProGetUniversalPackage.when custom application root doesn''
     ThenTaskFails 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
 }
 
-Describe 'New-WhiskeyProGetUniversalPackage.when packaging everything with a custom application name' {
-    $dirNames = @( 'dir1', 'dir1\sub' )
-    $fileNames = @( 'html.html' )
-
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-                                      -FileName $fileNames `
-                                      -OnDevelopBranch
-
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-                                            -ThatIncludes '*.html' `
-                                            -HasRootItems $dirNames `
-                                            -HasFiles 'html.html' `
-                                            -ForApplicationName 'foo' 
-}
-
 Describe 'New-WhiskeyProGetUniversalPackage.when cleaning' {
     $file = 'project.json'    
     Given7ZipIsInstalled
@@ -953,7 +928,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel is not include
 Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is included' {
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
-    ThenTaskFails 'not a valid Compression Level'
+    ThenTaskFails 'not a valid compression level'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is included as a string' {

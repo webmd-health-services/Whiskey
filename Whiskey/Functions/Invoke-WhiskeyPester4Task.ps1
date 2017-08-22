@@ -98,6 +98,10 @@ function Invoke-WhiskeyPester4Task
 
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx)
 
+    Write-Verbose -Message ('[Pester4]  {0}' -f $pesterModulePath)
+    Write-Verbose -Message ('[Pester4]    Script      {0}' -f ($Path | Select-Object -First 1))
+    $Path | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('[Pester4]                {0}' -f $_) }
+    Write-Verbose -Message ('[Pester4]    OutputFile  {0}' -f $outputFile)
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $script = $using:Path

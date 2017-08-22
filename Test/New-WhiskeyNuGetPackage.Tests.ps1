@@ -44,11 +44,7 @@ function GivenABuiltLibrary
     robocopy $projectRoot $TestDrive.FullName '/MIR' '/R:0'
 
     # Make sure output directory gets created by the task
-    $buildConfig = 'Debug'
-    if( $InReleaseMode )
-    {
-        $buildConfig = 'Release'
-    }
+    $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
 
     $project = Join-Path -Path $TestDrive.FullName -ChildPath $projectName -Resolve
     
@@ -58,8 +54,20 @@ function GivenABuiltLibrary
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
-    Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
+    #Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
+    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
+    $context.ByDeveloper = $false
+    $context.ByBuildServer = $false
+    if( $InReleaseMode )
+    {
+        $context.ByBuildServer = $true
+    }
+    else
+    {
+        $context.ByDeveloper = $true
+    }
+    Invoke-WhiskeyBuild -Context $context
+    #Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
 }
 
 function GivenRunByBuildServer

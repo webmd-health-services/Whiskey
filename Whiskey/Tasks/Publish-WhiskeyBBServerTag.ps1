@@ -39,7 +39,7 @@ function Publish-WhiskeyBBServerTag
         "
     }
     
-    $commitHash = Get-WhiskeyCommitID
+    $commitHash = $TaskContext.BuildMetadata.ScmCommitID
     if( -not $commitHash )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('Unable to identify a valid commit to tag. Are you sure you''re running under a build server?')
@@ -50,10 +50,9 @@ function Publish-WhiskeyBBServerTag
         $projectKey = $TaskParameter['ProjectKey']
         $repoKey = $TaskParameter['RepositoryKey']
     }
-    elseif( (Test-Path -Path 'env:GIT_URL') )
+    elseif( $TaskContext.BuildMetadata.ScmUri )
     {
-        $uri = Get-Item -Path 'env:GIT_URL'
-        $uri = [uri]$uri.Value
+        $uri = [uri]$TaskContext.BuildMetadata.ScmUri
         $projectKey = $uri.Segments[-2].Trim('/')
         $repoKey = $uri.Segments[-1] -replace '\.git$',''
     }

@@ -105,7 +105,7 @@ function Install-WhiskeyTool
         Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
         if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
         {
-           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput
+           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput -Description ('Nuget.exe install')
         }
         return $nuGetRoot
     }

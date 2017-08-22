@@ -1,4 +1,63 @@
 
+function ConvertTo-Yaml
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [System.Object]$Data,
+        [Parameter(Mandatory=$false)]
+        [string]$OutFile,
+        [switch]$JsonCompatible=$false,
+        [switch]$Force=$false
+    )
+    BEGIN {
+        $d = [System.Collections.Generic.List[object]](New-Object "System.Collections.Generic.List[object]")
+    }
+    PROCESS {
+        if($data -ne $null) {
+            $d.Add($data)
+        }
+    }
+    END {
+        if($d -eq $null -or $d.Count -eq 0){
+            return
+        }
+        if($d.Count -eq 1) {
+            $d = $d[0]
+        }
+        #$norm = Convert-PSObjectToGenericObject $d
+        if($OutFile) {
+            $parent = Split-Path $OutFile
+            if(!(Test-Path $parent)) {
+                Throw "Parent folder for specified path does not exist"
+            }
+            if((Test-Path $OutFile) -and !$Force){
+                Throw "Target file already exists. Use -Force to overwrite."
+            }
+            $wrt = New-Object "System.IO.StreamWriter" $OutFile
+        } else {
+            $wrt = New-Object "System.IO.StringWriter"
+        }
+
+        $options = 0
+        if ($JsonCompatible) {
+            # No indent options :~(
+            $options = [YamlDotNet.Serialization.SerializationOptions]::JsonCompatible
+        }
+        try {
+            $serializer = New-Object "YamlDotNet.Serialization.Serializer" $options
+            $serializer.Serialize($wrt, $d)
+        } finally {
+            $wrt.Close()
+        }
+        if($OutFile){
+            return
+        }else {
+            return $wrt.ToString()
+        }
+    }
+}
+
 function New-AssemblyInfo
 {
     param(
@@ -115,12 +174,6 @@ function New-WhiskeyTestContext
         [switch]
         $InReleaseMode,
 
-        [string]
-        $ForApplicationName,
-
-        [string]
-        $ForReleaseName,
-                
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
         [Switch]
         [Alias('ByBuildServer')]
@@ -178,16 +231,6 @@ function New-WhiskeyTestContext
             $configData = @{
                                 'Version' = $ForVersion.ToString()
                            }
-            if( $ForApplicationName )
-            {
-                $configData['ApplicationName'] = $ForApplicationName
-            }
-
-            if( $ForReleaseName )
-            {
-                $configData['ReleaseName'] = $ForReleaseName
-            }
-
             if( $ForTaskName )
             {
                 $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
@@ -223,11 +266,6 @@ function New-WhiskeyTestContext
         $context.TaskName = $ForTaskName
     }
 
-    if( $ForReleaseName )
-    {
-        $context.ReleaseName = $ForReleaseName
-    }
-
     if( $ForVersion )
     {
         $context.Version.SemVer2 = $ForVersion
@@ -248,6 +286,7 @@ function New-WhiskeyTestContext
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyMSBuildConfiguration.ps1' -Resolve)
 

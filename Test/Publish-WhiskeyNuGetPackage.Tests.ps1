@@ -103,7 +103,7 @@ function WhenRunningNuGetPackTask
         $Symbols
     )
 
-    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
+    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'NuGetPush' -ForBuildServer -IgnoreExistingOutputDirectory
     $taskParameter = @{ }
 
     if( $path )
