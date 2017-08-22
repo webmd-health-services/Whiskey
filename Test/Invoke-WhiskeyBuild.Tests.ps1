@@ -102,12 +102,36 @@ function ThenBuildOutputRemoved
     }
 }
 
+function ThenPipelineRan
+{
+    param(
+        $Name,
+        $Times = 1
+    )
+
+    $qualifier = ''
+    if( $Times -lt 1 )
+    {
+        $qualifier = 'not '
+    }
+
+    It ('should {0}run the {1} pipeline' -f $qualifier,$Name) {
+        $expectedPipelineName = $Name
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $Name -eq $expectedPipelineName }
+        if( $Times )
+        {
+            Assert-ContextPassedTo 'Invoke-WhiskeyPipeline' -Times $Times
+        }
+    }
+}
+
 function ThenBuildPipelineRan
 {
-    It ('should run the BuildTasks pipeline') {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Name -eq 'BuildTasks' }
-        Assert-ContextPassedTo 'Invoke-WhiskeyPIpeline' -Times 1
-    }
+    param(
+        $Times = 1
+    )
+
+    ThenPipelineRan 'BuildTasks' -Times $Times
 }
 
 function ThenBuildOutputNotRemoved
@@ -167,23 +191,21 @@ function ThenContextPassedWhenSettingBuildStatus
 
 function ThenPublishPipelineRan
 {
-    It ('should run the PublishTasks pipeline') {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Name -eq 'PublishTasks' }
-        Assert-ContextPassedTo 'Invoke-WhiskeyPIpeline' -Times 2
-    }
+    ThenPipelineRan -Name 'PublishTasks' -Times 1
 }
 
 function ThenPublishPipelineNotRun
 {
-    It ('should run the PublishTasks pipeline') {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times 0 -ParameterFilter { $Name -eq 'PublishTasks' }
-    }
+    ThenPipelineRan -Name 'PublishTasks' -Times 0
 }
 
 function WhenRunningBuild
 {
     [CmdletBinding()]
     param(
+        [string[]]
+        $PipelineName,
+
         [Switch]
         $WithCleanSwitch,
 
@@ -234,16 +256,22 @@ function WhenRunningBuild
     $script:threwException = $false
     try
     {
-        $modeParam = @{}
+        $optionalParams = @{}
         if( $WithCleanSwitch )
         {
-            $modeParam['Clean'] = $true
+            $optionalParams['Clean'] = $true
         }
         elseif( $WithInitializeSwitch )
         {
-            $modeparam['Initialize'] = $true
+            $optionalParams['Initialize'] = $true
         }
-        Invoke-WhiskeyBuild -Context $context @modeParam
+
+        $pipelineNameParam = @{ }
+        if( $PipelineName )
+        {
+            $optionalParams['PipelineName'] = $PipelineName
+        }
+        Invoke-WhiskeyBuild -Context $context @optionalParams
     }
     catch
     {
@@ -365,4 +393,14 @@ Describe 'Invoke-WhiskeyBuild.when publishing but no tasks' {
     GivenPublishingPipelineSucceeds
     WhenRunningBuild
     ThenPublishPipelineNotRun
+}
+
+Describe 'Invoke-WhiskeyBuild.when running specific pipelines' {
+    GivenRunByBuildServer
+    GivenPublishing
+    WhenRunningBuild -PipelineName 'Fubar','snafu'
+    ThenPublishPipelineNotRun
+    ThenPipelineRan 'Fubar'
+    ThenPipelineRan 'Snafu'
+    ThenBuildPipelineRan -Times 0
 }

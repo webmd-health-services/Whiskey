@@ -59,6 +59,12 @@ function Invoke-WhiskeyBuild
         # The context for the build. Use `New-WhiskeyContext` to create context objects.
         $Context,
 
+        [string[]]
+        # The name(s) of any pipelines to run. Default behavior is to run the `BuildTasks` pipeline and, if on a publishing branch, the `PublishTasks` pipeline.
+        #
+        # If you pass a value to this parameter, the `PublishTasks` pipeline is *not* run implicitly. You must pass its name to run it.
+        $PipelineName,
+
         [Parameter(Mandatory=$true,ParameterSetName='Clean')]
         [Switch]
         # Runs the build in clean mode. In clean mode, tasks delete any artifacts they create, including downloaded tools and dependencies. This is opt-in, so if a task is not deleting its artifacts, it needs to be updated to support clean mode.
@@ -85,15 +91,25 @@ function Invoke-WhiskeyBuild
         Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
 
         $Context.RunMode = $PSCmdlet.ParameterSetName
-            
-        Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
 
-        $config = $Context.Configuration
-        Write-Verbose -Message ('Publish?       {0}' -f $Context.Publish)
-        Write-Verbose -Message ('PublishTasks?  {0}' -f $config.ContainsKey('PublishTasks'))
-        if( $Context.Publish -and $config.ContainsKey('PublishTasks') )
+        if( $PipelineName )
         {
-            Invoke-WhiskeyPipeline -Context $Context -Name 'PublishTasks'
+            foreach( $name in $PipelineName )
+            {
+                Invoke-WhiskeyPipeline -Context $Context -Name $name
+            }
+        }
+        else
+        {
+            Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
+
+            $config = $Context.Configuration
+            Write-Verbose -Message ('Publish?           {0}' -f $Context.Publish)
+            Write-Verbose -Message ('Publish Pipeline?  {0}' -f $config.ContainsKey('PublishTasks'))
+            if( $Context.Publish -and $config.ContainsKey('PublishTasks') )
+            {
+                Invoke-WhiskeyPipeline -Context $Context -Name 'PublishTasks'
+            }
         }
 
         $succeeded = $true
