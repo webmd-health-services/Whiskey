@@ -17,11 +17,12 @@ function New-WhiskeySemanticVersion
     [CmdletBinding()]
     [OutputType([SemVersion.SemanticVersion])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='ByVersion')]
         [AllowNull()]
         [object]
         $Version,
 
+        [Parameter(Mandatory=$true,ParameterSetName='ByPath')]
         [AllowNull()]
         [AllowEmptyString()]
         [object]
@@ -42,21 +43,27 @@ function New-WhiskeySemanticVersion
     
     if( $Version )
     {
-        $semVersion = $Version | ConvertTo-WhiskeySemanticVersion -ErrorAction Stop
+        $semVersion = $Version | ConvertTo-WhiskeySemanticVersion
     }
     elseif( $Path )
     {
-        if($Path -like '*/package.json')
+        $Path = Resolve-Path -Path $Path | Select-Object -ExpandProperty ProviderPath
+        if( -not $Path )
+        {
+            Write-Error ('Path to Version file ''{0}'' does not exist' -f $path)
+        }
+        $fileInfo = Get-Item $Path
+        if($fileInfo.Name -eq 'package.json')
         {
             $semVersion = Get-Content -Raw -Path $Path | 
                 ConvertFrom-Json | 
                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore | 
-                ConvertTo-WhiskeySemanticVersion -ErrorAction Stop
+                ConvertTo-WhiskeySemanticVersion
         }
-        if($Path -like '*.psd1')
+        if($fileInfo.Extension -eq '.psd1')
         {
             $semVersion = (Test-ModuleManifest $Path).Version | 
-                ConvertTo-WhiskeySemanticVersion -ErrorAction Stop
+                ConvertTo-WhiskeySemanticVersion
         }
     }
     else
@@ -69,7 +76,10 @@ function New-WhiskeySemanticVersion
         $today = Get-Date
         $semVersion = New-Object 'SemVersion.SemanticVersion' $today.Year,$today.ToString('MMdd'),$patch,$Prerelease
     }
-
+    if( -not $semVersion )
+    {
+        Write-Error -Message ('Unable to determine module version from ''{0}''. Please make sure this is valid JSON, that it contains a Version property, and that the Version is a valid semantic version, e.g. it follows the specification at http://semver.org.' -f $fileInfo.FullName)
+    }
     $buildInfo = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
     if( $BuildMetadata.IsBuildServer )
     {
