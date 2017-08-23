@@ -462,7 +462,17 @@ function GivenARepositoryWithFiles
             New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
         }
 
-        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType 'File'
+        $itemTypeParam = @{ }
+        if( $item -like '*.*' ) 
+        {
+            $itemTypeParam['ItemType'] = 'File'
+        }
+        else 
+        {
+            $itemTypeParam['ItemType'] = 'Directory'
+        }
+
+        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) @itemTypeParam
     }
 }
 
@@ -609,7 +619,7 @@ function ThenPackageShouldInclude
     {
         $expectedPath = Join-Path -Path $packageRoot -ChildPath $item
         It ('should include {0}' -f $item) {
-            $expectedPath | Should Exist
+            $expectedPath | Should -Exist
         }
     }
 }
@@ -960,4 +970,11 @@ Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is includ
     GivenARepositoryWithFiles 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
     ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when package has empty directories' {
+    GivenARepositoryWithFiles 'root.ps1','dir1\one.ps1','dir1\emptyDir1','dir1\emptyDir2\text.txt'
+    WhenPackaging -Paths '.' -WithWhitelist '*.ps1'
+    ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
+    ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
 }
