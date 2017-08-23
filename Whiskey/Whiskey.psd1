@@ -171,6 +171,8 @@
 * ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
 * Added `NuGetRestore` task for restoring NuGet packages.
 * Renaming `PublishNuGetPackage` task to `NuGetPush`.
+* Creating `Pipeline` task that runs other pipelines as part of another pipeline.
+* Added support for multiple, distinct pipelines in a `whiskey.yml` file. Define distinct pipelines in `whiskey.yml` and pass the pipeline name(s) to the `Invoke-WhiskeyBuild` function's `PipelineName` parameter.
 '@
         } # End of PSData hashtable
 
