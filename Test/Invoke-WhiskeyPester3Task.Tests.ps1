@@ -286,14 +286,14 @@ Describe 'Invoke-WhiskeyPester3Task.when version of tool doesn''t exist' {
     Invoke-PesterTest -Path $pesterPassingPath -WithInvalidVersion -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when major version of tool is not 3.*' {
+Describe 'Invoke-WhiskeyPester3Task.when major version of tool is not 3.*' {
     GivenTestContext
     $version = '4.0.1'
     $failureMessage = 'the major version number must always be ''3'''
     Invoke-PesterTest -Path $pesterPassingPath -Version $version -ShouldFailWithMessage $failureMessage -PassingCount 0 -FailureCount 0 -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when Find-Module fails' {
+Describe 'Invoke-WhiskeyPester3Task.when Find-Module fails' {
     GivenTestContext
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith { return $Null }
     Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null }
