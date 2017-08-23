@@ -13,14 +13,15 @@ function Invoke-WhiskeyNuGetPush
 
         [Parameter(Mandatory=$true)]
         [string]
-        $ApiKey
+        $ApiKey,
+
+        [string]
+        $NuGetPath = (Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve)
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
-    $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-
-    & $nugetPath push $Path -Source $Uri -ApiKey $ApiKey
+    & $NuGetPath push $Path -Source $Uri -ApiKey $ApiKey
 
 }
