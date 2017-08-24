@@ -145,11 +145,10 @@ function ThenDotNetProjectsCompilationFailed
 function ThenNUnitTestsNotRun
 {
     param(
-        $ConfigurationPath
     )
 
     It 'should not run NUnit tests' {
-        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 
@@ -280,7 +279,7 @@ BuildTasks:
     WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenDotNetProjectsCompilationFailed -ConfigurationPath $whiskeyYmlPath -ProjectName $project
-    ThenNUnitTestsNotRun -ConfigurationPath $whiskeyYmlPath
+    ThenNUnitTestsNotRun
 }
 
 Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
@@ -348,7 +347,7 @@ BuildTasks:
 "@
     GivenPlugins -ForSpecificTask 'PowerShell'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-WhiskeyMsBuildTask' -ModuleName 'Whiskey'
+    Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
 
     WhenRunningPipeline 'BuildTasks'
     ThenPipelineSucceeded

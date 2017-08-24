@@ -54,7 +54,7 @@ function Invoke-WhiskeyPipeline
     }
 
     $taskIdx = -1
-    if( $config[$Name] -is [string]  )
+    if( -not $config[$Name] )
     {
         Write-Warning -Message ('It looks like pipeline ''{0}'' doesn''t have any tasks.' -f $Context.ConfigurationPath)
         $config[$Name] = @()
@@ -68,7 +68,7 @@ function Invoke-WhiskeyPipeline
             $taskName = $taskItem
             $taskItem = @{ }
         }
-        elseif( $taskItem -is [hashtable] )
+        elseif( ($taskItem | Get-Member -Name 'Keys') )
         {
             $taskName = $taskItem.Keys | Select-Object -First 1
             $taskItem = $taskItem[$taskName]

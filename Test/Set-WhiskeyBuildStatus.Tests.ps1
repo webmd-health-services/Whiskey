@@ -65,6 +65,20 @@ function ThenBuildStatusReportedToBitbucketServer
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Status -eq $ExpectedStatus }
     }
 
+    $buildInfo = $context.BuildMetadata
+    It ('should set status on commit ''{0}''' -f $buildInfo.ScmCommitID) {
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $CommitID -eq $buildInfo.ScmCommitID }
+    }
+
+    It ('should set status with key ''{0}''' -f $buildInfo.JobUri) {
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Key -eq $buildInfo.JobUri }
+    }
+
+    It ('should set status for build ''{0}''' -f $buildInfo.BuildUri) {
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $BuildUri -eq $buildInfo.BuildUri }
+        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $buildInfo.JobName }
+    }
+
     It ('should report to Bitbucket Server at {0}' -f $At) {
         $expectedUri = $At
         Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Uri -eq $expectedUri }
@@ -95,6 +109,11 @@ function WhenReportingBuildStatus
     )
 
     Mock -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey'
+    $context.BuildMetadata.ScmCommitID = 'deadbee'
+    $context.BuildMetadata.BuildUri = 'https://job.example.com/build'
+    $context.BuildMetadata.JobName = 'snafu'
+    $context.BuildMetadata.BuildServerName = 'Jenkins'
+    $context.BuildMetadata.JobUri = 'https://job.example.com/'
     $Global:Error.Clear()
     try
     {

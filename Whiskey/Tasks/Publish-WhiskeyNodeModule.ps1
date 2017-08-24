@@ -59,7 +59,7 @@ function Publish-WhiskeyNodeModule
         NpmRegistryUri: https://registry.npmjs.org/
     '
     }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $buildRoot
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $buildRoot -ForDeveloper:$TaskContext.ByDeveloper
     
     if (!$TaskContext.Publish)
     {

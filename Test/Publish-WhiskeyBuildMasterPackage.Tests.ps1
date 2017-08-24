@@ -5,38 +5,39 @@ $mockPackage = [pscustomobject]@{ }
 $mockRelease = [pscustomobject]@{ }
 $mockDeploy = [pscustomobject]@{ }
 $packageVersion = 'version'
+$defaultApiKeyID = 'BuildMaster'
+$defaultApiKey = 'fubarsnafu'
+$defaultAppName = 'application'
+$defaultReleaseId = 483
 $context = $null
 $version = $null
 $releaseName = $null
 $appName = $null
 $taskParameter = $null
-$releaseId = 483
+$releaseId = $null
 $apiKeyID = $null
 $apiKey = $null
+$uri = $null
 
-function GivenApiKey
+function GivenNoApiKey
 {
     param(
         $ID,
         $ApiKey
     )
 
-    $script:apiKeyID = $ID
-    $script:ApiKey = $ApiKey
-}
-
-function GivenApplicationName
-{
-    param(
-        $Name
-    )
-
-    $script:appName = $Name
+    $script:apiKeyID = $null
+    $script:ApiKey = $null
 }
 
 function GivenNoApplicationName
 {
     $script:appName = $null
+}
+
+function GivenNoReleaseName
+{
+    $script:releaseName = $null
 }
 
 function GivenNoRelease
@@ -52,8 +53,12 @@ function GivenNoRelease
 
     $script:appName = $ForApplication
     $script:releaseName = $Name
+    $script:releaseId = $null
+}
 
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { }
+function GivenNoUri
+{
+    $script:uri = $null
 }
 
 function GivenProperty
@@ -66,30 +71,16 @@ function GivenProperty
     $script:taskParameter = $Property
 }
 
-function GivenRelease
+function Init
 {
-    param(
-        [Parameter(Mandatory=$true,Position=0)]
-        [string]
-        $Name,
-        [Parameter(Mandatory=$true)]
-        [string]
-        $ForApplication
-    )
-
-    $script:appName = $ForApplication
-    $script:releaseName = $Name
-    $releaseId = $script:releaseId
-    Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Application = $Application; Name = $Name; id = $releaseId  } }.GetNewClosure()
-}
-
-function GivenVersion
-{
-    param(
-        $Version
-    )
-
-    $script:version = $Version
+    $script:version = '9.8.3-rc.1+build.deadbee'
+    $script:appName = $defaultAppName
+    $script:releaseName = 'release'
+    $script:uri = 'https://buildmaster.example.com'
+    $script:apiKeyID = $defaultApiKeyID
+    $script:apiKey = $defaultApiKey
+    $script:releaseId = $defaultReleaseId
+    $script:taskParameter = @{ }
 }
 
 function WhenCreatingPackage
@@ -98,17 +89,45 @@ function WhenCreatingPackage
     param(
     )
 
-    $taskParameter['ApplicationName'] = $appName
+    if( -not $taskParameter )
+    {
+        $taskParameter = @{ }
+    }
 
-    $script:context = New-WhiskeyTestContext -ForVersion $version -ForReleaseName $releaseName -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
+    if( $appName )
+    {
+        $taskParameter['ApplicationName'] = $appName
+    }
+
+    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
 
     if( $apiKeyID )
     {
+        $taskParameter['ApiKeyID'] = $apiKeyID
         Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
+    }
+
+    if( $releaseName )
+    {
+        $taskParameter['ReleaseName'] = $releaseName
+    }
+
+    if( $uri )
+    {
+        $taskParameter['Uri'] = $uri
     }
 
     $package = $mockPackage
     $deploy = $mockDeploy
+    $release = [pscustomobject]@{ Application = $appName; Name = $releaseName; id = $releaseId  }
+    if( $releaseId )
+    {
+        Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release  }.GetNewClosure()
+    }
+    else
+    {
+        Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { }
+    }
     Mock -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Release = $Release; PackageNumber = $PackageNumber; Variable = $Variable } }
     Mock -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Package = $package } }
 
@@ -237,22 +256,19 @@ function ThenTaskFails
 }
 
 Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
-    GivenApiKey 'BuildMaster' 'fubarsnafu'
-    GivenVersion '9.8.3-rc.1+build.deadbee'
-    GivenRelease 'release' -ForApplication 'application'
+    Init
     GivenProperty @{
-                        'Uri' = 'https://buildmaster.example.com';
-                        'ApiKeyID' = 'BuildMaster';
-                        'PackageVariables' = @{
+                        'PackageVariable' = @{
                                                     'One' = 'Two';
                                                     'Three' = 'Four';
-                                              }
+                                             }
                    }
     WhenCreatingPackage
     ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
 }
 
 Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in BuildMaster' {
+    Init
     GivenNoRelease 'release' -ForApplication 'application'
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenPackageNotCreated
@@ -260,31 +276,29 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in Bu
 }
 
 Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is missing') {
+    Init
     GivenNoApplicationName
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when customizing ReleaseName property') {
-    GivenApiKey 'BuildMaster' 'fubarsnafu'
-    GivenVersion '9.8.3-rc.1+build.deadbee'
-    GivenApplicationName 'fubar'
-    GivenRelease 'snafu' -ForApplication 'fubar'
-    GivenProperty @{ 'ReleaseName' = 'hello' ; Uri = 'https://buildmaster.example.com'; 'ApiKeyID' = 'BuildMaster' }
-    WhenCreatingPackage 
-    ThenCreatedPackage '9.8.3' -InRelease 'hello' -ForApplication 'fubar' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ }
+Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missing') {
+    Init
+    GivenNoReleaseName
+    WhenCreatingPackage -ErrorAction SilentlyContinue
+    ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
 }
 
 Describe ('Publish-WhiskeyBuildMasterPackage.when Uri property is missing') {
-    GivenRelease 'release' -ForApplication 'fubar'
-    GivenProperty @{ }
+    Init
+    GivenNoUri
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenTaskFails ('\bUri\b.*\bmandatory\b')
 }
 
 Describe ('Publish-WhiskeyBuildMasterPackage.when ApiKeyID property is missing') {
-    GivenRelease 'release' -ForApplication 'fubar'
-    GivenProperty @{ 'Uri' = 'https://buildmaster.example.com' }
+    Init
+    GivenNoApiKey
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
 }

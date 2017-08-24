@@ -12,8 +12,6 @@ function New-WhiskeyContextObject
                                     ApiKeys = @{ };
                                     Environment = '';
                                     Credentials = @{ }
-                                    ApplicationName = '';
-                                    ReleaseName ='';
                                     BuildRoot = '';
                                     ConfigurationPath = '';
                                     OutputDirectory = '';
@@ -28,6 +26,8 @@ function New-WhiskeyContextObject
                                     ByDeveloper = $true;
                                     Publish = $false;
                                     RunMode = 'Build';
+                                    BuildMetadata = (New-WhiskeyBuildMetadataObject);
+                                    Variables = @{ };
                                 }
     $context | Add-Member -MemberType ScriptMethod -Name 'ShouldClean' -Value { return $this.RunMode -eq 'Clean' }
     $context | Add-Member -MemberType ScriptMethod -Name 'ShouldInitialize' -Value { return $this.RunMode -eq 'Initialize' }

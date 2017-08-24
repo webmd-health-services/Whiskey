@@ -72,7 +72,9 @@ Use the `Add-WhiskeyCredential` function to add the credential to the build.`
                                     'Completed' = 'Successful';
                                     'Failed' = 'Failed'
                               }
-                Set-BBServerCommitBuildStatus -Connection $conn -Status $statusMap[$Status]
+
+                $buildInfo = $Context.BuildMetadata
+                Set-BBServerCommitBuildStatus -Connection $conn -Status $statusMap[$Status] -CommitID $buildInfo.ScmCommitID -Key $buildInfo.JobUri -BuildUri $buildInfo.BuildUri -Name $buildInfo.JobName
             }
 
             default

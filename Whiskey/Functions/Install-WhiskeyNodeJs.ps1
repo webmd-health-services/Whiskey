@@ -33,7 +33,11 @@ function Install-WhiskeyNodeJs
 
         [string]
         # The directory where NVM should be installed to. Only used if NVM isn't already installed. NVM is installed to `$NvmInstallDirectory\nvm`.
-        $NvmInstallDirectory
+        $NvmInstallDirectory,
+
+        [Switch]
+        # Install Node on a developer computer.
+        $ForDeveloper
     )
 
     Set-StrictMode -Version 'Latest'
@@ -51,7 +55,7 @@ function Install-WhiskeyNodeJs
     else
     {
         # On developer computers, NVM should be installed by default. If not, make the dev install it.
-        if( -not (Test-WhiskeyRunByBuildServer) )
+        if( $ForDeveloper )
         {
             Write-Error -Message (@"
 NVM for Windows is not installed. To install it:
