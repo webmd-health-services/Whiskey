@@ -9,6 +9,7 @@ $threwException = $null
 $assembly = $null
 $previousBuildRunAt = $null
 $version = $null
+$nuGetVersion = $null
 
 $assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
 foreach( $item in @( 'bin', 'obj', 'packages' ) )
@@ -93,9 +94,19 @@ function GivenVersion
     $script:version = $Version
 }
 
+function GivenNuGetVersion
+{
+    param(
+        $NuGetVersion
+    )
+
+    $script:nuGetVersion = $NuGetVersion
+}
+
 function Init
 {
     $script:version = $null
+    $script:nuGetVersion = $null
 }
 
 function WhenRunningTask
@@ -139,7 +150,7 @@ function WhenRunningTask
         $optionalParams['ForVersion'] = $AtVersion
     }
 
-    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'BuildRoot')
+    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Get-BuildRoot)
 
     if( -not $WithNoPath )
     {
@@ -156,6 +167,11 @@ function WhenRunningTask
     if( $version )
     {
         $WithParameter['Version'] = $version
+    }
+    
+    if( $nuGetVersion )
+    {
+        $WithParameter['NuGetVersion'] = $nuGetVersion
     }
     
     $Global:Error.Clear()
@@ -216,7 +232,10 @@ function ThenBinsAreEmpty
         Get-ChildItem -Path (Get-BuildRoot) -Filter $assembly -File -Recurse | Should -BeNullOrEmpty
     }
     It 'should remove packages directory' {
-        Get-ChildItem -Path (Get-BuildRoot) -Directory -Include 'packages' -Recurse | Should -BeNullOrEmpty
+        foreach ($project in $path) {
+            $projectPath = Join-Path -Path (Get-BuildRoot) -ChildPath ($project | Split-Path)
+            Get-ChildItem -Path $projectPath -Include 'packages' -Directory | Should -BeNullOrEmpty
+        } 
     }
 }
 
@@ -244,7 +263,8 @@ function ThenNuGetPackagesRestored
 function ThenNuGetPackagesNotRestored
 {
     It 'should not restore NuGet packages' {
-        Get-ChildItem -Path (Get-BuildRoot) -Filter 'packages' -Recurse | Should -BeNullOrEmpty
+        Get-ChildItem -Path (Get-BuildRoot) -Filter 'packages' -Recurse | 
+            ForEach-Object { Get-ChildItem -Path $_.FullName -Exclude 'NuGet.CommandLine.*' } | Should -BeNullOrEmpty
     }
 }
 
@@ -373,6 +393,15 @@ function ThenOutputIsMinimal
 function ThenOutputIsDebug
 {
     ThenOutput -Contains 'Target\ "[^"]+"\ in\ file\ '
+}
+
+function ThenSpecificNuGetVersionInstalled
+{
+    $nuGetPackageVersion = 'NuGet.CommandLine.{0}' -f $nuGetVersion
+    
+    It ('should install ''{0}''' -f $nugetPackageVersion) {
+        Join-Path -Path (Get-BuildRoot) -ChildPath ('packages\{0}' -f $nugetPackageVersion) | Should -Exist
+    }
 }
 
 function ThenTaskFailed
@@ -596,4 +625,13 @@ Describe 'MSBuild Task.when disabling file logger' {
 "@ 
     WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
     ThenOutputNotLogged
+}
+
+Describe 'MSBuild Task.when run by developer using a specific version of NuGet' {
+    Init
+    GivenProjectsThatCompile
+    GivenNuGetVersion '3.5.0'
+    WhenRunningTask -AsDeveloper
+    ThenSpecificNuGetVersionInstalled
+    ThenNuGetPackagesRestored
 }
