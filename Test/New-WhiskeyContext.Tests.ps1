@@ -162,7 +162,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
         if( $withPath )
         {
-            $Configuration['VersionPath'] = $withPath
+            $Configuration['VersionFrom'] = $withPath
             $Script:path = $withPath
         }
     
@@ -634,7 +634,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer1Is '1.2.3'
     }
 
-    function GivenNodeVersionPath
+    function GivenNodeVersionFrom
     {
         param(
             [string]
@@ -644,7 +644,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         )
         New-Item -Force $withPath -type file -value ('{{"version":"{0}"}}' -f $AtVersion)
     }
-    function GivenModuleVersionPath
+    function GivenModuleVersionFrom
     {
         param(
             [string]
@@ -659,7 +659,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
         GivenConfiguration -withPath 'package.json'
-        GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
         WhenCreatingContext -ByDeveloper
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
@@ -670,7 +670,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
         GivenConfiguration -withPath 'package.json'
-        GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
         WhenCreatingContext -ByDeveloper
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
@@ -681,7 +681,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building a Node module by a build server' {
         Init
         GivenConfiguration -ForBuildServer -withPath 'package.json'
-        GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
         WhenCreatingContext -ByBuildServer 
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
@@ -692,7 +692,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building a Powershell module by a build server' {
         Init
         GivenConfiguration -ForBuildServer -withPath 'package.psd1'
-        GivenModuleVersionPath -AtVersion '9.4.6' -withPath 'package.psd1'
+        GivenModuleVersionFrom -AtVersion '9.4.6' -withPath 'package.psd1'
         WhenCreatingContext -ByBuildServer 
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
@@ -703,7 +703,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
         Init
         GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
-        GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json' 
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json' 
         WhenCreatingContext 
         ThenVersionMatches ('^{0}\.' -f (Get-Date).ToString('yyyy\\.Mdd'))
     }

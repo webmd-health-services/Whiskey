@@ -120,9 +120,9 @@ function New-WhiskeyContext
     $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
     $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
     $versionParam = @{}
-    if( $config.ContainsKey( 'VersionPath') )
+    if( $config.ContainsKey( 'VersionFrom') )
     {
-        $versionParam['Path'] = $config['VersionPath']
+        $versionParam['Path'] = $config['VersionFrom']
     }
     else
     {
