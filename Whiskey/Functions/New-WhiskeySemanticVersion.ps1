@@ -62,7 +62,7 @@ function New-WhiskeySemanticVersion
         {
             $semVersion = Test-ModuleManifest -Path $Path | 
                 Select-Object -ExpandProperty 'Version' | 
-                ConvertTo-WhiskeySemanticVersion -ErrorAction Stop
+                ConvertTo-WhiskeySemanticVersion
         }
     }
     else
