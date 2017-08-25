@@ -7,7 +7,6 @@ InModuleScope -ModuleName 'Whiskey' {
     $buildID = '80'
     $branch = 'feature/fubar'
     $commitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
-    $appBuildMetadata = 'feature-fubar.deadbee'
     $buildServerBuildMetadata = '80.feature-fubar.deadbee'
     $developerBuildMetadata = '{0}-{1}' -f $env:USERNAME,$env:COMPUTERNAME
 
@@ -41,11 +40,11 @@ InModuleScope -ModuleName 'Whiskey' {
             {
                 if( $path -like '*.json')
                 {
-                    New-Item $path -type file -value ('{{"version":"{0}"}}' -f $PathVersion)
+                    New-Item -Force $path -type file -value ('{{"version":"{0}"}}' -f $PathVersion)
                 }
                 if( $path -like '*.psd1')
                 {
-                    New-Item $path -type file -value ('@{{ModuleVersion = "{0}" }}' -f $pathVersion) 
+                    New-Item -Force $path -type file -value ('@{{ModuleVersion = "{0}" }}' -f $pathVersion) 
                 }
                 $inputDesc = 'a path to obtain a version from {0}' -f $path            
             }
@@ -58,40 +57,109 @@ InModuleScope -ModuleName 'Whiskey' {
             {
                 $inputDesc = '{0} and prerelease metadata' -f $inputDesc
             }
-            # if( $badJSON )
-            # {
-            #     '{{"version"":}}'| Set-Content $path
-            # }
-            Describe ('New-WhiskeySemanticVersion.when passed {0}' -f $inputDesc) {
-                Context 'by build server' {
-                    $buildInfo = New-WhiskeyBuildMetadataObject
-                    $buildInfo.BuildNumber = $buildID
-                    $buildInfo.ScmBranch = $branch
-                    $buildInfo.ScmCommitID = $commitID
-                    $buildInfo.BuildServerName = 'Jenkins'
-                    if($Path)
-                    {
-                        New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+            if( $badJSON )
+            {
+                '{{"version"":}}'| Set-Content $path
+                Describe 'New-WhiskeySemanticVersion.when passed bad json it should fail' {
+                    Context 'by build server' {
+                        $buildInfo = New-WhiskeyBuildMetadataObject
+                        $buildInfo.BuildNumber = $buildID
+                        $buildInfo.ScmBranch = $branch
+                        $buildInfo.ScmCommitID = $commitID
+                        $buildInfo.BuildServerName = 'Jenkins'
+                        if($path)
+                        {
+                            try
+                            {
+                                New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo -ErrorAction silentlyContinue
+                            }
+                            catch
+                            {
+                                It ('should Not convert to {0}' -f $ByBuildServer) {
+                                    $Global:Error | Should -not -BeNullOrEmpty
+                                }
+                            }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo -ErrorAction silentlyContinue
+                            }
+                            catch
+                            {
+                                It ('should Not convert to {0}' -f $ByBuildServer) {
+                                    $Global:Error | Should -not -BeNullOrEmpty
+                                }
+                            }
+                        }
                     }
-                    else
-                    {
-                        It ('should convert to {0}' -f $ByBuildServer) {
-                            New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+                    Context 'by developer' {
+                        $buildInfo = New-WhiskeyBuildMetadataObject
+                        if($path)
+                        {
+                            try
+                            {
+                                New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo -ErrorAction silentlyContinue
+                            }
+                            catch
+                            {
+                                It ('should Not convert to {0}' -f $ByDeveloper) {
+                                    $Global:Error | Should -not -BeNullOrEmpty
+                                }
+                            }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo -ErrorAction silentlyContinue
+                            }
+                            catch
+                            {
+                                It ('should Not convert to {0}' -f $ByDeveloper) {
+                                    $Global:Error | Should -not -BeNullOrEmpty
+                                }
+                            }
                         }
                     }
                 }
-                Context 'by developer' {
-                    $buildInfo = New-WhiskeyBuildMetadataObject
-                    if($path)
-                    {
-                        It ('should convert to {0}' -f $ByDeveloper) {
-                            New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+            }
+            else
+            {
+                Describe ('New-WhiskeySemanticVersion.when passed {0}' -f $inputDesc) {
+                    Context 'by build server' {
+                        $buildInfo = New-WhiskeyBuildMetadataObject
+                        $buildInfo.BuildNumber = $buildID
+                        $buildInfo.ScmBranch = $branch
+                        $buildInfo.ScmCommitID = $commitID
+                        $buildInfo.BuildServerName = 'Jenkins'
+                        if($Path)
+                        {
+                            It ('should convert to {0}' -f $ByBuildServer) {
+                                New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+                            }
+                        }
+                        else
+                        {
+                            It ('should convert to {0}' -f $ByBuildServer) {
+                                New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByBuildServer))
+                            }
                         }
                     }
-                    else
-                    {
-                        It ('should convert to {0}' -f $ByDeveloper) {
-                            New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+                    Context 'by developer' {
+                        $buildInfo = New-WhiskeyBuildMetadataObject
+                        if($path)
+                        {
+                            It ('should convert to {0}' -f $ByDeveloper) {
+                                New-WhiskeySemanticVersion -Path $Path -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+                            }
+                        }
+                        else
+                        {
+                            It ('should convert to {0}' -f $ByDeveloper) {
+                                New-WhiskeySemanticVersion -Version $InputObject -Prerelease $Prerelease -BuildMetadata $buildInfo | Should Be ([SemVersion.SemanticVersion]::Parse($ByDeveloper))
+                            }
                         }
                     }
                 }
@@ -101,10 +169,6 @@ InModuleScope -ModuleName 'Whiskey' {
                 remove-item $path
             }
         }
-    }
-
-    $testCases = @{
-        '3.2.1+build.info' = '3.2.1';
     }
 
     '3.2.1+build.info' | Assert-ConvertsTo -ByBuildServer ('3.2.1+{0}' -f $buildServerBuildMetadata)  -ByDeveloper ('3.2.1+{0}' -f $developerBuildMetadata)

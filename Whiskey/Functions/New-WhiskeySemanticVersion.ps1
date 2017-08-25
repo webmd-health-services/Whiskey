@@ -23,8 +23,6 @@ function New-WhiskeySemanticVersion
         $Version,
 
         [Parameter(Mandatory=$true,ParameterSetName='ByPath')]
-        [AllowNull()]
-        [AllowEmptyString()]
         [object]
         $Path,
 
@@ -56,14 +54,15 @@ function New-WhiskeySemanticVersion
         if($fileInfo.Name -eq 'package.json')
         {
             $semVersion = Get-Content -Raw -Path $Path | 
-                ConvertFrom-Json | 
+                ConvertFrom-Json -ErrorAction Ignore | 
                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore | 
                 ConvertTo-WhiskeySemanticVersion
         }
         if($fileInfo.Extension -eq '.psd1')
         {
-            $semVersion = (Test-ModuleManifest $Path).Version | 
-                ConvertTo-WhiskeySemanticVersion
+            $semVersion = Test-ModuleManifest -Path $Path | 
+                Select-Object -ExpandProperty 'Version' | 
+                ConvertTo-WhiskeySemanticVersion -ErrorAction Stop
         }
     }
     else

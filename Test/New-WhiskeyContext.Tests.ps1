@@ -9,6 +9,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     $progetUri = [uri]'https://proget.example.com/'
     $configurationPath = $null
     $context = $null
+    $path = "bad"
     $runMode = $null
 
     function Assert-Context
@@ -162,6 +163,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         if( $withPath )
         {
             $Configuration['VersionPath'] = $withPath
+            $Script:path = $withPath
         }
     
         $buildInfo = New-WhiskeyBuildMetadataObject
@@ -228,6 +230,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         $script:runMode = $null
         $script:configurationPath = ''
         $script:context = $null
+        $script:path = "bad"
     }
 
     function ThenSemVer1Is
@@ -317,6 +320,10 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                 if( $script:runMode )
                 {
                     $script:context.RunMode = $script:runMode
+                }
+                if(Test-Path $Script:path)
+                {
+                    remove-item $Script:path
                 }
             }
             catch
@@ -635,23 +642,31 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [string]
             $withPath
         )
-        Mock -CommandName 'New-WhiskeySemanticVersion' -ModuleName 'Whiskey' -ParameterFilter {$path} -MockWith { return [SemVersion.SemanticVersion]$AtVersion }.GetNewClosure()
+        New-Item -Force $withPath -type file -value ('{{"version":"{0}"}}' -f $AtVersion)
     }
     function GivenModuleVersionPath
     {
         param(
             [string]
-            $Path,
+            $withPath,
             [string]
             $AtVersion
         )
+        
+        New-Item -Force $withPath -type file -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
 
-        @"
-    @{
-      "version": "$($AtVersion)",
     }
-"@  | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $path)
+    Describe 'New-WhiskeyContext.when building a Node module by a developer' {
+        Init
+        GivenConfiguration -withPath 'package.json'
+        GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json'
+        WhenCreatingContext -ByDeveloper
+        ThenSemVer2Is '9.4.6'
+        ThenVersionIs '9.4.6'
+        ThenSemVer2NoBuildMetadataIs '9.4.6'
+        ThenSemVer1Is '9.4.6'
     }
+
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
         GivenConfiguration -withPath 'package.json'
@@ -667,6 +682,17 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         Init
         GivenConfiguration -ForBuildServer -withPath 'package.json'
         GivenNodeVersionPath -AtVersion '9.4.6' -withPath 'package.json'
+        WhenCreatingContext -ByBuildServer 
+        ThenSemVer2Is '9.4.6'
+        ThenVersionIs '9.4.6'
+        ThenSemVer2NoBuildMetadataIs '9.4.6'
+        ThenSemVer1Is '9.4.6'
+    }
+
+    Describe 'New-WhiskeyContext.when building a Powershell module by a build server' {
+        Init
+        GivenConfiguration -ForBuildServer -withPath 'package.psd1'
+        GivenModuleVersionPath -AtVersion '9.4.6' -withPath 'package.psd1'
         WhenCreatingContext -ByBuildServer 
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'

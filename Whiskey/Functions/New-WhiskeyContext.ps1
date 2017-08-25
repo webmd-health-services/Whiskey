@@ -119,14 +119,16 @@ function New-WhiskeyContext
 
     $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
     $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
+    $versionParam = @{}
     if( $config.ContainsKey( 'VersionPath') )
     {
-        $semVersion = New-WhiskeySemanticVersion -Path $config['VersionPath'] -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
+        $versionParam['Path'] = $config['VersionPath']
     }
     else
     {
-        $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
+        $versionParam['Version'] = $config['Version']
     }
+    $semVersion = New-WhiskeySemanticVersion @versionParam -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
     if( -not $semVersion )
     {
         Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
