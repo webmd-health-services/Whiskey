@@ -43,7 +43,8 @@ function New-WhiskeyProGetUniversalPackage
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     $compressionLevel = 1
-    if($TaskParameter['CompressionLevel'] -and -not [int]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) ){
+    if($TaskParameter['CompressionLevel'] -and -not [int]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) )
+    {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ComressionLevel: ''{0}'' is not a valid Compression Level. it must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
     }
     $parentPathParam = @{ }
@@ -165,13 +166,13 @@ function New-WhiskeyProGetUniversalPackage
                             $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
-                                            'upack.json'
-                                            $include
-                                            } 
+                                'upack.json'
+                                $include
+                            } 
                         }
 
                         Write-Verbose -Message $operationDescription
-                        Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
+                        Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                     }
                 }
             }
