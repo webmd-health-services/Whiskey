@@ -420,14 +420,6 @@ function Then7zipShouldNotExist
     }
 }
 
-
-
-
-function New-TaskParameter
-{
-     @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' }
-}
-
 function Get-BuildRoot
 {
     $buildRoot = (Join-Path -Path $TestDrive.FullName -ChildPath 'Repo')
@@ -812,15 +804,12 @@ Describe 'New-WhiskeyProGetUniversalPackage.when path to package doesn''t exist'
     }
 }
 Describe 'New-WhiskeyProGetUniversalPackage.when path to third-party item doesn''t exist' {
-    $filter = { $PropertyName -eq 'Path' } 
-    Mock -CommandName 'Resolve-WhiskeyTaskPath' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $True }
-
     $context = New-WhiskeyTestContext -ForDeveloper
 
     $Global:Error.Clear()
 
     It 'should throw an exception' {
-        { Invoke-WhiskeyTask -TaskContext $context -Parameter (New-TaskParameter) -Name 'ProGetUniversalPackage' } | Should Throw
+        { Invoke-WhiskeyTask -TaskContext $context -Parameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' } -Name 'ProGetUniversalPackage' } | Should Throw
     }
 
     It 'should mention path in error message' {
@@ -852,8 +841,14 @@ Describe 'New-WhiskeyProGetUniversalPackage.when custom application root doesn''
 
     $Global:Error.Clear()
 
-    $parameter = New-TaskParameter
-    $parameter['SourceRoot'] = 'app'
+    $parameter = @{ 
+                    Name = 'fubar' ; 
+                    Description = 'fubar'; 
+                    Include = 'fubar'; 
+                    Path = '.'; 
+                    ThirdPartyPath = 'fubar' 
+                    SourceRoot = 'app';
+                }
 
     { Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'ProGetUniversalPackage' } | Should Throw
 
