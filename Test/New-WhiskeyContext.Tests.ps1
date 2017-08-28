@@ -9,6 +9,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     $progetUri = [uri]'https://proget.example.com/'
     $configurationPath = $null
     $context = $null
+    $path = "bad"
     $runMode = $null
 
     function Assert-Context
@@ -128,6 +129,9 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [Switch]
             $ForBuildServer,
 
+            [string]
+            $withPath,
+
             [String]
             $OnBranch = 'develop',
 
@@ -147,7 +151,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
 
         $Configuration['SomProperty'] = 'SomeValue'
-
         if( $WithVersion )
         {
             $Configuration['Version'] = $WithVersion
@@ -156,6 +159,11 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         if( $PublishingOn )
         {
             $Configuration['PublishOn'] = $PublishingOn
+        }
+        if( $withPath )
+        {
+            $Configuration['VersionFrom'] = $withPath
+            $Script:path = $withPath
         }
     
         $buildInfo = New-WhiskeyBuildMetadataObject
@@ -166,7 +174,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $buildInfo.ScmBranch = $OnBranch
             $buildInfo.BuildNumber = $BuildNumber
             $buildInfo.ScmCommitID = 'deadbee'
-            $buildInfo.BuildServerName = 'Jenkins' 
+            $buildInfo.BuildServerName = 'Jenkins'
 
             if( $WithVersion )
             {
@@ -186,6 +194,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                     return $semVersion
                 }.GetNewClosure()
             }
+
         }
 
         $yaml = $Configuration | ConvertTo-Yaml
@@ -221,6 +230,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         $script:runMode = $null
         $script:configurationPath = ''
         $script:context = $null
+        $script:path = "bad"
     }
 
     function ThenSemVer1Is
@@ -242,7 +252,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [SemVersion.SemanticVersion]
             $SemanticVersion
         )
-
         It ('should set semantic version v2 to {0}' -f $SemanticVersion) {
             $script:context.Version.SemVer2 | Should Be $SemanticVersion
             $script:context.Version.SemVer2 | Should BeOfType ([SemVersion.SemanticVersion])
@@ -311,6 +320,10 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                 if( $script:runMode )
                 {
                     $script:context.RunMode = $script:runMode
+                }
+                if(Test-Path $Script:path)
+                {
+                    remove-item $Script:path
                 }
             }
             catch
@@ -621,30 +634,43 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer1Is '1.2.3'
     }
 
-    function GivenPackageJson
+    function GivenNodeVersionFrom
     {
         param(
             [string]
+            $AtVersion,
+            [string]
+            $withPath
+        )
+        New-Item -Force $withPath -type file -value ('{{"version":"{0}"}}' -f $AtVersion)
+    }
+    function GivenModuleVersionFrom
+    {
+        param(
+            [string]
+            $withPath,
+            [string]
             $AtVersion
         )
+        
+        New-Item -Force $withPath -type file -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
 
-        @"
-    {
-      "name": "middle-tier-client",
-      "version": "$($AtVersion)",
-      "description": "Perform web requests to the middle tier",
-      "main": "index.js",
-      "engines":{
-        "node": "4.4.7"
-      }
     }
-"@  | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'package.json')
+    Describe 'New-WhiskeyContext.when building a Node module by a developer' {
+        Init
+        GivenConfiguration -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
+        WhenCreatingContext -ByDeveloper
+        ThenSemVer2Is '9.4.6'
+        ThenVersionIs '9.4.6'
+        ThenSemVer2NoBuildMetadataIs '9.4.6'
+        ThenSemVer1Is '9.4.6'
     }
 
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
-        GivenConfiguration
-        GivenPackageJson -AtVersion '9.4.6'
+        GivenConfiguration -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
         WhenCreatingContext -ByDeveloper
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
@@ -654,29 +680,32 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when building a Node module by a build server' {
         Init
-        GivenConfiguration -ForBuildServer
-        GivenPackageJson -AtVersion '9.4.6'
-        WhenCreatingContext -ByBuildServer
+        GivenConfiguration -ForBuildServer -withPath 'package.json'
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json'
+        WhenCreatingContext -ByBuildServer 
         ThenSemVer2Is '9.4.6'
         ThenVersionIs '9.4.6'
         ThenSemVer2NoBuildMetadataIs '9.4.6'
         ThenSemVer1Is '9.4.6'
     }
 
-    Describe 'New-WhiskeyContext.when building a Node.js application and should use an auto-generated version number' {
+    Describe 'New-WhiskeyContext.when building a Powershell module by a build server' {
         Init
-        GivenConfiguration
-        GivenPackageJson -AtVersion '0.0.0'
-        WhenCreatingContext 
-        ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+        GivenConfiguration -ForBuildServer -withPath 'package.psd1'
+        GivenModuleVersionFrom -AtVersion '9.4.6' -withPath 'package.psd1'
+        WhenCreatingContext -ByBuildServer 
+        ThenSemVer2Is '9.4.6'
+        ThenVersionIs '9.4.6'
+        ThenSemVer2NoBuildMetadataIs '9.4.6'
+        ThenSemVer1Is '9.4.6'
     }
 
     Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
         Init
         GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
-        GivenPackageJson -AtVersion '1.0.0' 
+        GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json' 
         WhenCreatingContext 
-        ThenVersionMatches ('^{0}\.' -f (Get-DAte).ToString('yyyy\\.Mdd'))
+        ThenVersionMatches ('^{0}\.' -f (Get-Date).ToString('yyyy\\.Mdd'))
     }
 
     Describe 'New-WhiskeyContext.when configuration is just a property name' {
