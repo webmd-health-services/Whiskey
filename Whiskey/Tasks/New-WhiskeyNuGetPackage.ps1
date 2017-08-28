@@ -39,7 +39,7 @@ function New-WhiskeyNuGetPackage
         $symbolsFileNameSuffix = '.symbols'
     }
        
-    $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
     if( -not $nugetPath )
     {
         return
