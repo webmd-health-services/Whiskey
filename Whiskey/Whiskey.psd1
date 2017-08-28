@@ -173,6 +173,8 @@
 * Renaming `PublishNuGetPackage` task to `NuGetPush`.
 * Creating `Pipeline` task that runs other pipelines as part of another pipeline.
 * Added support for multiple, distinct pipelines in a `whiskey.yml` file. Define distinct pipelines in `whiskey.yml` and pass the pipeline name(s) to the `Invoke-WhiskeyBuild` function's `PipelineName` parameter.
+* The `Pester3` task no longer requires a specific version of Pester. It defaults to installing the latest version of Pester 3.
+* Fixed: the `ProGetUniversalPackage` task no longer includes empty directories.
 '@
         } # End of PSData hashtable
 
