@@ -87,7 +87,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
     }
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
-    $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
     if( -not $nugetPath )
     {
         return
@@ -127,7 +127,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $path -Uri $source -ApiKey $apiKey
+        Invoke-WhiskeyNuGetPush -Path $path -Uri $source -ApiKey $apiKey -NuGetPath $nuGetPath
             
         try
         {

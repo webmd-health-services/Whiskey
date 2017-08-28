@@ -3,7 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\New-WhiskeyNuGetPackage.ps1' -Resolve)
 
 $projectName ='NUnit2PassingTest.csproj' 
 $context = $null
@@ -15,6 +14,7 @@ $publishFails = $false
 $packageExistsCheckFails = $false
 $threwException = $false
 $byBuildServer = $false
+$version = $null
 
 function InitTest
 {
@@ -28,6 +28,7 @@ function InitTest
     $script:packageExistsCheckFails = $false
     $script:path = $projectName
     $script:byBuildServer = $false
+    $script:version = $null
 }
 
 function GivenABuiltLibrary
@@ -90,6 +91,15 @@ function GivenNoPath
     $script:path = $null
 }
 
+function GivenVersion
+{
+    param(
+        $version
+    )
+    
+    $script:version = $version
+}
+
 function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
@@ -108,7 +118,7 @@ function WhenRunningNuGetPackTask
         $byItDepends['ForDeveloper'] = $true
     }
             
-    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' @byItDepends -ForTaskName 'NuGetPack'
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' @byItDepends
     
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 
@@ -123,19 +133,32 @@ function WhenRunningNuGetPackTask
     {
         $taskParameter['Symbols'] = $true
     }
+    
+    if( $version )
+    {
+        $taskParameter['Version'] = $version
+    }
 
     $optionalParams = @{ }
     $script:threwException = $false
     try
     {
         $Global:error.Clear()
-        New-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter
-
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NuGetPack'
     }
     catch
     {
         $script:threwException = $true
         Write-Error $_
+    }
+}
+
+function ThenSpecificNuGetVersionInstalled
+{
+    $nugetVersion = 'NuGet.CommandLine.{0}' -f $version
+
+    It ('should install ''{0}''' -f $nugetVersion) {
+        Join-Path -Path $context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
     }
 }
 
@@ -243,4 +266,14 @@ Describe 'New-WhiskeyNuGetPackage.when creating multiple packages for publishing
     WhenRunningNugetPackTask 
     ThenPackageCreated
     ThenTaskSucceeds
+}
+
+Describe 'New-WhiskeyNuGetPackage.when creating a package using a specifc version of NuGet' {
+    InitTest
+    GivenABuiltLibrary
+    GivenVersion '3.5.0'
+    WhenRunningNuGetPackTask
+    ThenSpecificNuGetVersionInstalled
+    ThenTaskSucceeds
+    ThenPackageCreated
 }

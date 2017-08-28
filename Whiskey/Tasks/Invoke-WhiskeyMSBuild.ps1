@@ -35,7 +35,7 @@ function Invoke-WhiskeyMSBuild
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     #setup
-    $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']
     
     # Make sure the Taskpath contains a Path parameter.
     if( -not ($TaskParameter.ContainsKey('Path')) -or -not $TaskParameter['Path'] )

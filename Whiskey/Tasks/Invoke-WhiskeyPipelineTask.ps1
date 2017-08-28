@@ -1,4 +1,4 @@
- function Invoke-PipelineTask 
+ function Invoke-WhiskeyPipelineTask 
 {
     <#
     .SYNOPSIS
