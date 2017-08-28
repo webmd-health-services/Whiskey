@@ -704,7 +704,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging multiple directories'
     $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
     $fileNames = @( 'html.html', 'code.cs' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-        -FileName $fileNames
+                                      -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
                                             -ThatIncludes '*.html' `
@@ -771,11 +771,11 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 {
     Describe ('New-WhiskeyProGetUniversalPackage.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
-                            Name = 'Name';
-                            Include = 'Include';
-                            Description = 'Description';
-                            Path = 'Path' 
-                        }
+                        Name = 'Name';
+                        Include = 'Include';
+                        Description = 'Description';
+                        Path = 'Path' 
+                      }
         $parameter.Remove($parameterName)
 
         $context = New-WhiskeyTestContext -ForDeveloper

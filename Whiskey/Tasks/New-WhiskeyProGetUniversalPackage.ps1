@@ -174,7 +174,7 @@ function New-WhiskeyProGetUniversalPackage
                             $whitelist = Invoke-Command {
                                             'upack.json'
                                             $include
-                                        } 
+                                            } 
                         }
 
                         Write-Verbose -Message $operationDescription
