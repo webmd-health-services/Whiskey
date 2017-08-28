@@ -178,7 +178,7 @@ function New-WhiskeyProGetUniversalPackage
                         }
 
                         Write-Verbose -Message $operationDescription
-                        Invoke-WhiskeyRobocopy -Source $sourcePath -Destination $destination -WhiteList $whitelist -Exclude $exclude | Write-Verbose
+                        Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                     }
                 }
             }

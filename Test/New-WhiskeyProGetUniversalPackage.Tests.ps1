@@ -18,15 +18,15 @@ function ThenTaskFails
         $error
     )
 
-        It ('should fail with error message that matches ''{0}''' -f $error) {
-            $Global:Error | Should match $error
-        }
+    It ('should fail with error message that matches ''{0}''' -f $error) {
+        $Global:Error | Should match $error
+    }
 }
 function ThenTaskSucceeds 
 {
-        It ('should not throw an error message') {
-            $Global:Error | Should BeNullOrEmpty
-        }
+    It ('should not throw an error message') {
+        $Global:Error | Should BeNullOrEmpty
+    }
 }
 function Assert-NewWhiskeyProGetUniversalPackage
 {
@@ -235,7 +235,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         {
             $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
             It ('should include {0} item' -f $itemName) {
-                 $dirpath | Should Exist
+                $dirpath | Should Exist
             }
             foreach( $fileName in $HasFiles )
             {
@@ -301,7 +301,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         {
             $dirPath = Join-Path -Path $packageContentsPath -ChildPath $itemName
             It ('should include {0} third-party root item' -f $itemName) {
-                 $dirpath | Should Exist
+                $dirpath | Should Exist
             }
             
             foreach( $fileName in $HasThirdPartyFile )
@@ -913,9 +913,23 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTas.when path contains wildcards' 
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory' {
     GivenARepositoryWithFiles 'dir1\subdir\file.txt'
-    WhenPackaging -Paths 'dir1\subdir' -WithWhitelist "*.txt"
+    WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir1\subdir\file.txt'
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space' {
+    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    WhenPackaging -Paths 'dir 1\sub dir' -WithWhitelist "*.txt"
+    ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
+    ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space and trailing backslash' {
+    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    WhenPackaging -Paths 'dir 1\sub dir\' -WithWhitelist "*.txt"
+    ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
+    ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 9 is included' {
