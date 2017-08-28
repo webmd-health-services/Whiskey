@@ -144,7 +144,8 @@ function Invoke-WhiskeyNUnit2Task
     Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
     Write-Verbose -Message ('  Filter              {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
     Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
-    Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $TaskParameter['DisableCodeCoverage'])
+    $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
+    Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
     Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
     Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
     
@@ -152,7 +153,7 @@ function Invoke-WhiskeyNUnit2Task
     $extraArgString = ($extraArgs -join " ")
     $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
     $nunitArgs = "\""${pathString}\"" /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
-    if( -not $TaskParameter['DisableCodeCoverage'] )
+    if( -not $disableCodeCoverage )
     {
         & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
         $testsFailed = $LastExitCode;

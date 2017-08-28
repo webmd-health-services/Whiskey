@@ -31,15 +31,6 @@ function Assert-ThatInstallNodeJs
 
     $Global:Error.Clear()
 
-    if( $OnDeveloperComputer )
-    {
-        Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $false }
-    }
-    else
-    {
-        Mock -CommandName 'Test-WhiskeyRunByBuildServer' -ModuleName 'Whiskey' -MockWith { return $true }
-    }
-
     $installDir = Join-Path -Path $env:TEMP -ChildPath 'z'
     $installDirParam = @{ NvmInstallDirectory = $installDir }
     if( $WhenUsingDefaultInstallDirectory )
@@ -76,7 +67,7 @@ function Assert-ThatInstallNodeJs
         $nodePath = $null
         $expectedNodePath = $null
         $expectedNpmPath = $null
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam -ForDeveloper:$OnDeveloperComputer
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)

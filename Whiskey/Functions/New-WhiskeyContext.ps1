@@ -58,63 +58,59 @@ function New-WhiskeyContext
         $DownloadRoot = $buildRoot
     }
 
-    $appName = $null
-    if( $config.ContainsKey('ApplicationName') )
-    {
-        $appName = $config['ApplicationName']
-    }
-
-    $releaseName = $null
-    if( $config.ContainsKey('ReleaseName') )
-    {
-        $releaseName = $config['ReleaseName']
-    }
-
     $bitbucketConnection = $null
 
+    $buildMetadata = Get-WhiskeyBuildMetadata
     $publish = $false
-    $byBuildServer = Test-WhiskeyRunByBuildServer
+    $byBuildServer = $buildMetadata.IsBuildServer
     $prereleaseInfo = ''
     if( $byBuildServer )
     {
-        $branch = Get-WhiskeyBranch
-        $publishOn = @( 'develop', 'release', 'release/.*', 'master' )
+        $branch = $buildMetadata.ScmBranch
+
         if( $config.ContainsKey( 'PublishOn' ) )
         {
-            $publishOn = $config['PublishOn']
-        }
-
-        $publish = ($branch -match ('^({0})$' -f ($publishOn -join '|')))
-        if( -not $releaseName -and $publish )
-        {
-            $releaseName = $branch
+            Write-Verbose -Message ('PublishOn')
+            foreach( $publishWildcard in $config['PublishOn'] )
+            {
+                $publish = $branch -like $publishWildcard
+                if( $publish )
+                {
+                    Write-Verbose -Message ('           {0}    -like  {1}' -f $branch,$publishWildcard)
+                    break
+                }
+                else
+                {
+                    Write-Verbose -Message ('           {0} -notlike  {1}' -f $branch,$publishWildcard)
+                }
+            }
         }
 
         if( $config['PrereleaseMap'] )
         {
-            Write-Verbose -Message ('Testing if {0} is a pre-release branch.' -f $branch)
             $idx = 0
+            Write-Verbose -Message ('PrereleaseMap')
             foreach( $item in $config['PrereleaseMap'] )
             {
-                if( $item -isnot [hashtable] -or $item.Count -ne 1 )
+                if( -not ($item | Get-Member -Name 'Count') -or -not ($item | Get-Member 'Keys') -or $item.Count -ne 1 )
                 {
-                    throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a regular expression. The property''s value should be the prerelease identifier to add to the version number on branches that match the regular expression. For example,
+                    throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a wildcard. The property''s value should be the prerelease identifier to add to the version number on branches that match the wildcard. For example,
     
     PrereleaseMap:
-    - "\balpha\b": "alpha"
-    - "\brc\b": "rc"
+    - "alpha/*": "alpha"
+    - "release/*": "rc"
     ' -f $ConfigurationPath,$idx)
                 }
 
-                $regex = $item.Keys | Select-Object -First 1
-                if( $branch -match $regex )
+                $wildcard = $item.Keys | Select-Object -First 1
+                if( $branch -like $wildcard )
                 {
-                    Write-Verbose -Message ('     {0}     -match  /{1}/' -f $branch,$regex)
-                    $prereleaseInfo = '{0}.{1}' -f $item[$regex],(Get-WhiskeyBuildID)
+                    Write-Verbose -Message ('               {0}     -like  {1}' -f $branch,$wildcard)
+                    $prereleaseInfo = '{0}.{1}' -f $item[$wildcard],$buildMetadata.BuildNumber
                 }
                 else
                 {
-                    Write-Verbose -Message ('     {0}  -notmatch  /{1}/' -f $branch,$regex)
+                    Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch,$wildcard)
                 }
                 $idx++
             }
@@ -128,19 +124,14 @@ function New-WhiskeyContext
         $config['Version'] = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json | Select-Object -ExpandProperty 'version' -ErrorAction Ignore
         if( $config['Version'] -eq '0.0.0' )
         {
-            $config.Remove('Version')
+            [void]$config.Remove('Version')
         }
     }
 
-    [SemVersion.SemanticVersion]$semVersion = $config['Version'] | ConvertTo-WhiskeySemanticVersion -ErrorAction Ignore
+    $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
     if( -not $semVersion )
     {
-        throw ('{0}: Version: ''{1}'' is not a valid semantic version. Please see http://semver.org for semantic versioning documentation.' -f $ConfigurationPath,$config['Version'])
-    }
-
-    if( $prereleaseInfo )
-    {
-        $semVersion = New-Object 'SemVersion.SemanticVersion' $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$prereleaseInfo,$semVersion.Build
+        Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
     }
 
     $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
@@ -156,11 +147,14 @@ function New-WhiskeyContext
     $context = New-WhiskeyContextObject
 
     $context.Environment = $Environment;
-    $context.ApplicationName = $appName;
-    $context.ReleaseName = $releaseName;
     $context.BuildRoot = $buildRoot;
     $context.ConfigurationPath = $ConfigurationPath;
-    $context.OutputDirectory = (Get-WhiskeyOutputDirectory -WorkingDirectory $buildRoot);
+
+    $context.OutputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
+    if( -not (Test-Path -Path $context.OutputDirectory -PathType Container) )
+    {
+        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force | Out-Null
+    }    
     $context.Version = [pscustomobject]@{
                                         SemVer2 = $semVersion;
                                         SemVer2NoBuildMetadata = $semVersionNoBuild;
@@ -173,6 +167,7 @@ function New-WhiskeyContext
     $context.ByDeveloper = (-not $byBuildServer);
     $context.Publish = $publish;
     $context.RunMode = 'Build';
+    $context.BuildMetadata = $buildMetadata
 
     return $context
 }

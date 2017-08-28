@@ -19,7 +19,7 @@ function global:MyTask2
 Describe 'Get-WhiskeyTasks' {
     $expectedTasks = @{
                         ProGetUniversalPackage         = 'New-WhiskeyProGetUniversalPackage';
-                        MSBuild                        = 'Invoke-WhiskeyMSBuildTask';
+                        MSBuild                        = 'Invoke-WhiskeyMSBuild';
                         NUnit2                         = 'Invoke-WhiskeyNUnit2Task';
                         Node                           = 'Invoke-WhiskeyNodeTask';
                         Pester3                        = 'Invoke-WhiskeyPester3Task';

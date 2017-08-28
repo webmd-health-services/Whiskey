@@ -13,6 +13,7 @@ $publishFails = $false
 $packageExistsCheckFails = $false
 $threwException = $false
 $path = $null
+$packageVersion = $null
 $version = $null
 
 function InitTest
@@ -26,7 +27,8 @@ function InitTest
     $script:publishFails = $false
     $script:packageExistsCheckFails = $false
     $script:path = $null
-    $script:version = $defaultVersion
+    $script:packageVersion = $defaultVersion
+    $script:version = $null
 }
 
 function GivenANuGetPackage
@@ -80,6 +82,15 @@ function GivenTheCheckIfThePackageExistsFails
     $script:packageExistsCheckFails = $true
 }
 
+function GivenPackageVersion
+{
+    param(
+        $PackageVersion
+    )
+
+    $script:packageVersion = $PackageVersion
+}
+
 function GivenVersion
 {
     param(
@@ -103,7 +114,7 @@ function WhenRunningNuGetPackTask
         $Symbols
     )
 
-    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishNuGetPackage' -ForBuildServer -IgnoreExistingOutputDirectory
+    $script:context = New-WhiskeyTestContext -ForVersion $packageVersion -ForBuildServer -IgnoreExistingOutputDirectory
     $taskParameter = @{ }
 
     if( $path )
@@ -125,6 +136,11 @@ function WhenRunningNuGetPackTask
     if( $Symbols )
     {
         $taskParameter['Symbols'] = $true
+    }
+
+    if( $version )
+    {
+        $taskParameter['Version'] = $version
     }
 
     Mock -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey'
@@ -170,7 +186,7 @@ function WhenRunningNuGetPackTask
         }
 
         $Global:error.Clear()
-        Publish-WhiskeyNuGetPackage -TaskContext $Context -TaskParameter $taskParameter | Out-Null 
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NuGetPush' | Out-Null 
 
     }
     catch
@@ -180,6 +196,15 @@ function WhenRunningNuGetPackTask
     }
 
     Remove-Variable -Name 'counter' -Scope 'Global' -ErrorAction Ignore
+}
+
+function ThenSpecificNuGetVersionInstalled
+{
+    $nugetVersion = 'NuGet.CommandLine.{0}' -f $version
+    
+    It ('should install ''{0}''' -f $nugetVersion) {
+        Join-Path -Path $context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
+    }
 }
 
 function ThenTaskThrowsAnException
@@ -211,7 +236,7 @@ function ThenPackagePublished
 {
     param(
         $Name,
-        $Version,
+        $PackageVersion,
         $Path,
         $Times = 1
     )
@@ -231,7 +256,7 @@ function ThenPackagePublished
         }
 
         It ('should check the correct URI for the package to exist') {
-            $expectedUriWildcard = '*/{0}/{1}' -f $Name,$Version
+            $expectedUriWildcard = '*/{0}/{1}' -f $Name,$PackageVersion
             Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
                 Write-Debug -Message ('Uri   expected   {0}' -f $expectedUriWildcard)
@@ -277,56 +302,56 @@ function ThenPackageNotPublished
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
     InitTest
-    GivenVersion '1.2.3'
+    GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
     WhenRunningNuGetPackTask
-    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -Version '1.2.3'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -PackageVersion '1.2.3'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerlease metadata' {
     InitTest
-    GivenVersion '1.2.3-preleasee45'
+    GivenPackageVersion '1.2.3-preleasee45'
     GivenANuGetPackage 'Fubar.1.2.3-preleasee45.nupkg'
     WhenRunningNuGetPackTask
-    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3-preleasee45.nupkg' -Version '1.2.3-preleasee45'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3-preleasee45.nupkg' -PackageVersion '1.2.3-preleasee45'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing a symbols NuGet package' {
     InitTest
-    GivenVersion '1.2.3'
+    GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.symbols.nupkg'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
     WhenRunningNuGetPackTask -Symbols
-    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.symbols.nupkg' -Version '1.2.3'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.symbols.nupkg' -PackageVersion '1.2.3'
     ThenPackageNotPublished -Path 'Fubar.1.2.3.nupkg'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
     InitTest
-    GivenVersion '3.4.5'
+    GivenPackageVersion '3.4.5'
     GivenANuGetPackage 'Fubar.3.4.5.nupkg','Snafu.3.4.5.nupkg'
     WhenRunningNugetPackTask -ForMultiplePackages
-    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.3.4.5.nupkg' -Version '3.4.5'
-    ThenPackagePublished -Name 'Snafu' -Path 'Snafu.3.4.5.nupkg' -Version '3.4.5'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.3.4.5.nupkg' -PackageVersion '3.4.5'
+    ThenPackagePublished -Name 'Snafu' -Path 'Snafu.3.4.5.nupkg' -PackageVersion '3.4.5'
     ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
     InitTest
-    GivenVersion '9.0.1'
+    GivenPackageVersion '9.0.1'
     GivenPackagePublishFails
     GivenANuGetPackage 'Fubar.9.0.1.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
     ThenTaskThrowsAnException 'failed to publish NuGet package'
-    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.9.0.1.nupkg' -Version '9.0.1'
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.9.0.1.nupkg' -PackageVersion '9.0.1'
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
     InitTest
-    GivenVersion '2.3.4'
+    GivenPackageVersion '2.3.4'
     GivenPackageAlreadyPublished
     GivenANuGetPackage 'Fubar.2.3.4.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
@@ -336,7 +361,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     InitTest
-    GivenVersion '5.6.7'
+    GivenPackageVersion '5.6.7'
     GivenTheCheckIfThePackageExistsFails
     GivenANuGetPackage 'Fubar.5.6.7.nupkg'
     WhenRunningNugetPackTask -ErrorAction SilentlyContinue
@@ -346,7 +371,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
     InitTest
-    GivenVersion '8.9.0'
+    GivenPackageVersion '8.9.0'
     GivenANuGetPackage 'Fubar.8.9.0.nupkg'
     GivenNoUri
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
@@ -356,7 +381,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
     InitTest
-    GivenVersion '1.2.3'
+    GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
     GivenNoApiKey
     WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
@@ -366,12 +391,12 @@ Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
 
 Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
     InitTest
-    GivenVersion '4.5.6'
+    GivenPackageVersion '4.5.6'
     GivenANuGetPackage 'someotherdir\MyPack.4.5.6.nupkg'
     GivenPath '.output\someotherdir\MyPack.4.5.6.nupkg'
     WhenRunningNuGetPackTask
     ThenTaskSucceeds
-    ThenPackagePublished -Name 'MyPack' -Path 'someotherdir\MyPack.4.5.6.nupkg' -Version '4.5.6'
+    ThenPackagePublished -Name 'MyPack' -Path 'someotherdir\MyPack.4.5.6.nupkg' -PackageVersion '4.5.6'
 }
 
 Describe 'Publish-WhiskeyNuGetPackage.when there are only symbols packages' {
@@ -380,4 +405,15 @@ Describe 'Publish-WhiskeyNuGetPackage.when there are only symbols packages' {
     WhenRunningNuGetPackTask
     ThenTaskSucceeds
     ThenPackageNotPublished
+}
+
+Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package using a specific version of NuGet' {
+    InitTest
+    GivenPackageVersion '1.2.3'
+    GivenANuGetPackage 'Fubar.1.2.3.nupkg'
+    GivenVersion '3.5.0'
+    WhenRunningNuGetPackTask
+    ThenSpecificNuGetVersionInstalled
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -PackageVersion '1.2.3'
+    ThenTaskSucceeds
 }

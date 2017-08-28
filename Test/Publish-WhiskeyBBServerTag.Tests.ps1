@@ -11,6 +11,8 @@ $credential = $null
 $credentialID = $null
 $repositoryKey = $null
 $projectKey = $null
+$commitID = $null
+$gitUri = $null
 
 function GivenACommit
 {
@@ -21,11 +23,11 @@ function GivenACommit
 
     if( -not $ThatIsInvalid )
     {
-        mock -CommandName 'Get-WhiskeyCommitID' -ModuleName 'Whiskey' -MockWith { return "ValidCommitHash" }
+        $script:commitID = 'ValidCommitHash'
     }
     else
     {
-        mock -CommandName 'Get-WhiskeyCommitID' -ModuleName 'Whiskey' -MockWith { return $null }
+        $script:commitID = $null
     }
 }
 
@@ -57,7 +59,6 @@ function GivenRepository
         $InProject
     )
 
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_URL' } -MockWith { return $false }
     $script:projectKey = $InProject
     $script:repositoryKey = $Named
 }
@@ -70,8 +71,7 @@ function GivenGitUrl
 
     $script:projectKey = $null
     $script:repositoryKey = $null
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_URL' } -MockWith { return $true }
-    Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:GIT_URL' } -MockWith { return [pscustomobject]@{ Value = $Uri } }.GetNewClosure()
+    $script:gitUri = $Uri
 }
 
 function GivenNoBBServerUri
@@ -100,6 +100,11 @@ function GivenVersion
     $script:version = $Version
 }
 
+function Init
+{
+    $script:gitUri = ''
+}
+
 function WhenTaggingACommit
 {
     [CmdletBinding()]
@@ -108,20 +113,8 @@ function WhenTaggingACommit
         $ThatWillFail
     )
 
-    $script:context = [pscustomobject]@{
-                                            Credentials = @{ };
-                                            Version = [pscustomobject]@{
-                                                                            SemVer2 = 'notused';
-                                                                            SemVer2NoBuildMetadata = $version;
-                                                                            SemVer1 = 'notused';
-                                                                            Version = 'notused';
-                                                                       };
-                                            TaskIndex = 1;
-                                            TaskName = 'PublishBitbucketServerTag';
-                                            ConfigurationPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-                                       }
     $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' -ForVersion $version -ForBuildServer
-
+    $context.BuildMetadata.ScmUri = $gitUri
     mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 
     $taskParameter = @{ }
@@ -144,6 +137,8 @@ function WhenTaggingACommit
         $taskParameter['ProjectKey'] = $projectKey
         $taskParameter['RepositoryKey'] = $repositoryKey
     }
+
+    $context.BuildMetadata.ScmCommitID = $commitID
 
     $global:Error.Clear()
     $script:threwException = $false
@@ -249,6 +244,7 @@ function ThenTheCommitShouldNotBeTagged
 }
 
 Describe 'Publish-WhiskeyBBServerTag.when repository cloned using SSH' {
+    Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
     GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
@@ -260,6 +256,7 @@ Describe 'Publish-WhiskeyBBServerTag.when repository cloned using SSH' {
 }
 
 Describe 'Publish-WhiskeyBBServerTag.when repository cloned using HTTPS' {
+    Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
     GivenGitUrl 'https://user@bbserver.example.com/scm/project/repo.git'
@@ -271,6 +268,7 @@ Describe 'Publish-WhiskeyBBServerTag.when repository cloned using HTTPS' {
 }
 
 Describe 'Publish-WhiskeyBBServerTag.when user provides repository keys' {
+    Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
     GivenRepository 'fubar' -InProject 'snafu'
@@ -282,6 +280,7 @@ Describe 'Publish-WhiskeyBBServerTag.when user provides repository keys' {
 }
 
 Describe 'Publish-WhiskeyBBServerTag.when attempting to tag without a valid commit' {
+    Init
     GivenGitUrl 'does not matter'
     GivenACommit -ThatIsInvalid
     WhenTaggingACommit -ErrorAction SilentlyContinue
@@ -290,12 +289,14 @@ Describe 'Publish-WhiskeyBBServerTag.when attempting to tag without a valid comm
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no credential ID' {
+    Init
     GivenNoCredential
     WhenTaggingACommit -ErrorAction SilentlyContinue
     ThenTaskFails '\bCredentialID\b.*\bis\ mandatory\b'
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
+    Init
     GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
     GivenNoBBServerUri
     WhenTaggingACommit -ErrorAction SilentlyContinue
@@ -303,6 +304,7 @@ Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no repository information' {
+    Init
     GivenNoRepoInformation
     GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
     GivenBBServerAt 'https://bitbucket.example.com'

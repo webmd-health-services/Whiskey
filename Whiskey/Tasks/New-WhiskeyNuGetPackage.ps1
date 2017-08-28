@@ -30,7 +30,7 @@ function New-WhiskeyNuGetPackage
 
     $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
-    $symbols = $TaskParameter['Symbols']
+    $symbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
     $symbolsArg = ''
     $symbolsFileNameSuffix = ''
     if( $symbols )
@@ -39,7 +39,7 @@ function New-WhiskeyNuGetPackage
         $symbolsFileNameSuffix = '.symbols'
     }
        
-    $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
     if( -not $nugetPath )
     {
         return

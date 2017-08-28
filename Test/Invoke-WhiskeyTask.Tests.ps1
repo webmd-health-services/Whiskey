@@ -10,6 +10,7 @@ $context = $null
 $warnings = $null
 $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
+$output = $null
 $taskDefaults = @{ }
 
 function Invoke-PreTaskPlugin
@@ -127,6 +128,7 @@ function GivenWhiskeyYmlBuildFile
 function Init
 {
     $script:taskDefaults = @{ }
+    $script:output = $null
 }
 
 function ThenPipelineFailed
@@ -180,11 +182,10 @@ function ThenDotNetProjectsCompilationFailed
 function ThenNUnitTestsNotRun
 {
     param(
-        $ConfigurationPath
     )
 
     It 'should not run NUnit tests' {
-        $ConfigurationPath | Split-Path | ForEach-Object { Get-WhiskeyOutputDirectory -WorkingDirectory $_ } | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $context.OutputDirectory | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }
 }
 
@@ -350,7 +351,7 @@ function WhenRunningTask
     $script:threwException = $false
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
         $script:warnings = $warnings
     }
     catch
@@ -387,7 +388,7 @@ Describe 'Invoke-WhiskeyTask.when there are task-specific registered event handl
     Init
     GivenPlugins -ForSpecificTask 'PowerShell'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-WhiskeyMsBuildTask' -ModuleName 'Whiskey'
+    Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ Path = 'somefile.ps1' }
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
@@ -429,6 +430,23 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
     ThenPipelineSucceeded
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+}
+
+function ThenNoOutput
+{
+    It 'should not return anything' {
+        $output | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when task has property variables' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = $env:COMPUTERNAME; }
+    ThenNoOutput
 }
 
 Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by build server' {
