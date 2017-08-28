@@ -20,7 +20,7 @@ function Invoke-WhiskeyPester4Task
     [Whiskey.Task("Pester4",SupportsClean=$true)]
     [CmdletBinding()]
     param(
-         [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true)]
         [object]
         $TaskContext,
     
@@ -50,9 +50,9 @@ function Invoke-WhiskeyPester4Task
     else
     {
         & {
-                $VerbosePreference = 'SilentlyContinue'
-                Import-Module -Name 'PackageManagement'
-          }
+            $VerbosePreference = 'SilentlyContinue'
+            Import-Module -Name 'PackageManagement'
+        }
 
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         if( -not $latestPester )
@@ -84,6 +84,11 @@ function Invoke-WhiskeyPester4Task
     
     $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
     
+    if( $TaskContext.ShouldInitialize() )
+    {
+        return
+    }
+    
     if( -not $pesterModulePath )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
@@ -109,9 +114,9 @@ function Invoke-WhiskeyPester4Task
         $outputFile = $using:outputFile
 
         Invoke-Command -ScriptBlock {
-                                        $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterModulePath
-                                    }
+            $VerbosePreference = 'SilentlyContinue'
+            Import-Module -Name $pesterModulePath
+        }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     } 
