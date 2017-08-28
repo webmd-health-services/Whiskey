@@ -119,16 +119,16 @@ function New-WhiskeyContext
 
     $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
     $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
-    if( -not $config.ContainsKey('Version') -and (Test-Path -Path $packageJsonPath -PathType Leaf) -and -not $ignorePackageJsonVersion )
+    $versionParam = @{}
+    if( $config.ContainsKey( 'VersionFrom' ) )
     {
-        $config['Version'] = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json | Select-Object -ExpandProperty 'version' -ErrorAction Ignore
-        if( $config['Version'] -eq '0.0.0' )
-        {
-            [void]$config.Remove('Version')
-        }
+        $versionParam['Path'] = $config['VersionFrom']
     }
-
-    $semVersion = New-WhiskeySemanticVersion -Version $config['Version'] -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
+    else
+    {
+        $versionParam['Version'] = $config['Version']
+    }
+    $semVersion = New-WhiskeySemanticVersion @versionParam -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
     if( -not $semVersion )
     {
         Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
@@ -156,11 +156,11 @@ function New-WhiskeyContext
         New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force | Out-Null
     }    
     $context.Version = [pscustomobject]@{
-                                        SemVer2 = $semVersion;
-                                        SemVer2NoBuildMetadata = $semVersionNoBuild;
-                                        SemVer1 = $semVersionV1;
-                                        Version = $version;
-                                }
+        SemVer2 = $semVersion;
+        SemVer2NoBuildMetadata = $semVersionNoBuild;
+        SemVer1 = $semVersionV1;
+        Version = $version;
+    }
     $context.Configuration = $config;
     $context.DownloadRoot = $DownloadRoot;
     $context.ByBuildServer = $byBuildServer;
