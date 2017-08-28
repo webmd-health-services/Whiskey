@@ -100,11 +100,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
     }
 
     $taskParameter = @{
-        Name = $Name;
-        Description = $Description;
-        Path = $ForPath;
-        Include = $ThatIncludes;
-    }
+                            Name = $Name;
+                            Description = $Description;
+                            Path = $ForPath;
+                            Include = $ThatIncludes;
+                        }
     if( $ThatExcludes )
     {
         $taskParameter['Exclude'] = $ThatExcludes
@@ -151,8 +151,8 @@ function Assert-NewWhiskeyProGetUniversalPackage
     try
     {
         $At = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'ProGetUniversalPackage' |
-            Where-Object { $_ -like '*.upack' } | 
-            Where-Object { Test-Path -Path $_ -PathType Leaf }
+                Where-Object { $_ -like '*.upack' } | 
+                Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
     catch
     {
@@ -669,12 +669,12 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging everything in a direc
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-        -FileName $fileNames
+                                      -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html' `
-        -HasRootItems $dirNames `
-        -HasFiles 'html.html'
+                                            -ThatIncludes '*.html' `
+                                            -HasRootItems $dirNames `
+                                            -HasFiles 'html.html'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging root files' {
@@ -682,22 +682,22 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging root files' {
     $thirdPartyFile = 'thirdparty.txt'
     $outputFilePath = Initialize-Test -RootFileName $file,$thirdPartyFile
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-        -WithThirdPartyRootItem $thirdPartyFile `
-        -HasThirdPartyRootItem $thirdPartyFile `
-        -HasRootItems $file 
+                                            -WithThirdPartyRootItem $thirdPartyFile `
+                                            -HasThirdPartyRootItem $thirdPartyFile `
+                                            -HasRootItems $file 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging whitelisted files in a directory' {
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'code.cs', 'style.css' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-        -FileName $fileNames
+                                      -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html','*.css' `
-        -HasRootItems $dirNames `
-        -HasFiles 'html.html','style.css' `
-        -NotHasFiles 'code.cs'
+                                            -ThatIncludes '*.html','*.css' `
+                                            -HasRootItems $dirNames `
+                                            -HasFiles 'html.html','style.css' `
+                                            -NotHasFiles 'code.cs'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging multiple directories' {
@@ -707,24 +707,24 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging multiple directories'
         -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
-        -ThatIncludes '*.html' `
-        -HasRootItems $dirNames `
-        -HasFiles 'html.html' `
-        -NotHasFiles 'code.cs'
+                                            -ThatIncludes '*.html' `
+                                            -HasRootItems $dirNames `
+                                            -HasFiles 'html.html' `
+                                            -NotHasFiles 'code.cs'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when whitelist includes items that need to be excluded' {    
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames `
-        -FileName $fileNames
+                                      -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html' `
-        -ThatExcludes 'html2.html','sub' `
-        -HasRootItems 'dir1' `
-        -HasFiles 'html.html' `
-        -NotHasFiles 'html2.html','sub' 
+                                            -ThatIncludes '*.html' `
+                                            -ThatExcludes 'html2.html','sub' `
+                                            -HasRootItems 'dir1' `
+                                            -HasFiles 'html.html' `
+                                            -NotHasFiles 'html2.html','sub' 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when paths don''t exist' {
@@ -734,10 +734,10 @@ Describe 'New-WhiskeyProGetUniversalPackage.when paths don''t exist' {
     Initialize-Test
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
-        -ThatIncludes '*' `
-        -ShouldFailWithErrorMessage '(don''t|does not) exist' `
-        -ShouldNotCreatePackage `
-        -ErrorAction SilentlyContinue 
+                                            -ThatIncludes '*' `
+                                            -ShouldFailWithErrorMessage '(don''t|does not) exist' `
+                                            -ShouldNotCreatePackage `
+                                            -ErrorAction SilentlyContinue 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when path contains known directories to exclude' {
@@ -746,10 +746,10 @@ Describe 'New-WhiskeyProGetUniversalPackage.when path contains known directories
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
     
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html' `
-        -HasRootItems 'dir1' `
-        -HasFiles 'html.html' `
-        -NotHasFiles '.git','.hg','obj' 
+                                            -ThatIncludes '*.html' `
+                                            -HasRootItems 'dir1' `
+                                            -HasFiles 'html.html' `
+                                            -NotHasFiles '.git','.hg','obj' 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when including third-party items' {
@@ -758,24 +758,24 @@ Describe 'New-WhiskeyProGetUniversalPackage.when including third-party items' {
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html' `
-        -ThatExcludes 'thirdparty.txt' `
-        -HasRootItems 'dir1' `
-        -HasFiles 'html.html' `
-        -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
-        -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
-        -HasThirdPartyFile 'thirdparty.txt' 
+                                            -ThatIncludes '*.html' `
+                                            -ThatExcludes 'thirdparty.txt' `
+                                            -HasRootItems 'dir1' `
+                                            -HasFiles 'html.html' `
+                                            -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
+                                            -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
+                                            -HasThirdPartyFile 'thirdparty.txt' 
 }
 
 foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 {
     Describe ('New-WhiskeyProGetUniversalPackage.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
-            Name = 'Name';
-            Include = 'Include';
-            Description = 'Description';
-            Path = 'Path' 
-        }
+                            Name = 'Name';
+                            Include = 'Include';
+                            Description = 'Description';
+                            Path = 'Path' 
+                        }
         $parameter.Remove($parameterName)
 
         $context = New-WhiskeyTestContext -ForDeveloper
@@ -834,14 +834,14 @@ Describe 'New-WhiskeyProGetUniversalPackage.when application root isn''t the roo
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames -SourceRoot 'app'
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatIncludes '*.html' `
-        -ThatExcludes 'thirdparty.txt' `
-        -HasRootItems 'dir1' `
-        -HasFiles 'html.html' `
-        -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
-        -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
-        -HasThirdPartyFile 'thirdparty.txt' `
-        -FromSourceRoot 'app' 
+                                            -ThatIncludes '*.html' `
+                                            -ThatExcludes 'thirdparty.txt' `
+                                            -HasRootItems 'dir1' `
+                                            -HasFiles 'html.html' `
+                                            -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
+                                            -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
+                                            -HasThirdPartyFile 'thirdparty.txt' `
+                                            -FromSourceRoot 'app' 
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when custom application root doesn''t exist' {
@@ -865,9 +865,9 @@ Describe 'New-WhiskeyProGetUniversalPackage.when cleaning' {
     Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-        -WhenCleaning `
-        -ShouldReturnNothing `
-        -ShouldNotCreatePackage 
+                                            -WhenCleaning `
+                                            -ShouldReturnNothing `
+                                            -ShouldNotCreatePackage 
     Then7zipShouldNotExist
 }
 
@@ -896,11 +896,11 @@ Describe 'New-WhiskeyProGetUniversalPackage.when including third-party items wit
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
 
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-        -ThatExcludes 'thirdparty.txt' `
-        -HasRootItems 'dir1' `
-        -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
-        -HasThirdPartyRootItem 'thirdparty' `
-        -HasThirdPartyFile 'thirdparty.txt'  
+                                            -ThatExcludes 'thirdparty.txt' `
+                                            -HasRootItems 'dir1' `
+                                            -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
+                                            -HasThirdPartyRootItem 'thirdparty' `
+                                            -HasThirdPartyFile 'thirdparty.txt'  
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package is empty' {

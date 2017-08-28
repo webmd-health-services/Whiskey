@@ -172,9 +172,9 @@ function New-WhiskeyProGetUniversalPackage
                             $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
-                                'upack.json'
-                                $include
-                            } 
+                                            'upack.json'
+                                            $include
+                                        } 
                         }
 
                         Write-Verbose -Message $operationDescription
