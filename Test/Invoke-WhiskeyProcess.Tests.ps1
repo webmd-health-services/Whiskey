@@ -245,7 +245,7 @@ Describe 'Invoke-WhiskeyProcess.when given bad path' {
     Init
     GivenPath 'nonexistent.exe'
     WhenRunningProcess
-    ThenTaskFailedWithMessage 'Could not locate the executable file ''nonexistent.exe'''
+    ThenTaskFailedWithMessage 'Executable ''nonexistent.exe'' does not exist.'
 }
 
 Describe 'Invoke-WhiskeyProcess.when Path has spaces' {
@@ -254,7 +254,7 @@ Describe 'Invoke-WhiskeyProcess.when Path has spaces' {
     GivenPath 'sub dir\process.bat'
     WhenRunningProcess
     ThenProcessRan
-    ThenRanInWorkingDirectory 'sub dir'
+    ThenRanInWorkingDirectory '.'
     ThenTaskSuccess
 }
 
@@ -300,16 +300,6 @@ Describe 'Invoke-WhiskeyProcess.when given bad working directory' {
     GivenWorkingDirectory 'badworkdir'
     WhenRunningProcess
     ThenTaskFailedWithMessage 'Could not locate the directory'    
-}
-
-Describe 'Invoke-WhiskeyProcess.when working directory is determined based on the root directory of the executable' {
-    Init
-    GivenExecutableFile 'subdir\workdir\process.bat' 'exit 0'
-    GivenPath 'subdir\workdir\process.bat'
-    WhenRunningProcess
-    ThenProcessRan
-    ThenRanInWorkingDirectory 'subdir\workdir'
-    ThenTaskSuccess
 }
 
 Describe 'Invoke-WhiskeyProcess.when running process located by the Path environment variable' {

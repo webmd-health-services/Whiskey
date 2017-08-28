@@ -2,42 +2,57 @@ function Invoke-WhiskeyProcess
 {
     <#
     .SYNOPSIS
-    Starts a process with given arguments
+    Runs a process\executable.
     
     .DESCRIPTION
-    The `Process` task runs an executable located at a given `Path`, relative to your `whiskey.yml` file. Additionally, you may specify a list of `Argument` and a `WorkingDirectory` in which to start the process.
-    
-    The exit code for the process must be '0' or one of `SuccessExitCode` specified, otherwise the build will be failed.
-    
-    ## Properties
+    The `Process` task runs a process/executable. Specify the path to the executable to run with the task's `Path` property. The `Path` can be the name of an executable that can be found in the `PATH` environment variable, a path relative to your `whiskey.yml` file's directory, or an absolute path.
 
-    ### Mandatory
-    * `Path`: path to the executable to run, relative to `whiskey.yml`
-    
-    ### Optional
-    * `Argument`: a list of arguments to be passed to the executable
-    * `SuccessExitCode`: a list of exit codes that indicate the process ran successfully
-    * `WorkingDirectory`: the directory in which to start the process
+    The task will fail if the process returns a non-zero exit code. Use the `SuccessExitCode` property to configure the task to interpret other exit codes as "success". 
 
-    ## Examples
+    Pass arguments to the process via the `Argument` property. The `Process` task uses PowerShell's `Start-Process` cmdlet to run the process, so that arguments will be passes as-is, with no escaping. YAML strings, however, are usually single-quoted (e.g. `'Value'`) or double-quoted (e.g. `"Value"`). If you're using a single quoted string and need to insert a single quote, escape it by using two single quotes, e.g. `'escape: '''` is converted to `escape '`. If you're using a double-quoted string and need to insert a double quote, escape it with `\`, e.g. `"escape: \""` is converted to `escape: "`. YAML supports other escape sequences in double-quoted strings. The full list of escape sequences is in the [YAML specification](http://yaml.org/spec/current.html#escaping in double quoted style/).
 
-    ### Example 1
+    By default, the executable is run from your `whiskey.yml` file's directory (i.e. the build root). Change the working directory with the `WorkingDirectory` property.
 
-        BuildTasks:
-        - Process:
-            Path: NCrunch.exe
-            Argument:
-            - Fubar
-            - Snafu
-            WorkingDirectory: .
-            SuccessExitCode:
-            - 0
-            - 1
-            - 2
+    # Properties
 
-    This example would launch the 'NCrunch.exe', located in the root directory of `whiskey.yml`, with the arguments 'Fubar' and 'Snafu'.
-    
-    The `WorkingDirectory` for the process would be the root build directory and the process must return an exit code of 0, 1, or 2 for the build to not fail.
+    * `Path` (*mandatory*): the path to the executable to run. This can be the name of an executable if it is in your PATH environment variable, a path relative to the `whiskey.yml` file, or an absolute path.
+    * `Argument`: a list of arguments to pass to the executable. Read the documentation above for notes on how to properly escape arguments.
+    * `WorkingDirectory`: the directory the executable will run in/from. By default, this is the build root, i.e. the `whiskey.yml` file's directory.
+    * `SuccessExitCode`: a list of exit codes that the `Process` task should interpret to mean the process exited successfully. The default is `0`.
+
+    # Examples
+
+    ## Example 1
+
+            BuildTasks:
+            - Process:
+                Path: cmd.exe
+                Argument:
+                - /C
+                - dir C:\
+
+    This example demonstrates how to call an executable whose arguments have to be quoted a specific way. In this case, we're using `cmd.exe` to get a directory listing of the `C:\` directory. This example will run `cmd.exe /C dir C:\.
+
+    ## Example 2
+
+            BuildTasks:
+            - Process:
+                Path: robocopy.exe
+                Argument:
+                - C:\Source
+                - C:\Desitination
+                - /MIR    
+                SuccessExitCode:
+                - 0
+                - 1
+                - 2
+                - 3
+                - 4
+                - 5
+                - 6
+                - 7
+
+    This example demonstrates how to configure the `Process` task to fail when an executable can return multiple success exit codes. In this case, `robocopy.exe` can return any value less than 8 to report a successful copy.
     #>      
 
     [CmdletBinding()]
@@ -58,11 +73,22 @@ function Invoke-WhiskeyProcess
     $path = $TaskParameter['Path']
     if ( -not $path )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want to start the Process with.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want to start the Process with, e.g.
+        
+            BuildTasks:
+            - Process:
+                Path: cmd.exe
+            
+        ')
     }
 
     $processPath = ''
-    if ( Test-Path -Path $path -PathType Leaf )
+    $pathRelativeToBuildRoot = Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
+    if ( (-not [IO.Path]::IsPathRooted($path)) -and (Test-Path -Path $pathRelativeToBuildRoot -PathType Leaf) )
+    {
+        $processPath = $pathRelativeToBuildRoot
+    }
+    elseif ([IO.Path]::IsPathRooted($path) -and (Test-Path -Path $path -PathType Leaf) )
     {
         $processPath = Resolve-Path -Path $path | Select-Object -ExpandProperty Path
     }
@@ -73,11 +99,11 @@ function Invoke-WhiskeyProcess
 
     if ( $processPath -eq '' )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate the executable file ''{0}'' specified in the ''Path'' property.' -f $path)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Executable ''{0}'' does not exist. We checked if the executable is at that path on the file system and if it is in your PATH environment variable.' -f $path)
     }
 
 
-    $workingDirectory = $processPath | Split-Path
+    $workingDirectory = $TaskContext.BuildRoot
     if ( $TaskParameter['WorkingDirectory'] )
     {
         $workingDirectory = $TaskParameter['WorkingDirectory']
@@ -86,10 +112,6 @@ function Invoke-WhiskeyProcess
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate the directory ''{0}'' specified in the ''WorkingDirectory'' property.' -f $workingDirectory)
         }
-    }
-    elseif ( $workingDirectory -eq '' )
-    {
-        $workingDirectory = $TaskContext.BuildRoot
     }
 
 
@@ -112,7 +134,7 @@ function Invoke-WhiskeyProcess
     $exitCode = $process.ExitCode
     if ( $exitCode -notin $successExitCode )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''. View the build output to see why the process failed.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
     }
 
 }
