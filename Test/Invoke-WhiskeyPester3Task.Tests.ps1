@@ -10,62 +10,6 @@ $pesterPath = $null
 $version = $null
 $taskParameter = @{}
 $failed = $false
-function ThenPesterShouldHaveRun
-{
-    param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
-            
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
-    )
-    $reportsIn =  $script:context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
-    #check to see if we were supposed to run any tests.
-    if( ($FailureCount + $PassingCount) -gt 0 )
-    {
-        It 'should run pester tests' {
-            $testReports | Should Not BeNullOrEmpty
-        }
-    }
-
-    $total = 0
-    $failed = 0
-    $passed = 0
-    foreach( $testReport in $testReports )
-    {
-        $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
-        $thisTotal = [int]($xml.'test-results'.'total')
-        $thisFailed = [int]($xml.'test-results'.'failures')
-        $thisPassed = ($thisTotal - $thisFailed)
-        $total += $thisTotal
-        $failed += $thisFailed
-        $passed += $thisPassed
-    }
-
-    $expectedTotal = $FailureCount + $PassingCount
-    It ('should run {0} tests' -f $expectedTotal) {
-        $total | Should Be $expectedTotal
-    }
-
-    It ('should have {0} failed tests' -f $FailureCount) {
-        $failed | Should Be $FailureCount
-    }
-
-    It ('should run {0} passing tests' -f $PassingCount) {
-        $passed | Should Be $PassingCount
-    }
-
-    foreach( $reportPath in $testReports )
-    {
-        It ('should publish {0} test results' -f $reportPath) {
-            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
-        }
-    }
-}
 
 function GivenTestContext
 {
@@ -127,7 +71,10 @@ function GivenWithCleanFlag
     $context.RunMode = 'Clean'
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
 }
-
+function GivenWithInitilizeFlag
+{
+    $context.RunMode = 'initialize'
+}
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
@@ -155,7 +102,9 @@ function ThenTestShouldPass
 {
     param(
         [switch]
-        $WithClean
+        $WithClean,
+        [switch]
+        $withInit
     )
     if( -not $script:Taskparameter['Version'] )
     {
@@ -188,6 +137,63 @@ function ThenTestShouldPass
     {
         It 'should attempt to uninstall Pester' {
             Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -Times 1 -ModuleName 'Whiskey'
+        }
+    }
+}
+
+function ThenPesterShouldHaveRun
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        [int]
+        $FailureCount,
+            
+        [Parameter(Mandatory=$true)]
+        [int]
+        $PassingCount
+    )
+    $reportsIn =  $script:context.outputDirectory
+    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
+    #check to see if we were supposed to run any tests.
+    if( ($FailureCount + $PassingCount) -gt 0 )
+    {
+        It 'should run pester tests' {
+            $testReports | Should Not BeNullOrEmpty
+        }
+    }
+
+    $total = 0
+    $failed = 0
+    $passed = 0
+    foreach( $testReport in $testReports )
+    {
+        $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
+        $thisTotal = [int]($xml.'test-results'.'total')
+        $thisFailed = [int]($xml.'test-results'.'failures')
+        $thisPassed = ($thisTotal - $thisFailed)
+        $total += $thisTotal
+        $failed += $thisFailed
+        $passed += $thisPassed
+    }
+
+    $expectedTotal = $FailureCount + $PassingCount
+    It ('should run {0} tests' -f $expectedTotal) {
+        $total | Should Be $expectedTotal
+    }
+
+    It ('should have {0} failed tests' -f $FailureCount) {
+        $failed | Should Be $FailureCount
+    }
+
+    It ('should run {0} passing tests' -f $PassingCount) {
+        $passed | Should Be $PassingCount
+    }
+
+    foreach( $reportPath in $testReports )
+    {
+        It ('should publish {0} test results' -f $reportPath) {
+            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
         }
     }
 }
@@ -325,5 +331,15 @@ Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with Clean
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
     ThenTestShouldPass -withClean
+}
+
+Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with initialization switch' {
+    GivenTestContext
+    GivenPesterPath -pesterPath 'PassingTests'
+    GivenVersion '3.4.3'
+    GivenWithInitilizeFlag
+    WhenPesterTaskIsInvoked
+    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
+    ThenTestShouldPass -withInit
 }
 
