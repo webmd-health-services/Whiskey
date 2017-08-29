@@ -82,24 +82,22 @@ function Invoke-WhiskeyProcess
         ')
     }
 
-    $processPath = ''
-    $pathRelativeToBuildRoot = Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
-    if ( (-not [IO.Path]::IsPathRooted($path)) -and (Test-Path -Path $pathRelativeToBuildRoot -PathType Leaf) )
+    if ( -not [IO.Path]::IsPathRooted($path) )
     {
-        $processPath = $pathRelativeToBuildRoot
+        $path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
     }
-    elseif ([IO.Path]::IsPathRooted($path) -and (Test-Path -Path $path -PathType Leaf) )
+    
+    if ( (Test-Path -Path $path -PathType Leaf) )
     {
-        $processPath = Resolve-Path -Path $path | Select-Object -ExpandProperty Path
+        $path = $path | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
     }
-    elseif ( Get-Command -Name $path -CommandType Application -ErrorAction Ignore )
+    else
     {
-        $processPath = $path
-    }
-
-    if ( $processPath -eq '' )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Executable ''{0}'' does not exist. We checked if the executable is at that path on the file system and if it is in your PATH environment variable.' -f $path)
+        $path = $TaskParameter['Path']
+        if( -not (Get-Command -Name $path -CommandType Application -ErrorAction Ignore) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Executable ''{0}'' does not exist. We checked if the executable is at that path on the file system and if it is in your PATH environment variable.' -f $path)
+        }
     }
 
 
@@ -129,7 +127,7 @@ function Invoke-WhiskeyProcess
     }
 
 
-    $process = Start-Process -FilePath $processPath @argumentListParam -WorkingDirectory $workingDirectory -NoNewWindow -Wait -PassThru
+    $process = Start-Process -FilePath $path @argumentListParam -WorkingDirectory $workingDirectory -NoNewWindow -Wait -PassThru
 
     $exitCode = $process.ExitCode
     if ( $exitCode -notin $successExitCode )
