@@ -14,6 +14,7 @@ $dependency = @()
 $ByDeveloper = $false
 $WithNoName = $false
 $withCleanSwitch = $false
+$withInitializeSwitch = $false
 $inSubDirectory = $null
 $inWorkingDirectory = $null
 $UsingNodeVersion = '^4.4.7'
@@ -49,6 +50,11 @@ function GivenNpmScriptsToRun
 function GivenWithCleanSwitch 
 {
     $script:withCleanSwitch = $true
+}
+
+function GivenWithInitializeSwitch
+{
+    $script:withInitializeSwitch = $true
 }
 function GivenSubDirectory 
 {
@@ -128,6 +134,10 @@ function WhenBuildIsStarted
     {
         $context.RunMode = 'Clean'
     }
+    if ( $script:withInitializeSwitch )
+    {
+        $context.RunMode = 'initialize'
+    }
     if ( $script:npmRegistryUri )
     {
         $taskParameter['npmRegistryUri'] = $script:npmRegistryUri
@@ -149,6 +159,16 @@ function WhenBuildIsStarted
         It ('should remove the node_modules directory') {
             (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Not Exist
         }
+        foreach( $taskName in $script:runScripts )
+        {
+            It ('should NOT run the {0} task' -f $taskName) {
+                (Join-Path -Path $script:InWorkingDirectory -ChildPath $taskName) | Should Not Exist
+            }
+        }
+        return
+    }
+    if( $script:withInitializeSwitch )
+    {
         foreach( $taskName in $script:runScripts )
         {
             It ('should NOT run the {0} task' -f $taskName) {
@@ -190,12 +210,12 @@ function WhenBuildIsStarted
     }
 
     $devDependencyPaths = Join-Path -Path $script:InWorkingDirectory -ChildPath 'package.json' | 
-                            ForEach-Object { Get-Content -Raw -Path $_ } | 
-                            ConvertFrom-Json |
-                            Select-Object -ExpandProperty 'devDependencies' |
-                            Get-Member -MemberType NoteProperty |
-                            Select-Object -ExpandProperty 'Name' |
-                            ForEach-Object { Join-Path -Path $script:InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
+        ForEach-Object { Get-Content -Raw -Path $_ } | 
+        ConvertFrom-Json |
+        Select-Object -ExpandProperty 'devDependencies' |
+        Get-Member -MemberType NoteProperty |
+        Select-Object -ExpandProperty 'Name' |
+        ForEach-Object { Join-Path -Path $script:InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
 
     
     if( $script:ByDeveloper )
@@ -261,10 +281,10 @@ function Initialize-NodeProject
     if( -not $script:DevDependency )
     {
         $script:DevDependency = @(
-                            '"jit-grunt": "^0.10.0"',
-                            '"grunt": "^1.0.1"',
-                            '"grunt-cli": "^1.2.0"'
-                          )
+            '"jit-grunt": "^0.10.0"',
+            '"grunt": "^1.0.1"',
+            '"grunt-cli": "^1.2.0"'
+        )
     }
 
     $nodeEngine = @"
@@ -543,6 +563,17 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on alre
     GivenNpmScriptsToRun 'build'
     Initialize-NodeProject 
     WhenBuildIsStarted
+    GivenNpmScriptsToRun 'test'
+    Initialize-NodeProject 
+    WhenBuildIsStarted
+    ThenBuildSucceeds
+    cleanup
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
+    GivenBuildByBuildServer
+    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+    GivenWithInitializeSwitch
     GivenNpmScriptsToRun 'test'
     Initialize-NodeProject 
     WhenBuildIsStarted

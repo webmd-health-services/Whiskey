@@ -88,6 +88,9 @@ function Invoke-NUnitTask
         [Switch]
         $WhenRunningClean,
 
+        [Switch]
+        $WhenRunningInitialize,
+
         [Version]
         $WithOpenCoverVersion = '4.6.519',
 
@@ -116,11 +119,11 @@ function Invoke-NUnitTask
         if( $WithRunningTests )
         {
             $taskParameter = @{
-                            Path = @(
-                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
-                                        'NUnit2PassingTest\NUnit2PassingTest.sln'   
-                                    )
-                          }
+                Path = @(
+                    'NUnit2FailingTest\NUnit2FailingTest.sln',
+                    'NUnit2PassingTest\NUnit2PassingTest.sln'   
+                )
+            }
             Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
         }
         if( $WithNoPath )
@@ -130,27 +133,27 @@ function Invoke-NUnitTask
         elseif( $WithInvalidPath )
         {
             $taskParameter = @{
-                                Path = @(
-                                            'I\do\not\exist'
-                                        )
-                              }
+                Path = @(
+                    'I\do\not\exist'
+                )
+            }
         }
         elseif( $WithFailingTests )
         {
             $taskParameter = @{
-                                Path = @(
-                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
-                                        )
-                              }
+                Path = @(
+                    ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
+                )
+            }
         }        
         else
         {
             $taskParameter = @{
-                                Path = @(
-                                            ('NUnit2PassingTest\bin\{0}\NUnit2PassingTest.dll' -f $configuration),
-                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
-                                        )
-                              }
+                Path = @(
+                    ('NUnit2PassingTest\bin\{0}\NUnit2PassingTest.dll' -f $configuration),
+                    ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
+                )
+            }
         }
 
         if( $WithDisabledCodeCoverage )
@@ -173,6 +176,13 @@ function Invoke-NUnitTask
             Install-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -DownloadRoot $context.BuildRoot
         }
 
+        if( $WhenRunningInitialize )
+        {
+            $context.RunMode = 'Initilize'
+            #check to be sure that we are only uninstalling the desired version of particular packages on clean
+            Install-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.4' -DownloadRoot $context.BuildRoot
+        }
+
         $Global:Error.Clear()
         try
         {
@@ -188,7 +198,7 @@ function Invoke-NUnitTask
             if( $WhenJoinPathResolveFails )
             {
                 It 'should write an error'{
-                $Global:Error[0] | Should Match ( $WithError )
+                    $Global:Error[0] | Should Match ( $WithError )
                 }
             }
             else
@@ -235,7 +245,7 @@ function Invoke-NUnitTask
             }
         }
         else
-        {               
+        {
             It 'should download NUnit.Runners' {
                 (Join-Path -Path $context.BuildRoot -ChildPath 'packages\NUnit.Runners.2.6.4') | Should Exist
             }
@@ -313,9 +323,9 @@ Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with disabled code c
 
 Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with coverage filters' { 
     $coverageFilter = (
-                    '-[NUnit2FailingTest]*',
-                    '+[NUnit2PassingTest]*'
-                    )
+        '-[NUnit2FailingTest]*',
+        '+[NUnit2PassingTest]*'
+    )
     Invoke-NUnitTask -WithRunningTests -InReleaseMode -CoverageFilter $coverageFilter
 }
 
@@ -338,7 +348,10 @@ function WhenRunningTask
 {
     param(
         [hashtable]
-        $WithParameters = @{ }
+        $WithParameters = @{ },
+
+        [Switch]
+        $WhenRunningInitialize
     )
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
@@ -353,7 +366,10 @@ function WhenRunningTask
     # Make sure there are spaces in the path so that we test things get escaped properly.
     Get-ChildItem -Path $context.BuildRoot -Filter $configuration -Directory -Recurse |
         Rename-Item -NewName ('{0} Mode' -f $configuration)
-
+    if( $WhenRunningInitialize )
+    {
+        $context.RunMode = 'initialize'
+    }
     try
     {
         $WithParameters['Path'] = 'bin\{0} Mode\{1}' -f $configuration,$assemblyToTest
@@ -379,9 +395,9 @@ function Get-TestCaseResult
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
         Get-Content -Raw |
         ForEach-Object { 
-            $testResult = [xml]$_
-            $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
-        }
+        $testResult = [xml]$_
+        $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
+    }
 }
 
 function ThenOutput
@@ -478,4 +494,10 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator argu
     WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
     ThenOutput -Contains 'Initializing report builders for report types: Latex'
     ThenOutput -DoesNotContain 'Preprocessing report', 'Initiating parser for OpenCover'
+}
+
+Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
+    GivenPassingTests
+    WhenRunningTask -WhenRunningInitialize -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
+    ThenOutput -DoesNotContain 'Initializing report builders for report types: Latex'
 }
