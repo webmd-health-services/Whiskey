@@ -172,9 +172,9 @@ function New-WhiskeyProGetUniversalPackage
                             $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
-                                            'upack.json'
-                                            $include
-                                            } 
+                                'upack.json'
+                                $include
+                            } 
                         }
 
                         Write-Verbose -Message $operationDescription
@@ -197,6 +197,11 @@ function New-WhiskeyProGetUniversalPackage
         $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
         $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
         $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
+
+        if( $TaskContext.ShouldInitialize() )
+        {
+            return
+        }
 
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
         & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')

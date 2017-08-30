@@ -53,6 +53,10 @@ function Init
     $script:email = $defaultEmailAddress
 }
 
+function GivenWithInitilizeFlag
+{
+    $script:context.RunMode = 'initialize'
+}
 function New-PublishNodeModuleStructure
 {
     param(
@@ -99,7 +103,15 @@ function ThenNodeModulePublished
 {
     It ('should publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+    }
+}
+
+function ThenNodeModuleIsNotPublished
+{
+    It ('should not publish the module') {
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
+            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0 -Exactly
     }
 }
 
@@ -137,14 +149,14 @@ $npmrcFileLine4
 "@
 
     It ('.npmrc file should be{0}{1}' -f [Environment]::newLine,$npmrcFileLine2){
-    # should populate the .npmrc file with the appropriate configuration values' {
+        # should populate the .npmrc file with the appropriate configuration values' {
         $actualFileContents = Get-Content -Raw -Path $npmrcPath
         $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
     }
 
     It ('should remove {0}' -f $npmRcPath) {
         Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
-                          -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
+            -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
     }
 }
 
@@ -236,4 +248,12 @@ Describe 'PublishNodeModule.when email address property missing' {
     New-PublishNodeModuleStructure
     WhenPublishingNodeModule -ErrorAction SilentlyContinue
     ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+}
+
+Describe 'PublishNodeModule.when publishing node module with initialization mode' {
+    Init
+    New-PublishNodeModuleStructure
+    GivenWithInitilizeFlag
+    WhenPublishingNodeModule
+    ThenNodeModuleIsNotPublished
 }
