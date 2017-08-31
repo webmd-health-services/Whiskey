@@ -97,7 +97,7 @@ function GivenSuccessExitCode
     $script:successExitCode = $SuccessExitCode
 }
 
-function WhenRunningProcess
+function WhenRunningExecutable
 {
     $TaskParameter = @{}
 
@@ -128,7 +128,7 @@ function WhenRunningProcess
 
     Try 
     {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Process'
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
     }
     Catch
     {
@@ -138,12 +138,12 @@ function WhenRunningProcess
     Pop-Location
 }
 
-function ThenProcessRan
+function ThenExecutableRan
 {
-    $processRanResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'ItRan.txt' -Recurse
+    $executableRanResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'ItRan.txt' -Recurse
 
-    It 'should run the process' {
-         $processRanResult | Should -Not -BeNullOrEmpty
+    It 'should run the executable' {
+         $executableRanResult | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -203,111 +203,111 @@ function ThenTaskFailedWithMessage
     }
 }
 
-Describe 'Invoke-WhiskeyProcess.when running a process with no arguments' {
+Describe 'Invoke-WhiskeyExec.when running an executable with no arguments' {
     Init
-    GivenExecutableFile 'process.bat' 'exit 0'
-    GivenPath 'process.bat'
-    WhenRunningProcess
-    ThenProcessRan
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when running a process with an argument' {
+Describe 'Invoke-WhiskeyExec.when running an executable with an argument' {
     Init
-    GivenExecutableFile 'process.bat' 'exit 0'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
     GivenArgument 'Arg1'
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when running a process with multiple arguments' {
+Describe 'Invoke-WhiskeyExec.when running an executable with multiple arguments' {
     Init
-    GivenExecutableFile 'process.bat' 'exit 0'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
     GivenArgument 'Arg1','Arg2'
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when missing Path parameter' {
+Describe 'Invoke-WhiskeyExec.when missing Path parameter' {
     Init
-    WhenRunningProcess
+    WhenRunningExecutable
     ThenTaskFailedWithMessage '''Path'' is mandatory.'
 }
 
-Describe 'Invoke-WhiskeyProcess.when given bad path' {
+Describe 'Invoke-WhiskeyExec.when given bad path' {
     Init
     GivenPath 'nonexistent.exe'
-    WhenRunningProcess
+    WhenRunningExecutable
     ThenTaskFailedWithMessage 'Executable ''nonexistent.exe'' does not exist.'
 }
 
-Describe 'Invoke-WhiskeyProcess.when Path has spaces' {
+Describe 'Invoke-WhiskeyExec.when Path has spaces' {
     Init
-    GivenExecutableFile 'sub dir\process.bat' 'exit 0'
-    GivenPath 'sub dir\process.bat'
-    WhenRunningProcess
-    ThenProcessRan
+    GivenExecutableFile 'sub dir\executable.bat' 'exit 0'
+    GivenPath 'sub dir\executable.bat'
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenRanInWorkingDirectory '.'
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when given success exit codes' {
+Describe 'Invoke-WhiskeyExec.when given success exit codes' {
     Init
-    GivenExecutableFile 'process.bat' 'exit 123'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 123'
+    GivenPath 'executable.bat'
     GivenSuccessExitCode 123
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when process exits with non-success exit code' {
+Describe 'Invoke-WhiskeyExec.when executable exits with non-success exit code' {
     Init
-    GivenExecutableFile 'process.bat' 'exit 42'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 42'
+    GivenPath 'executable.bat'
     GivenSuccessExitCode 0,1,123
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
 }
 
-Describe 'Invoke-WhiskeyProcess.when given a working directory' {
+Describe 'Invoke-WhiskeyExec.when given a working directory' {
     Init
     GivenADirectory 'workdir'
-    GivenExecutableFile 'process.bat' 'exit 0'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
     GivenWorkingDirectory 'workdir'
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenRanInWorkingDirectory
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyProcess.when given bad working directory' {
+Describe 'Invoke-WhiskeyExec.when given bad working directory' {
     Init
     GivenADirectory 'workdir'
-    GivenExecutableFile 'process.bat' 'exit 0'
-    GivenPath 'process.bat'
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
     GivenWorkingDirectory 'badworkdir'
-    WhenRunningProcess
+    WhenRunningExecutable
     ThenTaskFailedWithMessage 'Could not locate the directory'    
 }
 
-Describe 'Invoke-WhiskeyProcess.when running process located by the Path environment variable' {
+Describe 'Invoke-WhiskeyExec.when running executable located by the Path environment variable' {
     Init
     GivenPath 'cmd.exe'
     GivenArgument '/C','echo ItRan > ItRan.txt & echo|set /p="%cd%" > WorkingDirectory.txt & exit 0'
-    WhenRunningProcess
-    ThenProcessRan
+    WhenRunningExecutable
+    ThenExecutableRan
     ThenRanInWorkingDirectory '.'
     ThenTaskSuccess
 }

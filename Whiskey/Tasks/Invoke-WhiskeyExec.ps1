@@ -1,15 +1,15 @@
-function Invoke-WhiskeyProcess
+function Invoke-WhiskeyExec
 {
     <#
     .SYNOPSIS
-    Runs a process\executable.
+    Runs an executable.
     
     .DESCRIPTION
-    The `Process` task runs a process/executable. Specify the path to the executable to run with the task's `Path` property. The `Path` can be the name of an executable that can be found in the `PATH` environment variable, a path relative to your `whiskey.yml` file's directory, or an absolute path.
+    The `Exec` task runs an executable. Specify the path to the executable to run with the task's `Path` property. The `Path` can be the name of an executable that can be found in the `PATH` environment variable, a path relative to your `whiskey.yml` file's directory, or an absolute path.
 
-    The task will fail if the process returns a non-zero exit code. Use the `SuccessExitCode` property to configure the task to interpret other exit codes as "success". 
+    The task will fail if the executable returns a non-zero exit code. Use the `SuccessExitCode` property to configure the task to interpret other exit codes as "success". 
 
-    Pass arguments to the process via the `Argument` property. The `Process` task uses PowerShell's `Start-Process` cmdlet to run the process, so that arguments will be passes as-is, with no escaping. YAML strings, however, are usually single-quoted (e.g. `'Value'`) or double-quoted (e.g. `"Value"`). If you're using a single quoted string and need to insert a single quote, escape it by using two single quotes, e.g. `'escape: '''` is converted to `escape '`. If you're using a double-quoted string and need to insert a double quote, escape it with `\`, e.g. `"escape: \""` is converted to `escape: "`. YAML supports other escape sequences in double-quoted strings. The full list of escape sequences is in the [YAML specification](http://yaml.org/spec/current.html#escaping in double quoted style/).
+    Pass arguments to the executable via the `Argument` property. The `Exec` task uses PowerShell's `Start-Process` cmdlet to run the executable, so that arguments will be passes as-is, with no escaping. YAML strings, however, are usually single-quoted (e.g. `'Value'`) or double-quoted (e.g. `"Value"`). If you're using a single quoted string and need to insert a single quote, escape it by using two single quotes, e.g. `'escape: '''` is converted to `escape '`. If you're using a double-quoted string and need to insert a double quote, escape it with `\`, e.g. `"escape: \""` is converted to `escape: "`. YAML supports other escape sequences in double-quoted strings. The full list of escape sequences is in the [YAML specification](http://yaml.org/spec/current.html#escaping in double quoted style/).
 
     By default, the executable is run from your `whiskey.yml` file's directory (i.e. the build root). Change the working directory with the `WorkingDirectory` property.
 
@@ -18,14 +18,14 @@ function Invoke-WhiskeyProcess
     * `Path` (*mandatory*): the path to the executable to run. This can be the name of an executable if it is in your PATH environment variable, a path relative to the `whiskey.yml` file, or an absolute path.
     * `Argument`: a list of arguments to pass to the executable. Read the documentation above for notes on how to properly escape arguments.
     * `WorkingDirectory`: the directory the executable will run in/from. By default, this is the build root, i.e. the `whiskey.yml` file's directory.
-    * `SuccessExitCode`: a list of exit codes that the `Process` task should interpret to mean the process exited successfully. The default is `0`.
+    * `SuccessExitCode`: a list of exit codes that the `Exec` task should interpret to mean the executable's process exited successfully. The default is `0`.
 
     # Examples
 
     ## Example 1
 
             BuildTasks:
-            - Process:
+            - Exec:
                 Path: cmd.exe
                 Argument:
                 - /C
@@ -36,7 +36,7 @@ function Invoke-WhiskeyProcess
     ## Example 2
 
             BuildTasks:
-            - Process:
+            - Exec:
                 Path: robocopy.exe
                 Argument:
                 - C:\Source
@@ -52,11 +52,11 @@ function Invoke-WhiskeyProcess
                 - 6
                 - 7
 
-    This example demonstrates how to configure the `Process` task to fail when an executable can return multiple success exit codes. In this case, `robocopy.exe` can return any value less than 8 to report a successful copy.
+    This example demonstrates how to configure the `Exec` task to fail when an executable can return multiple success exit codes. In this case, `robocopy.exe` can return any value less than 8 to report a successful copy.
     #>      
 
     [CmdletBinding()]
-    [Whiskey.Task("Process")]
+    [Whiskey.Task("Exec")]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -73,10 +73,10 @@ function Invoke-WhiskeyProcess
     $path = $TaskParameter['Path']
     if ( -not $path )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want to start the Process with, e.g.
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want the Exec task to run, e.g.
         
             BuildTasks:
-            - Process:
+            - Exec:
                 Path: cmd.exe
             
         ')
@@ -132,7 +132,7 @@ function Invoke-WhiskeyProcess
     $exitCode = $process.ExitCode
     if ( $exitCode -notin $successExitCode )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''. View the build output to see why the process failed.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''. View the build output to see why the executable''s process failed.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
     }
 
 }
