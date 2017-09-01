@@ -110,9 +110,16 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
         catch [Net.WebException]
         {
-            if( ([Net.HttpWebResponse]([Net.WebException]$_.Exception).Response).StatusCode -ne [Net.HttpStatusCode]::NotFound )
+            $response = [Net.HttpWebResponse]([Net.WebException]$_.Exception).Response
+            if( $response.StatusCode -ne [Net.HttpStatusCode]::NotFound )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failure checking if {0} {1} package already exists at {2}. The web request returned a {3} status code.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
+                $content = $response.GetResponseStream()
+                $content.Position = 0
+                $reader = New-Object 'IO.StreamReader' $content
+                $error = $reader.ReadToEnd() -replace '<[^>]+?>',''
+                $reader.Close()
+                $response.Close()
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failure checking if {0} {1} package already exists at {2}. The web request returned a {3} ({4}) status code:{5} {5}{6}' -f $projectName,$packageVersion,$packageUri,$response.StatusCode,[int]$response.StatusCode,[Environment]::NewLine,$error)
             }
 
             for( $idx = 0; $idx -lt ($Global:Error.Count - $numErrorsAtStart); ++$idx )
