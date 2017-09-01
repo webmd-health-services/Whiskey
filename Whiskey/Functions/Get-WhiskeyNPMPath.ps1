@@ -21,7 +21,7 @@ function Get-WhiskeyNPMPath
     $packageJsonPath = Resolve-Path -Path (Join-Path -Path $ApplicationRoot -ChildPath 'package.json') | Select-Object -ExpandProperty 'ProviderPath'
     $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
 
-    if ( $packageJson.engines | Get-Member -Name 'npm' )
+    if ( ($packageJson | Get-Member -Name 'engines') -and ($packageJson.engines | Get-Member -Name 'npm') )
     {
         if( $packageJson.engines.npm -notmatch '(\d+\.\d+\.\d+)' )
         {
