@@ -151,13 +151,15 @@ function WhenRunningNuGetPackTask
     elseif( $publishFails )
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-            Invoke-WebRequest -Uri 'http://httpstat.us/404'
+            Write-Debug -Message 'http://httpstat.us/404'
+            Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
     elseif( $packageExistsCheckFails )
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-            Invoke-WebRequest -Uri 'http://httpstat.us/500'
+            Write-Debug -Message 'http://httpstat.us/500'
+            Invoke-WebRequest -Uri 'http://httpstat.us/500' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
     else
@@ -170,9 +172,11 @@ function WhenRunningNuGetPackTask
             {
                 $global:counter++    
                 Write-Debug $global:counter
-                Invoke-WebRequest -Uri 'http://httpstat.us/404'
+                Write-Debug -Message 'http://httpstat.us/404'
+                Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
             }
             $global:counter = 0
+            Write-Debug -Message 'http://httpstat.us/200'
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
 
