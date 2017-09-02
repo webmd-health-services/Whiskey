@@ -16,6 +16,7 @@ $context = $null
 $workingDirectory = $null
 $threwException = $false
 $email = $null
+$npmVersion = $null
 
 function GivenNoCredentialID
 {
@@ -30,6 +31,15 @@ function GivenNoEmailAddress
 function GivenNoNpmRegistryUri
 {
     $script:npmRegistryUri = $null
+}
+
+function GivenNpmVersion
+{
+    param(
+        $Version
+    )
+
+    $script:npmVersion = ('"npm": "{0}",' -f $Version)
 }
 
 function GivenWorkingDirectory
@@ -51,6 +61,7 @@ function Init
     $script:workingDirectory = $null
     $script:npmRegistryUri = 'http://registry.npmjs.org/'
     $script:email = $defaultEmailAddress
+    $script:npmVersion = $null
 }
 
 function New-PublishNodeModuleStructure
@@ -68,22 +79,28 @@ function New-PublishNodeModuleStructure
     {
         $taskParameter['NpmRegistryUri'] = $npmRegistryUri
     }
-    $buildRoot = $context.BuildRoot
+
+    $testPackageJsonChildPath = 'package.json'
 
     if ($workingDirectory)
     {
         $taskParameter['WorkingDirectory'] = $workingDirectory
+        $testPackageJsonChildPath = (Join-Path -Path $workingDirectory -ChildPath 'package.json')
     }
 
-    $testPackageJsonPath = Join-Path -Path $context.BuildRoot -ChildPath 'package.json'
-    $testPackageJson = '{
+    $testPackageJsonPath = Join-Path -Path $context.BuildRoot -ChildPath $testPackageJsonChildPath
+    $testPackageJson = @"
+{
   "name": "publishnodemodule_test",
   "version": "1.2.0",
   "main": "index.js",
   "engines": {
+    $($script:npmVersion)
     "node": "^4.4.7"
   }
-}'
+}
+"@
+
     $testPackageJsonPath = New-Item -Path $testPackageJsonPath -ItemType File -Value $testPackageJson
 
     $returnContextParams = @{}
@@ -100,6 +117,15 @@ function ThenNodeModulePublished
     It ('should publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+    }
+}
+
+function ThenLocalNpmCleanedUp
+{
+    $npmPath = (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
+
+    It 'should remove the local version of npm after publishing' {
+        $npmPath | Should -Not -Exist
     }
 }
 
@@ -236,4 +262,13 @@ Describe 'PublishNodeModule.when email address property missing' {
     New-PublishNodeModuleStructure
     WhenPublishingNodeModule -ErrorAction SilentlyContinue
     ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+}
+
+Describe 'PublishNodeModule.when publishing node module using specific version of npm' {
+    Init
+    GivenNPMVersion '~4.6.1'
+    New-PublishNodeModuleStructure
+    WhenPublishingNodeModule
+    ThenNpmrcCreated
+    ThenLocalNpmCleanedUp
 }

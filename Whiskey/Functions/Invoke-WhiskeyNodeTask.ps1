@@ -10,6 +10,8 @@ function Invoke-WhiskeyNodeTask
 
     You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
 
+    You may additionally specify a version of NPM to use in the engines field of your package.json file. NPM will be downloaded into your package's 'node_modules' directory at the specified version. This local version of NPM will be used to execute the list of `NpmScript` and then will be removed from 'node_modules' at the end of the build.
+
     This task accepts these parameters:
 
     * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
@@ -82,7 +84,7 @@ function Invoke-WhiskeyNodeTask
     }
     $npmScripts = $TaskParameter['NpmScript']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
-    $numSteps = 5 + $npmScriptCount
+    $numSteps = 6 + $npmScriptCount
     $stepNum = 0
 
     $originalPath = $env:PATH
@@ -115,15 +117,22 @@ function Invoke-WhiskeyNodeTask
         $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
         if( -not $nodePath )
         {
-            throw ('Node version required for this package failed to install. Please see previous errors for details.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node version required for this package failed to install. Please see previous errors for details.')
         }
         Update-Progress -Status ('Node.js version required for this package is installed') -Step ($stepNum++)
 
         $nodeRoot = $nodePath | Split-Path
-        $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+        $npmGlobalPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+        if( -not $npmGlobalPath )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM didn''t get installed by NVM when installing Node. Please use NVM to uninstall this version of Node.')
+        }
+
+        Update-Progress -Status ('Getting path to the version of NPM required for this package') -Step ($stepNum++)
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
         if( -not $npmPath )
         {
-            throw ('NPM didn''t get installed by NVM when installing Node. Please use NVM to uninstall this version of Node.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
         }
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
@@ -138,7 +147,7 @@ function Invoke-WhiskeyNodeTask
         & $nodePath $npmPath 'install' '--production=false' $noColorArg
         if( $LASTEXITCODE )
         {
-            throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
 
         if( -not $npmScripts )
@@ -154,13 +163,15 @@ BuildTasks:
 '@)
         }
 
+        # local version of npm gets removed by 'npm install', so call Get-WhiskeyNPMPath to download it again if necessary
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
-            & $nodePath $npmPath 'run' $script $noColorArg
+            & $nodePath $npmPath 'run' $script '--scripts-prepend-node-path=auto' $noColorArg 
             if( $LASTEXITCODE )
             {
-                throw ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
             }
         }
 
@@ -175,7 +186,7 @@ BuildTasks:
         & $nodePath $npmPath $npmCmd 'nsp@latest' '-g'
         if( -not (Test-Path -Path $nspPath -PathType Leaf) )
         {
-            throw ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
         $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
@@ -184,7 +195,7 @@ BuildTasks:
         if( $LASTEXITCODE )
         {
             $summary = $results | Format-List | Out-String
-            throw ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
@@ -197,14 +208,14 @@ BuildTasks:
         & $nodePath $npmPath $npmCmd 'license-checker@latest' '-g'
         if( -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
-            throw ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
         $reportJson = & $nodePath $licenseCheckerPath '--json'
         $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
         if( -not $report )
         {
-            throw ('License Checker failed to output a valid JSON report.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker failed to output a valid JSON report.')
         }
 
         # The default license checker report has a crazy format. It is an object with properties for each module.
@@ -230,10 +241,10 @@ BuildTasks:
         }
 
         Update-Progress -Status ('npm prune{0}' -f $productionArgDisplay) -Step ($stepNum++)
-        & $nodePath $npmPath 'prune' $productionArg $noColorArg
+        & $nodePath $npmGlobalPath 'prune' $productionArg $noColorArg
         if( $LASTEXITCODE )
         {
-            throw ('NPM command `npm prune{0}` failed, returning exist code {1}.' -f $productionArgDisplay,$LASTEXITCODE)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm prune{0}` failed, returning exist code {1}.' -f $productionArgDisplay,$LASTEXITCODE)
         }
     }
     finally
@@ -245,5 +256,3 @@ BuildTasks:
         Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }
-
-
