@@ -425,6 +425,7 @@ function cleanup
     $script:withCleanSwitch = $false
     $script:runScripts = @()
     $script:failed = $null
+    $script:withInitializeSwitch = $false
 }
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     GivenBuildByDeveloper
