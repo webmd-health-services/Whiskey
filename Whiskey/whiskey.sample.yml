@@ -15,6 +15,10 @@
 # build metadata will be `release-2.0.d383371`.
 Version: 0.0.0
 
+# The location you wish to get the version from.
+# This can be a package.json file or a powershell module file.
+VersionFrom: 'Whiskey/Whiskey.ps1'
+
 # The branches on which you want to publish a package to ProGet and start a deployment 
 # pipeline in BuildMaster, when running on the build server. If you omit the
 # `PublishOn` property (i.e. by default), publishing will happen on the `develop`, 

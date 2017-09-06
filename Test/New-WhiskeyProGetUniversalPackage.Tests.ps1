@@ -937,9 +937,23 @@ Describe 'Invoke-WhiskeyProGetUniversalPackageTas.when path contains wildcards' 
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory' {
     GivenARepositoryWithFiles 'dir1\subdir\file.txt'
-    WhenPackaging -Paths 'dir1\subdir' -WithWhitelist "*.txt"
+    WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir1\subdir\file.txt'
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space' {
+    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    WhenPackaging -Paths 'dir 1\sub dir' -WithWhitelist "*.txt"
+    ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
+    ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space and trailing backslash' {
+    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    WhenPackaging -Paths 'dir 1\sub dir\' -WithWhitelist "*.txt"
+    ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
+    ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 9 is included' {

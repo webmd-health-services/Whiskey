@@ -59,7 +59,7 @@ function Publish-WhiskeyNodeModule
         NpmRegistryUri: https://registry.npmjs.org/
     '
     }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $buildRoot -ForDeveloper:$TaskContext.ByDeveloper
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
     
     if( $TaskContext.ShouldInitialize() )
     {
@@ -69,8 +69,9 @@ function Publish-WhiskeyNodeModule
     {
         return
     }
-    $nodeRoot = $nodePath | Split-Path
-    $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+    
+    $npmGlobalPath = Join-Path -Path ($nodePath | Split-Path) -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
+    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
 
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
@@ -134,6 +135,12 @@ function Publish-WhiskeyNodeModule
             Write-Verbose -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
         }
+
+        if ( $npmPath -ne $npmGlobalPath )
+        {
+            & $nodePath $npmGlobalPath prune npm
+        }
+
         Pop-Location
     }
 }

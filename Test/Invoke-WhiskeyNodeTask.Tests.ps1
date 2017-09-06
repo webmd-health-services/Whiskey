@@ -18,6 +18,7 @@ $withInitializeSwitch = $false
 $inSubDirectory = $null
 $inWorkingDirectory = $null
 $UsingNodeVersion = '^4.4.7'
+$npmEngine = $null
 $runScripts = @()
 $failed = $null
 
@@ -102,6 +103,17 @@ function GivenDependency
 function GivenNoName 
 {
     $script:WithNoName = $true
+}
+
+function GivenNpmVersion
+{
+    param(
+        $Version
+    )
+
+    $script:npmEngine = @"
+        "npm": "$($Version)",
+"@
 }
 
 function WhenBuildIsStarted
@@ -288,9 +300,7 @@ function Initialize-NodeProject
     }
 
     $nodeEngine = @"
-    "engines": {
         "node": "$($script:UsingNodeVersion)"
-    },
 "@
     $packageJsonPath = Join-Path -Path $workingDir -ChildPath 'package.json'
     $name = '"name": "{0}",' -f $defaultPackageName
@@ -301,7 +311,10 @@ function Initialize-NodeProject
     @"
 {
     $($name)
-    $($nodeEngine)
+    "engines": {
+        $($script:npmEngine)
+        $($nodeEngine)
+    },
     "private": true,
     "scripts": {
         "build": "grunt build",
@@ -390,6 +403,14 @@ function ThenBuildFails
         $Global:Error | Where-Object { $_ -match $expectedError } | Should -not -BeNullOrEmpty
     }
 }
+
+function ThenNpmCleanedUp
+{
+    It 'should remove local version of npm that was used' {
+        (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules\npm') | Should Not Exist
+    }
+}
+
 function cleanup 
 {
     $script:context = $null
@@ -400,6 +421,7 @@ function cleanup
     $script:WithNoName = $false
     $script:inWorkingDirectory = $null
     $script:UsingNodeVersion = '^4.4.7'
+    $script:npmEngine = $null
     $script:withCleanSwitch = $false
     $script:runScripts = @()
     $script:failed = $null
@@ -578,6 +600,17 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
     Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when given version of npm' {
+    GivenBuildByDeveloper
+    GivenNpmVersion '~4.6.1'
+    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+    GivenNpmScriptsToRun 'build','test'
+    Initialize-NodeProject 
+    WhenBuildIsStarted
+    ThenBuildSucceeds
+    ThenNpmCleanedUp
     cleanup
 }
 

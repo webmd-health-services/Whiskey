@@ -73,7 +73,7 @@ function Assert-ThatInstallNodeJs
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
         $expectedNodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
         $expectedNpmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
-
+        
         if( $OnBuildServer )
         {
             $npmCliJsPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
@@ -83,18 +83,18 @@ function Assert-ThatInstallNodeJs
                 $version | Should Be $expectedLatest
             }
         }
-
+        
         if( $OnDeveloperComputer )
         {
             It 'should write an error' {
                 $Global:Error | Should Match 'is not installed'
             }
-
+            
             It 'should not install Node.js' {
                 $expectedNodePath | Should Not Exist
                 $expectedNpmPath | Should Not Exist
             }
-
+            
             It 'should not return anything' {
                 $nodePath | Should BeNullOrEmpty
             }
@@ -104,7 +104,17 @@ function Assert-ThatInstallNodeJs
             It ('should write an error that Node version ''{0}'' is not available' -f $InstallsVersion) {
                 $Global:Error | Should Match ('Failed to install Node.js version {0}.' -f $InstallsVersion)
             }
-
+            
+            It 'should not install Node.js' {
+                $nodePath | Should BeNullOrEmpty
+            }
+        }
+        elseif(($InstallsVersion -eq '') -or ($InstallsVersion -eq 'fubarsnafu'))
+        {
+            It ('should write an error that Node version ''{0}'' is invalid' -f $InstallsVersion) {
+                $Global:Error | Should Match ('Node version ''{0}'' is invalid' -f $InstallsVersion)
+            }
+            
             It 'should not install Node.js' {
                 $nodePath | Should BeNullOrEmpty
             }
@@ -114,7 +124,7 @@ function Assert-ThatInstallNodeJs
             It 'should write no errors' {
                 $Global:Error | Should BeNullOrEmpty
             }
-
+            
             It ('should install Node.js {0}' -f $InstallsVersion) {
                  $expectedNodePath | Should Exist
             }
@@ -140,19 +150,6 @@ function Assert-ThatInstallNodeJs
         {
             It ('should install to {0}' -f $env:APPDATA) {
                 Assert-MockCalled -CommandName 'Join-Path' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Path -eq $env:APPDATA }
-            }
-        }
-    }
-    catch
-    {
-        if(($InstallsVersion -eq '') -or ($InstallsVersion -eq 'fubarsnafu'))
-        {
-            It ('should write an error that Node version ''{0}'' is invalid' -f $InstallsVersion) {
-                $Global:Error | Should Match ('Node version ''{0}'' is invalid' -f $InstallsVersion)
-            }
-            
-            It 'should not install Node.js' {
-                $nodePath | Should BeNullOrEmpty
             }
         }
     }
