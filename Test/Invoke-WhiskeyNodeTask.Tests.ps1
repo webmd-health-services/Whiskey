@@ -284,7 +284,7 @@ function Initialize-NodeProject
                             '"jit-grunt": "^0.10.0"',
                             '"grunt": "^1.0.1"',
                             '"grunt-cli": "^1.2.0"'
-                        )
+                          )
     }
 
     $nodeEngine = @"

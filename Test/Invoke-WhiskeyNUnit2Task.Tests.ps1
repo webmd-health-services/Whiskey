@@ -123,7 +123,7 @@ function Invoke-NUnitTask
                                         'NUnit2FailingTest\NUnit2FailingTest.sln',
                                         'NUnit2PassingTest\NUnit2PassingTest.sln'   
                                     )
-                           }
+                          }
             Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
         }
         if( $WithNoPath )
@@ -145,7 +145,7 @@ function Invoke-NUnitTask
                                             ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
                                         )
                               }
-        }       
+        }        
         else
         {
             $taskParameter = @{

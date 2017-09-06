@@ -65,12 +65,10 @@ function Publish-WhiskeyNodeModule
     {
         return
     }
-
     if (!$TaskContext.Publish)
     {
         return
     }
-    
     $nodeRoot = $nodePath | Split-Path
     $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
 

@@ -103,11 +103,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
     }
 
     $taskParameter = @{
-                        Name = $Name;
-                        Description = $Description;
-                        Path = $ForPath;
-                        Include = $ThatIncludes;
-                    }
+                            Name = $Name;
+                            Description = $Description;
+                            Path = $ForPath;
+                            Include = $ThatIncludes;
+                        }
     if( $ThatExcludes )
     {
         $taskParameter['Exclude'] = $ThatExcludes
@@ -884,9 +884,9 @@ Describe 'New-WhiskeyProGetUniversalPackage.when initializing' {
     Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-        -withInitialize `
-        -ShouldReturnNothing `
-        -ShouldNotCreatePackage 
+                                            -withInitialize `
+                                            -ShouldReturnNothing `
+                                            -ShouldNotCreatePackage 
     Then7zipShouldExist
 }
 

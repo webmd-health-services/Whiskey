@@ -140,7 +140,6 @@ function Invoke-WhiskeyNodeTask
         {
             throw ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
-        # is this a good place for this?
         if( $TaskContext.ShouldInitialize() )
         {
             return
