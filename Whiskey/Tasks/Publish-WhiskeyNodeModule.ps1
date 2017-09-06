@@ -117,12 +117,12 @@ function Publish-WhiskeyNodeModule
         Write-Verbose -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
         Get-Content -Path $packageNpmrc |
             ForEach-Object {
-            if( $_ -match '_password' )
-            {
-                return $_ -replace '=(.*)$','=********'
-            }
-            return $_
-        } |
+                if( $_ -match '_password' )
+                {
+                    return $_ -replace '=(.*)$','=********'
+                }
+                return $_
+            } |
             Write-Verbose
     
         Invoke-Command -ScriptBlock {

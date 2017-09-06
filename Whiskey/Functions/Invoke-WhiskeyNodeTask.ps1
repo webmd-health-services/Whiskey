@@ -145,6 +145,7 @@ function Invoke-WhiskeyNodeTask
         {
             return
         }
+
         if( -not $npmScripts )
         {
             Write-WhiskeyWarning -TaskContext $TaskContext -Message (@'
@@ -183,7 +184,7 @@ BuildTasks:
         }
 
         $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
-            ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
+                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
         {
@@ -214,9 +215,9 @@ BuildTasks:
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
         [object[]]$newReport = $report | 
-            Get-Member -MemberType NoteProperty | 
-            Select-Object -ExpandProperty 'Name' | 
-            ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+                                    Get-Member -MemberType NoteProperty | 
+                                    Select-Object -ExpandProperty 'Name' | 
+                                    ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
         # show the report
         $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose

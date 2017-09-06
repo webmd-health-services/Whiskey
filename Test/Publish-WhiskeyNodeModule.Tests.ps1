@@ -103,7 +103,7 @@ function ThenNodeModulePublished
 {
     It ('should publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
     }
 }
 
@@ -111,7 +111,7 @@ function ThenNodeModuleIsNotPublished
 {
     It ('should not publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0 -Exactly
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0 -Exactly
     }
 }
 
@@ -156,7 +156,7 @@ $npmrcFileLine4
 
     It ('should remove {0}' -f $npmRcPath) {
         Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
-            -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
+                          -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
     }
 }
 

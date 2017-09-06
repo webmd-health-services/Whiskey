@@ -119,11 +119,11 @@ function Invoke-NUnitTask
         if( $WithRunningTests )
         {
             $taskParameter = @{
-                Path = @(
-                    'NUnit2FailingTest\NUnit2FailingTest.sln',
-                    'NUnit2PassingTest\NUnit2PassingTest.sln'   
-                )
-            }
+                            Path = @(
+                                        'NUnit2FailingTest\NUnit2FailingTest.sln',
+                                        'NUnit2PassingTest\NUnit2PassingTest.sln'   
+                                    )
+                           }
             Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
         }
         if( $WithNoPath )
@@ -133,27 +133,27 @@ function Invoke-NUnitTask
         elseif( $WithInvalidPath )
         {
             $taskParameter = @{
-                Path = @(
-                    'I\do\not\exist'
-                )
-            }
+                                Path = @(
+                                            'I\do\not\exist'
+                                        )
+                              }
         }
         elseif( $WithFailingTests )
         {
             $taskParameter = @{
-                Path = @(
-                    ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
-                )
-            }
-        }        
+                                Path = @(
+                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
+                                        )
+                              }
+        }       
         else
         {
             $taskParameter = @{
-                Path = @(
-                    ('NUnit2PassingTest\bin\{0}\NUnit2PassingTest.dll' -f $configuration),
-                    ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
-                )
-            }
+                                Path = @(
+                                            ('NUnit2PassingTest\bin\{0}\NUnit2PassingTest.dll' -f $configuration),
+                                            ('NUnit2FailingTest\bin\{0}\NUnit2FailingTest.dll' -f $configuration)
+                                        )
+                              }
         }
 
         if( $WithDisabledCodeCoverage )
@@ -323,9 +323,9 @@ Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with disabled code c
 
 Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with coverage filters' { 
     $coverageFilter = (
-        '-[NUnit2FailingTest]*',
-        '+[NUnit2PassingTest]*'
-    )
+                    '-[NUnit2FailingTest]*',
+                    '+[NUnit2PassingTest]*'
+                    )
     Invoke-NUnitTask -WithRunningTests -InReleaseMode -CoverageFilter $coverageFilter
 }
 
@@ -394,10 +394,10 @@ function Get-TestCaseResult
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
         Get-Content -Raw |
-        ForEach-Object { 
-        $testResult = [xml]$_
-        $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
-    }
+            ForEach-Object { 
+                $testResult = [xml]$_
+                $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
+            }
 }
 
 function ThenOutput

@@ -154,7 +154,7 @@ function Invoke-WhiskeyNUnit2Task
     Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
     Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
     Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
-    write-host "should not go here"
+
     $pathString = ($path -join '\" \"')
     $extraArgString = ($extraArgs -join " ")
     $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")

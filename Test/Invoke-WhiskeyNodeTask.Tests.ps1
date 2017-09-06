@@ -210,12 +210,12 @@ function WhenBuildIsStarted
     }
 
     $devDependencyPaths = Join-Path -Path $script:InWorkingDirectory -ChildPath 'package.json' | 
-        ForEach-Object { Get-Content -Raw -Path $_ } | 
-        ConvertFrom-Json |
-        Select-Object -ExpandProperty 'devDependencies' |
-        Get-Member -MemberType NoteProperty |
-        Select-Object -ExpandProperty 'Name' |
-        ForEach-Object { Join-Path -Path $script:InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
+                            ForEach-Object { Get-Content -Raw -Path $_ } | 
+                            ConvertFrom-Json |
+                            Select-Object -ExpandProperty 'devDependencies' |
+                            Get-Member -MemberType NoteProperty |
+                            Select-Object -ExpandProperty 'Name' |
+                            ForEach-Object { Join-Path -Path $script:InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
 
     
     if( $script:ByDeveloper )
@@ -281,10 +281,10 @@ function Initialize-NodeProject
     if( -not $script:DevDependency )
     {
         $script:DevDependency = @(
-            '"jit-grunt": "^0.10.0"',
-            '"grunt": "^1.0.1"',
-            '"grunt-cli": "^1.2.0"'
-        )
+                            '"jit-grunt": "^0.10.0"',
+                            '"grunt": "^1.0.1"',
+                            '"grunt-cli": "^1.2.0"'
+                        )
     }
 
     $nodeEngine = @"
