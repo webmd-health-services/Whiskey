@@ -42,6 +42,11 @@ function GivenNpmVersion
     $script:npmVersion = ('"npm": "{0}",' -f $Version)
 }
 
+function GivenNpmReturnsNonZeroExitCode
+{
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'} -MockWith { & cmd /c exit 1 }
+}
+
 function GivenWorkingDirectory
 {
     param(
@@ -271,4 +276,13 @@ Describe 'PublishNodeModule.when publishing node module using specific version o
     WhenPublishingNodeModule
     ThenNpmrcCreated
     ThenLocalNpmCleanedUp
+}
+
+Describe 'PublishNodeModule.when npm publish returns non-zero exit code' {
+    Init
+    New-PublishNodeModuleStructure
+    GivenNpmReturnsNonZeroExitCode
+    WhenPublishingNodeModule -ErrorAction SilentlyContinue
+    ThenNpmrcCreated
+    ThenTaskFailed 'NPM command ''npm publish'' failed with exit code ''1'''
 }
