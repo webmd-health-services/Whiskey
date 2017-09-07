@@ -67,6 +67,8 @@ function Init
 function GivenWithInitilizeFlag
 {
     $script:context.RunMode = 'initialize'
+    $nvmPath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
+    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nvmPath}.GetNewClosure()
 }
 function New-PublishNodeModuleStructure
 {
@@ -230,8 +232,6 @@ function WhenPublishingNodeModule
     {
         $parameter['EmailAddress'] = $email
     }
-    $nodePath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
-    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nodePath}.GetNewClosure()
     $script:threwException = $false
     try
     {
