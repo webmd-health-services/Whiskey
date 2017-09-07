@@ -95,7 +95,7 @@ function Invoke-NUnitTask
         $WithOpenCoverVersion = '4.6.519',
 
         [Version]
-        $WithReportGeneratorVersion = '2.5.7',
+        $WithReportGeneratorVersion = '2.5.11',
 
         [Switch]
         $WithDisabledCodeCoverage,
@@ -457,33 +457,40 @@ function ThenItShouldNotRunTests {
         $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
     }   
 }
-
-function ThenItInstalled {
-    param (
-        [string]
-        $Name,
-
-        [Version]
-        $WithOpenCoverVersion = '4.6.519',
-
-        [Version]
-        $WithReportGeneratorVersion = '2.5.7'
-    )
+function ThenItInstalledNunit {
     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
     $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
-    $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
-    
     It 'should hvae installed the expected version of Nunit.Runners' {
         $nunitPath | should exist
     }
+    Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
+}
+function ThenItInstalledOpenCover {
+    param (
+        [Version]
+        $WithOpenCoverVersion = '4.6.519'
+    )
+
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
+
     It 'should have installed OpenCover' {
         $openCoverPackagePath | should exist
     }
+}
+
+function ThenItInstalledReportGenerator {
+    param (
+
+        [Version]
+        $WithReportGeneratorVersion = '2.5.11'
+    )
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
+    
     It 'should have installed ReportGenerator' {
         $reportGeneratorPath | should exist
     }
-    Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
 }
 
 Describe 'Invoke-WhiskeyNUnit2Task.when including tests by category' {
@@ -528,6 +535,8 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator argu
 Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
     GivenPassingTests
     WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
-    ThenItInstalled
+    ThenItInstalledNunit
+    ThenItInstalledOpenCover
+    ThenItInstalledReportGenerator
     ThenItShouldNotRunTests
 }

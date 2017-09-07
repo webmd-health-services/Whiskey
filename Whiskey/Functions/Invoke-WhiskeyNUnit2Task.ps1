@@ -102,7 +102,6 @@ function Invoke-WhiskeyNUnit2Task
     $frameworkParam = '/framework={0}' -f $frameworkParam
       
     $nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
-    
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
@@ -155,7 +154,7 @@ function Invoke-WhiskeyNUnit2Task
     Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
     Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
     Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
-
+    
     $pathString = ($path -join '\" \"')
     $extraArgString = ($extraArgs -join " ")
     $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")

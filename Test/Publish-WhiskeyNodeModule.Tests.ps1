@@ -72,7 +72,7 @@ function New-PublishNodeModuleStructure
 {
     param(
     )
-    
+
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'}
     Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
@@ -112,6 +112,7 @@ function New-PublishNodeModuleStructure
     $returnContextParams.TaskParameter = $taskParameter
     $script:parameter = $taskParameter
     $script:context = $context
+
     return $returnContextParams
 }
 

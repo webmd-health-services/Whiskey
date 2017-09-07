@@ -113,7 +113,7 @@ function New-WhiskeyProGetUniversalPackage
                 [Switch]
                 $AsThirdPartyItem
             )
-
+    
             foreach( $item in $Path )
             {
                 $override = $False
