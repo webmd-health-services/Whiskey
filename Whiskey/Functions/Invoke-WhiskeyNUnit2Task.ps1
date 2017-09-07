@@ -19,7 +19,7 @@ function Invoke-WhiskeyNUnit2Task
     Demonstates how to run the NUnit tests in some assemblies and save the result to a specific file. 
     In this example, the assemblies to run are in `$TaskParameter.path` and the test report will be saved in an xml file relative to the indicated `$TaskContext.OutputDirectory` 
     #>
-    [Whiskey.Task("NUnit2",SupportsClean=$true)]
+    [Whiskey.Task("NUnit2",SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -103,11 +103,6 @@ function Invoke-WhiskeyNUnit2Task
       
     $nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
     
-    if( $TaskContext.ShouldInitialize() )
-    {
-        return
-    }
-    
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
@@ -133,6 +128,12 @@ function Invoke-WhiskeyNUnit2Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
     }
+
+    if( $TaskContext.ShouldInitialize() )
+    {
+        return
+    }
+
     $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
     

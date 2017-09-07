@@ -23,7 +23,7 @@ function Publish-WhiskeyNodeModule
 
     Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
     #>
-    [Whiskey.Task("PublishNodeModule")]
+    [Whiskey.Task("PublishNodeModule", SupportsInitialize=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -65,6 +65,7 @@ function Publish-WhiskeyNodeModule
     {
         return
     }
+
     if (!$TaskContext.Publish)
     {
         return

@@ -158,7 +158,7 @@ function WhenBuildIsStarted
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $script:context -Parameter $taskParameter -Name 'Node'
     }
     catch
     {
@@ -411,6 +411,11 @@ function ThenNpmCleanedUp
     }
 }
 
+function ThenNPMIsInstalled {
+    It ('should include the node_modules directory') {
+        (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Exist
+    }
+}
 function cleanup 
 {
     $script:context = $null
@@ -600,7 +605,9 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
     GivenNpmScriptsToRun 'test'
     Initialize-NodeProject 
     WhenBuildIsStarted
+    ThenNPMIsInstalled
     ThenBuildSucceeds
+    cleanup
 }
 
 Describe 'Invoke-WhiskeyNodeTask.when given version of npm' {

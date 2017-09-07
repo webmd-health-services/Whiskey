@@ -72,7 +72,7 @@ function New-PublishNodeModuleStructure
 {
     param(
     )
-
+    
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'}
     Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
@@ -112,8 +112,16 @@ function New-PublishNodeModuleStructure
     $returnContextParams.TaskParameter = $taskParameter
     $script:parameter = $taskParameter
     $script:context = $context
-
     return $returnContextParams
+}
+
+function ThenNodeShouldExist
+{
+    It 'should have a nodejs installed' {
+        Assert-MockCalled   -CommandName 'Install-WhiskeyNodeJs' `
+                            -ModuleName 'Whiskey' `
+                            -Times 1 -Exactly
+    }
 }
 
 function ThenNodeModulePublished
@@ -221,7 +229,8 @@ function WhenPublishingNodeModule
     {
         $parameter['EmailAddress'] = $email
     }
-
+    $nodePath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
+    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nodePath}.GetNewClosure()
     $script:threwException = $false
     try
     {
@@ -281,6 +290,7 @@ Describe 'PublishNodeModule.when publishing node module with initialization mode
     New-PublishNodeModuleStructure
     GivenWithInitilizeFlag
     WhenPublishingNodeModule
+    ThenNodeShouldExist
     ThenNodeModuleIsNotPublished
 }
 Describe 'PublishNodeModule.when publishing node module using specific version of npm' {

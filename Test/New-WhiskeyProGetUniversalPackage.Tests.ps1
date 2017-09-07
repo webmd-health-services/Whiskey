@@ -92,7 +92,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
         [Switch]
         $withInitialize
     )
+    $7zipInstalled = Test-path (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*')
 
+    if( $7zipInstalled ){
+        remove-Item (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*') -Recurse -Force
+    }
     if( -not $Version )
     {
         $now = [DateTime]::Now

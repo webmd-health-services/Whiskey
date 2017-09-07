@@ -19,6 +19,17 @@ function GivenTestContext
     $script:taskParameter = @{}
     $Global:Error.Clear()
     $script:context = New-WhiskeyPesterTestContext
+
+    $pesterDirectoryName = 'Modules\Pester'
+    if( $PSVersionTable.PSVersion.Major -ge 5 )
+    {
+        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+    }
+    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
+    if(Test-Path $pesterPAth)
+    {
+        Remove-item $pesterPath -Recurse -Force
+    }
 }
 
 function New-WhiskeyPesterTestContext 
@@ -90,7 +101,7 @@ function WhenPesterTaskIsInvoked
 
     try
     {
-        Invoke-WhiskeyPester3Task -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester3'
     }
     catch
     {
@@ -102,9 +113,7 @@ function ThenTestShouldPass
 {
     param(
         [switch]
-        $WithClean,
-        [switch]
-        $withInit
+        $WithClean
     )
     if( -not $script:Taskparameter['Version'] )
     {
@@ -210,6 +219,17 @@ function ThenTestShouldFail
         $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
     }
 }
+
+function ThenNoPesterTestFileShouldExist {
+    $reportsIn =  $script:context.outputDirectory
+    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
+    write-host $testReports
+    it 'should not have created any test reports' {
+        $testReports | should BeNullOrEmpty
+    }
+
+}
+
 function ThenTestShouldCreateMultipleReportFiles
 {
     It 'should create multiple report files' {
@@ -222,6 +242,7 @@ function ThenFindModuleShouldHaveBeenCalled
     Assert-MockCalled -CommandName 'Find-Module' -Times 1 -ModuleName 'Whiskey'
     Assert-MockCalled -CommandName 'Where-Object' -Times 1 -ModuleName 'Whiskey'
 }
+
 
 Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests' {
     GivenTestContext
@@ -339,7 +360,7 @@ Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with initi
     GivenVersion '3.4.3'
     GivenWithInitilizeFlag
     WhenPesterTaskIsInvoked
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
-    ThenTestShouldPass -withInit
+    ThenNoPesterTestFileShouldExist 
+    ThenTestShouldPass
 }
 
