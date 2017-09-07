@@ -123,6 +123,8 @@ function Publish-WhiskeyNodeModule
         Invoke-Command -ScriptBlock {
             & $nodePath $npmPath publish
         }
+
+        $npmPublishExitCode = $LASTEXITCODE
     }
     finally
     {
@@ -131,13 +133,18 @@ function Publish-WhiskeyNodeModule
             Write-Verbose -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
         }
-
+        
         if ( $npmPath -ne $npmGlobalPath )
         {
             & $nodePath $npmGlobalPath prune npm
         }
-
+        
         Pop-Location
+    }
+
+    if ($npmPublishExitCode -ne 0)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm publish'' failed with exit code ''{0}''.' -f $npmPublishExitCode)
     }
 }
 
