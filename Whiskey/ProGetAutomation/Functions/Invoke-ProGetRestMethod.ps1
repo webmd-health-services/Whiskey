@@ -65,9 +65,19 @@ function Invoke-ProGetRestMethod
         }
     }
 
-    $headers = @{
-                    'X-ApiKey' = $Session.ApiKey;
-                }
+    $headers = @{ }
+
+    if( $Session.ApiKey )
+    {
+        $headers['X-ApiKey'] = $Session.ApiKey;
+    }
+
+    if( $Session.Credential )
+    {
+        $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $Session.Credential.UserName,$Session.Credential.GetNetworkCredential().Password))
+        $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
+        $headers['Authorization'] = $creds
+    }
 
     #$DebugPreference = 'Continue'
     Write-Debug -Message ('{0} {1}' -f $Method.ToString().ToUpperInvariant(),($uri -replace '\b(API_Key=)([^&]+)','$1********'))
@@ -75,7 +85,7 @@ function Invoke-ProGetRestMethod
     foreach( $headerName in $headers.Keys )
     {
         $value = $headers[$headerName]
-        if( @( 'X-ApiKey' ) -contains $headerName )
+        if( @( 'X-ApiKey', 'Authorization' ) -contains $headerName )
         {
             $value = '*' * 8
         }
@@ -107,6 +117,6 @@ function Invoke-ProGetRestMethod
     }
     catch [Net.WebException]
     {
-        Write-Error -ErrorRecord $_
+        Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
     }
 }
