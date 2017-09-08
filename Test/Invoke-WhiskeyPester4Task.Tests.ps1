@@ -73,7 +73,7 @@ function GivenPesterPath
 function GivenFindModuleFails
 {
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith { return $Null }
-    Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null }
+    Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null } -ParameterFilter { [string]$FilterScript -eq " `$_.Version -like '4.*' "}
 }
 function GivenWithCleanFlag
 {
@@ -238,7 +238,7 @@ function ThenTestShouldCreateMultipleReportFiles
 function ThenFindModuleShouldHaveBeenCalled
 {
     Assert-MockCalled -CommandName 'Find-Module' -Times 1 -ModuleName 'Whiskey'
-    Assert-MockCalled -CommandName 'Where-Object' -Times 1 -ModuleName 'Whiskey'
+    Assert-MockCalled -CommandName 'Where-Object' -Times 1 -ModuleName 'Whiskey' 
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
@@ -328,7 +328,7 @@ Describe 'Invoke-WhiskeyPester4Task.when Find-Module fails' {
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
     ThenFindModuleShouldHaveBeenCalled
-    ThenTestShouldFail -failureMessage 'Unable to find a version of Pester 4 to install.'
+    ThenTestShouldFail -failureMessage ''
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {

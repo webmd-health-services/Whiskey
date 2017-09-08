@@ -75,7 +75,7 @@ function GivenPesterPath
 function GivenFindModuleFails
 {
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith { return $Null }
-    Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null }
+    Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null } -ParameterFilter {[string]$FilterScript -eq " `$_.Version -like '3.*' "}
 }
 function GivenWithCleanFlag
 {
