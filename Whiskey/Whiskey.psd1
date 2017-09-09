@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.13.1'
+    ModuleVersion = '0.14.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-Fixed: `PublishProGetUniversalPackage` fails when uploading large packages (i.e. the upload request times out).
+* The version to build can now be taken from `package.json` files (for Node.js modules/applications) and PowerShell module manifest files (e.g. `*.psd1` files). Use the new `VersionFrom` property in your `whiskey.yml` file. It should be the path to a `package.json` file or a PowerShell module manifest file. The `package.json` file must have a `version` property. The module manifest file must have a `ModuleVersion` property.
+* Fixed: `PublishProGetUniversalPackage` fails when uploading large packages (i.e. the upload request times out).
+* The `NuGetPush`, `NuGetPack`, and `MSBuild` tasks now supports custom versions of nuget.exe. Use the `Version` property (the `NuGetVersion` property on the `MSBuild` task) to specify what version you want to use. That version of NuGet is installed into a `packages\NuGet.CommandLine.VERSION` directory in your build root.
+* Fixed: the `PublishNodeModule` task doesn't fail a build if publishing fails.
+* Fixed: the `ProGetUniversalPackage` task fails if a source or destination path ends with `\`.
+* Added an `Exec` task for executing custom programs. Set the `Path` property to the path to the executable. Set `Argument` to any arguments to pass to the executable. Set `SuccessExitCode` to any exit codes that signify the command succeeded.
+* Fixed: The `PublishProGetUniversalPackage` task replaces existing packages.
+* ***BREAKING CHANGE***: Removed the `IgnorePackageJsonVersion` whiskey.yml configuration property. If you want Whiskey to pull the version from a Node.js package file, set the `VersionFrom` whiskey.yml property to the path to your `package.json` file.
+* You can now use a custom version of NPM with the `Node` and `PublishNodeModule` tasks. Set the `engines.npm` property in your package.json file (e.g. `{ "engines": { "npm": "VERSION" } }`) to the version of NPM to use. That version will be installed in your local `node_modules` directory. Optionally, if there is a version of `npm` in your local `node_modules` directory, that is used instead of the global `npm`. The global version of NPM is still used when installing your local npm and when running the `npm prune` command.
 '@
         } # End of PSData hashtable
 
