@@ -48,21 +48,40 @@ function New-WhiskeySemanticVersion
         $Path = Resolve-Path -Path $Path | Select-Object -ExpandProperty ProviderPath
         if( -not $Path )
         {
-            Write-Error ('Path to Version file ''{0}'' does not exist' -f $path)
+            Write-Error ('Path to version file ''{0}'' does not exist' -f $path)
         }
         $fileInfo = Get-Item $Path
         if($fileInfo.Name -eq 'package.json')
         {
             $semVersion = Get-Content -Raw -Path $Path | 
-                ConvertFrom-Json -ErrorAction Ignore | 
-                Select-Object -ExpandProperty 'version' -ErrorAction Ignore | 
-                ConvertTo-WhiskeySemanticVersion
+                            ConvertFrom-Json -ErrorAction Ignore | 
+                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore | 
+                            ConvertTo-WhiskeySemanticVersion
+            if( -not $semVersion )
+            {
+                Write-Error -Message ('Unable to get the version to build from the Node.js package.json file ''{0}''. Please make sure the file is valid JSON, that it contains a `version` property, and that the version''s value is a valid semantic version, e.g.
+    
+    {
+        "version": "1.2.3"
+    }
+    ' -f $fileInfo.FullName)
+            }
         }
+
         if($fileInfo.Extension -eq '.psd1')
         {
             $semVersion = Test-ModuleManifest -Path $Path | 
-                Select-Object -ExpandProperty 'Version' | 
-                ConvertTo-WhiskeySemanticVersion
+                            Select-Object -ExpandProperty 'Version' | 
+                            ConvertTo-WhiskeySemanticVersion
+            if( -not $semVersion )
+            {
+                Write-Error -Message ('Unable to get the version to build from the PowerShell module manifest file ''{0}''. Please make sure the file is a valid Powershell module manifest and that it contains a `ModuleVersion` property, e.g. 
+    
+    @{
+        ModuleVersion = ''1.2.3'';
+    }
+    ' -f $fileInfo.FullName)
+            }
         }
     }
     else
@@ -75,10 +94,7 @@ function New-WhiskeySemanticVersion
         $today = Get-Date
         $semVersion = New-Object 'SemVersion.SemanticVersion' $today.Year,$today.ToString('MMdd'),$patch,$Prerelease
     }
-    if( -not $semVersion )
-    {
-        Write-Error -Message ('Unable to determine module version from ''{0}''. Please make sure this is valid JSON, that it contains a Version property, and that the Version is a valid semantic version, e.g. it follows the specification at http://semver.org.' -f $fileInfo.FullName)
-    }
+
     $buildInfo = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
     if( $BuildMetadata.IsBuildServer )
     {
