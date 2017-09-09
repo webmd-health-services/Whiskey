@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.13.0'
+    ModuleVersion = '0.13.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,39 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* ***BREAKING CHANGE***: Removed `Get-WhiskeyOutputDirectory` function. You should use the `OutputDirectory` property on the build's context object (which is returned by `New-WhiskeyContext`).
-* ***BREAKING CHANGE***: Removed `Test-WhiskeyRunByBuildServer` function. You should use the `ByBuildServer` or `ByDeveloper` properties on the build's context object (which is returned by `New-WhiskeyContext`).
-* ***BREAKING CHANGE***: The `ConvertTo-WhiskeySemanticVersion` function now tries to convert its input into a semantic version. It no longer also tries to create a version number for the current build. It is now safe to use this function to convert objects to version numbers.
-* Build metadata is now available on a `BuildMetadata` property on build context objects returned by `New-WhiskeyContext`. This includes information like build number, job name, source control information, etc.
-* Fixed: setting a build status in Bitbucket Server doesn't replace previous statuses. If any build of a commit has ever failed, Bitbucket Server shows that commit as failed.
-* Added support for running builds under AppVeyor.
-* Added support for running builds under TeamCity.
-* ***BREAKING CHANGE***: Whiskey no longer publishes on `develop`, `release`, `release/*`, or `master` branches by default. Publishing only happens if you supply a `PublishOn` property in your whiskey.yml file.
-* ***BREAKING CHANGE***: PublishOn property now uses wildcards instead of regular expressions.
-* ***BREAKING CHANGE***: PublishBuildMasterPackage task now requires a `ReleaseName` property.
-* ***BREAKING CHANGE***: Build context object no longer has a ReleaseName property.
-* ***BREAKING CHANGE***: Build context object no longer has an ApplicationName property.
-* ***BREAKING CHANGE***: PrereleaseMap configuration property now uses wildcards instead of regular expressions to match branch names.
-* Added `Version` property to MSBuild task. Use this property to specify which version of MSBuild to use. The default is now the most recent (i.e. highest) version installed.
-* Added `NoFileLogger` property to MSBuild task. Use this property to disable writing debug logs to the output directory.
-* Added `NoMaxCpuCountArgument` property to MSBuild task. Use this property to not pass the `/maxcpucount` parameter to MSBuild.
-* Added support for building with MSBuild 15.0.
-* Added `ConvertFrom-WhiskeyYamlScalar` function for converting configuration properties into booleans, integers, floating-point numbers, and date/times according to the YAML specification.
-* ***BREAKING CHANGE***: Switched from `powershell-yaml` module to `YamlDotNet` library to parse YAML files. The `powershell-yaml` module tries to convert all scalars to strongly-typed objects, which causes pain.
-* ***BREAKING CHANGE***: Renamed `PublishFile` task to `CopyFile`.
-* `CopyFile` task now supports wildcards in the `DestinationDirectory` property. Any path with wildcards *must* exist.
-* Dynamic variables can now be defined and used in task property values. You can use environment variables, well-known Whiskey variables (see the help for `Resolve-WhiskeyVariable` for the list), and your own variables. Use the `Add-WhiskeyVariable` function to add your own variables.
-* Created `Resolve-WhiskeyVariable` function for replacing variables in strings, arrays, and hashtables. Variables are tokens in strings whose foramt is `$(NAME)`.
-* Created `Add-WhiskeyVariable` function for adding variables to a build.
-* ***BREAKING CHANGE***: Renamed `CopyFile` task's `DestinationDirectories` property to `DestinationDirectory`.
-* ***BREAKING CHANGE***: Renamed `Node` task's `NpmScripts` property to `NpmScript`.
-* ***BREAKING CHANGE***: Renamed `PublishBuildMasterPackage` task's `PackageVariables` property to `PackageVariable`.
-* Added `NuGetRestore` task for restoring NuGet packages.
-* Renaming `PublishNuGetPackage` task to `NuGetPush`.
-* Creating `Pipeline` task that runs other pipelines as part of another pipeline.
-* Added support for multiple, distinct pipelines in a `whiskey.yml` file. Define distinct pipelines in `whiskey.yml` and pass the pipeline name(s) to the `Invoke-WhiskeyBuild` function's `PipelineName` parameter.
-* The `Pester3` task no longer requires a specific version of Pester. It defaults to installing the latest version of Pester 3.
-* Fixed: the `ProGetUniversalPackage` task no longer includes empty directories.
+Fixed: `PublishProGetUniversalPackage` fails when uploading large packages (i.e. the upload request times out).
 '@
         } # End of PSData hashtable
 

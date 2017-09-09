@@ -6,7 +6,7 @@ function Publish-ProGetUniversalPackage
     Publishes a package to the specified ProGet instance
 
     .DESCRIPTION
-    The `Publish-ProGetUniversalPackage` function will upload a package to the specified Proget instance/feed.
+    The `Publish-ProGetUniversalPackage` function will upload a package to the `FeedName` universal feed . It uses upack 2.0.0.1 to upload. If upack.exe returns a non-zero exit code, the upload failed.
 
     .EXAMPLE
     Publish-ProGetUniversalPackage -Session $ProGetSession -FeedName 'Apps' -PackagePath 'C:\ProGetPackages\TestPackage.upack'
@@ -36,56 +36,44 @@ function Publish-ProGetUniversalPackage
     
     $shouldProcessCaption = ('creating {0} package' -f $PackagePath)
     $proGetPackageUri = [String]$Session.Uri + 'upack/' + $FeedName
-    if (!$Session.Credential)
-    {
-        Write-Error -Message ('Unable to upload ''{0}'' package to ProGet at {1}. Uploading a package requires ProGet credentials (i.e. a username and password), but the credential on the ProGet session is missing. Please use `New-ProGetSession` to create a session and pass a credential that can upload universal packages via the `Credential` parameter.' -f ($PackagePath | Split-Path -Leaf), $proGetPackageUri)
-        return
-    }
     $proGetCredential = $Session.Credential
 
-    $headers = @{}
-    $bytes = [Text.Encoding]::UTF8.GetBytes(('{0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password))
-    $creds = 'Basic ' + [Convert]::ToBase64String($bytes)
-    
-    $operationDescription = 'Uploading ''{0}'' package to ProGet {1}' -f ($PackagePath | Split-Path -Leaf), $proGetPackageUri
+    $PackagePath = Resolve-Path -Path $PackagePath | Select-Object -ExpandProperty 'ProviderPath'
+    if( -not $PackagePath )
+    {
+        Write-Error -Message ('Package ''{0}'' does not exist.' -f $PSBoundParameters['PackagePath'])
+        return
+    }
+
+    $upackPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\upack.exe' -Resolve
+    if( -not $upackPath )
+    {
+        Write-Error -Message ('We couldn''t find the upack.exe executable.' -f $upackPath)
+        return
+    }
+
+    $userMsg = ''
+    if( $proGetCredential )
+    {
+        $userMsg = ' as ''{0}''' -f $proGetCredential.UserName
+    }
+
+    $operationDescription = 'Uploading ''{0}'' package to ProGet at ''{1}''{2}.' -f ($PackagePath | Split-Path -Leaf), $proGetPackageUri, $userMsg
     if( $PSCmdlet.ShouldProcess($operationDescription, $operationDescription, $shouldProcessCaption) )
     {
-        Write-Verbose -Message ('PUT {0}' -f $proGetPackageUri)
-    
-        # Invoke-RestMethod runs out memory when uploading 100MB ZIP files (or larger). UploadFile doesn't have that problem.
-        $client = New-Object 'Net.WebClient'
-        $client.Headers.Add('Authorization', $creds)
-        try
+        Write-Verbose -Message $operationDescription
+
+        $userArg = ''
+        if( $proGetCredential )
         {
-            $client.UploadFile($proGetPackageUri, 'PUT', $PackagePath)
+            $userArg = '--user={0}:{1}' -f $proGetCredential.UserName,$proGetCredential.GetNetworkCredential().Password
         }
-        catch
+        
+        & $upackPath 'push' $PackagePath $proGetPackageUri $userArg
+        if( $LASTEXITCODE )
         {
-            $ex = $_.Exception
-            while( $ex.InnerException )
-            {
-                $ex = $ex.InnerException
-            }
-
-            $result = ''
-            if( $ex -is [Net.WebException] )
-            {
-                [Net.HttpWebResponse]$response = $ex.Response
-                if( $response )
-                {
-                    $stream = $response.GetResponseStream()
-                    $reader = New-Object 'IO.StreamReader' $stream
-                    $result = $reader.ReadToEnd()
-                }
-            }
-
-            if( -not $result )
-            {
-                $result = $ex.Message
-            }
-
-            $Global:Error.RemoveAt(0)
-            Write-Error -Message ('Failed to upload ''{0}'' package to {1}{2}{3}' -f ($PackagePath | Split-Path -Leaf),$proGetPackageUri,[Environment]::NewLine,$result)
+            Write-Error -Message ('Failed to upload ''{0}'' to ''{1}''{2}: ''{3}'' returned with exit code ''{4}''.' -f $PackagePath,$proGetPackageUri,$userMsg,$upackPath,$LASTEXITCODE)
+            return
         }
     }
 }
