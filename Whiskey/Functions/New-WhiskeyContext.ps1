@@ -117,8 +117,6 @@ function New-WhiskeyContext
         }
     }
 
-    $packageJsonPath = Join-Path -Path $buildRoot -ChildPath 'package.json'
-    $ignorePackageJsonVersion = $config.ContainsKey('IgnorePackageJsonVersion') -and $config['IgnorePackageJsonVersion']
     $versionParam = @{}
     if( $config.ContainsKey( 'VersionFrom' ) )
     {

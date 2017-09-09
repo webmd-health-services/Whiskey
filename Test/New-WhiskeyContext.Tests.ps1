@@ -702,7 +702,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
         Init
-        GivenConfiguration -Configuration @{ 'IgnorePackageJsonVersion' = $true }
+        GivenConfiguration -Configuration @{ }
         GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json' 
         WhenCreatingContext 
         ThenVersionMatches ('^{0}\.' -f (Get-Date).ToString('yyyy\\.Mdd'))
