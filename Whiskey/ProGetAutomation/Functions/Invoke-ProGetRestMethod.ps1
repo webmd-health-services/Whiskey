@@ -98,6 +98,7 @@ function Invoke-ProGetRestMethod
         $debugBody | Write-Debug
     }
 
+    $errorsAtStart = $Global:Error.Count
     try
     {
         $bodyParam = @{ }
@@ -117,6 +118,11 @@ function Invoke-ProGetRestMethod
     }
     catch [Net.WebException]
     {
+        for( $idx = $errorsAtStart; $idx -lt $Global:Error.Count; ++$idx )
+        {
+            $Global:Error.RemoveAt(0)
+        }
+
         Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
     }
 }
