@@ -2,7 +2,7 @@
 function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true)]
+    [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true, SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -23,6 +23,14 @@ function New-WhiskeyProGetUniversalPackage
     if( $TaskContext.ShouldClean() )
     {
         Uninstall-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
+        return
+    }
+    $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
+    $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
+    $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
+
+    if( $TaskContext.ShouldInitialize() )
+    {
         return
     }
 
@@ -174,7 +182,7 @@ function New-WhiskeyProGetUniversalPackage
                             $whitelist = Invoke-Command {
                                             'upack.json'
                                             $include
-                                            } 
+                                            }
                         }
 
                         Write-Verbose -Message $operationDescription
@@ -193,10 +201,6 @@ function New-WhiskeyProGetUniversalPackage
         {
             Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
         }
-
-        $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
-        $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
-        $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
 
         Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
         & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')

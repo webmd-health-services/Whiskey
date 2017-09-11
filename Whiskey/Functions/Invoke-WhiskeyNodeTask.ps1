@@ -38,7 +38,7 @@ function Invoke-WhiskeyNodeTask
 
     Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
     #>
-    [Whiskey.Task("Node",SupportsClean=$true)]
+    [Whiskey.Task("Node",SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -148,6 +148,10 @@ function Invoke-WhiskeyNodeTask
         if( $LASTEXITCODE )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
+        }
+        if( $TaskContext.ShouldInitialize() )
+        {
+            return
         }
 
         if( -not $npmScripts )

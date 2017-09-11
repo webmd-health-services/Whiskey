@@ -88,11 +88,14 @@ function Invoke-NUnitTask
         [Switch]
         $WhenRunningClean,
 
+        [Switch]
+        $WhenRunningInitialize,
+
         [Version]
         $WithOpenCoverVersion = '4.6.519',
 
         [Version]
-        $WithReportGeneratorVersion = '2.5.7',
+        $WithReportGeneratorVersion = '2.5.11',
 
         [Switch]
         $WithDisabledCodeCoverage,
@@ -176,7 +179,7 @@ function Invoke-NUnitTask
         $Global:Error.Clear()
         try
         {
-            Invoke-WhiskeyNUnit2Task -TaskContext $context -TaskParameter $taskParameter -ErrorAction SilentlyContinue
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NUnit2' -ErrorAction SilentlyContinue
         }
         catch
         {
@@ -188,7 +191,7 @@ function Invoke-NUnitTask
             if( $WhenJoinPathResolveFails )
             {
                 It 'should write an error'{
-                $Global:Error[0] | Should Match ( $WithError )
+                    $Global:Error[0] | Should Match ( $WithError )
                 }
             }
             else
@@ -235,7 +238,7 @@ function Invoke-NUnitTask
             }
         }
         else
-        {               
+        {
             It 'should download NUnit.Runners' {
                 (Join-Path -Path $context.BuildRoot -ChildPath 'packages\NUnit.Runners.2.6.4') | Should Exist
             }
@@ -326,20 +329,28 @@ $output = $null
 $context = $null
 $threwException = $false
 $thrownError = $null
-
+$taskParameter = $null
 function GivenPassingTests
 {
     $script:solutionToBuild = 'NUnit2PassingTest.sln'
     $script:assemblyToTest = 'NUnit2PassingTest.dll'
     $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whiskey.yml'
+    $script:taskParameter = @{ 'Path' = $script:solutionToBuild }
 }
-
+function GivenInvalidPath
+{
+    $script:assemblyToTest = 'I/do/not/exist'
+}
 function WhenRunningTask
 {
     param(
         [hashtable]
-        $WithParameters = @{ }
+        $WithParameters = @{ },
+
+        [Switch]
+        $WhenRunningInitialize
     )
+    $Global:Error.Clear()
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
 
@@ -348,16 +359,19 @@ function WhenRunningTask
 
     $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
 
-    Invoke-WhiskeyTask -TaskContext $context -Parameter @{ 'Path' = $solutionToBuild } -Name 'MSBuild'
+    Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
 
     # Make sure there are spaces in the path so that we test things get escaped properly.
     Get-ChildItem -Path $context.BuildRoot -Filter $configuration -Directory -Recurse |
         Rename-Item -NewName ('{0} Mode' -f $configuration)
-
+    if( $WhenRunningInitialize )
+    {
+        $context.RunMode = 'initialize'
+    }
     try
     {
         $WithParameters['Path'] = 'bin\{0} Mode\{1}' -f $configuration,$assemblyToTest
-        $script:output = Invoke-WhiskeyNUnit2Task -TaskContext $context -TaskParameter $WithParameters | ForEach-Object { Write-Verbose -Message $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' | ForEach-Object { Write-Verbose -Message $_ ; $_ }
         $script:threwException = $false
         $script:thrownError = $null
     }
@@ -378,10 +392,10 @@ function Get-TestCaseResult
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
         Get-Content -Raw |
-        ForEach-Object { 
-            $testResult = [xml]$_
-            $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
-        }
+            ForEach-Object { 
+                $testResult = [xml]$_
+                $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
+            }
 }
 
 function ThenOutput
@@ -441,6 +455,58 @@ function ThenTestsPassed
     Assert-OpenCoverRuns -OpenCoverDirectoryPath (Join-Path -path $Script:context.OutputDirectory -ChildPath 'OpenCover')
 }
 
+function ThenItShouldNotRunTests {
+    $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
+
+    It 'should not run NUnit tests' {
+        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+    }   
+}
+function ThenItInstalledNunit {
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
+    It 'should hvae installed the expected version of Nunit.Runners' {
+        $nunitPath | should exist
+    }
+    Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
+}
+function ThenItInstalledOpenCover {
+    param (
+        [Version]
+        $WithOpenCoverVersion = '4.6.519'
+    )
+
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
+
+    It 'should have installed OpenCover' {
+        $openCoverPackagePath | should exist
+    }
+}
+
+function ThenItInstalledReportGenerator {
+    param (
+
+        [Version]
+        $WithReportGeneratorVersion = '2.5.11'
+    )
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
+    
+    It 'should have installed ReportGenerator' {
+        $reportGeneratorPath | should exist
+    }
+}
+
+function ThenErrorShouldNotBeThrown {
+    param(
+        $ErrorMessage
+    )
+    It ('should Not write an error that matches {0}' -f $ErrorMessage){
+        $Global:Error | Where-Object { $_ -match $ErrorMessage } | Should BeNullOrEmpty
+    }
+}
+
 Describe 'Invoke-WhiskeyNUnit2Task.when including tests by category' {
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
@@ -478,4 +544,24 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator argu
     WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
     ThenOutput -Contains 'Initializing report builders for report types: Latex'
     ThenOutput -DoesNotContain 'Preprocessing report', 'Initiating parser for OpenCover'
+}
+
+Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
+    GivenPassingTests
+    WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
+    ThenItInstalledNunit
+    ThenItInstalledOpenCover
+    ThenItInstalledReportGenerator
+    ThenItShouldNotRunTests
+}
+
+Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active and No path is included' {
+    GivenPassingTests
+    GivenInvalidPath
+    WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
+    ThenItInstalledNunit
+    ThenItInstalledOpenCover
+    ThenItInstalledReportGenerator
+    ThenItShouldNotRunTests
+    ThenErrorShouldNotBeThrown -ErrorMessage 'does not exist.'
 }

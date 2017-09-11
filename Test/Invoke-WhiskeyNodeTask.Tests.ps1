@@ -14,6 +14,7 @@ $dependency = @()
 $ByDeveloper = $false
 $WithNoName = $false
 $withCleanSwitch = $false
+$withInitializeSwitch = $false
 $inSubDirectory = $null
 $inWorkingDirectory = $null
 $UsingNodeVersion = '^4.4.7'
@@ -50,6 +51,11 @@ function GivenNpmScriptsToRun
 function GivenWithCleanSwitch 
 {
     $script:withCleanSwitch = $true
+}
+
+function GivenWithInitializeSwitch
+{
+    $script:withInitializeSwitch = $true
 }
 function GivenSubDirectory 
 {
@@ -140,6 +146,10 @@ function WhenBuildIsStarted
     {
         $context.RunMode = 'Clean'
     }
+    if ( $script:withInitializeSwitch )
+    {
+        $context.RunMode = 'initialize'
+    }
     if ( $script:npmRegistryUri )
     {
         $taskParameter['npmRegistryUri'] = $script:npmRegistryUri
@@ -148,7 +158,7 @@ function WhenBuildIsStarted
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyNodeTask -TaskContext $script:context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $script:context -Parameter $taskParameter -Name 'Node'
     }
     catch
     {
@@ -161,6 +171,16 @@ function WhenBuildIsStarted
         It ('should remove the node_modules directory') {
             (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Not Exist
         }
+        foreach( $taskName in $script:runScripts )
+        {
+            It ('should NOT run the {0} task' -f $taskName) {
+                (Join-Path -Path $script:InWorkingDirectory -ChildPath $taskName) | Should Not Exist
+            }
+        }
+        return
+    }
+    if( $script:withInitializeSwitch )
+    {
         foreach( $taskName in $script:runScripts )
         {
             It ('should NOT run the {0} task' -f $taskName) {
@@ -391,6 +411,11 @@ function ThenNpmCleanedUp
     }
 }
 
+function ThenNodeModulesAreInstalled {
+    It ('should include the node_modules directory') {
+        (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Exist
+    }
+}
 function cleanup 
 {
     $script:context = $null
@@ -405,6 +430,7 @@ function cleanup
     $script:withCleanSwitch = $false
     $script:runScripts = @()
     $script:failed = $null
+    $script:withInitializeSwitch = $false
 }
 Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
     GivenBuildByDeveloper
@@ -568,6 +594,18 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on alre
     GivenNpmScriptsToRun 'test'
     Initialize-NodeProject 
     WhenBuildIsStarted
+    ThenBuildSucceeds
+    cleanup
+}
+
+Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
+    GivenBuildByBuildServer
+    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+    GivenWithInitializeSwitch
+    GivenNpmScriptsToRun 'test'
+    Initialize-NodeProject 
+    WhenBuildIsStarted
+    ThenNodeModulesAreInstalled
     ThenBuildSucceeds
     cleanup
 }
