@@ -118,7 +118,7 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
-    # # Be sure that the Taskparameter contains a 'Path'.
+    # Be sure that the Taskparameter contains a 'Path'.
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
@@ -132,7 +132,7 @@ function Invoke-WhiskeyNUnit2Task
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
-    
+
     $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
     
