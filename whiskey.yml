@@ -9,9 +9,9 @@ BuildTasks:
 - Pester4:
     Path: Test\*.Tests.ps1
     
-# PublishTasks:
-# - PublishPowerShellModule:
-#     RepositoryName: PSGallery
-#     RepositoryUri: https://powershellgallery.com/
-#     Path: Whiskey
-#     ApiKeyID: PowerShellGallery
+PublishTasks:
+- PublishPowerShellModule:
+    RepositoryName: PSGallery
+    RepositoryUri: https://powershellgallery.com/
+    Path: Whiskey
+    ApiKeyID: PowerShellGallery
