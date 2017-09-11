@@ -1,4 +1,5 @@
 
+Add-Type -AssemblyName 'System.Net.Http'
 Add-Type -AssemblyName 'System.Web'
 
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions') -Filter '*.ps1' |
