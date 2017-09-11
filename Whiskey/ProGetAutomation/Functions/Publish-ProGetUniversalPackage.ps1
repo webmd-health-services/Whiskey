@@ -6,7 +6,7 @@ function Publish-ProGetUniversalPackage
     Publishes a package to the specified ProGet instance
 
     .DESCRIPTION
-    The `Publish-ProGetUniversalPackage` function will upload a package to the `FeedName` universal feed . It uses upack 2.0.0.1 to upload. If upack.exe returns a non-zero exit code, the upload failed.
+    The `Publish-ProGetUniversalPackage` function will upload a package to the `FeedName` universal feed. It uses .NET 4.5's `HttpClient` to upload the file.
 
     .EXAMPLE
     Publish-ProGetUniversalPackage -Session $ProGetSession -FeedName 'Apps' -PackagePath 'C:\ProGetPackages\TestPackage.upack'
@@ -50,13 +50,6 @@ function Publish-ProGetUniversalPackage
     if( -not $PackagePath )
     {
         Write-Error -Message ('Package ''{0}'' does not exist.' -f $PSBoundParameters['PackagePath'])
-        return
-    }
-
-    $upackPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\upack.exe' -Resolve
-    if( -not $upackPath )
-    {
-        Write-Error -Message ('We couldn''t find the upack.exe executable.' -f $upackPath)
         return
     }
 
