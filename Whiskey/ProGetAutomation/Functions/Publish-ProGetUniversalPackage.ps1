@@ -203,7 +203,11 @@ See http://inedo.com/support/documentation/various/universal-packages/universal-
             $streamContent = New-Object 'Net.Http.StreamContent' ([IO.Stream]$packageStream)
             $streamContent.Headers.ContentType = New-Object 'Net.Http.Headers.MediaTypeHeaderValue' ('application/octet-stream')
             $httpResponseMessage = $httpClient.PutAsync($proGetPackageUri, [Net.Http.HttpContent]$streamContent)
-            $httpResponseMessage.Wait($maxDuration)
+            if( -not $httpResponseMessage.Wait($maxDuration) )
+            {
+                Write-Error -Message ('Uploading file ''{0}'' to ''{1}'' timed out after {2} second(s). To increase this timeout, set the Timeout parameter to the number of seconds to wait for the upload to complete.' -f $PackagePath,$proGetPackageUri,$Timeout)
+                return
+            }
                         
             $response = $httpResponseMessage.Result
             if( -not $response.IsSuccessStatusCode )
