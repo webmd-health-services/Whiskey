@@ -337,7 +337,10 @@ function GivenPassingTests
     $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whiskey.yml'
     $script:taskParameter = @{ 'Path' = $script:solutionToBuild }
 }
-
+function GivenInvalidPath
+{
+    $script:assemblyToTest = 'I/do/not/exist'
+}
 function WhenRunningTask
 {
     param(
@@ -345,11 +348,9 @@ function WhenRunningTask
         $WithParameters = @{ },
 
         [Switch]
-        $WhenRunningInitialize,
-
-        [Switch]
-        $WithNoPath
+        $WhenRunningInitialize
     )
+    $Global:Error.Clear()
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
 
@@ -366,9 +367,6 @@ function WhenRunningTask
     if( $WhenRunningInitialize )
     {
         $context.RunMode = 'initialize'
-    }
-    if( $WithNoPath ){
-        $script:taskParameter = @{}
     }
     try
     {
@@ -500,6 +498,15 @@ function ThenItInstalledReportGenerator {
     }
 }
 
+function ThenErrorShouldNotBeThrown {
+    param(
+        $ErrorMessage
+    )
+    It ('should Not write an error that matches {0}' -f $ErrorMessage){
+        $Global:Error | Where-Object { $_ -match $ErrorMessage } | Should BeNullOrEmpty
+    }
+}
+
 Describe 'Invoke-WhiskeyNUnit2Task.when including tests by category' {
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
@@ -550,9 +557,11 @@ Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
 
 Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active and No path is included' {
     GivenPassingTests
-    WhenRunningTask -WhenRunningInitialize -WithNoPath -WithParameters @{ }
+    GivenInvalidPath
+    WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
     ThenItInstalledNunit
     ThenItInstalledOpenCover
     ThenItInstalledReportGenerator
     ThenItShouldNotRunTests
+    ThenErrorShouldNotBeThrown -ErrorMessage 'does not exist.'
 }
