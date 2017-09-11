@@ -151,6 +151,7 @@
 * Fixed: The `PublishProGetUniversalPackage` task replaces existing packages.
 * ***BREAKING CHANGE***: Removed the `IgnorePackageJsonVersion` whiskey.yml configuration property. If you want Whiskey to pull the version from a Node.js package file, set the `VersionFrom` whiskey.yml property to the path to your `package.json` file.
 * You can now use a custom version of NPM with the `Node` and `PublishNodeModule` tasks. Set the `engines.npm` property in your package.json file (e.g. `{ "engines": { "npm": "VERSION" } }`) to the version of NPM to use. That version will be installed in your local `node_modules` directory. Optionally, if there is a version of `npm` in your local `node_modules` directory, that is used instead of the global `npm`. The global version of NPM is still used when installing your local npm and when running the `npm prune` command.
+* Created "Initializaton" mode. When a build is run in this mode, tasks install and configure any tools they use and then quit. They perform no build work. This is useful so if needed, developers can get everything installed without running a complete build.
 '@
         } # End of PSData hashtable
 
