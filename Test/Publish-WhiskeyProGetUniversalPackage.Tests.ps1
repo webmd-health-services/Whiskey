@@ -11,6 +11,7 @@ $feedName = $null
 $path = $null
 $threwException = $false
 $noAccessToProGet = $null
+$myTimeout = $null
 
 function GivenNoPath
 {
@@ -65,6 +66,15 @@ function GivenNoParameters
     $script:credential = $null
 }
 
+function GivenTimeout
+{
+    param(
+        $Timeout
+    )
+
+    $script:myTimeout = $Timeout
+}
+
 function GivenUniversalFeed
 {
     param(
@@ -81,6 +91,11 @@ function GivenUpackFile
     )
 
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $Name)) -Force -ItemType 'File'
+}
+
+function Init
+{
+    $script:myTimeout = $null
 }
 
 function ThenPackageNotPublished
@@ -145,6 +160,32 @@ function ThenPackagePublishedToFeed
     }
 }
 
+function ThenPackagePublishedWithTimeout
+{
+    param(
+        $ExpectedTimeout
+    )
+
+    It ('should publish with timeout ''{0}'' seconds' -f $ExpectedTimeout) {
+        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
+            $DebugPreference = 'Continue'
+            Write-Debug -Message ('Timeout  expected  {0}' -f $Timeout)
+            Write-Debug -Message ('         actual    {0}' -f $ExpectedTimeout)
+            $Timeout -eq $ExpectedTimeout 
+        }
+    }
+}
+
+function ThenPackagePublishedWithDefaultTimeout
+{
+    param(
+    )
+
+    It ('should publish to feed with default timeout') {
+        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Timeout -eq $null }
+    }
+}
+
 function ThenTaskFailed
 {
     param(
@@ -194,6 +235,11 @@ function WhenPublishingPackage
         $parameter['Path'] = $path
     }
 
+    if( $myTimeout )
+    {
+        $parameter['Timeout'] = $myTimeout
+    }
+
     $mock = { }
     if( $noAccessToProGet )
     {
@@ -206,7 +252,7 @@ function WhenPublishingPackage
     try
     {
         $Global:Error.Clear()
-        Publish-WhiskeyProGetUniversalPackage -TaskContext $context -TaskParameter $parameter
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'PublishProGetUniversalPackage'
     }
     catch
     {
@@ -227,6 +273,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default file
     ThenPackagePublishedAt 'my uri'
     ThenPackagePublishedToFeed 'universalfeed'
     ThenPackagePublishedAs 'fubar'
+    ThenPackagePublishedWithDefaultTimeout
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish' {
@@ -277,4 +324,15 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permissi
     GivenNoAccessToProGet
     WhenPublishingPackage -ErrorAction SilentlyContinue
     ThenTaskFAiled 'Failed to upload'
+}
+
+Describe 'Publish-WhiskeyProGetUniversalPackage.when uploading a large package' {
+    GivenUpackFile 'myfile1.upack'
+    GivenUpackFile 'myfile2.upack'
+    GivenProGetIsAt 'my uri'
+    GivenCredential 'fubar' -WithID 'progetid'
+    GivenUniversalFeed 'universalfeed'
+    GivenTimeout 600
+    WhenPublishingPackage
+    ThenPackagePublishedWithTimeout 600
 }

@@ -67,10 +67,17 @@ function Publish-WhiskeyProGetUniversalPackage
 
     $feedName = $TaskParameter['FeedName']
     $taskPrefix = '[{0}]  [{1}]' -f $session.Uri,$feedName
+
+    $optionalParam = @{ }
+    if( $TaskParameter['Timeout'] )
+    {
+        $optionalParam['Timeout'] = $TaskParameter['Timeout']
+    }
+
     Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}' -f $taskPrefix)
     foreach( $package in $packages )
     {
         Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}  {1}' -f (' ' * $taskPrefix.Length),$package)
-        Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package -ErrorAction Stop
+        Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package @optionalParam -ErrorAction Stop
     }
 }

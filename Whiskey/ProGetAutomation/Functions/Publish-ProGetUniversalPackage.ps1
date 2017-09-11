@@ -28,7 +28,8 @@ function Publish-ProGetUniversalPackage
         [Parameter(Mandatory=$true)]
         [string]
         # The path to the package that will be published to ProGet.
-        $PackagePath
+        $PackagePath,
+
         [int]
         # The timeout (in seconds) for the upload. The default is 100 seconds.
         $Timeout = 100,
