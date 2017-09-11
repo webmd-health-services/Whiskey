@@ -66,21 +66,6 @@ function Invoke-WhiskeyNUnit2Task
         Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
-    
-    # Be sure that the Taskparameter contains a 'Path'.
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
-        
-        BuildTasks:
-        - NUnit2:
-            Path:
-            - Assembly.dll
-            - OtherAssembly.dll')
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
 
     $includeParam = $null
     if( $TaskParameter.ContainsKey('Include') )
@@ -133,6 +118,21 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
+    # # Be sure that the Taskparameter contains a 'Path'.
+    if( -not ($TaskParameter.ContainsKey('Path')))
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+        
+        BuildTasks:
+        - NUnit2:
+            Path:
+            - Assembly.dll
+            - OtherAssembly.dll')
+    }
+
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
+    
     $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
     

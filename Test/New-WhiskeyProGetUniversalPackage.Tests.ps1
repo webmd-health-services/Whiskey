@@ -885,7 +885,6 @@ Describe 'New-WhiskeyProGetUniversalPackage.when cleaning' {
 
 Describe 'New-WhiskeyProGetUniversalPackage.when initializing' {
     $file = 'project.json'    
-    Given7ZipIsInstalled
     $outputFilePath = Initialize-Test -RootFileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
                                             -withInitialize `

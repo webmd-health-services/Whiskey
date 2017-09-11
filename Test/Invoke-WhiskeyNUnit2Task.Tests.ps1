@@ -329,12 +329,13 @@ $output = $null
 $context = $null
 $threwException = $false
 $thrownError = $null
-
+$taskParameter = $null
 function GivenPassingTests
 {
     $script:solutionToBuild = 'NUnit2PassingTest.sln'
     $script:assemblyToTest = 'NUnit2PassingTest.dll'
     $script:buildScript = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\whiskey.yml'
+    $script:taskParameter = @{ 'Path' = $script:solutionToBuild }
 }
 
 function WhenRunningTask
@@ -344,7 +345,10 @@ function WhenRunningTask
         $WithParameters = @{ },
 
         [Switch]
-        $WhenRunningInitialize
+        $WhenRunningInitialize,
+
+        [Switch]
+        $WithNoPath
     )
     $outputDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
     $script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $buildScript -ForOutputDirectory $outputDirectory -ForBuildRoot ($buildScript | Split-Path)
@@ -354,7 +358,7 @@ function WhenRunningTask
 
     $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
 
-    Invoke-WhiskeyTask -TaskContext $context -Parameter @{ 'Path' = $solutionToBuild } -Name 'MSBuild'
+    Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
 
     # Make sure there are spaces in the path so that we test things get escaped properly.
     Get-ChildItem -Path $context.BuildRoot -Filter $configuration -Directory -Recurse |
@@ -362,6 +366,9 @@ function WhenRunningTask
     if( $WhenRunningInitialize )
     {
         $context.RunMode = 'initialize'
+    }
+    if( $WithNoPath ){
+        $script:taskParameter = @{}
     }
     try
     {
@@ -535,6 +542,15 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator argu
 Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
     GivenPassingTests
     WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
+    ThenItInstalledNunit
+    ThenItInstalledOpenCover
+    ThenItInstalledReportGenerator
+    ThenItShouldNotRunTests
+}
+
+Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active and No path is included' {
+    GivenPassingTests
+    WhenRunningTask -WhenRunningInitialize -WithNoPath -WithParameters @{ }
     ThenItInstalledNunit
     ThenItInstalledOpenCover
     ThenItInstalledReportGenerator

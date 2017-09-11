@@ -411,7 +411,7 @@ function ThenNpmCleanedUp
     }
 }
 
-function ThenNPMIsInstalled {
+function ThenNodeModulesAreInstalled {
     It ('should include the node_modules directory') {
         (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Exist
     }
@@ -605,7 +605,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
     GivenNpmScriptsToRun 'test'
     Initialize-NodeProject 
     WhenBuildIsStarted
-    ThenNPMIsInstalled
+    ThenNodeModulesAreInstalled
     ThenBuildSucceeds
     cleanup
 }

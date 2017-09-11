@@ -107,7 +107,7 @@ function WhenPesterTaskIsInvoked
         Write-Error -ErrorRecord $_
     }
 }
-function ThenTestShouldPass
+function ThenPesterShouldBeInstalled
 {
     param(
         [switch]
@@ -134,17 +134,36 @@ function ThenTestShouldPass
     It 'should pass' {
         $script:failed | Should Be $false
     }
-    if( -not $WithClean )
+    It 'Should pass the build root to the Install tool' {
+        $pesterPath | Should Exist
+    }
+}
+
+function ThenPesterShouldBeUninstalled {
+    if( -not $script:Taskparameter['Version'] )
     {
-        It 'Should pass the build root to the Install tool' {
-            $pesterPath | Should Exist
-        }
+        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
+        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
+        $version = $latestPester.Version 
+        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
     }
     else
     {
-        It 'should attempt to uninstall Pester' {
-            Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -Times 1 -ModuleName 'Whiskey'
-        }
+        $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
+        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
+    }
+    $pesterDirectoryName = 'Modules\Pester'
+    if( $PSVersionTable.PSVersion.Major -ge 5 )
+    {
+        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+    }
+    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
+    It 'should pass' {
+        $script:failed | Should Be $false
+    }
+
+    It 'should attempt to uninstall Pester' {
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -Times 1 -ModuleName 'Whiskey'
     }
 }
 
@@ -247,7 +266,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
     GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked 
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-    ThenTestShouldPass
+    ThenPesterShouldBeInstalled
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running failing Pester tests' {
@@ -274,7 +293,7 @@ Describe 'Invoke-WhiskeyPester4Task.when run multiple times in the same build' {
     WhenPesterTaskIsInvoked
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-    ThenTestShouldPass
+    ThenPesterShouldBeInstalled
     ThenTestShouldCreateMultipleReportFiles
 }
 
@@ -291,7 +310,7 @@ Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
     GivenPesterPath -pesterPath 'PassingTests'
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 4 -FailureCount 0
-    ThenTestShouldPass
+    ThenPesterShouldBeInstalled
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
@@ -347,7 +366,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with Clean
     GivenWithCleanFlag
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
-    ThenTestShouldPass -withClean
+    ThenPesterShouldBeUninstalled -withClean
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initialization switch' {
@@ -357,5 +376,5 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initi
     GivenWithInitilizeFlag
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
-    ThenTestShouldPass
+    ThenPesterShouldBeInstalled
 }
