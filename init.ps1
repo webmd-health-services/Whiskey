@@ -20,7 +20,7 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-$modules = @( 'Pester', 'Carbon' )
+$modules = @( 'Carbon' )
 
 $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Modules'
 New-Item -Path $modulesRoot -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null

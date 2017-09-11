@@ -2,7 +2,11 @@
 param(
     [Switch]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    $Clean
+    $Clean,
+
+    [Switch]
+    # Initializes the repository.
+    $Initialize
 )
 
 #Requires -Version 4
@@ -25,10 +29,15 @@ Get-ChildItem 'env:' |
 
 try
 {
-    $cleanArg = @{ }
+    $optionalArgs = @{ }
     if( $Clean )
     {
-        $cleanArg['Clean'] = $true
+        $optionalArgs['Clean'] = $true
+    }
+
+    if( $Initialize )
+    {
+        $optionalArgs['Initialize'] = $true
     }
 
     $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
@@ -36,7 +45,7 @@ try
     {
         Add-WhiskeyApiKey -Context $context -ID 'PowerShellGallery' -Value $env:POWERSHELL_GALLERY_API_KEY
     }
-    Invoke-WhiskeyBuild -Context $context @cleanArg
+    Invoke-WhiskeyBuild -Context $context @optionalArgs
     exit 0
 }
 catch
