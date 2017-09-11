@@ -87,9 +87,16 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $MissingRootItems,
 
         [Switch]
-        $WhenCleaning
-    )
+        $WhenCleaning,
 
+        [Switch]
+        $withInitialize
+    )
+    $7zipInstalled = Test-path (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*')
+
+    if( $7zipInstalled ){
+        remove-Item (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*') -Recurse -Force
+    }
     if( -not $Version )
     {
         $now = [DateTime]::Now
@@ -139,7 +146,10 @@ function Assert-NewWhiskeyProGetUniversalPackage
     {
         $taskContext.RunMode = 'Clean'
     }
-        
+    if( $withInitialize )
+    {
+        $taskContext.RunMode = 'initialize'
+    }
     function Get-TempDirCount
     {
         Get-ChildItem -Path $env:TEMP -Filter ('Whiskey+New-WhiskeyProGetUniversalPackage+{0}+*' -f $Name) | 
@@ -417,6 +427,13 @@ function Then7zipShouldNotExist
 {
     It 'should delete 7zip NuGet package' {
         Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Not -Exist
+    }
+}
+
+function Then7zipShouldExist
+{
+    It 'should have 7zip NuGet package installed' {
+        Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Exist
     }
 }
 
@@ -864,6 +881,16 @@ Describe 'New-WhiskeyProGetUniversalPackage.when cleaning' {
                                             -ShouldReturnNothing `
                                             -ShouldNotCreatePackage 
     Then7zipShouldNotExist
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when initializing' {
+    $file = 'project.json'    
+    $outputFilePath = Initialize-Test -RootFileName $file
+    Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
+                                            -withInitialize `
+                                            -ShouldReturnNothing `
+                                            -ShouldNotCreatePackage 
+    Then7zipShouldExist
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging given a full relative path' {

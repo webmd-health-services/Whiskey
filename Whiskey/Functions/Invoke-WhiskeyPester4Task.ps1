@@ -17,10 +17,10 @@ function Invoke-WhiskeyPester4Task
 
     Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
     #>
-    [Whiskey.Task("Pester4",SupportsClean=$true)]
+    [Whiskey.Task("Pester4",SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
     param(
-         [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true)]
         [object]
         $TaskContext,
     
@@ -69,6 +69,13 @@ function Invoke-WhiskeyPester4Task
         return
     }
     
+    $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
+    
+    if( $TaskContext.ShouldInitialize() )
+    {
+        return
+    }
+
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
@@ -81,8 +88,6 @@ function Invoke-WhiskeyPester4Task
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    
-    $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
     
     if( -not $pesterModulePath )
     {

@@ -19,7 +19,7 @@ function Invoke-WhiskeyNUnit2Task
     Demonstates how to run the NUnit tests in some assemblies and save the result to a specific file. 
     In this example, the assemblies to run are in `$TaskParameter.path` and the test report will be saved in an xml file relative to the indicated `$TaskContext.OutputDirectory` 
     #>
-    [Whiskey.Task("NUnit2",SupportsClean=$true)]
+    [Whiskey.Task("NUnit2",SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -66,21 +66,6 @@ function Invoke-WhiskeyNUnit2Task
         Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
-    
-    # Be sure that the Taskparameter contains a 'Path'.
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
-        
-        BuildTasks:
-        - NUnit2:
-            Path:
-            - Assembly.dll
-            - OtherAssembly.dll')
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
 
     $includeParam = $null
     if( $TaskParameter.ContainsKey('Include') )
@@ -127,6 +112,27 @@ function Invoke-WhiskeyNUnit2Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
     }
+
+    if( $TaskContext.ShouldInitialize() )
+    {
+        return
+    }
+
+    # Be sure that the Taskparameter contains a 'Path'.
+    if( -not ($TaskParameter.ContainsKey('Path')))
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
+        
+        BuildTasks:
+        - NUnit2:
+            Path:
+            - Assembly.dll
+            - OtherAssembly.dll')
+    }
+
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
+
     $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
     

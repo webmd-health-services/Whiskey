@@ -69,6 +69,12 @@ function Init
     $script:npmVersion = $null
 }
 
+function GivenWithInitilizeFlag
+{
+    $script:context.RunMode = 'initialize'
+    $nvmPath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
+    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nvmPath}.GetNewClosure()
+}
 function New-PublishNodeModuleStructure
 {
     param(
@@ -117,11 +123,28 @@ function New-PublishNodeModuleStructure
     return $returnContextParams
 }
 
+function ThenNodeShouldExist
+{
+    It 'should have a nodejs installed' {
+        Assert-MockCalled   -CommandName 'Install-WhiskeyNodeJs' `
+                            -ModuleName 'Whiskey' `
+                            -Times 1 -Exactly
+    }
+}
+
 function ThenNodeModulePublished
 {
     It ('should publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
                             -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+    }
+}
+
+function ThenNodeModuleIsNotPublished
+{
+    It 'should not publish the module' {
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
+                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0 -Exactly
     }
 }
 
@@ -168,7 +191,7 @@ $npmrcFileLine4
 "@
 
     It ('.npmrc file should be{0}{1}' -f [Environment]::newLine,$npmrcFileLine2){
-    # should populate the .npmrc file with the appropriate configuration values' {
+        # should populate the .npmrc file with the appropriate configuration values' {
         $actualFileContents = Get-Content -Raw -Path $npmrcPath
         $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
     }
@@ -214,7 +237,6 @@ function WhenPublishingNodeModule
     {
         $parameter['EmailAddress'] = $email
     }
-
     $script:threwException = $false
     try
     {
@@ -269,6 +291,14 @@ Describe 'PublishNodeModule.when email address property missing' {
     ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
 }
 
+Describe 'PublishNodeModule.when publishing node module with initialization mode' {
+    Init
+    New-PublishNodeModuleStructure
+    GivenWithInitilizeFlag
+    WhenPublishingNodeModule
+    ThenNodeShouldExist
+    ThenNodeModuleIsNotPublished
+}
 Describe 'PublishNodeModule.when publishing node module using specific version of npm' {
     Init
     GivenNPMVersion '~4.6.1'
