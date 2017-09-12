@@ -64,46 +64,47 @@
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @( 
-                        'BitbucketServerAutomation',
-                        'BuildMasterAutomation',
-                        'ProGetAutomation',
-                        'VSSetup'
-                     )
+        'BitbucketServerAutomation',
+        'BuildMasterAutomation',
+        'ProGetAutomation',
+        'VSSetup'
+    )
 
     # Functions to export from this module
     FunctionsToExport = @( 
-                            'Add-WhiskeyApiKey',
-                            'Add-WhiskeyCredential',
-                            'Add-WhiskeyVariable',
-                            'ConvertFrom-WhiskeyYamlScalar',
-                            'ConvertTo-WhiskeySemanticVersion',
-                            'Get-WhiskeyApiKey',
-                            'Get-WhiskeyTask',
-                            'Get-WhiskeyCredential',
-                            'Install-WhiskeyNodeJs',
-                            'Install-WhiskeyTool',
-                            'Invoke-WhiskeyNodeTask',
-                            'Invoke-WhiskeyNUnit2Task',
-                            'Invoke-WhiskeyPester3Task',
-                            'Invoke-WhiskeyPester4Task',
-                            'Invoke-WhiskeyPipeline',
-                            'Invoke-WhiskeyBuild',
-                            'Invoke-WhiskeyTask',
-                            'New-WhiskeyContext',
-                            'Publish-WhiskeyBuildMasterPackage',
-                            'Publish-WhiskeyNuGetPackage',
-                            'Publish-WhiskeyProGetUniversalPackage',
-                            'Publish-WhiskeyBBServerTag',
-                            'Register-WhiskeyEvent',
-                            'Resolve-WhiskeyNuGetPackageVersion',
-                            'Resolve-WhiskeyPowerShellModuleVersion',
-                            'Resolve-WhiskeyTaskPath',
-                            'Resolve-WhiskeyVariable',
-                            'Set-WhiskeyBuildStatus',
-                            'Stop-WhiskeyTask',
-                            'Uninstall-WhiskeyTool',
-                            'Unregister-WhiskeyEvent'
-                         );
+        'Add-WhiskeyApiKey',
+        'Add-WhiskeyCredential',
+        'Add-WhiskeyVariable',
+        'ConvertFrom-WhiskeyYamlScalar',
+        'ConvertTo-WhiskeySemanticVersion',
+        'Get-WhiskeyApiKey',
+        'Get-WhiskeyTask',
+        'Get-WhiskeyCredential',
+        'Install-WhiskeyNodeJs',
+        'Install-WhiskeyTool',
+        'Invoke-WhiskeyNodeTask',
+        'Invoke-WhiskeyNUnit2Task',
+        'Invoke-WhiskeyPester3Task',
+        'Invoke-WhiskeyPester4Task',
+        'Invoke-WhiskeyPipeline',
+        'Invoke-WhiskeyBuild',
+        'Invoke-WhiskeyTask',
+        'New-WhiskeyContext',
+        'Publish-WhiskeyBuildMasterPackage',
+        'Get-WhiskeyPowerShellModule',
+        'Publish-WhiskeyNuGetPackage',
+        'Publish-WhiskeyProGetUniversalPackage',
+        'Publish-WhiskeyBBServerTag',
+        'Register-WhiskeyEvent',
+        'Resolve-WhiskeyNuGetPackageVersion',
+        'Resolve-WhiskeyPowerShellModuleVersion',
+        'Resolve-WhiskeyTaskPath',
+        'Resolve-WhiskeyVariable',
+        'Set-WhiskeyBuildStatus',
+        'Stop-WhiskeyTask',
+        'Uninstall-WhiskeyTool',
+        'Unregister-WhiskeyEvent'
+    );
 
     # Cmdlets to export from this module
     #CmdletsToExport = '*'
