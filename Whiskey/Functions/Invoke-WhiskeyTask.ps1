@@ -46,10 +46,18 @@ function Invoke-WhiskeyTask
             Write-Verbose -Message $prefix
             Write-Verbose -Message ('{0}  [On{1}]  {2}' -f $prefix,$EventName,$commandName)
             $startedAt = Get-Date
-            & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Parameter
-            $endedAt = Get-Date
-            $duration = $endedAt - $startedAt
-            Write-Verbose ('{0}  {1}  COMPLETED in {2}' -f $prefix,(' ' * ($EventName.Length + 4)),$duration)
+            $result = 'FAILED'
+            try
+            {
+                & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Parameter
+                $result = 'COMPLETED'
+            }
+            finally
+            {
+                $endedAt = Get-Date
+                $duration = $endedAt - $startedAt
+                Write-Verbose ('{0}  {1}  {2} in {3}' -f $prefix,(' ' * ($EventName.Length + 4)),$result,$duration)
+            }
         }
     }
 
@@ -148,10 +156,18 @@ function Invoke-WhiskeyTask
 
     Write-Verbose -Message $prefix
     $startedAt = Get-Date
-    & $task.CommandName -TaskContext $TaskContext -TaskParameter $Parameter
-    $endedAt = Get-Date
-    $duration = $endedAt - $startedAt
-    Write-Verbose ('{0}  COMPLETED in {1}' -f $prefix,$duration)
+    $result = 'FAILED'
+    try
+    {
+        & $task.CommandName -TaskContext $TaskContext -TaskParameter $Parameter
+        $result = 'COMPLETED'
+    }
+    finally
+    {
+        $endedAt = Get-Date
+        $duration = $endedAt - $startedAt
+        Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)
+    }
 
     Invoke-Event -Prefix $prefix -EventName 'AfterTask'
     Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name)
