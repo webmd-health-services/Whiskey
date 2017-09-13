@@ -68,7 +68,7 @@
                         'BuildMasterAutomation',
                         'ProGetAutomation',
                         'VSSetup'
-                    )
+                     )
 
     # Functions to export from this module
     FunctionsToExport = @( 
@@ -104,7 +104,7 @@
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
                             'Unregister-WhiskeyEvent'
-                        );
+                         );
 
     # Cmdlets to export from this module
     #CmdletsToExport = '*'
