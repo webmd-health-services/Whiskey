@@ -61,10 +61,10 @@ function ThenModuleShouldBeInstalled
     
 }
 
-function ThenModuleShouldNotBeInstalled
+function ThenModuleShouldNotExist
 {
     $modulePath = Join-path -Path 'Modules' -ChildPath $moduleName
-    it 'should have uninstalled the module' {
+    it 'should not have the module installed' {
         Join-path -path $context.BuildRoot -ChildPath $modulePath | should -not -Exist
     }
 }
@@ -75,7 +75,7 @@ function ThenErrorShouldBeThrown
         [string]
         $errorMessage
     )
-    it ('should throw an error that matches {0}' -f $errorMessage){
+    it ('should throw an error that matches ''{0}''' -f $errorMessage){
         $Global:Error | where-object {$_ -match $errorMessage } | Should -not -BeNullOrEmpty
     }
 }
@@ -100,6 +100,7 @@ Describe 'Get-WhiskeyPowerShellModule.when an invalid module name is requested' 
     GivenInvalidModule
     WhenPowershellModuleIsRan
     ThenErrorShouldBeThrown -errorMessage 'No match was found for the specified search criteria and module name'
+    ThenModuleShouldNotExist
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when called with invalid version' {
@@ -108,12 +109,14 @@ Describe 'Get-WhiskeyPowerShellModule.when called with invalid version' {
     GivenInvalidVersion
     WhenPowershellModuleIsRan
     ThenErrorShouldBeThrown -errorMessage "Failed to find module Carbon version 0.0.0"
+    ThenModuleShouldNotExist
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when called with missing name' {
     GivenContext
     WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage "Please"
+    ThenErrorShouldBeThrown -errorMessage "Please Add a Name Property for which PowerShell Module you would like to get."
+    ThenModuleShouldNotExist
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when called with clean mode' {
@@ -121,5 +124,5 @@ Describe 'Get-WhiskeyPowerShellModule.when called with clean mode' {
     GivenModule
     GivenCleanMode
     WhenPowershellModuleIsRan
-    ThenModuleShouldNotBeInstalled
+    ThenModuleShouldNotExist
 }

@@ -2,10 +2,11 @@ function Get-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
-    Short description
+    Task to get and install a powershell module that is specified. 
     
     .DESCRIPTION
-    Long description
+    This task will install a module and a specific version that is requested.
+    If no version is added to this task then by default the newest version will be installed.
     
     .EXAMPLE
     BuildTasks:
@@ -14,8 +15,10 @@ function Get-WhiskeyPowerShellModule
         Version: 2.5.0
     
     .NOTES
-    General notes
+    Currently only name and version properties are implemented. 
+    Properties 'Path' and 'RepositoryName' may be added in the future.
     #>
+    
     [CmdletBinding()]
     [Whiskey.Task("GetPowerShellModule",SupportsClean=$true)]
     param(
