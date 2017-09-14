@@ -117,6 +117,25 @@ function New-WhiskeyContext
         }
     }
 
+    $outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
+    if( -not (Test-Path -Path $outputDirectory -PathType Container) )
+    {
+        New-Item -Path $outputDirectory -ItemType 'Directory' -Force | Out-Null
+    }    
+
+    $context = New-WhiskeyContextObject
+    $context.Environment = $Environment
+    $context.BuildRoot = $buildRoot
+    $context.ConfigurationPath = $ConfigurationPath
+    $context.OutputDirectory = $outputDirectory
+    $context.Configuration = $config
+    $context.DownloadRoot = $DownloadRoot
+    $context.ByBuildServer = $byBuildServer
+    $context.ByDeveloper = (-not $byBuildServer)
+    $context.Publish = $publish
+    $context.RunMode = 'Build'
+    $context.BuildMetadata = $buildMetadata
+
     $versionParam = @{}
     if( $config.ContainsKey( 'VersionFrom' ) )
     {
@@ -124,7 +143,7 @@ function New-WhiskeyContext
     }
     else
     {
-        $versionParam['Version'] = $config['Version']
+        $versionParam['Version'] = $config['Version'] | Resolve-WhiskeyVariable -Context $context
     }
     $semVersion = New-WhiskeySemanticVersion @versionParam -Prerelease $prereleaseInfo -BuildMetadata $buildMetadata -ErrorAction Stop
     if( -not $semVersion )
@@ -132,7 +151,7 @@ function New-WhiskeyContext
         Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
     }
 
-    $version = New-Object -TypeName 'version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
+    $version = New-Object -TypeName 'Version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     $semVersionNoBuild = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
     if( $semVersion.Prerelease )
@@ -142,30 +161,12 @@ function New-WhiskeyContext
         $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersionV1Prerelease
     }
     
-    $context = New-WhiskeyContextObject
-
-    $context.Environment = $Environment;
-    $context.BuildRoot = $buildRoot;
-    $context.ConfigurationPath = $ConfigurationPath;
-
-    $context.OutputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
-    if( -not (Test-Path -Path $context.OutputDirectory -PathType Container) )
-    {
-        New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force | Out-Null
-    }    
     $context.Version = [pscustomobject]@{
-        SemVer2 = $semVersion;
-        SemVer2NoBuildMetadata = $semVersionNoBuild;
-        SemVer1 = $semVersionV1;
-        Version = $version;
-    }
-    $context.Configuration = $config;
-    $context.DownloadRoot = $DownloadRoot;
-    $context.ByBuildServer = $byBuildServer;
-    $context.ByDeveloper = (-not $byBuildServer);
-    $context.Publish = $publish;
-    $context.RunMode = 'Build';
-    $context.BuildMetadata = $buildMetadata
+                                            SemVer2 = $semVersion;
+                                            SemVer2NoBuildMetadata = $semVersionNoBuild;
+                                            SemVer1 = $semVersionV1;
+                                            Version = $version;
+                                        }
 
     return $context
 }

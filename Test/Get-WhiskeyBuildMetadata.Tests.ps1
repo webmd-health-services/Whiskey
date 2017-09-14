@@ -193,7 +193,8 @@ InModuleScope 'Whiskey' {
         $buildInfo = $script:buildInfo
 
         It ('should set build number') {
-            $buildInfo.BuildNumber | Should Be $BuildNumber
+            $buildInfo.BuildNumber | Should -BeOfType $BuildNumber.GetType()
+            $buildInfo.BuildNumber | Should -Be $BuildNumber
         }
 
         It ('should set build ID') {
@@ -283,7 +284,7 @@ InModuleScope 'Whiskey' {
         Init
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber '' -BuildID '' -JobName '' -BuildUri '' -ScmUri '' -ScmCommit '' -ScmBranch '' -JobUri ''
+        ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri '' -ScmUri '' -ScmCommit '' -ScmBranch '' -JobUri ''
         ThenRunByDeveloper
     }
 

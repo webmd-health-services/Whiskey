@@ -167,34 +167,14 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     
         $buildInfo = New-WhiskeyBuildMetadataObject
+        $buildInfo.BuildNumber = $BuildNumber
 
         Mock -CommandName 'Get-WhiskeyBuildMetadata' -ModuleName 'Whiskey' -MockWith { return $buildInfo }.GetNewClosure()
         if( $ForBuildServer )
         {
             $buildInfo.ScmBranch = $OnBranch
-            $buildInfo.BuildNumber = $BuildNumber
             $buildInfo.ScmCommitID = 'deadbee'
             $buildInfo.BuildServerName = 'Jenkins'
-
-            if( $WithVersion )
-            {
-                Mock -CommandName 'New-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { return [SemVersion.SemanticVersion]$Configuration['Version'] }.GetNewClosure()
-            }
-        }
-        else
-        {
-            if( $WithVersion )
-            {
-                Mock -CommandName 'New-WhiskeySemanticVersion' -ModuleName 'Whiskey' -MockWith { 
-                    [SemVersion.SemanticVersion]$semVersion = $null
-                    if( -not [SemVersion.SemanticVersion]::TryParse($Configuration['Version'],[ref]$semVersion) )
-                    {
-                        return
-                    }
-                    return $semVersion
-                }.GetNewClosure()
-            }
-
         }
 
         $yaml = $Configuration | ConvertTo-Yaml
@@ -480,6 +460,21 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenDoesNotPublish
     }
 
+    Describe 'New-WhiskeyContext.when version number uses build number' {
+        Context 'by developer' {
+            Init
+            GivenConfiguration -WithVersion '1.2.$(WHISKEY_BUILD_NUMBER)' -BuildNumber '0'
+            WhenCreatingContext -ByDeveloper -Environment 'fubar'
+            ThenDeveloperContextCreated -WithSemanticVersion '1.2.0' -Environment 'fubar'
+        }
+        Context 'by build server' {
+            Init
+            GivenConfiguration -WithVersion '1.2.$(WHISKEY_BUILD_NUMBER)' -BuildNumber '45' -ForBuildServer
+            WhenCreatingContext -ByBuildServer -Environment 'fubar'
+            ThenBuildServerContextCreated -WithSemanticVersion '1.2.45' -Environment 'fubar'
+        }
+    }
+
     Describe 'New-WhiskeyContext.when run by developer for a library' {
         Init
         GivenConfiguration -WithVersion '1.2.3'
@@ -497,7 +492,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when run by developer and version is not a semantic version' {
         Init
         GivenConfiguration -WithVersion 'fubar'
-        WhenCreatingContext -ByDeveloper  -ThenCreationFailsWithErrorMessage 'unable\ to\ create\ the\ semantic\ version' -ErrorAction SilentlyContinue
+        WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'unable\ to\ convert\ ''fubar''\ to\ a\ semantic\ version' -ErrorAction SilentlyContinue
     }
 
     Describe 'New-WhiskeyContext.when run by the build server' {
