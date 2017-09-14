@@ -16,11 +16,16 @@ function Publish-BMReleasePackage
     Publish-BMReleasePackage -Session $session -Package $package
 
     Demonstrates how to deploy a package by passing a package object to the `Package` parameter. This object must have an `id` or `pipeline_id` property.
-
+    
     .EXAMPLE
     Publish-BMReleasePackage -Session $session -Package 383
 
     Demonstrates how to deploy a package by passing its ID to the `Package` parameter.
+
+    .EXAMPLE
+    Publish-BMReleasePackage -Session $session -Package $package
+
+    Demonstrates how to deploy a package to a specific stage of the release pipeline. By default, a package will deploy to the first stage of the assigned pipeline.
     #>
     [CmdletBinding()]
     param(
@@ -35,11 +40,21 @@ function Publish-BMReleasePackage
         #
         # * A package object which has an `id` property.
         # * The package's ID, as an integer.
-        $Package
+        $Package,
+        
+        [string]
+        # The name of the pipeline stage where the package will be deployed.
+        $Stage
     )
 
     Set-StrictMode -Version 'Latest'
 
     $parameters = @{} | Add-BMObjectParameter -Name 'package' -Value $Package -PassThru
+    
+    if( $Stage )
+    {
+        $parameters['toStage'] = $Stage
+    }
+    
     Invoke-BMRestMethod -Session $Session -Name 'releases/packages/deploy' -Parameter $parameters
 }
