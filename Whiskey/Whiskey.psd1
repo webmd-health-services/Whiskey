@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.15.0'
+    ModuleVersion = '0.17.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,8 +142,12 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Builds hang if a Whiskey task uses a variable but the variable's value results to null, 0, an empty string, or $false.
-* You can now use Whiskey variables in `Version` property values.
+You can now define custom variables in your whiskey.yml file using the new `Variable` property, e.g.
+    
+   Variable:
+       VERSION: 6.4
+
+defines a `VERSION` variable whose value is `6.4`. You would reference this variable elsewhere in your whiskey.yml file as `$(VERSION)`. Variable names are case-insensitive.
 '@
         } # End of PSData hashtable
 

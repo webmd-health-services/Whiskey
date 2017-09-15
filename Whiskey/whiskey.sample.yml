@@ -65,6 +65,20 @@ PublishOn:
 #- "develop": beta
 #- "feature/*": alpha
 
+# The `Variable` property is used to define custom variables that you can use in 
+# task property values and in the `Version` property value. It should be a map of 
+# key/value pairs. The keys is the variable's name. The value is the variable's value.
+# Variable names are case-insensitive.
+#
+# You can use a variable's value in your whiskey.yml file like this: `$(KEY)`. By 
+# default, all environment variables are available as variables. Also, Whiskey defines 
+# its own set of built-in variables. See the `Resolve-WhiskeyVarible` function's help 
+# topic for the list of built-in variables. Variables defined here take precedence over 
+# environment variables and Whiskey's built-in variables. You can also add variables 
+# with the `Add-WhiskeyVariable` function.
+Variable:
+    SomeVariable: SomeValue
+
 # The `PublishBuildStatusTo` is a list of publishers where you wnat build status
 # information published. Status is published when a build starts, succeeds, and fails. 
 # Build statuses are only published when running under a build server. You can only

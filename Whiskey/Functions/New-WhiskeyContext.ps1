@@ -136,6 +136,26 @@ function New-WhiskeyContext
     $context.RunMode = 'Build'
     $context.BuildMetadata = $buildMetadata
 
+    if( $config['Variable'] )
+    {
+        $variables = $config['Variable']
+        if( -not ($variables | Get-Member -Name 'Keys') )
+        {
+            Write-Error -Message ('{0}: The ''Variable'' property is not defined correctly. It should be a map of key/value pairs. Each key is the variable name whose value is the key''s value. For example,
+    
+    Variable:
+        VERSION: 6.4
+    
+defines a `VERSION` variable whose value is `6.4`.
+    ' -f $ConfigurationPath) -ErrorAction Stop
+        }
+
+        foreach( $key in $variables.Keys )
+        {
+            Add-WhiskeyVariable -Context $context -Name $key -Value $variables[$key]
+        }
+    }
+
     $versionParam = @{}
     if( $config.ContainsKey( 'VersionFrom' ) )
     {

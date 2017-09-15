@@ -118,6 +118,11 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $Context | Get-Member -Name 'BuildMetadata' | Should -Not -BeNullOrEmpty
             $Context.BuildMetadata | Should -Not -BeNullOrEmpty
         }
+
+        It ('should have Variables property') {
+            $Context | Get-Member -Name 'Variables' | Should -Not -BeNullOrEmpty
+            $Context.Variables | Should -BeOfType ([hashtable])
+        }
     }
 
     function GivenConfiguration
@@ -398,6 +403,29 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             It 'should return a context' {
                 $iWasCalled | Should Be $true
             }
+        }
+    }
+
+    function ThenHasnOVariable
+    {
+        param(
+            $Name
+        )
+
+        It ('should not have variable ''{0}''' -f $Name) {
+            $Script:context.Variables[$Name] | Should -BeNullOrEmpty
+        }
+    }
+
+    function ThenHasVariable
+    {
+        param(
+            $Name,
+            $WithValue
+        )
+
+        It ('should have variable ''{0}''' -f $Name) {
+            $Script:context.Variables[$Name] | Should -Be $WithValue
         }
     }
 
@@ -733,5 +761,37 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
+    }
+
+    Describe 'New-WhiskeyContext.when variables defined in whiskey.yml' {
+        Init
+        GivenWhiskeyYml @'
+Variable:
+    One: Two
+    Three: Four
+'@
+        WhenCreatingContext
+        ThenHasVariable 'One' -WithValue 'Two'
+        ThenHasVariable 'Three' -WithValue 'Four'
+    }
+
+    Describe 'New-WhiskeyContext.when variables defined but no values' {
+        Init
+        GivenWhiskeyYml @'
+Variable:
+    
+One: Two
+'@
+        WhenCreatingContext
+        ThenHasnOVariable 'One'
+    }
+
+    Describe 'New-WhiskeyContext.when variables defined not defined correctly' {
+        Init
+        GivenWhiskeyYml @'
+Variable:
+    One
+'@
+        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'should\ be\ a\ map' -ErrorAction SilentlyContinue
     }
 }
