@@ -15,6 +15,7 @@ $coverageFilter = $null
 $disableCodeCoverage = $false
 $failed = $false
 $framework = $null
+$initialize = $null
 $openCoverVersion = $null
 $openCoverArgument = $null
 $output = $null
@@ -37,6 +38,7 @@ function Init
     $script:disableCodeCoverage = $false
     $script:failed = $false
     $script:framework = $null
+    $script:initialize = $null
     $script:openCoverVersion = $null
     $script:openCoverArgument = $null
     $script:output = $null
@@ -73,6 +75,11 @@ function GivenArgument
 function GivenClean
 {
     $script:clean = $true
+}
+
+function GivenInitialize
+{
+    $script:initialize = $true
 }
 
 function GivenCoverageFilter
@@ -231,6 +238,13 @@ function WhenRunningTask
         Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version '2.5.8' -DownloadRoot $buildRoot
     }
 
+    if ($initialize)
+    {
+        $taskContext.RunMode = 'Initialize'
+
+        Remove-Item -Path (Join-Path -Path $buildRoot -ChildPath 'packages') -Recurse -Force
+    }
+
     try 
     {
         $script:output = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NUnit3'
@@ -268,6 +282,30 @@ function ThenPackagesCleanedUp
     $extraReportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.2.5.8'
     It 'should leave the ReportGenerator.2.5.8 package' {
         $extraReportGeneratorPath | Should -Exist
+    }
+
+}
+
+function ThenPackagesDownloaded
+{
+    $packagesPath = Join-Path -Path $buildRoot -ChildPath 'packages'
+
+    $nunitPackage = 'NUnit.ConsoleRunner.3.7.0'
+    $nunitConsolePath = Join-Path -Path $packagesPath -ChildPath $nunitPackage
+    It ('should download the {0} package' -f $nunitPackage) {
+        $nunitConsolePath | Should -Exist
+    }
+
+    $openCoverPackage = 'OpenCover.{0}' -f $openCoverVersion
+    $openCoverPath = Join-Path -Path $packagesPath -ChildPath $openCoverPackage
+    It ('should download the {0} package' -f $openCoverPackage) {
+        $openCoverPath | Should -Exist
+    }
+
+    $reportGeneratorPackage = 'ReportGenerator.{0}' -f $reportGeneratorVersion
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath $reportGeneratorPackage
+    It ('should download the {0} package'-f $reportGeneratorPackage) {
+        $reportGeneratorPath | Should -Exist
     }
 
 }
@@ -428,13 +466,25 @@ function ThenRanWithCoverageFilter
 
 Describe 'Invoke-WhiskeyNUnit3Task.when running in Clean mode' {
     Init
-    GivenPassingPath
     GivenOpenCoverVersion '4.6.519'
     GivenReportGeneratorVersion '2.5.11'
     GivenClean
     WhenRunningTask
     ThenPackagesCleanedUp
     ThenNUnitShouldNotRun
+    ThenCodeCoverageReportNotCreated
+    ThenTaskSucceeded
+}
+
+Describe 'Invoke-WhiskeyNUnit3Task.when running in Initialize mode' {
+    Init
+    GivenOpenCoverVersion '4.6.519'
+    GivenReportGeneratorVersion '2.5.11'
+    GivenInitialize
+    WhenRunningTask
+    ThenPackagesDownloaded
+    ThenNUnitShouldNotRun
+    ThenCodeCoverageReportNotCreated
     ThenTaskSucceeded
 }
 
