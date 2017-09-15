@@ -23,7 +23,7 @@ function Publish-BMReleasePackage
     Demonstrates how to deploy a package by passing its ID to the `Package` parameter.
 
     .EXAMPLE
-    Publish-BMReleasePackage -Session $session -Package $package
+    Publish-BMReleasePackage -Session $session -Package $package -Stage $stage
 
     Demonstrates how to deploy a package to a specific stage of the release pipeline. By default, a package will deploy to the first stage of the assigned pipeline.
     #>
