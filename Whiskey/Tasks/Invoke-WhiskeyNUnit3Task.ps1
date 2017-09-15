@@ -10,7 +10,7 @@ function Invoke-WhiskeyNUnit3Task
     
     The `Path` parameter is mandatory and must contain a list of paths, relative to your `whiskey.yml` file, to the assemblies for which NUnit tests should be run.
 
-    By default, OpenCover and ReportGenerator are also run against the results of the NUnit tests and their output is saved to the `OutputDirectory` of the build. If you wish to **only** run NUnit tests, then specify the `DisableCodeCoverage` parameter with the value of `true`.
+    By default, OpenCover runs NUnit and gathers test code coverage, saving its report to '.output\openCover\openCover.xml'. ReporterGenerator is used to convert the OpenCover report into an HTML report, viewable to '.output\openCover\index.html'. If you wish to **only** run NUnit tests, then specify the `DisableCodeCoverage` parameter with the value of `true`.
     
     The task will run NUnit tests with .NET framework `4.0` by default. You may override this setting with the `Framework` parameter.
         
@@ -59,8 +59,8 @@ function Invoke-WhiskeyNUnit3Task
             Path:
             - Assembly.dll
             TestFilter:
-            - cat == 'Slow Data Tests' && Priority == High
-            - cat == 'Standard Tests'
+            - "cat == 'Slow Data Tests' && Priority == High"
+            - "cat == 'Standard Tests'"
             Argument:
             - "--debug"
 
@@ -87,7 +87,7 @@ function Invoke-WhiskeyNUnit3Task
     #>
 
     [CmdletBinding()]
-    [Whiskey.Task("NUnit3",SupportsClean=$true)]
+    [Whiskey.Task("NUnit3",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -106,27 +106,6 @@ function Invoke-WhiskeyNUnit3Task
     $nunitVersion = '3.7.0'
     $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit3-{0:00}.xml' -f $TaskContext.TaskIndex)
     $nunitReportParam = '--result={0}' -f $nunitReport
-
-    if (-not $TaskParameter['Path'])
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
-
-            BuildTasks:
-            - NUnit3:
-                Path:
-                - Assembly.dll
-                - OtherAssembly.dll
-
-        ')
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    $path | Foreach-Object {
-        if (-not (Test-Path -Path $_ -PathType Leaf))
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message (' ''Path'' item ''{0}'' does not exist.' -f $_)
-        }
-    }
 
     $openCoverVersionParam = @{}
     if ($TaskParameter['OpenCoverVersion'])
@@ -148,6 +127,29 @@ function Invoke-WhiskeyNUnit3Task
         return
     }
 
+    $nunitPath = Install-WhiskeyTool -NuGetPackageName $nunitPackage -Version $nunitVersion -DownloadRoot $TaskContext.BuildRoot
+    if (-not $nunitPath)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package ''{0}'' failed to install.' -f $nunitPackage)
+    }
+
+    $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionParam
+    if (-not $openCoverPath)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''OpenCover'' failed to install.'
+    }
+
+    $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
+    if (-not $reportGeneratorPath)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''ReportGenerator'' failed to install.'
+    }
+
+    if ($TaskContext.ShouldInitialize())
+    {
+        return
+    }
+
     $openCoverArgument = @()
     if ($TaskParameter['OpenCoverArgument'])
     {
@@ -161,12 +163,11 @@ function Invoke-WhiskeyNUnit3Task
     }
 
     $framework = '4.0'
-    $frameworkParam = '--framework={0}' -f $framework
     if ($TaskParameter['Framework'])
     {
         $framework = $TaskParameter['Framework']
-        $frameworkParam = '--framework={0}' -f $framework
     }
+    $frameworkParam = '--framework={0}' -f $framework
 
     $testFilter = ''
     $testFilterParam = ''
@@ -191,24 +192,6 @@ function Invoke-WhiskeyNUnit3Task
         $coverageFilter = $TaskParameter['CoverageFilter'] -join ' '
     }
 
-    $nunitPath = Install-WhiskeyTool -NuGetPackageName $nunitPackage -Version $nunitVersion -DownloadRoot $TaskContext.BuildRoot
-    if (-not $nunitPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package ''{0}'' failed to install.' -f $nunitPackage)
-    }
-
-    $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionParam
-    if (-not $openCoverPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''OpenCover'' failed to install.'
-    }
-
-    $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
-    if (-not $reportGeneratorPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''ReportGenerator'' failed to install.'
-    }
-
     $nunitConsolePath = Join-Path -Path $nunitPath -ChildPath 'tools\nunit3-console.exe'
     $openCoverConsolePath = Join-Path $openCoverPath -ChildPath 'tools\OpenCover.Console.exe'
     $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools\ReportGenerator.exe'
@@ -218,6 +201,27 @@ function Invoke-WhiskeyNUnit3Task
         if (-not(Test-Path -Path $consolePath -PathType Leaf))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package ''{0}'' was installed, but could not locate ''{1}'' at {2}''.'-f ($consolePath | Split-Path | Split-Path -Leaf), ($consolePath | Split-Path -Leaf), $consolePath)
+        }
+    }
+
+    if (-not $TaskParameter['Path'])
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
+
+            BuildTasks:
+            - NUnit3:
+                Path:
+                - Assembly.dll
+                - OtherAssembly.dll
+
+        ')
+    }
+
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $path | Foreach-Object {
+        if (-not (Test-Path -Path $_ -PathType Leaf))
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''Path'' item ''{0}'' does not exist.' -f $_)
         }
     }
 
