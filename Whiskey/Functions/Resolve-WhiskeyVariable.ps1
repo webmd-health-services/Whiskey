@@ -177,10 +177,12 @@ function Resolve-WhiskeyVariable
                 return $InputObject
             }
 
-            if( $value )
+            if( -not $value )
             {
-                $InputObject = $InputObject -replace ([regex]::Escape($Matches[1]),$value)
+                $value = ''
             }
+
+            $InputObject = $InputObject -replace ([regex]::Escape($Matches[1]),$value)
         }
 
         return $InputObject

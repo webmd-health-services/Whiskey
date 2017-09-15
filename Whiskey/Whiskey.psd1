@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.14.1'
+    ModuleVersion = '0.15.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-Fixed: Task duration doesn't show in verbose output when a task fails.
+* Fixed: Builds hang if a Whiskey task uses a variable but the variable's value results to null, 0, an empty string, or $false.
+* You can now use Whiskey variables in `Version` property values.
 '@
         } # End of PSData hashtable
 
