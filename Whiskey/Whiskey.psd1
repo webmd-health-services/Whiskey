@@ -148,6 +148,10 @@ You can now define custom variables in your whiskey.yml file using the new `Vari
        VERSION: 6.4
 
 defines a `VERSION` variable whose value is `6.4`. You would reference this variable elsewhere in your whiskey.yml file as `$(VERSION)`. Variable names are case-insensitive.
+
+You can now escape variables in a value by prefixing the variable with two dollar signs, e.g. $$(COMPUTERNAME) will resolve to `$(COMPUTERNAME)`.
+
+You can now nest variables. Given variable `FUBAR` whose value is `$(COMPUTERNAME)`, variable `$(FUBAR)` would resolve to the name of the current computer.
 '@
         } # End of PSData hashtable
 
