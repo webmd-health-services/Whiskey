@@ -94,9 +94,6 @@ function Invoke-NUnitTask
         [Version]
         $WithOpenCoverVersion = '4.6.519',
 
-        [Version]
-        $WithReportGeneratorVersion = '2.5.11',
-
         [Switch]
         $WithDisabledCodeCoverage,
 
@@ -115,6 +112,9 @@ function Invoke-NUnitTask
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
         $threwException = $false
         $Global:Error.Clear()
+
+        $latestReportGeneratorVersion = ..\Whiskey\bin\NuGet.exe list packageid:reportgenerator
+        $latestReportGeneratorVersion = $latestReportGeneratorVersion.replace("ReportGenerator ", "")
 
         if( $WithRunningTests )
         {
@@ -167,7 +167,7 @@ function Invoke-NUnitTask
             $taskParameter.Add('CoverageFilter', $CoverageFilter)
         }
         $taskParameter.Add('OpenCoverVersion', $WithOpenCoverVersion)
-        $taskParameter.Add('ReportGeneratorVersion', $WithReportGeneratorVersion)
+        $taskParameter.Add('ReportGeneratorVersion', $latestReportGeneratorVersion)
 
         if( $WhenRunningClean )
         {
@@ -210,7 +210,7 @@ function Invoke-NUnitTask
             $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
             $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
             $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
-            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
+            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $latestReportGeneratorVersion)
             It 'should not throw an exception' {
                 $threwException | Should be $False
             }
@@ -465,7 +465,7 @@ function ThenItShouldNotRunTests {
 function ThenItInstalledNunit {
     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
     $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
-    It 'should hvae installed the expected version of Nunit.Runners' {
+    It 'should have installed the expected version of Nunit.Runners' {
         $nunitPath | should exist
     }
     Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
@@ -485,13 +485,10 @@ function ThenItInstalledOpenCover {
 }
 
 function ThenItInstalledReportGenerator {
-    param (
-
-        [Version]
-        $WithReportGeneratorVersion = '2.5.11'
-    )
+    $latestVersion = ..\Whiskey\bin\NuGet.exe list packageid:reportgenerator
+    $latestVersion = $latestVersion.replace(" ", ".")
     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('{0}' -f $latestVersion)
     
     It 'should have installed ReportGenerator' {
         $reportGeneratorPath | should exist
