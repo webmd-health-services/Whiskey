@@ -13,8 +13,8 @@
 
     # Version number of this module.
     ModuleVersion = '0.14.1'
-
-    # ID used to uniquely identify this module
+	
+	# ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
 
     # Author of this module
@@ -142,7 +142,11 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+<<<<<<< HEAD
 Fixed: Task duration doesn't show in verbose output when a task fails.
+=======
+* You can now specify a custom version of NUnit 2. Set the `Version` property on the `NUnit2` task. 
+>>>>>>> b65492c... Allow custom versions of NUnit 2 in the NUnit 2 task; fixed broken tests.
 '@
         } # End of PSData hashtable
 
