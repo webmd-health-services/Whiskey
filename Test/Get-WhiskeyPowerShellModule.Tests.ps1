@@ -62,6 +62,7 @@ function ThenModuleShouldBeInstalled
     }
 
     it ('Should have installed version {0}' -f $AtVersion) {
+        write-host(get-childitem $modulePath)
         Test-ModuleManifest $moduleFile | select-object -ExpandProperty 'Version' | should -Match $AtVersion
     }
     
