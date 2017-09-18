@@ -56,14 +56,12 @@ function ThenModuleShouldBeInstalled
     )
     $modulePath = Join-path -Path 'Modules' -ChildPath $module
     $modulePath = Join-path -path $context.BuildRoot -ChildPath $modulePath
-    $moduleFile = join-path -path $modulePath -ChildPath '/pester.psd1'
     it 'should have installed the module' {
         $modulePath | should -Exist
     }
 
     it ('Should have installed version {0}' -f $AtVersion) {
-        write-host(get-childitem $modulePath)
-        Test-ModuleManifest $moduleFile | select-object -ExpandProperty 'Version' | should -Match $AtVersion
+        Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -match $AtVersion } | should -not -BeNullOrEmpty
     }
     
 }
