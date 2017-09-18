@@ -5,10 +5,6 @@ Set-StrictMode -Version 'Latest'
 
 $context = $null
 $taskParameter = @{}
-$moduleName = 'Carbon'
-$invalidModuleName = 'No Module Here'
-$version = '2.5.0'
-$badVersion = '0.0.0'
 function GivenContext 
 {
     $script:taskParameter = @{}
@@ -17,22 +13,20 @@ function GivenContext
 
 function GivenModule
 {
-    $script:taskParameter['Name'] = $moduleName
+    Param(
+        [String]
+        $module
+    )
+    $script:taskParameter['Name'] = $module
 }
 
 function GivenVersion 
 {
-    $script:taskParameter['Version'] = $version
-}
-
-function GivenInvalidVersion 
-{
-    $script:taskParameter['Version'] = $badVersion
-}
-
-function GivenInvalidModule 
-{
-    $script:taskParameter['Name'] = $invalidModuleName
+    param(
+        [string]
+        $Version
+    )
+    $script:taskParameter['Version'] = $Version
 }
 
 function GivenCleanMode
@@ -44,7 +38,7 @@ function WhenPowershellModuleIsRan
     $global:Error.clear()
     try
     {
-        Get-whiskeyPowershellModule -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name "GetPowerShellModule"
     }
     catch
     {
@@ -54,16 +48,28 @@ function WhenPowershellModuleIsRan
 
 function ThenModuleShouldBeInstalled
 {
-    $modulePath = Join-path -Path 'Modules' -ChildPath $moduleName
+    param(
+        [String]
+        $module,
+        [String]
+        $AtVersion
+    )
+    $modulePath = Join-path -Path 'Modules' -ChildPath $module
+    $modulePath = Join-path -path $context.BuildRoot -ChildPath $modulePath
+    $moduleFile = join-path -path $modulePath -ChildPath '/pester.psd1'
     it 'should have installed the module' {
-        Join-path -path $context.BuildRoot -ChildPath $modulePath | should -Exist
+        $modulePath | should -Exist
+    }
+
+    it ('Should have installed version {0}' -f $AtVersion) {
+        Test-ModuleManifest $moduleFile | select-object -ExpandProperty 'Version' | should -Match $AtVersion
     }
     
 }
 
 function ThenModuleShouldNotExist
 {
-    $modulePath = Join-path -Path 'Modules' -ChildPath $moduleName
+    $modulePath = Join-path -Path 'Modules' -ChildPath $taskParameter['Name']
     it 'should not have the module installed' {
         Join-path -path $context.BuildRoot -ChildPath $modulePath | should -not -Exist
     }
@@ -81,34 +87,42 @@ function ThenErrorShouldBeThrown
 }
 Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested without version parameter' {
     GivenContext
-    GivenModule
+    GivenModule -module 'Pester'
     WhenPowershellModuleIsRan
-    ThenModuleShouldBeInstalled
+    ThenModuleShouldBeInstalled -module 'Pester'
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested with version parameter' {
     GivenContext
-    GivenModule
-    GivenVersion
+    GivenModule -module 'Pester'
+    GivenVersion -version '3.4.0'
     WhenPowershellModuleIsRan
-    ThenModuleShouldBeInstalled
+    ThenModuleShouldBeInstalled -module 'Pester' -AtVersion '3.4.0'
+}
+
+Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested with wildcard version' {
+    GivenContext
+    GivenModule -module 'Pester'
+    GivenVersion -version '3.3.*'
+    WhenPowershellModuleIsRan
+    ThenModuleShouldBeInstalled -module 'Pester' -AtVersion '3.3.14'
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when an invalid module name is requested' {
     GivenContext
-    GivenVersion
-    GivenInvalidModule
+    GivenVersion -version '3.4.0'
+    GivenModule -module 'bad mod'
     WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage 'No match was found for the specified search criteria and module name'
+    ThenErrorShouldBeThrown -errorMessage 'No match was found for the specified search criteria and module name ''bad mod'''
     ThenModuleShouldNotExist
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when called with invalid version' {
     GivenContext
-    GivenModule
-    GivenInvalidVersion
+    GivenModule -module 'Pester'
+    GivenVersion  -version '0.0.0'
     WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage "Failed to find module Carbon version 0.0.0"
+    ThenErrorShouldBeThrown -errorMessage "Failed to find module Pester version 0.0.0"
     ThenModuleShouldNotExist
 }
 
@@ -121,7 +135,7 @@ Describe 'Get-WhiskeyPowerShellModule.when called with missing name' {
 
 Describe 'Get-WhiskeyPowerShellModule.when called with clean mode' {
     GivenContext
-    GivenModule
+    GivenModule -module 'Pester'
     GivenCleanMode
     WhenPowershellModuleIsRan
     ThenModuleShouldNotExist

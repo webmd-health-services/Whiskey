@@ -91,7 +91,6 @@
                             'Invoke-WhiskeyTask',
                             'New-WhiskeyContext',
                             'Publish-WhiskeyBuildMasterPackage',
-                            'Get-WhiskeyPowerShellModule',
                             'Publish-WhiskeyNuGetPackage',
                             'Publish-WhiskeyProGetUniversalPackage',
                             'Publish-WhiskeyBBServerTag',
