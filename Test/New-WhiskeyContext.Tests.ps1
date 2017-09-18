@@ -406,7 +406,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     }
 
-    function ThenHasnOVariable
+    function ThenHasNoVariable
     {
         param(
             $Name
@@ -783,7 +783,7 @@ Variable:
 One: Two
 '@
         WhenCreatingContext
-        ThenHasnOVariable 'One'
+        ThenHasNoVariable 'One'
     }
 
     Describe 'New-WhiskeyContext.when variables defined not defined correctly' {
