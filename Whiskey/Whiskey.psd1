@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.16.0'
+    ModuleVersion = '0.18.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added an `NUnit3` task for running NUnit tests using the NUnit3 console runner. Set the `Path` property to a list of paths of assemblies for which you want to run tests for. By default, OpenCover runs NUnit and gathers test code coverage, saving its report to '.output\openCover\openCover.xml'. ReporterGenerator is used to convert the OpenCover report into an HTML report, viewable to '.output\openCover\index.html'. If you wish to **only** run NUnit tests, then specify the `DisableCodeCoverage` parameter with the value of `true`.
+Created a `Delete` task for deleting files and directories.
 '@
         } # End of PSData hashtable
 
