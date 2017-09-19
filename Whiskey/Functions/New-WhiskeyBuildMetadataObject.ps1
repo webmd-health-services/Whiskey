@@ -8,7 +8,7 @@ function New-WhiskeyBuildMetadataObject
     Set-StrictMode -Version 'Latest'
 
     $info = [pscustomobject]@{
-                                BuildNumber = '';
+                                BuildNumber = 0;
                                 BuildID = '';
                                 BuildServerName = '';
                                 BuildUri = '';
