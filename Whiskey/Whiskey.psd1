@@ -12,8 +12,8 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.14.1'
-	
+    ModuleVersion = '0.17.0'
+
 	# ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
 
@@ -142,11 +142,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-<<<<<<< HEAD
-Fixed: Task duration doesn't show in verbose output when a task fails.
-=======
-* You can now specify a custom version of NUnit 2. Set the `Version` property on the `NUnit2` task. 
->>>>>>> b65492c... Allow custom versions of NUnit 2 in the NUnit 2 task; fixed broken tests.
+* You can now specify a custom version of NUnit 2. Set the `Version` property on the `NUnit2` task.
+* Added support for `PackageName` and `DeployTo` properties to `Publish-WhiskeyBuildMasterPackage` task function
 '@
         } # End of PSData hashtable
 
