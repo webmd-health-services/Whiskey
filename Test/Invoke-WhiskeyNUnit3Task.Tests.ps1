@@ -50,7 +50,7 @@ function Init
 
     $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
 
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit3*\bin\Debug\*') -Destination $buildRoot
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit3*\bin\*\*') -Destination $buildRoot
 }
 
 function Get-NunitXmlElement
