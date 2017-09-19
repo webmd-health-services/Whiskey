@@ -113,8 +113,7 @@ function Invoke-NUnitTask
         $threwException = $false
         $Global:Error.Clear()
 
-        $latestReportGeneratorVersion = ..\Whiskey\bin\NuGet.exe list packageid:reportgenerator
-        $latestReportGeneratorVersion = $latestReportGeneratorVersion.replace("ReportGenerator ", "")
+        $ReportGeneratorVersion = '2.5.11'
 
         if( $WithRunningTests )
         {
@@ -210,7 +209,7 @@ function Invoke-NUnitTask
             $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
             $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
             $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
-            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $latestReportGeneratorVersion)
+            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
             It 'should not throw an exception' {
                 $threwException | Should be $False
             }
@@ -356,7 +355,7 @@ function WhenRunningTask
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     Get-ChildItem -Path $context.BuildRoot -Include 'bin','obj' -Directory -Recurse | Remove-Item -Recurse -Force
-
+    
     $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
 
     Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
@@ -485,10 +484,9 @@ function ThenItInstalledOpenCover {
 }
 
 function ThenItInstalledReportGenerator {
-    $latestVersion = ..\Whiskey\bin\NuGet.exe list packageid:reportgenerator
-    $latestVersion = $latestVersion.replace(" ", ".")
+
     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('{0}' -f $latestVersion)
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
     
     It 'should have installed ReportGenerator' {
         $reportGeneratorPath | should exist
