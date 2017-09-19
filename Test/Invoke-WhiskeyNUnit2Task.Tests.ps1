@@ -166,7 +166,7 @@ function Invoke-NUnitTask
             $taskParameter.Add('CoverageFilter', $CoverageFilter)
         }
         $taskParameter.Add('OpenCoverVersion', $WithOpenCoverVersion)
-        $taskParameter.Add('ReportGeneratorVersion', $latestReportGeneratorVersion)
+        $taskParameter.Add('ReportGeneratorVersion', $ReportGeneratorVersion)
 
         if( $WhenRunningClean )
         {
