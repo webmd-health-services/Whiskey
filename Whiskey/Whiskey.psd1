@@ -142,7 +142,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* You can now specify a custom version of NUnit 2. Set the `Version` property on the `NUnit2` task. 
+* You can now specify a custom version of NUnit 2 that the `NUnit2` task should use by setting the `Version` property to the version you want to use.
+* You can now specify a custom version of NUnit 3 that the `NUnit3` task should use by setting the `Version` property to the version you want to use.
 '@
         } # End of PSData hashtable
 

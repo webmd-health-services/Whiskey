@@ -28,6 +28,7 @@ $outputDirectory = $null
 $nunitReport = $null
 $openCoverReport = $null
 $reportGeneratorHtml = $null
+$nunitVersion = $null
 
 function Init
 {
@@ -46,8 +47,12 @@ function Init
     $script:testFilter = $null
     $script:reportGeneratorVersion = $null
     $script:reportGeneratorArgument = $null
+    $script:nunitVersion = $null
 
     $script:outputDirectory = Join-Path -Path $TestDrive -ChildPath '.output'
+
+    Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies') -Filter 'packages' -Recurse |
+        Remove-Item -Recurse -Force
 }
 
 function Get-NunitXmlElement
@@ -167,6 +172,15 @@ function GivenReportGeneratorArgument
     $script:reportGeneratorArgument = $Argument
 }
 
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:nunitVersion = $Version
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -224,6 +238,11 @@ function WhenRunningTask
     if ($coverageFilter)
     {
         $taskParameter['CoverageFilter'] = $coverageFilter
+    }
+
+    if( $nunitVersion )
+    {
+        $taskParameter['Version'] = $nunitVersion
     }
 
     if ($clean)
@@ -288,26 +307,31 @@ function ThenPackagesCleanedUp
 
 function ThenPackagesDownloaded
 {
-    $packagesPath = Join-Path -Path $buildRoot -ChildPath 'packages'
+    ThenPackageInstalled 'NUnit.ConsoleRunner.3.7.0'
+    ThenPackageInstalled ('OpenCover.{0}' -f $openCoverVersion)
+    ThenPackageInstalled ('ReportGenerator.{0}' -f $reportGeneratorVersion)
+}
 
-    $nunitPackage = 'NUnit.ConsoleRunner.3.7.0'
-    $nunitConsolePath = Join-Path -Path $packagesPath -ChildPath $nunitPackage
-    It ('should download the {0} package' -f $nunitPackage) {
-        $nunitConsolePath | Should -Exist
+function ThenPackageInstalled
+{
+    param(
+        $Name
+    )
+
+    It ('should install package ''{0}''' -f $Name) {
+        Join-Path -Path $taskContext.BuildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Exist
     }
+}
 
-    $openCoverPackage = 'OpenCover.{0}' -f $openCoverVersion
-    $openCoverPath = Join-Path -Path $packagesPath -ChildPath $openCoverPackage
-    It ('should download the {0} package' -f $openCoverPackage) {
-        $openCoverPath | Should -Exist
+function ThenPackageNotInstalled
+{
+    param(
+        $Name
+    )
+
+    It ('should not install package ''{0}''' -f $Name) {
+        Join-Path -Path $taskContext.BuildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Not -Exist
     }
-
-    $reportGeneratorPackage = 'ReportGenerator.{0}' -f $reportGeneratorVersion
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath $reportGeneratorPackage
-    It ('should download the {0} package'-f $reportGeneratorPackage) {
-        $reportGeneratorPath | Should -Exist
-    }
-
 }
 
 function ThenRanNUnitWithNoHeaderArgument
@@ -643,4 +667,22 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with ReportGenerator
     ThenCodeCoverageReportGenerated
     ThenOutput -DoesNotContain 'Initializing report builders'
     ThenTaskSucceeded
+}
+
+Describe 'NUnit3.when using custom version of NUnit 3' {
+    Init
+    GivenPassingPath
+    GivenVersion '3.2.1'
+    WhenRunningTask
+    ThenPackageInstalled 'NUnit.ConsoleRunner.3.2.1'
+    ThenTaskSucceeded
+}
+
+Describe 'NUnit3.when using a non-3 version of NUnit' {
+    Init
+    GivenPassingPath
+    GivenVersion '2.6.4'
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenPackageNotInstalled 'NUnit.ConsoleRunner.*'
+    ThenTaskFailedWithMessage 'isn''t\ a\ valid\ 3\.x\ version\ of\ NUnit'
 }
