@@ -12,9 +12,9 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-	ModuleVersion = '0.17.0'
+    ModuleVersion = '0.17.0'
 
-	# ID used to uniquely identify this module
+    # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
 
     # Author of this module
@@ -145,6 +145,38 @@
 * You can now specify a custom version of NUnit 2 that the `NUnit2` task should use by setting the `Version` property to the version you want to use.
 * You can now specify a custom version of NUnit 3 that the `NUnit3` task should use by setting the `Version` property to the version you want to use.
 * The `NUnit3` task upgraded to use NUnit 3.8.1 (from 3.7.0).
+
+Added support for `PackageName` and `DeployTo` properties to `Publish-WhiskeyBuildMasterPackage` task function, e.g.
+
+    PublishTasks:
+    - PublishBuildMasterPackage:
+        ApplicationName: TestApplication
+        Uri: https://buildmaster.example.com
+        ApiKeyID: buildmaster.example.com
+		PackageName: TestPackage
+        DeployTo:
+        - BranchName:
+          - develop
+		  - feature*
+	      ReleaseName: TestRelease
+          StartAtStage: Test
+        - BranchName: prod
+          ReleaseName: ProdRelease
+          SkipDeploy: true
+
+`PackageName` (optional): defines the name of the package that will be created in BuildMaster. In this example, the `PackageName` will be `TestPackage` instead of the default convention of `MajorVersion.MinorVersion.PatchVersion`  
+
+`DeployTo` (mandatory) defines a map of SCM branch to corresponding BuildMaster releases where packages should be created and deployed. `DeployTo` contains the following properties:
+- `BranchName` (mandatory) defines the SCM branch to be mapped to the release. Wildcards are allowed.
+- `ReleaseName` (mandatory) defines the release in BuildMaster where packages should be created and deployed.
+- `StartAtStage` (optional) defines the stage of the release pipeline where the package should start its deployment. By default, the package will be released to the first stage of the pipeline.
+- `SkipDeploy` (optional) defines that the release package should be created, but not automatically deployed. By default, the package deployment will be started.
+
+When building on `develop`, `feature/NewFunction`, or `feature68` branches, a package will be created on the `TestRelease` release of the `TestApplication` application. The package will be deployed to the `Test` stage of the `TestRelease` release's pipeline.
+
+When building on `prod` branch, a package will be created on the `ProdRelease` release of the `TestApplication` application. The package will be created, but will not be deployed.
+
+When building on `unmapped` branch, the task will fail with an error stating that the current branch must be mapped to a `ReleaseName`. No package will be created or deployed.
 '@
         } # End of PSData hashtable
 
