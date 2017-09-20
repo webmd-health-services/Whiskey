@@ -149,9 +149,28 @@ function Resolve-WhiskeyVariable
             return ,$InputObject
         }
 
-        while( $InputObject -match '(\$\(([^)]+)\))' )
+        $startAt = 0
+        $haystack = $InputObject.ToString()
+        do
         {
-            $variableName = $Matches[2]
+            $needleStart = $haystack.IndexOf('$(',$startAt)
+            if( $needleStart -lt 0 )
+            {
+                break
+            }
+            elseif( $needleStart -gt 0 )
+            {
+                if( $haystack[$needleStart - 1] -eq '$' )
+                {
+                    $haystack = $haystack.Remove($needleStart - 1, 1)
+                    $startAt = $needleStart
+                    continue
+                }
+            }
+
+            $needleEnd = $haystack.IndexOf(')', $needleStart)
+            $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
+
             $envVarPath = 'env:{0}' -f $variableName
             if( $Context.Variables.ContainsKey($variableName) )
             {
@@ -182,9 +201,13 @@ function Resolve-WhiskeyVariable
                 $value = ''
             }
 
-            $InputObject = $InputObject -replace ([regex]::Escape($Matches[1]),$value)
+            $haystack = $haystack.Remove($needleStart,$needleEnd - $needleStart + 1)
+            $haystack = $haystack.Insert($needleStart,$value)
+            # No need to keep searching where we've already looked.
+            $startAt = $needleStart
         }
+        while( $true )
 
-        return $InputObject
+        return $haystack
     }
 }

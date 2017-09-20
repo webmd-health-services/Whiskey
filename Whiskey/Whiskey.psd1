@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.17.0'
+    ModuleVersion = '0.18.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,9 +142,16 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* You can now specify a custom version of NUnit 2 that the `NUnit2` task should use by setting the `Version` property to the version you want to use.
-* You can now specify a custom version of NUnit 3 that the `NUnit3` task should use by setting the `Version` property to the version you want to use.
-* The `NUnit3` task upgraded to use NUnit 3.8.1 (from 3.7.0).
+You can now define custom variables in your whiskey.yml file using the new `Variable` property, e.g.
+    
+   Variable:
+       VERSION: 6.4
+
+defines a `VERSION` variable whose value is `6.4`. You would reference this variable elsewhere in your whiskey.yml file as `$(VERSION)`. Variable names are case-insensitive.
+
+You can now escape variables in a value by prefixing the variable with two dollar signs, e.g. $$(COMPUTERNAME) will resolve to `$(COMPUTERNAME)`.
+
+You can now nest variables. Given variable `FUBAR` whose value is `$(COMPUTERNAME)`, variable `$(FUBAR)` would resolve to the name of the current computer.
 '@
         } # End of PSData hashtable
 
