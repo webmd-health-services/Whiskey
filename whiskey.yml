@@ -7,7 +7,8 @@ BuildTasks:
 - PowerShell:
     Path: init.ps1
 - Pester4:
-    Path: Test\*.Tests.ps1
+    Path: Test\Copy-WhiskeyFile.Tests.ps1
+    DescribeDurationReportCount: 20
     
 PublishTasks:
 - PublishPowerShellModule:

@@ -94,6 +94,11 @@ function Invoke-WhiskeyPester4Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
+    [int]$describeDurationCount = 0
+    $describeDurationCount = $TaskParameter['DescribeDurationReportCount']
+    [int]$itDurationCount = 0
+    $itDurationCount = $TaskParameter['ItDurationReportCount']
+
     $testIdx = 0
     $outputFileNameFormat = 'pester-{0:00}.xml'
     while( (Test-Path -Path (Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx))) )
@@ -112,13 +117,33 @@ function Invoke-WhiskeyPester4Task
         $script = $using:Path
         $pesterModulePath = $using:pesterModulePath
         $outputFile = $using:outputFile
+        [int]$describeCount = $using:describeDurationCount
+        [int]$itCount = $using:itDurationCount
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
                                         Import-Module -Name $pesterModulePath
                                     }
 
-        Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
+        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
+
+        $result.TestResult | 
+            Group-Object 'Describe' |
+            ForEach-Object {
+                $totalTime = [TimeSpan]::Zero
+                $_.Group | ForEach-Object { $totalTime += $_.Time }
+                [pscustomobject]@{
+                                    Describe = $_.Name;
+                                    Duration = $totalTime
+                                }
+            } | Sort-Object -Property 'Duration' -Descending |
+            Select-Object -First $describeCount |
+            Format-Table -AutoSize
+
+        $result.TestResult |
+            Sort-Object -Property 'Time' -Descending |
+            Select-Object -First $itCount |
+            Format-Table -AutoSize -Property 'Describe','Name','Time'
     } 
     
     do
