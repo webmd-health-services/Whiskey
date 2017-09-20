@@ -36,6 +36,15 @@ function Invoke-WhiskeyNUnit2Task
     
     $package = 'NUnit.Runners'
     $version = '2.6.4'
+    if( $TaskParameter['Version'] )
+    {
+        $version = $TaskParameter['Version']
+        if( $version -notlike '2.*' )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 2.x version of NUnit.' -f $TaskParameter['Version'])
+        }
+    }
+
     $openCoverVersionArg  = @{}
     $reportGeneratorVersionArg = @{}
     if( $TaskParameter['OpenCoverVersion'] )
@@ -99,18 +108,30 @@ function Invoke-WhiskeyNUnit2Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
     }
 
-    $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
-    if( -not (Test-Path -Path $openCoverPath -PathType Container))
+    $openCoverRoot = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+    if( -not (Test-Path -Path $openCoverRoot -PathType Container))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package OpenCover {0}.' -f $version)
     }
-    $openCoverPath = Join-Path -Path $openCoverPath -ChildPath 'tools'
-    $openCoverConsolePath = Join-Path -Path $openCoverPath -ChildPath 'OpenCover.Console.exe' -Resolve
-
-    $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
-    if( -not (Test-Path -Path $reportGeneratorPath -PathType Container))
+    $openCoverPath = Get-ChildItem -Path $openCoverRoot -Filter 'OpenCover.Console.exe' -Recurse |
+                        Select-Object -First 1 |
+                        Select-Object -ExpandProperty 'FullName'
+    if( -not (Test-Path -Path $openCoverPath -PathType Leaf) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find OpenCover.Console.exe in OpenCover NuGet package at ''{0}''.' -f $openCoverRoot)
+    }
+
+    $reportGeneratorRoot = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+    if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container))
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package ReportGenerator.' -f $version)
+    }
+    $reportGeneratorPath = Get-ChildItem -Path $reportGeneratorRoot -Filter 'ReportGenerator.exe' -Recurse |
+                                Select-Object -First 1 |
+                                Select-Object -ExpandProperty 'FullName'
+    if( -not (Test-Path -Path $reportGeneratorPath -PathType Leaf) )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find ReportGenerator.exe in ReportGenerator NuGet package at ''{0}''.' -f $reportGeneratorRoot)
     }
 
     if( $TaskContext.ShouldInitialize() )
@@ -133,9 +154,6 @@ function Invoke-WhiskeyNUnit2Task
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
     $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $TaskContext.TaskIndex)
 
-    $reportGeneratorPath = Join-Path -Path $reportGeneratorPath -ChildPath 'tools'
-    $reportGeneratorConsolePath = Join-Path -Path $reportGeneratorPath -ChildPath 'ReportGenerator.exe' -Resolve
-    
     $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
     New-Item -Path $coverageReportDir -ItemType 'Directory' -Force | Out-Null
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
@@ -161,12 +179,12 @@ function Invoke-WhiskeyNUnit2Task
     $nunitArgs = "\""${pathString}\"" /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
     if( -not $disableCodeCoverage )
     {
-        & $openCoverConsolePath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
+        & $openCoverPath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
         $testsFailed = $LastExitCode;
-        & $reportGeneratorConsolePath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir" $reportGeneratorArgs
+        & $reportGeneratorPath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir" $reportGeneratorArgs
         if( $LastExitCode -or $testsFailed )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverConsolePath,$LastExitCode)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverPath,$LastExitCode)
         }
     }
     else

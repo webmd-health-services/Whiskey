@@ -104,6 +104,15 @@ function Invoke-WhiskeyNUnit3Task
     $nunitPackage = 'NUnit.ConsoleRunner'
     # Due to a bug in NuGet we can't search for and install packages with wildcards (e.g. 3.*), so we're hardcoding a version for now. See Resolve-WhiskeyNuGetPackageVersion for more details.
     $nunitVersion = '3.7.0'
+    if( $TaskParameter['Version'] )
+    {
+        $nunitVersion = $TaskParameter['Version']
+        if( $nunitVersion -notlike '3.*' )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 3.x version of NUnit.' -f $TaskParameter['Version'])
+        }
+    }
+
     $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit3-{0:00}.xml' -f $TaskContext.TaskIndex)
     $nunitReportParam = '--result={0}' -f $nunitReport
 
