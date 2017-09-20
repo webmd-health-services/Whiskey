@@ -2,12 +2,10 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies'
-
-# Build the assemblies that are used for these NUnit tests
-$taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory (Join-Path -Path $env:TEMP -ChildPath '.output')
-$taskParameter = @{ 'Path' = @('NUnit3PassingTest\NUnit3PassingTest.sln','NUnit3FailingTest\NUnit3FailingTest.sln') }
-Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'MSBuild'
+# Build the assemblies that use NUnit3. Only do this once.
+$latestNUnit3Version = '3.7.0'
+$taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit3.yml')
+Invoke-WhiskeyBuild -Context $taskContext
 
 $argument = $null
 $clean = $false
@@ -46,8 +44,13 @@ function Init
     $script:testFilter = $null
     $script:reportGeneratorVersion = $null
     $script:reportGeneratorArgument = $null
+    $script:nunitVersion = $null
 
-    $script:outputDirectory = Join-Path -Path $TestDrive -ChildPath '.output'
+    $script:buildRoot = $TestDrive.FullName
+
+    $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
+
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit3*\bin\*\*') -Destination $buildRoot
 }
 
 function Get-NunitXmlElement
@@ -70,11 +73,6 @@ function GivenArgument
         $Argument
     )
     $script:argument = $Argument
-}
-
-function GivenClean
-{
-    $script:clean = $true
 }
 
 function GivenInitialize
@@ -124,12 +122,12 @@ function GivenPath
 }
 function GivenPassingPath
 {
-    $script:path = 'NUnit3PassingTest\bin\Debug\NUnit3PassingTest.dll'
+    $script:path = 'NUnit3PassingTest.dll'
 }
 
 function GivenFailingPath
 {
-    $script:path = 'NUnit3FailingTest\bin\Debug\NUnit3FailingTest.dll'
+    $script:path = 'NUnit3FailingTest.dll'
 }
 
 function GivenFramework
@@ -149,6 +147,23 @@ function GivenTestFilter
 
     $script:testFilter = $Filter
 }
+
+function GivenPackageInstalled
+{
+    param(
+        $Name,
+        $Version
+    )
+
+    $versionParam = @{ }
+    if( $Version )
+    {
+        $versionParam['Version'] = $Version
+    }
+
+    Install-WhiskeyTool -NuGetPackageName $Name @versionParam -DownloadRoot $buildRoot
+}
+
 function GivenReportGeneratorVersion
 {
     param(
@@ -167,12 +182,24 @@ function GivenReportGeneratorArgument
     $script:reportGeneratorArgument = $Argument
 }
 
+function GivenVersion
+{
+    param(
+        $Version
+    )
+
+    $script:nunitVersion = $Version
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
-    param()
+    param(
+        [Switch]
+        $InCleanMode
+    )
 
-    $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
+    $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName -ForOutputDirectory $outputDirectory
 
     $taskParameter = @{}
 
@@ -226,23 +253,26 @@ function WhenRunningTask
         $taskParameter['CoverageFilter'] = $coverageFilter
     }
 
-    if ($clean)
+    if( $nunitVersion )
+    {
+        $taskParameter['Version'] = $nunitVersion
+    }
+
+    if ($InCleanMode)
     {
         $taskContext.RunMode = 'Clean'
         
-        # Ensure we have packages to cleanup in when run in Clean mode
-        Install-WhiskeyTool -NuGetPackageName 'NUnit.ConsoleRunner' -Version '3.7.0' -DownloadRoot $buildRoot
-        Install-WhiskeyTool -NuGetPackageName 'OpenCover' -Version $openCoverVersion -DownloadRoot $buildRoot
-        Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version $reportGeneratorVersion -DownloadRoot $buildRoot
-        # Install an extra version so we can make sure only specified versions get cleaned up
-        Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version '2.5.8' -DownloadRoot $buildRoot
+        ## Ensure we have packages to cleanup in when run in Clean mode
+        #Install-WhiskeyTool -NuGetPackageName 'NUnit.ConsoleRunner' -Version '3.7.0' -DownloadRoot $buildRoot
+        #Install-WhiskeyTool -NuGetPackageName 'OpenCover' -Version $openCoverVersion -DownloadRoot $buildRoot
+        #Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version $reportGeneratorVersion -DownloadRoot $buildRoot
+        ## Install an extra version so we can make sure only specified versions get cleaned up
+        #Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version '2.5.8' -DownloadRoot $buildRoot
     }
 
     if ($initialize)
     {
         $taskContext.RunMode = 'Initialize'
-
-        Remove-Item -Path (Join-Path -Path $buildRoot -ChildPath 'packages') -Recurse -Force
     }
 
     try 
@@ -254,58 +284,56 @@ function WhenRunningTask
         $script:failed = $true
         Write-Error -ErrorRecord $_
     }
-
 }
 
-function ThenPackagesCleanedUp
+function ThenPackageInstalled
 {
-    $packagesPath = Join-Path -Path $buildRoot -ChildPath 'packages'
+    param(
+        $PackageDirectoryName
+    )
 
-    $nunitPackage = 'NUnit.ConsoleRunner.3.7.0'
-    $nunitConsolePath = Join-Path -Path $packagesPath -ChildPath $nunitPackage
-    It ('should clean up the {0} package' -f $nunitPackage) {
-        $nunitConsolePath | Should -Not -Exist
+    It ('should not uninstall package ''{0}''' -f $PackageDirectoryName) {
+        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $PackageDirectoryName) | Should -Exist
     }
+}
 
-    $openCoverPackage = 'OpenCover.{0}' -f $openCoverVersion
-    $openCoverPath = Join-Path -Path $packagesPath -ChildPath $openCoverPackage
-    It ('should clean up the {0} package' -f $openCoverPackage) {
-        $openCoverPath | Should -Not -Exist
+function ThenPackageNotInstalled
+{
+    param(
+        $PackageDirectoryName
+    )
+
+    It ('should uninstall package ''{0}''' -f $PackageDirectoryName) {
+        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $PackageDirectoryName) | Should -Not -Exist
     }
-
-    $reportGeneratorPackage = 'ReportGenerator.{0}' -f $reportGeneratorVersion
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath $reportGeneratorPackage
-    It ('should clean up the {0} package'-f $reportGeneratorPackage) {
-        $reportGeneratorPath | Should -Not -Exist
-    }
-
-    $extraReportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.2.5.8'
-    It 'should leave the ReportGenerator.2.5.8 package' {
-        $extraReportGeneratorPath | Should -Exist
-    }
-
 }
 
 function ThenPackagesDownloaded
 {
-    $packagesPath = Join-Path -Path $buildRoot -ChildPath 'packages'
+    ThenPackageInstalled ('NUnit.ConsoleRunner.{0}' -f $latestNUnit3Version)
+    ThenPackageInstalled ('OpenCover.{0}' -f $openCoverVersion)
+    ThenPackageInstalled ('ReportGenerator.{0}' -f $reportGeneratorVersion)
+}
 
-    $nunitPackage = 'NUnit.ConsoleRunner.3.7.0'
-    $nunitConsolePath = Join-Path -Path $packagesPath -ChildPath $nunitPackage
-    It ('should download the {0} package' -f $nunitPackage) {
-        $nunitConsolePath | Should -Exist
+function ThenPackageInstalled
+{
+    param(
+        $Name
+    )
+
+    It ('package ''{0}'' should exist' -f $Name) {
+        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Exist
     }
+}
 
-    $openCoverPackage = 'OpenCover.{0}' -f $openCoverVersion
-    $openCoverPath = Join-Path -Path $packagesPath -ChildPath $openCoverPackage
-    It ('should download the {0} package' -f $openCoverPackage) {
-        $openCoverPath | Should -Exist
-    }
+function ThenPackageNotInstalled
+{
+    param(
+        $Name
+    )
 
-    $reportGeneratorPackage = 'ReportGenerator.{0}' -f $reportGeneratorVersion
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath $reportGeneratorPackage
-    It ('should download the {0} package'-f $reportGeneratorPackage) {
-        $reportGeneratorPath | Should -Exist
+    It ('package ''{0}'' should not exist' -f $Name) {
+        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Not -Exist
     }
 
 }
@@ -468,9 +496,15 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running in Clean mode' {
     Init
     GivenOpenCoverVersion '4.6.519'
     GivenReportGeneratorVersion '2.5.11'
-    GivenClean
-    WhenRunningTask
-    ThenPackagesCleanedUp
+    GivenPackageInstalled 'NUnit.ConsoleRunner'
+    GivenPackageInstalled 'OpenCover' '4.6.519'
+    GivenPackageInstalled 'ReportGenerator' '2.5.11'
+    GivenPackageInstalled 'ReportGenerator' '2.5.8'
+    WhenRunningTask -InCleanMode
+    ThenPackageNotInstalled ('NUnit.ConsoleRunner.{0}' -f $latestNUnit3Version)
+    ThenPackageNotInstalled 'OpenCover.4.6.519'
+    ThenPackageNotInstalled 'ReportGenerator.2.5.11'
+    ThenPackageInstalled 'ReportGenerator.2.5.8'
     ThenNUnitShouldNotRun
     ThenCodeCoverageReportNotCreated
     ThenTaskSucceeded
@@ -488,7 +522,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running in Initialize mode' {
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when missing Path paramter' {
+Describe 'Invoke-WhiskeyNUnit3Task.when missing Path parameter' {
     Init
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run' 
@@ -545,7 +579,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with disabled code c
 
 Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with multiple paths' {
     Init
-    GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3PassingTest.dll','NUnit3PassingTest\bin\Debug\NUnit3PassingTest.dll'
+    GivenPath 'NUnit3PassingTest.dll','NUnit3PassingTest.dll'
     WhenRunningTask
     ThenNUnitReportGenerated
     ThenCodeCoverageReportGenerated
@@ -554,7 +588,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with multiple paths'
 
 Describe 'Invoke-WhiskeyNUnit3Task.when running failing NUnit tests' {
     Init
-    GivenPath 'NUnit3FailingTest\bin\Debug\NUnit3FailingTest.dll', 'NUnit3PassingTest\bin\Debug\NUnit3PassingTest.dll'
+    GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenNUnitReportGenerated
     ThenCodeCoverageReportGenerated
@@ -626,7 +660,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover argum
 }
 Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover coverage filter' {
     Init
-    GivenPath 'NUnit3FailingTest\bin\Debug\NUnit3FailingTest.dll', 'NUnit3PassingTest\bin\Debug\NUnit3PassingTest.dll'
+    GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
     GivenCoverageFilter '-[NUnit3FailingTest]*','+[NUnit3PassingTest]*'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenNUnitReportGenerated
@@ -643,4 +677,22 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with ReportGenerator
     ThenCodeCoverageReportGenerated
     ThenOutput -DoesNotContain 'Initializing report builders'
     ThenTaskSucceeded
+}
+
+Describe 'NUnit3.when using custom version of NUnit 3' {
+    Init
+    GivenPassingPath
+    GivenVersion '3.2.1'
+    WhenRunningTask
+    ThenPackageInstalled 'NUnit.ConsoleRunner.3.2.1'
+    ThenTaskSucceeded
+}
+
+Describe 'NUnit3.when using a non-3 version of NUnit' {
+    Init
+    GivenPassingPath
+    GivenVersion '2.6.4'
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenPackageNotInstalled 'NUnit.ConsoleRunner.*'
+    ThenTaskFailedWithMessage 'isn''t\ a\ valid\ 3\.x\ version\ of\ NUnit'
 }

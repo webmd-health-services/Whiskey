@@ -1,0 +1,6 @@
+
+BuildTasks:
+- MSBuild:
+    Path:
+    - NUnit3FailingTest\*.sln
+    - NUnit3PassingTest\*.sln
