@@ -21,6 +21,7 @@ function Resolve-WhiskeyNuGetPackageVersion
 
     if( -not $Version )
     {
+        Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
         $Version = & $NugetPath list ('packageid:{0}' -f $NuGetPackageName) |
                         Where-Object { $_ -match $NuGetPackageName } |
                         Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
