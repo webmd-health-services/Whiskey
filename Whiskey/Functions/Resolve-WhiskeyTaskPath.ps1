@@ -64,7 +64,11 @@ function Resolve-WhiskeyTaskPath
             }
             else
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist.' -f $PropertyName,$pathIdx,$Path)
+                if( $ErrorActionPreference -ne [Management.Automation.ActionPreference]::Ignore )
+                {
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist.' -f $PropertyName,$pathIdx,$Path)
+                }
+                return
             }
         }
 

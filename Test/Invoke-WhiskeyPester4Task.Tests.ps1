@@ -8,6 +8,27 @@ $pesterPath = $null
 $version = $null
 $taskParameter = @{}
 $failed = $false
+$output = $null
+$describeReportRowCount = 0
+$itReportRowCount = 0
+
+function GivenDescribeDurationReportCount
+{
+    param(
+        $Count
+    )
+
+    $taskParameter['DescribeDurationReportCount'] = $Count
+}
+
+function GivenItDurationReportCount
+{
+    param(
+        $Count
+    )
+
+    $taskParameter['ItDurationReportCount'] = $Count
+}
 
 function GivenTestContext
 {
@@ -30,6 +51,11 @@ function GivenTestContext
     }
 }
 
+function Init
+{
+    $script:taskParameter = @{}
+}
+
 function New-WhiskeyPesterTestContext 
 {
     param()
@@ -45,6 +71,7 @@ function New-WhiskeyPesterTestContext
         return $context
     }
 }
+
 function GivenVersion
 {
     param(
@@ -53,6 +80,7 @@ function GivenVersion
     )
     $Script:taskparameter['version'] = $Version
 }
+
 function GivenInvalidVersion
 {
     $Script:taskparameter['version'] = '4.0.0'
@@ -61,6 +89,7 @@ function GivenInvalidVersion
         -MockWith { return $False }`
         -ParameterFilter { $Path -eq $context.BuildRoot }
 }
+
 function GivenPesterPath
 {
     param(
@@ -75,15 +104,18 @@ function GivenFindModuleFails
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith { return $Null }
     Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null } -ParameterFilter { [string]$FilterScript -eq " `$_.Version -like '4.*' "}
 }
+
 function GivenWithCleanFlag
 {
     $context.RunMode = 'Clean'
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
 }
+
 function GivenWithInitilizeFlag
 {
     $context.RunMode = 'initialize'
 }
+
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
@@ -99,7 +131,7 @@ function WhenPesterTaskIsInvoked
 
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester4'
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester4'
     }
     catch
     {
@@ -107,6 +139,60 @@ function WhenPesterTaskIsInvoked
         Write-Error -ErrorRecord $_
     }
 }
+
+function Get-OutputReportRowCount
+{
+    param(
+        $Regex
+    )
+
+    $report = $output | Out-String
+    $report = $report -split ([regex]::Escape([Environment]::Newline))
+    $reportStarted = $false
+    $rowCount = 0
+    for( $idx = 0; $idx -lt $report.Count; ++$idx )
+    {
+        if( $reportStarted )
+        {
+            if( -not $report[$idx] )
+            {
+                break
+            }
+            $rowCount++
+            continue
+        }
+
+        if( $report[$idx] -match $Regex )
+        {
+            $idx++
+            $reportStarted = $true
+        }
+    }
+    return $rowCount
+}
+
+function ThenDescribeDurationReportHasRows
+{
+    param(
+        $Count
+    )
+
+    It ('should output {0} rows in the Describe Duration Report' -f $Count) {
+        Get-OutputReportRowCount -Regex '\bDescribe\b +\bDuration\b' | Should -Be $Count
+    }
+}
+
+function ThenItDurationReportHasRows
+{
+    param(
+        $Count
+    )
+
+    It ('should output {0} rows in the It Duration Report' -f $Count) {
+        Get-OutputReportRowCount -Regex '\bDescribe\b +\bName\b +\bTime\b' | Should -Be $Count
+    }
+}
+
 function ThenPesterShouldBeInstalled
 {
     param(
@@ -139,7 +225,8 @@ function ThenPesterShouldBeInstalled
     }
 }
 
-function ThenPesterShouldBeUninstalled {
+function ThenPesterShouldBeUninstalled 
+{
     if( -not $script:Taskparameter['Version'] )
     {
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
@@ -223,6 +310,7 @@ function ThenPesterShouldHaveRun
         }
     }
 }
+
 function ThenTestShouldFail
 {
     param(
@@ -237,14 +325,21 @@ function ThenTestShouldFail
     }
 }
 
-function ThenNoPesterTestFileShouldExist {
+function ThenNoPesterTestFileShouldExist 
+{
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
     write-host $testReports
     it 'should not have created any test reports' {
         $testReports | should BeNullOrEmpty
     }
+}
 
+function ThenNoDurationReportPresent
+{
+    It ('should not output a duration report') {
+        $output | Out-String | Should -Not -Match '\bDescribe\b( +\bName\b)? +\b(Duration|Time)\b'
+    }
 }
 
 function ThenTestShouldCreateMultipleReportFiles
@@ -254,6 +349,7 @@ function ThenTestShouldCreateMultipleReportFiles
         Join-Path -Path $context.OutputDirectory -ChildPath 'pester-01.xml' | Should Exist
     }
 }
+
 function ThenFindModuleShouldHaveBeenCalled
 {
     Assert-MockCalled -CommandName 'Find-Module' -Times 1 -ModuleName 'Whiskey'
@@ -261,15 +357,18 @@ function ThenFindModuleShouldHaveBeenCalled
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked 
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
     ThenPesterShouldBeInstalled
+    ThenNoDurationReportPresent
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running failing Pester tests' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'FailingTests'
     GivenVersion '4.0.3'
@@ -279,6 +378,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running failing Pester tests' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running multiple test scripts' {
+    Init
     GivenTestContext
     GivenPesterPath 'FailingTests','PassingTests'
     GivenVersion '4.0.3'
@@ -287,6 +387,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running multiple test scripts' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when run multiple times in the same build' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'  
     GivenVersion '4.0.3'
@@ -298,6 +399,7 @@ Describe 'Invoke-WhiskeyPester4Task.when run multiple times in the same build' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when missing Path Configuration' {
+    Init
     GivenTestContext
     GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
@@ -306,6 +408,7 @@ Describe 'Invoke-WhiskeyPester4Task.when missing Path Configuration' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     WhenPesterTaskIsInvoked
@@ -314,6 +417,7 @@ Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
+    Init
     GivenTestContext
     GivenVersion 'fubar'
     GivenPesterPath -pesterPath 'PassingTests' 
@@ -323,6 +427,7 @@ Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when version of tool doesn''t exist' {
+    Init
     GivenTestContext
     GivenInvalidVersion
     GivenPesterPath -pesterPath 'PassingTests' 
@@ -332,6 +437,7 @@ Describe 'Invoke-WhiskeyPester4Task.when version of tool doesn''t exist' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when a task path is absolute' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'C:\FubarSnafu'
     GivenVersion '4.0.3'
@@ -341,6 +447,7 @@ Describe 'Invoke-WhiskeyPester4Task.when a task path is absolute' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when Find-Module fails' {
+    Init
     GivenTestContext
     GivenFindModuleFails
     GivenPesterPath -pesterPath 'PassingTests'
@@ -351,6 +458,7 @@ Describe 'Invoke-WhiskeyPester4Task.when Find-Module fails' {
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {
+    Init
     GivenTestContext
     GivenVersion '3.4.3'
     GivenPesterPath -pesterPath 'PassingTests' 
@@ -360,6 +468,7 @@ Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {
 
 }
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with Clean Switch' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '4.0.3'
@@ -370,6 +479,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with Clean
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initialization switch' {
+    Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '4.0.3'
@@ -377,4 +487,15 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initi
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
     ThenPesterShouldBeInstalled
+}
+
+Describe 'Pester4.when showing duration reports' {
+    Init
+    GivenTestContext
+    GivenPesterPath -pesterPath 'PassingTests'
+    GivenDescribeDurationReportCount 1
+    GivenItDurationReportCount 1
+    WhenPesterTaskIsInvoked 
+    ThenDescribeDurationReportHasRows 1
+    ThenItDurationReportHasRows 1
 }
