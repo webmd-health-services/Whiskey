@@ -1,6 +1,66 @@
 
 function Publish-WhiskeyBuildMasterPackage
 {
+    <#
+    .SYNOPSIS
+    Creates and deploys a release package in BuildMaster.
+
+    .DESCRIPTION
+    The `PublishBuildMasterPackage` task creates a release package in BuildMaster. By default, it also starts a deployment of the package to the first stage of the release's pipeline. It uses the `New-BMPackage` function from the `BuildMasterAutomation` module to create the package. It uses the `Publish-BMReleasePackage` to start the deployment.
+
+    Set the `ApplicationName` property to the name of the application in BuildMaster where the package should be published. Set the `ReleaseName` property to the name of the release in BuildMaster where the package should be published. Set the `Uri` property to the base URI to BuildMaster. Set the `ApiKeyID` property to the ID of the API key to use when publishing the package to BuildMaster. Use the `Add-WhiskeyApiKey` to add your API key.
+
+    Set the `DeployTo` property to map an SCM branch to its corresponding BuildMaster release where packages should be created and deployed. `BranchName` and `ReleaseName` are required. The task will fail if the current branch is not mapped to an existing release. `StartAtStage` and `SkipDeploy` are optional. By default, a deployment will start at the first stage of a release pipeline and will not be skipped.
+
+    ## Property
+
+    * `ApplicationName` (mandatory): the name of the application in BuildMaster where the package should be published.
+    * `ReleaseName` (mandatory): the name of the release in BuildMaster where the package should be published.
+    * `Uri` (mandatory): the BuildMaster URI where the package should be published.
+    * `ApiKeyID` (mandatory): the ID of the API key to use when publishing the package to BuildMaster. Use the `Add-WhiskeyApiKey` to add your API key.
+    * `PackageVariable`: the variables to configure in BuildMaster unique to this package. By default, the package will not have any package-level variables.
+    * `PackageName`: the name of the package that will be created in BuildMaster. By default, the package will be named "MajorVersion.MinorVersion.PatchVersion"
+    * `StartAtStage`: the stage of the release pipeline where the package should start its deployment. By default, the package will be released to the first stage of the pipeline.
+    * `SkipDeploy`: the release package should be created, but not automatically deployed. By default, the package deployment will be started.
+    
+    ## Examples
+
+    ### Example 1
+
+        PublishTasks:
+        - PublishBuildMasterPackage:
+            ApplicationName: TestApplication
+            ReleaseName: ProdRelease
+            Uri: https://buildmaster.example.com
+            ApiKeyID: buildmaster.example.com
+            
+    Demonstrates the minimal configuration needed to create and deploy a package. In this case, a package will be created on the `ProdRelease` release of the `TestApplication` application at `https://buildmaster.example.com` using the API key with the `buildmaster.example.com` ID. The package will be deployed to the first stage of the release's pipeline.
+
+    ### Example 2
+
+        PublishTasks:
+        - PublishBuildMasterPackage:
+            ApplicationName: TestApplication
+            ReleaseName: ProdRelease
+            Uri: https://buildmaster.example.com
+            ApiKeyID: buildmaster.example.com
+            PackageName: TestPackage
+            StartAtStage: TestStaging
+            
+    In this case, the package will be named `TestPackage` instead of the default "MajorVersion.MinorVersion.PatchVersion". The package will be deployed to `TestStaging` stage of the `ProdRelease` release's pipeline.
+
+    ### Example 3
+
+        PublishTasks:
+        - PublishBuildMasterPackage:
+            ApplicationName: TestApplication
+            ReleaseName: ProdRelease
+            Uri: https://buildmaster.example.com
+            ApiKeyID: buildmaster.example.com
+            SkipDeploy: true
+            
+    In this case, a package will be created on the `ProdRelease` release of the `TestApplication` application. The package will not be deployed because the `SkipDeploy` property is defined.
+    #>
     [CmdletBinding()]
     [Whiskey.Task("PublishBuildMasterPackage")]
     param(
@@ -22,39 +82,10 @@ function Publish-WhiskeyBuildMasterPackage
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApplicationName'' is mandatory. It must be set to the name of the application in BuildMaster where the package should be published.')
     }
     
-    $branch = $TaskContext.BuildMetadata.ScmBranch
-    $releaseName = $null
-    $startAtStage = $null
-    $skipDeploy = $null
-    
-    if( $TaskParameter['DeployTo'] )
-    {
-        $idx = 0
-        Write-Verbose -Message ('DeployTo')
-        :deploy foreach( $item in $TaskParameter['DeployTo'] )
-        {
-            foreach( $wildcard in $item['BranchName'] )
-            {
-                if( $branch -like $wildcard )
-                {
-                    Write-Verbose -Message ('               {0}     -like  {1}' -f $branch,$wildcard)
-                    $releaseName = $item['ReleaseName']
-                    $startAtStage = $item['StartAtStage']
-                    $skipDeploy = $item['SkipDeploy']
-                    break deploy
-                }
-                else
-                {
-                    Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch,$wildcard)
-                }
-            }
-            $idx++
-        }
-    }
-    
+    $releaseName = $TaskParameter['ReleaseName']
     if( -not $releaseName )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ReleaseName'' is mandatory. It must be set to the release name in the BuildMaster application where the package should be published. Use the ''DeployTo'' property to map the current branch to a ''ReleaseName''.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ReleaseName'' is mandatory. It must be set to the release name in the BuildMaster application where the package should be published.')
     }
     
     $buildmasterUri = $TaskParameter['Uri']
@@ -68,7 +99,7 @@ function Publish-WhiskeyBuildMasterPackage
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It should be the ID of the API key to use when publishing the package to BuildMaster. Use the `Add-WhiskeyApiKey` to add your API key.')
     }
-
+    
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $TaskParameter['ApiKeyID'] -PropertyName 'ApiKeyID'
     $buildMasterSession = New-BMSession -Uri $TaskParameter['Uri'] -ApiKey $apiKey
 
@@ -96,17 +127,13 @@ function Publish-WhiskeyBuildMasterPackage
     $package = New-BMPackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables -ErrorAction Stop
     $package | Format-List | Out-String | Write-Verbose
 
-    if( $skipDeploy )
+    if( ConvertFrom-WhiskeyYamlScalar -InputObject $TaskParameter['SkipDeploy'] )
     {
-        Write-Verbose -Message ('''SkipDeploy'' property is configured for the ''{0}'' branch. The BuildMaster release package is ready for manual deployment.' -f $branch)
+        Write-Verbose -Message ('Skipping deploy. SkipDeploy property is true')
     }
     else
     {
-        $optionalParams = @{ }
-        if( $startAtStage )
-        {
-            $optionalParams['Stage'] = $startAtStage
-        }
+        $optionalParams = @{ 'Stage' = $TaskParameter['StartAtStage'] }
         
         $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package @optionalParams -ErrorAction Stop
         $deployment | Format-List | Out-String | Write-Verbose

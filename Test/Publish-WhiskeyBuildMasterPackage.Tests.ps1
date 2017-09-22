@@ -9,8 +9,7 @@ $defaultApiKeyID = 'BuildMaster'
 $defaultApiKey = 'fubarsnafu'
 $defaultAppName = 'application'
 $defaultReleaseId = 483
-$defaultScmBranch = 'develop'
-$defaultPackageVariable = @{ 'PackageVariable' = @{ 'One' = 'Two'; 'Three' = 'Four'; } }
+$packageVariable = @{ 'PackageVariable' = @{ 'One' = 'Two'; 'Three' = 'Four'; } }
 $context = $null
 $version = $null
 $releaseName = $null
@@ -20,8 +19,9 @@ $releaseId = $null
 $apiKeyID = $null
 $apiKey = $null
 $uri = $null
-$deployToMap = $null
 $packageName = $null
+$startAtStage = $null
+$skipDeploy = $null
 
 function GivenNoApiKey
 {
@@ -41,12 +41,7 @@ function GivenNoApplicationName
 
 function GivenNoReleaseName
 {
-    $script:deployToMap = @{ 'BranchName' = $defaultScmBranch; 'ReleaseName' = $null }
-}
-
-function GivenNoDeployTo
-{
-    $script:deployToMap = $null
+    $script:releaseName = $null
 }
 
 function GivenNoRelease
@@ -79,16 +74,6 @@ function GivenProperty
     $script:taskParameter = $Property
 }
 
-function GivenDeployTo
-{
-    param(
-        [Parameter(Mandatory=$true,Position=0)]
-        $DeployTo
-    )
-    
-    $script:deployToMap = $DeployTo
-}
-
 function GivenPackageName
 {
     param(
@@ -97,6 +82,24 @@ function GivenPackageName
     )
     
     $script:packageName = $Name
+}
+
+function GivenStartAtStage
+{
+    param(
+        [Parameter(Mandatory=$true,Position=0)]
+        $Stage
+    )
+    
+    $script:startAtStage = $Stage
+}
+
+function GivenSkipDeploy
+{
+    param(
+    )
+    
+    $script:skipDeploy = 'true'
 }
 
 function Init
@@ -108,9 +111,11 @@ function Init
     $script:apiKeyID = $defaultApiKeyID
     $script:apiKey = $defaultApiKey
     $script:releaseId = $defaultReleaseId
+    $script:packageVariable = @{ 'PackageVariable' = @{ 'One' = 'Two'; 'Three' = 'Four'; } }
     $script:taskParameter = @{ }
-    $script:deployToMap = @{ 'BranchName' = $defaultScmBranch; 'ReleaseName' = $releaseName }
     $script:packageName = $null
+    $script:startAtStage = $null
+    $script:skipDeploy = 'false'
 }
 
 function WhenCreatingPackage
@@ -129,8 +134,12 @@ function WhenCreatingPackage
         $taskParameter['ApplicationName'] = $appName
     }
 
+    if( $releaseName )
+    {
+        $taskParameter['ReleaseName'] = $releaseName
+    }
+    
     $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
-    $context.BuildMetadata.ScmBranch = $defaultScmBranch
     
     if( $apiKeyID )
     {
@@ -142,15 +151,20 @@ function WhenCreatingPackage
     {
         $taskParameter['Uri'] = $uri
     }
-
-    if( $deployToMap )
-    {
-        $taskParameter['DeployTo'] = $deployToMap
-    }
-
+    
     if( $packageName )
     {
         $taskParameter['PackageName'] = $packageName
+    }
+
+    if( $startAtStage )
+    {
+        $taskParameter['StartAtStage'] = $startAtStage
+    }
+
+    if( $skipDeploy )
+    {
+        $taskParameter['SkipDeploy'] = $skipDeploy
     }
     
     $package = $mockPackage
@@ -275,7 +289,7 @@ function ThenPackageDeployed
     else
     {
         It 'should deploy package to first stage of release pipeline' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq $null }
+            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq '' }
         }
     }
 
@@ -333,37 +347,29 @@ function ThenTaskFails
     }
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when current branch is mapped to release' {
+Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
     Init
-    GivenProperty $defaultPackageVariable
+    GivenProperty $packageVariable
     WhenCreatingPackage
     ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when branch wildcard is mapped to release' {
+Describe 'Publish-WhiskeyBuildMasterPackage.when creating package with defined name' {
+    $packageNameOverride = 'PackageABCD'
     Init
-    GivenDeployTo @{ 'BranchName' = 'dev*'; 'ReleaseName' = $releaseName }
-    GivenProperty $defaultPackageVariable
+    GivenPackageName $packageNameOverride
+    GivenProperty $packageVariable
     WhenCreatingPackage
-    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
-}
-
-Describe 'Publish-WhiskeyBuildMasterPackage.when current branch is one of multiple mapped to release' {
-    Init
-    GivenDeployTo @( @{ 'BranchName' = 'default' ; 'ReleaseName' = $releaseName }, @{ 'BranchName' = @( 'release', 'feature/*', 'develop' ); 'ReleaseName' = $releaseName } )
-    GivenProperty $defaultPackageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+    ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
 }
 
 Describe 'Publish-WhiskeyBuildMasterPackage.when deploying release package to specific stage' {
     $releaseStage = 'Test'
     Init
-    GivenDeployTo @{ 'BranchName' = 'develop'; 'ReleaseName' = $releaseName; 'StartAtStage' = $releaseStage }
-    GivenProperty $defaultPackageVariable
+    GivenStartAtStage $releaseStage
+    GivenProperty $packageVariable
     WhenCreatingPackage
     ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
@@ -371,21 +377,11 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when deploying release package to sp
 
 Describe 'Publish-WhiskeyBuildMasterPackage.when creating package without starting deployment' {
     Init
-    GivenDeployTo  @{ 'BranchName' = 'develop'; 'ReleaseName' = $releaseName; 'SkipDeploy' = $true }
-    GivenProperty $defaultPackageVariable
+    GivenSkipDeploy
+    GivenProperty $packageVariable
     WhenCreatingPackage
     ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
     ThenPackageNotDeployed
-}
-
-Describe 'Publish-WhiskeyBuildMasterPackage.when creating package with defined name' {
-    $packageNameOverride = 'PackageABCD'
-    Init
-    GivenPackageName $packageNameOverride
-    GivenProperty $defaultPackageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
 }
 
 Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in BuildMaster' {
@@ -402,14 +398,6 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is mi
     WhenCreatingPackage -ErrorAction SilentlyContinue
     ThenPackageNotCreated
     ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
-}
-
-Describe ('Publish-WhiskeyBuildMasterPackage.when DeployTo property is missing') {
-    Init
-    GivenNoDeployTo
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
 }
 
 Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missing') {
