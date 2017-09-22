@@ -31,7 +31,6 @@ function Invoke-WhiskeyNodeTask
     * Runs `npm install` to install your dependencies.
     * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
     * Saves a report on each dependency's license.
-    * Prunes developer dependencies (if running under a build server).
 
     .EXAMPLE
     Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScript = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
@@ -235,21 +234,6 @@ BuildTasks:
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
         ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
-
-        $productionArg = ''
-        $productionArgDisplay = ''
-        if( $TaskContext.ByBuildServer )
-        {
-            $productionArg = '--production'
-            $productionArgDisplay = ' --production'
-        }
-
-        Update-Progress -Status ('npm prune{0}' -f $productionArgDisplay) -Step ($stepNum++)
-        & $nodePath $npmGlobalPath 'prune' $productionArg $noColorArg
-        if( $LASTEXITCODE )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm prune{0}` failed, returning exist code {1}.' -f $productionArgDisplay,$LASTEXITCODE)
-        }
     }
     finally
     {
