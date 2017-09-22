@@ -41,60 +41,46 @@ Version: 0.0.0
 # property is used.
 # VersionFrom: 'Whiskey/Whiskey.ps1'
 
-# The branches on which you want to publish a package to ProGet and start a deployment 
-# pipeline in BuildMaster, when running on the build server. If you omit the
-# `PublishOn` property (i.e. by default), publishing will happen on the `develop`, 
-# `release`, and `master` branches and any branch that starts with `release/`.
+# The `PublishOn` property is a list of branch names. After a successful build on a 
+# branch that matches any name in this list, the `PublishTasks` pipeline will run. With 
+# an empty `PublishOn` property, your `PublishTasks` pipeline will never run.
 #
-# You can't publish something unless you create a package, so make sure your 
-# `BuildTasks` property contains a `ProGetUniversalPackage` task.
-#
-# You may use regular expressions. Make sure to escape any regular expression 
-# operators. If the entire branch name matches one of the items in this list, your 
-# package will be published. For example, given the example list below, your package 
-# would get published on any of these branches:
-# 
-# * develop
-# * release
-# * release/2.0
-# * master
-#
-# Your package would *not* get published on any of these branches:
-#
-# * development
-# * released
-# * master/hotfix
-#
-# The list of branches gets converted to a regular expression using this format:
-# `^(ITEM|ITEM|ITEM)$`.
+# Wildcards are supported. For example, if `release/*` is in the list, the 
+# `PublishTasks` pipeline would run on the `release/6.3` branch but not the `release`
+# branch.
 PublishOn:
- - develop
- - release
- - release/.*
  - master
  
-# PrereleaseMap is a list of branches to prerelease identifier mappings. Each item
-# is a name/value pair. The name is a regular expression and the value is the 
-# prerelease identifier. If a branch matches the regular expression, its prerelease
-# identifier and an auto-generated version number are automatically added to your 
-# package's semantic version. 
+# The `PrereleaseMap` property is used to add a prerelease identifiers to your version 
+# during builds on specific branches. It is a list of key/value pairs, where each key is the 
+# name of a branch and the value is the prerelease identifier to use in builds on that
+# branch. The branch name may contain wildcards to match multiple branches. A unique
+# prerelease number is appended to the end of the identifier, e.g. `alpha.300`. You have
+# no control over the prerelease version number. It will not be duplicated across 
+# builds/branches. It is not guaranteed to increment by one between builds or start at 
+# one. 
 #
-# You have no control over the prereleae version number.It will not be duplicated 
-# across builds/branches. It is not guaranteed to increment by one between builds 
-# or start at 1. 
+# If a branch matches multiple keys, the first match/prerelease identifer is used. 
+#PrereleaseMap:
+#- "develop": beta
+#- "feature/*": alpha
+
+# The `Variable` property is used to define custom variables that you can use in 
+# task property values and in the `Version` property value. It should be a map of 
+# key/value pairs. The keys is the variable's name. The value is the variable's value.
+# Variable names are case-insensitive.
 #
-# If a branch matches multiple regular expressions, the first match/prerelease 
-# identifer is used. 
-#
-# In the example below, if a branch contains the word `alpha`, and the version
-# number is 3.2.1 and the prerelease version is 43, the full semantic version would
-# be `3.2.1-alpha.43`. You must also add the branch to the PublishOn element, 
-# otherwise your prerelease package will never get published.
-PrereleaseMap:
-- "\balpha\b": alpha
+# You can use a variable's value in your whiskey.yml file like this: `$(KEY)`. By 
+# default, all environment variables are available as variables. Also, Whiskey defines 
+# its own set of built-in variables. See the `Resolve-WhiskeyVarible` function's help 
+# topic for the list of built-in variables. Variables defined here take precedence over 
+# environment variables and Whiskey's built-in variables. You can also add variables 
+# with the `Add-WhiskeyVariable` function.
+Variable:
+    SomeVariable: SomeValue
 
 # The `PublishBuildStatusTo` is a list of publishers where you wnat build status
-# information published. Status are published when a build starts, succeeds, and fails. 
+# information published. Status is published when a build starts, succeeds, and fails. 
 # Build statuses are only published when running under a build server. You can only
 # report this information to Bitbucket Server.
 #
