@@ -170,7 +170,7 @@ function Invoke-WhiskeyPester4Task
             } | Sort-Object -Property 'Duration' -Descending |
             Select-Object -First $describeCount |
             Format-Table -AutoSize
-
+        
         $result.TestResult |
             Sort-Object -Property 'Time' -Descending |
             Select-Object -First $itCount |
