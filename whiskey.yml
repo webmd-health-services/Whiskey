@@ -8,6 +8,7 @@ BuildTasks:
     Path: init.ps1
 - Pester4:
     Path: Test\*.Tests.ps1
+    DescribeDurationReportCount: 20
     
 PublishTasks:
 - PublishPowerShellModule:

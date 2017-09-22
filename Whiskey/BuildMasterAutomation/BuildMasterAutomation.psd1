@@ -12,7 +12,7 @@
     RootModule = 'BuildMasterAutomation.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.2.1'
+    ModuleVersion = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID = 'cc5a1865-e5f8-45f2-b0d3-317a1611a965'
@@ -72,6 +72,7 @@ The BuildMasterAutomation module is a PowerShell module for working with BuildMa
                             'Add-BMObjectParameter',
                             'Disable-BMApplication',
                             'Get-BMApplication',
+                            'Get-BMApplicationGroup',
                             'Get-BMRelease',
                             'Get-BMPackage',
                             'Invoke-BMNativeApiMethod',
@@ -121,9 +122,10 @@ The BuildMasterAutomation module is a PowerShell module for working with BuildMa
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-Fixed: Calling any REST API that has a body in its request fails under PowerShell 5.1.
+* Created `Get-BMApplicationGroup` function to retrieve application groups.
+* Updated `New-BMApplication` function to allow defining an application group.
+* Updated `Publish-BMReleasePackage` function to support deploying to a specific stage of a release pipeline.
 '@
-
         } # End of PSData hashtable
 
     } # End of PrivateData hashtable

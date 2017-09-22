@@ -142,16 +142,17 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-You can now define custom variables in your whiskey.yml file using the new `Variable` property, e.g.
-    
-   Variable:
-       VERSION: 6.4
+# Pester4 Task
 
-defines a `VERSION` variable whose value is `6.4`. You would reference this variable elsewhere in your whiskey.yml file as `$(VERSION)`. Variable names are case-insensitive.
+The `Pester4` task can now show a Describe Duration Report and an It Duration Report. These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
 
-You can now escape variables in a value by prefixing the variable with two dollar signs, e.g. $$(COMPUTERNAME) will resolve to `$(COMPUTERNAME)`.
+# Bug Fixes
 
-You can now nest variables. Given variable `FUBAR` whose value is `$(COMPUTERNAME)`, variable `$(FUBAR)` would resolve to the name of the current computer.
+* The `Pester3` and `Pester4` tasks always downloaded Pester even if it was already installed.
+
+# New Tasks
+
+Created a `Delete` task for deleting files and directories.
 '@
         } # End of PSData hashtable
 
