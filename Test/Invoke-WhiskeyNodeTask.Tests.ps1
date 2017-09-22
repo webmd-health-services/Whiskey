@@ -230,17 +230,8 @@ function WhenBuildIsStarted
                             ForEach-Object { Join-Path -Path $script:InWorkingDirectory -ChildPath ('node_modules\{0}' -f $_)  }
 
     
-    if( $script:ByDeveloper )
-    {
-        It 'should not prune dev dependencies' {
-            $devDependencyPaths | Should Exist
-        }
-    }
-    else 
-    {
-        It 'should prune dev dependencies' {
-            $devDependencyPaths | Should Not Exist
-        }
+    It 'should not prune dev dependencies' {
+        $devDependencyPaths | Should Exist
     }
 }
 
@@ -404,11 +395,14 @@ function ThenBuildFails
     }
 }
 
-function ThenNpmCleanedUp
+function ThenLocalNpmInstalled
 {
-    It 'should remove local version of npm that was used' {
-        (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules\npm') | Should Not Exist
+    It 'should install a local version of npm' {
+        (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules\npm') | Should -Exist
     }
+
+    # npm module path in TestDrive is too long for Pester to cleanup with Remove-Item
+    & cmd /C rmdir /S /Q (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules\npm')
 }
 
 function ThenNodeModulesAreInstalled {
@@ -457,7 +451,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'fail'
     Initialize-NodeProject 
-    WhenBuildIsStarted
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -NpmScript 'fail'
     cleanup
 }
@@ -467,7 +461,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
     GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     Initialize-NodeProject 
-    WhenBuildIsStarted
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'npm\ install\b.*failed'
     cleanup
 }
@@ -500,7 +494,7 @@ Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
     Initialize-NodeProject 
-    WhenBuildIsStarted
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'name is missing or doesn''t have a value'
     cleanup
 }
@@ -534,7 +528,7 @@ Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
     Initialize-NodeProject 
-    WhenBuildIsStarted
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'WorkingDirectory\[0\] .* does not exist'
     cleanup
 }
@@ -570,7 +564,7 @@ Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
     GivenNpmRegistryUri -registry 'http://thisis@abadurl.notreal/'
     GivenNpmScriptsToRun 'build','test'
     Initialize-NodeProject 
-    WhenBuildIsStarted
+    WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'NPM command `npm install` failed with exit code 1.'
     cleanup
 }
@@ -618,7 +612,7 @@ Describe 'Invoke-WhiskeyNodeTask.when given version of npm' {
     Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
-    ThenNpmCleanedUp
+    ThenLocalNpmInstalled
     cleanup
 }
 

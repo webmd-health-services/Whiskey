@@ -142,6 +142,14 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+# Node Task
+
+No longer runs `npm prune` at end of task.
+
+# PublishNodeModule Task
+
+Runs `npm prune --production` before publishing the node module with `npm publish`. If specified, the task will use the version of npm in the package.json's `engines.npm` field.
+
 # Pester4 Task
 
 The `Pester4` task can now show a Describe Duration Report and an It Duration Report. These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
