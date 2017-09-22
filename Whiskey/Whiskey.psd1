@@ -149,6 +149,10 @@ The `Pester4` task can now show a Describe Duration Report and an It Duration Re
 # Bug Fixes
 
 * The `Pester3` and `Pester4` tasks always downloaded Pester even if it was already installed.
+
+# New Tasks
+
+Created a `Delete` task for deleting files and directories.
 '@
         } # End of PSData hashtable
 

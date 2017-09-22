@@ -56,7 +56,11 @@ function New-BMApplication
 
         [Switch]
         # Allow multiple active builds.
-        $AllowMultipleActiveBuilds
+        $AllowMultipleActiveBuilds,
+
+        [string]
+        # The application group to assign. By default, the application will be ungrouped.
+        $ApplicationGroupId
     )
 
     Set-StrictMode -Version 'Latest'
@@ -79,6 +83,11 @@ function New-BMApplication
         $parameters['AllowMultipleActiveBuilds_Indicator'] = $true;
     }
 
+    if( $ApplicationGroupId )
+    {
+        $parameters['ApplicationGroup_Id'] = $ApplicationGroupId
+    }
+    
     $appID = Invoke-BMNativeApiMethod -Session $Session -Name 'Applications_CreateApplication' -Parameter $parameters
     if( -not $appID )
     {
