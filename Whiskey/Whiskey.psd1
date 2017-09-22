@@ -142,39 +142,16 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-# Node Task
-
-No longer runs `npm prune` at end of task.
-
-# PublishNodeModule Task
-
-Runs `npm prune --production` before publishing the node module with `npm publish`. If specified, the task will use the version of npm in the package.json's `engines.npm` field.
-
-# NUnit2 and NUnit3 Tasks
-
-You can now specify a custom version of NUnit task should use by setting the `Version` property to the version you want to use.
-
-# PublishBuildMaster Task:
-
-The PublishBuildMasterPackage task now supports:
-  
-* customizing package names with the `PackageName` property. The default value will continue to be the major, minor, and patch portions of the version number, e.g. `6.4.34`.
-* skipping/preventing a package from deploying with the `SkipDeploy` property. Set it to `true` and a package will be created in BuildMaster, but not deployed anywhere.
-* starting a deploy at a specific stage of a release's pipeline. Set the `StartAtStage` property to the name of the stage you want the deploy to start at. In order for a deploy to start at any stage in a pipeline, the "Enforce pipeline stage order for deployments" setting must be off. This can be set in the BuildMaster UI in the pipeline's Edit panel.
-
-# Pester4 Task
-
-* The `Pester4` task can now show a Describe Duration Report and an It Duration Report. These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
-* Fixed: Pester module was always downloaded even if it was already installed.
-
-# Pester3 Task
-
-Fixe: Pester module was always downloaded even if it was already installed.
-
-# New Task
-
-Created a `Delete` task for deleting files and directories.
-
+* The `Node` task no longer runs `npm prune`.
+* The `PublishNodeModule` task now runs `npm prune --production` before publishing the node module.
+* You can now specify a custom version of NUnit that the `NUnit2` and `NUnit3` tasks should use by setting the `Version` property to the version you want to use.
+* The `PublishBuildMasterPackage` task now supports:
+  * customizing package names with the `PackageName` property. The default value will continue to be the major, minor, and patch portions of the version number, e.g. `6.4.34`.
+  * skipping/preventing a package from deploying with the `SkipDeploy` property. Set it to `true` and a package will be created in BuildMaster, but not deployed anywhere.
+  * starting a deploy at a specific stage of a release's pipeline. Set the `StartAtStage` property to the name of the stage you want the deploy to start at. In order for a deploy to start at any stage in a pipeline, the "Enforce pipeline stage order for deployments" setting must be off. This can be set in the BuildMaster UI in the pipeline's Edit panel.
+* The `Pester4` task can now show a "Describe Duration Report" and an "It Duration Report". These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
+* Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
+* Created a `Delete` task for deleting files and directories.
 '@
         } # End of PSData hashtable
 
