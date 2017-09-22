@@ -293,9 +293,7 @@ function Initialize-NodeProject
     if( -not $script:DevDependency )
     {
         $script:DevDependency = @(
-                            '"jit-grunt": "^0.10.0"',
-                            '"grunt": "^1.0.1"',
-                            '"grunt-cli": "^1.2.0"'
+                            '"rimraf": "^2.6.2"'
                           )
     }
 
@@ -317,9 +315,9 @@ function Initialize-NodeProject
     },
     "private": true,
     "scripts": {
-        "build": "grunt build",
-        "test": "grunt test",
-        "fail": "grunt fail"
+        "build": "node build",
+        "test": "node test",
+        "fail": "node fail"
     },
 
     "dependencies": {
@@ -332,25 +330,17 @@ function Initialize-NodeProject
 }
 "@ | Set-Content -Path $packageJsonPath
 
-    $gruntfilePath = Join-Path -Path $workingDir -ChildPath 'Gruntfile.js'
     @'
-'use strict';
-module.exports = function(grunt) {
-    require('jit-grunt')(grunt);
+console.log('BUILDING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'build.js')
 
-    grunt.registerTask('build', '', function(){
-        grunt.file.write('build', '');
-    });
+    @'
+console.log('TESTING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'test.js')
 
-    grunt.registerTask('test', '', function(){
-        grunt.file.write('test', '');
-    });
-
-    grunt.registerTask('fail', '', function(){
-        grunt.fail.fatal('I failed!');
-    });
-}
-'@ | Set-Content -Path $gruntfilePath
+    @'
+throw ('FAILING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'fail.js')
 
     $byWhoArg = @{  }
     if( $script:ByDeveloper )
