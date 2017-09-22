@@ -64,7 +64,7 @@ function Install-WhiskeyTool
 
         $expectedPath = Join-Path -Path $modulesRoot -ChildPath $ModuleName
 
-        if( (Test-Path -Path $expectedPath -PathType Leaf) )
+        if( (Test-Path -Path $expectedPath -PathType Container) )
         {
             Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
             return
