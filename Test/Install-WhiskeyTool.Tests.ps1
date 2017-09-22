@@ -246,10 +246,23 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
 }
 
 Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
-        Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
-        Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-        It 'should enable NuGet package restore' {
-         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
-         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
-        }
+    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
+    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+    It 'should enable NuGet package restore' {
+        Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
+        Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
+    }
+}
+
+Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
+    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '4.0.6'
+    $info = Get-ChildItem -Path $TestDrive.FullName -Filter 'Pester.psd1' -Recurse
+    $manifest = Test-ModuleManifest -Path $info.FullName
+    Start-Sleep -Milliseconds 333
+    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '4.0.7'
+    $newInfo = Get-ChildItem -Path $TestDrive.FullName -Filter 'Pester.psd1' -Recurse
+    $newManifest = Test-ModuleManifest -Path $newInfo.FullName
+    It 'should not redownload module' {
+        $newManifest.Version | Should -Be $manifest.Version
+    }
 }
