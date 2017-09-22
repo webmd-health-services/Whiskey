@@ -127,9 +127,9 @@ function Publish-WhiskeyBuildMasterPackage
     $package = New-BMPackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables -ErrorAction Stop
     $package | Format-List | Out-String | Write-Verbose
 
-    if( $TaskParameter['SkipDeploy'] )
+    if( ConvertFrom-WhiskeyYamlScalar -InputObject $TaskParameter['SkipDeploy'] )
     {
-        Write-Verbose -Message ('''SkipDeploy'' property is configured. The BuildMaster release package is ready for manual deployment.')
+        Write-Verbose -Message ('Skipping deploy. SkipDeploy property is true')
     }
     else
     {

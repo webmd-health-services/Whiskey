@@ -99,7 +99,7 @@ function GivenSkipDeploy
     param(
     )
     
-    $script:skipDeploy = $true
+    $script:skipDeploy = 'true'
 }
 
 function Init
@@ -115,7 +115,7 @@ function Init
     $script:taskParameter = @{ }
     $script:packageName = $null
     $script:startAtStage = $null
-    $script:skipDeploy = $null
+    $script:skipDeploy = 'false'
 }
 
 function WhenCreatingPackage
@@ -164,7 +164,7 @@ function WhenCreatingPackage
 
     if( $skipDeploy )
     {
-        $taskParameter['SkipDeploy'] = $true
+        $taskParameter['SkipDeploy'] = $skipDeploy
     }
     
     $package = $mockPackage

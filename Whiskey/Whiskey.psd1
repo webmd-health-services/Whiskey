@@ -148,12 +148,10 @@
 * You can now specify a custom version of NUnit 2 that the `NUnit2` task should use by setting the `Version` property to the version you want to use.
 * You can now specify a custom version of NUnit 3 that the `NUnit3` task should use by setting the `Version` property to the version you want to use.
 * The `NUnit3` task upgraded to use NUnit 3.8.1 (from 3.7.0).
-
-Added support for `PackageName`, `StartAtStage`, and `SkipDeploy` properties to `Publish-WhiskeyBuildMasterPackage` task function.
-
-- `PackageName` (optional): defines the name of the package that will be created in BuildMaster. In this example, the `PackageName` will be `TestPackage` instead of the default convention of `MajorVersion.MinorVersion.PatchVersion`  
-- `StartAtStage` (optional): defines the stage of the release pipeline where the package should start its deployment. By default, the package will be released to the first stage of the pipeline.
-- `SkipDeploy` (optional): defines that the release package should be created, but not automatically deployed. By default, the package deployment will be started.
+* PublishBuildMasterPackage task now supports:
+  * customizing package names with the `PackageName` property. The default value will continue to be the major, minor, and patch portions of the version number, e.g. `6.4.34`.
+  * skipping/preventing a package from deploying with the `SkipDeploy` property. Set it to `true` and a package will be created in BuildMaster, but not deployed anywhere.
+  * starting a deploy at a specific stage of a release's pipeline. Set the `StartAtStage` property to the name of the stage you want the deploy to start at. In order for a deploy to start at any stage in a pipeline, the "Enforce pipeline stage order for deployments" setting must be off. This can be set in the BuildMaster UI in the pipeline's Edit panel.
 
 # Pester4 Task
 
