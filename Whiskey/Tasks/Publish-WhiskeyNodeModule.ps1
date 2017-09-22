@@ -42,8 +42,7 @@ function Publish-WhiskeyNodeModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $buildRoot = $TaskContext.BuildRoot
-    $workingDir = $buildRoot
+    $workingDir = $TaskContext.BuildRoot
     if($TaskParameter.ContainsKey('WorkingDirectory'))
     {
         $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
@@ -71,9 +70,6 @@ function Publish-WhiskeyNodeModule
         return
     }
     
-    $npmGlobalPath = Join-Path -Path ($nodePath | Split-Path) -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
-    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
-
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
     $credentialID = $TaskParameter['CredentialID']
@@ -124,12 +120,29 @@ function Publish-WhiskeyNodeModule
                 return $_
             } |
             Write-Verbose
-    
+
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        Write-Verbose -Message 'Removing extraneous packages with ''npm prune'''
+        Invoke-Command -ScriptBlock {
+            & $nodePath $npmPath prune --production --no-color
+        }
+        
+        if ($LASTEXITCODE -ne 0)
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm prune'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
+        }
+        
+        # local version of npm gets removed by 'npm prune', so call Get-WhiskeyNPMPath to download it again so we can also use the desired version of npm for publishing
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        Write-Verbose -Message 'Publishing package with ''npm publish'''
         Invoke-Command -ScriptBlock {
             & $nodePath $npmPath publish
         }
-
-        $npmPublishExitCode = $LASTEXITCODE
+        
+        if ($LASTEXITCODE -ne 0)
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm publish'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
+        }
     }
     finally
     {
@@ -139,18 +152,6 @@ function Publish-WhiskeyNodeModule
             Remove-Item -Path $packageNpmrc
         }
         
-        if ( $npmPath -ne $npmGlobalPath )
-        {
-            & $nodePath $npmGlobalPath prune npm
-        }
-        
         Pop-Location
     }
-
-    if ($npmPublishExitCode -ne 0)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm publish'' failed with exit code ''{0}''.' -f $npmPublishExitCode)
-    }
 }
-
-
