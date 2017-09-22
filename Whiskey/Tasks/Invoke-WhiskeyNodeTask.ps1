@@ -70,7 +70,6 @@ function Invoke-WhiskeyNodeTask
         Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
     }
 
-
     if( $TaskContext.ShouldClean() )
     {
         Write-Timing -Message 'Cleaning'
