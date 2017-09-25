@@ -117,7 +117,10 @@ function Invoke-NUnitTask
         $WithDisabledCodeCoverage,
 
         [String[]]
-        $CoverageFilter
+        $CoverageFilter,
+
+        [ScriptBlock]
+        $MockInstallWhiskeyToolWith
     )
 
     process
@@ -125,6 +128,19 @@ function Invoke-NUnitTask
 
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
         Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
+
+        if( -not $MockInstallWhiskeyToolWith )
+        {
+            $MockInstallWhiskeyToolWith = {
+                if( -not $Version )
+                {
+                    $Version = '*'
+                }
+                return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.{1}' -f $NuGetPackageName,$Version))
+            }
+        }
+
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith $MockInstallWhiskeyToolWith
 
         $Global:Error.Clear()
 
@@ -321,8 +337,7 @@ Describe 'Invoke-WhiskeyNUnit2Task when running failing NUnit2 tests' {
 }
 
 Describe 'Invoke-WhiskeyNUnit2Task when Install-WhiskeyTool fails' {
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $false }
-    Invoke-NUnitTask -ThatFails
+    Invoke-NUnitTask -ThatFails -MockInstallWhiskeyToolWith { return $false }
 }
 
 Describe 'Invoke-WhiskeyNUnit2Task when Path Parameter is not included' {
@@ -408,6 +423,9 @@ function Init
 
     robocopy $packagesRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
+
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
+    Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
 }
 
 function WhenRunningTask
@@ -426,6 +444,13 @@ function WhenRunningTask
     if( $WhenRunningInitialize )
     {
         $context.RunMode = 'initialize'
+    }
+
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith {
+        return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.*' -f $NuGetPackageName)) |
+                    Get-Item -ErrorAction Ignore |
+                    Select-Object -First 1 |
+                    Select-Object -ExpandProperty 'FullName'
     }
 
     try
@@ -546,11 +571,15 @@ function ThenItInstalled {
         $Version
     )
 
-    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'packages'
-    $packagePath = Join-Path -Path $packagesPath -ChildPath ('{0}.{1}' -f $Name,$Version)
-
+    $expectedVersion = $Version
     It ('should have installed {0} {1}' -f $Name,$Version) {
-        $packagePath | should exist
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
+            $DebugPreference = 'Continue'
+            Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $Name)
+            Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
+            $NuGetPackageName -eq $Name 
+        }
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $ExpectedVersion }
     }
 }
 
