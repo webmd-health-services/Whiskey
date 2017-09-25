@@ -312,12 +312,12 @@ function GivenNuGetPackageInstalled
     & $nugetPath install $Name -Version $AtVersion -OutputDirectory (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when the Clean Switch is active' {
+Describe 'NUnit2.when the Clean Switch is active' {
     GivenNuGetPackageInstalled 'NUnit.Runners' -AtVersion '2.6.3'
     Invoke-NUnitTask -WhenRunningClean
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests' { 
+Describe 'NUnit2.when running NUnit tests' { 
     Context 'no code coverage' {
         Invoke-NUnitTask -WithRunningTests -WithDisabledCodeCoverage
     }
@@ -326,7 +326,7 @@ Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests' {
     }
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when running failing NUnit2 tests' {
+Describe 'NUnit2.when running failing NUnit2 tests' {
     $withError = [regex]::Escape('NUnit2 tests failed')
     Context 'no code coverage' {
         Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError -WithDisabledCodeCoverage
@@ -336,27 +336,27 @@ Describe 'Invoke-WhiskeyNUnit2Task when running failing NUnit2 tests' {
     }
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when Install-WhiskeyTool fails' {
+Describe 'NUnit2.when Install-WhiskeyTool fails' {
     Invoke-NUnitTask -ThatFails -MockInstallWhiskeyToolWith { return $false }
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when Path Parameter is not included' {
+Describe 'NUnit2.when Path Parameter is not included' {
     $withError = [regex]::Escape('Element ''Path'' is mandatory')
     Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when Path Parameter is invalid' {
+Describe 'NUnit2.when Path Parameter is invalid' {
     $withError = [regex]::Escape('does not exist.')
     Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when NUnit Console Path is invalid and Join-Path -resolve fails' {
+Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails' {
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -MockWith { Write-Error 'Path does not exist!' } -ParameterFilter { $ChildPath -eq 'nunit-console.exe' }
     $withError = [regex]::Escape('was installed, but couldn''t find nunit-console.exe')
     Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError -ErrorAction SilentlyContinue
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task when running NUnit tests with coverage filters' { 
+Describe 'NUnit2.when running NUnit tests with coverage filters' { 
     $coverageFilter = (
                     '-[NUnit2FailingTest]*',
                     '+[NUnit2PassingTest]*'
@@ -601,7 +601,7 @@ function ThenErrorShouldNotBeThrown {
     }
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when including tests by category' {
+Describe 'NUnit2.when including tests by category' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
@@ -609,7 +609,7 @@ Describe 'Invoke-WhiskeyNUnit2Task.when including tests by category' {
     ThenTestsNotRun 'ShouldPass'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when excluding tests by category' {
+Describe 'NUnit2.when excluding tests by category' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Exclude' = 'Category with Spaces 1','Category with Spaces 2' }
@@ -617,28 +617,28 @@ Describe 'Invoke-WhiskeyNUnit2Task.when excluding tests by category' {
     ThenTestsPassed 'ShouldPass'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when running with custom arguments' {
+Describe 'NUnit2.when running with custom arguments' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
     ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','^\.{2,}'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when running under a custom dotNET framework' {
+Describe 'NUnit2.when running under a custom dotNET framework' {
     Init
     GivenPassingTests
     WhenRunningTask @{ 'Framework' = 'net-4.5' }
     ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when running with custom OpenCover arguments' {
+Describe 'NUnit2.when running with custom OpenCover arguments' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
     ThenOutput -Contains '====Unvisited Classes===='
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator arguments' {
+Describe 'NUnit2.when running with custom ReportGenerator arguments' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
@@ -646,7 +646,7 @@ Describe 'Invoke-WhiskeyNUnit2Task.when running with custom ReportGenerator argu
     ThenOutput -DoesNotContain 'Preprocessing report', 'Initiating parser for OpenCover'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
+Describe 'NUnit2.when the Initialize Switch is active' {
     Init
     GivenPassingTests
     WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
@@ -656,7 +656,7 @@ Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active' {
     ThenItShouldNotRunTests
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when using custom tool versions' {
+Describe 'NUnit2.when using custom tool versions' {
     Init
     GivenPassingTests
     GivenOpenCoverVersion '4.0.1229'
@@ -668,7 +668,7 @@ Describe 'Invoke-WhiskeyNUnit2Task.when using custom tool versions' {
     ThenItInstalled 'ReportGenerator' '2.5.11'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active and No path is included' {
+Describe 'NUnit2.when the Initialize Switch is active and No path is included' {
     Init
     GivenPassingTests
     GivenInvalidPath
@@ -680,7 +680,7 @@ Describe 'Invoke-WhiskeyNUnit2Task.when the Initialize Switch is active and No p
     ThenErrorShouldNotBeThrown -ErrorMessage 'does not exist.'
 }
 
-Describe 'Invoke-WhiskeyNUnit2Task.when using version of NUnit that isn''t 2' {
+Describe 'NUnit2.when using version of NUnit that isn''t 2' {
     Init
     GivenPassingTests
     GivenVersion '3.7.0'

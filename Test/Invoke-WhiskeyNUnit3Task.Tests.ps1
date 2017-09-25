@@ -489,7 +489,7 @@ function ThenRanWithCoverageFilter
     }
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running in Clean mode' {
+Describe 'NUnit3.when running in Clean mode' {
     Init
     GivenOpenCoverVersion '4.6.519'
     GivenReportGeneratorVersion '2.5.11'
@@ -502,7 +502,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running in Clean mode' {
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running in Initialize mode' {
+Describe 'NUnit3.when running in Initialize mode' {
     Init
     GivenOpenCoverVersion '4.6.519'
     GivenReportGeneratorVersion '2.5.11'
@@ -514,20 +514,20 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running in Initialize mode' {
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when missing Path parameter' {
+Describe 'NUnit3.when missing Path parameter' {
     Init
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run' 
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when given bad Path' {
+Describe 'NUnit3.when given bad Path' {
     Init
     GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3FailingTest.dll','nonexistentfile'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'does not exist.'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when NUnit fails to install' {
+Describe 'NUnit3.when NUnit fails to install' {
     Init
     GivenPassingPath
     Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'NUnit.ConsoleRunner' }
@@ -535,7 +535,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when NUnit fails to install' {
     ThenTaskFailedWithMessage 'failed to install.'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when nunit3-console.exe cannot be located' {
+Describe 'NUnit3.when nunit3-console.exe cannot be located' {
     Init
     GivenPassingPath
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -match 'nunit3-console.exe' } -MockWith { 'C:\some\nonexistent\path\nunit3-console.exe' }
@@ -543,7 +543,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when nunit3-console.exe cannot be located' {
     ThenTaskFailedWithMessage 'could not locate ''nunit3-console.exe'''
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when OpenCover fails to install' {
+Describe 'NUnit3.when OpenCover fails to install' {
     Init
     GivenPassingPath
     Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'OpenCover'}
@@ -551,7 +551,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when OpenCover fails to install' {
     ThenTaskFailedWithMessage 'failed to install.'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when ReportGenerator fails to install' {
+Describe 'NUnit3.when ReportGenerator fails to install' {
     Init
     GivenPassingPath
     Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'ReportGenerator'}
@@ -559,7 +559,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when ReportGenerator fails to install' {
     ThenTaskFailedWithMessage 'failed to install.'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with disabled code coverage' {
+Describe 'NUnit3.when running NUnit tests with disabled code coverage' {
     Init
     GivenPassingPath
     GivenDisableCodeCoverage
@@ -569,7 +569,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with disabled code c
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with multiple paths' {
+Describe 'NUnit3.when running NUnit tests with multiple paths' {
     Init
     GivenPath 'NUnit3PassingTest.dll','NUnit3PassingTest.dll'
     WhenRunningTask
@@ -578,7 +578,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with multiple paths'
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running failing NUnit tests' {
+Describe 'NUnit3.when running failing NUnit tests' {
     Init
     GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
     WhenRunningTask -ErrorAction SilentlyContinue
@@ -587,7 +587,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running failing NUnit tests' {
     ThenTaskFailedWithMessage 'NUnit3 tests failed'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with specific framework' {
+Describe 'NUnit3.when running NUnit tests with specific framework' {
     Init
     GivenPassingPath
     GivenFramework '4.5'
@@ -598,7 +598,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with specific framew
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with extra arguments' {
+Describe 'NUnit3.when running NUnit with extra arguments' {
     Init
     GivenPassingPath
     GivenArgument '--noheader','--dispose-runners'
@@ -609,7 +609,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with extra arguments' {
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with bad arguments' {
+Describe 'NUnit3.when running NUnit with bad arguments' {
     Init
     GivenPassingPath
     GivenArgument '-badarg'
@@ -618,7 +618,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with bad arguments' {
     ThenTaskFailedWithMessage 'NUnit3 didn''t run successfully'
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with a test filter' {
+Describe 'NUnit3.when running NUnit with a test filter' {
     Init
     GivenPassingPath
     GivenTestFilter "cat == 'Category with Spaces 1'"
@@ -629,7 +629,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with a test filter' {
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with multiple test filters' {
+Describe 'NUnit3.when running NUnit with multiple test filters' {
     Init
     GivenPassingPath
     GivenTestFilter "cat == 'Category with Spaces 1'", "cat == 'Category with Spaces 2'"
@@ -640,7 +640,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit with multiple test filters
     ThenTaskSucceeded
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover argument' {
+Describe 'NUnit3.when running NUnit tests with OpenCover argument' {
     Init
     GivenPassingPath
     GivenOpenCoverArgument '-showunvisited'
@@ -650,7 +650,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover argum
     ThenOutput -Contains '====Unvisited Classes===='
     ThenTaskSucceeded
 }
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover coverage filter' {
+Describe 'NUnit3.when running NUnit tests with OpenCover coverage filter' {
     Init
     GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
     GivenCoverageFilter '-[NUnit3FailingTest]*','+[NUnit3PassingTest]*'
@@ -660,7 +660,7 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with OpenCover cover
     ThenRanWithCoverageFilter
 }
 
-Describe 'Invoke-WhiskeyNUnit3Task.when running NUnit tests with ReportGenerator argument' {
+Describe 'NUnit3.when running NUnit tests with ReportGenerator argument' {
     Init
     GivenPassingPath
     GivenReportGeneratorArgument '-verbosity:off'
