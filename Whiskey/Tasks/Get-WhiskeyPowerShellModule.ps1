@@ -32,10 +32,7 @@ function Get-WhiskeyPowerShellModule
             Version: "0.14.*"
 
     This example demonstrates how to pin to a specific version of a module. In this case, the latest `0.14.x` version will be downloaded. When version 0.15.0 comes out, you'll still download the latest `0.14.x` version.
-        
-    .NOTES
-    Currently only name and version properties are implemented. 
-    Properties 'Path' and 'RepositoryName' may be added in the future.
+
     #>
     
     [CmdletBinding()]
