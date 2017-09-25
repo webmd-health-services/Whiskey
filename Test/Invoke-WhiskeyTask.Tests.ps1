@@ -547,13 +547,13 @@ Describe 'Invoke-WhiskeyTask.when ExceptOnBranch does not contain current branch
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'ExceptOnBranch' = 'notDevelop' }
 }
 
-Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch both contain current branch' {
+Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch properties are both defined' {
     Init
     GivenRunByDeveloper
     GivenScmBranch 'develop'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
-    ThenThrewException 'resolve conflicting configuration'
+    ThenThrewException 'This task defines both OnlyOnBranch and ExceptOnBranch properties'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
 }
 

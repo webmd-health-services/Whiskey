@@ -146,13 +146,15 @@ function Invoke-WhiskeyTask
     
     $branch = $TaskContext.BuildMetadata.ScmBranch
     $executeTaskOnBranch = $true
-    $onlyOnBranch = $null
-    $exceptOnBranch = $null
+    
+    if( $Parameter['OnlyOnBranch'] -and $Parameter['ExceptOnBranch'] )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('This task defines both OnlyOnBranch and ExceptOnBranch properties. Only one of these can be used. Please remove one or both of these properties and re-run your build.')
+    }
     
     if( $Parameter['OnlyOnBranch'] )
     {
         $executeTaskOnBranch =$false
-        $onlyOnBranch = $false
         Write-Verbose -Message ('OnlyOnBranch')
         foreach( $wildcard in $Parameter['OnlyOnBranch'] )
         {
@@ -160,7 +162,6 @@ function Invoke-WhiskeyTask
             {
                 Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
                 $executeTaskOnBranch = $true
-                $onlyOnBranch = $true
                 break
             }
             else
@@ -172,7 +173,6 @@ function Invoke-WhiskeyTask
 
     if( $Parameter['ExceptOnBranch'] )
     {
-        $exceptOnBranch = $false
         Write-Verbose -Message ('ExceptOnBranch')
         foreach( $wildcard in $Parameter['ExceptOnBranch'] )
         {
@@ -180,7 +180,6 @@ function Invoke-WhiskeyTask
             {
                 Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
                 $executeTaskOnBranch = $false
-                $exceptOnBranch = $true
                 break
             }
             else
@@ -188,11 +187,6 @@ function Invoke-WhiskeyTask
                 Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
             }
         }
-    }
-
-    if( $onlyOnBranch -and $exceptOnBranch )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} is mapped to both the ''OnlyOnBranch'' and ''ExceptOnBranch'' properties. Please resolve conflicting configuration and re-run the build.' -f $branch)
     }
     
     if( !$executeTaskOnBranch )
