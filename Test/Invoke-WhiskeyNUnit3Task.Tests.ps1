@@ -7,6 +7,13 @@ $latestNUnit3Version = '3.7.0'
 $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit3.yml')
 Invoke-WhiskeyBuild -Context $taskContext
 
+$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve
+$packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
+Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
+& $nugetPath install OpenCover -OutputDirectory $packagesRoot
+& $nugetPath install ReportGenerator -OutputDirectory $packagesRoot
+& $nugetPath install NUnit.Runners -Version $latestNUnit3Version -OutputDirectory $packagesRoot
+
 $argument = $null
 $clean = $false
 $coverageFilter = $null
@@ -148,22 +155,6 @@ function GivenTestFilter
     $script:testFilter = $Filter
 }
 
-function GivenPackageInstalled
-{
-    param(
-        $Name,
-        $Version
-    )
-
-    $versionParam = @{ }
-    if( $Version )
-    {
-        $versionParam['Version'] = $Version
-    }
-
-    Install-WhiskeyTool -NuGetPackageName $Name @versionParam -DownloadRoot $buildRoot
-}
-
 function GivenReportGeneratorVersion
 {
     param(
@@ -261,19 +252,23 @@ function WhenRunningTask
     if ($InCleanMode)
     {
         $taskContext.RunMode = 'Clean'
-        
-        ## Ensure we have packages to cleanup in when run in Clean mode
-        #Install-WhiskeyTool -NuGetPackageName 'NUnit.ConsoleRunner' -Version '3.7.0' -DownloadRoot $buildRoot
-        #Install-WhiskeyTool -NuGetPackageName 'OpenCover' -Version $openCoverVersion -DownloadRoot $buildRoot
-        #Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version $reportGeneratorVersion -DownloadRoot $buildRoot
-        ## Install an extra version so we can make sure only specified versions get cleaned up
-        #Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -Version '2.5.8' -DownloadRoot $buildRoot
     }
 
     if ($initialize)
     {
         $taskContext.RunMode = 'Initialize'
     }
+
+    Mock -CommandName 'Install-WhiskeyTool' -Module 'Whiskey' -MockWith {
+        return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.*' -f $NuGetPackageName)) |
+                    Get-Item -ErrorAction Ignore |
+                    Select-Object -First 1 |
+                    Select-Object -ExpandProperty 'FullName'
+    }
+
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' 
+
+    Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
 
     try 
     {
@@ -289,53 +284,55 @@ function WhenRunningTask
 function ThenPackageInstalled
 {
     param(
-        $PackageDirectoryName
+        $PackageName,
+        $Version
     )
 
-    It ('should not uninstall package ''{0}''' -f $PackageDirectoryName) {
-        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $PackageDirectoryName) | Should -Exist
+    It ('should install package ''{0}''' -f $PackageName) {
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
+            $DebugPreference = 'Continue'
+            Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $NuGetPackageName)
+            Write-Debug -Message ('                  actual    {0}' -f $PackageName)
+            $NuGetPackageName -eq $PackageName 
+        }
+        if( $Version )
+        {
+            $expectedVersion = $Version
+            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $expectedVersion }
+        }
     }
 }
 
 function ThenPackageNotInstalled
 {
     param(
-        $PackageDirectoryName
+        $PackageName
     )
 
-    It ('should uninstall package ''{0}''' -f $PackageDirectoryName) {
-        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $PackageDirectoryName) | Should -Not -Exist
+    It ('should not install package ''{0}''' -f $PackageName) {
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $PackageName } -Times 0
+    }
+}
+
+function ThenPackageUninstalled
+{
+    param(
+        $PackageName,
+        $Version
+    )
+
+    It ('should not install package ''{0}''' -f $PackageName) {
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $PackageName }
+        $expectedVersion = $Version
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $expectedVersion }
     }
 }
 
 function ThenPackagesDownloaded
 {
-    ThenPackageInstalled ('NUnit.ConsoleRunner.{0}' -f $latestNUnit3Version)
-    ThenPackageInstalled ('OpenCover.{0}' -f $openCoverVersion)
-    ThenPackageInstalled ('ReportGenerator.{0}' -f $reportGeneratorVersion)
-}
-
-function ThenPackageInstalled
-{
-    param(
-        $Name
-    )
-
-    It ('package ''{0}'' should exist' -f $Name) {
-        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Exist
-    }
-}
-
-function ThenPackageNotInstalled
-{
-    param(
-        $Name
-    )
-
-    It ('package ''{0}'' should not exist' -f $Name) {
-        Join-Path -Path $buildRoot -ChildPath ('packages\{0}' -f $Name) | Should -Not -Exist
-    }
-
+    ThenPackageInstalled 'NUnit.ConsoleRunner' $latestNUnit3Version
+    ThenPackageInstalled 'OpenCover' $openCoverVersion
+    ThenPackageInstalled 'ReportGenerator' $reportGeneratorVersion
 }
 
 function ThenRanNUnitWithNoHeaderArgument
@@ -496,15 +493,10 @@ Describe 'Invoke-WhiskeyNUnit3Task.when running in Clean mode' {
     Init
     GivenOpenCoverVersion '4.6.519'
     GivenReportGeneratorVersion '2.5.11'
-    GivenPackageInstalled 'NUnit.ConsoleRunner'
-    GivenPackageInstalled 'OpenCover' '4.6.519'
-    GivenPackageInstalled 'ReportGenerator' '2.5.11'
-    GivenPackageInstalled 'ReportGenerator' '2.5.8'
     WhenRunningTask -InCleanMode
-    ThenPackageNotInstalled ('NUnit.ConsoleRunner.{0}' -f $latestNUnit3Version)
-    ThenPackageNotInstalled 'OpenCover.4.6.519'
-    ThenPackageNotInstalled 'ReportGenerator.2.5.11'
-    ThenPackageInstalled 'ReportGenerator.2.5.8'
+    ThenPackageUninstalled 'NUnit.ConsoleRunner' $latestNUnit3Version
+    ThenPackageUninstalled 'OpenCover' '4.6.519'
+    ThenPackageUninstalled 'ReportGenerator' '2.5.11'
     ThenNUnitShouldNotRun
     ThenCodeCoverageReportNotCreated
     ThenTaskSucceeded
@@ -684,7 +676,7 @@ Describe 'NUnit3.when using custom version of NUnit 3' {
     GivenPassingPath
     GivenVersion '3.2.1'
     WhenRunningTask
-    ThenPackageInstalled 'NUnit.ConsoleRunner.3.2.1'
+    ThenPackageInstalled 'NUnit.ConsoleRunner' '3.2.1'
     ThenTaskSucceeded
 }
 
@@ -693,6 +685,6 @@ Describe 'NUnit3.when using a non-3 version of NUnit' {
     GivenPassingPath
     GivenVersion '2.6.4'
     WhenRunningTask -ErrorAction SilentlyContinue
-    ThenPackageNotInstalled 'NUnit.ConsoleRunner.*'
+    ThenPackageNotInstalled 'NUnit.ConsoleRunner'
     ThenTaskFailedWithMessage 'isn''t\ a\ valid\ 3\.x\ version\ of\ NUnit'
 }
