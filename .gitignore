@@ -9,3 +9,4 @@ Test/Assemblies/**/whiskey.yml
 Arc/WhsCI/**
 Modules
 .whsgallerykey
+*.orig

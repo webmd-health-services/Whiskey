@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.16.0'
+    ModuleVersion = '0.19.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,16 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added an `NUnit3` task for running NUnit tests using the NUnit3 console runner. Set the `Path` property to a list of paths of assemblies for which you want to run tests for. By default, OpenCover runs NUnit and gathers test code coverage, saving its report to '.output\openCover\openCover.xml'. ReporterGenerator is used to convert the OpenCover report into an HTML report, viewable to '.output\openCover\index.html'. If you wish to **only** run NUnit tests, then specify the `DisableCodeCoverage` parameter with the value of `true`.
+* The `Node` task no longer runs `npm prune`.
+* The `PublishNodeModule` task now runs `npm prune --production` before publishing the node module.
+* You can now specify a custom version of NUnit that the `NUnit2` and `NUnit3` tasks should use by setting the `Version` property to the version you want to use.
+* The `PublishBuildMasterPackage` task now supports:
+  * customizing package names with the `PackageName` property. The default value will continue to be the major, minor, and patch portions of the version number, e.g. `6.4.34`.
+  * skipping/preventing a package from deploying with the `SkipDeploy` property. Set it to `true` and a package will be created in BuildMaster, but not deployed anywhere.
+  * starting a deploy at a specific stage of a release's pipeline. Set the `StartAtStage` property to the name of the stage you want the deploy to start at. In order for a deploy to start at any stage in a pipeline, the "Enforce pipeline stage order for deployments" setting must be off. This can be set in the BuildMaster UI in the pipeline's Edit panel.
+* The `Pester4` task can now show a "Describe Duration Report" and an "It Duration Report". These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
+* Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
+* Created a `Delete` task for deleting files and directories.
 '@
         } # End of PSData hashtable
 

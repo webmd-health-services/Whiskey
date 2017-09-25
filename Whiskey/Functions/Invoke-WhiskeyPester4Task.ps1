@@ -6,16 +6,47 @@ function Invoke-WhiskeyPester4Task
     Runs Pester tests using Pester 4.
 
     .DESCRIPTION
-    The `Invoke-Pester4Task` runs tests using Pester 4. You pass the path(s) to test to the `Path` parameter, which are passed directly to the `Invoke-Pester` function's `Script` parameter. Additional configuration information can be included in the `$TaskContext` such as:
+    The `Pester4` task runs tests using Pester 4. You pass the path(s) to test to the `Path` property. If any test fails, the build will fail.
 
-    * `$TaskContext.Version`: The version of Pester 4 to use. Can be a version greater than 4.0. Must match a version on the Powershell Gallery. To find a list of all the versions of Pester available, install the Package Management module, then run `Find-Module -Name 'Pester' -AllVersions`. You usually want the latest version.
+    Pester is installed using the PowerShellGet module's `Save-Module` function. The module is installed to the `Modules` directory in your build root. If the PowerShellGet module isn't installed, this task will fail.
 
-    If any tests fail (i.e. if the `FailedCount property on the result object returned by `Invoke-Pester` is greater than 0), this function will throw a terminating error.
+    It is hard, in some build tools, to track down your longest running tests and Describe blocks. The `Pester4` task can output two reports that will show you the longest running It and Describe blocks. The `DescribeDurationReportCount` property controls how many rows to show in the Describe Duration Report, which shows the duration of every Describe block that was run, from longest to shortest duration. The `ItDurationReportCount` property controls how many rows to show in the It Duration Report, which shows the duration of all It blocks that were run, from longest to shortest durations.
 
-    .EXAMPLE
-    Invoke-WhiskeyPester4Task -TaskContext $context -TaskParameter $taskParameter
+    ## Properties
 
-    Demonstrates how to run Pester tests against a set of test fixtures. In this case, The version of Pester in `$TaskContext.Version` will recursively run all tests under `TaskParameter.Path` and output an XML report with the results in the `$TaskContext.OutputDirectory` directory.
+    * `Path` (mandatory): the path to the test scripts to run. These paths are passed to the `Invoke-Pester` function's `Script` parameter. Wildcards are supported, but they are resolved by the `Pester4` task *before* getting passed to Pester.
+    * `Version`: the version of Pester 4 to use. Defaults to the latest version of Pester 4. Wildcards are supported if you want to pin to a specific minor version, e.g. `4.0.*` will use the latest `4.0` version, but never `4.1` or later.
+    * `DescribeDurationReportCount`: the number of rows to show in the Describe Duration Report. The default is `0`. The Describe Duration Report shows Describe block execution durations in your build output, sorted by longest running to shortest running. This property controls how many rows to show in the report.
+    * `ItDurationReportCount`: the number of rows to show in the It Duration Report. The default is `0`. The It Duration Report shows It block execution durations in your build output, sorted by longest running to shortest running. This property controls how many rows to show in the report.
+
+    ## Examples
+
+    ### Example 1
+
+        BuildTasks:
+        - Pester4:
+            Path: Test\*.ps1
+
+    Demonstrates how to run Pester tests using Pester 4. In this case, all the tests in files that match the wildcard `Test\*.ps1` are run.
+
+    ### Example 2
+
+        BuildTasks:
+        - Pester4:
+            Path: Test\*.ps1
+            Version: 4.0.6
+
+    Demonstrates how to pin to a specific version of Pester 4. In this case, Pester 4.0.6 will always be used.
+
+    ### Example 3
+
+        BuildTasks:
+        - Pester4:
+            Path: Test\*.ps1
+            DescribeDurationReportCount: 20
+            ItDurationReportCount: 20
+
+    Demonstrates how to show the Describe Duration Report and It Duration Report after the task finishes. These reports show the duration of all Describe and It blocks that were run. In this example, the top 20 longest Describe and It blocks will be sho
     #>
     [Whiskey.Task("Pester4",SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
@@ -94,6 +125,11 @@ function Invoke-WhiskeyPester4Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
     }
 
+    [int]$describeDurationCount = 0
+    $describeDurationCount = $TaskParameter['DescribeDurationReportCount']
+    [int]$itDurationCount = 0
+    $itDurationCount = $TaskParameter['ItDurationReportCount']
+
     $testIdx = 0
     $outputFileNameFormat = 'pester-{0:00}.xml'
     while( (Test-Path -Path (Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx))) )
@@ -112,13 +148,33 @@ function Invoke-WhiskeyPester4Task
         $script = $using:Path
         $pesterModulePath = $using:pesterModulePath
         $outputFile = $using:outputFile
+        [int]$describeCount = $using:describeDurationCount
+        [int]$itCount = $using:itDurationCount
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
                                         Import-Module -Name $pesterModulePath
                                     }
 
-        Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
+        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
+
+        $result.TestResult | 
+            Group-Object 'Describe' |
+            ForEach-Object {
+                $totalTime = [TimeSpan]::Zero
+                $_.Group | ForEach-Object { $totalTime += $_.Time }
+                [pscustomobject]@{
+                                    Describe = $_.Name;
+                                    Duration = $totalTime
+                                }
+            } | Sort-Object -Property 'Duration' -Descending |
+            Select-Object -First $describeCount |
+            Format-Table -AutoSize
+        
+        $result.TestResult |
+            Sort-Object -Property 'Time' -Descending |
+            Select-Object -First $itCount |
+            Format-Table -AutoSize -Property 'Describe','Name','Time'
     } 
     
     do

@@ -42,9 +42,14 @@ function GivenNpmVersion
     $script:npmVersion = ('"npm": "{0}",' -f $Version)
 }
 
-function GivenNpmReturnsNonZeroExitCode
+function GivenNpmPublishReturnsNonZeroExitCode
 {
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'} -MockWith { & cmd /c exit 1 }
+}
+
+function GivenNpmPruneReturnsNonZeroExitCode
+{
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'prune'} -MockWith { & cmd /c exit 1 }
 }
 
 function GivenWorkingDirectory
@@ -80,6 +85,7 @@ function New-PublishNodeModuleStructure
     param(
     )
 
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'prune --production --no-color'}
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'}
     Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
@@ -148,13 +154,24 @@ function ThenNodeModuleIsNotPublished
     }
 }
 
-function ThenLocalNpmCleanedUp
+function ThenNpmPackagesPruned
+{
+    It 'should prune npm packages' {
+        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
+                            -ParameterFilter {$ScriptBlock -match 'prune --production --no-color'} -Times 1 -Exactly
+    }
+}
+
+function ThenLocalNpmInstalled
 {
     $npmPath = (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
 
-    It 'should remove the local version of npm after publishing' {
-        $npmPath | Should -Not -Exist
+    It 'should install a specific local version of npm' {
+        $npmPath | Should -Exist
     }
+
+    # npm module path in TestDrive is too long for Pester to cleanup with Remove-Item
+    & cmd /C rmdir /S /Q (Join-Path -Path $TestDrive.FullName -ChildPath 'node_modules\npm')
 }
 
 function ThenNpmrcCreated
@@ -255,6 +272,7 @@ Describe 'PublishNodeModule.when publishing node module' {
     New-PublishNodeModuleStructure
     WhenPublishingNodeModule
     ThenNpmrcCreated
+    ThenNpmPackagesPruned
     ThenNodeModulePublished
 }
 
@@ -264,6 +282,7 @@ Describe 'PublishNodeModule.when publishing node module from custom working dire
     New-PublishNodeModuleStructure
     WhenPublishingNodeModule
     ThenNpmrcCreated -In 'App'
+    ThenNpmPackagesPruned
     ThenNodeModulePublished    
 }
 
@@ -305,14 +324,25 @@ Describe 'PublishNodeModule.when publishing node module using specific version o
     New-PublishNodeModuleStructure
     WhenPublishingNodeModule
     ThenNpmrcCreated
-    ThenLocalNpmCleanedUp
+    ThenNpmPackagesPruned
+    ThenNodeModulePublished    
+    ThenLocalNpmInstalled
 }
 
 Describe 'PublishNodeModule.when npm publish returns non-zero exit code' {
     Init
     New-PublishNodeModuleStructure
-    GivenNpmReturnsNonZeroExitCode
+    GivenNpmPublishReturnsNonZeroExitCode
     WhenPublishingNodeModule -ErrorAction SilentlyContinue
     ThenNpmrcCreated
     ThenTaskFailed 'NPM command ''npm publish'' failed with exit code ''1'''
+}
+
+Describe 'PublishNodeModule.when npm prune returns non-zero exit code' {
+    Init
+    New-PublishNodeModuleStructure
+    GivenNpmPruneReturnsNonZeroExitCode
+    WhenPublishingNodeModule -ErrorAction SilentlyContinue
+    ThenNpmrcCreated
+    ThenTaskFailed 'NPM command ''npm prune'' failed with exit code ''1'''
 }
