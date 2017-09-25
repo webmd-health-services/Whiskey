@@ -152,6 +152,7 @@
 * The `Pester4` task can now show a "Describe Duration Report" and an "It Duration Report". These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
 * Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
 * Created a `Delete` task for deleting files and directories.
+* Created a `GetPowerShellModule` task for downloading PowerShell modules needed during a build.
 '@
         } # End of PSData hashtable
 
