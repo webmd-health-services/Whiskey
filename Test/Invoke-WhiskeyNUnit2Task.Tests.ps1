@@ -127,6 +127,8 @@ function Invoke-NUnitTask
         $threwException = $false
         $Global:Error.Clear()
 
+        $ReportGeneratorVersion = '2.5.11'
+
         if( $WithRunningTests )
         {
             $taskParameter = @{
@@ -417,7 +419,7 @@ function WhenRunningTask
 
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
     Get-ChildItem -Path $context.BuildRoot -Include 'bin','obj' -Directory -Recurse | Remove-Item -Recurse -Force
-
+    
     $configuration = Get-WhiskeyMSBuildConfiguration -Context $context
 
     Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'MSBuild'
@@ -555,6 +557,15 @@ function ThenItInstalled {
     }
 }
 
+function ThenItInstalledReportGenerator {
+
+    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
+    
+    It 'should have installed ReportGenerator' {
+        $reportGeneratorPath | should exist
+    }
+}
 function ThenErrorIs {
     param(
         $Regex
