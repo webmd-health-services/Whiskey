@@ -431,7 +431,7 @@ function Init
     $script:withInitializeSwitch = $false
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when running a build' {
+Describe 'Node.when running a build' {
     Context 'by developer' {
         Init
         GivenBuildByDeveloper
@@ -452,7 +452,7 @@ Describe 'Invoke-WhiskeyNodeTask.when running a build' {
     }
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
+Describe 'Node.when a build task fails' {
     Init
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -462,7 +462,7 @@ Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
     ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -NpmScript 'fail'
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when `npm install` fails' {
+Describe 'Node.when `npm install` fails' {
     Init
     GivenBuildByDeveloper
     GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
@@ -472,7 +472,7 @@ Describe 'Invoke-WhiskeyNodeTask.when `npm install` fails' {
     ThenBuildFails -expectedError 'npm\ install\b.*failed'
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
+Describe 'Node.when module has security vulnerability' {
     Init
     GivenBuildByDeveloper
     GivenDependency -Dependency @( '"minimatch": "3.0.0"' )
@@ -483,7 +483,7 @@ Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     ThenBuildFails -expectedError 'found the following security vulnerabilities' -WhoseScriptsPass
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScript' {
+Describe 'Node.when user forgets to add any NpmScript' {
     Init
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -495,7 +495,7 @@ Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScript' {
     }
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
+Describe 'Node.when app is not in the root of the repository' {
     Init
     GivenSubDirectory -inWorkingDirectory 's'
     GivenBuildByDeveloper
@@ -506,7 +506,7 @@ Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' 
     ThenBuildSucceeds
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
+Describe 'Node.when working directory does not exist' {
     Init
     GivenBuildByDeveloper
     GivenWorkingDirectory -InWorkingDirectory 'idonotexist'
@@ -522,7 +522,7 @@ function GivenInstalledNodeModules
     New-Item -it file -Path (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\module\bin\something.js') -Force
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
+Describe 'Node.when run by build server with Clean Switch' {
     Init
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -538,7 +538,7 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     ThenPackagesCleaned
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
+Describe 'Node.when no npm registry is provided' {
     Init
     GivenBuildByBuildServer
     GivenNpmScriptsToRun 'build','test'
@@ -547,7 +547,7 @@ Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
     ThenBuildFails -expectedError 'property ''NpmRegistryUri'' is mandatory'
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when run in initialization mode' {
+Describe 'Node.when run in initialization mode' {
     Init
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
