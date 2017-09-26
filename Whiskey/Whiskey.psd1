@@ -153,6 +153,20 @@
 * Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
 * Created a `Delete` task for deleting files and directories.
 * Created a `GetPowerShellModule` task for downloading PowerShell modules needed during a build.
+
+Whether or not a task runs can now be filtered by the branch being built. Every task now has `OnlyOnBranch` and `ExceptOnBranch` properties. Each property is a list of branch names that controls what branches a task does or doesn't run on. Wildcards patterns are supported. If you use `OnlyOnBranch`, that task will only run if the current branch matches one of the branch names. If you use `ExceptOnBranch`, that task will only run if the current branch doesn't match one of the branch names.
+
+    PublishTasks:
+    - PublishBuildMasterPackage:
+        OnlyOnBranch: master
+        ReleaseName: 6.4
+        ApplicationName: Whiskey
+    - PublishBuildMasterPackage:
+        ExceptOnBranch: master
+        ReleaseName: 6.5
+        ApplicationName: Whiskey
+
+The above example shows how you would publish different branches to different releases in BuildMaster. The master branch is packaged and deployed to the `6.4` release. All other branches are packaged and deployed to the `6.5` release.
 '@
         } # End of PSData hashtable
 

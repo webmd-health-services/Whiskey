@@ -12,6 +12,7 @@ $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
 $output = $null
 $taskDefaults = @{ }
+$scmBranch = $null
 
 function Invoke-PreTaskPlugin
 {
@@ -125,10 +126,20 @@ function GivenWhiskeyYmlBuildFile
     return $whiskeyymlpath
 }
 
+function GivenScmBranch
+{
+    param(
+        [string]
+        $Branch
+    )
+    $script:scmBranch = $Branch
+}
+
 function Init
 {
     $script:taskDefaults = @{ }
     $script:output = $null
+    $script:scmBranch = $null
 }
 
 function ThenPipelineFailed
@@ -342,9 +353,15 @@ function WhenRunningTask
     $context.TaskName = $null;
     $context.TaskIndex = 1;
     $context.TaskDefaults = $taskDefaults;
+
     if( $InRunMode )
     {
         $context.RunMode = $InRunMode;
+    }
+
+    if( $scmBranch )
+    {
+        $context.BuildMetadata.ScmBranch = $scmBranch
     }
 
     $Global:Error.Clear()
@@ -473,6 +490,70 @@ Describe 'Invoke-WhiskeyTask.when OnlyBy has an invalid value' {
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Somebody' } -ErrorAction SilentlyContinue
     ThenThrewException 'invalid value'
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyOnBranch contains current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop' } -ErrorAction SilentlyContinue
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyOnBranch' = 'develop' }
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyOnBranch contains wildcard matching current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = @( 'master', 'dev*' ) } -ErrorAction SilentlyContinue
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyOnBranch' = @( 'master', 'dev*' ) }
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyOnBranch does not contain current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'notDevelop' } -ErrorAction SilentlyContinue
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when ExceptOnBranch contains current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when ExceptOnBranch contains wildcard matching current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = @( 'master', 'dev*' ) } -ErrorAction SilentlyContinue
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when ExceptOnBranch does not contain current branch' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' } -ErrorAction SilentlyContinue
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'ExceptOnBranch' = 'notDevelop' }
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch properties are both defined' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
+    ThenThrewException 'This task defines both OnlyOnBranch and ExceptOnBranch properties'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
 }
 
