@@ -9,6 +9,8 @@ if( (Test-Path -Path 'env:NVM_HOME') )
     Remove-Item -Path 'env:NVM_HOME'
 }
 
+$nodePath = $null
+
 function Assert-ThatInstallNodeJs
 {
     [CmdletBinding()]
@@ -26,7 +28,10 @@ function Assert-ThatInstallNodeJs
         $WhenUsingDefaultInstallDirectory,
 
         [Switch]
-        $PreserveInstall
+        $PreserveInstall,
+
+        [string]
+        $PackageName = 'nodetest'
     )
 
     $Global:Error.Clear()
@@ -44,7 +49,7 @@ function Assert-ThatInstallNodeJs
     $registryUri = 'https://proget.example.com/'
     $testPackageJson = 
 '{
-  "name": "nodetest",
+  "name": "' + $PackageName + '",
   "version": "0.0.1",
   "description": "TestApp",
   "main": "main.js",
@@ -64,10 +69,10 @@ function Assert-ThatInstallNodeJs
 
         Install-Directory -Path $installDir
         $null = New-Item (Join-Path -Path $installDir -ChildPath 'package.json') -ItemType File -Value $testPackageJson -Force
-        $nodePath = $null
+        $script:nodePath = $null
         $expectedNodePath = $null
         $expectedNpmPath = $null
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam -ForDeveloper:$OnDeveloperComputer
+        $script:nodePath = Install-WhiskeyNodeJs -RegistryUri $registryUri -ApplicationRoot $installDir @installDirParam -ForDeveloper:$OnDeveloperComputer
 
         $nvmRoot = Join-Path -Path $installDir -ChildPath 'nvm'
         $nodeRoot = Join-Path -Path $nvmRoot -ChildPath ('v{0}' -f $InstallsVersion)
@@ -118,6 +123,9 @@ function Assert-ThatInstallNodeJs
             It 'should not install Node.js' {
                 $nodePath | Should BeNullOrEmpty
             }
+        }
+        elseif( -not $PackageName )
+        {
         }
         else
         {
@@ -175,6 +183,18 @@ function Assert-ThatInstallNodeJs
     }
 }
 
+function ThenFails
+{
+    param(
+        $WithError
+    )
+
+    It ('should fail') {
+        $Global:Error | Should -Match $WithError
+        $nodePath | Should -BeNullOrEmpty
+    }
+}
+
 
 Describe 'Install-WhiskeyNodeJs.when run by build server and NVM isn''t installed' {
     Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -OnBuildServer -PreserveInstall
@@ -201,6 +221,11 @@ Describe 'Install-WhiskeyNodejs.should fail when node version is invalid' {
 
 Describe 'Install-WhiskeyNodejs.should fail when node version does not exist' {
     Assert-ThatInstallNodeJs -InstallsVersion '438.4393.329' -ErrorAction SilentlyContinue
+}
+
+Describe 'Install-WhiskeyNodeJs.when package.json has no name' {
+    Assert-ThatInstallNodeJs -InstallsVersion '4.4.7' -PackageName '' -ErrorAction SilentlyContinue
+    ThenFails -WithError 'package name is missing'
 }
 
 if( $restoreNvmHome )

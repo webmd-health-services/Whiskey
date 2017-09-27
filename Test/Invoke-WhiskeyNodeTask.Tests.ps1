@@ -284,9 +284,7 @@ function Initialize-NodeProject
     if( -not $script:DevDependency )
     {
         $script:DevDependency = @(
-                            '"jit-grunt": "^0.10.0"',
-                            '"grunt": "^1.0.1"',
-                            '"grunt-cli": "^1.2.0"'
+                            '"rimraf": "^2.6.2"'
                           )
     }
 
@@ -308,9 +306,9 @@ function Initialize-NodeProject
     },
     "private": true,
     "scripts": {
-        "build": "grunt build",
-        "test": "grunt test",
-        "fail": "grunt fail"
+        "build": "node build",
+        "test": "node test",
+        "fail": "node fail"
     },
 
     "dependencies": {
@@ -323,25 +321,17 @@ function Initialize-NodeProject
 }
 "@ | Set-Content -Path $packageJsonPath
 
-    $gruntfilePath = Join-Path -Path $workingDir -ChildPath 'Gruntfile.js'
     @'
-'use strict';
-module.exports = function(grunt) {
-    require('jit-grunt')(grunt);
+console.log('BUILDING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'build.js')
 
-    grunt.registerTask('build', '', function(){
-        grunt.file.write('build', '');
-    });
+    @'
+console.log('TESTING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'test.js')
 
-    grunt.registerTask('test', '', function(){
-        grunt.file.write('test', '');
-    });
-
-    grunt.registerTask('fail', '', function(){
-        grunt.fail.fatal('I failed!');
-    });
-}
-'@ | Set-Content -Path $gruntfilePath
+    @'
+throw ('FAILING')
+'@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'fail.js')
 
     $byWhoArg = @{  }
     if( $script:ByDeveloper )
@@ -410,7 +400,15 @@ function ThenNodeModulesAreInstalled {
         (Join-Path -Path $script:InWorkingDirectory -ChildPath 'node_modules') | Should Exist
     }
 }
-function cleanup 
+
+function ThenPackagesCleaned
+{
+    It ('should clean packages directory') {
+        Join-Path -Path $context.BuildRoot -ChildPath 'node_modules' | Should -Not -Exist
+    }
+}
+
+function Init 
 {
     $script:context = $null
     $script:npmRegistryUri = $null
@@ -426,58 +424,50 @@ function cleanup
     $script:failed = $null
     $script:withInitializeSwitch = $false
 }
-Describe 'Invoke-WhiskeyNodeTask.when run by a developer' {
-    GivenBuildByDeveloper
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    ThenBuildSucceeds
-    cleanup
+
+Describe 'Node.when running a build' {
+    Context 'by developer' {
+        Init
+        GivenBuildByDeveloper
+        GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+        GivenNpmScriptsToRun 'build','test'
+        Initialize-NodeProject 
+        WhenBuildIsStarted
+        ThenBuildSucceeds
+    }
+    Context 'by build server' {
+        Init
+        GivenBuildByBuildServer
+        GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
+        GivenNpmScriptsToRun 'build','test'
+        Initialize-NodeProject 
+        WhenBuildIsStarted
+        ThenBuildSucceeds
+    }
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when run by build server' {
-    GivenBuildByBuildServer
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    ThenBuildSucceeds
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when a build task fails' {
+Describe 'Node.when a build task fails' {
+    Init
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'fail'
     Initialize-NodeProject 
     WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'npm\ run\b.*\bfailed' -NpmScript 'fail'
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when a install fails' {
+Describe 'Node.when `npm install` fails' {
+    Init
     GivenBuildByDeveloper
     GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     Initialize-NodeProject 
     WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'npm\ install\b.*failed'
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when NODE_ENV is set to production' {
-    GivenEnvironment 'production'
-    GivenBuildByBuildServer
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    ThenBuildSucceeds
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
+Describe 'Node.when module has security vulnerability' {
+    Init
     GivenBuildByDeveloper
     GivenDependency -Dependency @( '"minimatch": "3.0.0"' )
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -485,21 +475,10 @@ Describe 'Invoke-WhiskeyNodeTask.when module has security vulnerability' {
     Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildFails -expectedError 'found the following security vulnerabilities' -WhoseScriptsPass
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when packageJson has no name' {
-    GivenNoName
-    GivenBuildByDeveloper
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted -ErrorAction SilentlyContinue
-    ThenBuildFails -expectedError 'name is missing or doesn''t have a value'
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScript' {
+Describe 'Node.when user forgets to add any NpmScript' {
+    Init
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     Initialize-NodeProject 
@@ -508,10 +487,10 @@ Describe 'Invoke-WhiskeyNodeTask.when user forgets to add any NpmScript' {
     It 'should warn that there were no NPM scripts' {
         $warnings | Should Match ([regex]::Escape('Property ''NpmScript'' is missing or empty'))
     }
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' {
+Describe 'Node.when app is not in the root of the repository' {
+    Init
     GivenSubDirectory -inWorkingDirectory 's'
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -519,10 +498,10 @@ Describe 'Invoke-WhiskeyNodeTask.when app is not in the root of the repository' 
     Initialize-NodeProject 
     WhenBuildIsStarted
     ThenBuildSucceeds
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
+Describe 'Node.when working directory does not exist' {
+    Init
     GivenBuildByDeveloper
     GivenWorkingDirectory -InWorkingDirectory 'idonotexist'
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
@@ -530,7 +509,6 @@ Describe 'Invoke-WhiskeyNodeTask.when working directory does not exist' {
     Initialize-NodeProject 
     WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'WorkingDirectory\[0\] .* does not exist'
-    cleanup
 }
 
 function GivenInstalledNodeModules
@@ -538,7 +516,8 @@ function GivenInstalledNodeModules
     New-Item -it file -Path (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\module\bin\something.js') -Force
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
+Describe 'Node.when run by build server with Clean Switch' {
+    Init
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     Initialize-NodeProject
@@ -546,74 +525,33 @@ Describe 'Invoke-WhiskeyNodeTask.when run by build server with Clean Switch' {
     GivenWithCleanSwitch
     WhenBuildIsStarted
     ThenBuildSucceeds
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when a valid npm registry is provided' {
-    GivenBuildByBuildServer
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
+    ThenPackagesCleaned
+    # Run again to make sure we don't get an error if there isn't a directory to clean.
     WhenBuildIsStarted
     ThenBuildSucceeds
-    cleanup
+    ThenPackagesCleaned
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when an invalid npm registry is provided' {
-    GivenBuildByBuildServer
-    GivenNpmRegistryUri -registry 'http://thisis@abadurl.notreal/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted -ErrorAction SilentlyContinue
-    ThenBuildFails -expectedError 'NPM command `npm install` failed with exit code 1.'
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when no npm registry is provided' {
+Describe 'Node.when no npm registry is provided' {
+    Init
     GivenBuildByBuildServer
     GivenNpmScriptsToRun 'build','test'
     Initialize-NodeProject 
     WhenBuildIsStarted -ErrorAction SilentlyContinue
     ThenBuildFails -expectedError 'property ''NpmRegistryUri'' is mandatory'
-    cleanup
 }
 
-Describe 'Invoke-WhiskeyNodeTask.when run by build server, running Clean on already Clean directory' {
-    GivenBuildByBuildServer
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenWithCleanSwitch
-    GivenNpmScriptsToRun 'build'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    GivenNpmScriptsToRun 'test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    ThenBuildSucceeds
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when run by build server, running initialize' {
+Describe 'Node.when run in initialization mode' {
+    Init
     GivenBuildByBuildServer
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenWithInitializeSwitch
-    GivenNpmScriptsToRun 'test'
+    # Run a failing build to test that we just install and don't run a full build
+    GivenNpmScriptsToRun 'fail'
     Initialize-NodeProject 
     WhenBuildIsStarted
     ThenNodeModulesAreInstalled
     ThenBuildSucceeds
-    cleanup
-}
-
-Describe 'Invoke-WhiskeyNodeTask.when given version of npm' {
-    GivenBuildByDeveloper
-    GivenNpmVersion '~4.6.1'
-    GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
-    GivenNpmScriptsToRun 'build','test'
-    Initialize-NodeProject 
-    WhenBuildIsStarted
-    ThenBuildSucceeds
-    ThenLocalNpmInstalled
-    cleanup
 }
 
 if( $startedWithNodeEnv )

@@ -58,19 +58,34 @@ function Invoke-WhiskeyNodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $startedAt = Get-Date
+    function Write-Timing
+    {
+        param(
+            $Message
+        )
+
+        $now = Get-Date
+        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
+    }
+
     if( $TaskContext.ShouldClean() )
     {
+        Write-Timing -Message 'Cleaning'
         $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
         if( Test-Path $nodeModulesPath -PathType Container )
         {
             $outputDirectory = Join-Path -path $TaskContext.BuildRoot -ChildPath '.output' 
             $emptyDir = New-Item -Name 'TempEmptyDir' -Path $outputDirectory -ItemType 'Directory'
+            Write-Timing -Message ('Emptying {0}' -f $nodeModulesPath)
             Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $nodeModulesPath | Write-Debug
+            Write-Timing -Message ('COMPLETE')
             Remove-Item -Path $emptyDir
             Remove-Item -Path $nodeModulesPath
         }
         return
     }
+
     $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
     {
@@ -81,6 +96,7 @@ function Invoke-WhiskeyNodeTask
             NpmRegistryUri: https://registry.npmjs.org/
         '
     }
+
     $npmScripts = $TaskParameter['NpmScript']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
     $numSteps = 6 + $npmScriptCount
@@ -113,7 +129,9 @@ function Invoke-WhiskeyNodeTask
     try
     {
         Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
+        Write-Timing -Message 'Installing Node.js'
         $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
+        Write-Timing -Message ('COMPLETE')
         if( -not $nodePath )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node version required for this package failed to install. Please see previous errors for details.')
@@ -128,7 +146,9 @@ function Invoke-WhiskeyNodeTask
         }
 
         Update-Progress -Status ('Getting path to the version of NPM required for this package') -Step ($stepNum++)
+        Write-Timing -Message 'Resolving path to NPM.'
         $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        Write-Timing -Message ('COMPLETE')
         if( -not $npmPath )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
@@ -143,13 +163,16 @@ function Invoke-WhiskeyNodeTask
         }
 
         Update-Progress -Status ('npm install') -Step ($stepNum++)
+        Write-Timing -Message 'Installing Node.js modules.'
         & $nodePath $npmPath 'install' '--production=false' $noColorArg
         if( $LASTEXITCODE )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
         }
+
         if( $TaskContext.ShouldInitialize() )
         {
+            Write-Timing -Message 'Initialization complete.'
             return
         }
 
@@ -171,7 +194,9 @@ BuildTasks:
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
+            Write-Timing -Message ('Running script ''{0}''.' -f $script)
             & $nodePath $npmPath 'run' $script '--scripts-prepend-node-path=auto' $noColorArg 
+            Write-Timing -Message ('COMPLETE')
             if( $LASTEXITCODE )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
@@ -186,14 +211,19 @@ BuildTasks:
         {
             $npmCmd = 'update'
         }
+
+        Write-Timing -Message ('Installing NSP.')
         & $nodePath $npmPath $npmCmd 'nsp@latest' '-g'
+        Write-Timing -Message ('COMPLETE')
         if( -not (Test-Path -Path $nspPath -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
+        Write-Timing -Message ('Running NSP security check.')
         $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
                         ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
+        Write-Timing -Message ('COMPLETE')
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
         {
@@ -208,19 +238,24 @@ BuildTasks:
         {
             $npmCmd = 'update'
         }
+        Write-Timing -Message ('Installing license checker.')
         & $nodePath $npmPath $npmCmd 'license-checker@latest' '-g'
+        Write-Timing -Message ('COMPLETE')
         if( -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
         }
 
+        Write-Timing -Message ('Generating license report.')
         $reportJson = & $nodePath $licenseCheckerPath '--json'
+        Write-Timing -Message ('COMPLETE')
         $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
         if( -not $report )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker failed to output a valid JSON report.')
         }
 
+        Write-Timing -Message ('Converting license report.')
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
         [object[]]$newReport = $report | 
@@ -234,6 +269,7 @@ BuildTasks:
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
         ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
+        Write-Timing -Message ('COMPLETE')
     }
     finally
     {
