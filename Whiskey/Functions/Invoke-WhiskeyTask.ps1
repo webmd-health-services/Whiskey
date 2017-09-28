@@ -143,7 +143,58 @@ function Invoke-WhiskeyTask
             }
         }
     }
+    
+    $branch = $TaskContext.BuildMetadata.ScmBranch
+    $executeTaskOnBranch = $true
+    
+    if( $Parameter['OnlyOnBranch'] -and $Parameter['ExceptOnBranch'] )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('This task defines both OnlyOnBranch and ExceptOnBranch properties. Only one of these can be used. Please remove one or both of these properties and re-run your build.')
+    }
+    
+    if( $Parameter['OnlyOnBranch'] )
+    {
+        $executeTaskOnBranch =$false
+        Write-Verbose -Message ('OnlyOnBranch')
+        foreach( $wildcard in $Parameter['OnlyOnBranch'] )
+        {
+            if( $branch -like $wildcard )
+            {
+                Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
+                $executeTaskOnBranch = $true
+                break
+            }
+            else
+            {
+                Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
+            }
+        }
+    }
 
+    if( $Parameter['ExceptOnBranch'] )
+    {
+        Write-Verbose -Message ('ExceptOnBranch')
+        foreach( $wildcard in $Parameter['ExceptOnBranch'] )
+        {
+            if( $branch -like $wildcard )
+            {
+                Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
+                $executeTaskOnBranch = $false
+                break
+            }
+            else
+            {
+                Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
+            }
+        }
+    }
+    
+    if( !$executeTaskOnBranch )
+    {
+        Write-Verbose -Message ('{0}  SKIPPED  {1} not configured to execute this task.' -f $prefix, $branch)
+        return
+    }
+    
     if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
     {
         Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
