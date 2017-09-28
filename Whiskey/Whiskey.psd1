@@ -153,6 +153,7 @@
 * Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
 * Created a `Delete` task for deleting files and directories.
 * Created a `GetPowerShellModule` task for downloading PowerShell modules needed during a build.
+* Created an `NpmPrune` task that runs `npm prune` in a Node.js module.
 
 Whether or not a task runs can now be filtered by the branch being built. Every task now has `OnlyOnBranch` and `ExceptOnBranch` properties. Each property is a list of branch names that controls what branches a task does or doesn't run on. Wildcards patterns are supported. If you use `OnlyOnBranch`, that task will only run if the current branch matches one of the branch names. If you use `ExceptOnBranch`, that task will only run if the current branch doesn't match one of the branch names.
 
