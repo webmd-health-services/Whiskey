@@ -485,7 +485,7 @@ Describe 'Node.when user forgets to add any NpmScript' {
     WhenBuildIsStarted -WarningVariable 'warnings'
 
     It 'should warn that there were no NPM scripts' {
-        $warnings | Should Match ([regex]::Escape('Property ''NpmScript'' is missing or empty'))
+        $warnings -join [Environment]::NewLine | Should -Match 'Property ''NpmScript'' is missing or empty'
     }
 }
 
