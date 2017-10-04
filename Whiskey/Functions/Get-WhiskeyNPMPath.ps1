@@ -28,6 +28,15 @@ function Get-WhiskeyNPMPath
             Write-Error -Message ('NPM version ''{0}'' is invalid. The NPM version must be a valid semantic version. Package.json file ''{1}'', engines field:{2}{3}' -f $packageJson.engines.npm,$packageJsonPath,[Environment]::NewLine,($packageJson.engines | ConvertTo-Json -Depth 50))
             return
         }
+        $version = $Matches[1]
+
+        $localNpmPath = (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
+        $localNpmMetadata = Get-Content -Path (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\package.json') -ErrorAction Ignore | ConvertFrom-Json
+
+        if ((Test-Path -Path $localNpmPath -PathType Leaf) -and ($localNpmMetadata.Version -eq $version))
+        {
+            return $localNpmPath
+        }
 
         Push-Location -Path $ApplicationRoot
         Try
@@ -36,9 +45,11 @@ function Get-WhiskeyNPMPath
             $npmVersion = ('npm@{0}' -f $version)
 
             $activity = ('Installing local NPM version {0}' -f $version)
-            & $NodePath $npmGlobalPath 'install' $npmVersion '--no-save' |
-                Where-Object { $_ } |
-                ForEach-Object { Write-Progress -Activity $activity -Status $_ ; }
+            Invoke-Command -ScriptBlock {
+                & $NodePath $npmGlobalPath 'install' $npmVersion '--no-save' |
+                    Where-Object { $_ } |
+                    ForEach-Object { Write-Progress -Activity $activity -Status $_ ; }
+            }
             Write-Progress -Activity $activity -Completed
 
             if ( $LASTEXITCODE )
@@ -52,7 +63,7 @@ function Get-WhiskeyNPMPath
             Pop-Location
         }
 
-        return (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
+        return $localNpmPath
     }
     else
     {
