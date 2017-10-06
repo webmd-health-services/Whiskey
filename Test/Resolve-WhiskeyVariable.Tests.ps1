@@ -275,3 +275,10 @@ Describe 'Resolve-WhiskeyVariable.when nested variable' {
     WhenResolving '$(FUBAR) $$(COMPUTERNAME)'
     ThenValueIs ('{0} $(COMPUTERNAME)' -f $env:COMPUTERNAME)
 }
+
+Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
+    Init
+    GivenVariable 'ZeroValueVariable' 0
+    WhenResolving '$(ZeroValueVariable)'
+    ThenValueIs '0'
+}
