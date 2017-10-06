@@ -251,17 +251,6 @@ Describe 'Resolve-WhiskeyVariable.when using well-known variables' {
     ThenValueIs $expectedValue
 }
 
-Describe 'Resolve-WhiskeyVariable.when using well-known variable with a value of ''0''' {
-    Init
-    WhenResolving '$(WHISKEY_BUILD_NUMBER)'
-    $expectedValue = '0'
-    if( $context.ByBuildServer )
-    {
-        $expectedValue = $context.BuildMetadata.BuildNumber
-    }
-    ThenValueIs $expectedValue
-}
-
 Describe 'Resolve-WhiskeyVariable.when hashtable key value is empty' {
     Init
     WhenResolving @{ 'Path' = $null }
@@ -285,4 +274,11 @@ Describe 'Resolve-WhiskeyVariable.when nested variable' {
     GivenVariable 'FUBAR' '$(COMPUTERNAME)'
     WhenResolving '$(FUBAR) $$(COMPUTERNAME)'
     ThenValueIs ('{0} $(COMPUTERNAME)' -f $env:COMPUTERNAME)
+}
+
+Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
+    Init
+    GivenVariable 'ZeroValueVariable' 0
+    WhenResolving '$(ZeroValueVariable)'
+    ThenValueIs '0'
 }
