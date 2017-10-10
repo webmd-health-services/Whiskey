@@ -11,6 +11,7 @@ $applicationRoot = $null
 $argument = @{}
 $dependency = $null
 $devDependency = $null
+$initializeOnly = $false
 $npmCommand = $null
 $nodeVersion = '^4.4.7'
 
@@ -18,10 +19,11 @@ function Init
 {
     $Global:Error.Clear()
     $script:applicationRoot = $TestDrive.FullName
-    $script:dependency = $null
-    $script:devDependency = $null
     $script:argument = @{}
     $script:command = $null
+    $script:dependency = $null
+    $script:devDependency = $null
+    $script:initializeOnly = $false
 }
 
 function CreatePackageJson
@@ -72,6 +74,15 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
+function GivenInitializeOnly
+{
+    $script:initializeOnly = $true
+    Mock -CommandName 'Invoke-Command'
+    Mock -CommandName 'Install-WhiskeyNodeJs' -MockWith { $TestDrive.FullName }
+    Mock -CommandName 'Join-Path' -ParameterFilter { $ChildPath -eq 'node_modules\npm\bin\npm-cli.js' } -MockWith { $TestDrive.FullName }
+    Mock -CommandName 'Get-WhiskeyNPMPath' -MockWith { $TestDrive.FullName }
+}
+
 function GivenNpmCommand
 {
     param(
@@ -102,7 +113,14 @@ function WhenRunningNpmCommand
 
     CreatePackageJson
 
-    Invoke-WhiskeyNpmCommand -NpmCommand $npmCommand -ApplicationRoot $applicationRoot -RegistryUri $registryUri @argument
+    if ($initializeOnly)
+    {
+        Invoke-WhiskeyNpmCommand -InitializeOnly -ApplicationRoot $applicationRoot -RegistryUri $registryUri
+    }
+    else
+    {
+        Invoke-WhiskeyNpmCommand -NpmCommand $npmCommand -ApplicationRoot $applicationRoot -RegistryUri $registryUri @argument
+    }
 }
 
 function ThenErrorMessage
@@ -166,6 +184,28 @@ function ThenExitCode
     }
 }
 
+function ThenNodeJsInstalled
+{
+    It 'should install Node.js' {
+        Assert-MockCalled -CommandName 'Install-WhiskeyNodeJs' -Times 1
+    }
+}
+
+function ThenNPMInstalled
+{
+    It 'should install NPM' {
+        Assert-MockCalled -CommandName 'Get-WhiskeyNPMPath' -Times 1
+    }
+}
+
+function ThenNpmNotRun
+{
+    It 'should not run npm' {
+        Assert-MockCalled -CommandName 'Invoke-Command' -Times 0
+    }
+}
+
+
 Describe 'Invoke-WhiskeyNpmCommand.when Node.js fails to install' {
     Init
     GivenNpmCommand 'install'
@@ -212,4 +252,15 @@ Describe 'Invoke-WhiskeyNpmCommand.when NPM command with argument that fails' {
     GivenArgument 'fakepackage'
     WhenRunningNpmCommand -ErrorAction SilentlyContinue
     ThenExitCode 1
+}
+
+Describe 'Invoke-WhiskeyNpmCommand.when running with InitializeOnly' {
+    Init
+    GivenInitializeOnly
+    WhenRunningNpmCommand
+    ThenNodeJsInstalled
+    ThenNPMInstalled
+    ThenNpmNotRun
+    ThenExitCode 0
+    ThenNoErrorsWritten
 }

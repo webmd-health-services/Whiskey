@@ -25,14 +25,19 @@ function Invoke-WhiskeyNpmCommand
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='InvokeNpm')]
         [string]
         # The NPM command to execute.
         $NpmCommand,
         
+        [Parameter(ParameterSetName='InvokeNpm')]
         [string[]]
         # An array of arguments to be given to the NPM command being executed.
         $Argument,
+
+        [Parameter(ParameterSetName='InitializeOnly')]
+        [switch]
+        $InitializeOnly,
 
         [Parameter(Mandatory=$true)]
         [string]
@@ -95,6 +100,13 @@ function Invoke-WhiskeyNpmCommand
     {
         Write-Error -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
         $Global:LASTEXITCODE = 3
+        return
+    }
+
+    if ($InitializeOnly)
+    {
+        $Global:LASTEXITCODE = 0
+        Write-Timing -Message 'Initialization complete.'
         return
     }
 
