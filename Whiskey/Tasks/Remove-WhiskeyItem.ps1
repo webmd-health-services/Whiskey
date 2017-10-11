@@ -46,7 +46,7 @@ function Remove-WhiskeyItem
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
+    
     foreach( $path in $TaskParameter['Path'] )
     {
         $path = $path | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -ErrorAction Ignore
@@ -55,17 +55,18 @@ function Remove-WhiskeyItem
             continue
         }
 
-        if( (Test-Path -Path $path -PathType Container) )
-        {
-            $emptyDir = Join-Path -Path $TaskContext.OutputDirectory -ChildPath 'empty'
-            if( -not (Test-Path -Path $emptyDir -PathType Container) )
+        $path | ForEach-Object {
+            if( (Test-Path -Path $_ -PathType Container) )
             {
-                New-Item -Path $emptyDir -ItemType 'Directory'
+                $emptyDir = Join-Path -Path $TaskContext.OutputDirectory -ChildPath 'empty'
+                if( -not (Test-Path -Path $emptyDir -PathType Container) )
+                {
+                    New-Item -Path $emptyDir -ItemType 'Directory'
+                }
+
+                robocopy $emptyDir $_ /MIR /R:0 /NP /NFL /NDL
             }
-
-            robocopy $emptyDir $path /MIR /R:0 /NP /NFL /NDL
+            Remove-Item -Path $_ -Force -Recurse
         }
-        Remove-Item -Path $path -Force
     }
-
 }
