@@ -57,7 +57,7 @@
     This example demonstrates how to run multiple pipelines with the `Pipeline` task. In this example, the `BuildASpecificTing` tasks will run, followed by the `BuildAnotherThing` tasks.
     #>
     [CmdletBinding()]
-    [Whiskey.Task("Pipeline")]
+    [Whiskey.Task("Pipeline", SupportsClean=$true, SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
