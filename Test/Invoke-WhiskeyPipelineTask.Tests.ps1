@@ -4,8 +4,22 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$clean = $false
+$initialize = $false
 $pipelines = $null
 $threwException = $false
+
+function GivenCleanMode
+{
+    $script:clean = $true
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+}
+
+function GivenInitializeMode
+{
+    $script:initialize = $true
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+}
 
 function GivenPipeline
 {
@@ -22,8 +36,40 @@ $($Yaml)
 
 function Init
 {
+    $script:clean = $false
+    $script:initialize = $false
     $script:pipelines = New-Object 'Collections.Generic.List[string]'
     $script:threwException = $false
+}
+
+function ThenPowershellModule
+{
+    param(
+        [Parameter(Position=0)]
+        [string]
+        $Name,
+
+        [Parameter(ParameterSetName='Cleaned')]
+        [switch]
+        $Cleaned,
+
+        [Parameter(ParameterSetName='Installed')]
+        [switch]
+        $Installed
+    )
+
+    if ($Cleaned)
+    {
+        It 'should run Pipeline tasks when in Clean mode' {
+            Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName $Name -ParameterFilter { $ModuleName -eq 'Whiskey' }
+        }
+    }
+    elseif ($Installed)
+    {
+        It 'should run Pipeline tasks when in Initialize mode' {
+            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName $Name -ParameterFilter { $ModuleName -eq 'Whiskey' }
+        }
+    }
 }
 
 function ThenPipelineFailed
@@ -71,7 +117,18 @@ function WhenRunningTask
     $Global:Error.Clear()
     try
     {
-        Invoke-WhiskeyBuild -Context $context
+        if ($clean)
+        {
+            Invoke-WhiskeyBuild -Context $context -Clean
+        }
+        elseif ($initialize)
+        {
+            Invoke-WhiskeyBuild -Context $context -Initialize
+        }
+        else
+        {
+            Invoke-WhiskeyBuild -Context $context
+        }
     }
     catch
     {
@@ -80,7 +137,7 @@ function WhenRunningTask
     }
 }
 
-Describe 'WhiskeyPipeline Task.when running another pipeline' {
+Describe 'Pipeline.when running another pipeline' {
     Init
     GivenPipeline 'Fubar' @'
 - CopyFile:
@@ -99,7 +156,7 @@ Describe 'WhiskeyPipeline Task.when running another pipeline' {
     ThenPipelineRun 'BuildTasks' -BecauseFileExists 'BuildTasks\whiskey.yml'
 }
 
-Describe 'WhiskeyPipeline Task.when running multiple pipelines' {
+Describe 'Pipeline.when running multiple pipelines' {
     Init
     GivenPipeline 'Fubar' @'
 - CopyFile:
@@ -127,7 +184,7 @@ Describe 'WhiskeyPipeline Task.when running multiple pipelines' {
     ThenPipelineRun 'BuildTasks' -BecauseFileExists 'BuildTasks\whiskey.yml'
 }
 
-Describe 'WhiskeyPipeline Task.when Name property is missing' {
+Describe 'Pipeline.when Name property is missing' {
     Init
     GivenPipeline 'BuildTasks' @'
 - Pipeline
@@ -136,7 +193,7 @@ Describe 'WhiskeyPipeline Task.when Name property is missing' {
     ThenPipelineFailed 'mandatory'
 }
 
-Describe 'WhiskeyPipeline Task.when Name property doesn''t have a value' {
+Describe 'Pipeline.when Name property doesn''t have a value' {
     Init
     GivenPipeline 'BuildTasks' @'
 - Pipeline:
@@ -144,4 +201,36 @@ Describe 'WhiskeyPipeline Task.when Name property doesn''t have a value' {
 '@
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenPipelineFailed 'is missing or doesn''t have a value'
+}
+
+Describe 'Pipeline.when running in Clean mode' {
+    Init
+    GivenCleanMode
+    GivenPipeline 'Fubar' @'
+- GetPowerShellModule:
+    Name: Whiskey
+    Version: 0.18.0
+'@
+    GivenPipeline 'BuildTasks' @'
+- Pipeline:
+    Name: Fubar
+'@
+    WhenRunningTask
+    ThenPowershellModule 'Whiskey' -Cleaned
+}
+
+Describe 'Pipeline.when running in Initialize mode' {
+    Init
+    GivenInitializeMode
+    GivenPipeline 'Fubar' @'
+- GetPowerShellModule:
+    Name: Whiskey
+    Version: 0.18.0
+'@
+    GivenPipeline 'BuildTasks' @'
+- Pipeline:
+    Name: Fubar
+'@
+    WhenRunningTask
+    ThenPowershellModule 'Whiskey' -Installed
 }
