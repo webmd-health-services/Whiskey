@@ -150,6 +150,8 @@
 * Created an `NpmScript` task for running NPM scripts defined in a `package.json` file.
 * Created an `NspCheck` task for running the Node Security Platform module against the list of dependencies in a `package.json` file to check for any known security vulnerabilities.
 * Created a `NodeLicenseChecker` task for generating a license report for all the dependencies listed in a `package.json` file.
+* Added `OnlyDuring` and `ExceptDuring` global task properties for controlling which run modes tasks can run in.
+* The `Delete` task now supports the `Clean` run mode and will execute normally when a `Clean` build is run.
 '@
         } # End of PSData hashtable
 
