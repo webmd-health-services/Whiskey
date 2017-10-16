@@ -110,7 +110,7 @@ function Invoke-WhiskeyTask
 
     if ($onlyDuring -and $exceptDuring)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties were defined. These properties are mutually exclusive, i.e. you may only specify one or the other.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
     }
     elseif ($onlyDuring -and ($onlyDuring -notin @('Clean', 'Initialize')))
     {

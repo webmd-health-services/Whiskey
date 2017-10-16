@@ -796,7 +796,7 @@ Describe 'Invoke-WhiskeyTask.when given both OnlyDuring and ExceptDuring' {
         Init
         GivenMockTask -SupportsClean -SupportsInitialize
         WhenRunningTask 'MockTask' -Parameter @{ 'OnlyDuring' = 'Clean'; 'ExceptDuring' = 'Clean' } -ErrorAction SilentlyContinue
-        ThenThrewException 'Both ''OnlyDuring'' and ''ExceptDuring'' properties were defined. These properties are mutually exclusive'
+        ThenThrewException 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive'
         ThenTaskNotRun 'MockTask'
     }
     finally
