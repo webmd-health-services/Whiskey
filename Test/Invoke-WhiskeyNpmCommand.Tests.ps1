@@ -249,7 +249,7 @@ Describe 'Invoke-WhiskeyNpmCommand.when running successful NPM command' {
 Describe 'Invoke-WhiskeyNpmCommand.when NPM command with argument that fails' {
     Init
     GivenNpmCommand 'install'
-    GivenArgument 'fakepackage'
+    GivenArgument 'thisisanonexistentpackage'
     WhenRunningNpmCommand -ErrorAction SilentlyContinue
     ThenExitCode 1
 }

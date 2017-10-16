@@ -135,10 +135,10 @@ function Invoke-WhiskeyNpmInstall
     {
         foreach ($package in $TaskParameter['Package'])
         {
-            if ($package -is [System.Collections.Hashtable])
+            if ($package | Get-Member -Name 'Keys')
             {
-                $packageName = $package.GetEnumerator() | Select-Object -ExpandProperty 'Key'
-                $packageVersion = $package.GetEnumerator() | Select-Object -ExpandProperty 'Value'
+                $packageName = $package.Keys | Select-Object -First 1
+                $packageVersion = $package[$packageName]
 
                 Write-Timing -Message ('Installing {0} at version {1}' -f $packageName,$packageVersion)
                 $modulePath = Install-WhiskeyNodeModule -Name $packageName -Version $packageVersion -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper

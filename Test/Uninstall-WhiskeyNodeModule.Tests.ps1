@@ -139,9 +139,10 @@ Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
     GivenName 'wrappy'
     WhenUninstallingNodeModule
     ThenNoErrorsWritten
+    ThenModule 'wrappy' -DoesNotExist
 }
 
-Describe 'Uninstall-WhiskeyNodeModule.when given name' {
+Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
     Init
     GivenInstalledModule 'wrappy'
     GivenInstalledModule 'pify'
@@ -159,7 +160,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm prune fails to re
     GivenName 'wrappy'
     GivenForce
     GivenFailingNpmPrune
-    WhenUninstallingNodeModule -ErrorAction SilentlyContinue
+    WhenUninstallingNodeModule
     ThenModule 'wrappy' -DoesNotExist
     ThenModule 'pify' -Exists
     ThenNoErrorsWritten
