@@ -32,6 +32,11 @@ function GivenNoNPMVersion
     GivenPackageJson
 }
 
+function GivenNPMAlreadyInstalled
+{
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'install' }
+}
+
 function GivenNPMVersion
 {
     param(
@@ -79,6 +84,13 @@ function WhenGettingNPMPath
     $script:npmPath = Get-WhiskeyNPMPath -ApplicationRoot $buildRoot -NodePath $nodePath -ErrorAction SilentlyContinue
 
     Pop-Location
+}
+
+function ThenNPMInstallCmdNotCalled
+{
+    It 'should not call ''npm install'' again' {
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'install' } -Times 0
+    }
 }
 
 function ThenNPMPathIsGlobal
@@ -130,11 +142,18 @@ Describe 'Get-WhiskeyNPMPath.when specific version of NPM is set in package.json
     Init
     GivenNPMVersion '5.1.0'
     WhenGettingNPMPath
-    ThenNPMPathIsLocal
     ThenNPMShouldBeVersion '5.1.0'
+    ThenNPMPathIsLocal
 
-    # npm module path in TestDrive is too long for Pester to cleanup with Remove-Item
-    & cmd /C rmdir /S /Q (Join-Path -Path (Get-BuildRoot) -ChildPath 'node_modules')
+    # Run again to ensure 'npm install' isn't called since npm is already there
+    # Need to first remove the super long paths that npm creates otherwise Pester breaks when trying to save TestDrive states between contexts
+    & cmd /C rmdir /S /Q (Join-Path -Path (Get-BuildRoot) -ChildPath 'node_modules\npm\node_modules')
+    Context 'local NPM already installed' {
+        GivenNPMAlreadyInstalled
+        WhenGettingNPMPath
+        ThenNPMInstallCmdNotCalled
+        ThenNPMPathIsLocal
+    }
 }
 
 Describe 'Get-WhiskeyNPMPath.when NPM version in package.json is not a semantic version' {

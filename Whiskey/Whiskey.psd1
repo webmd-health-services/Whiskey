@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.19.0'
+    ModuleVersion = '0.20.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,32 +142,14 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* The `Node` task no longer runs `npm prune`.
-* The `PublishNodeModule` task now runs `npm prune --production` before publishing the node module.
-* You can now specify a custom version of NUnit that the `NUnit2` and `NUnit3` tasks should use by setting the `Version` property to the version you want to use.
-* The `PublishBuildMasterPackage` task now supports:
-  * customizing package names with the `PackageName` property. The default value will continue to be the major, minor, and patch portions of the version number, e.g. `6.4.34`.
-  * skipping/preventing a package from deploying with the `SkipDeploy` property. Set it to `true` and a package will be created in BuildMaster, but not deployed anywhere.
-  * starting a deploy at a specific stage of a release's pipeline. Set the `StartAtStage` property to the name of the stage you want the deploy to start at. In order for a deploy to start at any stage in a pipeline, the "Enforce pipeline stage order for deployments" setting must be off. This can be set in the BuildMaster UI in the pipeline's Edit panel.
-* The `Pester4` task can now show a "Describe Duration Report" and an "It Duration Report". These reports show the duration of each Describe and It block that were run, respectively, from longest to shortest. The task has two new properties that control the number of rows to show (i.e. they control how many of your longest Describe and It blocks to show). Use the `DescribeDurationReportCount` property to control how many of your longest-running Describe blocks to show. Use the `ItDurationReport` property to control how many of your longest-running It blocks to show.
-* Fixed: Pester module was always downloaded by the `Pester3` and `Pester4` tasks even if it was already installed.
-* Created a `Delete` task for deleting files and directories.
-* Created a `GetPowerShellModule` task for downloading PowerShell modules needed during a build.
-* Created an `NpmPrune` task that runs `npm prune` in a Node.js module.
-
-Whether or not a task runs can now be filtered by the branch being built. Every task now has `OnlyOnBranch` and `ExceptOnBranch` properties. Each property is a list of branch names that controls what branches a task does or doesn't run on. Wildcards patterns are supported. If you use `OnlyOnBranch`, that task will only run if the current branch matches one of the branch names. If you use `ExceptOnBranch`, that task will only run if the current branch doesn't match one of the branch names.
-
-    PublishTasks:
-    - PublishBuildMasterPackage:
-        OnlyOnBranch: master
-        ReleaseName: 6.4
-        ApplicationName: Whiskey
-    - PublishBuildMasterPackage:
-        ExceptOnBranch: master
-        ReleaseName: 6.5
-        ApplicationName: Whiskey
-
-The above example shows how you would publish different branches to different releases in BuildMaster. The master branch is packaged and deployed to the `6.4` release. All other branches are packaged and deployed to the `6.5` release.
+* The `Node` task has been deprecated. It''s functionality has been broken up into individual smaller tasks, `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker`.
+* Created private function `Invoke-WhiskeyNpmCommand` to encapsulate the logic required for running NPM commands.
+* Created private function `Install-WhiskeyNodeModule` to install node modules to a project's `node_modules` directory.
+* Created private function `Uninstall-WhiskeyNodeModule` to remove node modules from a project's `node_modules` directory.
+* Created an `NpmInstall` task for installing node modules defined in a `package.json` file `dependencies` and `devDependencies` properties.
+* Created an `NpmScript` task for running NPM scripts defined in a `package.json` file.
+* Created an `NspCheck` task for running the Node Security Platform module against the list of dependencies in a `package.json` file to check for any known security vulnerabilities.
+* Created a `NodeLicenseChecker` task for generating a license report for all the dependencies listed in a `package.json` file.
 '@
         } # End of PSData hashtable
 

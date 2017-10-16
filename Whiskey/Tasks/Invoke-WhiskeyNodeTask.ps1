@@ -58,6 +58,8 @@ function Invoke-WhiskeyNodeTask
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    Write-Warning -Message ('The ''Node'' task has been deprecated and will be removed in a future version of Whiskey. It''s functionality has been broken up into individual smaller tasks, ''NpmInstall'', ''NpmRunScript'', ''NspCheck'', and ''NodeLicenseChecker''. Update the build configuration in ''{0}'' to use the new tasks.' -f $TaskContext.ConfigurationPath)
+
     $startedAt = Get-Date
     function Write-Timing
     {
