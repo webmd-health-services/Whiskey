@@ -5,6 +5,12 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $path = $null
+$runMode = $null
+
+function GivenClean
+{
+    $script:runMode = 'Clean'
+}
 
 function GivenItem
 {
@@ -43,6 +49,7 @@ function GivenPath
 function Init
 {
     $script:path = $null
+    $script:runMode = $null
 }
 
 function ThenItemDoesNotExist
@@ -86,7 +93,22 @@ function WhenDeleting
 {
     $Global:Error.Clear()
     $context = New-WhiskeyTestContext -ForBuildServer
+
+    if ($runMode)
+    {
+        $context.RunMode = $runMode
+    }
+
     Invoke-WhiskeyTask -TaskContext $context -Name 'Delete' -Parameter @{ Path = $path }
+}
+
+Describe 'Remove-WhiskeyItem.when run in Clean mode and item is a file' {
+    Init
+    GivenClean
+    GivenItem 'dir1\file.txt' -ItemType 'File'
+    GivenPath 'dir1\file.txt'
+    WhenDeleting
+    ThenItemDoesNotExist 'dir1\file.txt'
 }
 
 Describe 'Remove-WhiskeyItem.when item is a file' {
