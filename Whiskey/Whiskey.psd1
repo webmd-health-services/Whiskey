@@ -143,6 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: Pipeline task was not running in Clean and Initialize modes, thus no tasks in the sub-pipelines were getting cleaned/initialized.
+* Fixed: Resolve-WhiskeyNuGetPackageVersion fails if NuGet.exe returns multiple versions.
 '@
         } # End of PSData hashtable
 

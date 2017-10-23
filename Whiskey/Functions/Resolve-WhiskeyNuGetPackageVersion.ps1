@@ -2,7 +2,7 @@ function Resolve-WhiskeyNuGetPackageVersion
 {
     [CmdletBinding()]
     param(
-        
+
         [Parameter(Mandatory=$true)]
         [string]
         # The name of the NuGet package to download.
@@ -22,10 +22,15 @@ function Resolve-WhiskeyNuGetPackageVersion
     if( -not $Version )
     {
         Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
-        $Version = & $NugetPath list ('packageid:{0}' -f $NuGetPackageName) |
-                        Where-Object { $_ -match $NuGetPackageName } |
-                        Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
-                        ForEach-Object { $Matches[1] }
+        $NuGetPackage = Invoke-Command -NoNewScope -ScriptBlock {
+            & $NugetPath list ('packageid:{0}' -f $NuGetPackageName)
+        }
+        $Version = $NuGetPackage |
+            Where-Object { $_ -match $NuGetPackageName } |
+            Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
+            ForEach-Object { $Matches[1] } |
+            Select-Object -First 1
+
         if( -not $Version )
         {
             Write-Error ("Unable to find latest version of package '{0}'." -f $NuGetPackageName)
