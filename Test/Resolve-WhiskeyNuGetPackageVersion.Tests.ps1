@@ -23,6 +23,16 @@ function GivenNuGetPackageName
     $Script:NuGetPackageName = $Name
 }
 
+function GivenNugetReturnsMultipleVersions
+{
+    param(
+        [string[]]
+        $PackageVersions
+    )
+
+    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'list' } -MockWith { $PackageVersions }.GetNewClosure()
+}
+
 function GivenVersion
 {
     param(
@@ -125,4 +135,22 @@ Describe 'Resolve-WhiskeyNuGetPackageVersion.when package does not exist' {
     WhenResolvingNuGetPackageVersion -ErrorAction SilentlyContinue
     ThenErrorMessage 'Unable to find latest version of package'
     ThenReturnedNothing
+}
+
+Describe 'Resolve-WhiskeyNuGetPackageVersion.when NuGet returns multiple versions' {
+    Init
+    GivenNuGetPackageName 'NuGet.CommandLine'
+    GivenNugetReturnsMultipleVersions 'NuGet.CommandLine 1.2.3', 'NuGet.CommandLine 2.3.4'
+    WhenResolvingNuGetPackageVersion
+    ThenReturnedVersion '1.2.3'
+    ThenNoErrorsWritten
+}
+
+Describe 'Resolve-WhiskeyNuGetPackageVersion.when NuGet returns multiple different packages' {
+    Init
+    GivenNuGetPackageName 'NuGet.CommandLine'
+    GivenNugetReturnsMultipleVersions 'NuGet.Command 1.0.0', 'NuGet.CommandLine', 'NuGet.CommandLine 4.3.0', 'NuGet.Core 2.1.0'
+    WhenResolvingNuGetPackageVersion
+    ThenReturnedVersion '4.3.0'
+    ThenNoErrorsWritten
 }
