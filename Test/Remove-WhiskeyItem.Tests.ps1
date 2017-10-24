@@ -58,10 +58,10 @@ function ThenItemDoesNotExist
         [string[]]
         $Path
     )
-
-    It 'should delete' {
-        foreach( $item in $Path )
-        {
+    
+    foreach( $item in $Path )
+    {
+        It ('should delete ''{0}''' -f $item) {
             Join-Path -Path $TestDrive.FullName -ChildPath $item | Should -Not -Exist
         }
     }
@@ -74,9 +74,9 @@ function ThenItemExists
         $Path
     )
 
-    It 'should not delete' {
-        foreach( $item in $Path )
-        {
+    foreach( $item in $Path )
+    {
+        It ('should not delete ''{0}''' -f $item) {
             Join-Path -Path $TestDrive.FullName -ChildPath $item | Should -Exist
         }
     }
@@ -160,4 +160,16 @@ Describe 'Delete.when deleting a using wildcards' {
     WhenDeleting
     ThenItemDoesNotExist 'file.txt'
     ThenItemExists 'file.json'
+}
+
+Describe 'Delete.when wildcards match multiple paths' {
+    Init
+    GivenItem 'Production\Source\Dir1\Bin' -ItemType 'Directory'
+    GivenItem 'Production\Source\Dir2\Bin' -ItemType 'Directory'
+    GivenItem 'Production\Source\Dir2\NotBin' -ItemType 'Directory'
+    GivenPath 'Production\Source\*\Bin'
+    WhenDeleting
+    ThenItemDoesNotExist 'Production\Source\Dir1\Bin'
+    ThenItemDoesNotExist 'Production\Source\Dir2\Bin'
+    ThenItemExists 'Production\Source\Dir2\NotBin'
 }

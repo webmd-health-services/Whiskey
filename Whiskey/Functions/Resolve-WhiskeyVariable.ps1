@@ -196,7 +196,7 @@ function Resolve-WhiskeyVariable
                 return $InputObject
             }
 
-            if( -not $value )
+            if( $value -eq $null )
             {
                 $value = ''
             }
