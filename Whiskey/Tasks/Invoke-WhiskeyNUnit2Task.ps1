@@ -96,7 +96,12 @@ function Invoke-WhiskeyNUnit2Task
     $includeParam = $null
     if( $TaskParameter.ContainsKey('Include') )
     {
-        $includeParam = '/include=\"{0}\"' -f ($TaskParameter['Include'] -join ',')
+        if( $TaskParameter.Get_Item('DisableCodeCoverage') -eq $true ){
+            $includeParam = '/include="{0}"' -f ($TaskParameter['Include'] -join ',')
+        }
+        else{
+            $includeParam = '/include=\"{0}\"' -f ($TaskParameter['Include'] -join ',')
+        }
     }
         
     $excludeParam = $null
@@ -217,7 +222,8 @@ function Invoke-WhiskeyNUnit2Task
     else
     {
         Write-Timing -Message ('Running NUnit')
-        & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath) 
+        write-host "include: ", $includeParam
+        & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
         Write-Timing -Message ('COMPLETE')
         if( $LastExitCode )
         {

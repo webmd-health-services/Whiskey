@@ -374,7 +374,9 @@ $taskParameter = $null
 $openCoverVersion = $null
 $reportGeneratorVersion = $null
 $nunitVersion = $null
-
+$disableCodeCoverage = $null
+$include = $null
+$CoverageFilter = $null
 function GivenPassingTests
 {
     $script:solutionToBuild = 'NUnit2PassingTest.sln'
@@ -387,6 +389,19 @@ function GivenInvalidPath
     $script:assemblyToTest = 'I/do/not/exist'
 }
 
+function GivenCodeCoverageIsDisabled
+{
+    $Script:disableCodeCoverage = $true
+}
+
+function GivenInclude
+{
+    param(
+        [String[]]
+        $Value
+    )
+    $script:include = $value
+}
 function GivenReportGeneratorVersion
 {
     param(
@@ -414,6 +429,14 @@ function GivenVersion
     $script:nunitVersion = $Version
 }
 
+function GivenCoverageFilter
+{ 
+    Param(
+        [String]
+        $Filter
+    )
+    $script:CoverageFilter = $Filter
+}
 function Init
 {
     $script:openCoverVersion = $null
@@ -465,7 +488,18 @@ function WhenRunningTask
         {
             $WithParameters['ReportGeneratorVersion'] = $reportGeneratorVersion
         }
-
+        if( $disableCodeCoverage )
+        {
+            $WithParameters['DisableCodeCoverage'] = $disableCodeCoverage
+        }
+        if( $CoverageFilter )
+        {
+            $WithParameters['CoverageFilter'] = $CoverageFilter
+        }
+        if( $include )
+        {
+            $WithParameters['include'] = $include
+        }
         if( $nunitVersion )
         {
             $WithParameters['Version'] = $nunitVersion
@@ -596,6 +630,7 @@ function ThenErrorIs {
     param(
         $Regex
     )
+    Write-host $Global:error
     It ('should write an error that matches /{0}/' -f $Regex){
         $Global:Error | Should -Match $Regex
     }
@@ -610,12 +645,32 @@ function ThenErrorShouldNotBeThrown {
     }
 }
 
+function ThenNoErrorShouldBeThrown {
+    $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
+    write-host $Global:Error
+    Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
+    it 'Should not throw an Error'{
+        $Global:error | Should BeNullOrEmpty
+    }
+}
+
 Describe 'NUnit2.when including tests by category' {
     Init
     GivenPassingTests
     WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
     ThenTestsPassed 'HasCategory1','HasCategory2'
     ThenTestsNotRun 'ShouldPass'
+}
+
+Describe 'NUnit2.when code coverage is disabled and using category filters' {
+    Init
+    GivenCodeCoverageIsDisabled
+    GivenPassingTests
+    GivenInclude -Value 'Category with Spaces 1','Category With Spaces 1'
+    WhenRunningTask
+    # ThenTestsPassed -TestName 'HasCategory1','HasCategory2'
+    ThenTestsNotRun 'HasCategory1','HasCategory2','ShouldPass'
+    ThenNoErrorShouldBeThrown
 }
 
 Describe 'NUnit2.when excluding tests by category' {
