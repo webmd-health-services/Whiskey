@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.19.1'
+    ModuleVersion = '0.19.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,9 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Pipeline task was not running in Clean and Initialize modes, thus no tasks in the sub-pipelines were getting cleaned/initialized.
-* Fixed: Tasks that install NuGet packages fail if NuGet.exe returns multiple versions of the package.
-* Fixed: variables whose value evaluates/converts to `$false` get replaced with an empty string, e.g. `0`.
+* Fixed: running a build under TeamCity sometimes doesn't use the correct branch name if a build is configured to build on multiple branches.
 '@
         } # End of PSData hashtable
 
