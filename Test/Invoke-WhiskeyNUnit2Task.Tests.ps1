@@ -21,7 +21,7 @@ foreach( $packageID in $packages.Keys )
 {
     if( -not (Test-Path -Path (Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $packageID,$packages[$packageID]))) )
     {
-        & $nugetPath install $packageID -OutputDirectory $packagesRoot
+        & $nugetPath install $packageID -Version $packages[$packageID] -OutputDirectory $packagesRoot
     }
 }
 
