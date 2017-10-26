@@ -143,7 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: NUnit2 task fails when code coverage is disabled and including/excluding test categories with spaces.
-* Fixed: version.json file missing from packages when a package's whitelist include *.json files.
+* Fixed: version.json file missing from packages when a package's whitelist includes *.json files.
 '@
         } # End of PSData hashtable
 
