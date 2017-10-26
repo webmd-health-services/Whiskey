@@ -989,3 +989,9 @@ Describe 'New-WhiskeyProGetUniversalPackage.when package has empty directories' 
     ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
     ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
 }
+
+Describe 'New-WhiskeyProGetUniversalPackage.when package has JSON files' {
+    GivenARepositoryWithFiles 'my.json'
+    WhenPackaging -Paths '.' -WithWhitelist '*.json'
+    ThenPackageShouldInclude 'my.json','version.json'
+}
