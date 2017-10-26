@@ -61,6 +61,13 @@ function Invoke-WhiskeyPowerShell
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $ScriptPath,$WorkingDirectory)
         }
 
+        $passTaskContext = $false
+        $taskContextParameter = Get-Command -Name $scriptPath -ParameterName 'TaskContext' -ErrorAction Ignore
+        if( $taskContextParameter )
+        {
+            $passTaskContext = $true
+        }
+
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-ExitCode-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $job = Start-Job -ScriptBlock {
             $workingDirectory = $using:WorkingDirectory
@@ -69,6 +76,7 @@ function Invoke-WhiskeyPowerShell
             $taskContext = $using:TaskContext
             $moduleRoot = $using:moduleRoot
             $resultPath = $using:resultPath
+            $passTaskContext = $using:passTaskContext
 
             Invoke-Command -ScriptBlock { 
                                             $VerbosePreference = 'SilentlyContinue';
@@ -77,9 +85,15 @@ function Invoke-WhiskeyPowerShell
 
             $VerbosePreference = $using:VerbosePreference
 
+            $contextArgument = @{ }
+            if( $passTaskContext )
+            {
+                $contextArgument['TaskContext'] = $passTaskContext
+            }
+
             Set-Location $workingDirectory
             $Global:LASTEXITCODE = 0
-            & $scriptPath -TaskContext $taskContext @argument
+            & $scriptPath @contextArgument @argument
             $Global:LASTEXITCODE | Set-Content -Path $resultPath
         }
 

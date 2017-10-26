@@ -1,4 +1,4 @@
-
+ 
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
@@ -134,7 +134,7 @@ function WhenTheTaskRuns
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyPowerShell -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter
     }
     catch
     {
@@ -297,7 +297,6 @@ param(
     }
 }
 
-
 Describe 'Invoke-WhiskeyPowerShell.when passing named parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
@@ -305,7 +304,10 @@ Describe 'Invoke-WhiskeyPowerShell.when passing named parameters' {
 `$Two | Set-Content -Path 'two.txt'
 "@ -WithParam @"
 param(
+    # Don't remove the [Parameter] attributes. Part of the test!
+    [Parameter(Mandatory=`$true)]
     `$One,
+    [Parameter(Mandatory=`$true)]
     `$Two
 )
 "@
@@ -316,4 +318,18 @@ param(
         ThenFile 'one.txt' -HasContent 'snafu'
         ThenFile 'two.txt' -HasContent 'fubar'
     }
+}
+
+Describe 'Invoke-WhiskeyPowerShell.when script has TaskContext parameter' {
+    GivenAScript @"
+exit 0
+"@ -WithParam @"
+param(
+    # Don't remove the [Parameter] attributes. Part of the test!
+    [Parameter(Mandatory=`$true)]
+    `$TaskContext
+)
+"@
+    WhenTheTaskRuns 
+    ThenTheTaskPasses
 }
