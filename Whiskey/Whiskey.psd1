@@ -143,8 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: NUnit2 task fails when code coverage is disabled and including/excluding test categories with spaces.
-* Created a `Delete` task for deleting files and directories.
-* Created a `GetPowerShellModule` task for downloading PowerShell modules needed during a build.
+* Fixed: ProGetUniversalPackage task fails if a package only contains third-party paths.
 '@
         } # End of PSData hashtable
 
