@@ -6,17 +6,24 @@ $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe'
 
 $latestNUnit2Version = '2.6.4'
 $latestOpenCoverVersion,$latestReportGeneratorVersion = & {
-                                                                & $nugetPath list packageid:OpenCover
-                                                                & $nugetPath list packageid:ReportGenerator
+                                                                & $nugetPath list packageid:OpenCover -Source https://www.nuget.org/api/v2/
+                                                                & $nugetPath list packageid:ReportGenerator -Source https://www.nuget.org/api/v2/
                                                         } |
                                                         Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
                                                         ForEach-Object { $Matches[1] }
-
+$packages = @{
+                'OpenCover' = $latestOpenCoverVersion;
+                'ReportGenerator' = $latestReportGeneratorVersion;
+                'NUnit.Runners' = $latestNUnit2Version;
+            }
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
-Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
-& $nugetPath install OpenCover -OutputDirectory $packagesRoot
-& $nugetPath install ReportGenerator -OutputDirectory $packagesRoot
-& $nugetPath install NUnit.Runners -Version $latestNUnit2Version -OutputDirectory $packagesRoot
+foreach( $packageID in $packages.Keys )
+{
+    if( -not (Test-Path -Path (Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $packageID,$packages[$packageID]))) )
+    {
+        & $nugetPath install $packageID -OutputDirectory $packagesRoot
+    }
+}
 
 $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit2.yml')
 Invoke-WhiskeyBuild -Context $taskContext
@@ -375,8 +382,10 @@ $openCoverVersion = $null
 $reportGeneratorVersion = $null
 $nunitVersion = $null
 $disableCodeCoverage = $null
+$exclude = $null
 $include = $null
 $CoverageFilter = $null
+
 function GivenPassingTests
 {
     $script:solutionToBuild = 'NUnit2PassingTest.sln'
@@ -394,6 +403,15 @@ function GivenCodeCoverageIsDisabled
     $Script:disableCodeCoverage = $true
 }
 
+function GivenExclude
+{
+    param(
+        [String[]]
+        $Value
+    )
+    $script:exclude = $value
+}
+
 function GivenInclude
 {
     param(
@@ -402,6 +420,7 @@ function GivenInclude
     )
     $script:include = $value
 }
+
 function GivenReportGeneratorVersion
 {
     param(
@@ -437,12 +456,15 @@ function GivenCoverageFilter
     )
     $script:CoverageFilter = $Filter
 }
+
 function Init
 {
     $script:openCoverVersion = $null
     $script:reportGeneratorVersion = $null
     $script:nunitVersion = $null
     $script:enableCodeCoverage = $false
+    $script:include = $null
+    $script:exclude = $null
 
     robocopy $packagesRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
@@ -495,6 +517,10 @@ function WhenRunningTask
         if( $CoverageFilter )
         {
             $WithParameters['CoverageFilter'] = $CoverageFilter
+        }
+        if( $exclude )
+        {
+            $WithParameters['exclude'] = $exclude
         }
         if( $include )
         {
@@ -608,7 +634,7 @@ function ThenItInstalled {
     $expectedVersion = $Version
     It ('should have installed {0} {1}' -f $Name,$Version) {
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
-            $DebugPreference = 'Continue'
+            #$DebugPreference = 'Continue'
             Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $Name)
             Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
             $NuGetPackageName -eq $Name 
@@ -662,14 +688,14 @@ Describe 'NUnit2.when including tests by category' {
     ThenTestsNotRun 'ShouldPass'
 }
 
-Describe 'NUnit2.when code coverage is disabled and using category filters' {
+Describe 'NUnit2.when code coverage is disabled and using category filters with spaces' {
     Init
     GivenCodeCoverageIsDisabled
     GivenPassingTests
     GivenInclude -Value 'Category with Spaces 1','Category With Spaces 1'
+    GivenExclude -Value 'Category with Spaces','Another with spaces'
+    GivenCodeCoverageIsDisabled
     WhenRunningTask
-    # ThenTestsPassed -TestName 'HasCategory1','HasCategory2'
-    ThenTestsNotRun 'HasCategory1','HasCategory2','ShouldPass'
     ThenNoErrorShouldBeThrown
 }
 

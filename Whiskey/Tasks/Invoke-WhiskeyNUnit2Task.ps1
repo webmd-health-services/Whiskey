@@ -96,18 +96,13 @@ function Invoke-WhiskeyNUnit2Task
     $includeParam = $null
     if( $TaskParameter.ContainsKey('Include') )
     {
-        if( $TaskParameter.Get_Item('DisableCodeCoverage') -eq $true ){
-            $includeParam = '/include="{0}"' -f ($TaskParameter['Include'] -join ',')
-        }
-        else{
-            $includeParam = '/include=\"{0}\"' -f ($TaskParameter['Include'] -join ',')
-        }
+        $includeParam = '/include="{0}"' -f ($TaskParameter['Include'] -join ',')
     }
         
     $excludeParam = $null
     if( $TaskParameter.ContainsKey('Exclude') )
     {
-        $includeParam = '/exclude=\"{0}\"' -f ($TaskParameter['Exclude'] -join ',')
+        $includeParam = '/exclude="{0}"' -f ($TaskParameter['Exclude'] -join ',')
     }
 
     $frameworkParam = '4.0'
@@ -194,19 +189,20 @@ function Invoke-WhiskeyNUnit2Task
     Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
     Write-Verbose -Message ('  Argument            {0}' -f ($extraArgs -join $separator))
     Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
-    Write-Verbose -Message ('  Filter              {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
+    Write-Verbose -Message ('  CoverageFilter      {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
     Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
     $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
     Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
     Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
     Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
     
-    $pathString = ($path -join '\" \"')
-    $extraArgString = ($extraArgs -join " ")
-    $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
-    $nunitArgs = "\""${pathString}\"" /noshadow ${frameworkParam} /xml=\`"${reportPath}\`" ${includeParam} ${excludeParam} ${extraArgString}"
     if( -not $disableCodeCoverage )
     {
+        $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
+        $extraArgString = ($extraArgs -join " ")
+        $pathsArg = ($path -join '" "')
+        $nunitArgs = '"{0}" {1} /xml="{2}" {3} {4} {5}' -f $pathsArg,$frameworkParam,$reportPath,$includeParam,$excludeParam,$extraArgString
+        $nunitArgs = $nunitArgs -replace '"', '\"'
         Write-Timing -Message ('Running OpenCover')
         & $openCoverPath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
         Write-Timing -Message ('COMPLETE')
@@ -222,7 +218,6 @@ function Invoke-WhiskeyNUnit2Task
     else
     {
         Write-Timing -Message ('Running NUnit')
-        write-host "include: ", $includeParam
         & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
         Write-Timing -Message ('COMPLETE')
         if( $LastExitCode )
