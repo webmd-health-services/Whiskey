@@ -102,7 +102,7 @@ function Invoke-WhiskeyNUnit2Task
     $excludeParam = $null
     if( $TaskParameter.ContainsKey('Exclude') )
     {
-        $includeParam = '/exclude="{0}"' -f ($TaskParameter['Exclude'] -join ',')
+        $excludeParam = '/exclude="{0}"' -f ($TaskParameter['Exclude'] -join ',')
     }
 
     $frameworkParam = '4.0'
@@ -201,7 +201,7 @@ function Invoke-WhiskeyNUnit2Task
         $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
         $extraArgString = ($extraArgs -join " ")
         $pathsArg = ($path -join '" "')
-        $nunitArgs = '"{0}" {1} /xml="{2}" {3} {4} {5}' -f $pathsArg,$frameworkParam,$reportPath,$includeParam,$excludeParam,$extraArgString
+        $nunitArgs = '"{0}" /noshadow {1} /xml="{2}" {3} {4} {5}' -f $pathsArg,$frameworkParam,$reportPath,$includeParam,$excludeParam,$extraArgString
         $nunitArgs = $nunitArgs -replace '"', '\"'
         Write-Timing -Message ('Running OpenCover')
         & $openCoverPath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs

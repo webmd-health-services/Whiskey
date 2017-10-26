@@ -462,9 +462,9 @@ function Init
     $script:openCoverVersion = $null
     $script:reportGeneratorVersion = $null
     $script:nunitVersion = $null
-    $script:enableCodeCoverage = $false
     $script:include = $null
     $script:exclude = $null
+    $Script:disableCodeCoverage = $null
 
     robocopy $packagesRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
@@ -702,7 +702,8 @@ Describe 'NUnit2.when code coverage is disabled and using category filters with 
 Describe 'NUnit2.when excluding tests by category' {
     Init
     GivenPassingTests
-    WhenRunningTask -WithParameters @{ 'Exclude' = 'Category with Spaces 1','Category with Spaces 2' }
+    GivenExclude 'Category with Spaces 1','Category with Spaces 2'
+    WhenRunningTask
     ThenTestsNotRun 'HasCategory1','HasCategory2'
     ThenTestsPassed 'ShouldPass'
 }
