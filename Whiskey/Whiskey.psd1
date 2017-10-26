@@ -146,6 +146,7 @@
 * Fixed: version.json file missing from packages when a package's whitelist includes *.json files.
 * Fixed: running a build under TeamCity sometimes doesn't use the correct branch name if a build is configured to build on multiple branches.
 * Fixed: PowerShell task can fail if a script doesn't have a `TaskContext` parameter.
+* Fixed: PowerShell task fails in some situations when a script has a Switch parameter.
 '@
         } # End of PSData hashtable
 

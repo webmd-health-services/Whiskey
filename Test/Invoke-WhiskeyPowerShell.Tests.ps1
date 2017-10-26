@@ -333,3 +333,22 @@ param(
     WhenTheTaskRuns 
     ThenTheTaskPasses
 }
+
+Describe 'Invoke-WhiskeyPowerShell.when script has Switch parameter' {
+    GivenAScript @"
+if( -not `$SomeBool -or `$SomeOtherBool )
+{
+    throw
+}
+"@ -WithParam @"
+param(
+    [Switch]
+    `$SomeBool,
+
+    [Switch]
+    `$SomeOtherBool
+)
+"@
+    WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }
+    ThenTheTaskPasses
+}

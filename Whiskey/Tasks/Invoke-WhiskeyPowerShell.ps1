@@ -58,14 +58,22 @@ function Invoke-WhiskeyPowerShell
 
         if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $ScriptPath,$WorkingDirectory)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $scriptPath,$WorkingDirectory)
         }
 
-        $passTaskContext = $false
-        $taskContextParameter = Get-Command -Name $scriptPath -ParameterName 'TaskContext' -ErrorAction Ignore
-        if( $taskContextParameter )
+        $scriptCommand = Get-Command -Name $scriptPath -ErrorAction Ignore
+        if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
         {
-            $passTaskContext = $true
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': it has a syntax error.' -f $scriptPath)
+        }
+
+        $passTaskContext = $scriptCommand.Parameters.ContainsKey('TaskContext')
+
+        if( (Get-Member -InputObject $argument -Name 'Keys') )
+        {
+            $scriptCommand.Parameters.Values | 
+                Where-Object { $_.ParameterType -eq [switch] } | 
+                ForEach-Object { $argument[$_.Name] = $argument[$_.Name] | ConvertFrom-WhiskeyYamlScalar }
         }
 
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-ExitCode-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
