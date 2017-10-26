@@ -177,7 +177,7 @@ function New-WhiskeyProGetUniversalPackage
                         }
                         else
                         {
-                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
+                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
                                             'upack.json'

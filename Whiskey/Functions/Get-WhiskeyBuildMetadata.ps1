@@ -102,7 +102,7 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.JobName = $buildProperties['teamcity.buildType.id']
         
         $configProperties = Import-TeamCityProperty -Path $buildProperties['teamcity.configuration.properties.file']
-        $buildInfo.ScmBranch = $configProperties['vcsroot.branch'] -replace '^refs/heads/',''
+        $buildInfo.ScmBranch = $configProperties['teamcity.build.branch'] -replace '^refs/heads/',''
         $buildInfo.ScmUri = $configProperties['vcsroot.url']
         $buildInfo.BuildServerName = 'TeamCity'
 
