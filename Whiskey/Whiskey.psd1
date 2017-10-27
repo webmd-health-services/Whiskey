@@ -143,6 +143,8 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: NUnit2 task fails when code coverage is disabled and including/excluding test categories with spaces.
+* Fixed: version.json file missing from packages when a package's whitelist includes *.json files.
+* Fixed: running a build under TeamCity sometimes doesn't use the correct branch name if a build is configured to build on multiple branches.
 * Fixed: ProGetUniversalPackage task fails if a package only contains third-party paths.
 '@
         } # End of PSData hashtable
