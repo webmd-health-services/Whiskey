@@ -42,16 +42,10 @@ function New-WhiskeyProGetUniversalPackage
         }
     }
 
-    if( $TaskParameter.ContainsKey('Path') -and -not $TaskParameter.ContainsKey('Include') )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because you supplied a value for the Path property.')
-    }
-
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
     $version = $TaskContext.Version.SemVer2NoBuildMetadata
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
-    $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
     
@@ -121,7 +115,7 @@ function New-WhiskeyProGetUniversalPackage
             foreach( $item in $Path )
             {
                 $override = $False
-                if( $item -is [hashtable] )
+                if( (Get-Member -InputObject $item -Name 'Keys') )
                 {
                     $sourcePath = $null
                     $override = $True
@@ -176,17 +170,20 @@ function New-WhiskeyProGetUniversalPackage
                         if( $AsThirdPartyItem )
                         {
                             $exclude = @()
-                            $whitelist = @()
+                            $whitelist = @( )
                             $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                         }
                         else
                         {
+                            if( -not $TaskParameter['Include'] )
+                            {
+                                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
+                                return
+                            }
+
                             $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
-                            $whitelist = Invoke-Command {
-                                            'upack.json'
-                                            $include
-                                            }
+                            $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
                         }
 
                         Write-Verbose -Message $operationDescription

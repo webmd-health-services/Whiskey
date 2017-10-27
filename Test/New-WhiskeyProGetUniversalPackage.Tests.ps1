@@ -444,11 +444,13 @@ function Get-BuildRoot
     return $buildRoot
 }
 
-function GivenARepositoryWithFiles
+function GivenARepositoryWithItems
 {
     param(
         [string[]]
-        $Path
+        $Path,
+
+        $ItemType = 'File'
     )
 
     $buildRoot = Get-BuildRoot
@@ -461,17 +463,7 @@ function GivenARepositoryWithFiles
             New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
         }
 
-        $itemTypeParam = @{ }
-        if( $item -like '*.*' ) 
-        {
-            $itemTypeParam['ItemType'] = 'File'
-        }
-        else 
-        {
-            $itemTypeParam['ItemType'] = 'Directory'
-        }
-
-        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) @itemTypeParam
+        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType $ItemType
     }
 }
 
@@ -580,7 +572,7 @@ function Expand-Package
     $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
     if( -not (Test-Path -Path $expandPath -PathType Container) )
     {
-        Expand-Item -Path $packagePath -OutDirectory $expandPath
+        Expand-Item -Path $packagePath -OutDirectory $expandPath | Out-Null
     }
     return $expandPath
 }
@@ -776,7 +768,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when including third-party items' {
                                             -HasThirdPartyFile 'thirdparty.txt' 
 }
 
-foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
+foreach( $parameterName in @( 'Name', 'Description' ) )
 {
     Describe ('New-WhiskeyProGetUniversalPackage.when {0} property is omitted' -f $parameterName) {
         $parameter = @{
@@ -806,7 +798,6 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
         }
     }
 }
-
 Describe 'New-WhiskeyProGetUniversalPackage.when path to package doesn''t exist' {
     $context = New-WhiskeyTestContext -ForDeveloper
 
@@ -820,6 +811,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when path to package doesn''t exist'
         $Global:Error | Should BeLike ('* Path`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
+
 Describe 'New-WhiskeyProGetUniversalPackage.when path to third-party item doesn''t exist' {
     $context = New-WhiskeyTestContext -ForDeveloper
 
@@ -913,93 +905,110 @@ Describe 'New-WhiskeyProGetUniversalPackage.when packaging given a full relative
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when including third-party items with override syntax' {
-    $dirNames = @( 'dir1', 'app\thirdparty')
-    $fileNames = @( 'thirdparty.txt' )
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-                                            -ThatExcludes 'thirdparty.txt' `
-                                            -HasRootItems 'dir1' `
-                                            -WithThirdPartyRootItem @{ 'app\thirdparty' = 'thirdparty' } `
-                                            -HasThirdPartyRootItem 'thirdparty' `
-                                            -HasThirdPartyFile 'thirdparty.txt'  
+    GivenARepositoryWithItems 'dir1\thirdparty.txt', 'app\thirdparty\none of your business', 'app\fourthparty\none of your business'
+    # Ensures task handles either type of object so we can switch parsers easily. 
+    $thirdPartyDictionary = New-Object 'Collections.Generic.Dictionary[string,string]' 
+    $thirdPartyDictionary['app\fourthparty'] = 'fourthparty'
+    WhenPackaging -Paths 'dir1' -WithWhitelist @('thirdparty.txt') -WithThirdPartyPath @{ 'app\thirdparty' = 'thirdparty' },$thirdPartyDictionary
+    ThenTaskSucceeds
+    ThenPackageShouldInclude 'dir1\thirdparty.txt', 'thirdparty\none of your business','fourthparty\none of your business'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package is empty' {
-    GivenARepositoryWithFiles 'file.txt'
+    GivenARepositoryWithItems 'file.txt'
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
 }
 
 Describe 'Invoke-WhiskeyProGetUniversalPackageTas.when path contains wildcards' {
-    GivenARepositoryWithFiles 'one.ps1','two.ps1','three.ps1'
+    GivenARepositoryWithItems 'one.ps1','two.ps1','three.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
 }
 
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory' {
-    GivenARepositoryWithFiles 'dir1\subdir\file.txt'
+    GivenARepositoryWithItems 'dir1\subdir\file.txt'
     WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir1\subdir\file.txt'
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space' {
-    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    GivenARepositoryWithItems 'dir 1\sub dir\file.txt'
     WhenPackaging -Paths 'dir 1\sub dir' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when packaging a directory with a space and trailing backslash' {
-    GivenARepositoryWithFiles 'dir 1\sub dir\file.txt'
+    GivenARepositoryWithItems 'dir 1\sub dir\file.txt'
     WhenPackaging -Paths 'dir 1\sub dir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 9 is included' {
-    GivenARepositoryWithFiles 'one.ps1'
+    GivenARepositoryWithItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
     ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel is not included' {
-    GivenARepositoryWithFiles 'one.ps1'
+    GivenARepositoryWithItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
     ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 800
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when a bad compressionLevel is included' {
-    GivenARepositoryWithFiles 'one.ps1'
+    GivenARepositoryWithItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
     ThenTaskFails 'not a valid compression level'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when compressionLevel of 7 is included as a string' {
-    GivenARepositoryWithFiles 'one.ps1'
+    GivenARepositoryWithItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
     ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package has empty directories' {
-    GivenARepositoryWithFiles 'root.ps1','dir1\one.ps1','dir1\emptyDir1','dir1\emptyDir2\text.txt'
+    GivenARepositoryWithItems 'root.ps1','dir1\one.ps1','dir1\emptyDir2\text.txt'
+    GivenARepositoryWithItems 'dir1\emptyDir1' -ItemType 'Directory'
     WhenPackaging -Paths '.' -WithWhitelist '*.ps1'
     ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
     ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package has JSON files' {
-    GivenARepositoryWithFiles 'my.json'
+    GivenARepositoryWithItems 'my.json'
     WhenPackaging -Paths '.' -WithWhitelist '*.json'
     ThenPackageShouldInclude 'my.json','version.json'
 }
 
+Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-party paths and only files' {
+    GivenARepositoryWithItems 'my.json','dir\yours.json', 'my.txt'
+    WhenPackaging -WithThirdPartyPath 'dir' -Paths 'my.json'
+    ThenPackageShouldInclude 'version.json','dir\yours.json', 'my.json'
+    ThenPackageShouldNotInclude 'my.txt'
+}
 
-Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-party paths' {
-    GivenARepositoryWithFiles 'my.json','dir\yours.json' 
-    WhenPackaging -WithThirdPartyPath 'dir'
-    ThenPackageShouldInclude 'version.json','dir\yours.json'
-    ThenPackageShouldNotInclude 'my.json'
+Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is empty' {
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging -Paths 'dir' -ErrorAction SilentlyContinue -WithWhitelist @()
+    ThenTaskFails 'Property\ ''Include''\ is\ mandatory\ because'
+}
+
+Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is missing' {
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging -Paths 'dir' -ErrorAction SilentlyContinue
+    ThenTaskFails 'Property\ ''Include''\ is\ mandatory\ because'
+}
+
+Describe 'ProGetUniversalPackage.when package includes a file and there''s no whitelist' {
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging -Paths 'dir\my.json'
+    ThenPackageShouldInclude 'dir\my.json'
+    ThenTaskSucceeds
+    ThenPackageShouldNotInclude 'dir\yours.json'
 }
