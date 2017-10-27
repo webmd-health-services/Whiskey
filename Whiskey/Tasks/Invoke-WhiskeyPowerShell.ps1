@@ -59,12 +59,14 @@ function Invoke-WhiskeyPowerShell
         if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $scriptPath,$WorkingDirectory)
+            continue
         }
 
         $scriptCommand = Get-Command -Name $scriptPath -ErrorAction Ignore
-        if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
+        if( -not $scriptCommand )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': it has a syntax error.' -f $scriptPath)
+            continue
         }
 
         $passTaskContext = $scriptCommand.Parameters.ContainsKey('TaskContext')
