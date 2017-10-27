@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.19.1'
+    ModuleVersion = '0.19.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,9 +142,12 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Pipeline task was not running in Clean and Initialize modes, thus no tasks in the sub-pipelines were getting cleaned/initialized.
-* Fixed: Tasks that install NuGet packages fail if NuGet.exe returns multiple versions of the package.
-* Fixed: variables whose value evaluates/converts to `$false` get replaced with an empty string, e.g. `0`.
+* Fixed: NUnit2 task fails when code coverage is disabled and including/excluding test categories with spaces.
+* Fixed: version.json file missing from packages when a package's whitelist includes *.json files.
+* Fixed: running a build under TeamCity sometimes doesn't use the correct branch name if a build is configured to build on multiple branches.
+* Fixed: ProGetUniversalPackage task fails if a package only contains third-party paths.
+* Fixed: PowerShell task can fail if a script doesn't have a `TaskContext` parameter.
+* Fixed: PowerShell task fails in some situations when a script has a Switch parameter.
 '@
         } # End of PSData hashtable
 

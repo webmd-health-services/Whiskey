@@ -158,7 +158,7 @@ InModuleScope 'Whiskey' {
         GivenProperty $buildPropertiesPath 'teamcity.configuration.properties.file' $configPropertiesPath
         GivenProperty $buildPropertiesPath 'teamcity.buildType.id' $BuildTypeID
 
-        GivenProperty $configPropertiesPath 'vcsroot.branch' $VcsBranch
+        GivenProperty $configPropertiesPath 'teamcity.build.branch' $VcsBranch
         GivenProperty $configPropertiesPath 'vcsroot.url' $VcsUri
         GivenProperty $configPropertiesPath 'teamcity.serverUrl' $ServerUri
     }
