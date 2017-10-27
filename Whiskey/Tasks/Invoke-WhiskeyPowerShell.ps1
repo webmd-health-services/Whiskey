@@ -58,7 +58,24 @@ function Invoke-WhiskeyPowerShell
 
         if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $ScriptPath,$WorkingDirectory)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $scriptPath,$WorkingDirectory)
+            continue
+        }
+
+        $scriptCommand = Get-Command -Name $scriptPath -ErrorAction Ignore
+        if( -not $scriptCommand )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': it has a syntax error.' -f $scriptPath)
+            continue
+        }
+
+        $passTaskContext = $scriptCommand.Parameters.ContainsKey('TaskContext')
+
+        if( (Get-Member -InputObject $argument -Name 'Keys') )
+        {
+            $scriptCommand.Parameters.Values | 
+                Where-Object { $_.ParameterType -eq [switch] } | 
+                ForEach-Object { $argument[$_.Name] = $argument[$_.Name] | ConvertFrom-WhiskeyYamlScalar }
         }
 
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-ExitCode-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
@@ -69,6 +86,7 @@ function Invoke-WhiskeyPowerShell
             $taskContext = $using:TaskContext
             $moduleRoot = $using:moduleRoot
             $resultPath = $using:resultPath
+            $passTaskContext = $using:passTaskContext
 
             Invoke-Command -ScriptBlock { 
                                             $VerbosePreference = 'SilentlyContinue';
@@ -77,9 +95,15 @@ function Invoke-WhiskeyPowerShell
 
             $VerbosePreference = $using:VerbosePreference
 
+            $contextArgument = @{ }
+            if( $passTaskContext )
+            {
+                $contextArgument['TaskContext'] = $passTaskContext
+            }
+
             Set-Location $workingDirectory
             $Global:LASTEXITCODE = 0
-            & $scriptPath -TaskContext $taskContext @argument
+            & $scriptPath @contextArgument @argument
             $Global:LASTEXITCODE | Set-Content -Path $resultPath
         }
 
