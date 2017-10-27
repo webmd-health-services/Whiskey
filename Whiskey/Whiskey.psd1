@@ -143,6 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: ProGetUniversalPackage task fails if the package contains only third-party paths, files, and the whitelist is empty or missing. Whitelist isn't needed if Path is only files.
+* Fixed: ProGetUniversalPackage task fails when customizing the destination path inside the package.
 '@
         } # End of PSData hashtable
 
