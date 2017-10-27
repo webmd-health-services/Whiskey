@@ -802,7 +802,7 @@ foreach( $parameterName in @( 'Name', 'Description', 'Include' ) )
 
         It 'should fail' {
             $threwException | Should Be $true
-            $Global:Error | Should BeLike ('*Property ''{0}'' is mandatory.' -f $parameterName)
+            $Global:Error | Should -Match ('\bProperty\ ''{0}''\ is\ mandatory\b' -f $parameterName)
         }
     }
 }
@@ -988,4 +988,18 @@ Describe 'New-WhiskeyProGetUniversalPackage.when package has empty directories' 
     WhenPackaging -Paths '.' -WithWhitelist '*.ps1'
     ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
     ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
+}
+
+Describe 'New-WhiskeyProGetUniversalPackage.when package has JSON files' {
+    GivenARepositoryWithFiles 'my.json'
+    WhenPackaging -Paths '.' -WithWhitelist '*.json'
+    ThenPackageShouldInclude 'my.json','version.json'
+}
+
+
+Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-party paths' {
+    GivenARepositoryWithFiles 'my.json','dir\yours.json' 
+    WhenPackaging -WithThirdPartyPath 'dir'
+    ThenPackageShouldInclude 'version.json','dir\yours.json'
+    ThenPackageShouldNotInclude 'my.json'
 }

@@ -34,7 +34,7 @@ function New-WhiskeyProGetUniversalPackage
         return
     }
 
-    foreach( $mandatoryName in @( 'Name', 'Description', 'Include' ) )
+    foreach( $mandatoryName in @( 'Name', 'Description' ) )
     {
         if( -not $TaskParameter.ContainsKey($mandatoryName) )
         {
@@ -42,11 +42,15 @@ function New-WhiskeyProGetUniversalPackage
         }
     }
 
+    if( $TaskParameter.ContainsKey('Path') -and -not $TaskParameter.ContainsKey('Include') )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because you supplied a value for the Path property.')
+    }
+
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
     $version = $TaskContext.Version.SemVer2NoBuildMetadata
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
-    $path = $TaskParameter['Path']
     $include = $TaskParameter['Include']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
@@ -177,7 +181,7 @@ function New-WhiskeyProGetUniversalPackage
                         }
                         else
                         {
-                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude } 
+                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
                             $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                             $whitelist = Invoke-Command {
                                             'upack.json'
