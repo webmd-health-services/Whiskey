@@ -406,29 +406,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     }
 
-    function ThenHasNoVariable
-    {
-        param(
-            $Name
-        )
-
-        It ('should not have variable ''{0}''' -f $Name) {
-            $Script:context.Variables[$Name] | Should -BeNullOrEmpty
-        }
-    }
-
-    function ThenHasVariable
-    {
-        param(
-            $Name,
-            $WithValue
-        )
-
-        It ('should have variable ''{0}''' -f $Name) {
-            $Script:context.Variables[$Name] | Should -Be $WithValue
-        }
-    }
-
     function ThenPublishes
     {
         It 'should publish' {
@@ -761,37 +738,5 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
-    }
-
-    Describe 'New-WhiskeyContext.when variables defined in whiskey.yml' {
-        Init
-        GivenWhiskeyYml @'
-Variable:
-    One: Two
-    Three: Four
-'@
-        WhenCreatingContext
-        ThenHasVariable 'One' -WithValue 'Two'
-        ThenHasVariable 'Three' -WithValue 'Four'
-    }
-
-    Describe 'New-WhiskeyContext.when variables defined but no values' {
-        Init
-        GivenWhiskeyYml @'
-Variable:
-    
-One: Two
-'@
-        WhenCreatingContext
-        ThenHasNoVariable 'One'
-    }
-
-    Describe 'New-WhiskeyContext.when variables defined not defined correctly' {
-        Init
-        GivenWhiskeyYml @'
-Variable:
-    One
-'@
-        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'should\ be\ a\ map' -ErrorAction SilentlyContinue
     }
 }
