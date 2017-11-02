@@ -152,6 +152,7 @@
 * Created a `NodeLicenseChecker` task for generating a license report for all the dependencies listed in a `package.json` file.
 * Added `OnlyDuring` and `ExceptDuring` global task properties for controlling which run modes tasks can run in.
 * The `Delete` task now supports the `Clean` run mode and will execute normally when a `Clean` build is run.
+* Added `SetVariable` task for setting variables.
 '@
         } # End of PSData hashtable
 
