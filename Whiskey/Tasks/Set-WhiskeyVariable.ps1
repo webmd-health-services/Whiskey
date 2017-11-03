@@ -17,7 +17,7 @@
     Would add a `ReleaseName` variable whose value is `6.8` and a `BuildMasterPackageName` variable whose value is `$(WHISKEY_BUILD_NUMBER)@$(WHISKEY_SCM_BRANCH)`.
     #>
     [CmdletBinding()]
-    [Whiskey.Task("SetVariable")]
+    [Whiskey.Task("SetVariable",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [object]
