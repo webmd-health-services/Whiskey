@@ -269,7 +269,12 @@ function ThenPluginsRan
         {
             It ('should run {0}' -f $pluginName) {
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
+                    #$DebugPreference = 'Continue'
+                    Write-Debug -Message ('TaskName  expected  {0}' -f $ForTaskNamed)
+                    Write-Debug -Message ('          actual    {0}' -f $TaskName)
+                    $TaskName -eq $ForTaskNamed 
+                }
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
                     if( $TaskParameter.Count -ne $WithParameter.Count )
                     {
@@ -364,6 +369,22 @@ function ThenTaskRanWithParameter
         }
         Assert-Hashtable -Expected $ExpectedParameter -Actual $actualParameter
         Remove-Variable -Name 'actualParameter' -Scope 'Global'
+    }
+}
+
+function ThenTaskRanWithoutParameter
+{
+    param(
+        $CommandName,
+        [string[]]
+        $ParameterName
+    )
+
+    foreach( $name in $ParameterName )
+    {
+        It ('should not pass property ''{0}''' -f $name) {
+            Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -ParameterFilter { -not $TaskParameter.ContainsKey($name) }
+        }
     }
 }
 
@@ -500,7 +521,8 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by developer and being
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
     ThenPipelineSucceeded
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'OnlyBy'
 }
 
 function ThenNoOutput
@@ -526,7 +548,8 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by build server and be
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'BuildServer' }
     ThenPipelineSucceeded
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyBy' = 'BuildServer' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'OnlyBy'
 }
 
 Describe 'Invoke-WhiskeyTask.when task should only be run by build server and being run by developer' {
@@ -553,7 +576,8 @@ Describe 'Invoke-WhiskeyTask.when OnlyOnBranch contains current branch' {
     GivenScmBranch 'develop'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop' } -ErrorAction SilentlyContinue
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyOnBranch' = 'develop' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'OnlyOnBranch'
 }
 
 Describe 'Invoke-WhiskeyTask.when OnlyOnBranch contains wildcard matching current branch' {
@@ -562,7 +586,8 @@ Describe 'Invoke-WhiskeyTask.when OnlyOnBranch contains wildcard matching curren
     GivenScmBranch 'develop'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = @( 'master', 'dev*' ) } -ErrorAction SilentlyContinue
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'OnlyOnBranch' = @( 'master', 'dev*' ) }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'OnlyOnBranch'
 }
 
 Describe 'Invoke-WhiskeyTask.when OnlyOnBranch does not contain current branch' {
@@ -597,8 +622,9 @@ Describe 'Invoke-WhiskeyTask.when ExceptOnBranch does not contain current branch
     GivenRunByDeveloper
     GivenScmBranch 'develop'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' } -ErrorAction SilentlyContinue
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' ; 'ExceptOnBranch' = 'notDevelop' }
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' } e
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'ExceptOnBranch'
 }
 
 Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch properties are both defined' {
@@ -757,7 +783,8 @@ Describe 'Invoke-WhiskeyTask.when given OnlyDuring parameter' {
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter 
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter -InRunMode 'Clean'
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter -InRunMode 'Initialize'
-                ThenTaskRanWithParameter 'MockTask' $TaskParameter -Times 1
+                ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+                ThenTaskRanWithoutParameter 'OnlyDuring'
             }
         }
     }
@@ -780,7 +807,8 @@ Describe 'Invoke-WhiskeyTask.when given ExceptDuring parameter' {
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter 
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter -InRunMode 'Clean'
                 WhenRunningTask 'MockTask' -Parameter $TaskParameter -InRunMode 'Initialize'
-                ThenTaskRanWithParameter 'MockTask' $TaskParameter -Times 2
+                ThenTaskRanWithParameter 'MockTask' @{ } -Times 2
+                ThenTaskRanWithoutParameter 'ExceptDuring'
             }
         }
     }
