@@ -6,6 +6,16 @@ Set-StrictMode -Version 'Latest'
 
 $context = $null
 $failed = $true
+$runMode = $null
+
+function GivenRunMode
+{
+    param(
+        $RunMode
+    )
+
+    $context.RunMode = $RunMode
+}
 
 function GivenVariable
 {
@@ -20,6 +30,7 @@ function GivenVariable
 function Init
 {
     $script:context = New-WhiskeyTestContext -ForBuildServer
+    $script:runMode = $null
 }
 
 function WhenCallingTask
@@ -90,4 +101,18 @@ Describe 'SetVariable.when setting a pre-defined Whiskey variable' {
     Init
     WhenCallingTask @{ 'WHISKEY_SCM_BRANCH' = 'fubar' } -ErrorAction SilentlyContinue
     ThenTaskFailed ([regex]::Escape('is a built-in Whiskey variable'))
+}
+
+Describe 'SetVariable.when running in clean mode' {
+    Init
+    GivenRunMode 'Clean'
+    WhenCallingTask @{ 'InCleanMode' = 'true' }
+    ThenVariable 'InCleanMode' -Is 'true'
+}
+
+Describe 'SetVariable.when running in initialize mode' {
+    Init
+    GivenRunMode 'Initialize'
+    WhenCallingTask @{ 'InInitializeMode' = 'true' }
+    ThenVariable 'InInitializeMode' -Is 'true'
 }
