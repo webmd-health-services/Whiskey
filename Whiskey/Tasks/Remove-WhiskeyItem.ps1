@@ -32,7 +32,7 @@ function Remove-WhiskeyItem
     
     This example demonstrates how to use the `Delete` task to delete directories. In this case, the `Test\bin` and `Test\obj` directories will be deleted.
     #>
-    [Whiskey.TaskAttribute('Delete')]
+    [Whiskey.TaskAttribute('Delete', SupportsClean=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

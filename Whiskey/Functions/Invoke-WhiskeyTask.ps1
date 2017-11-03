@@ -33,7 +33,8 @@ function Invoke-WhiskeyTask
     {
         param(
             $Prefix,
-            $EventName
+            $EventName,
+            $Property
         )
 
         if( -not $events.ContainsKey($EventName) )
@@ -49,7 +50,7 @@ function Invoke-WhiskeyTask
             $result = 'FAILED'
             try
             {
-                & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Parameter
+                & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Property
                 $result = 'COMPLETED'
             }
             finally
@@ -104,6 +105,33 @@ function Invoke-WhiskeyTask
 
     #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
     $prefix = '[{0}]' -f $Name
+
+    $onlyDuring = $Parameter['OnlyDuring']
+    $exceptDuring = $Parameter['ExceptDuring']
+
+    if ($onlyDuring -and $exceptDuring)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
+    }
+    elseif ($onlyDuring -and ($onlyDuring -notin @('Clean', 'Initialize')))
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $onlyDuring)
+    }
+    elseif ($exceptDuring -and ($exceptDuring -notin @('Clean', 'Initialize')))
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $exceptDuring)
+    }
+
+    if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))
+    {
+        Write-Verbose -Message ('{0}  SKIPPED  OnlyDuring: {1} -- Current RunMode: {2}' -f $prefix,$onlyDuring,$TaskContext.RunMode)
+        return
+    }
+    elseif ($exceptDuring -and ($TaskContext.RunMode -eq $exceptDuring))
+    {
+        Write-Verbose -Message ('{0}  SKIPPED  ExceptDuring: {1} -- Current RunMode: {2}' -f $prefix,$exceptDuring,$TaskContext.RunMode)
+        return
+    }
     
     if( $TaskContext.ShouldClean() -and -not $task.SupportsClean )
     {
@@ -194,23 +222,29 @@ function Invoke-WhiskeyTask
         Write-Verbose -Message ('{0}  SKIPPED  {1} not configured to execute this task.' -f $prefix, $branch)
         return
     }
+
+    $taskProperties = $Parameter.Clone()
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring' ) )
+    {
+        $taskProperties.Remove($commonPropertyName)
+    }
     
     if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
     {
-        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
+        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $taskProperties
     }
 
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
+    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $taskProperties | Out-Null
 
-    Invoke-Event -EventName 'BeforeTask' -Prefix $prefix
-    Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix
+    Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
+    Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix -Property $taskProperties
 
     Write-Verbose -Message $prefix
     $startedAt = Get-Date
     $result = 'FAILED'
     try
     {
-        & $task.CommandName -TaskContext $TaskContext -TaskParameter $Parameter
+        & $task.CommandName -TaskContext $TaskContext -TaskParameter $taskProperties
         $result = 'COMPLETED'
     }
     finally
@@ -220,8 +254,8 @@ function Invoke-WhiskeyTask
         Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)
     }
 
-    Invoke-Event -Prefix $prefix -EventName 'AfterTask'
-    Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name)
+    Invoke-Event -Prefix $prefix -EventName 'AfterTask' -Property $taskProperties
+    Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name) -Property $taskProperties
     Write-Verbose ($prefix)
     Write-Verbose ''
 }
