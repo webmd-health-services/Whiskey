@@ -142,12 +142,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* The `Node` task has been deprecated. It''s functionality has been broken up into individual smaller tasks, `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker`.
-* Created private function `Invoke-WhiskeyNpmCommand` to encapsulate the logic required for running NPM commands.
-* Created private function `Install-WhiskeyNodeModule` to install node modules to a project's `node_modules` directory.
-* Created private function `Uninstall-WhiskeyNodeModule` to remove node modules from a project's `node_modules` directory.
+* The `Node` task has been deprecated. It's functionality has been broken up into individual smaller tasks, `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker`.
 * Created an `NpmInstall` task for installing node modules defined in a `package.json` file `dependencies` and `devDependencies` properties.
-* Created an `NpmScript` task for running NPM scripts defined in a `package.json` file.
+* Created an `NpmRunScript` task for running NPM scripts defined in a `package.json` file.
 * Created an `NspCheck` task for running the Node Security Platform module against the list of dependencies in a `package.json` file to check for any known security vulnerabilities.
 * Created a `NodeLicenseChecker` task for generating a license report for all the dependencies listed in a `package.json` file.
 * Added `OnlyDuring` and `ExceptDuring` global task properties for controlling which run modes tasks can run in.
