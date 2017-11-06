@@ -98,7 +98,7 @@ function Invoke-WhiskeyPowerShell
             $contextArgument = @{ }
             if( $passTaskContext )
             {
-                $contextArgument['TaskContext'] = $passTaskContext
+                $contextArgument['TaskContext'] = $taskContext
             }
 
             Set-Location $workingDirectory

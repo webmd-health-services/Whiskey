@@ -321,6 +321,7 @@ param(
 }
 
 Describe 'Invoke-WhiskeyPowerShell.when script has TaskContext parameter' {
+    $emptyContext = New-WhiskeyContextObject
     GivenAScript @"
 exit 0
 "@ -WithParam @"
@@ -329,6 +330,23 @@ param(
     [Parameter(Mandatory=`$true)]
     `$TaskContext
 )
+
+    `$expectedMembers = & {
+$(
+    foreach( $memberName in $emptyContext | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' )
+    {
+        "'{0}'`n" -f $memberName
+    }
+)
+    }
+
+    foreach( `$expectedMember in `$expectedMembers )
+    {
+        if( -not (`$TaskContext | Get-Member -Name `$expectedMember) )
+        {
+            throw ('TaskContext missing member ''{0}''.' -f `$expectedMember)
+        }
+    }
 "@
     WhenTheTaskRuns 
     ThenTheTaskPasses
