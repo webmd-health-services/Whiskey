@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.20.0'
+    ModuleVersion = '0.21.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,8 +142,6 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: ProGetUniversalPackage task fails if the package contains only third-party paths, files, and the whitelist is empty or missing. Whitelist isn't needed if Path is only files.
-* Fixed: ProGetUniversalPackage task fails when customizing the destination path inside the package.
 * Added: Set-WhiskeyProGetAsset task that adds and updates assets in ProGet.
 '@
         } # End of PSData hashtable
