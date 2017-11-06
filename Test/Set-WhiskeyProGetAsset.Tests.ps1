@@ -26,8 +26,8 @@ function GivenAsset {
     )
     $script:taskParameter['Name'] = $name
     $script:taskParameter['Directory'] = $directory
-    $script:taskParameter['Path'] = $FilePath
-    New-Item -Path $FilePath -Type 'File' -Force
+    $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
+    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
 
     $feed = Test-ProGetFeed -Session $session -FeedName $directory -FeedType 'Asset'
     if( !$feed )
