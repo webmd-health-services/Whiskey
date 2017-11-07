@@ -144,6 +144,7 @@
             ReleaseNotes = @'
 * Fixed: PowerShell task doesn't pass TaskContext to scripts that have a TaskContext parameter.\
 * Pinning Node task to use NSP 2.8.0. Later versions break our automated tests.
+* Pinning NspCheck task to use NSP 2.8.0. Later versions break our automated tests.
 '@
         } # End of PSData hashtable
 
