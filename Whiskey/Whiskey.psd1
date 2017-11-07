@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.20.0'
+    ModuleVersion = '0.20.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -113,7 +113,7 @@
 
     # Aliases to export from this module
     AliasesToExport = '*'
-
+    
     # DSC resources to export from this module
     # DscResourcesToExport = @()
 
@@ -142,14 +142,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* The `Node` task has been deprecated. It's functionality has been broken up into individual smaller tasks, `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker`.
-* Created an `NpmInstall` task for installing node modules defined in a `package.json` file `dependencies` and `devDependencies` properties.
-* Created an `NpmRunScript` task for running NPM scripts defined in a `package.json` file.
-* Created an `NspCheck` task for running the Node Security Platform module against the list of dependencies in a `package.json` file to check for any known security vulnerabilities.
-* Created a `NodeLicenseChecker` task for generating a license report for all the dependencies listed in a `package.json` file.
-* Added `OnlyDuring` and `ExceptDuring` global task properties for controlling which run modes tasks can run in.
-* The `Delete` task now supports the `Clean` run mode and will execute normally when a `Clean` build is run.
-* Added `SetVariable` task for setting variables.
+* Fixed: PowerShell task doesn't pass TaskContext to scripts that have a TaskContext parameter.\
+* Pinning Node task to use NSP 2.7.0. Later versions break our automated tests.
+* Pinning NspCheck task to use NSP 2.7.0. Later versions break our automated tests.
 '@
         } # End of PSData hashtable
 
