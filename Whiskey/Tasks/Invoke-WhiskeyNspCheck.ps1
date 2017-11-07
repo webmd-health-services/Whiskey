@@ -91,7 +91,7 @@ function Invoke-WhiskeyNspCheck
     }
 
     Write-Timing -Message 'Installing NSP'
-    $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp@2.8.0' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+    $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.8.0' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
     $nspPath = Join-Path -Path $nspModuleRoot -ChildPath 'bin\nsp' -Resolve -ErrorAction Ignore
     
     if (-not $nspPath)
