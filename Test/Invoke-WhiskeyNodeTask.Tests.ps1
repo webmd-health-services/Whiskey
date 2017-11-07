@@ -321,6 +321,7 @@ function Initialize-NodeProject
 }
 "@ | Set-Content -Path $packageJsonPath
 
+    Get-Content -Path $packageJsonPath -Raw | Write-Verbose -Verbose
     @'
 console.log('BUILDING')
 '@ | Set-Content -Path (Join-Path -Path $workingDir -ChildPath 'build.js')

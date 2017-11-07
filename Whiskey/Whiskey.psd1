@@ -113,7 +113,7 @@
 
     # Aliases to export from this module
     AliasesToExport = '*'
-
+    
     # DSC resources to export from this module
     # DscResourcesToExport = @()
 
