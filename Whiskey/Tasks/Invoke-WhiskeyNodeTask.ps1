@@ -215,7 +215,7 @@ BuildTasks:
         }
 
         Write-Timing -Message ('Installing NSP.')
-        & $nodePath $npmPath $npmCmd 'nsp@2.8.0' '-g'
+        & $nodePath $npmPath $npmCmd 'nsp@2.7.0' '-g'
         Write-Timing -Message ('COMPLETE')
         if( -not (Test-Path -Path $nspPath -PathType Leaf) )
         {

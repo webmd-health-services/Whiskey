@@ -145,7 +145,7 @@ function ThenNspInstalled
 {
     It 'should install NSP module' {
         Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'nsp' } -Times 1        
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq '2.8.0' } -Times 1        
+        Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq '2.7.0' } -Times 1
     }
 }
 
