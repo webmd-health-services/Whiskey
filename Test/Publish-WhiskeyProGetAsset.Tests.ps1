@@ -3,19 +3,35 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$apiKey = 'HKgaAKWjjgB9YRrTbTpHzw=='
-$script:username = 'Admin'
-$credential = New-Credential -UserName $username -Password $username
-$script:taskParameter = @{ }
-$script:taskParameter['uri'] = ('http://{0}:82/' -f $env:COMPUTERNAME)
-$script:session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential -ApiKey $apikey
-
+$script:username = 'testusername'
+$script:apikey = 'testapikey'
+$script:apiKeyID = 'testApiid'
+$script:credentialID = 'TestCredential'
 
 function GivenContext
 {
-    $Script:Context = New-WhiskeyTestContext -ForBuildServer    
+    $script:taskParameter = @{ }
+    $script:taskParameter['uri'] = 'TestURI'
+    $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
+    $script:testSession= $session
+    $Script:Context = New-WhiskeyTestContext -ForBuildServer -forTaskname 'PublishProGetAsset'
+    Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { $testSession }.GetNewClosure()
+    Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
 }
-function GivenAsset {
+
+function GivenCredentials
+{
+    $password = ConvertTo-SecureString -AsPlainText -Force -String $username
+    $script:credential = New-Object 'Management.Automation.PsCredential' $username,$password
+    Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
+    Add-WhiskeyApiKey -Context $context -ID $apiKeyID -value $apiKey 
+
+    $taskParameter['CredentialID'] = $credentialID
+    $taskParameter['ApiKeyID'] = $apiKeyID
+}
+
+function GivenAsset
+{
     param(
         [string]
         $Name,
@@ -28,12 +44,7 @@ function GivenAsset {
     $script:taskParameter['Directory'] = $directory
     $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
-
-    $feed = Test-ProGetFeed -Session $session -FeedName $directory -FeedType 'Asset'
-    if( !$feed )
-    {
-        New-ProGetFeed -Session $session -FeedName $directory -FeedType 'Asset'
-    }
+    Mock -CommandName 'Invoke-ProGetRestMethod' -ModuleName 'Whiskey' -MockWith {return $true}
 }
 
 function GivenAssetWithInvalidDirectory
@@ -50,6 +61,7 @@ function GivenAssetWithInvalidDirectory
     $script:taskParameter['Directory'] = $directory
     $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
+    Mock -CommandName 'Test-ProGetFeed' -ModuleName 'Whiskey' -MockWith { return $false }
 }
 
 function GivenAssetThatDoesntExist
@@ -72,11 +84,10 @@ function WhenAssetIsUploaded
 {
     $Global:Error.Clear()
     $script:threwException = $false
-    $taskParameter['apiKey'] = $apiKey
-    $taskParameter['proGetUsername'] = $username
-    $taskParameter['proGetPassword'] = $username
-    try{
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'SetProGetAsset' -ErrorAction SilentlyContinue
+
+    try
+    {
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'PublishProGetAsset' -ErrorAction SilentlyContinue
     }
     catch
     {
@@ -90,7 +101,7 @@ function ThenTaskFails
         [String]
         $ExpectedError
     )
-
+    write-host $Global:Error
     It ('should fail with error message that matches ''{0}''' -f $ExpectedError) {
         $Global:Error | Where-Object {$_ -match $ExpectedError } |  Should -not -BeNullOrEmpty
     }
@@ -122,6 +133,7 @@ function ThenAssetShouldNotExist
 
 function ThenTaskSucceeds 
 {
+    write-host $Global:Error
     It ('should not throw an error message') {
         $Global:Error | Should BeNullOrEmpty
     }
@@ -129,46 +141,30 @@ function ThenTaskSucceeds
 
 Describe 'Set-WhiskeyProGetAsset.when Asset is uploaded correctly'{
     GivenContext
+    GivenCredentials
     GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldExist -Name 'foo.txt' -directory 'bar'
     ThenTaskSucceeds
 }
-
-Describe 'Set-WhiskeyProGetAsset.when Asset does not exist'{
-    GivenContext
-    GivenAssetThatDoesntExist -Name 'fooboo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
-    WhenAssetIsUploaded
-    ThenAssetShouldNotExist -Name 'fooboo.txt' -directory 'bar'
-    ThenTaskFails -ExpectedError 'Could Not find file named'
-}
-
 Describe 'Set-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     GivenContext
+    GivenCredentials
     GivenAssetThatDoesntExist -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldNotExist -Name 'fooboo.txt' -directory 'bar'
     ThenTaskFails -ExpectedError 'Please add a valid Name to your whiskey.yml file'
 }
 
-Describe 'Set-WhiskeyProGetAsset.when Asset exists but proget directory does not exist'{
+Describe 'Set-WhiskeyProGetAsset.when credentials are not given'{
     GivenContext
-    GivenAssetWithInvalidDirectory -Name 'foo.txt' -Directory 'foo' -FilePath 'foo.txt'
+    GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldNotExist -Name 'foo.txt' -directory 'foo' 
-    ThenTaskFails -ExpectedError 'Asset Directory ''foo'' does not exist'
+    ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
 }
 
 Describe 'Set-WhiskeyProGetAsset.when Asset already exists'{
     GivenContext
+    GivenCredentials
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldExist -Name 'foo.txt' -directory 'bar'
     ThenTaskSucceeds
-}
-
-$assets = Get-ProGetAsset -Session $session -Directory 'bar'
-foreach($asset in $assets)
-{
-    Remove-ProGetAsset -Session $session -Directory 'bar' -Name $asset.name
 }

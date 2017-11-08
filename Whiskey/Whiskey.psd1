@@ -142,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added: Set-WhiskeyProGetAsset task that adds and updates assets in ProGet.
+* Added: PublishProGetAsset task that adds and updates assets in ProGet.
 '@
         } # End of PSData hashtable
 
