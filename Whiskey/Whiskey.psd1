@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.20.1'
+    ModuleVersion = '0.20.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,9 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: PowerShell task doesn't pass TaskContext to scripts that have a TaskContext parameter.\
-* Pinning Node task to use NSP 2.7.0. Later versions break our automated tests.
-* Pinning NspCheck task to use NSP 2.7.0. Later versions break our automated tests.
+* Fixed: ProGetUniversalPackage task fails to remove temporary packaging directory if any files have paths greater than 260 characters.
 '@
         } # End of PSData hashtable
 

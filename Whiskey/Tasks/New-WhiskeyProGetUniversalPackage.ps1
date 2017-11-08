@@ -77,9 +77,9 @@ function New-WhiskeyProGetUniversalPackage
     $tempBaseName = 'Whiskey+New-WhiskeyProGetUniversalPackage+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
 
     try
     {
@@ -211,6 +211,9 @@ function New-WhiskeyProGetUniversalPackage
     }
     finally
     {
+        $emptyDirectory = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+        New-Item -Path $emptyDirectory -ItemType 'Directory' | Out-Null
+
         $maxTries = 50
         $tryNum = 0
         $failedToCleanUp = $true
@@ -221,11 +224,16 @@ function New-WhiskeyProGetUniversalPackage
                 $failedToCleanUp = $false
                 break
             }
+
             Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot)
             Start-Sleep -Milliseconds 100
+
+            & robocopy $emptyDirectory $tempRoot /MIR /R:0 /NP /NFL /NDL
             Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction Ignore
         }
         while( $tryNum++ -lt $maxTries )
+        
+        Remove-Item -Path $emptyDirectory -Force
 
         if( $failedToCleanUp )
         {
