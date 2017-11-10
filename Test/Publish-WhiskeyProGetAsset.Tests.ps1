@@ -33,17 +33,36 @@ function GivenCredentials
 function GivenAsset
 {
     param(
-        [string]
+        [string[]]
         $Name,
         [string]
         $directory,
-        [string]
+        [string[]]
         $FilePath
     )
     $script:taskParameter['Name'] = $name
     $script:taskParameter['Directory'] = $directory
-    $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
+    $script:taskParameter['Path'] = @()
+    foreach($file in $FilePath){
+        $script:taskParameter['Path'] += (Join-Path -Path $TestDrive.FullName -ChildPath $file)
+        New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $file) -ItemType 'File' -Force
+    }
+}
+
+function GivenAssetWithoutName
+{
+    param(
+        [string]
+        $directory,
+        [string[]]
+        $FilePath
+    )
+    $script:taskParameter['Directory'] = $directory
+    $script:taskParameter['Path'] = @()
+    foreach($file in $FilePath){
+        $script:taskParameter['Path'] += (Join-Path -Path $TestDrive.FullName -ChildPath $file)
+        New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $file) -ItemType 'File' -Force
+    }
 }
 
 function GivenAssetWithInvalidDirectory
@@ -56,7 +75,7 @@ function GivenAssetWithInvalidDirectory
         [string]
         $FilePath
     )
-    $script:taskParameter['Name'] = $name
+    # $script:taskParameter['Name'] = $name
     $script:taskParameter['Directory'] = $directory
     $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
@@ -108,24 +127,26 @@ function ThenTaskFails
 function ThenAssetShouldExist
 {
     param(
-        [string]
-        $Name
+        [string[]]
+        $AssetName
     )
-    it ('should contain the file {0}' -f $Name) {
-        Get-ProGetAsset -session $session -Directory $TaskParameter['Directory'] | Where-Object { $_.name -match $name } | should -not -BeNullOrEmpty
+    foreach( $file in $AssetName ){
+        it ('should contain the file {0}' -f $file) {
+            Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file }.getNewClosure()
+        }
     }
 }
 
 function ThenAssetShouldNotExist
 {
     param(
-        [string]
-        $Name,
-        [string]
-        $directory
+        [string[]]
+        $AssetName
     )
-    it ('should not contain the file {0}' -f $Name) {
-        Get-ProGetAsset -session $session -Directory $directory| Where-Object { $_.name -match $name } | should -match '' 
+    foreach( $file in $AssetName ){
+        it ('should not contain the file {0}' -f $file) {
+            Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file } -Times 0
+        }
     }
 }
 
@@ -141,20 +162,51 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly'{
     GivenCredentials
     GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
     WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'foo.txt'
     ThenTaskSucceeds
 }
+
+Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly'{
+    GivenContext
+    GivenCredentials
+    GivenAsset -Name 'foo.txt','bar.txt' -directory 'bar' -FilePath 'foo.txt','bar.txt'
+    WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'foo.txt','bar.txt' 
+    ThenTaskSucceeds
+}
+
 Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     GivenContext
     GivenCredentials
-    GivenAssetThatDoesntExist -Directory 'bar' -FilePath 'fooboo.txt'
+    GivenAssetWithoutName -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
-    ThenTaskFails -ExpectedError 'Please add a valid Name to your whiskey.yml file'
+    ThenAssetShouldExist -AssetName 'fooboo.txt'
+    ThenTaskSucceeds
+}
+
+Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
+    GivenContext
+    GivenCredentials
+    GivenAssetWithoutName -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
+    WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'fooboo.txt','bar.txt'
+    ThenTaskSucceeds
+}
+
+Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
+    GivenContext
+    GivenCredentials
+    GivenAssetWithoutName -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
+    WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'fooboo.txt'
+    ThenTaskSucceeds
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
     GivenContext
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
+    ThenAssetShouldNotExist -AssetName 'foo.txt'
     ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
 }
 
@@ -163,5 +215,6 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset already exists'{
     GivenCredentials
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'
     WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'foo.txt'
     ThenTaskSucceeds
 }
