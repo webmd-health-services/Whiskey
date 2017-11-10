@@ -370,3 +370,16 @@ param(
     WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }
     ThenTheTaskPasses
 }
+
+
+Describe 'Invoke-WhiskeyPowerShell.when script has a common parameter that isn''t an argument' {
+    GivenAScript @"
+Write-Debug 'Fubar'
+"@ -WithParam @"
+[CmdletBinding()]
+param(
+)
+"@
+    WhenTheTaskRuns -WithArgument @{ }
+    ThenTheTaskPasses
+}
