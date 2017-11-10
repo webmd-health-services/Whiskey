@@ -13,9 +13,9 @@ function GivenContext
     $script:taskParameter = @{ }
     $script:taskParameter['uri'] = 'TestURI'
     $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
-    $script:testSession= $session
+    $Global:globalTestSession = $session
     $Script:Context = New-WhiskeyTestContext -ForBuildServer -forTaskname 'PublishProGetAsset'
-    Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { $testSession }.GetNewClosure()
+    Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
     Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
 }
 
@@ -44,7 +44,6 @@ function GivenAsset
     $script:taskParameter['Directory'] = $directory
     $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
-    Mock -CommandName 'Invoke-ProGetRestMethod' -ModuleName 'Whiskey' -MockWith {return $true}
 }
 
 function GivenAssetWithInvalidDirectory
@@ -139,14 +138,14 @@ function ThenTaskSucceeds
     }
 }
 
-Describe 'Set-WhiskeyProGetAsset.when Asset is uploaded correctly'{
+Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly'{
     GivenContext
     GivenCredentials
     GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
     WhenAssetIsUploaded
     ThenTaskSucceeds
 }
-Describe 'Set-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
+Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     GivenContext
     GivenCredentials
     GivenAssetThatDoesntExist -Directory 'bar' -FilePath 'fooboo.txt'
@@ -154,14 +153,14 @@ Describe 'Set-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     ThenTaskFails -ExpectedError 'Please add a valid Name to your whiskey.yml file'
 }
 
-Describe 'Set-WhiskeyProGetAsset.when credentials are not given'{
+Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
     GivenContext
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
     ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
 }
 
-Describe 'Set-WhiskeyProGetAsset.when Asset already exists'{
+Describe 'Publish-WhiskeyProGetAsset.when Asset already exists'{
     GivenContext
     GivenCredentials
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'
