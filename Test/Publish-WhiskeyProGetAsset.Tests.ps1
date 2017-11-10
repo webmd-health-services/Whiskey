@@ -100,7 +100,6 @@ function ThenTaskFails
         [String]
         $ExpectedError
     )
-    write-host $Global:Error
     It ('should fail with error message that matches ''{0}''' -f $ExpectedError) {
         $Global:Error | Where-Object {$_ -match $ExpectedError } |  Should -not -BeNullOrEmpty
     }
@@ -132,7 +131,6 @@ function ThenAssetShouldNotExist
 
 function ThenTaskSucceeds 
 {
-    write-host $Global:Error
     It ('should not throw an error message') {
         $Global:Error | Should BeNullOrEmpty
     }
