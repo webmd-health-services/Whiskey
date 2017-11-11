@@ -75,6 +75,7 @@ function Invoke-WhiskeyPowerShell
         {
             $scriptCommand.Parameters.Values | 
                 Where-Object { $_.ParameterType -eq [switch] } | 
+                Where-Object { $argument.ContainsKey($_.Name) } |
                 ForEach-Object { $argument[$_.Name] = $argument[$_.Name] | ConvertFrom-WhiskeyYamlScalar }
         }
 
