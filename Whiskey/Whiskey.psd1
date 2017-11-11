@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.20.2'
+    ModuleVersion = '0.21.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -143,6 +143,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: ProGetUniversalPackage task fails to remove temporary packaging directory if any files have paths greater than 260 characters.
+* Added `Version` property to ProGetUniversalPackage task. If supplied, packages will use this version instead of the one generated for the build.
 '@
         } # End of PSData hashtable
 
