@@ -115,6 +115,10 @@ function Publish-WhiskeyProGetUniversalPackage
     {
         $optionalParam['Timeout'] = $TaskParameter['Timeout']
     }
+    if( $TaskParameter['Overwrite'] )
+    {
+        $optionalParam['Force'] = $TaskParameter['Overwrite'] | ConvertFrom-WhiskeyYamlScalar
+    }
 
     Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}' -f $taskPrefix)
     foreach( $package in $packages )
