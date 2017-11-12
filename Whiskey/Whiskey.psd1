@@ -145,6 +145,7 @@
 * Fixed: ProGetUniversalPackage task fails to remove temporary packaging directory if any files have paths greater than 260 characters.
 * Added `Version` property to ProGetUniversalPackage task. If supplied, packages will use this version instead of the one generated for the build.
 * Added `Overwrite` property to PublishProGetUniversalPackage task for overwriting a package when publishing if it already exists. The default behavior is to fail a build if a package already exists.
+* Fixed: variables in property names not resolved/replaced, e.g. `$(WHISKEY_VERSION): "value"` remains `$(WHISKEY_VERSION): "value"` instead of becoming `"1.4.5": "value"` (assuming your version is `1.4.5`).
 '@
         } # End of PSData hashtable
 

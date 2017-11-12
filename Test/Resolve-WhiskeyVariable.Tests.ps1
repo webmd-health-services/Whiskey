@@ -282,3 +282,9 @@ Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
     WhenResolving '$(ZeroValueVariable)'
     ThenValueIs '0'
 }
+
+Describe 'Resolve-WhiskeyVariable.when property name is variable' {
+    Init
+    WhenResolving @{ '$(COMPUTERNAME)' = 'fubarsnafu' }
+    ThenValueIs @{ $env:COMPUTERNAME = 'fubarsnafu' }
+}
