@@ -1,6 +1,247 @@
 
 function New-WhiskeyProGetUniversalPackage
 {
+    <#
+    .SYNOPSIS
+    Creates a ProGet universal package.
+
+    .DESCRIPTION
+    The `ProGetUniversalPackage` task creates a universal ProGet package of your application.
+
+    You must specify a package name and description with the Name and Description properties, respecitvely.
+
+    Specify the directories and files you want in the package with the `Path` property. The paths should be relative to the whiskey.yml file. Each item is added to your package at the same relative path. The contents directories are filtered by the `Include` property, which is a list of filenames and/or wildcard patterns. Only files that match at least one item in this list will be included in your package.  We use whitelists so we know what files are getting packaged and deployed. Without a whitelist, any file put into a directory that gets packaged would be included. This is a security risk. We can audit whitelists. Using whitelists also helps keep the size of our packages to a minimum.
+
+    This PowerShell command will create a YAML whitelist for all files under a path:
+
+        Get-ChildItem -Path $PATH -Recurse |
+            Select-Object -ExpandProperty 'Extension' |
+            Select-Object -unique |
+            Sort-Object |
+            ForEach-Object { '- "*{0}"' -f $_ }
+
+    The package is saved to the output directory as `$Name.upack` where `$Name is replaced with the name of your package.
+
+    A version.json file is put into the root of your package. It contains the version information for the current build. It looks like this:
+
+        {
+            "SemVer2":  "2017.412.286-rc.1+master.1acb317",
+            "SemVer2NoBuildMetadata":  "2017.412.286-rc.1",
+            "PrereleaseMetadata":  "rc.1",
+            "BuildMetadata":  "master.1acb317",
+            "SemVer1": "2017.412.286-rc1",
+            "Version":  "2017.412.286"
+        }
+
+    It has these properties:
+    
+    * `BuildMetadata`: this is either the build number, branch, and commit ID or the branch and commit ID, each separated by a period ..
+    * `PrereleasMetadata`: this is any pre-release metadata from the Version property from your whiskey.yml file. If there is not Version in your whiskey.yml file, this field will be empty.
+    * `SemVer2`: the full semantic version of the application.
+    * `SemVer2NoBuildMetadata`: this is the version number used when creating packages. We omit the build metadata so that we don't upload duplicate packages (i.e. every build generates unique build metadata even if that version of code was already built and published.
+    * `SemVer1`: a semantic version compatible for use with systems that don't yet support the v2 semantic version spec, e.g. NuGet.
+    * `Version`: the MAJOR.MINOR.PATCH version number of the application.
+
+    ## Properties
+
+    * `Name` (mandatory): the package's name.
+    * `Description` (mandatory): the package's description. This shows in ProGet and helps people know about your application.
+    * `Path` (mandatory): the directories and filenames to include in the package. Each path must relative to the whiskey.yml file. You can change the root path the task uses to resolve these paths with the `SourceRoot` property. Each item is added to the package at the same relative path as its source item. If you have two paths with the same name, the second item will replace the first. You can customize the path of the item in the package by converting the value into a key/value pair, e.g. `source_dir\source_file.ps1`: `destination_dir\destination_file.ps1`.
+    * `Include` (mandatory): a whitelist of wildcards and file names. All directories in the `Path` property are filtered with this list, i.e. only items under each directory in `Path` that matches an item in `Include` will be added to your package.
+    * `Exclude`: a list of wildcards, file names, and directory names to exclude from the package. Sometimes a whitelist can be a little greedy and include some files or directories you might not want. Any file or directory that matches an item in this list will be excluded from the package.
+    * `ThirdPartyPath`: a list of directores and files that should be included in the package unfiltered. These are paths that are copied without using the Include or Exclude elements. This is useful to include items you depend on but have no control over, like Node.js applications' node_modules directory.
+    * `SourceRoot`: this changes the root path used to resolve the relative paths in the Path property. Use this element when your application's root directory isn't the same directory your whiskey.yml file is in. This path should be relative to the whiskey.yml file.
+    * `CompressionLevel`: the compression level to use when creating the package. Can be a value from 1 (fastest but largest file) to 9 (slowest but smallest file). The default is `1`.
+    * `Version`: the package version (MAJOR.MINOR.PATCH), without any prerelease or build metadata. Usually, the version for the current build is used. Prerelease and build metadata for the current build is added.
+
+    ## Examples
+
+    ### Example 1
+
+        BuildTasks:
+        - ProGetUniversalPackage:
+            Name: Example1
+            Description: This package demonstrates the YAML for using the ProGetUniversalPackage task.
+            Path:
+            - bin
+            - REAMDE.md
+            Include:
+            - "*.dll"
+
+    The above example shows the YAML for creating a ProGet Universal Package. Given the file system looks like this:
+    
+        bin\
+            Assembly.dll
+            Assembly.pdb
+            Assembly.xml
+        src\
+            Assembly.cs
+        README.md
+        whiskey.yml
+
+    The package will look like this:
+
+        package\
+            bin\
+                Assembly.dll
+            README.md
+            version.json
+        upack.json
+
+    Because the `Include` list only includes `*.dll`, the `Assembly.pdb` and `Assembly.xml` files are not included in the package.
+
+    The `version.json` file is created by the task and contains the version metadata for this build.
+
+    The `upack.json` file contains the universal package metadata required by ProGet.
+
+    ### Example 2
+
+        BuildTasks:
+        - ProGetUniversalPackage
+            Name: Example2
+            Description: This package demonstrates the YAML for using the ProGetUniversalPackage task.
+            Path:
+            - bin
+            Include:
+            - "*.dll"
+            - "*.pdb"
+            Exclude:
+            - SomeOtherAssembly.pdb
+
+    The above demonstrates how to use the `Exclude` property to exclude files from the package. If this is what's on the file system:
+    
+        bin\
+            Assembly.dll
+            Assembly.pdb
+            SomeOtherAssembly.dll
+            SomeOtherAssembly.pdb
+        whiskey.yml
+
+    The package will look like this:
+
+        package\
+            bin\
+                Assembly.dll
+                Assembly.pdb
+                SomeOtherAssembly.dll
+            version.json
+        upack.json
+
+    Note that the `bin\SomeOtherAssembly.pdb` file is not in the package even though it matches an item in the `Include` whitelist. It is excluded because it matches an item in the `Exclude` blacklist.
+
+    ## Example 3
+
+        BuildTasks:
+        - ProGetUniversalPackage
+            Name: Example3
+            Description: This package demonstrates how the `ThirdPartyPath` property works.
+            Path:
+            - dist
+            Include:
+            - "*.js"
+            - "*.json"
+            - "*.css"
+            ThirdPartyPath:
+            - node_modules
+
+    Thie example demonstrates how to use the `ThirdPartyPath` property. If the file system looks like this:
+
+        dist\
+            index.js
+            default.css
+            data.json
+        node_modules\
+            rimraf\
+                LICENSE
+                otherfiles
+        whiskey.yml
+
+    the package will look like this:
+
+        package\
+            dist\
+                index.js
+                default.css
+                data.json
+            node_modules\
+                rimraf\
+                    LICENSE
+                    otherfiles
+            version.json
+        upack.json
+
+    Notice that all files/directories under `node_modules` are included because `node_modules` is in the `ThirdPartyPath` list. Directores in `ThirdPartyPath` are included in the package as-is, with no filtering.
+
+    ## Example 4
+
+        BuildTasks:
+        - ProGetUniversalPackage
+            Name: Example4
+            Description: This package demonstrates how the customize paths in the package.
+            Path:
+            - source: destination
+            Include:
+            - "*.dll"
+
+    Thie example demonstrates how to use customize the path an item should have in the package. If this is the file system:
+
+        source\
+            Assembly.dll
+            Assembly.pdb
+        whiskey.yml
+
+    the package will look like this:
+
+        package\
+            destination\
+                Assembly.dll
+            version.json
+        upack.json
+
+    Notice that the `source` directory is added to the package as `destination`. This is done by making the value of an item in the `Path` list from a string into a key/value pair (e.g. `key: value`).
+
+    ## Example 5
+
+        BuildTasks:
+        - ProGetUniversalPackage
+            Name: Example5
+            Description: Demonstration of the SourceRoot property.
+            SourceRoot: Whiskey
+            Path:
+            - Functions
+            - "*.ps*1"
+            Include:
+            - "*.ps*1"
+            ThirdPartyPath:
+            - ProGetAutomation
+
+    Thie example demonstrates how to change the root directory the task uses to resolve the relative paths in the `Path`. If the file system is:
+
+        Whiskey\
+            Functions\
+                New-WhiskeyContext.ps1
+            Whiskey.psd1
+            Whiskey.psm1
+            BuildMasterAutomation\
+                BuildMasterAutomation.psd1
+                BuildMasterAutomation.psm1
+        whiskey.yml
+
+    the package will be:
+
+        package\
+            Functions\
+                New-WhiskeyContext.ps1
+            Whiskey.psd1
+            Whiskey.psm1
+            BuildMasterAutomation\
+                BuildMasterAutomation.psd1
+                BuildMasterAutomation.psm1
+            version.json
+        upack.json
+
+    Notice that the top-level Whiskey directory found on the file system isn't part of the package. Because it is defined as the source root, it is considered the root of the files to put in the package, so is omitted from the package.
+    #>
     [CmdletBinding()]
     [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true, SupportsInitialize=$true)]
     param(
@@ -43,7 +284,21 @@ function New-WhiskeyProGetUniversalPackage
     }
 
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
-    $version = $TaskContext.Version.SemVer2NoBuildMetadata
+    $version = $TaskContext.Version
+    if( $TaskParameter.ContainsKey('Version') )
+    {
+        if( ($TaskParameter['Version'] -notmatch '^\d+\.\d+\.\d+$') )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
+        }
+        [SemVersion.SemanticVersion]$semVer = $null
+        if( -not ([SemVersion.SemanticVersion]::TryParse($TaskParameter['Version'], [ref]$semVer)) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is not a valid semantic version.')
+        }
+        $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$version.SemVer2.Prerelease,$version.SemVer2.Build
+        $version = New-WhiskeyVersionObject -SemVer $semVer
+    }
     $name = $TaskParameter['Name']
     $description = $TaskParameter['Description']
     $exclude = $TaskParameter['Exclude']
@@ -55,7 +310,7 @@ function New-WhiskeyProGetUniversalPackage
         $compressionLevel = $TaskParameter['CompressionLevel'] | ConvertFrom-WhiskeyYamlScalar -ErrorAction Ignore
         if( $compressionLevel -eq $null )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ComressionLevel: ''{0}'' is not a valid compression level. It must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CompressionLevel'': ''{0}'' is not a valid compression level. It must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
         }
     }
 
@@ -68,7 +323,7 @@ function New-WhiskeyProGetUniversalPackage
     }
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
-    $fileName = '{0}.{1}.upack' -f $name,($version -replace $fixRegex,'-')
+    $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
     $outDirectory = $TaskContext.OutputDirectory
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
@@ -77,28 +332,28 @@ function New-WhiskeyProGetUniversalPackage
     $tempBaseName = 'Whiskey+New-WhiskeyProGetUniversalPackage+{0}' -f $name
     $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
     $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
 
     try
     {
         $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
         @{
             name = $name;
-            version = $version.ToString();
+            version = $version.SemVer2NoBuildMetadata.ToString();
             title = $name;
             description = $description
         } | ConvertTo-Json | Set-Content -Path $upackJsonPath
         
         # Add the version.json file
         @{
-            Version = $TaskContext.Version.Version.ToString();
-            SemVer2 = $TaskContext.Version.SemVer2.ToString();
-            SemVer2NoBuildMetadata = $TaskContext.Version.SemVer2NoBuildMetadata.ToString();
-            PrereleaseMetadata = $TaskContext.Version.SemVer2.Prerelease;
-            BuildMetadata = $TaskContext.Version.SemVer2.Build;
-            SemVer1 = $TaskContext.Version.SemVer1.ToString();
+            Version = $version.Version.ToString();
+            SemVer2 = $version.SemVer2.ToString();
+            SemVer2NoBuildMetadata = $version.SemVer2NoBuildMetadata.ToString();
+            PrereleaseMetadata = $version.SemVer2.Prerelease;
+            BuildMetadata = $version.SemVer2.Build;
+            SemVer1 = $version.SemVer1.ToString();
         } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
         
         function Copy-ToPackage
@@ -211,6 +466,9 @@ function New-WhiskeyProGetUniversalPackage
     }
     finally
     {
+        $emptyDirectory = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+        New-Item -Path $emptyDirectory -ItemType 'Directory' | Out-Null
+
         $maxTries = 50
         $tryNum = 0
         $failedToCleanUp = $true
@@ -221,11 +479,16 @@ function New-WhiskeyProGetUniversalPackage
                 $failedToCleanUp = $false
                 break
             }
+
             Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot)
             Start-Sleep -Milliseconds 100
+
+            & robocopy $emptyDirectory $tempRoot /MIR /R:0 /NP /NFL /NDL
             Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction Ignore
         }
         while( $tryNum++ -lt $maxTries )
+        
+        Remove-Item -Path $emptyDirectory -Force
 
         if( $failedToCleanUp )
         {

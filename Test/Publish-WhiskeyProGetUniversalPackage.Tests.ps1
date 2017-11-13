@@ -12,10 +12,22 @@ $path = $null
 $threwException = $false
 $noAccessToProGet = $null
 $myTimeout = $null
+$packageExists = $false
+$overwrite = $false
+
+function GivenOverwrite
+{
+    $script:overwrite = $true
+}
 
 function GivenNoPath
 {
     $script:path = $null
+}
+
+function GivenPackageExists
+{
+    $script:packageExists = $true
 }
 
 function GivenPath
@@ -96,6 +108,21 @@ function GivenUpackFile
 function Init
 {
     $script:myTimeout = $null
+    $script:packageExists = $false
+}
+
+function ThenPackageOverwritten
+{
+    It ('should overwrite existing package') {
+        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { 
+                                #$DebugPreference = 'continue'
+                                Write-Debug -Message ('Force  expected  true')
+                                Write-Debug -Message ('       actual    false' -f $Force)
+                                $Force.ToBool()
+                            }
+    }
 }
 
 function ThenPackageNotPublished
@@ -117,6 +144,10 @@ function ThenPackagePublished
 
     It ('should publish file ''.output\{0}''' -f $FileName) {
         Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackagePath -eq (Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $FileName)) }
+    }
+
+    It ('should not throw any errors') {
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 
@@ -168,7 +199,7 @@ function ThenPackagePublishedWithTimeout
 
     It ('should publish with timeout ''{0}'' seconds' -f $ExpectedTimeout) {
         Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-            $DebugPreference = 'Continue'
+            #$DebugPreference = 'Continue'
             Write-Debug -Message ('Timeout  expected  {0}' -f $Timeout)
             Write-Debug -Message ('         actual    {0}' -f $ExpectedTimeout)
             $Timeout -eq $ExpectedTimeout 
@@ -240,10 +271,20 @@ function WhenPublishingPackage
         $parameter['Timeout'] = $myTimeout
     }
 
+    if( $overwrite )
+    {
+        # String to ensure parsed to a boolean.
+        $parameter['Overwrite'] = 'true'
+    }
+
     $mock = { }
     if( $noAccessToProGet )
     {
         $mock = { Write-Error -Message 'Failed to upload package to some uri.' }
+    }
+    elseif( $packageExists )
+    {
+        $mock = { if( -not $Force ) { Write-Error -Message ('Package already exists!') } }
     }
 
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
@@ -335,4 +376,26 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when uploading a large package' 
     GivenTimeout 600
     WhenPublishingPackage
     ThenPackagePublishedWithTimeout 600
+}
+
+Describe 'PublishProGetUniversalPackage.when package already exists' {
+    GivenUpackFile 'my.upack'
+    GivenProGetIsAt 'proget.example.com'
+    GivenCredential 'fubar' -WithID 'progetid'
+    GivenUniversalFeed 'universalfeed'
+    GivenPackageExists
+    WhenPublishingPackage -ErrorAction SilentlyContinue
+    ThenTaskFailed
+}
+
+Describe 'PublishProGetUniversalPackage.when replacing existing package' {
+    GivenUpackFile 'my.upack'
+    GivenProGetIsAt 'proget.example.com'
+    GivenCredential 'fubar' -WithID 'progetid'
+    GivenUniversalFeed 'universalfeed'
+    GivenPackageExists
+    GivenOverwrite
+    WhenPublishingPackage
+    ThenPackagePublished 'my.upack'
+    ThenPackageOverwritten
 }
