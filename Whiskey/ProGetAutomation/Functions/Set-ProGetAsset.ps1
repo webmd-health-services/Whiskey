@@ -2,60 +2,64 @@ function Set-ProGetAsset
 {
     <#
         .SYNOPSIS
-        Adds and Updates assets to the ProGet asset manager. 
+        Adds and updates assets to the ProGet asset manager. 
 
         .DESCRIPTION
-        The `Set-ProGetAsset` adds assets to ProGet A session, assetName, assetDirectory and Path is required. 
+        The `Set-ProGetAsset` adds assets to ProGet A session, FilePath, DirectoryName and Path is required. 
         A root directory needs to be created in ProGet using the `New-ProGetFeed` function with Type `Asset`.
         
-        The Name parameter is the name you wish the asset to be named in ProGet. 
-        The Directory parameter is the directory you wish the asset to be located in.
-        The Path parameter is the path to the file located on your machine. 
+        The FilePath parameter is relative path to the file you wish to upload.
+        The DirectoryName parameter is the root asset directory you wish the asset to be located in.
+        The Path parameter is the path to the file you wish to place the asset.
 
         .EXAMPLE
-        Set-ProGetAsset -Session $session -Name 'exampleAsset' -Directory 'versions' -Path 'path/to/file.txt'
+        Set-ProGetAsset -Session $session -Path 'subdir/exampleAsset.txt' -DirectoryName 'assetDirectory' -FilePath 'path/to/file.txt'
 
-        Example of adding an asset to ProGet if versions is not created it will throw an error.
+        Example of adding an asset located on the machine at `path/to/file.txt` to ProGet in the `assetDirectory/subdir` folder. If `assetDirectory` is not created it will throw an error. If subdir is not created it will create the folder.
         
         .EXAMPLE
-        Set-ProGetAsset -Session $session -Name 'exampleAsset' -Directory 'versions/subfolder' -Path 'path/to/file.txt'
+        Set-ProGetAsset -Session $session -Path 'exampleAsset.txt' -Directory 'assetDirectory' -Path 'path/to/file.txt'
 
-        Example of adding an asset to ProGet if subfolder are not created it will create the directory, but not the versions directory.
+        Example of adding an asset located on the machine at `path/to/file.txt` to ProGet in the `assetDirectory` folder. If `assetDirectory` is not created it will throw an error. If subdir is not created it will create the folder.
     #>
     param(
         [Parameter(Mandatory = $true)]
         [Object]
+        # A session object that represents the ProGet instance to use. Use the `New-ProGetSession` function to create session objects.
         $Session,
         
         [Parameter(Mandatory = $true)]
         [string]
-        $Directory,        
+        # The name of a valid directory to upload the desired asset in ProGet. If no root directories exist, use the `New-ProGetFeed` with parameter `-Type 'Asset'` to create a new directory in the ProGet assets page.
+        $DirectoryName,        
         
         [Parameter(Mandatory = $true)]
         [string]
-        $Name,
+        # Desired path of the asset that will be uploaded. Any directories that do not exist will be created automatically.
+        $Path,
 
         [Parameter(Mandatory = $true)]
         [string]
-        $Path
+        # The Relative Path of the file to be uploaded. 
+        $FilePath
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $feedExists = Test-ProGetFeed -Session $session -FeedName $Directory -FeedType 'Asset'
+    $feedExists = Test-ProGetFeed -Session $session -FeedName $DirectoryName -FeedType 'Asset'
     if( !$feedExists )
     {
-        Write-Error('Asset Directory ''{0}'' does not exist, please create one using New-ProGetFeed with Name ''{0}'' and Type ''Asset''' -f $Directory)
+        Write-Error('Asset Directory ''{0}'' does not exist, please create one using New-ProGetFeed with Name ''{0}'' and Type ''Asset''' -f $DirectoryName)
     }
 
-    if( -not (Test-path -Path $Path) )
+    if( -not (Test-path -Path $FilePath) )
     {
-        Write-error ('Could Not find file named ''{0}''. please pass in the correct path value' -f $Path)
+        Write-error ('Could Not find file named ''{0}''. please pass in the correct path value' -f $FilePath)
     }
     try
     {
-        Invoke-ProGetRestMethod -Session $Session -Path ('/endpoints/{0}/content/{1}' -f $Directory, $Name) -Method Post -Infile $Path
+        Invoke-ProGetRestMethod -Session $Session -Path ('/endpoints/{0}/content/{1}' -f $DirectoryName, $Path) -Method Post -Infile $FilePath
     }
     catch
     {

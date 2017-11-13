@@ -40,24 +40,8 @@ function GivenAsset
         [string[]]
         $FilePath
     )
-    $script:taskParameter['Name'] = $name
-    $script:taskParameter['Directory'] = $directory
-    $script:taskParameter['Path'] = @()
-    foreach($file in $FilePath){
-        $script:taskParameter['Path'] += (Join-Path -Path $TestDrive.FullName -ChildPath $file)
-        New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $file) -ItemType 'File' -Force
-    }
-}
-
-function GivenAssetWithoutName
-{
-    param(
-        [string]
-        $directory,
-        [string[]]
-        $FilePath
-    )
-    $script:taskParameter['Directory'] = $directory
+    $script:taskParameter['AssetPath'] = $name
+    $script:taskParameter['AssetDirectory'] = $directory
     $script:taskParameter['Path'] = @()
     foreach($file in $FilePath){
         $script:taskParameter['Path'] += (Join-Path -Path $TestDrive.FullName -ChildPath $file)
@@ -76,7 +60,7 @@ function GivenAssetWithInvalidDirectory
         $FilePath
     )
     # $script:taskParameter['Name'] = $name
-    $script:taskParameter['Directory'] = $directory
+    $script:taskParameter['AssetDirectory'] = $directory
     $script:taskParameter['Path'] = (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath)
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $FilePath) -ItemType 'File' -Force
     Mock -CommandName 'Test-ProGetFeed' -ModuleName 'Whiskey' -MockWith { return $false }
@@ -93,8 +77,8 @@ function GivenAssetThatDoesntExist
         $FilePath
 
     )
-    $script:taskParameter['Name'] = $name
-    $script:taskParameter['Directory'] = $directory
+    $script:taskParameter['AssetPath'] = $name
+    $script:taskParameter['AssetDirectory'] = $directory
     $script:taskParameter['Path'] = $TestDrive.FullName,$FilePath -join '\'
 }
 
@@ -132,7 +116,7 @@ function ThenAssetShouldExist
     )
     foreach( $file in $AssetName ){
         it ('should contain the file {0}' -f $file) {
-            Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file }.getNewClosure()
+            Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $file }.getNewClosure()
         }
     }
 }
@@ -166,6 +150,15 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly'{
     ThenTaskSucceeds
 }
 
+Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded to a subdirectory correctly'{
+    GivenContext
+    GivenCredentials
+    GivenAsset -Name 'boo/foo.txt' -directory 'bar' -FilePath 'foo.txt'
+    WhenAssetIsUploaded
+    ThenAssetShouldExist -AssetName 'boo/foo.txt'
+    ThenTaskSucceeds
+}
+
 Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly'{
     GivenContext
     GivenCredentials
@@ -178,28 +171,28 @@ Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly
 Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     GivenContext
     GivenCredentials
-    GivenAssetWithoutName -Directory 'bar' -FilePath 'fooboo.txt'
+    GivenAsset -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldExist -AssetName 'fooboo.txt'
-    ThenTaskSucceeds
+    ThenAssetShouldNotExist -AssetName 'fooboo.txt'
+    ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'    
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
     GivenContext
     GivenCredentials
-    GivenAssetWithoutName -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
+    GivenAsset -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldExist -AssetName 'fooboo.txt','bar.txt'
-    ThenTaskSucceeds
+    ThenAssetShouldNotExist -AssetName 'fooboo.txt','bar.txt'
+    ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
     GivenContext
     GivenCredentials
-    GivenAssetWithoutName -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
+    GivenAsset -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
-    ThenAssetShouldExist -AssetName 'fooboo.txt'
-    ThenTaskSucceeds
+    ThenAssetShouldNotExist -AssetName 'fooboo.txt'
+    ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
