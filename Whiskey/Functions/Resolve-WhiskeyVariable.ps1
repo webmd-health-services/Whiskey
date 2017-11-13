@@ -127,16 +127,23 @@ function Resolve-WhiskeyVariable
 
         if( (Get-Member -Name 'Keys' -InputObject $InputObject) )
         {
-            # Can't modify a collection while enumerating it.
             $newValues = @{ }
+            $toRemove = New-Object 'Collections.Generic.List[string]'
+            # Can't modify a collection while enumerating it.
             foreach( $key in $InputObject.Keys )
             {
-                $newValues[$key] = Resolve-WhiskeyVariable -Context $Context -InputObject $InputObject[$key]
+                $newKey = $key | Resolve-WhiskeyVariable -Context $Context  
+                if( $newKey -ne $key )
+                {
+                    $toRemove.Add($key)
+                }
+                $newValues[$newKey] = Resolve-WhiskeyVariable -Context $Context -InputObject $InputObject[$key]
             }
             foreach( $key in $newValues.Keys )
             {
                 $InputObject[$key] = $newValues[$key]
             }
+            $toRemove | ForEach-Object { $InputObject.Remove($_) }
             return $InputObject
         }
 

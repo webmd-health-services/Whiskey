@@ -6,14 +6,45 @@ Set-StrictMode -Version 'Latest'
 $defaultPackageName = 'WhiskeyTest'
 $defaultDescription = 'A package created to test the New-WhiskeyProGetUniversalPackage function in the Whiskey module.'
 $defaultVersion = '1.2.3'
+$packageVersion = $null
+$buildVersion = $null
 
 $threwException = $false
 $temporaryPackageDir = $null
+$context = $null
+$expandPath = $null
+
+function GivenBuildVersion
+{
+    param(
+        [SemVersion.SemanticVersion]
+        $Version
+    )
+
+    $script:buildVersion = New-WhiskeyVersionObject
+    $buildVersion.SemVer2 = $Version
+    $buildVersion.Version = [Version]('{0}.{1}.{2}' -f $Version.Major,$Version.Minor,$Version.Patch)
+    $buildVersion.SemVer2NoBuildMetadata = '{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,$Version.Prerelease
+    $buildVersion.SemVer1 = '{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,($Version.Prerelease -replace '[^A-Za-z0-9]','')
+}
+
+function GivenPackageVersion
+{
+    param(
+        $Version
+    )
+
+    $script:packageVersion = $Version
+}
 
 function Init
 {
     $script:threwException = $false
     $script:temporaryPackageDir = Join-Path -Path $TestDrive.FullName -ChildPath 'TempDir'
+    $script:packageVersion = $null
+    $script:buildVersion = $null
+    $script:context = $null
+    $script:expandPath = $null
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $env:TEMP -and $ChildPath -like 'Whiskey+New-WhiskeyProGetUniversalPackage+*' } -MockWith { Join-Path -Path $TestDrive.FullName -ChildPath 'TempDir' }
 }
 
@@ -28,12 +59,54 @@ function ThenTaskFails
         $Global:Error | Should match $error
     }
 }
+
 function ThenTaskSucceeds 
 {
     It ('should not throw an error message') {
         $Global:Error | Should BeNullOrEmpty
     }
 }
+
+function ThenVersionIs
+{
+    param(
+        $Version,
+        $PrereleaseMetadata,
+        $BuildMetadata,
+        $SemVer2,
+        $SemVer1,
+        $SemVer2NoBuildMetadata
+    )
+
+    $versionJsonPath = Join-Path -Path $expandPath -ChildPath 'package\version.json'
+
+    $versionJson = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
+    It 'version.json should have Version property' {
+        $versionJson.Version | Should -BeOfType ([string])
+        $versionJson.Version | Should -Be $Version
+    }
+    It 'version.json should have PrereleaseMetadata property' {
+        $versionJson.PrereleaseMetadata | Should -BeOfType ([string])
+        $versionJson.PrereleaseMetadata | Should -Be $PrereleaseMetadata
+    }
+    It 'version.json shuld have BuildMetadata property' {
+        $versionJson.BuildMetadata | Should -BeOfType ([string])
+        $versionJson.BuildMetadata | Should -Be $BuildMetadata
+    }
+    It 'version.json should have v2 semantic version' {
+        $versionJson.SemVer2 | Should -BeOfType ([string])
+        $versionJson.SemVer2 | Should -Be $SemVer2
+    }
+    It 'version.json should have v1 semantic version' {
+        $versionJson.SemVer1 | Should -BeOfType ([string])
+        $versionJson.SemVer1 | Should -Be $SemVer1
+    }
+    It 'version.json should have v2 semantic version without build metadata' {
+        $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([string])
+        $versionJson.SemVer2NoBuildMetadata | Should -Be $SemVer2NoBuildMetadata
+    }
+}
+
 function Assert-NewWhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
@@ -133,7 +206,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $byWhoArg = @{ $PSCmdlet.ParameterSetName = $true }
 
-    $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
+    $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
     $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
@@ -479,7 +552,9 @@ function WhenPackaging
         $WithVersion = $defaultVersion,
         $WithApplicationName,
         [object[]]
-        $CompressionLevel
+        $CompressionLevel,
+        [Switch]
+        $SkipExpand
     )
     $taskParameter = @{ }
     if( $WithPackageName )
@@ -515,10 +590,20 @@ function WhenPackaging
         $taskParameter['CompressionLevel'] = $CompressionLevel
     }
 
-    $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForVersion $WithVersion
+    if( $packageVersion )
+    {
+        $taskParameter['Version'] = $packageVersion
+    }
+
+    $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForVersion $WithVersion
     if( $WithApplicationName )
     {
         $taskContext.ApplicationName = $WithApplicationName
+    }
+
+    if( $buildVersion )
+    {
+        $context.Version = $buildVersion
     }
     
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
@@ -537,30 +622,14 @@ function WhenPackaging
         $threwException = $true
         Write-Error -ErrorRecord $_
     }
-}
 
-function Expand-Package
-{
-    param(
-        $PackageName = $defaultPackageName,
-        $PackageVersion = $defaultVersion
-    )
+    $packageInfo = Get-ChildItem -Path $taskContext.OutputDirectory -Filter '*.upack'
 
-    $packageName = '{0}.{1}.upack' -f $PackageName,($PackageVersion -replace '[\\/]','-')
-    $outputRoot = Get-BuildRoot
-    $outputRoot = Join-Path -Path $outputRoot -ChildPath '.output'
-    $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
-
-    It 'should create a package' {
-        $packagePath | Should Exist
-    }
-
-    $expandPath = Join-Path -Path $TestDrive.FullName -ChildPath 'Expand'
-    if( -not (Test-Path -Path $expandPath -PathType Container) )
+    if( -not $SkipExpand -and $packageInfo )
     {
-        Expand-Item -Path $packagePath -OutDirectory $expandPath | Out-Null
+        $script:expandPath = Join-Path -Path $taskContext.OutputDirectory -ChildPath 'extracted'
+        Expand-Item -Path $packageInfo.FullName -OutDirectory $expandPath | Out-Null
     }
-    return $expandPath
 }
 
 function Get-PackageSize
@@ -588,8 +657,6 @@ function ThenPackageShouldInclude
         $Path
     )
 
-    $expandPath = Expand-Package -PackageName $PackageName -PackageVersion $PackageVersion
-
     $Path += @( 'version.json' )
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
     foreach( $item in $Path )
@@ -608,7 +675,6 @@ function ThenPackageShouldNotInclude
         $Path
     )
 
-    $expandPath = Expand-Package
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
 
     foreach( $item in $Path )
@@ -616,6 +682,34 @@ function ThenPackageShouldNotInclude
         It ('package should not include {0}' -f $item) {
             (Join-Path -Path $packageRoot -ChildPath $item) | Should -Not -Exist
         }
+    }
+}
+
+function ThenUpackMetadataIs
+{
+    param(
+        $Name,
+        $Version,
+        $Description
+    )
+
+    $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json' -Resolve
+
+    $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
+    It 'should contain name' {
+        $upackInfo.Name | Should -Be $Name
+    }
+
+    It 'should contain title' {
+        $upackInfo.title | Should -Be $Name
+    }
+
+    It 'should contain version' {
+        $upackInfo.Version | Should -Be $Version
+    }
+
+    It 'should contain description' {
+        $upackInfo.Description | Should -Be $Description
     }
 }
 
@@ -1070,6 +1164,39 @@ Describe 'ProGetUniversalPackage.when temporary packing directory contains paths
     $longFilePath = Join-Path -Path $temporaryPackageDir -ChildPath ('a' * 248)
     & robocopy $(Get-BuildRoot) $longFilePath 'file.txt' /create
 
-    WhenPackaging -Paths '.' -WithWhitelist 'file.txt'
+    WhenPackaging -Paths '.' -WithWhitelist 'file.txt' -SkipExpand
     ThenTempDirectoryCleanedUp
+}
+
+Describe 'ProGetUniversalPackage.when customizing package version' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    GivenPackageVersion '5.8.2'
+    WhenPackaging -Paths 'my.file'
+    ThenPackageShouldInclude 'my.file','version.json'
+    ThenUpackMetadataIs $defaultPackageName '5.8.2-rc.1' $defaultDescription
+    ThenVersionIs -Version '5.8.2' `
+                  -PrereleaseMetadata 'rc.1' `
+                  -BuildMetadata 'build.300' `
+                  -SemVer2 '5.8.2-rc.1+build.300' `
+                  -SemVer1 '5.8.2-rc1' `
+                  -SemVer2NoBuildMetadata '5.8.2-rc.1'
+    ThenTaskSucceeds
+}
+
+Describe 'ProGetUniversalPackage.when not customizing package version' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    WhenPackaging -Paths 'my.file'
+    ThenPackageShouldInclude 'my.file','version.json'
+    ThenUpackMetadataIs $defaultPackageName $context.Version.SemVer2NoBuildMetadata.ToString() $defaultDescription
+    ThenVersionIs -Version '1.2.3' `
+                  -PrereleaseMetadata 'rc.1' `
+                  -BuildMetadata 'build.300' `
+                  -SemVer2 '1.2.3-rc.1+build.300' `
+                  -SemVer1 '1.2.3-rc1' `
+                  -SemVer2NoBuildMetadata '1.2.3-rc.1'
+    ThenTaskSucceeds
 }
