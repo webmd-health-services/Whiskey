@@ -19,6 +19,7 @@ function Publish-WhiskeyProGetUniversalPackage
     * `CredentialID`: if ProGet requires authentication when uploading universal packages, this should be the ID of the credential to use. Add credentials to your build with the `Add-WhiskeyCredential` function.
     * `Path`: the path to any upack files to upload. By default, all `*.upack` files in the `.output` directory are uploaded.
     * `Timeout`: the timeout, in seconds, to use when uploading the file. If the upload request takes longer than this, it will be cancelled and the build will fail.
+    * `Overwrite`: replace/overwrite the package if it already exists in ProGet. The default behavior is to fail/stop if the package exists.
 
     ## Examples
 
@@ -114,6 +115,10 @@ function Publish-WhiskeyProGetUniversalPackage
     if( $TaskParameter['Timeout'] )
     {
         $optionalParam['Timeout'] = $TaskParameter['Timeout']
+    }
+    if( $TaskParameter['Overwrite'] )
+    {
+        $optionalParam['Force'] = $TaskParameter['Overwrite'] | ConvertFrom-WhiskeyYamlScalar
     }
 
     Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}' -f $taskPrefix)

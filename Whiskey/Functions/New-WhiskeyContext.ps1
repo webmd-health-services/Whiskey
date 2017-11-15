@@ -155,23 +155,7 @@ function New-WhiskeyContext
     {
         Write-Error ('Unable to create the semantic version for the current build. Is ''{0}'' a valid semantic version? If not, please update the Version property in ''{1}'' to be a valid semantic version.' -f $config['Version'], $ConfigurationPath) -ErrorAction Stop
     }
-
-    $version = New-Object -TypeName 'Version' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    $semVersionNoBuild = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch
-    if( $semVersion.Prerelease )
-    {
-        $semVersionNoBuild = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersion.Prerelease
-        $semVersionV1Prerelease = $semVersion.Prerelease -replace '[^A-Za-z0-90]',''
-        $semVersionV1 = New-Object -TypeName 'SemVersion.SemanticVersion' -ArgumentList $semVersion.Major,$semVersion.Minor,$semVersion.Patch,$semVersionV1Prerelease
-    }
-    
-    $context.Version = [pscustomobject]@{
-                                            SemVer2 = $semVersion;
-                                            SemVer2NoBuildMetadata = $semVersionNoBuild;
-                                            SemVer1 = $semVersionV1;
-                                            Version = $version;
-                                        }
+    $context.Version = New-WhiskeyVersionObject -SemVer $semVersion
 
     return $context
 }
