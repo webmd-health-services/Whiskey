@@ -34,7 +34,7 @@ function Invoke-ProGetRestMethod
         # Send the request as JSON. Otherwise, the data is sent as name/value pairs.
         $AsJson,
         
-        # Send File as InFile parameter
+        # Sends the contents of the file at this path as the body of the web request.
         [String]
         $InFile
     )
@@ -101,6 +101,7 @@ function Invoke-ProGetRestMethod
     {
         $debugBody | Write-Debug
     }
+
     $errorsAtStart = $Global:Error.Count
     try
     {
@@ -120,6 +121,7 @@ function Invoke-ProGetRestMethod
         {
             $credentialParam['Credential'] = $Session.Credential
         }
+
         Invoke-RestMethod -Method $Method -Uri $uri @bodyParam -ContentType $contentType -Headers $headers @credentialParam | 
             ForEach-Object { $_ } 
     }
