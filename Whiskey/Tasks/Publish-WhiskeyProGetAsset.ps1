@@ -12,7 +12,6 @@ function Publish-WhiskeyProGetAsset
         
         ## Properties
         * `CredentialID`: The ID to the ProGet Credential. Set the `CredentialID` property to the ID of the credential to use when uploading. Add the credential with the `Add-WhiskeyCredential` function.
-        * `ApiKeyID` (Mandatory): The ID to the  ApiKey to the ProGet Api. Use the `Add-WhiskeyApiKey` to add your API key.
         * `Path` (Mandatory): The relative paths to the files/directories to upload to ProGet. Paths should be relative to the whiskey.yml file they were taken from.
         * `Uri` (Mandatory): The uri to the ProGet instance.
         * `AssetPath` (Mandatory): The desired Paths to the location you wish the file to be uploaded to in ProGet. The last item in the path is the asset name. The number of names provided must equal the number of file paths.
@@ -24,7 +23,6 @@ function Publish-WhiskeyProGetAsset
         BuildTasks:
         - PublishProGetAsset:
             CredentialID: ProGetCredential
-            ApiKeyID: ProGetApiKey
             Path: 'path/to/file.txt'
             Uri: http://proget.dev.webmd.com/
             AssetPath: 'exampleAsset'
@@ -36,7 +34,6 @@ function Publish-WhiskeyProGetAsset
         BuildTasks:
         - PublishProGetAsset:
             CredentialID: ProGetCredential
-            ApiKeyID: ProGetApiKey
             Path: 
             - 'path/to/file.txt'
             - 'Path/to/anotherfile.txt'
@@ -68,7 +65,6 @@ function Publish-WhiskeyProGetAsset
     BuildTasks:
     - PublishProGetAsset:
         CredentialID: ProGetCredential
-        ApiKeyID: ProGetApiKey
         Path: 
         -'path/to/file.txt'
         -'path/to/anotherfile.txt'
@@ -93,15 +89,9 @@ function Publish-WhiskeyProGetAsset
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ("CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet. Add the credential with the `Add-WhiskeyCredential` function:" + $message)
     }
 
-    if( -Not $TaskParameter['ApiKeyID'])
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("ApiKeyId is a mandatory property. It should be the ID of the ApiKey to use when connecting to ProGet.  Use the `Add-WhiskeyApiKey` to add your API key.:"+$message)
-    }
-
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
-    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $TaskParameter['ApiKeyID'] -PropertyName 'ApiKeyID'
 
-    $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential -ApiKey $apiKey
+    $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
 
     foreach($path in $TaskParameter['Path']){
         if( $TaskParameter['AssetPath'] -and @($TaskParameter['AssetPath']).count -eq @($TaskParameter['Path']).count){

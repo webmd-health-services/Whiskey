@@ -4,8 +4,6 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $script:username = 'testusername'
-$script:apikey = 'testapikey'
-$script:apiKeyID = 'testApiid'
 $script:credentialID = 'TestCredential'
 
 function GivenContext
@@ -24,10 +22,8 @@ function GivenCredentials
     $password = ConvertTo-SecureString -AsPlainText -Force -String $username
     $script:credential = New-Object 'Management.Automation.PsCredential' $username,$password
     Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
-    Add-WhiskeyApiKey -Context $context -ID $apiKeyID -value $apiKey 
 
     $taskParameter['CredentialID'] = $credentialID
-    $taskParameter['ApiKeyID'] = $apiKeyID
 }
 
 function GivenAsset

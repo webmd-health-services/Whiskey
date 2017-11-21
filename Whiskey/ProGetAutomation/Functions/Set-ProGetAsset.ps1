@@ -46,23 +46,11 @@ function Set-ProGetAsset
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    $feedExists = Test-ProGetFeed -Session $session -FeedName $DirectoryName -FeedType 'Asset'
-    if( !$feedExists )
-    {
-        Write-Error('Asset Directory ''{0}'' does not exist, please create one using New-ProGetFeed with Name ''{0}'' and Type ''Asset''' -f $DirectoryName)
-    }
-
     if( -not (Test-path -Path $FilePath) )
     {
         Write-error ('Could Not find file named ''{0}''. please pass in the correct path value' -f $FilePath)
+        return
     }
-    try
-    {
-        Invoke-ProGetRestMethod -Session $Session -Path ('/endpoints/{0}/content/{1}' -f $DirectoryName, $Path) -Method Post -Infile $FilePath
-    }
-    catch
-    {
-        Write-Error ("ERROR: {0}" -f $Global:Error)
-    }
+
+    return Invoke-ProGetRestMethod -Session $Session -Path ('/endpoints/{0}/content/{1}' -f $DirectoryName, $Path) -Method Post -Infile $FilePath
 }

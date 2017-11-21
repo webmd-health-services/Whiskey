@@ -45,24 +45,17 @@ function Remove-ProGetAsset
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    try
-    {
-        $uri = '/endpoints/{0}/content/{1}' -f $DirectoryName,$Path
-        $assetList = Get-ProGetAsset -Session $Session -Path $Path -DirectoryName $DirectoryName -Filter $filter
+    $uri = '/endpoints/{0}/content/{1}' -f $DirectoryName,$Path
+    $assetList = Get-ProGetAsset -Session $Session -Path $Path -DirectoryName $DirectoryName -Filter $filter
 
-        foreach($asset in $assetList)
-        {
-            $asset = $asset.Name
-            if($Path)
-            {
-                $asset = (join-Path -Path $Path -ChildPath $asset)
-            }
-            $uri = '/endpoints/{0}/content/{1}' -f $DirectoryName, $asset
-            Invoke-ProGetRestMethod -Session $Session -Path $uri -Method Delete
-        }
-    }
-    catch
+    foreach($asset in $assetList)
     {
-        Write-Error ("ERROR: {0}" -f $Global:Error)
+        $asset = $asset.Name
+        if($Path)
+        {
+            $asset = (join-Path -Path $Path -ChildPath $asset)
+        }
+        $uri = '/endpoints/{0}/content/{1}' -f $DirectoryName, $asset
+        Invoke-ProGetRestMethod -Session $Session -Path $uri -Method Delete
     }
 }

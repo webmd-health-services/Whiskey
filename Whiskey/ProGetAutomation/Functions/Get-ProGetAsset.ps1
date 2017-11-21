@@ -52,12 +52,5 @@ function Get-ProGetAsset
     {
         $Filter = '*'
     }
-    try
-    {
-        return Invoke-ProGetRestMethod -Session $Session -Path $uri -Method Get | Where-Object { $_.Name -like $Filter }
-    }
-    catch
-    {
-        Write-Error ("ERROR: {0}" -f $Global:Error)
-    }
+    return Invoke-ProGetRestMethod -Session $Session -Path $uri -Method Get | Where-Object { $_.Name -like $Filter }
 }

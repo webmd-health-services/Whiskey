@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.22.0'
+    ModuleVersion = '0.22.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added: PublishProGetAsset task that adds and updates assets in ProGet.
+* fixed: Removed ApiKey as requirement for Publish-WhiskeyProGetAsset.
 '@
         } # End of PSData hashtable
 
