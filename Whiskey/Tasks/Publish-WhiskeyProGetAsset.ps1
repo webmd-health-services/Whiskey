@@ -7,8 +7,11 @@ function Publish-WhiskeyProGetAsset
         Publishes assets to ProGet. 
 
         .DESCRIPTION
-        The `PublishProGetAsset` task adds assets to ProGet. A root directory needs to be 
-        created in ProGet using the `New-ProGetFeed` function in ProGetAutomation with Type `Asset`.
+        The `PublishProGetAsset` task adds files to a ProGet asset directory. Specify the asset directory's name with the `AssetDirectory` property. Specify the path to the file in the asset directory with the `AssetPath` parameter. Specify the path to the file to upload via the `Path` property.
+
+        You can publish multiple assets. Set the `Path` property to a list of files to publish. There must be an equal number of destination paths in the `Asset-Path` property. The first item in the `Path` list will be published using the first path in the `Asset-Path` property, and so forth.
+
+        If publishing to your asset directory requires credentials, pass the credential ID to the `CredentialID` parameter. Use the `Add-WhiskeyCredential` function to add the credential to your build.
         
         ## Properties
         * `CredentialID`: The ID to the ProGet Credential. Set the `CredentialID` property to the ID of the credential to use when uploading. Add the credential with the `Add-WhiskeyCredential` function.
