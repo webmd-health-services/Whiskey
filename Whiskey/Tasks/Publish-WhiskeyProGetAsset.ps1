@@ -98,7 +98,7 @@ function Publish-WhiskeyProGetAsset
 
     foreach($path in $TaskParameter['Path']){
         if( $TaskParameter['AssetPath'] -and @($TaskParameter['AssetPath']).count -eq @($TaskParameter['Path']).count){
-            $name = $TaskParameter['AssetPath'][$TaskParameter['Path'].indexOf($path)]
+            $name = @($TaskParameter['AssetPath'])[$TaskParameter['Path'].indexOf($path)]
         }
         else
         {
