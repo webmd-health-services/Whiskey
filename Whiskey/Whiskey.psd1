@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.22.0'
+    ModuleVersion = '0.22.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Removed ApiKey as requirement for Publish-WhiskeyProGetAsset.
+* Fixed: NUnit tests fail to run when code coverage is disabled (i.e. they are not run through OpenCover) and the `Include` parameter's value contains a space.
 '@
         } # End of PSData hashtable
 
