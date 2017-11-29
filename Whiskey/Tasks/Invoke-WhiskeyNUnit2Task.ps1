@@ -226,19 +226,23 @@ function Invoke-WhiskeyNUnit2Task
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
     
     $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
-    $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
-    Write-Verbose -Message ('  Path                {0}' -f ($Path -join $separator))
+    $VerbosePreference = 'Continue'
+    Write-Verbose -Message ('  Path                {0}' -f ($Path | Select-Object -First 1))
+    $Path | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
     Write-Verbose -Message ('  Framework           {0}' -f $frameworkParam)
     Write-Verbose -Message ('  Include             {0}' -f $includeParam)
     Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
-    Write-Verbose -Message ('  Argument            {0}' -f ($extraArgs -join $separator))
-    Write-Verbose -Message ('                      /xml={0}' -f $reportPath)
-    Write-Verbose -Message ('  CoverageFilter      {0}' -f $TaskParameter['CoverageFilter'] -join ' ')
+    Write-Verbose -Message ('  Argument            /xml={0}' -f $reportPath)
+    $extraArgs | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
+    Write-Verbose -Message ('  CoverageFilter      {0}' -f ($TaskParameter['CoverageFilter'] | Select-Object -First 1))
+    $TaskParameter['CoverageFilter'] | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
     Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
     $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
     Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
-    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs -join ' '))
-    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs -join ' '))
+    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs | Select-Object -First 1))
+    $openCoverArgs | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
+    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs | Select-Object -First 1))
+    $reportGeneratorArgs | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
     
     if( -not $disableCodeCoverage )
     {

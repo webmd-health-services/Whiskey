@@ -142,7 +142,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: NUnit tests fail to run when code coverage is disabled (i.e. they are not run through OpenCover) and the `Include` parameter's value contains a space.
+* Fixed: NUnit2 tests fail to run when code coverage is disabled (i.e. they are not run through OpenCover) and the `Include` parameter's value contains a space.
+* Fixed: NUnit2 task's verbose output doesn't align correctly.
+* Fixed: NUnit2 task's verbose output doesn't properly show code coverage filter when there are multiple filters.
 '@
         } # End of PSData hashtable
 
