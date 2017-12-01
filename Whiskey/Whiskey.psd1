@@ -144,7 +144,7 @@
             ReleaseNotes = @'
 * Fixed: SetVariable task fails when a variable's value is empty.
 * Every task and event handler now gets its own temp directory under `.output` where it can put temporary files. The directory is automatically deleted when the task finishes. Use the `Temp` property on the `$TaskContext` task/event parameter.
-* New-ProGetUniversalPackage task no longer excludes .git, .hg, or obj directories. 
+* ProGetUniversalPackage task no longer excludes .git, .hg, or obj directories. 
 '@
         } # End of PSData hashtable
 
