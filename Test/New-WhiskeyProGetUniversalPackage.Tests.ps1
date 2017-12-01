@@ -825,19 +825,6 @@ Describe 'ProGetUniversalPackage.when paths don''t exist' {
                                             -ErrorAction SilentlyContinue 
 }
 
-Describe 'ProGetUniversalPackage.when path contains known directories to exclude' {
-    Init
-    $dirNames = @( 'dir1', 'dir1/.hg', 'dir1/.git', 'dir1/obj', 'dir1/sub/.hg', 'dir1/sub/.git', 'dir1/sub/obj' )
-    $filenames = 'html.html'
-    $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $filenames
-    
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1' `
-                                            -ThatIncludes '*.html' `
-                                            -HasRootItems 'dir1' `
-                                            -HasFiles 'html.html' `
-                                            -NotHasFiles '.git','.hg','obj' 
-}
-
 Describe 'ProGetUniversalPackage.when including third-party items' {
     Init
     $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )

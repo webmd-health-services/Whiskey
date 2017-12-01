@@ -418,7 +418,7 @@ function New-WhiskeyProGetUniversalPackage
                     $destinationDisplay = $destinationDisplay.Trim('\')
                     if( $AsThirdPartyItem )
                     {
-                        $exclude = @()
+                        $robocopyExclude = @()
                         $whitelist = @( )
                         $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                     }
@@ -430,13 +430,13 @@ function New-WhiskeyProGetUniversalPackage
                             return
                         }
 
-                        $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
+                        $robocopyExclude = & { $TaskParameter['Exclude'] ; (Join-Path -Path $destination -ChildPath 'version.json') } 
                         $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                         $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
                     }
 
                     Write-Verbose -Message $operationDescription
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $exclude | Write-Verbose
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-Verbose
                 }
             }
         }
