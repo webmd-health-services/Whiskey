@@ -50,11 +50,20 @@ function Invoke-WhiskeyTask
             $result = 'FAILED'
             try
             {
+                $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.On{1}.{2}' -f $Name,$EventName,[IO.Path]::GetRandomFileName())
+                if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
+                {
+                    New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force
+                }
                 & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Property
                 $result = 'COMPLETED'
             }
             finally
             {
+                if( (Test-Path -Path $TaskContext.Temp -PathType Container) )
+                {
+                    Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
+                }
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
                 Write-Verbose ('{0}  {1}  {2} in {3}' -f $prefix,(' ' * ($EventName.Length + 4)),$result,$duration)
@@ -244,11 +253,20 @@ function Invoke-WhiskeyTask
     $result = 'FAILED'
     try
     {
+        $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $task.Name,[IO.Path]::GetRandomFileName())
+        if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
+        {
+            New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
+        }
         & $task.CommandName -TaskContext $TaskContext -TaskParameter $taskProperties
         $result = 'COMPLETED'
     }
     finally
     {
+        if( (Test-Path -Path $TaskContext.Temp -PathType Container) )
+        {
+            Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
+        }
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
         Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)

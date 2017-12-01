@@ -10,7 +10,6 @@ $packageVersion = $null
 $buildVersion = $null
 
 $threwException = $false
-$temporaryPackageDir = $null
 $context = $null
 $expandPath = $null
 
@@ -40,7 +39,6 @@ function GivenPackageVersion
 function Init
 {
     $script:threwException = $false
-    $script:temporaryPackageDir = Join-Path -Path $TestDrive.FullName -ChildPath 'TempDir'
     $script:packageVersion = $null
     $script:buildVersion = $null
     $script:context = $null
@@ -746,13 +744,6 @@ function ThenPackageShouldbeBeCompressed
 
 }
 
-function ThenTempDirectoryCleanedUp
-{
-    It 'should clean up the temporary packaging directory' {
-        $temporaryPackageDir | Should -Not -Exist
-    }
-}
-
 Describe 'ProGetUniversalPackage.when packaging everything in a directory' {
     Init
     $dirNames = @( 'dir1', 'dir1\sub' )
@@ -764,7 +755,6 @@ Describe 'ProGetUniversalPackage.when packaging everything in a directory' {
                                             -ThatIncludes '*.html' `
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging root files' {
@@ -776,7 +766,6 @@ Describe 'ProGetUniversalPackage.when packaging root files' {
                                             -WithThirdPartyRootItem $thirdPartyFile `
                                             -HasThirdPartyRootItem $thirdPartyFile `
                                             -HasRootItems $file 
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging whitelisted files in a directory' {
@@ -791,7 +780,6 @@ Describe 'ProGetUniversalPackage.when packaging whitelisted files in a directory
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html','style.css' `
                                             -NotHasFiles 'code.cs'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging multiple directories' {
@@ -806,7 +794,6 @@ Describe 'ProGetUniversalPackage.when packaging multiple directories' {
                                             -HasRootItems $dirNames `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles 'code.cs'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when whitelist includes items that need to be excluded' {    
@@ -822,7 +809,6 @@ Describe 'ProGetUniversalPackage.when whitelist includes items that need to be e
                                             -HasRootItems 'dir1' `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles 'html2.html','sub' 
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when paths don''t exist' {
@@ -837,7 +823,6 @@ Describe 'ProGetUniversalPackage.when paths don''t exist' {
                                             -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                                             -ShouldNotCreatePackage `
                                             -ErrorAction SilentlyContinue 
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when path contains known directories to exclude' {
@@ -851,7 +836,6 @@ Describe 'ProGetUniversalPackage.when path contains known directories to exclude
                                             -HasRootItems 'dir1' `
                                             -HasFiles 'html.html' `
                                             -NotHasFiles '.git','.hg','obj' 
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items' {
@@ -868,7 +852,6 @@ Describe 'ProGetUniversalPackage.when including third-party items' {
                                             -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyFile 'thirdparty.txt' 
-    ThenTempDirectoryCleanedUp
 }
 
 foreach( $parameterName in @( 'Name', 'Description' ) )
@@ -947,7 +930,6 @@ Describe 'ProGetUniversalPackage.when application root isn''t the root of the re
                                             -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyFile 'thirdparty.txt' `
                                             -FromSourceRoot 'app' 
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
@@ -1004,7 +986,6 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path' {
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $path -HasRootItems $path
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging given a full relative path with override syntax' {
@@ -1016,7 +997,6 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path with 
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $forPath -HasRootItems $file
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items with override syntax' {
@@ -1028,7 +1008,6 @@ Describe 'ProGetUniversalPackage.when including third-party items with override 
     WhenPackaging -Paths 'dir1' -WithWhitelist @('thirdparty.txt') -WithThirdPartyPath @{ 'app\thirdparty' = 'thirdparty' },$thirdPartyDictionary
     ThenTaskSucceeds
     ThenPackageShouldInclude 'dir1\thirdparty.txt', 'thirdparty\none of your business','fourthparty\none of your business'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when package is empty' {
@@ -1036,7 +1015,6 @@ Describe 'ProGetUniversalPackage.when package is empty' {
     GivenARepositoryWIthItems 'file.txt'
     WhenPackaging -WithWhitelist "*.txt"
     ThenPackageShouldInclude
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when path contains wildcards' {
@@ -1044,7 +1022,6 @@ Describe 'ProGetUniversalPackage.when path contains wildcards' {
     GivenARepositoryWIthItems 'one.ps1','two.ps1','three.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
     ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
-    ThenTempDirectoryCleanedUp
 }
 
 
@@ -1054,7 +1031,6 @@ Describe 'ProGetUniversalPackage.when packaging a directory' {
     WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir1\subdir\file.txt'
     ThenPackageShouldNotInclude ('dir1\{0}' -f $defaultPackageName)
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory with a space' {
@@ -1063,7 +1039,6 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space' {
     WhenPackaging -Paths 'dir 1\sub dir' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory with a space and trailing backslash' {
@@ -1072,7 +1047,6 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space and tra
     WhenPackaging -Paths 'dir 1\sub dir\' -WithWhitelist "*.txt"
     ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when compressionLevel of 9 is included' {
@@ -1080,7 +1054,6 @@ Describe 'ProGetUniversalPackage.when compressionLevel of 9 is included' {
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
     ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when compressionLevel is not included' {
@@ -1088,7 +1061,6 @@ Describe 'ProGetUniversalPackage.when compressionLevel is not included' {
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
     ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 800
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when a bad compressionLevel is included' {
@@ -1103,25 +1075,22 @@ Describe 'ProGetUniversalPackage.when compressionLevel of 7 is included as a str
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
     ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
     Init
     GivenARepositoryWithItems 'root.ps1','dir1\one.ps1','dir1\emptyDir2\text.txt'
     GivenARepositoryWithItems 'dir1\emptyDir1' -ItemType 'Directory'
-    WhenPackaging -Paths '.' -WithWhitelist '*.ps1'
+    WhenPackaging -Paths '.' -WithWhitelist '*.ps1' -ThatExcludes '.output'
     ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
     ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when package has JSON files' {
     Init
     GivenARepositoryWIthItems 'my.json'
-    WhenPackaging -Paths '.' -WithWhitelist '*.json'
+    WhenPackaging -Paths '.' -WithWhitelist '*.json' -ThatExcludes '.output'
     ThenPackageShouldInclude 'my.json','version.json'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-party paths and only files' {
@@ -1130,7 +1099,6 @@ Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-par
     WhenPackaging -WithThirdPartyPath 'dir' -Paths 'my.json'
     ThenPackageShouldInclude 'version.json','dir\yours.json', 'my.json'
     ThenPackageShouldNotInclude 'my.txt'
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is empty' {
@@ -1153,19 +1121,6 @@ Describe 'ProGetUniversalPackage.when package includes a file and there''s no wh
     ThenPackageShouldInclude 'dir\my.json'
     ThenTaskSucceeds
     ThenPackageShouldNotInclude 'dir\yours.json'
-    ThenTempDirectoryCleanedUp
-}
-
-Describe 'ProGetUniversalPackage.when temporary packing directory contains paths longer than 260 characters' {
-    Init
-    GivenARepositoryWIthItems 'file.txt'
-
-    # create a REALLY long path in the temp directory
-    $longFilePath = Join-Path -Path $temporaryPackageDir -ChildPath ('a' * 248)
-    & robocopy $(Get-BuildRoot) $longFilePath 'file.txt' /create
-
-    WhenPackaging -Paths '.' -WithWhitelist 'file.txt' -SkipExpand
-    ThenTempDirectoryCleanedUp
 }
 
 Describe 'ProGetUniversalPackage.when customizing package version' {

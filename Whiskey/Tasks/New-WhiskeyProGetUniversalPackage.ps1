@@ -328,171 +328,133 @@ function New-WhiskeyProGetUniversalPackage
 
     $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
 
-    $tempRoot = [IO.Path]::GetRandomFileName()
-    $tempBaseName = 'Whiskey+New-WhiskeyProGetUniversalPackage+{0}' -f $name
-    $tempRoot = '{0}+{1}' -f $tempBaseName,$tempRoot
-    $tempRoot = Join-Path -Path $env:TEMP -ChildPath $tempRoot
-    New-Item -Path $tempRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
+    $tempRoot = $TaskContext.Temp
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' -Force | Out-String | Write-Verbose
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-Null
 
-    try
-    {
-        $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-        @{
-            name = $name;
-            version = $version.SemVer2NoBuildMetadata.ToString();
-            title = $name;
-            description = $description
-        } | ConvertTo-Json | Set-Content -Path $upackJsonPath
-        
-        # Add the version.json file
-        @{
-            Version = $version.Version.ToString();
-            SemVer2 = $version.SemVer2.ToString();
-            SemVer2NoBuildMetadata = $version.SemVer2NoBuildMetadata.ToString();
-            PrereleaseMetadata = $version.SemVer2.Prerelease;
-            BuildMetadata = $version.SemVer2.Build;
-            SemVer1 = $version.SemVer1.ToString();
-        } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
-        
-        function Copy-ToPackage
-        {
-            param(
-                [Parameter(Mandatory=$true)]
-                [object[]]
-                $Path,
-        
-                [Switch]
-                $AsThirdPartyItem
-            )
+    $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+    @{
+        name = $name;
+        version = $version.SemVer2NoBuildMetadata.ToString();
+        title = $name;
+        description = $description
+    } | ConvertTo-Json | Set-Content -Path $upackJsonPath
     
-            foreach( $item in $Path )
+    # Add the version.json file
+    @{
+        Version = $version.Version.ToString();
+        SemVer2 = $version.SemVer2.ToString();
+        SemVer2NoBuildMetadata = $version.SemVer2NoBuildMetadata.ToString();
+        PrereleaseMetadata = $version.SemVer2.Prerelease;
+        BuildMetadata = $version.SemVer2.Build;
+        SemVer1 = $version.SemVer1.ToString();
+    } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
+    
+    function Copy-ToPackage
+    {
+        param(
+            [Parameter(Mandatory=$true)]
+            [object[]]
+            $Path,
+    
+            [Switch]
+            $AsThirdPartyItem
+        )
+
+        foreach( $item in $Path )
+        {
+            $override = $False
+            if( (Get-Member -InputObject $item -Name 'Keys') )
             {
-                $override = $False
-                if( (Get-Member -InputObject $item -Name 'Keys') )
+                $sourcePath = $null
+                $override = $True
+                foreach( $key in $item.Keys )
                 {
-                    $sourcePath = $null
-                    $override = $True
-                    foreach( $key in $item.Keys )
-                    {
-                        $destinationItemName = $item[$key]
-                        $sourcePath = $key
-                    }
+                    $destinationItemName = $item[$key]
+                    $sourcePath = $key
+                }
+            }
+            else
+            {
+                $sourcePath = $item
+            }
+            $pathparam = 'path'
+            if( $AsThirdPartyItem )
+            {
+                $pathparam = 'ThirdPartyPath'
+            }
+
+            $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+            if( -not $sourcePaths )
+            {
+                return
+            }
+
+            foreach( $sourcePath in $sourcePaths )
+            {
+                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
+                $relativePath = $relativePath.Trim("\")
+                if( -not $override )
+                {
+                    $destinationItemName = $relativePath
+                }
+
+                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
+                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
+
+                #if parent doesn't exist in the destination dir, create it
+                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                {
+                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                }
+
+                if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                {
+                    Copy-Item -Path $sourcePath -Destination $destination
                 }
                 else
                 {
-                    $sourcePath = $item
-                }
-                $pathparam = 'path'
-                if( $AsThirdPartyItem )
-                {
-                    $pathparam = 'ThirdPartyPath'
-                }
-
-                $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
-                if( -not $sourcePaths )
-                {
-                    return
-                }
-
-                foreach( $sourcePath in $sourcePaths )
-                {
-                    $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
-                    $relativePath = $relativePath.Trim("\")
-                    if( -not $override )
+                    $destinationDisplay = $destination -replace [regex]::Escape($tempRoot),''
+                    $destinationDisplay = $destinationDisplay.Trim('\')
+                    if( $AsThirdPartyItem )
                     {
-                        $destinationItemName = $relativePath
-                    }
-
-                    $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
-                    $parentDestinationPath = ( Split-Path -Path $destination -Parent)
-
-                    #if parent doesn't exist in the destination dir, create it
-                    if( -not ( Test-Path -Path $parentDestinationPath ) )
-                    {
-                        New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
-                    }
-
-                    if( (Test-Path -Path $sourcePath -PathType Leaf) )
-                    {
-                        Copy-Item -Path $sourcePath -Destination $destination
+                        $exclude = @()
+                        $whitelist = @( )
+                        $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                     }
                     else
                     {
-                        $destinationDisplay = $destination -replace [regex]::Escape($tempRoot),''
-                        $destinationDisplay = $destinationDisplay.Trim('\')
-                        if( $AsThirdPartyItem )
+                        if( -not $TaskParameter['Include'] )
                         {
-                            $exclude = @()
-                            $whitelist = @( )
-                            $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
-                        }
-                        else
-                        {
-                            if( -not $TaskParameter['Include'] )
-                            {
-                                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
-                                return
-                            }
-
-                            $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
-                            $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
-                            $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
+                            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
+                            return
                         }
 
-                        Write-Verbose -Message $operationDescription
-                        Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $exclude | Write-Verbose
+                        $exclude = & { '.git' ;  '.hg' ; 'obj' ; $exclude ; (Join-Path -Path $destination -ChildPath 'version.json') } 
+                        $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
+                        $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
                     }
+
+                    Write-Verbose -Message $operationDescription
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $exclude | Write-Verbose
                 }
             }
         }
-
-        if( $TaskParameter['Path'] )
-        {
-            Copy-ToPackage -Path $TaskParameter['Path']
-        }
-
-        if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
-        {
-            Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
-        }
-
-        Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
-        & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
-
-        Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
-        $outFile
     }
-    finally
+
+    if( $TaskParameter['Path'] )
     {
-        $emptyDirectory = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
-        New-Item -Path $emptyDirectory -ItemType 'Directory' | Out-Null
-
-        $maxTries = 50
-        $tryNum = 0
-        $failedToCleanUp = $true
-        do
-        {
-            if( -not (Test-Path -Path $tempRoot -PathType Container) )
-            {
-                $failedToCleanUp = $false
-                break
-            }
-
-            Write-Verbose -Message ('[{0,2}] Deleting directory ''{1}''.' -f $tryNum,$tempRoot)
-            Start-Sleep -Milliseconds 100
-
-            & robocopy $emptyDirectory $tempRoot /MIR /R:0 /NP /NFL /NDL
-            Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction Ignore
-        }
-        while( $tryNum++ -lt $maxTries )
-        
-        Remove-Item -Path $emptyDirectory -Force
-
-        if( $failedToCleanUp )
-        {
-            Write-Warning -Message ('Failed to delete temporary directory ''{0}''.' -f $tempRoot)
-        }
+        Copy-ToPackage -Path $TaskParameter['Path']
     }
+
+    if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
+    {
+        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+    }
+
+    Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
+    & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+
+    Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
+    $outFile
 }
