@@ -53,7 +53,7 @@ function Invoke-WhiskeyTask
                 $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.On{1}.{2}' -f $Name,$EventName,[IO.Path]::GetRandomFileName())
                 if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
                 {
-                    New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force
+                    New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
                 }
                 & $commandName -TaskContext $TaskContext -TaskName $Name -TaskParameter $Property
                 $result = 'COMPLETED'
@@ -253,7 +253,7 @@ function Invoke-WhiskeyTask
     $result = 'FAILED'
     try
     {
-        $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $task.Name,[IO.Path]::GetRandomFileName())
+        $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
         if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
         {
             New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
