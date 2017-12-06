@@ -119,7 +119,15 @@ function Invoke-WhiskeyNspCheck
         }
         Write-Timing -Message 'COMPLETE'
 
-        $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+        try
+        {
+            $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+        }
+        catch
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, did not run successfully as it did not return valid JSON (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$output)
+        }
+
         if ($Global:LASTEXITCODE -ne 0)
         {
             $summary = $results | Format-List | Out-String
