@@ -54,9 +54,22 @@ function CreatePackageJson
 
 function MockNsp
 {
+    param(
+        [switch]
+        $Failing
+    )
+
     Mock -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -MockWith { $TestDrive.FullName }
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -eq 'bin\nsp' } -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' }
+    
+    if (-not $Failing)
+    {
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -MockWith { & cmd /c 'ECHO [] && exit 0' }
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -MockWith { & cmd /c 'ECHO An error has occured && exit 1' }
+    }
 }
 
 function GivenDependency 
@@ -242,4 +255,11 @@ Describe 'NspCheck.when module has a security vulnerability' {
     GivenDependency '"minimatch": "3.0.0"'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'found the following security vulnerabilities'
+}
+
+Describe 'NspCheck.when nsp does not return valid JSON' {
+    Init
+    MockNsp -Failing
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailedWithMessage 'did not return valid JSON'
 }
