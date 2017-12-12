@@ -120,17 +120,85 @@ function Invoke-WhiskeyExec
     }
 
 
-    $successExitCode = 0
+    [int[]]$successExitCode = $null
+    $successExitRangeGreaterThan = $null
+    $successExitRangeLessThan = $null
+
     if ( $TaskParameter['SuccessExitCode'] )
     {
-        $successExitCode = $TaskParameter['SuccessExitCode']
+        $TaskParameter['SuccessExitCode'] | ForEach-Object {
+            
+            if( $_ -match '^\d+$' )
+            {
+                $successExitCode += $_
+            }
+            
+            if( $_ -match '^\d+\.\.\d+$' )
+            {
+                $successExitCode += Invoke-Expression -Command $_
+            }
+
+            if( $_ -match '^\=\s*\d+$' )
+            {
+                $successExitCode += [int]($_ -split '(\d+$)')[1]
+            }
+
+            if ($_ -match '^>\s*\d+$')
+            {
+                $gtTemp = [int]($_ -split '(\d+$)')[1]
+                if ( !$successExitRangeGreaterThan -or $gtTemp -lt $successExitRangeGreaterThan )
+                {
+                    $successExitRangeGreaterThan = $gtTemp
+                }
+            }
+
+            if ($_ -match '^>\=\s*\d+$')
+            {
+                $gteTemp = [int]($_ -split '(\d+$)')[1] - 1
+                if ( !$successExitRangeGreaterThan -or $gteTemp -lt $successExitRangeGreaterThan )
+                {
+                    $successExitRangeGreaterThan = $gteTemp
+                }
+            }
+
+            if ($_ -match '^<\s*\d+$')
+            {
+                $ltTemp = [int]($_ -split '(\d+$)')[1]
+                if ( !$successExitRangeLessThan -or $ltTemp -lt $successExitRangeLessThan )
+                {
+                    $successExitRangeLessThan = $ltTemp
+                }
+            }
+
+            if ($_ -match '^<\=\s*\d+$')
+            {
+                $lteTemp = [int]($_ -split '(\d+$)')[1] + 1
+                if ( !$successExitRangeLessThan -or $lteTemp -lt $successExitRangeLessThan )
+                {
+                    $successExitRangeLessThan = $lteTemp
+                }
+            }
+        }
+    }
+    else
+    {
+        $successExitCode = 0
+    }
+    
+    $process = Start-Process -FilePath $path @argumentListParam -WorkingDirectory $workingDirectory -NoNewWindow -Wait -PassThru
+    $exitCode = $process.ExitCode
+    
+    if ( !$successExitRangeGreaterThan )
+    {
+        $successExitRangeGreaterThan = $exitCode + 1
+    }
+    
+    if ( !$successExitRangeLessThan )
+    {
+        $successExitRangeLessThan = $exitCode - 1
     }
 
-
-    $process = Start-Process -FilePath $path @argumentListParam -WorkingDirectory $workingDirectory -NoNewWindow -Wait -PassThru
-
-    $exitCode = $process.ExitCode
-    if ( $exitCode -notin $successExitCode )
+    if ( ($exitCode -notin $successExitCode) -and !($exitCode -gt $successExitRangeGreaterThan ) -and !($exitCode -lt $successExitRangeLessThan ) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''. View the build output to see why the executable''s process failed.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
     }
