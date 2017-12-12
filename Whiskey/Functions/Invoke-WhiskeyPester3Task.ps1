@@ -49,11 +49,6 @@ function Invoke-WhiskeyPester3Task
     }
     else
     {
-        & {
-                $VerbosePreference = 'SilentlyContinue'
-                Import-Module -Name 'PackageManagement'
-          }
-
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '3.*' } ) 
         if( -not $latestPester )
         {
