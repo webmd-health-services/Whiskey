@@ -18,7 +18,7 @@ function Invoke-WhiskeyExec
     * `Path` (*mandatory*): the path to the executable to run. This can be the name of an executable if it is in your PATH environment variable, a path relative to the `whiskey.yml` file, or an absolute path.
     * `Argument`: a list of arguments to pass to the executable. Read the documentation above for notes on how to properly escape arguments.
     * `WorkingDirectory`: the directory the executable will run in/from. By default, this is the build root, i.e. the `whiskey.yml` file's directory.
-    * `SuccessExitCode`: a list of exit codes that the `Exec` task should interpret to mean the executable's process exited successfully. The default is `0`.
+    * `SuccessExitCode`: a list of exit codes that the `Exec` task should interpret to mean the executable's process exited successfully. The list can include individual exit codes and certain range operators (ie. '=0', '>=1', '<=2', '>3', '<4', '5..10' ). An exit code only needs to match a single code or range to be evaluated as successful. The default is `0`
 
     # Examples
 
@@ -43,16 +43,12 @@ function Invoke-WhiskeyExec
                 - C:\Desitination
                 - /MIR    
                 SuccessExitCode:
-                - 0
-                - 1
-                - 2
-                - 3
-                - 4
-                - 5
-                - 6
-                - 7
+                - 10
+                - 12
+                - <8
+                - >=28
 
-    This example demonstrates how to configure the `Exec` task to fail when an executable can return multiple success exit codes. In this case, `robocopy.exe` can return any value less than 8 to report a successful copy.
+    This example demonstrates how to configure the `Exec` task to fail when an executable can return multiple success exit codes. In this case, `robocopy.exe` can return any value less than 8, greater than or equal to 28, 10, or 12, to report a successful copy.
     #>      
 
     [CmdletBinding()]
@@ -133,17 +129,17 @@ function Invoke-WhiskeyExec
                 $successExitCode += $_
             }
             
-            if( $_ -match '^\d+\.\.\d+$' )
-            {
-                $successExitCode += Invoke-Expression -Command $_
-            }
-
-            if( $_ -match '^\=\s*\d+$' )
+            elseif( $_ -match '^\=\s*\d+$' )
             {
                 $successExitCode += [int]($_ -split '(\d+$)')[1]
             }
-
-            if ($_ -match '^>\s*\d+$')
+            
+            elseif( $_ -match '^\d+\.\.\d+$' )
+            {
+                $successExitCode += Invoke-Expression -Command $_
+            }
+            
+            elseif ($_ -match '^>\s*\d+$')
             {
                 $gtTemp = [int]($_ -split '(\d+$)')[1]
                 if ( !$successExitRangeGreaterThan -or $gtTemp -lt $successExitRangeGreaterThan )
@@ -152,7 +148,7 @@ function Invoke-WhiskeyExec
                 }
             }
 
-            if ($_ -match '^>\=\s*\d+$')
+            elseif ($_ -match '^>\=\s*\d+$')
             {
                 $gteTemp = [int]($_ -split '(\d+$)')[1] - 1
                 if ( !$successExitRangeGreaterThan -or $gteTemp -lt $successExitRangeGreaterThan )
@@ -161,7 +157,7 @@ function Invoke-WhiskeyExec
                 }
             }
 
-            if ($_ -match '^<\s*\d+$')
+            elseif ($_ -match '^<\s*\d+$')
             {
                 $ltTemp = [int]($_ -split '(\d+$)')[1]
                 if ( !$successExitRangeLessThan -or $ltTemp -lt $successExitRangeLessThan )
@@ -170,7 +166,7 @@ function Invoke-WhiskeyExec
                 }
             }
 
-            if ($_ -match '^<\=\s*\d+$')
+            elseif ($_ -match '^<\=\s*\d+$')
             {
                 $lteTemp = [int]($_ -split '(\d+$)')[1] + 1
                 if ( !$successExitRangeLessThan -or $lteTemp -lt $successExitRangeLessThan )
@@ -198,7 +194,7 @@ function Invoke-WhiskeyExec
         $successExitRangeLessThan = $exitCode - 1
     }
 
-    if ( ($exitCode -notin $successExitCode) -and !($exitCode -gt $successExitRangeGreaterThan ) -and !($exitCode -lt $successExitRangeLessThan ) )
+    if ( !($exitCode -in $successExitCode) -and !($exitCode -gt $successExitRangeGreaterThan) -and !($exitCode -lt $successExitRangeLessThan) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}'', which is not one of the expected ''SuccessExitCode'' of ''{2}''. View the build output to see why the executable''s process failed.' -F $TaskParameter['Path'],$exitCode,$successExitCode -join ',')
     }
