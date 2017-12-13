@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.22.0'
+    ModuleVersion = '0.24.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -142,7 +142,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Removed ApiKey as requirement for Publish-WhiskeyProGetAsset.
+* Fixed: when a task is using a specific version of a PowerShell module, don't search remote repositories; assume user chose a correct version number.
 '@
         } # End of PSData hashtable
 
