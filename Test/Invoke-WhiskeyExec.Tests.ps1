@@ -262,18 +262,7 @@ Describe 'Invoke-WhiskeyExec.when given success exit codes' {
     Init
     GivenExecutableFile 'executable.bat' 'exit 123'
     GivenPath 'executable.bat'
-    GivenSuccessExitCode 123
-    WhenRunningExecutable
-    ThenExecutableRan
-    ThenSpecifiedArgumentsWerePassed
-    ThenTaskSuccess
-}
-
-Describe 'Invoke-WhiskeyExec.when given success exit codes with ''='' prefix' {
-    Init
-    GivenExecutableFile 'executable.bat' 'exit 123'
-    GivenPath 'executable.bat'
-    GivenSuccessExitCode '=123'
+    GivenSuccessExitCode '123'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
@@ -284,18 +273,18 @@ Describe 'Invoke-WhiskeyExec.when executable exits with non-success exit code' {
     Init
     GivenExecutableFile 'executable.bat' 'exit 42'
     GivenPath 'executable.bat'
-    GivenSuccessExitCode 0,1,123
+    GivenSuccessExitCode '0','1','123'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a range ''..'' of success exit codes' {
     Init
     GivenExecutableFile 'executable.bat' 'exit 123'
     GivenPath 'executable.bat'
-    GivenSuccessExitCode 120..130
+    GivenSuccessExitCode '120..130'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
@@ -306,11 +295,11 @@ Describe 'Invoke-WhiskeyExec.when given a range ''..'' and exits with code outsi
     Init
     GivenExecutableFile 'executable.bat' 'exit 133'
     GivenPath 'executable.bat'
-    GivenSuccessExitCode 120..130
+    GivenSuccessExitCode '120..130'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a range ''>='' of success exit codes' {
@@ -332,7 +321,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ''>='' and exits with code outsi
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a range ''<='' of success exit codes' {
@@ -354,7 +343,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ''<='' and exits with code outsi
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a range ''>'' of success exit codes' {
@@ -376,7 +365,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ''>'' and exits with code outsid
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a range ''<'' of success exit codes' {
@@ -398,7 +387,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ''>='' and exits with code outsi
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
-    ThenTaskFailedWithMessage 'not one of the expected ''SuccessExitCode'''
+    ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given a working directory' {
