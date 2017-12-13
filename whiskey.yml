@@ -9,6 +9,7 @@ BuildTasks:
 - Pester4:
     Path: Test\*.Tests.ps1
     DescribeDurationReportCount: 20
+    Version: 4.1.1
     
 PublishTasks:
 - PublishPowerShellModule:
