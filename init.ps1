@@ -20,30 +20,14 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-$modules = @( 'Carbon' )
+$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Whiskey\bin\NuGet.exe' -Resolve
+$packagesPath = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
+& $nugetPath install '7-Zip.x64' -OutputDirectory $packagesPath -Version '16.2.1'
 
-$modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Modules'
-New-Item -Path $modulesRoot -ItemType 'Directory' -Force -ErrorAction Ignore | Out-Null
-
-& {
-        $VerbosePreference = 'SilentlyContinue'
-        Import-Module 'PackageManagement'
-  }
-
-foreach( $moduleName in $modules )
+$installPath = Join-Path -Path $packagesPath -ChildPath '7-Zip'
+if( -not (Test-Path -Path $installPath -PathType Container) )
 {
-    $moduleRootPath = Join-Path -Path $modulesRoot -ChildPath $moduleName
-    if( (Test-Path -Path $moduleRootPath -PathType Container) )
-    {
-        if( $Clean )
-        {
-            Remove-Item -Path $moduleRootPath -Recurse -Force
-        }
-        else
-        {
-            continue
-        }
-    }
-
-    Save-Module -Name $moduleName -Path $modulesRoot
+    New-Item -Path $installPath -ItemType 'Directory'
 }
+
+robocopy (Join-Path -Path $packagesPath -ChildPath '7-Zip.x64.16.02.1\tools') $installPath /MIR /R:0 /NDL /NP /NJH /NJS

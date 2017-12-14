@@ -160,7 +160,8 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Serve
     Context 'by build server' {
         GivenRunByBuildServer
         GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-        GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
+        $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+        GivenCredential 'BBServer1' $credential
         WhenReportingBuildStatus Started
         ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
     }
@@ -176,7 +177,8 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Serve
 Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-    GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
+    $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+    GivenCredential 'BBServer1' $credential
     WhenReportingBuildStatus Failed
     ThenBuildStatusReportedToBitbucketServer Failed -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
@@ -184,7 +186,8 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server
 Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Server' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-    GivenCredential 'BBServer1' (New-Credential -UserName 'bitbucketserver' -Password 'fubar')
+    $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+    GivenCredential 'BBServer1' $credential
     WhenReportingBuildStatus Completed
     ThenBuildStatusReportedToBitbucketServer Successful -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
