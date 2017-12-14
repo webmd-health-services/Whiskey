@@ -31,3 +31,7 @@ if( -not (Test-Path -Path $installPath -PathType Container) )
 }
 
 robocopy (Join-Path -Path $packagesPath -ChildPath '7-Zip.x64.16.02.1\tools') $installPath /MIR /R:0 /NDL /NP /NJH /NJS
+if( $LASTEXITCODE -lt 8 )
+{
+    exit 0
+}
