@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageManagementModule = Get-Module -Name 'PackageManagement' -ListAvailable
 $packageManagementModule | Format-List
-if( $packageManagementModule -and $packageManagementModule.Version -lt '1.1.7' )
+if( $packageManagementModule -and [Version]$packageManagementModule.Version -lt [Version]'1.1.7' )
 {
     Install-Module -Name 'PackageManagement' -MinimumVersion '1.1.7' -Force
 }
