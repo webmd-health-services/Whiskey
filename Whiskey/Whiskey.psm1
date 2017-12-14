@@ -39,13 +39,6 @@ if( -not ($attr | Get-Member 'SupportsClean') )
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
     ForEach-Object { . $_.FullName }
 
-$packageManagementModule = Get-Module -Name 'PackageManagement' -ListAvailable |
-                                Where-Object { [Version]$_.Version -ge [Version]'1.1.7' }
-if( -not $packageManagementModule )
-{
-    Write-Error -Message ('Whiskey depends on PackageManagement module version 1.1.7 or later. Please install it: Install-Module -Name ''PackageManagement'' -MinimumVersion ''1.1.7'' -Force.') -ErrorAction Stop
-}
-
 if( (Get-Module -Name 'PackageManagement') )
 {
     Remove-Module -Name 'PackageManagement' -Force
