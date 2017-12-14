@@ -1762,7 +1762,6 @@ function Save-Module
         $PSBoundParameters["Provider"] = $script:PSModuleProviderName
         $PSBoundParameters["MessageResolver"] = $script:PackageManagementSaveModuleMessageResolverScriptBlock
         $PSBoundParameters[$script:PSArtifactType] = $script:PSArtifactTypeModule
-        $PSBoundParameters[$script:AllowPrereleaseVersions] = $AllowPrerelease
         $null = $PSBoundParameters.Remove("AllowPrerelease")
         
         # When -Force is specified, Path will be created if not available.
@@ -1831,10 +1830,12 @@ function Save-Module
                 if($ev) { return }
             }
 
+            $parameters = $PSBoundParameters
+
             $null = PackageManagement\Save-Package @PSBoundParameters
         }
         elseif($InputObject)
-        {
+        {x
             $null = $PSBoundParameters.Remove("InputObject")
 
             foreach($inputValue in $InputObject)
