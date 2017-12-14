@@ -13,6 +13,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$packageManagementModule = Get-Module -Name 'PackageManagement' -ListAvailable
+if( $packageManagementModule -and $packageManagementModule.Version -lt '1.1.7' )
+{
+    Install-Module -Name 'PackageManagement' -MinimumVersion '1.1.7' -Force
+}
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve

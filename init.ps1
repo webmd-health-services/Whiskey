@@ -20,12 +20,6 @@ param(
 Set-StrictMode -Version 'Latest'
 #Requires -Version 4
 
-$packageManagementModule = Get-Module -Name 'PackageManagement' -ListAvailable
-if( $packageManagementModule -and $packageManagementModule.Version -lt '1.1.7' )
-{
-    Install-Module -Name 'PackageManagement' -MinimumVersion '1.1.7' -Force
-}
-
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '.\Whiskey\bin\NuGet.exe' -Resolve
 $packagesPath = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 & $nugetPath install '7-Zip.x64' -OutputDirectory $packagesPath -Version '16.2.1'
