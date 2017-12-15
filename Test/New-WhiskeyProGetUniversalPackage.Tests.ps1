@@ -296,7 +296,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         }
     }
 
-    Expand-Item -Path $packagePath -OutDirectory $expandPath
+    & (Join-Path -Path $PSScriptRoot -ChildPath '..\packages\7-Zip\7z.exe') x $packagePath ('-o{0}' -f $expandPath)
 
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
@@ -461,7 +461,10 @@ function Initialize-Test
     )
 
     $repoRoot = Get-BuildRoot
-    Install-Directory -Path $repoRoot
+    if( -not (Test-Path -Path $repoRoot -PathType Container) )
+    {
+        New-Item -Path $repoRoot -ItemType 'Directory'
+    }
     if( -not $SourceRoot )
     {
         $SourceRoot = $repoRoot
@@ -470,12 +473,18 @@ function Initialize-Test
     {
         $SourceRoot = Join-Path -Path $repoRoot -ChildPath $SourceRoot
     }
-    Install-Directory -Path $repoRoot
+    if( -not (Test-Path -Path $SourceRoot -PathType Container) )
+    {
+        New-Item -Path $SourceRoot -ItemType 'Directory'
+    }
 
     $DirectoryName | ForEach-Object { 
         $dirPath = $_
         $dirPath = Join-Path -Path $SourceRoot -ChildPath $_
-        Install-Directory -Path $dirPath
+        if( -not (Test-Path -Path $dirPath -PathType Container) )
+        {
+            New-Item -Path $dirPath -ItemType 'Directory'
+        }
         foreach( $file in $FileName )
         {
             New-Item -Path (Join-Path -Path $dirPath -ChildPath $file) -ItemType 'File' | Out-Null
@@ -628,7 +637,7 @@ function WhenPackaging
     if( -not $SkipExpand -and $packageInfo )
     {
         $script:expandPath = Join-Path -Path $taskContext.OutputDirectory -ChildPath 'extracted'
-        Expand-Item -Path $packageInfo.FullName -OutDirectory $expandPath | Out-Null
+        & (Join-Path -Path $PSScriptRoot -ChildPath '..\packages\7-Zip\7z.exe') x $packageInfo.FullName ('-o{0}' -f $expandPath)
     }
 }
 

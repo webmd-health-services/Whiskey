@@ -67,7 +67,10 @@ function Assert-ThatInstallNodeJs
     try
     {
 
-        Install-Directory -Path $installDir
+        if( -not (Test-Path -Path $installDir -PathType Container) )
+        {
+            New-Item -Path $installDir -ItemType 'Directory'
+        }
         $null = New-Item (Join-Path -Path $installDir -ChildPath 'package.json') -ItemType File -Value $testPackageJson -Force
         $script:nodePath = $null
         $expectedNodePath = $null
