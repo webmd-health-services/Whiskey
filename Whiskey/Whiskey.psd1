@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.23.0'
+    ModuleVersion = '0.24.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,9 +144,13 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: SetVariable task fails when a variable's value is empty.
-* Every task and event handler now gets its own temp directory under `.output` where it can put temporary files. The directory is automatically deleted when the task finishes. Use the `Temp` property on the `$TaskContext` task/event parameter.
-* ProGetUniversalPackage task no longer excludes .git, .hg, or obj directories. 
+* Fixed: `NspCheck` task doesn't properly capture report of found vulnerabilities.
+* Fixed: `NspCheck` task throws PowerShell exception instead of NSP error if NSP did not return valid JSON.
+* `Exec` task now supports ranges `( .., >=, <=, >, < )` for `SuccessExitCode` property.
+* Removed dependency on `Carbon` PowerShell module.
+* Added `PackageManagement` and `PowerShellGet` modules to Whiskey package.
+* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
+* Determining latest version of Pester module to install is handled by Install-WhiskeyTool.
 '@
         } # End of PSData hashtable
 
