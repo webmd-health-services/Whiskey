@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.22.0'
+    ModuleVersion = '0.23.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Removed ApiKey as requirement for Publish-WhiskeyProGetAsset.
+* Fixed: SetVariable task fails when a variable's value is empty.
+* Every task and event handler now gets its own temp directory under `.output` where it can put temporary files. The directory is automatically deleted when the task finishes. Use the `Temp` property on the `$TaskContext` task/event parameter.
+* ProGetUniversalPackage task no longer excludes .git, .hg, or obj directories. 
 '@
         } # End of PSData hashtable
 

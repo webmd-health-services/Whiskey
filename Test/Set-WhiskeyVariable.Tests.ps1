@@ -116,3 +116,9 @@ Describe 'SetVariable.when running in initialize mode' {
     WhenCallingTask @{ 'InInitializeMode' = 'true' }
     ThenVariable 'InInitializeMode' -Is 'true'
 }
+
+Describe 'SetVariable.when variable value is empty' {
+    Init
+    WhenCallingTask @{ 'Variable1' = '' }
+    ThenVariable 'Variable1' -Is ''
+}
