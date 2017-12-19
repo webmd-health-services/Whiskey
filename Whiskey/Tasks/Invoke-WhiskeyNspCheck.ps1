@@ -91,9 +91,19 @@ function Invoke-WhiskeyNspCheck
     }
 
     Write-Timing -Message 'Installing NSP'
-    $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+
+    if( $TaskParameter['NspVersion'] )
+    {
+        $nspVersion = ConvertTo-WhiskeySemanticVersion -InputObject $TaskParameter['NspVersion']
+        $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version $nspVersion -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+    }
+    else
+    {
+        $nspVersion = $null
+        $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+    }
+
     $nspPath = Join-Path -Path $nspModuleRoot -ChildPath 'bin\nsp' -Resolve -ErrorAction Ignore
-    
     if (-not $nspPath)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download the ''nsp'' module to ''{0}''.' -f (Join-Path -Path $workingDirectory -ChildPath 'node_modules'))
@@ -113,10 +123,22 @@ function Invoke-WhiskeyNspCheck
 
         Write-Timing -Message 'Running NSP security check'
 
-        $output = Invoke-Command -NoNewScope -ScriptBlock {
-            & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
-                ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+        if( !$nspVersion -or $nspVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
+        {
+            
+            $output = Invoke-Command -NoNewScope -ScriptBlock {
+                & $nodePath $nspPath 'check' '--reporter' 'json' 2>&1 |
+                    ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+            }
         }
+        else
+        {
+            $output = Invoke-Command -NoNewScope -ScriptBlock {
+                & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
+                    ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+            }
+        }
+
         Write-Timing -Message 'COMPLETE'
 
         try
