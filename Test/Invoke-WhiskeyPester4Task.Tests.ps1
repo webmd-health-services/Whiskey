@@ -99,12 +99,6 @@ function GivenPesterPath
     $script:taskParameter['path'] = $pesterPath 
 }
 
-function GivenFindModuleFails
-{
-    Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith { return $Null }
-    Mock -CommandName 'Where-Object' -ModuleName 'Whiskey' -MockWith { return $Null } -ParameterFilter { [string]$FilterScript -eq " `$_.Version -like '4.*' "}
-}
-
 function GivenWithCleanFlag
 {
     $context.RunMode = 'Clean'
@@ -196,27 +190,24 @@ function ThenItDurationReportHasRows
 function ThenPesterShouldBeInstalled
 {
     param(
-        [switch]
-        $WithClean
+        [string]
+        $ExpectedVersion
     )
-    if( -not $script:Taskparameter['Version'] )
-    {
-        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
-        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
-        $version = $latestPester.Version 
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
-    }
-    else
-    {
-        $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
-    }
+
     $pesterDirectoryName = 'Modules\Pester'
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        $pesterDirectoryName = 'Modules\Pester\{0}' -f $ExpectedVersion
     }
+
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
+    $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
+
+    It ('should install version {0}' -f $ExpectedVersion) {
+        $module = Test-ModuleManifest -Path $pesterPath
+        $module.Version.ToString() | Should -BeLike $ExpectedVersion
+    }
+
     It 'should pass' {
         $script:failed | Should Be $false
     }
@@ -350,12 +341,6 @@ function ThenTestShouldCreateMultipleReportFiles
     }
 }
 
-function ThenFindModuleShouldHaveBeenCalled
-{
-    Assert-MockCalled -CommandName 'Find-Module' -Times 1 -ModuleName 'Whiskey'
-    Assert-MockCalled -CommandName 'Where-Object' -Times 1 -ModuleName 'Whiskey' 
-}
-
 Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
     Init
     GivenTestContext
@@ -363,7 +348,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
     GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked 
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-    ThenPesterShouldBeInstalled
+    ThenPesterShouldBeInstalled '4.0.3'
     ThenNoDurationReportPresent
 }
 
@@ -394,7 +379,7 @@ Describe 'Invoke-WhiskeyPester4Task.when run multiple times in the same build' {
     WhenPesterTaskIsInvoked
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-    ThenPesterShouldBeInstalled
+    ThenPesterShouldBeInstalled '4.0.3'
     ThenTestShouldCreateMultipleReportFiles
 }
 
@@ -413,7 +398,7 @@ Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
     GivenPesterPath -pesterPath 'PassingTests'
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 4 -FailureCount 0
-    ThenPesterShouldBeInstalled
+    ThenPesterShouldBeInstalled '4.*'
 }
 
 Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
@@ -446,17 +431,6 @@ Describe 'Invoke-WhiskeyPester4Task.when a task path is absolute' {
     ThenTestShouldFail -failureMessage 'absolute'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when Find-Module fails' {
-    Init
-    GivenTestContext
-    GivenFindModuleFails
-    GivenPesterPath -pesterPath 'PassingTests'
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
-    ThenFindModuleShouldHaveBeenCalled
-    ThenTestShouldFail -failureMessage ''
-}
-
 Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {
     Init
     GivenTestContext
@@ -486,7 +460,7 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initi
     GivenWithInitilizeFlag
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
-    ThenPesterShouldBeInstalled
+    ThenPesterShouldBeInstalled '4.0.3'
 }
 
 Describe 'Pester4.when showing duration reports' {

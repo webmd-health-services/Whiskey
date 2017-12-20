@@ -49,7 +49,7 @@ function GivenCredential
     )
 
     $script:credentialID = $ID
-    $script:credential = New-Credential -UserName $UserName -Password $Password
+    $script:credential = New-Object 'Management.Automation.PsCredential' $UserName,(ConvertTo-SecureString -AsPlainText -Force -String $Password)
 }
 
 function GivenRepository

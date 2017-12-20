@@ -8,11 +8,12 @@ $devDependency = $null
 $failed = $false
 $givenWorkingDirectory = $null
 $npmRegistryUri = 'http://registry.npmjs.org'
-$nodeVersion = '^4.4.7'
+$nodeVersion = '^8.9.3'
 $output = $null
 $shouldClean = $false
 $shouldInitialize = $false
 $workingDirectory = $null
+$version = $null
 
 function Init
 {
@@ -25,6 +26,7 @@ function Init
     $script:shouldClean = $false
     $script:shouldInitialize = $false
     $script:workingDirectory = $TestDrive.FullName
+    $script:version = $null
 }
 
 function CreatePackageJson
@@ -54,9 +56,22 @@ function CreatePackageJson
 
 function MockNsp
 {
+    param(
+        [switch]
+        $Failing
+    )
+
     Mock -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -MockWith { $TestDrive.FullName }
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -eq 'bin\nsp' } -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' }
+    
+    if (-not $Failing)
+    {
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -MockWith { & cmd /c 'ECHO [] && exit 0' }
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -MockWith { & cmd /c 'ECHO An error has occured && exit 1' }
+    }
 }
 
 function GivenDependency 
@@ -99,6 +114,15 @@ function GivenWorkingDirectory
     New-Item -Path $workingDirectory -ItemType 'Directory' -Force | Out-Null
 }
 
+function GivenVersion
+{
+    param(
+        $WithVersion
+    )
+
+    $script:version = $WithVersion
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -111,6 +135,11 @@ function WhenRunningTask
     if ($givenWorkingDirectory)
     {
         $taskParameter['WorkingDirectory'] = $givenWorkingDirectory
+    }
+
+    if ($version)
+    {
+        $taskParameter['Version'] = $version
     }
 
     if ($shouldClean)
@@ -143,9 +172,19 @@ function WhenRunningTask
 
 function ThenNspInstalled
 {
+    param(
+        $WithVersion
+    )
+
     It 'should install NSP module' {
         Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'nsp' } -Times 1        
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq '2.7.0' } -Times 1
+    }
+
+    if( $WithVersion )
+    {
+        It ('should install NSP version ''{0}''' -f $WithVersion) {
+            Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $WithVersion } -Times 1
+        }
     }
 }
 
@@ -158,8 +197,28 @@ function ThenNspNotRun
 
 function ThenNspRan
 {
+    param(
+        $WithVersion
+    )
+
     It 'should run ''nsp check''' {
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -Times 1
+    }
+
+    if( $WithVersion )
+    {
+        if( $WithVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
+        {
+            It 'should run ''nsp check'' with ''--reporter'' json formatting argument' {
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $argumentList -eq '--reporter' } -Times 1
+            }
+        }
+        else
+        {
+            It 'should run ''nsp check'' with ''--output'' json formatting argument' {
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $argumentList -eq '--output' } -Times 1
+            }
+        }
     }
 }
 
@@ -180,6 +239,14 @@ function ThenTaskFailedWithMessage
 
 function ThenTaskSucceeded
 {
+    for( $i = $Global:Error.Count - 1; $i -ge 0; $i-- )
+    {
+        if( $Global:Error[$i] -match 'npm notice created a lockfile as package-lock.json. You should commit this file.' )
+        {
+            $Global:Error.RemoveAt($i)
+        }
+    }
+    
     It 'should not write any errors' {
         $Global:Error | Should -BeNullOrEmpty
     }
@@ -233,7 +300,7 @@ Describe 'NspCheck.when running nsp check' {
 Describe 'NspCheck.when running nsp in given working directory' {
     Init
     GivenWorkingDirectory 'src\app'
-    WhenRunningTask
+    WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskSucceeded
 }
 
@@ -242,4 +309,31 @@ Describe 'NspCheck.when module has a security vulnerability' {
     GivenDependency '"minimatch": "3.0.0"'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'found the following security vulnerabilities'
+}
+
+Describe 'NspCheck.when nsp does not return valid JSON' {
+    Init
+    MockNsp -Failing
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailedWithMessage 'did not return valid JSON'
+}
+
+Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
+    Init
+    GivenVersion '2.7.0'
+    MockNsp
+    WhenRunningTask
+    ThenNspInstalled -WithVersion '2.7.0'
+    ThenNspRan -WithVersion '2.7.0'
+    ThenTaskSucceeded
+}
+
+Describe 'NspCheck.when running nsp check specifically with v3.1.0' {
+    Init
+    GivenVersion '3.1.0'
+    MockNsp
+    WhenRunningTask
+    ThenNspInstalled -WithVersion '3.1.0'
+    ThenNspRan -WithVersion '3.1.0'
+    ThenTaskSucceeded
 }
