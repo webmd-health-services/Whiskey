@@ -151,6 +151,7 @@
 * Added `PackageManagement` and `PowerShellGet` modules to Whiskey package.
 * Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
 * Determining latest version of Pester module to install is handled by Install-WhiskeyTool.
+* Added: `NspCheck` task now supports the `NspVersion` property to define specific versions of NSP. Removed pinned (2.7.0) version of NSP from the task.
 '@
         } # End of PSData hashtable
 
