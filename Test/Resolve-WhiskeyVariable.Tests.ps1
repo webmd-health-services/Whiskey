@@ -288,3 +288,10 @@ Describe 'Resolve-WhiskeyVariable.when property name is variable' {
     WhenResolving @{ '$(COMPUTERNAME)' = 'fubarsnafu' }
     ThenValueIs @{ $env:COMPUTERNAME = 'fubarsnafu' }
 }
+
+Describe 'Resolve-WhiskeyVariable.when value is empty' {
+    Init
+    GivenVariable 'FUBAR' ''
+    WhenResolving 'prefix$(FUBAR)suffix'
+    ThenValueIs 'prefixsuffix'
+}

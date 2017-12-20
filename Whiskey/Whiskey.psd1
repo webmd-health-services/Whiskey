@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.22.0'
+    ModuleVersion = '0.24.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,13 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Removed ApiKey as requirement for Publish-WhiskeyProGetAsset.
+* Fixed: `NspCheck` task doesn't properly capture report of found vulnerabilities.
+* Fixed: `NspCheck` task throws PowerShell exception instead of NSP error if NSP did not return valid JSON.
+* `Exec` task now supports ranges `( .., >=, <=, >, < )` for `SuccessExitCode` property.
+* Removed dependency on `Carbon` PowerShell module.
+* Added `PackageManagement` and `PowerShellGet` modules to Whiskey package.
+* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
+* Determining latest version of Pester module to install is handled by Install-WhiskeyTool.
 '@
         } # End of PSData hashtable
 

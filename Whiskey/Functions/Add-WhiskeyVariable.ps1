@@ -26,6 +26,7 @@ function Add-WhiskeyVariable
         $Name,
 
         [Parameter(Mandatory=$true)]
+        [AllowEmptyString()]
         [string]
         $Value
     )

@@ -388,6 +388,42 @@ function ThenTaskRanWithoutParameter
     }
 }
 
+function ThenTempDirectoryCreated 
+{
+    param(
+        $TaskName
+    )
+
+    $expectedTempPath = Join-Path -Path $context.OutputDirectory -ChildPath ('Temp.{0}.' -f $TaskName)
+    $expectedTempPathRegex = '^{0}[a-z0-9]{{8}}\.[a-z0-9]{{3}}$' -f [regex]::escape($expectedTempPath)
+    It ('should create a task-specific temp directory') {
+        Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+            Write-Debug ('Path  expected  {0}' -f $expectedTempPathRegex)
+            Write-Debug ('      actual    {0}' -f $Path)
+            $Path -match $expectedTempPathRegex }
+        Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter { $Force }
+        Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+            Write-Debug ('ItemType  expected  {0}' -f 'Directory')
+            Write-Debug ('          actual    {0}' -f $ItemType)
+            $ItemType -eq 'Directory' }
+    }
+}
+
+function ThenTempDirectoryRemoved 
+{
+    param(
+        $TaskName
+    )
+    
+    $expectedTempPath = Join-Path -Path $context.OutputDirectory -ChildPath ('Temp.{0}.*' -f $TaskName)
+    It ('should delete task-specific temp directory') {
+        $expectedTempPath | Should -Not -Exist
+        $context.Temp | Should -Not -Exist
+    }
+}
+
 function ThenThrewException
 {
     param(
@@ -439,6 +475,8 @@ function WhenRunningTask
         $context.BuildMetadata.ScmBranch = $scmBranch
     }
 
+    Mock -CommandName 'New-Item' -ModuleName 'Whiskey' -MockWith { [IO.Directory]::CreateDirectory($Path) }
+
     $Global:Error.Clear()
     $script:threwException = $false
     try
@@ -465,6 +503,8 @@ Describe 'Invoke-WhiskeyTask.when a task fails' {
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'idonotexist.ps1' } -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenThrewException 'not\ exist'
+    ThenTempDirectoryCreated 'PowerShell'
+    ThenTempDirectoryRemoved 'PowerShell'
 }
 
 Describe 'Invoke-WhiskeyTask.when there are registered event handlers' {
@@ -474,6 +514,12 @@ Describe 'Invoke-WhiskeyTask.when there are registered event handlers' {
     WhenRunningTask 'PowerShell' -Parameter @{ Path = 'somefile.ps1' }
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
+    ThenTempDirectoryCreated 'PowerShell.OnBeforeTask'
+    ThenTempDirectoryCreated 'PowerShell'
+    ThenTempDirectoryCreated 'PowerShell.OnAfterTask'
+    ThenTempDirectoryRemoved 'PowerShell.OnBeforeTask'
+    ThenTempDirectoryRemoved 'PowerShell'
+    ThenTempDirectoryRemoved 'PowerShell.OnAfterTask'
 }
 
 Describe 'Invoke-WhiskeyTask.when there are task-specific registered event handlers' {
