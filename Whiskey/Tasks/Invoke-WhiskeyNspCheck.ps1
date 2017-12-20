@@ -16,6 +16,7 @@ function Invoke-WhiskeyNspCheck
 
     # * `NpmRegistryUri` (mandatory): the uri to set a custom npm registry.
     # * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    # * `NspVersion`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
 
     # Examples
 
@@ -35,6 +36,15 @@ function Invoke-WhiskeyNspCheck
             WorkingDirectory: app
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file that is located in the `(BUILD_ROOT)\app` directory.
+
+    ## Example 3
+
+        BuildTasks:
+        - NspCheck:
+            NpmRegistryUri: "http://registry.npmjs.org"
+            NspVersion: 2.7.0
+    
+    This example will run `node.exe nsp check` by installing and running NSP version 2.7.0.
     #>
 
     [Whiskey.Task("NspCheck", SupportsClean=$true, SupportsInitialize=$true)]
@@ -123,21 +133,20 @@ function Invoke-WhiskeyNspCheck
 
         Write-Timing -Message 'Running NSP security check'
 
+        $formattingArg = '--output'
         if( !$nspVersion -or $nspVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
         {
-            
-            $output = Invoke-Command -NoNewScope -ScriptBlock {
-                & $nodePath $nspPath 'check' '--reporter' 'json' 2>&1 |
-                    ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
-            }
+            $formattingArg = '--reporter'
         }
-        else
-        {
-            $output = Invoke-Command -NoNewScope -ScriptBlock {
-                & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
-                    ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
-            }
-        }
+
+        $output = Invoke-Command -NoNewScope -ScriptBlock {
+            param(
+                $JsonOutputFormat
+            )
+
+            & $nodePath $nspPath 'check' $JsonOutputFormat 'json' 2>&1 |
+                ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+        } -ArgumentList $formattingArg
 
         Write-Timing -Message 'COMPLETE'
 

@@ -210,13 +210,13 @@ function ThenNspRan
         if( $WithVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
         {
             It 'should run ''nsp check'' with ''--reporter'' json formatting argument' {
-                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--reporter' } -Times 1
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $argumentList -eq '--reporter' } -Times 1
             }
         }
         else
         {
             It 'should run ''nsp check'' with ''--output'' json formatting argument' {
-                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--output' } -Times 1
+                Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $argumentList -eq '--output' } -Times 1
             }
         }
     }
