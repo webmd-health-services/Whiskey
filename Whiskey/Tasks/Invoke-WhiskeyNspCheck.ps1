@@ -16,7 +16,7 @@ function Invoke-WhiskeyNspCheck
 
     # * `NpmRegistryUri` (mandatory): the uri to set a custom npm registry.
     # * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-    # * `NspVersion`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
+    # * `Version`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
 
     # Examples
 
@@ -42,7 +42,7 @@ function Invoke-WhiskeyNspCheck
         BuildTasks:
         - NspCheck:
             NpmRegistryUri: "http://registry.npmjs.org"
-            NspVersion: 2.7.0
+            Version: 2.7.0
     
     This example will run `node.exe nsp check` by installing and running NSP version 2.7.0.
     #>
@@ -102,9 +102,9 @@ function Invoke-WhiskeyNspCheck
 
     Write-Timing -Message 'Installing NSP'
 
-    if( $TaskParameter['NspVersion'] )
+    if( $TaskParameter['Version'] )
     {
-        $nspVersion = ConvertTo-WhiskeySemanticVersion -InputObject $TaskParameter['NspVersion']
+        $nspVersion = ConvertTo-WhiskeySemanticVersion -InputObject $TaskParameter['Version']
         $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version $nspVersion -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
     }
     else

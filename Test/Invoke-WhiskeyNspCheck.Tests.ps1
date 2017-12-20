@@ -13,7 +13,7 @@ $output = $null
 $shouldClean = $false
 $shouldInitialize = $false
 $workingDirectory = $null
-$nspVersion = $null
+$version = $null
 
 function Init
 {
@@ -26,7 +26,7 @@ function Init
     $script:shouldClean = $false
     $script:shouldInitialize = $false
     $script:workingDirectory = $TestDrive.FullName
-    $script:nspVersion = $null
+    $script:version = $null
 }
 
 function CreatePackageJson
@@ -114,13 +114,13 @@ function GivenWorkingDirectory
     New-Item -Path $workingDirectory -ItemType 'Directory' -Force | Out-Null
 }
 
-function GivenNspVersion
+function GivenVersion
 {
     param(
-        $Version
+        $WithVersion
     )
 
-    $script:nspVersion = $Version
+    $script:version = $WithVersion
 }
 
 function WhenRunningTask
@@ -137,9 +137,9 @@ function WhenRunningTask
         $taskParameter['WorkingDirectory'] = $givenWorkingDirectory
     }
 
-    if ($nspVersion)
+    if ($version)
     {
-        $taskParameter['NspVersion'] = $nspVersion
+        $taskParameter['Version'] = $version
     }
 
     if ($shouldClean)
@@ -320,7 +320,7 @@ Describe 'NspCheck.when nsp does not return valid JSON' {
 
 Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
     Init
-    GivenNspVersion '2.7.0'
+    GivenVersion '2.7.0'
     MockNsp
     WhenRunningTask
     ThenNspInstalled -WithVersion '2.7.0'
@@ -330,7 +330,7 @@ Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
 
 Describe 'NspCheck.when running nsp check specifically with v3.1.0' {
     Init
-    GivenNspVersion '3.1.0'
+    GivenVersion '3.1.0'
     MockNsp
     WhenRunningTask
     ThenNspInstalled -WithVersion '3.1.0'
