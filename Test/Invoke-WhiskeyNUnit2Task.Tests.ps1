@@ -683,7 +683,7 @@ function ThenNoErrorShouldBeThrown {
 Describe 'NUnit2.when including tests by category' {
     Init
     GivenPassingTests
-    WhenRunningTask -WithParameters @{ 'Include' = 'Category with Spaces 1','Category with Spaces 2' }
+    WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
     ThenTestsPassed 'HasCategory1','HasCategory2'
     ThenTestsNotRun 'ShouldPass'
 }
@@ -692,8 +692,8 @@ Describe 'NUnit2.when code coverage is disabled and using category filters with 
     Init
     GivenCodeCoverageIsDisabled
     GivenPassingTests
-    GivenInclude -Value 'Category with Spaces 1','Category With Spaces 1'
-    GivenExclude -Value 'Category with Spaces','Another with spaces'
+    GivenInclude -Value 'Category with Spaces 1,Category With Spaces 1'
+    GivenExclude -Value 'Category with Spaces,Another with spaces'
     GivenCodeCoverageIsDisabled
     WhenRunningTask
     ThenNoErrorShouldBeThrown
@@ -702,7 +702,7 @@ Describe 'NUnit2.when code coverage is disabled and using category filters with 
 Describe 'NUnit2.when excluding tests by category' {
     Init
     GivenPassingTests
-    GivenExclude 'Category with Spaces 1','Category with Spaces 2'
+    GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
     WhenRunningTask
     ThenTestsNotRun 'HasCategory1','HasCategory2'
     ThenTestsPassed 'ShouldPass'
