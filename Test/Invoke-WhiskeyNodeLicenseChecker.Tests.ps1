@@ -168,7 +168,7 @@ function ThenLicenseReportCreated
 
 function ThenLicenseReportIsValidJSON
 {
-    $licenseReportJson = Get-Content -Path $licenseReportPath | ConvertFrom-Json
+    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
 
     It 'should be valid JSON' {
         $licenseReportJson | Should -Not -BeNullOrEmpty
@@ -184,7 +184,7 @@ function ThenLicenseReportNotCreated
 
 function ThenLicenseReportFormatTransformed
 {
-    $licenseReportJson = Get-Content -Path $licenseReportPath | ConvertFrom-Json
+    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
 
     It 'should transform the license report format to a more readable structure' {
         $licenseReportJson | Select-Object -ExpandProperty 'name' | Should -Not -BeNullOrEmpty

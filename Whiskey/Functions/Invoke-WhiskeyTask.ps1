@@ -232,10 +232,10 @@ function Invoke-WhiskeyTask
         return
     }
 
-    $workingDirectory = $Parameter['WorkingDirectory']
-    if( !(Test-Path (Join-Path -Path $TaskContext.BuildRoot -ChildPath $workingDirectory )) )
+    $workingDirectory = $TaskContext.BuildRoot
+    if( $Parameter['WorkingDirectory'] )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''WorkingDirectory'' has an invalid value: ''{0}''. Please enter a valid directory path or remove the property to execute this task at the build root: ''{1}''.' -f $workingDirectory, $TaskContext.BuildRoot)
+        $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
     $taskProperties = $Parameter.Clone()

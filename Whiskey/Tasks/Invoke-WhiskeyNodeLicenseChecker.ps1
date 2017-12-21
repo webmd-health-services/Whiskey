@@ -75,11 +75,7 @@ function Invoke-WhiskeyNodeLicenseChecker
         '
     }
 
-    $workingDirectory = $TaskContext.BuildRoot
-    if ($TaskParameter['WorkingDirectory'])
-    {
-        $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     if ($TaskContext.ShouldClean())
     {
@@ -106,43 +102,35 @@ function Invoke-WhiskeyNodeLicenseChecker
         return
     }
 
-    Push-Location -Path $workingDirectory
-    try
-    {
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
 
-        Write-Timing -Message ('Generating license report')
-        $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
-            & $nodePath $licenseCheckerPath '--json'
-        }
-        Write-Timing -Message ('COMPLETE')
-
-        $report = Invoke-Command -NoNewScope -ScriptBlock {
-            ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
-        }
-        if (-not $report)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message 'License Checker failed to output a valid JSON report.'
-        }
-
-        Write-Timing -Message 'Converting license report.'
-        # The default license checker report has a crazy format. It is an object with properties for each module.
-        # Let's transform it to a more sane format: an array of objects.
-        [object[]]$newReport = $report | 
-                                    Get-Member -MemberType NoteProperty | 
-                                    Select-Object -ExpandProperty 'Name' | 
-                                    ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
-
-        # show the report
-        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
-
-        $licensePath = 'node-license-checker-report.json'
-        $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
-        ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
-        Write-Timing -Message ('COMPLETE')
+    Write-Timing -Message ('Generating license report')
+    $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
+        & $nodePath $licenseCheckerPath '--json'
     }
-    finally
-    {
-        Pop-Location
+    Write-Timing -Message ('COMPLETE')
+
+    $report = Invoke-Command -NoNewScope -ScriptBlock {
+        ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
     }
+    if (-not $report)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'License Checker failed to output a valid JSON report.'
+    }
+
+    Write-Timing -Message 'Converting license report.'
+    # The default license checker report has a crazy format. It is an object with properties for each module.
+    # Let's transform it to a more sane format: an array of objects.
+    [object[]]$newReport = $report | 
+                                Get-Member -MemberType NoteProperty | 
+                                Select-Object -ExpandProperty 'Name' | 
+                                ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+
+    # show the report
+    $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
+
+    $licensePath = 'node-license-checker-report.json'
+    $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
+    ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
+    Write-Timing -Message ('COMPLETE')
 }
