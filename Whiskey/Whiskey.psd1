@@ -144,14 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `NspCheck` task doesn't properly capture report of found vulnerabilities.
-* Fixed: `NspCheck` task throws PowerShell exception instead of NSP error if NSP did not return valid JSON.
-* `Exec` task now supports ranges `( .., >=, <=, >, < )` for `SuccessExitCode` property.
-* Removed dependency on `Carbon` PowerShell module.
-* Added `PackageManagement` and `PowerShellGet` modules to Whiskey package.
-* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
-* Determining latest version of Pester module to install is handled by Install-WhiskeyTool.
-* Added: `NspCheck` task now supports the `Version` property to define specific versions of NSP. Removed pinned (2.7.0) version of NSP from the task.
+* `Invoke-WhiskeyTask` function now supports a global `WorkingDirectory` property for all tasks.
 '@
         } # End of PSData hashtable
 

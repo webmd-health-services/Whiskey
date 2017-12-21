@@ -542,7 +542,7 @@ Describe 'Invoke-WhiskeyTask.when there are task defaults' {
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' $defaults
 }
 
-Describe 'Invoke-WhiskeyTask.when there are task defaults' {
+Describe 'Invoke-WhiskeyTask.when there are task defaults that are overwritten' {
     Init
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     $defaults = @{ 'Fubar' = @{ 'Snfau' = 'value1' ; 'Key2' = 'value1' }; 'Key3' = 'Value3' }
@@ -668,7 +668,7 @@ Describe 'Invoke-WhiskeyTask.when ExceptOnBranch does not contain current branch
     GivenRunByDeveloper
     GivenScmBranch 'develop'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' } e
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' }
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
     ThenTaskRanWithoutParameter 'ExceptOnBranch'
 }
@@ -681,6 +681,24 @@ Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch properties are
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
     ThenThrewException 'This task defines both OnlyOnBranch and ExceptOnBranch properties'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'WorkingDirectory' = '.output' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+    ThenTaskRanWithoutParameter 'WorkingDirectory'
+}
+
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
+    Init
+    GivenRunByDeveloper
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
+    ThenThrewException 'Please enter a valid directory path or remove the property to execute this task at the build root'
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell' 
 }
 
 $tasks = Get-WhiskeyTask

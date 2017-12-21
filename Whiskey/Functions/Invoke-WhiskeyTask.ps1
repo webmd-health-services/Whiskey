@@ -232,8 +232,14 @@ function Invoke-WhiskeyTask
         return
     }
 
+    $workingDirectory = $Parameter['WorkingDirectory']
+    if( !(Test-Path (Join-Path -Path $TaskContext.BuildRoot -ChildPath $workingDirectory )) )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''WorkingDirectory'' has an invalid value: ''{0}''. Please enter a valid directory path or remove the property to execute this task at the build root: ''{1}''.' -f $workingDirectory, $TaskContext.BuildRoot)
+    }
+
     $taskProperties = $Parameter.Clone()
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring' ) )
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory' ) )
     {
         $taskProperties.Remove($commonPropertyName)
     }
@@ -251,6 +257,7 @@ function Invoke-WhiskeyTask
     Write-Verbose -Message $prefix
     $startedAt = Get-Date
     $result = 'FAILED'
+    Push-Location -Path $workingDirectory
     try
     {
         $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
@@ -270,6 +277,7 @@ function Invoke-WhiskeyTask
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
         Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)
+        Pop-Location
     }
 
     Invoke-Event -Prefix $prefix -EventName 'AfterTask' -Property $taskProperties
