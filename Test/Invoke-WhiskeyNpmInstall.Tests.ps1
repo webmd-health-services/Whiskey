@@ -196,7 +196,7 @@ function ThenPackage
 
         if ($Version)
         {
-            $packageVersion = Get-Content -Path (Join-Path -Path $packagePath -ChildPath 'package.json') | ConvertFrom-Json | Select-Object -ExpandProperty 'Version'
+            $packageVersion = Get-Content -Path (Join-Path -Path $packagePath -ChildPath 'package.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version'
             It ('''{0}'' should be version ''{1}''' -f $PackageName,$Version) {
                 $packageVersion | Should -Be $Version
             }

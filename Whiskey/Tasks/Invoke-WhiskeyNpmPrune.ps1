@@ -52,11 +52,7 @@ function Invoke-WhiskeyNpmPrune
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $workingDirectory = $TaskContext.BuildRoot
-    if ($TaskParameter['WorkingDirectory'])
-    {
-        $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     $npmRegistryUri = $TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
@@ -82,22 +78,14 @@ function Invoke-WhiskeyNpmPrune
         return
     }
 
-    Push-Location $workingDirectory
-    try
-    {
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
+    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
 
-        Invoke-Command -ScriptBlock {
-            & $nodePath $npmPath prune --production
-        }
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm prune'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
-        }
+    Invoke-Command -ScriptBlock {
+        & $nodePath $npmPath prune --production
     }
-    finally
+
+    if ($LASTEXITCODE -ne 0)
     {
-        Pop-Location
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm prune'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
     }
 }

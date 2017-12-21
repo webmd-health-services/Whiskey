@@ -107,7 +107,7 @@ function ThenModule
 
         if ($Version)
         {
-            $moduleVersion = Get-Content -Path (Join-Path -Path $modulePath -ChildPath 'package.json') | ConvertFrom-Json | Select-Object -ExpandProperty 'Version'
+            $moduleVersion = Get-Content -Path (Join-Path -Path $modulePath -ChildPath 'package.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version'
             It ('module should be version {0}' -f $Version) {
                 $moduleVersion | Should -Be $Version
             }

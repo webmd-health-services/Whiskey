@@ -91,11 +91,7 @@ function Invoke-WhiskeyNpmInstall
         '
     }
 
-    $workingDirectory = $TaskContext.BuildRoot
-    if ($TaskParameter['WorkingDirectory'])
-    {
-        $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     if ($TaskContext.ShouldClean())
     {

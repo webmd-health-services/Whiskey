@@ -30,21 +30,7 @@ function Invoke-WhiskeyPowerShell
     
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
-    if( $TaskParameter.ContainsKey('WorkingDirectory') )
-    {
-        if( -not [IO.Path]::IsPathRooted($TaskParameter['WorkingDirectory']))
-        {
-            $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-        } 
-        else
-        {
-            $workingDirectory = $TaskParameter['WorkingDirectory']
-        }       
-    }
-    else
-    {
-        $WorkingDirectory = $TaskContext.BuildRoot
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     $argument = $TaskParameter['Argument']
     if( -not $argument )

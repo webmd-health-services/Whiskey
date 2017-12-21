@@ -121,18 +121,13 @@ function Invoke-WhiskeyNodeTask
         Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
     }
 
-    $workingDir = $TaskContext.BuildRoot
-    if( $TaskParameter.ContainsKey('WorkingDirectory') )
-    {
-        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
-    Push-Location -Path $workingDir
     try
     {
         Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
         Write-Timing -Message 'Installing Node.js'
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
+        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
         Write-Timing -Message ('COMPLETE')
         if( -not $nodePath )
         {
@@ -149,7 +144,7 @@ function Invoke-WhiskeyNodeTask
 
         Update-Progress -Status ('Getting path to the version of NPM required for this package') -Step ($stepNum++)
         Write-Timing -Message 'Resolving path to NPM.'
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
         Write-Timing -Message ('COMPLETE')
         if( -not $npmPath )
         {
@@ -192,7 +187,7 @@ BuildTasks:
         }
 
         # local version of npm gets removed by 'npm install', so call Get-WhiskeyNPMPath to download it again if necessary
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
@@ -276,8 +271,6 @@ BuildTasks:
     finally
     {
         Set-Item -Path 'env:PATH' -Value $originalPath
-
-        Pop-Location
 
         Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
