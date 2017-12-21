@@ -109,7 +109,7 @@ function WhenRunningTask
     param()
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
-    
+
     $taskParameter = @{ 'NpmRegistryUri' = $script:npmRegistryUri }
 
     if ($givenWorkingDirectory)
@@ -126,8 +126,6 @@ function WhenRunningTask
         $taskContext.RunMode = 'Initialize'
     }
 
-    Push-Location $script:workingDirectory
-
     try
     {
         CreatePackageJson
@@ -138,10 +136,6 @@ function WhenRunningTask
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-    finally
-    {
-        Pop-Location
     }
 }
 

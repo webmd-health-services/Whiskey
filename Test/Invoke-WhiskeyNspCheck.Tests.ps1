@@ -151,8 +151,6 @@ function WhenRunningTask
         $taskContext.RunMode = 'Initialize'
     }
 
-    Push-Location $script:workingDirectory
-
     try
     {
         CreatePackageJson
@@ -163,10 +161,6 @@ function WhenRunningTask
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-    finally
-    {
-        Pop-Location
     }
 }
 
@@ -207,7 +201,7 @@ function ThenNspRan
 
     if( $WithVersion )
     {
-        if( $WithVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
+        if( $WithVersion -ge (ConvertTo-WhiskeySemanticVersion -InputObject '3.0.0') )
         {
             It 'should run ''nsp check'' with ''--reporter'' json formatting argument' {
                 Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $argumentList -eq '--reporter' } -Times 1
