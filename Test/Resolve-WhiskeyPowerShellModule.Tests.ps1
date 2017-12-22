@@ -48,13 +48,6 @@ function GivenModuleDoesNotExist
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey'
 }
 
-function GivenVersionDoesNotExist
-{
-    $script:moduleName = 'nonexistentmodule'
-    $script:moduleVersion = '1.0.0'
-    Mock -CommandName 'Find-Module' -ModuleName 'Whiskey'
-}
-
 function WhenResolvingPowerShellModule
 {
     [CmdletBinding()]
@@ -161,14 +154,6 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given Version wildcard' {
 Describe 'Resolve-WhiskeyPowerShellModule.when given module that does not exist' {
     Init
     GivenModuleDoesNotExist
-    WhenResolvingPowerShellModule -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Failed to find module'
-    ThenReturnedNothing
-}
-
-Describe 'Resolve-WhiskeyPowerShellModule.when given Version that does not exist' {
-    Init
-    GivenVersionDoesNotExist
     WhenResolvingPowerShellModule -ErrorAction SilentlyContinue
     ThenErrorMessage 'Failed to find module'
     ThenReturnedNothing

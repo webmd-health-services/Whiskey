@@ -136,7 +136,7 @@ Describe 'GetPowerShellModule.when called with invalid version' {
     GivenVersion -Version '0.0.0'
     GivenNonExistentModule
     WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
-    ThenErrorShouldBeThrown "Failed to find module Pester version 0.0.0"
+    ThenErrorShouldBeThrown "Failed to find module Pester at version 0.0.0"
     ThenModuleShouldNotExist
 }
 

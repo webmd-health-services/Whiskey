@@ -38,6 +38,8 @@ function Resolve-WhiskeyPowerShellModule
 
     if( $Version )
     {
+        $atVersionString = ' at version {0}' -f $Version
+
         if( -not [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
         {
             $tempVersion = [Version]$Version
@@ -49,24 +51,19 @@ function Resolve-WhiskeyPowerShellModule
 
         $module = Find-Module -Name $Name -AllVersions | 
                         Where-Object { $_.Version.ToString() -like $Version } | 
-                        Sort-Object -Property 'Version' -Descending | 
-                        Select-Object -First 1
-
-        if( -not $module )
-        {
-            Write-Error -Message ('Failed to find module {0} version {1} on the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $Name, $tempVersion)
-            return
-        }
+                        Sort-Object -Property 'Version' -Descending
     }
     else
     {
-        $module = Find-Module -Name $Name -ErrorAction Ignore | Select-Object -First 1
-        if( -not $module )
-        {
-            Write-Error -Message ('Failed to find module {0} module on the PowerShell Gallery. You can browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $Name)
-            return
-        }
+        $atVersionString = ''
+        $module = Find-Module -Name $Name -ErrorAction Ignore
     }
 
-    return $module
+    if( -not $module )
+    {
+        Write-Error -Message ('Failed to find module {0}{1} module on the PowerShell Gallery. You can browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $Name,$atVersionString)
+        return
+    }
+
+    return $module | Select-Object -First 1
 }
