@@ -7,8 +7,10 @@ Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\PowerS
 
 $context = $null
 $taskParameter = @{}
-function GivenContext 
+
+function Init
 {
+    $Global:Error.Clear()
     $script:taskParameter = @{}
     $script:context = New-WhiskeyTestContext -ForDeveloper
 }
@@ -22,7 +24,7 @@ function GivenModule
     $script:taskParameter['Name'] = $module
 }
 
-function GivenVersion 
+function GivenVersion
 {
     param(
         [string]
@@ -31,13 +33,20 @@ function GivenVersion
     $script:taskParameter['Version'] = $Version
 }
 
+function GivenNonExistentModule
+{
+    Mock -CommandName 'Find-Module' -ModuleName 'Whiskey'
+}
+
 function GivenCleanMode
 {
     $script:context.Runmode = 'clean'
 }
 function WhenPowershellModuleIsRan
 {
-    $global:Error.clear()
+    [CmdletBinding()]
+    param()
+
     try
     {
         Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name "GetPowerShellModule"
@@ -62,10 +71,12 @@ function ThenModuleShouldBeInstalled
         $modulePath | should -Exist
     }
 
-    it ('Should have installed version {0}' -f $AtVersion) {
-        Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -match $AtVersion } | should -not -BeNullOrEmpty
+    if ($AtVersion)
+    {
+        it ('Should have installed version {0}' -f $AtVersion) {
+            Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -match $AtVersion } | should -not -BeNullOrEmpty
+        }
     }
-    
 }
 
 function ThenModuleShouldNotExist
@@ -86,56 +97,58 @@ function ThenErrorShouldBeThrown
         $Global:Error | where-object {$_ -match $errorMessage } | Should -not -BeNullOrEmpty
     }
 }
-Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested without version parameter' {
-    GivenContext
+Describe 'GetPowerShellModule.when a valid module is requested without version parameter' {
+    Init
     GivenModule -module 'Pester'
     WhenPowershellModuleIsRan
     ThenModuleShouldBeInstalled -module 'Pester'
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested with version parameter' {
-    GivenContext
+Describe 'GetPowerShellModule.when a valid module is requested with version parameter' {
+    Init
     GivenModule -module 'Pester'
     GivenVersion -version '3.4.0'
     WhenPowershellModuleIsRan
     ThenModuleShouldBeInstalled -module 'Pester' -AtVersion '3.4.0'
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when a valid module is requested with wildcard version' {
-    GivenContext
+Describe 'GetPowerShellModule.when a valid module is requested with wildcard version' {
+    Init
     GivenModule -module 'Pester'
     GivenVersion -version '3.3.*'
     WhenPowershellModuleIsRan
     ThenModuleShouldBeInstalled -module 'Pester' -AtVersion '3.3.14'
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when an invalid module name is requested' {
-    GivenContext
-    GivenVersion -version '3.4.0'
-    GivenModule -module 'bad mod'
-    WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage 'No match was found for the specified search criteria and module name ''bad mod'''
+Describe 'GetPowerShellModule.when an invalid module name is requested' {
+    Init
+    GivenModule -Module 'bad mod'
+    GivenVersion -Version '3.4.0'
+    GivenNonExistentModule
+    WhenPowershellModuleIsRan  -ErrorAction SilentlyContinue
+    ThenErrorShouldBeThrown 'Failed to find module bad mod'
     ThenModuleShouldNotExist
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when called with invalid version' {
-    GivenContext
-    GivenModule -module 'Pester'
-    GivenVersion  -version '0.0.0'
-    WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage "Failed to find module Pester version 0.0.0"
+Describe 'GetPowerShellModule.when called with invalid version' {
+    Init
+    GivenModule -Module 'Pester'
+    GivenVersion -Version '0.0.0'
+    GivenNonExistentModule
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
+    ThenErrorShouldBeThrown "Failed to find module Pester version 0.0.0"
     ThenModuleShouldNotExist
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when called with missing name' {
-    GivenContext
-    WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage "Please Add a Name Property for which PowerShell Module you would like to get."
+Describe 'GetPowerShellModule.when called with missing name' {
+    Init
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
+    ThenErrorShouldBeThrown "Please Add a Name Property for which PowerShell Module you would like to get."
     ThenModuleShouldNotExist
 }
 
-Describe 'Get-WhiskeyPowerShellModule.when called with clean mode' {
-    GivenContext
+Describe 'GetPowerShellModule.when called with clean mode' {
+    Init
     GivenModule -module 'Pester'
     GivenCleanMode
     WhenPowershellModuleIsRan
