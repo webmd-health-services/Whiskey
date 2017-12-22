@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* `Invoke-WhiskeyTask` function now supports a global `WorkingDirectory` property for all tasks.
+* Added common WorkingDirectory property. Setting it on a task will result in that task running in the given directory. The path must be relative to the build root.
 '@
         } # End of PSData hashtable
 

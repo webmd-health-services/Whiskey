@@ -232,21 +232,6 @@ throw 'fubar'
     ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when PowerShell task defined with an absolute working directory' {
-    GivenWorkingDirectory (Join-Path -path $TestDrive.FullName -ChildPath 'bin')
-    GivenAPassingScript
-    WhenTheTaskRuns -ErrorAction SilentlyContinue
-    ThenTheTaskFails
-}
-
-Describe 'Invoke-WhiskeyPowerShell.when PowerShell task defined with a relative working directory' {
-    GivenWorkingDirectory 'bin'
-    GivenAPassingScript
-    WhenTheTaskRuns
-    ThenTheTaskPasses
-    ThenTheScriptRan
-}
-
 Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {
     GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
     GivenAPassingScript

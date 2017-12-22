@@ -181,6 +181,19 @@ function GivenScmBranch
     $script:scmBranch = $Branch
 }
 
+function GivenWorkingDirectory
+{
+    param(
+        [string]
+        $Directory
+    )
+
+    $wd = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+
+    Mock -CommandName 'Push-Location' -ModuleName 'Whiskey' -ParameterFilter { $workingDirectory -eq $wd }
+    Mock -CommandName 'Pop-Location' -ModuleName 'Whiskey'
+}
+
 function Init
 {
     $script:taskDefaults = @{ }
@@ -421,6 +434,23 @@ function ThenTempDirectoryRemoved
     It ('should delete task-specific temp directory') {
         $expectedTempPath | Should -Not -Exist
         $context.Temp | Should -Not -Exist
+    }
+}
+
+function ThenTaskRanInWorkingDirectory 
+{
+    param(
+        $Directory
+    )
+    
+    $wd = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+
+    It ('should push the working directory ''{0}'' before executing task' -f $Directory) {
+        Assert-MockCalled -CommandName 'Push-Location' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $wd }
+    }
+
+    It ('should pop the working directory ''{0}'' after executing task' -f $Directory) {
+        Assert-MockCalled -CommandName 'Pop-Location' -ModuleName 'Whiskey'
     }
 }
 
@@ -686,10 +716,12 @@ Describe 'Invoke-WhiskeyTask.when OnlyOnBranch and ExceptOnBranch properties are
 Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined' {
     Init
     GivenRunByDeveloper
+    GivenWorkingDirectory '.output'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'WorkingDirectory' = '.output' }
+    ThenTaskRanInWorkingDirectory '.output'
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
-    ThenTaskRanWithoutParameter 'WorkingDirectory'
+    ThenTaskRanWithoutParameter 'Invoke-WhiskeyPowerShell' 'WorkingDirectory'
 }
 
 Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
