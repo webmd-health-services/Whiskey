@@ -8,9 +8,16 @@ function New-WhiskeySemanticVersion
     .DESCRIPTION
     The `New-WhiskeySemanticVersion` function gets a semantic version that represents the current build. If called multiple times during a build, you'll get the same verson number back.
 
-    If passed a version, it will return that version with build metadata attached. Any build metadata on the passed-in version is replaced. On a build server, build metadata is the build number, source control branch, and commit ID, e.g. `80.master.deadbee`. When run by developers, the build metadata is the current username and computer name, e.g. `whiskey.desktop001`.
+    If passed a `Version`, it will return that version with build metadata attached. Any build metadata on the passed-in version is replaced. On a build server, build metadata is the build number, source control branch, and commit ID, e.g. `80.master.deadbee`. When run by developers, the build metadata is the current username and computer name, e.g. `whiskey.desktop001`.
 
-    If not passed a version, or the version passed is null or empty, a date-based version number is generated for you. The major number is the year and the minor number is the month and day, e.g. `2017.808`. If run by a developer, the patch number is set to `0`. If run on a build server, the build number is used.
+    Alternatively, you may pass a valid file path to the `Path` parameter and the function will pull the version number from that file.
+
+    The `Path` parameter currently supports the following files:
+
+    * Node.js `package.json` files.
+    * PowerShell module manifest files with the file extension `.psd1`.
+
+    If not passed a `Path`, `Version`, or the version passed is null or empty, a date-based version number is generated for you. The major number is the year and the minor number is the month and day, e.g. `2017.0327`. If run by a developer, the patch number is set to `0`. If run on a build server, the build number is used.
 
     Pass any prerelease metadata to the `Prerelease` parameter.
     #>
@@ -54,7 +61,7 @@ function New-WhiskeySemanticVersion
         $Path = $resolvedPath
 
         $fileInfo = Get-Item $Path
-        if($fileInfo.Name -eq 'package.json')
+        if( $fileInfo.Name -eq 'package.json' )
         {
             $semVersion = Get-Content -Raw -Path $Path |
                             ConvertFrom-Json -ErrorAction Ignore |
@@ -71,10 +78,9 @@ function New-WhiskeySemanticVersion
                 ' -f $fileInfo.FullName)
                 return
             }
-
         }
 
-        if($fileInfo.Extension -eq '.psd1')
+        if( $fileInfo.Extension -eq '.psd1' )
         {
             $semVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore |
                             Select-Object -ExpandProperty 'Version' |
