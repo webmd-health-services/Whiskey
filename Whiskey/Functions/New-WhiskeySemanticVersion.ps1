@@ -12,7 +12,7 @@ function New-WhiskeySemanticVersion
 
     If not passed a version, or the version passed is null or empty, a date-based version number is generated for you. The major number is the year and the minor number is the month and day, e.g. `2017.808`. If run by a developer, the patch number is set to `0`. If run on a build server, the build number is used.
 
-    Pass any prerelease metadata to the `Prerelease` parameter. If `Version` has a value, then the `Prerelease` parameter is ignored.
+    Pass any prerelease metadata to the `Prerelease` parameter.
     #>
     [CmdletBinding()]
     [OutputType([SemVersion.SemanticVersion])]
@@ -38,49 +38,57 @@ function New-WhiskeySemanticVersion
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     if( $Version )
     {
         $semVersion = $Version | ConvertTo-WhiskeySemanticVersion
     }
     elseif( $Path )
     {
-        $Path = Resolve-Path -Path $Path | Select-Object -ExpandProperty ProviderPath
-        if( -not $Path )
+        $resolvedPath = Resolve-Path -Path $Path -ErrorAction Ignore | Select-Object -ExpandProperty ProviderPath
+        if( -not $resolvedPath )
         {
-            Write-Error ('Path to version file ''{0}'' does not exist' -f $path)
+            Write-Error ('Path to given version file ''{0}'' does not exist.' -f $Path)
+            return
         }
+        $Path = $resolvedPath
+
         $fileInfo = Get-Item $Path
         if($fileInfo.Name -eq 'package.json')
         {
-            $semVersion = Get-Content -Raw -Path $Path | 
-                            ConvertFrom-Json -ErrorAction Ignore | 
-                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore | 
+            $semVersion = Get-Content -Raw -Path $Path |
+                            ConvertFrom-Json -ErrorAction Ignore |
+                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore |
                             ConvertTo-WhiskeySemanticVersion
+
             if( -not $semVersion )
             {
-                Write-Error -Message ('Unable to get the version to build from the Node.js package.json file ''{0}''. Please make sure the file is valid JSON, that it contains a `version` property, and that the version''s value is a valid semantic version, e.g.
-    
-    {
-        "version": "1.2.3"
-    }
-    ' -f $fileInfo.FullName)
+                Write-Error -Message ('Unable to get the version to build from the Node.js package.json file ''{0}''. Please make sure the file is valid JSON, that it contains a ''version'' property, and that the version''s value is a valid semantic version, e.g.
+
+                {{
+                    "version": "1.2.3"
+                }}
+                ' -f $fileInfo.FullName)
+                return
             }
+
         }
 
         if($fileInfo.Extension -eq '.psd1')
         {
-            $semVersion = Test-ModuleManifest -Path $Path | 
-                            Select-Object -ExpandProperty 'Version' | 
+            $semVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore |
+                            Select-Object -ExpandProperty 'Version' |
                             ConvertTo-WhiskeySemanticVersion
+
             if( -not $semVersion )
             {
-                Write-Error -Message ('Unable to get the version to build from the PowerShell module manifest file ''{0}''. Please make sure the file is a valid Powershell module manifest and that it contains a `ModuleVersion` property, e.g. 
-    
-    @{
-        ModuleVersion = ''1.2.3'';
-    }
-    ' -f $fileInfo.FullName)
+                Write-Error -Message ('Unable to get the version to build from the PowerShell module manifest file ''{0}''. Please make sure the file is a valid Powershell module manifest and that it contains a ''ModuleVersion'' property, e.g.
+
+                @{{
+                    ModuleVersion = ''1.2.3'';
+                }}
+                ' -f $fileInfo.FullName)
+                return
             }
         }
     }
