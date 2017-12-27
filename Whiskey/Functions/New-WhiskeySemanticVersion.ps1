@@ -16,6 +16,7 @@ function New-WhiskeySemanticVersion
 
     * Node.js `package.json` files.
     * PowerShell module manifest files with the file extension `.psd1`.
+    * .NET csproj files with the file extension `.csproj`.
 
     If not passed a `Path`, `Version`, or the version passed is null or empty, a date-based version number is generated for you. The major number is the year and the minor number is the month and day, e.g. `2017.0327`. If run by a developer, the patch number is set to `0`. If run on a build server, the build number is used.
 
@@ -63,10 +64,18 @@ function New-WhiskeySemanticVersion
         $fileInfo = Get-Item $Path
         if( $fileInfo.Name -eq 'package.json' )
         {
-            $semVersion = Get-Content -Raw -Path $Path |
-                            ConvertFrom-Json -ErrorAction Ignore |
-                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore |
-                            ConvertTo-WhiskeySemanticVersion
+            try
+            {
+                $packageJson = Get-Content -Raw -Path $Path | ConvertFrom-Json
+            }
+            catch
+            {
+                Write-Error -ErrorRecord $_
+                Write-Error -Message ('Unable to get version to build, package.json file ''{0}'' contains bad JSON.' -f $Path)
+                return
+            }
+
+            $semVersion = $packageJson | Select-Object -ExpandProperty 'version' -ErrorAction Ignore | ConvertTo-WhiskeySemanticVersion
 
             if( -not $semVersion )
             {
@@ -79,8 +88,7 @@ function New-WhiskeySemanticVersion
                 return
             }
         }
-
-        if( $fileInfo.Extension -eq '.psd1' )
+        elseif( $fileInfo.Extension -eq '.psd1' )
         {
             $semVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore |
                             Select-Object -ExpandProperty 'Version' |
@@ -96,6 +104,41 @@ function New-WhiskeySemanticVersion
                 ' -f $fileInfo.FullName)
                 return
             }
+        }
+        elseif( $fileInfo.Extension -eq '.csproj' )
+        {
+            try
+            {
+                [xml]$csprojXml = Get-Content -Path $Path -Raw
+            }
+            catch
+            {
+                Write-Error -ErrorRecord $_
+                Write-Error -Message ('Unable to get version to build, csproj file ''{0}'' contains bad XML.' -f $Path)
+                return
+            }
+
+            $csprojVersion = $csprojXml.SelectNodes('/Project/PropertyGroup/Version') | Select-Object -ExpandProperty '#text'
+
+            if( -not $csprojVersion )
+            {
+                Write-Error -Message ('Unable to get the version to build from the csproj file ''{0}'' as it either did''t contain a ''Version'' element or the element text was empty. Please make sure there is a valid ''Version'' element located under ''/Project/PropertyGroup'', e.g.
+
+                <Project Sdk="Microsoft.NET.Sdk">
+                    <PropertyGroup>
+                        <Version>1.2.3</Version>
+                    </PropertyGroup>
+                </Project>
+                ' -f $Path)
+                return
+            }
+
+            $semVersion = $csprojVersion | ConvertTo-WhiskeySemanticVersion
+        }
+        else
+        {
+            Write-Error -Message ('Version file ''{0}'' is an unsupported file type.' -f $Path)
+            return
         }
     }
     else

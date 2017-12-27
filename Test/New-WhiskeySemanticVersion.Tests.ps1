@@ -237,6 +237,15 @@ Describe 'New-WhiskeySemanticVersion.when given invalid Path' {
     ThenErrorMessage 'does not exist.'
 }
 
+Describe 'New-WhiskeySemanticVersion.when given Path to an unsupported file' {
+    Init
+    GivenFile 'version.txt' 'version=1.2.3'
+    GivenPath 'version.txt'
+    WhenGettingSemanticVersion -ErrorAction SilentlyContinue
+    ThenReturnedNothing
+    ThenErrorMessage 'unsupported file type.'
+}
+
 Describe 'New-WhiskeySemanticVersion.when given Path to a package.json with missing ''version'' key' {
     Init
     GivenFile 'package.json' @'
@@ -248,6 +257,19 @@ Describe 'New-WhiskeySemanticVersion.when given Path to a package.json with miss
     WhenGettingSemanticVersion -ErrorAction SilentlyContinue
     ThenReturnedNothing
     ThenErrorMessage 'Unable to get the version to build from the Node.js package.json file'
+}
+
+Describe 'New-WhiskeySemanticVersion.when given Path to a ''package.json'' with bad JSON' {
+    Init
+    GivenFile 'package.json' @'
+    [
+        "version": "0.0.1",
+    }
+'@
+    GivenPath 'package.json'
+    WhenGettingSemanticVersion -ErrorAction SilentlyContinue
+    ThenReturnedNothing
+    ThenErrorMessage 'contains bad JSON'
 }
 
 Describe 'New-WhiskeySemanticVersion.when given Path to a ''package.json''' {
@@ -315,4 +337,46 @@ Describe 'New-WhiskeySemanticVersion.when given Path to a PowerShell module mani
     GivenPrerelease 'rc.4'
     WhenGettingSemanticVersion
     ThenAddedBuildMetadataToSemanticVersionOf '0.0.1'
+}
+
+Describe 'New-WhiskeySemanticVersion.when given Path to a ''.csproj'' file with no Version element' {
+    Init
+    GivenFile 'dotnetlibrary.csproj' @'
+    <Project Sdk="Microsoft.NET.Sdk">
+        <PropertyGroup>
+            <Description>Library description</Description>
+        </PropertyGroup>
+    </Project>
+'@
+    GivenPath 'dotnetlibrary.csproj'
+    WhenGettingSemanticVersion -ErrorAction SilentlyContinue
+    ThenReturnedNothing
+    ThenErrorMessage 'Unable to get the version to build from the csproj file'
+}
+
+Describe 'New-WhiskeySemanticVersion.when given Path to a ''.csproj'' with bad XML' {
+    Init
+    GivenFile 'dotnetlibrary.csproj' @'
+    <Project
+    </Project>
+'@
+    GivenPath 'dotnetlibrary.csproj'
+    WhenGettingSemanticVersion -ErrorAction SilentlyContinue
+    ThenReturnedNothing
+    ThenErrorMessage 'contains bad XML'
+}
+
+Describe 'New-WhiskeySemanticVersion.when given Path to a ''.csproj'' with a valid version' {
+    Init
+    GivenFile 'dotnetlibrary.csproj' @'
+    <Project Sdk="Microsoft.NET.Sdk">
+        <PropertyGroup>
+            <Description>Library description</Description>
+            <Version>1.2.3</Version>
+        </PropertyGroup>
+    </Project>
+'@
+    GivenPath 'dotnetlibrary.csproj'
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '1.2.3'
 }
