@@ -225,8 +225,7 @@ Describe 'Install-WhiskeyTool.when version of module doesn''t exist' {
     }
 
     It 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'failed to find module'
+        $Global:Error[0] | Should Match 'failed to download Pester 3\.0\.0'
     }
 }
 

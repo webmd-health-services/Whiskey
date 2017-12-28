@@ -35,8 +35,13 @@ function GivenCleanMode
 {
     $script:context.Runmode = 'clean'
 }
+
 function WhenPowershellModuleIsRan
 {
+    [CmdletBinding()]
+    param(
+    )
+
     $global:Error.clear()
     try
     {
@@ -113,7 +118,7 @@ Describe 'Get-WhiskeyPowerShellModule.when an invalid module name is requested' 
     GivenContext
     GivenVersion -version '3.4.0'
     GivenModule -module 'bad mod'
-    WhenPowershellModuleIsRan
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
     ThenErrorShouldBeThrown -errorMessage 'No match was found for the specified search criteria and module name ''bad mod'''
     ThenModuleShouldNotExist
 }
@@ -122,14 +127,14 @@ Describe 'Get-WhiskeyPowerShellModule.when called with invalid version' {
     GivenContext
     GivenModule -module 'Pester'
     GivenVersion  -version '0.0.0'
-    WhenPowershellModuleIsRan
-    ThenErrorShouldBeThrown -errorMessage "Failed to find module Pester version 0.0.0"
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
+    ThenErrorShouldBeThrown -errorMessage "Failed to download Pester 0.0.0"
     ThenModuleShouldNotExist
 }
 
 Describe 'Get-WhiskeyPowerShellModule.when called with missing name' {
     GivenContext
-    WhenPowershellModuleIsRan
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
     ThenErrorShouldBeThrown -errorMessage "Please Add a Name Property for which PowerShell Module you would like to get."
     ThenModuleShouldNotExist
 }

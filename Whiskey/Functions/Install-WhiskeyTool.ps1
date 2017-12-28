@@ -81,6 +81,7 @@ function Install-WhiskeyTool
         if( -not (Test-Path -Path $expectedPath -PathType Container) )
         {
             Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
+            return
         }
 
         return $expectedPath
