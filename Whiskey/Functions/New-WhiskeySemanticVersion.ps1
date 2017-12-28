@@ -8,15 +8,28 @@ function New-WhiskeySemanticVersion
     .DESCRIPTION
     The `New-WhiskeySemanticVersion` function gets a semantic version that represents the current build. If called multiple times during a build, you'll get the same verson number back.
 
-    If passed a `Version`, it will return that version with build metadata attached. Any build metadata on the passed-in version is replaced. On a build server, build metadata is the build number, source control branch, and commit ID, e.g. `80.master.deadbee`. When run by developers, the build metadata is the current username and computer name, e.g. `whiskey.desktop001`.
-
-    Alternatively, you may pass a valid file path to the `Path` parameter and the function will pull the version number from that file.
+    If passed a `Version`, it will return that version with build metadata attached. Alternatively, you may pass a valid file path to the `Path` parameter and the function will pull the version number from that file. Any build metadata on the passed-in version is replaced. On a build server, build metadata is the build number, source control branch, and commit ID, e.g. `80.master.deadbee`. When run by developers, the build metadata is the current username and computer name, e.g. `whiskey.desktop001`.
 
     The `Path` parameter currently supports the following files:
 
-    * Node.js `package.json` files.
-    * PowerShell module manifest files with the file extension `.psd1`.
-    * .NET csproj files with the file extension `.csproj`.
+    * Node.js `package.json` files (JSON key: `version`).
+        ```
+        { "version": "1.0.0" }
+        ```
+
+    * PowerShell module manifest files with the file extension `.psd1` (Hash table key: `ModuleVersion`).
+        ```
+        @{ ModuleVersion = '1.0.0'; }
+        ```
+
+    * .NET csproj files with the file extension `.csproj` (XML element: `/Project/PropertyGroup/Version`).
+        ```
+        <Project>
+            <PropertyGroup>
+                <Version>1.0.0</Version>
+            </PropertyGroup>
+        </Project>
+        ```
 
     If not passed a `Path`, `Version`, or the version passed is null or empty, a date-based version number is generated for you. The major number is the year and the minor number is the month and day, e.g. `2017.0327`. If run by a developer, the patch number is set to `0`. If run on a build server, the build number is used.
 
