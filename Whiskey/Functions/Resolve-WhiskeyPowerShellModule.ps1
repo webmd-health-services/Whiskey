@@ -38,17 +38,16 @@ function Resolve-WhiskeyPowerShellModule
 
     if( $Version )
     {
-        $atVersionString = ' at version {0}' -f $Version
 
-        if( -not [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
-        {
-            $tempVersion = [Version]$Version
-            if( $TempVersion -and ($TempVersion.Build -lt 0) )
-            {
-                $Version = [version]('{0}.{1}.0' -f $TempVersion.Major,$TempVersion.Minor)
-            }
+        [Version]$tempVersion = $null
+	
+	if( [Version]::TryParse( $Version, [ref]$tempVersion ) -and $tempVersion.Build -lt 0 )
+	{
+            $Version = [version]('{0}.{1}.0' -f $TempVersion.Major,$TempVersion.Minor)
         }
 
+        $atVersionString = ' {0}' -f $Version
+	
         $module = Find-Module -Name $Name -AllVersions | 
                         Where-Object { $_.Version.ToString() -like $Version } | 
                         Sort-Object -Property 'Version' -Descending

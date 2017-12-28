@@ -144,8 +144,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
-* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
+* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
+* Fixed: when a task is using a specific version of a PowerShell module, don't search remote repositories; assume user chose a correct version number.
+* Added: `NspCheck` task now supports the `Version` property to define specific versions of NSP. Removed pinned (2.7.0) version of NSP from the task.
 '@
         } # End of PSData hashtable
 

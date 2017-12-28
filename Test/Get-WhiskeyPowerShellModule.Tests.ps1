@@ -47,6 +47,7 @@ function GivenCleanMode
 {
     $script:context.Runmode = 'clean'
 }
+
 function WhenPowershellModuleIsRan
 {
     [CmdletBinding()]
@@ -130,7 +131,7 @@ Describe 'GetPowerShellModule.when an invalid module Name is requested' {
     GivenModule 'bad mod'
     GivenVersion '3.4.0'
     GivenNonExistentModule
-    WhenPowershellModuleIsRan  -ErrorAction SilentlyContinue
+    WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
     ThenErrorShouldBeThrown 'Failed to find module bad mod'
     ThenModuleShouldNotExist
 }
@@ -141,7 +142,7 @@ Describe 'GetPowerShellModule.when given an invalid Version' {
     GivenVersion '0.0.0'
     GivenNonExistentModule
     WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
-    ThenErrorShouldBeThrown "Failed to find module Pester at version 0.0.0"
+    ThenErrorShouldBeThrown -errorMessage "Failed to download Pester 0.0.0"
     ThenModuleShouldNotExist
 }
 

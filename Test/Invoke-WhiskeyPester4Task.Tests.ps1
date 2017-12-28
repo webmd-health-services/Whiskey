@@ -83,7 +83,7 @@ function GivenVersion
 
 function GivenInvalidVersion
 {
-    $Script:taskparameter['version'] = '4.0.0'
+    $Script:taskparameter['version'] = '4.9999.9999'
     Mock -CommandName 'Test-Path' `
         -ModuleName 'Whiskey' `
         -MockWith { return $False }`
