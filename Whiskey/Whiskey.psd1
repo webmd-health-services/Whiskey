@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.24.1'
+    ModuleVersion = '0.25.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -145,6 +145,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
+* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
 '@
         } # End of PSData hashtable
 
