@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.24.1'
+    ModuleVersion = '0.25.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -98,7 +98,7 @@
                             'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
-                            'Resolve-WhiskeyPowerShellModuleVersion',
+                            'Resolve-WhiskeyPowerShellModule',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
@@ -144,7 +144,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
 * Fixed: when a task is using a specific version of a PowerShell module, don't search remote repositories; assume user chose a correct version number.
+* Added: `NspCheck` task now supports the `Version` property to define specific versions of NSP. Removed pinned (2.7.0) version of NSP from the task.
 '@
         } # End of PSData hashtable
 

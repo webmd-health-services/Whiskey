@@ -21,7 +21,7 @@ function GivenAnInstalledPowerShellModule
     )
 
     $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-    $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
+    $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
     if( $LikePowerShell4 )
     {        
         $Name = '{0}' -f $WithName
@@ -105,7 +105,7 @@ function ThenPowerShellModuleUninstalled
         $WithName = 'Pester'
     )
 
-    $WithVersion = Resolve-WhiskeyPowerShellModuleVersion -ModuleName $WithName -Version $WithVersion
+    $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
     if( $LikePowerShell4 )
     {        
         $Name = '{0}' -f $WithName
