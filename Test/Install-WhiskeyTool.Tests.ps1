@@ -46,10 +46,12 @@ function Invoke-PowershellInstall
         Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith {
             return $module = @(
                                  [pscustomobject]@{
-                                                Version = [Version]$Version                                            
+                                                Version = [Version]$Version
+                                                Repository = 'Repository'
                                             }
                                  [pscustomobject]@{
                                                 Version = '0.1.1'
+                                                Repository = 'Repository'
                                             }
                               )            
         }
@@ -84,7 +86,11 @@ function Invoke-PowershellInstall
                 Write-Debug -Message ('                 actual    {0}' -f $Name)
                 Write-Debug -Message ('RequiredVersion  expected  {0}' -f $ActualVersion)
                 Write-Debug -Message ('                 actual    {0}' -f $RequiredVersion)
-                $Name -eq $ForModule -and $RequiredVersion -eq $ActualVersion
+                Write-Debug -Message ('Repository       expected  {0}' -f 'Repository')
+                Write-Debug -Message ('                 actual    {0}' -f $Repository)
+                $Name -eq $ForModule -and `
+                $RequiredVersion -eq $ActualVersion -and `
+                $Repository -eq 'Repository'
             }
         }
 
@@ -198,13 +204,13 @@ Describe 'Install-WhiskeyTool.when omitting BUILD number' {
 }
 
 Describe 'Install-WhiskeyTool.when omitting Version' {
-    $actualVersion = Resolve-WhiskeyPowerShellModuleVersion -Version '' -ModuleName 'Blade'
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $actualVersion -ForRealsies
+    $bladeModule = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $bladeModule.Version -ForRealsies
 }
 
 Describe 'Install-WhiskeyTool.when using wildcard version' {
-    $actualVersion = Resolve-WhiskeyPowerShellModuleVersion -Version '0.*' -ModuleName 'Blade'
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $actualVersion -ForRealsies
+    $bladeModule = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Blade'
+    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $bladeModule.Version -ForRealsies
 }
 
 Describe 'Install-WhiskeyTool.when installing a module under PowerShell 4' {
@@ -241,7 +247,7 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
 
     It 'should write an error' {
         $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'Unable to find any versions'
+        $Global:Error[0] | Should Match 'Failed to find module'
     }
 }
 
