@@ -9,19 +9,9 @@ $workingDirectory = $null
 $failed = $false
 $scriptName = $null
 
-function Get-WorkingDirectory
-{
-    if( $workingDirectory )
-    {
-        return $workingDirectory
-    }
-
-    return $TestDrive.FullName
-}
-
 function Get-OutputFilePath
 {
-    $path = (Join-Path -Path (Get-WorkingDirectory) -ChildPath 'run')
+    $path = (Join-Path -Path ($TestDrive.FullName) -ChildPath ('{0}\run' -f $workingDirectory))
     if( -not [IO.Path]::IsPathRooted($path) )
     {
         $path = Join-Path -Path $TestDrive.FullName -ChildPath $path
@@ -115,7 +105,7 @@ function WhenTheTaskRuns
                                 $scriptName
                             )
                         }
-    $workingDirectory = Get-WorkingDirectory
+
     if( $workingDirectory )
     {
         $taskParameter['WorkingDirectory'] = $workingDirectory
@@ -242,22 +232,6 @@ throw 'fubar'
     ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
 }
 
-Describe 'Invoke-WhiskeyBuild.when PowerShell task defined with an absolute working directory' {
-    GivenWorkingDirectory (Join-Path -path $TestDrive.FullName -ChildPath 'bin')
-    GivenAPassingScript
-    WhenTheTaskRuns
-    ThenTheTaskPasses
-    ThenTheScriptRan
-}
-
-Describe 'Invoke-WhiskeyBuild.when PowerShell task defined with a relative working directory' {
-    GivenWorkingDirectory 'bin'
-    GivenAPassingScript
-    WhenTheTaskRuns
-    ThenTheTaskPasses
-    ThenTheScriptRan
-}
-
 Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {
     GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
     GivenAPassingScript
@@ -272,7 +246,7 @@ function ThenFile
         $HasContent
     )
 
-    $fullpath = Join-Path -Path (Get-WorkingDirectory) -ChildPath $Path 
+    $fullpath = Join-Path -Path ($TestDrive.FullName) -ChildPath $Path 
     $fullpath | Should -Exist
     Get-Content -Path $fullpath | Should -Be $HasContent
 }

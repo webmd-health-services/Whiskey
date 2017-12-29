@@ -31,7 +31,7 @@ function Get-WhiskeyNPMPath
         $version = $Matches[1]
 
         $localNpmPath = (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
-        $localNpmMetadata = Get-Content -Path (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\package.json') -ErrorAction Ignore | ConvertFrom-Json
+        $localNpmMetadata = Get-Content -Path (Join-Path -Path $ApplicationRoot -ChildPath 'node_modules\npm\package.json') -Raw -ErrorAction Ignore | ConvertFrom-Json
 
         if ((Test-Path -Path $localNpmPath -PathType Leaf) -and ($localNpmMetadata.Version -eq $version))
         {

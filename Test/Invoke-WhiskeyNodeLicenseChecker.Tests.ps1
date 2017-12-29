@@ -109,7 +109,7 @@ function WhenRunningTask
     param()
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
-    
+
     $taskParameter = @{ 'NpmRegistryUri' = $script:npmRegistryUri }
 
     if ($givenWorkingDirectory)
@@ -126,8 +126,6 @@ function WhenRunningTask
         $taskContext.RunMode = 'Initialize'
     }
 
-    Push-Location $script:workingDirectory
-
     try
     {
         CreatePackageJson
@@ -138,10 +136,6 @@ function WhenRunningTask
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-    finally
-    {
-        Pop-Location
     }
 }
 
@@ -168,7 +162,7 @@ function ThenLicenseReportCreated
 
 function ThenLicenseReportIsValidJSON
 {
-    $licenseReportJson = Get-Content -Path $licenseReportPath | ConvertFrom-Json
+    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
 
     It 'should be valid JSON' {
         $licenseReportJson | Should -Not -BeNullOrEmpty
@@ -184,7 +178,7 @@ function ThenLicenseReportNotCreated
 
 function ThenLicenseReportFormatTransformed
 {
-    $licenseReportJson = Get-Content -Path $licenseReportPath | ConvertFrom-Json
+    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
 
     It 'should transform the license report format to a more readable structure' {
         $licenseReportJson | Select-Object -ExpandProperty 'name' | Should -Not -BeNullOrEmpty

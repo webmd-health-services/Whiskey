@@ -52,7 +52,16 @@ function Initialize-NodeProject
     # Run npm install so we have things to prune
     $nodePath = Install-WhiskeyNodeJs -RegistryUri $script:npmRegistryUri -ApplicationRoot $script:workingDirectory
     $npmPath = (Join-Path -Path ($NodePath | Split-Path) -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve)
-    & $nodePath $npmPath install
+    
+    Push-Location -Path $script:workingDirectory
+    try
+    {
+        & $nodePath $npmPath install
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
 
 function GivenDependency 
@@ -127,8 +136,6 @@ function WhenRunningTask
         $taskContext.RunMode = 'Initialize'
     }
 
-    Push-Location $script:workingDirectory
-
     try
     {
         Initialize-NodeProject
@@ -139,10 +146,6 @@ function WhenRunningTask
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-    finally
-    {
-        Pop-Location
     }
 }
 

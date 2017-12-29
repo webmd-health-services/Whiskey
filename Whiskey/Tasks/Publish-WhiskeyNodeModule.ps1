@@ -42,11 +42,7 @@ function Publish-WhiskeyNodeModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $workingDir = $TaskContext.BuildRoot
-    if($TaskParameter.ContainsKey('WorkingDirectory'))
-    {
-        $workingDir = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     $npmRegistryUri = [uri]$TaskParameter['NpmRegistryUri']
     if (-not $npmRegistryUri) 
@@ -58,7 +54,7 @@ function Publish-WhiskeyNodeModule
         NpmRegistryUri: https://registry.npmjs.org/
     '
     }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDir -ForDeveloper:$TaskContext.ByDeveloper
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
     
     if( $TaskContext.ShouldInitialize() )
     {
@@ -103,7 +99,6 @@ function Publish-WhiskeyNodeModule
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
 
-    Push-Location $workingDir
     try
     {
         $packageNpmrc = New-Item -Path '.npmrc' -ItemType File -Force
@@ -121,7 +116,7 @@ function Publish-WhiskeyNodeModule
             } |
             Write-Verbose
 
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
         Write-Verbose -Message 'Removing extraneous packages with ''npm prune'''
         Invoke-Command -ScriptBlock {
             & $nodePath $npmPath prune --production --no-color
@@ -133,7 +128,7 @@ function Publish-WhiskeyNodeModule
         }
         
         # local version of npm gets removed by 'npm prune', so call Get-WhiskeyNPMPath to download it again so we can also use the desired version of npm for publishing
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDir
+        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
         Write-Verbose -Message 'Publishing package with ''npm publish'''
         Invoke-Command -ScriptBlock {
             & $nodePath $npmPath publish
@@ -151,7 +146,5 @@ function Publish-WhiskeyNodeModule
             Write-Verbose -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
         }
-        
-        Pop-Location
     }
 }
