@@ -232,8 +232,14 @@ function Invoke-WhiskeyTask
         return
     }
 
+    $workingDirectory = $TaskContext.BuildRoot
+    if( $Parameter['WorkingDirectory'] )
+    {
+        $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
+    }
+
     $taskProperties = $Parameter.Clone()
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring' ) )
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory' ) )
     {
         $taskProperties.Remove($commonPropertyName)
     }
@@ -251,6 +257,7 @@ function Invoke-WhiskeyTask
     Write-Verbose -Message $prefix
     $startedAt = Get-Date
     $result = 'FAILED'
+    Push-Location -Path $workingDirectory
     try
     {
         $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
@@ -270,6 +277,7 @@ function Invoke-WhiskeyTask
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
         Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)
+        Pop-Location
     }
 
     Invoke-Event -Prefix $prefix -EventName 'AfterTask' -Property $taskProperties

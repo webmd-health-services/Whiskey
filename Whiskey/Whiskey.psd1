@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.24.0'
+    ModuleVersion = '0.25.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -66,8 +66,8 @@
     NestedModules = @( 
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-						'PackageManagement',
-						'PowerShellGet',
+                        'PackageManagement',
+                        'PowerShellGet',
                         'ProGetAutomation',
                         'VSSetup'
                      )
@@ -98,7 +98,7 @@
                             'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
-                            'Resolve-WhiskeyPowerShellModuleVersion',
+                            'Resolve-WhiskeyPowerShellModule',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
@@ -144,14 +144,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `NspCheck` task doesn't properly capture report of found vulnerabilities.
-* Fixed: `NspCheck` task throws PowerShell exception instead of NSP error if NSP did not return valid JSON.
-* `Exec` task now supports ranges `( .., >=, <=, >, < )` for `SuccessExitCode` property.
-* Removed dependency on `Carbon` PowerShell module.
-* Added `PackageManagement` and `PowerShellGet` modules to Whiskey package.
-* Fixed: PowerShellGet can't save modules that have prerelease versions in their feed.
-* Determining latest version of Pester module to install is handled by Install-WhiskeyTool.
-* Added: `NspCheck` task now supports the `Version` property to define specific versions of NSP. Removed pinned (2.7.0) version of NSP from the task.
+* Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
+* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
+* Added common WorkingDirectory property. Setting it on a task will result in that task running in the given directory. The path must be relative to the build root.
 '@
         } # End of PSData hashtable
 

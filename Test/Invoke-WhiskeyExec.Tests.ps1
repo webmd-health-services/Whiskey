@@ -123,9 +123,6 @@ function WhenRunningExecutable
 
     $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot)
 
-    # This is normally done by Invoke-WhiskeyBuild, which we're skipping past by invoking WhiskeyTask directly
-    Push-Location -Path (Get-BuildRoot)
-
     Try 
     {
         Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
@@ -134,8 +131,6 @@ function WhenRunningExecutable
     {
         $script:failed = $true
     }
-
-    Pop-Location
 }
 
 function ThenExecutableRan
@@ -409,7 +404,7 @@ Describe 'Invoke-WhiskeyExec.when given bad working directory' {
     GivenPath 'executable.bat'
     GivenWorkingDirectory 'badworkdir'
     WhenRunningExecutable
-    ThenTaskFailedWithMessage 'Could not locate the directory'    
+    ThenTaskFailedWithMessage 'BuildTasks.+WorkingDirectory.+does not exist.'    
 }
 
 Describe 'Invoke-WhiskeyExec.when running executable located by the Path environment variable' {

@@ -417,6 +417,7 @@ function Init
     $script:dependency = @()
     $script:ByDeveloper = $false
     $script:WithNoName = $false
+    $script:inSubDirectory = $null
     $script:inWorkingDirectory = $null
     $script:UsingNodeVersion = '^4.4.7'
     $script:npmEngine = $null
@@ -492,7 +493,8 @@ Describe 'Node.when user forgets to add any NpmScript' {
 
 Describe 'Node.when app is not in the root of the repository' {
     Init
-    GivenSubDirectory -inWorkingDirectory 's'
+    GivenSubDirectory -subDirectory 's'
+    GivenWorkingDirectory -inWorkingDirectory 's'
     GivenBuildByDeveloper
     GivenNpmRegistryUri -registry 'http://registry.npmjs.org/'
     GivenNpmScriptsToRun 'build','test'
@@ -527,6 +529,7 @@ Describe 'Node.when run by build server with Clean Switch' {
     WhenBuildIsStarted
     ThenBuildSucceeds
     ThenPackagesCleaned
+    $script:inWorkingDirectory = $null
     # Run again to make sure we don't get an error if there isn't a directory to clean.
     WhenBuildIsStarted
     ThenBuildSucceeds

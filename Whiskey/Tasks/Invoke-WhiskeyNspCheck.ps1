@@ -85,11 +85,7 @@ function Invoke-WhiskeyNspCheck
         '
     }
 
-    $workingDirectory = $TaskContext.BuildRoot
-    if ($TaskParameter['WorkingDirectory'])
-    {
-        $workingDirectory = $TaskParameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
+    $workingDirectory = (Get-Location).ProviderPath
 
     if ($TaskContext.ShouldClean())
     {
@@ -126,47 +122,39 @@ function Invoke-WhiskeyNspCheck
         return
     }
 
-    Push-Location -Path $workingDirectory
+    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
+
+    Write-Timing -Message 'Running NSP security check'
+
+    $formattingArg = '--output'
+    if( !$nspVersion -or $nspVersion -ge (ConvertTo-WhiskeySemanticVersion -InputObject '3.0.0') )
+    {
+        $formattingArg = '--reporter'
+    }
+
+    $output = Invoke-Command -NoNewScope -ScriptBlock {
+        param(
+            $JsonOutputFormat
+        )
+
+        & $nodePath $nspPath 'check' $JsonOutputFormat 'json' 2>&1 |
+            ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
+    } -ArgumentList $formattingArg
+
+    Write-Timing -Message 'COMPLETE'
+
     try
     {
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
-
-        Write-Timing -Message 'Running NSP security check'
-
-        $formattingArg = '--output'
-        if( !$nspVersion -or $nspVersion -gt (ConvertTo-WhiskeySemanticVersion -InputObject '2.7.0') )
-        {
-            $formattingArg = '--reporter'
-        }
-
-        $output = Invoke-Command -NoNewScope -ScriptBlock {
-            param(
-                $JsonOutputFormat
-            )
-
-            & $nodePath $nspPath 'check' $JsonOutputFormat 'json' 2>&1 |
-                ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
-        } -ArgumentList $formattingArg
-
-        Write-Timing -Message 'COMPLETE'
-
-        try
-        {
-            $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
-        }
-        catch
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, did not run successfully as it did not return valid JSON (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$output)
-        }
-
-        if ($Global:LASTEXITCODE -ne 0)
-        {
-            $summary = $results | Format-List | Out-String
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
-        }
+        $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
     }
-    finally
+    catch
     {
-        Pop-Location
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, did not run successfully as it did not return valid JSON (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$output)
+    }
+
+    if ($Global:LASTEXITCODE -ne 0)
+    {
+        $summary = $results | Format-List | Out-String
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
     }
 }

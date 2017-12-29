@@ -96,18 +96,7 @@ function Invoke-WhiskeyExec
         }
     }
 
-
-    $workingDirectory = $TaskContext.BuildRoot
-    if ( $TaskParameter['WorkingDirectory'] )
-    {
-        $workingDirectory = $TaskParameter['WorkingDirectory']
-
-        if ( -not (Test-Path -Path $workingDirectory -PathType Container) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate the directory ''{0}'' specified in the ''WorkingDirectory'' property.' -f $workingDirectory)
-        }
-    }
-
+    $workingDirectory = (Get-Location).ProviderPath
 
     $argumentListParam = @{}
     if ( $TaskParameter['Argument'] )
