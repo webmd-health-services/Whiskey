@@ -144,6 +144,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
+* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
 * Added common WorkingDirectory property. Setting it on a task will result in that task running in the given directory. The path must be relative to the build root.
 '@
         } # End of PSData hashtable
