@@ -11,7 +11,7 @@ function Invoke-WhiskeyExec
 
     Pass arguments to the executable via the `Argument` property. The `Exec` task uses PowerShell's `Start-Process` cmdlet to run the executable, so that arguments will be passes as-is, with no escaping. YAML strings, however, are usually single-quoted (e.g. `'Value'`) or double-quoted (e.g. `"Value"`). If you're using a single quoted string and need to insert a single quote, escape it by using two single quotes, e.g. `'escape: '''` is converted to `escape '`. If you're using a double-quoted string and need to insert a double quote, escape it with `\`, e.g. `"escape: \""` is converted to `escape: "`. YAML supports other escape sequences in double-quoted strings. The full list of escape sequences is in the [YAML specification](http://yaml.org/spec/current.html#escaping in double quoted style/).
 
-    The `Exec` task supports a simplified single line syntax to define the `Path` and optional `Arguments` properties. Anything enclosed by single-quote or double-quote characters are treated as individual path or argument. Otherwise, white-space is the default delimiter separating items.
+    The `Exec` task supports a simplified single line syntax to define the `Path` and optional `Arguments` properties. Anything enclosed by single-quote or double-quote characters are treated as an individual path or argument. Otherwise, white-space is the default delimiter separating items.
 
     By default, the executable is run from your `whiskey.yml` file's directory (i.e. the build root). Change the working directory with the `WorkingDirectory` property.
 
@@ -77,13 +77,14 @@ function Invoke-WhiskeyExec
 
     if( $TaskParameter.ContainsKey('') )
     {
-        $defaultProperty = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+        $regExMatches = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+        $defaultProperty = @($regExMatches.Matches.Groups | Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value')
 
-        $TaskParameter['Path'] = $defaultProperty.Matches | Where-Object { $_.Index -eq 0 } | Select-Object -ExpandProperty 'Groups' |
-            Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
-
-        $TaskParameter['Argument'] = $defaultProperty.Matches | Where-Object { $_.Index -ne 0 } | Select-Object -ExpandProperty 'Groups' |
-            Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+        $TaskParameter['Path'] = $defaultProperty[0]
+        if( $defaultProperty.Count -gt 1 )
+        {
+            $TaskParameter['Argument'] = $defaultProperty[1..($defaultProperty.Count - 1)]
+        }
     }
 
     $path = $TaskParameter['Path']

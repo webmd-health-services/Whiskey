@@ -105,13 +105,14 @@ function GivenTaskDefaultProperty
         $Property
     )
 
-    $script:defaultProperty = Select-String -InputObject $Property -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+    $regExMatches = Select-String -InputObject $Property -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+    $defaultProperty = @($regExMatches.Matches.Groups | Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value')
 
-    $script:path = $defaultProperty.Matches | Where-Object { $_.Index -eq 0 } | Select-Object -ExpandProperty 'Groups' |
-        Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
-
-    $script:argument = $defaultProperty.Matches | Where-Object { $_.Index -ne 0 } | Select-Object -ExpandProperty 'Groups' |
-        Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+    $script:path = $defaultProperty[0]
+    if( $defaultProperty.Count -gt 1 )
+    {
+        $script:argument = $defaultProperty[1..($defaultProperty.Count - 1)]
+    }
 }
 
 function WhenRunningExecutable
