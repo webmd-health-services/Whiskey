@@ -9,6 +9,7 @@ $failed = $false
 $path = $null
 $successExitCode = $null
 $workingDirectory = $null
+$defaultProperty = $null
 
 function Get-BuildRoot
 {
@@ -26,6 +27,7 @@ function Init
     $script:path = $null
     $script:successExitCode = $null
     $script:workingDirectory = $null
+    $script:defaultProperty = $null
 }
 
 function GivenArgument
@@ -97,6 +99,21 @@ function GivenSuccessExitCode
     $script:successExitCode = $SuccessExitCode
 }
 
+function GivenTaskDefaultProperty
+{
+    param(
+        $Property
+    )
+
+    $script:defaultProperty = Select-String -InputObject $Property -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+
+    $script:path = $defaultProperty.Matches | Where-Object { $_.Index -eq 0 } | Select-Object -ExpandProperty 'Groups' |
+        Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+
+    $script:argument = $defaultProperty.Matches | Where-Object { $_.Index -ne 0 } | Select-Object -ExpandProperty 'Groups' |
+        Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+}
+
 function WhenRunningExecutable
 {
     $TaskParameter = @{}
@@ -119,6 +136,11 @@ function WhenRunningExecutable
     if ( $successExitCode )
     {
         $TaskParameter['SuccessExitCode'] = $successExitCode
+    }
+
+    if ( $defaultProperty )
+    {
+        $TaskParameter[''] = $defaultProperty
     }
 
     $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot)
@@ -224,6 +246,26 @@ Describe 'Invoke-WhiskeyExec.when running an executable with multiple arguments'
     GivenExecutableFile 'executable.bat' 'exit 0'
     GivenPath 'executable.bat'
     GivenArgument 'Arg1','Arg2'
+    WhenRunningExecutable
+    ThenExecutableRan
+    ThenSpecifiedArgumentsWerePassed
+    ThenTaskSuccess
+}
+
+Describe 'Invoke-WhiskeyExec.when utilizing default task property to define executable and arguments' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenTaskDefaultProperty 'executable.bat Arg1 Arg2 "Arg 3" ''Arg 4'''
+    WhenRunningExecutable
+    ThenExecutableRan
+    ThenSpecifiedArgumentsWerePassed
+    ThenTaskSuccess
+}
+
+Describe 'Invoke-WhiskeyExec.when utilizing default task property to define executable with no arguments' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenTaskDefaultProperty 'executable.bat'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed

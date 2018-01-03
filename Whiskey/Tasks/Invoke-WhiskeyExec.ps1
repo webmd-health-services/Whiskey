@@ -66,6 +66,17 @@ function Invoke-WhiskeyExec
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if( $TaskParameter.ContainsKey('') )
+    {
+        $defaultProperty = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+
+        $TaskParameter['Path'] = $defaultProperty.Matches | Where-Object { $_.Index -eq 0 } | Select-Object -ExpandProperty 'Groups' |
+            Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+
+        $TaskParameter['Argument'] = $defaultProperty.Matches | Where-Object { $_.Index -ne 0 } | Select-Object -ExpandProperty 'Groups' |
+            Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value'
+    }
+
     $path = $TaskParameter['Path']
     if ( -not $path )
     {
