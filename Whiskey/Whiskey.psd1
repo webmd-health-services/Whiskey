@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.25.0'
+    ModuleVersion = '0.25.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,9 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
-* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
-* Added common WorkingDirectory property. Setting it on a task will result in that task running in the given directory. The path must be relative to the build root.
+* `Exec` task now supports a single line syntax to define Path and Arguments properties.
 '@
         } # End of PSData hashtable
 
