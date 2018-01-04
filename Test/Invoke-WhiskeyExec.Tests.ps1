@@ -9,6 +9,7 @@ $failed = $false
 $path = $null
 $successExitCode = $null
 $workingDirectory = $null
+$defaultProperty = $null
 
 function Get-BuildRoot
 {
@@ -26,6 +27,7 @@ function Init
     $script:path = $null
     $script:successExitCode = $null
     $script:workingDirectory = $null
+    $script:defaultProperty = $null
 }
 
 function GivenArgument
@@ -97,6 +99,15 @@ function GivenSuccessExitCode
     $script:successExitCode = $SuccessExitCode
 }
 
+function GivenTaskDefaultProperty
+{
+    param(
+        $Property
+    )
+
+    $script:defaultProperty = $Property
+}
+
 function WhenRunningExecutable
 {
     $TaskParameter = @{}
@@ -119,6 +130,11 @@ function WhenRunningExecutable
     if ( $successExitCode )
     {
         $TaskParameter['SuccessExitCode'] = $successExitCode
+    }
+
+    if ( $defaultProperty )
+    {
+        $TaskParameter[''] = $defaultProperty
     }
 
     $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot)
@@ -144,9 +160,13 @@ function ThenExecutableRan
 
 function ThenSpecifiedArgumentsWerePassed
 {
+    param(
+        $Arguments
+    )
+
     $argumentsResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'Arguments.txt' -Recurse | Get-Content
 
-    if ( -not $script:argument )
+    if ( -not $Arguments )
     {
         It 'should not pass any arguments' {
             $argumentsResult | Should -BeNullOrEmpty
@@ -154,8 +174,8 @@ function ThenSpecifiedArgumentsWerePassed
     }
     else
     {
-        It ('should pass these arguments: ''{0}''' -f ($script:argument -join ''',''')) {
-            $argumentsResult | Should -Be ($script:argument -join ' ')
+        It ('should pass these arguments: ''{0}''' -f ($Arguments -join ''',''')) {
+            $argumentsResult | Should -Be ($Arguments -join ' ')
         }
 
     }
@@ -215,7 +235,7 @@ Describe 'Invoke-WhiskeyExec.when running an executable with an argument' {
     GivenArgument 'Arg1'
     WhenRunningExecutable
     ThenExecutableRan
-    ThenSpecifiedArgumentsWerePassed
+    ThenSpecifiedArgumentsWerePassed 'Arg1'
     ThenTaskSuccess
 }
 
@@ -224,6 +244,26 @@ Describe 'Invoke-WhiskeyExec.when running an executable with multiple arguments'
     GivenExecutableFile 'executable.bat' 'exit 0'
     GivenPath 'executable.bat'
     GivenArgument 'Arg1','Arg2'
+    WhenRunningExecutable
+    ThenExecutableRan
+    ThenSpecifiedArgumentsWerePassed 'Arg1','Arg2'
+    ThenTaskSuccess
+}
+
+Describe 'Invoke-WhiskeyExec.when utilizing default task property to define executable and arguments' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenTaskDefaultProperty 'executable.bat Arg1 Arg2 "Arg 3" ''Arg 4'''
+    WhenRunningExecutable
+    ThenExecutableRan
+    ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', '"Arg 3"', '''Arg 4'''
+    ThenTaskSuccess
+}
+
+Describe 'Invoke-WhiskeyExec.when utilizing default task property to define executable with no arguments' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenTaskDefaultProperty -Property 'executable.bat'
     WhenRunningExecutable
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed

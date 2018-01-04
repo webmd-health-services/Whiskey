@@ -76,6 +76,10 @@ function Invoke-WhiskeyPipeline
             {
                 $taskItem = @{ }
             }
+            elseif( $taskItem -is [string] )
+            {
+                $taskItem = @{ '' = $taskItem }
+            }
         }
         else
         {
