@@ -145,6 +145,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * `Exec` task now supports a single line syntax to define Path and Arguments properties.
+* Fixed: `PowerShell` task would not fail the build on certain PowerShell errors that are non-terminating but still cause unexpected script exit.
 '@
         } # End of PSData hashtable
 

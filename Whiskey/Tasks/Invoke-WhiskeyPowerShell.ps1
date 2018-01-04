@@ -65,7 +65,7 @@ function Invoke-WhiskeyPowerShell
                 ForEach-Object { $argument[$_.Name] = $argument[$_.Name] | ConvertFrom-WhiskeyYamlScalar }
         }
 
-        $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-ExitCode-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
+        $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-RunResult-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $job = Start-Job -ScriptBlock {
             $workingDirectory = $using:WorkingDirectory
             $scriptPath = $using:ScriptPath
@@ -90,8 +90,15 @@ function Invoke-WhiskeyPowerShell
 
             Set-Location $workingDirectory
             $Global:LASTEXITCODE = 0
+
             & $scriptPath @contextArgument @argument
-            $Global:LASTEXITCODE | Set-Content -Path $resultPath
+
+            $result = @{
+                'ExitCode'   = $Global:LASTEXITCODE
+                'Successful' = $?
+            }
+
+            $result | ConvertTo-Json | Set-Content -Path $resultPath
         }
 
         do
@@ -102,16 +109,22 @@ function Invoke-WhiskeyPowerShell
 
         $job | Receive-Job
 
-        if( -not (Test-Path -Path $resultPath -PathType Leaf) )
+        if( (Test-Path -Path $resultPath -PathType Leaf) )
+        {
+            $runResult = Get-Content -Path $resultPath -Raw | ConvertFrom-Json
+        }
+        else
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
         }
-                    
-        [int]$exitCode = Get-Content -Path $resultPath | Select-Object -First 1
-        
-        if( $exitCode )
+
+        if( $runResult.ExitCode -ne 0 )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $scriptPath,$exitCode)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
+        }
+        elseif( $runResult.Successful -eq $false )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
         }
 
     }
