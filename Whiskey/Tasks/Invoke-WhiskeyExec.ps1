@@ -77,7 +77,7 @@ function Invoke-WhiskeyExec
 
     if( $TaskParameter.ContainsKey('') )
     {
-        $regExMatches = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|"([^"]*)"|''([^'']*)''' -AllMatches
+        $regExMatches = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|("[^"]*")|(''[^'']*'')' -AllMatches
         $defaultProperty = @($regExMatches.Matches.Groups | Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value')
 
         $TaskParameter['Path'] = $defaultProperty[0]
