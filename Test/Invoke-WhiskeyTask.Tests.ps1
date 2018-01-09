@@ -13,6 +13,7 @@ $postTaskPluginCalled = $false
 $output = $null
 $taskDefaults = @{ }
 $scmBranch = $null
+$variables = @{ }
 
 function Invoke-PreTaskPlugin
 {
@@ -157,6 +158,25 @@ function GivenDefaults
     $script:taskDefaults[$ForTask] = $Default
 }
 
+function GivenScmBranch
+{
+    param(
+        [string]
+        $Branch
+    )
+    $script:scmBranch = $Branch
+}
+
+function GivenVariable
+{
+    param(
+        $Name,
+        $Value
+    )
+
+    $variables[$Name] = $Value
+}
+
 function GivenWhiskeyYmlBuildFile
 {
     param(
@@ -172,15 +192,6 @@ function GivenWhiskeyYmlBuildFile
     return $whiskeyymlpath
 }
 
-function GivenScmBranch
-{
-    param(
-        [string]
-        $Branch
-    )
-    $script:scmBranch = $Branch
-}
-
 function GivenWorkingDirectory
 {
     param(
@@ -189,6 +200,7 @@ function GivenWorkingDirectory
     )
 
     $wd = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+    New-Item -Path $wd -ItemType 'Directory' -Force
 
     Mock -CommandName 'Push-Location' -ModuleName 'Whiskey' -ParameterFilter { $workingDirectory -eq $wd }
     Mock -CommandName 'Pop-Location' -ModuleName 'Whiskey'
@@ -199,6 +211,7 @@ function Init
     $script:taskDefaults = @{ }
     $script:output = $null
     $script:scmBranch = $null
+    $script:variables = @{ }
 }
 
 function ThenPipelineFailed
@@ -506,6 +519,11 @@ function WhenRunningTask
     }
 
     Mock -CommandName 'New-Item' -ModuleName 'Whiskey' -MockWith { [IO.Directory]::CreateDirectory($Path) }
+
+    foreach( $variableName in $variables.Keys )
+    {
+        Add-WhiskeyVariable -Context $context -Name $variableName -Value $variables[$variableName]
+    }
 
     $Global:Error.Clear()
     $script:threwException = $false
@@ -952,3 +970,93 @@ Describe 'Invoke-WhiskeyTask.when OnlyDuring or ExceptDuring contains invalid va
         RemoveMockTask
     }
 }
+
+foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+{
+    Describe ('Invoke-WhiskeyTask.when {0} property has variable for a value' -f $commonPropertyName) {
+        Init
+        $taskProperties = @{ }
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+        GivenVariable 'Fubar' 'Snafu'
+        WhenRunningTask 'PowerShell' -Parameter @{ $commonPropertyName = '$(Fubar)' } -ErrorAction SilentlyContinue
+        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when OnlyOnBranch property has variable for a value') {
+    Init
+    $taskProperties = @{ }
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'OnlyOnBranch' = '$(Fubar)' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' -ExpectedParameter @{ }
+}
+
+Describe ('Invoke-WhiskeyTask.when ExceptOnBranch property has variable for a value') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'ExceptOnBranch' = '$(Fubar)' }
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property has a variable for a value') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenWorkingDirectory 'Snafu'
+    GivenVariable 'Fubar' 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = '$(Fubar)' }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+{
+    Describe ('Invoke-WhiskeyTask.when {0} property comes from defaults' -f $commonPropertyName) {
+        Init
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+        GivenDefaults @{ $commonPropertyName = 'Snafu' } -ForTask 'PowerShell'
+        WhenRunningTask 'PowerShell' -Parameter @{ } -ErrorAction SilentlyContinue
+        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when OnlyOnBranch property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenDefaults @{ 'OnlyOnBranch' = 'Snafu' } -ForTask 'PowerShell'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' -ExpectedParameter @{ }
+}
+
+Describe ('Invoke-WhiskeyTask.when ExceptOnBranch property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenDefaults @{ 'ExceptOnBranch' = 'Snafu' } -ForTask 'PowerShell'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenWorkingDirectory 'Snafu'
+    GivenDefaults @{ 'WorkingDirectory' = 'Snafu' } -ForTask 'PowerShell'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults and default has a variable') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenWorkingDirectory 'Snafu'
+    GivenDefaults @{ 'WorkingDirectory' = '$(Fubar)' } -ForTask 'PowerShell'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore

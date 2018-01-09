@@ -112,6 +112,13 @@ function Invoke-WhiskeyTask
 
     $TaskContext.TaskName = $Name
 
+    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
+    {
+        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
+    }
+
+    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
+
     #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
     $prefix = '[{0}]' -f $Name
 
@@ -226,7 +233,7 @@ function Invoke-WhiskeyTask
         }
     }
     
-    if( !$executeTaskOnBranch )
+    if( -not $executeTaskOnBranch )
     {
         Write-Verbose -Message ('{0}  SKIPPED  {1} not configured to execute this task.' -f $prefix, $branch)
         return
@@ -244,13 +251,6 @@ function Invoke-WhiskeyTask
         $taskProperties.Remove($commonPropertyName)
     }
     
-    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
-    {
-        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $taskProperties
-    }
-
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $taskProperties | Out-Null
-
     Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
     Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix -Property $taskProperties
 

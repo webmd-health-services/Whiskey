@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.25.1'
+    ModuleVersion = '0.26.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,8 +144,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* `Exec` task now supports a single line syntax to define Path and Arguments properties.
-* Fixed: `PowerShell` task would not fail the build on certain PowerShell errors that are non-terminating but still cause unexpected script exit.
+* Fixed: variables in common task property values (i.e. OnlyBy, ExceptDuring, OnlyOnBranch, WorkingDirectory, etc.) aren't resolved.
+* Fixed: common task properties in task default properties are ignored.
 '@
         } # End of PSData hashtable
 
