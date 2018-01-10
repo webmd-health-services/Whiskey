@@ -54,6 +54,7 @@ function Invoke-WhiskeyNpmInstall
     #>
 
     [Whiskey.Task("NpmInstall", SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.RequiresTool("Node", "NodePath")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

@@ -1,6 +1,8 @@
 
 $events = @{ }
 
+$7z = Join-Path -Path $PSScriptRoot -ChildPath 'bin\7-Zip\7z.exe' -Resolve
+
 $types = @(
                 @{
                     Name = 'Whiskey.TaskAttribute';
