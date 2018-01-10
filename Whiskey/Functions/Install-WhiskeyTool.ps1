@@ -28,6 +28,15 @@ function Install-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [ValidateSet('Node')]
+        # The name of the tool to install. Currently only Node is supported.
+        $Name,
+
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        # The context of the current build.
+        $Context,
+        
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The name of the PowerShell module to download.
@@ -44,7 +53,8 @@ function Install-WhiskeyTool
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
+        [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The root directory where the tools should be downloaded. The default is your build root.
         #

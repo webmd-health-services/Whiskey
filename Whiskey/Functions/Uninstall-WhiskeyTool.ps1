@@ -31,6 +31,15 @@ function Uninstall-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [ValidateSet('Node')]
+        # The name of the tool to uninstall. Currently only Node is supported.
+        $Name,
+
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        # The context of the current build.
+        $Context,
+
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The name of the PowerShell module to uninstall.
@@ -45,7 +54,8 @@ function Uninstall-WhiskeyTool
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
+        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
         [string]
         # The build root where the build is currently running. Tools are installed here.
         $BuildRoot

@@ -1,12 +1,10 @@
 
 $events = @{ }
 
-$type = [AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('Whiskey.TaskAttribute') } | Select-Object -First 1
-
-if( -not $type )
-{
-    Add-Type -TypeDefinition @"
-
+$types = @(
+                @{
+                    Name = 'Whiskey.TaskAttribute';
+                    Definition = @'
 namespace Whiskey {
 
     public sealed class TaskAttribute : System.Attribute {
@@ -26,10 +24,45 @@ namespace Whiskey {
     }
 
 }
+'@;
+                },
+                @{
+                    Name = 'Whiskey.RequiresToolAttribute';
+                    Definition = @'
+namespace Whiskey {
+    
+    public sealed class RequiresToolAttribute : System.Attribute {
+        
+        public RequiresToolAttribute(string toolName, string toolPathParameterName)
+        {
+            ToolName = toolName;
+            ToolPathParameterName = toolPathParameterName;
+        }
 
-"@ -ErrorAction Ignore
+        public string ToolName { get; private set; }
+
+        public string ToolPathParameterName { get; set; }
+    }
 }
+'@;
+                }
+        )
 
+foreach( $typeDef in $types )
+{
+    $type = [AppDomain]::CurrentDomain.GetAssemblies() | 
+                ForEach-Object { $_.GetType($typeDef.Name) } | 
+                Select-Object -First 1
+
+
+    if( $type )
+    {
+        continue
+    }
+
+    Add-Type -TypeDefinition $typeDef.Definition 
+}
+            
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'SupportsClean') )
 {
