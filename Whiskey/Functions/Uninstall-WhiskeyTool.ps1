@@ -101,4 +101,28 @@ function Uninstall-WhiskeyTool
             Remove-Item -Path $nuGetRoot -Recurse -Force
         }
     }
+    elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
+    {
+        switch( $Name )
+        {
+            'Node'
+            {
+                $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+                New-Item -Path $emptyDir -ItemType 'Directory'
+                $dirToRemove = Join-Path -Path $Context.BuildRoot -ChildPath '.node'
+                robocopy $emptyDir $dirToRemove /MIR /R:0 /NP
+                if( $LASTEXITCODE -ge 8 )
+                {
+                    Write-Error -Message ('Robocopy failed to remove contents of ''{0}'' (it returned exit code {1}). Please see previous output for details.' -f $dirToRemove,$LASTEXITCODE)
+                }
+
+                Remove-Item -Path $dirToRemove -Recurse -Force
+                Remove-Item -Path $emptyDir -Recurse -Force
+            }
+            default
+            {
+                throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $Name)
+            }
+        }
+    }
 }

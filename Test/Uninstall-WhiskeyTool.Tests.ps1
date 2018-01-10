@@ -232,3 +232,16 @@ Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 
     WhenUninstallingPowerShellModule -WithVersion '4.*'
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'
 }
+
+Describe 'Uninstall-WhiskeyTool.when uninstalling Node' {
+    $context = New-WhiskeyTestContext -ForDeveloper
+    Install-WhiskeyTool -Name Node -Context $context
+    $Global:Error.Clear()
+    Uninstall-WhiskeyTool -Name Node -Context $context
+    It ('should not write any errors') {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+    It ('should delete Node') {
+        Join-Path -Path $context.BuildRoot -ChildPath '.node' | Should -Not -Exist
+    }
+}
