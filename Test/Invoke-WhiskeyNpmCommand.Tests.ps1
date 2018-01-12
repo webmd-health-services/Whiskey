@@ -3,8 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyNpmCommand.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyNPMPath.ps1' -Resolve)
-
 
 $argument = @{}
 $dependency = $null
@@ -76,11 +74,6 @@ function GivenNpmCommand
         $Command
     )
     $script:npmCommand = $Command
-}
-
-function GivenFailingNPMInstall
-{
-    Mock -CommandName 'Get-WhiskeyNPMPath'
 }
 
 function GivenMissingGlobalNPM
@@ -166,13 +159,6 @@ function ThenExitCode
 
     It ('should return exit code ''{0}''' -f $ExitCode) {
         $Global:LASTEXITCODE | Should -Be $ExitCode
-    }
-}
-
-function ThenNPMInstalled
-{
-    It 'should install NPM' {
-        Assert-MockCalled -CommandName 'Get-WhiskeyNPMPath' -Times 1
     }
 }
 

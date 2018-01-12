@@ -49,36 +49,20 @@ function Invoke-WhiskeyNpmCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     $nodeRoot = $NodePath | Split-Path
         
-    Write-Timing -Message 'Resolving path to NPM.'
-    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath
-    Write-Timing -Message ('COMPLETE')
-    
-    if( -not $npmPath )
+    $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+
+    if( -not $npmPath -or -not (Test-Path -Path $npmPath -PathType Leaf) )
     {
-        Write-Error -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
-        $Global:LASTEXITCODE = 3
+        Write-Error -Message ('Whiskey failed to install NPM. Something pretty serious has gone wrong.')
         return
     }
 
     $originalPath = $env:PATH
-
     Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
     try
     {
-
         $defaultArguments = @('--scripts-prepend-node-path=auto')
         if( -not $ForDeveloper )
         {
