@@ -167,6 +167,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
         if( $withPath )
         {
+            $withPath = Join-Path -Path $TestDrive.FullName -ChildPath $withPath
             $Configuration['VersionFrom'] = $withPath
             $Script:path = $withPath
         }
@@ -189,6 +190,30 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function GivenConfigurationFileDoesNotExist
     {
         $script:configurationPath = 'I\do\not\exist'
+    }
+
+    function GivenNodeVersionFrom
+    {
+        param(
+            [string]
+            $AtVersion,
+            [string]
+            $WithPath
+        )
+
+        Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $WithPath) -Value ('{{"version":"{0}"}}' -f $AtVersion)
+    }
+
+    function GivenModuleVersionFrom
+    {
+        param(
+            [string]
+            $WithPath,
+            [string]
+            $AtVersion
+        )
+        
+        Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $WithPath) -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
     }
 
     function GivenRunMode
@@ -442,6 +467,21 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     }
 
+    function ThenTaskDefaultsContains
+    {
+        param(
+            $Task,
+            $Property,
+            $Value
+        )
+
+        It ('should set ''{0}'' property ''{1}'' to ''{2}''' -f $Task,$Property,($Value -join ', ')) {
+            $script:context.TaskDefaults.ContainsKey($Task) | Should -Be $true
+            $script:context.TaskDefaults[$Task].ContainsKey($Property) | Should -Be $true
+            $script:context.TaskDefaults[$Task][$Property] | Should -Be $Value
+        }
+    }
+
     function ThenVersionMatches
     {
         param(
@@ -634,28 +674,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer1Is '1.2.3'
     }
 
-    function GivenNodeVersionFrom
-    {
-        param(
-            [string]
-            $AtVersion,
-            [string]
-            $withPath
-        )
-        New-Item -Force $withPath -type file -value ('{{"version":"{0}"}}' -f $AtVersion)
-    }
-    function GivenModuleVersionFrom
-    {
-        param(
-            [string]
-            $withPath,
-            [string]
-            $AtVersion
-        )
-        
-        New-Item -Force $withPath -type file -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
-
-    }
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
         GivenConfiguration -withPath 'package.json'
@@ -739,4 +757,24 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
     }
+
+    Describe 'New-WhiskeyContext.when setting TaskDefaults' {
+        Init
+        GivenWhiskeyYml @'
+TaskDefaults:
+    MSBuild:
+        Version: 12.0
+    Exec:
+        WorkingDirectory: workdir
+        SuccessExitCode:
+        - 1
+        - 2
+        - '>=100'
+'@
+        WhenCreatingContext
+        ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
+        ThenTaskDefaultsContains -Task 'Exec' -Property 'WorkingDirectory' -Value 'workdir'
+        ThenTaskDefaultsContains -Task 'Exec' -Property 'SuccessExitCode' -Value @(1, 2, '>=100')
+    }
+
 }

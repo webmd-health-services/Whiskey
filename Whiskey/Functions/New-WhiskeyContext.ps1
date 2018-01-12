@@ -8,19 +8,28 @@ function New-WhiskeyContext
     .DESCRIPTION
     The `New-WhiskeyContext` function creates a context object used when running builds. It gets passed to each build task. The YAML file at `ConfigurationPath` is parsed. If it has a `Version` property, it is converted to a semantic version, a classic version, and a NuGet verson (a semantic version without any build metadata). An object is then returned with the following properties:
 
-    * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter
+    * `ApiKeys`: any api keys needed that need to be referenced by tasks are stored here with a unique ID. Use `Add-WhiskeyApiKey` to add api keys to this property.
     * `BuildRoot`: the absolute path to the directory the YAML configuration file is in.
-    * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
-    * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
-    * `ReleaseVersion`: the semantic version with all build metadata stripped away, i.e. the version and pre-release only.
-    * `Configuration`: the parsed YAML as a hashtable.
-    * `DownloadRoot`: the path to a directory where tools can be downloaded when needed. 
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
-    * `ApplicatoinName`: the name of the application being built.
+    * `BuildMetadata`: metadata information of the current build on a build server.
+    * `Configuration`: the object returned from the YAML parser that describes the YAML file configuration.
+    * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter.
+    * `Credentials`: any credentials needed by tasks are stored here with a unique ID. Use `Add-WhiskeyCredential` to add credentials to this property.
+    * `DownloadRoot`: the path to a directory where tools can be downloaded when needed.
+    * `Environment`: the environment the build is running in.
+    * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
+    * `PipelineName`: the currently running task pipeline.
+    * `Publish`: a flag indicating if the PublishTasks pipeline should run.
+    * `RunMode`: the current run mode of the build, `Build`, `Clean`, or `Initialize`. Defaults to `build`.
+    * `TaskName`: The currently running task.
+    * `TaskDefaults`: default task parameter values parsed from the `TaskDefaults` property of the YAML file.
+    * `Temp`: the temporary work directory for the current task.
+    * `Variables`: any variables set using the `SetVariable` task.
+    * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
 
     .EXAMPLE
-    New-WhiskeyContext -Path '.\whiskey.yml' 
+    New-WhiskeyContext -Path '.\whiskey.yml'
 
     Demonstrates how to create a context for a developer build.
     #>
@@ -58,8 +67,6 @@ function New-WhiskeyContext
         $DownloadRoot = $buildRoot
     }
 
-    $bitbucketConnection = $null
-
     $buildMetadata = Get-WhiskeyBuildMetadata
     $publish = $false
     $byBuildServer = $buildMetadata.IsBuildServer
@@ -95,7 +102,7 @@ function New-WhiskeyContext
                 if( -not ($item | Get-Member -Name 'Count') -or -not ($item | Get-Member 'Keys') -or $item.Count -ne 1 )
                 {
                     throw ('{0}: Prerelease[{1}]: The `PrereleaseMap` property must be a list of objects. Each object must have one property. That property should be a wildcard. The property''s value should be the prerelease identifier to add to the version number on branches that match the wildcard. For example,
-    
+
     PrereleaseMap:
     - "alpha/*": "alpha"
     - "release/*": "rc"
@@ -121,20 +128,25 @@ function New-WhiskeyContext
     if( -not (Test-Path -Path $outputDirectory -PathType Container) )
     {
         New-Item -Path $outputDirectory -ItemType 'Directory' -Force | Out-Null
-    }    
+    }
 
     $context = New-WhiskeyContextObject
-    $context.Environment = $Environment
     $context.BuildRoot = $buildRoot
-    $context.ConfigurationPath = $ConfigurationPath
-    $context.OutputDirectory = $outputDirectory
-    $context.Configuration = $config
-    $context.DownloadRoot = $DownloadRoot
     $context.ByBuildServer = $byBuildServer
     $context.ByDeveloper = (-not $byBuildServer)
+    $context.BuildMetadata = $buildMetadata
+    $context.Configuration = $config
+    $context.ConfigurationPath = $ConfigurationPath
+    $context.DownloadRoot = $DownloadRoot
+    $context.Environment = $Environment
+    $context.OutputDirectory = $outputDirectory
     $context.Publish = $publish
     $context.RunMode = 'Build'
-    $context.BuildMetadata = $buildMetadata
+
+    if ($config.ContainsKey('TaskDefaults'))
+    {
+        $context.TaskDefaults = $config['TaskDefaults']
+    }
 
     if( $config['Variable'] )
     {
