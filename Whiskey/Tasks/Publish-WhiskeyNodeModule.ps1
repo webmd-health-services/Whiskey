@@ -121,26 +121,8 @@ function Publish-WhiskeyNodeModule
             Write-Verbose
 
         $nodePath = $TaskParameter['NodePath']
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath
-        Write-Verbose -Message 'Removing extraneous packages with ''npm prune'''
-        Invoke-Command -ScriptBlock {
-            & $nodePath $npmPath prune --production --no-color
-        }
-        
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm prune'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
-        }
-        
-        Write-Verbose -Message 'Publishing package with ''npm publish'''
-        Invoke-Command -ScriptBlock {
-            & $nodePath $npmPath publish
-        }
-        
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm publish'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'prune' -Argument '--production' -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'publish' -ErrorAction Stop
     }
     finally
     {
