@@ -145,6 +145,15 @@ function New-WhiskeyContext
 
     if ($config.ContainsKey('TaskDefaults'))
     {
+        $knownTasks = Get-WhiskeyTask | Select-Object -ExpandProperty 'Name'
+        foreach ($task in ($config['TaskDefaults'] | Select-Object -ExpandProperty 'Keys'))
+        {
+            if ($task -notin $knownTasks)
+            {
+                throw '''TaskDefaults'' property contains defaults for task ''{0}'' which is not a valid Whiskey task.' -f $task
+            }
+        }
+
         $context.TaskDefaults = $config['TaskDefaults']
     }
 
