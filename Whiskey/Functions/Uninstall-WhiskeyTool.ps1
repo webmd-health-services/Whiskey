@@ -32,13 +32,13 @@ function Uninstall-WhiskeyTool
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [ValidateSet('Node')]
         # The name of the tool to uninstall. Currently only Node is supported.
         $Name,
 
         [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        # The context of the current build.
-        $Context,
+        [string]
+        # The directory where the tool should be uninstalled from.
+        $InstallRoot,
 
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
@@ -103,25 +103,42 @@ function Uninstall-WhiskeyTool
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
     {
-        switch( $Name )
+        $provider,$Name = $Name -split '::'
+        if( -not $Name )
         {
-            'Node'
-            {
-                $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
-                New-Item -Path $emptyDir -ItemType 'Directory'
-                $dirToRemove = Join-Path -Path $Context.BuildRoot -ChildPath '.node'
-                robocopy $emptyDir $dirToRemove /MIR /R:0 /NP
-                if( $LASTEXITCODE -ge 8 )
-                {
-                    Write-Error -Message ('Robocopy failed to remove contents of ''{0}'' (it returned exit code {1}). Please see previous output for details.' -f $dirToRemove,$LASTEXITCODE)
-                }
+            $Name = $provider
+            $provider = ''
+        }
 
-                Remove-Item -Path $dirToRemove -Recurse -Force
-                Remove-Item -Path $emptyDir -Recurse -Force
+        switch( $provider )
+        {
+            'NodeModule'
+            {
+                # Don't do anything. All node modules require the Node tool to also be defined so they'll get deleted by the Node deletion.
             }
             default
             {
-                throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $Name)
+                switch( $Name )
+                {
+                    'Node'
+                    {
+                        $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+                        New-Item -Path $emptyDir -ItemType 'Directory'
+                        $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
+                        robocopy $emptyDir $dirToRemove /MIR /R:0 /NP
+                        if( $LASTEXITCODE -ge 8 )
+                        {
+                            Write-Error -Message ('Robocopy failed to remove contents of ''{0}'' (it returned exit code {1}). Please see previous output for details.' -f $dirToRemove,$LASTEXITCODE)
+                        }
+
+                        Remove-Item -Path $dirToRemove -Recurse -Force
+                        Remove-Item -Path $emptyDir -Recurse -Force
+                    }
+                    default
+                    {
+                        throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $Name)
+                    }
+                }
             }
         }
     }

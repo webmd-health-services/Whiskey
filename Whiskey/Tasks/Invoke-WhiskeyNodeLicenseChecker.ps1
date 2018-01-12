@@ -8,22 +8,20 @@ function Invoke-WhiskeyNodeLicenseChecker
     .DESCRIPTION
     The `NodeLicenseChecker` task runs the node module `license-checker` against all the modules listed in the `dependencies` and `devDepenendencies` properties of the `package.json` file for this application. The task will create a JSON report file named `node-license-checker-report.json` located in the `.output` directory of the build root.
 
-    You must specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
+    This task installs the latest LTS version of Node into a `.node` directory (in the same directory as your whiskey.yml file). To use a specific version, set the `engines.node` property in your package.json file to the version you want. (See https://docs.npmjs.com/files/package.json#engines for more information.)
 
     If the application's `package.json` file does not exist in the build root next to the `whiskey.yml` file, specify a `WorkingDirectory` where it can be found.
 
     # Properties
 
-    # * `NpmRegistryUri` (mandatory): the uri to set a custom npm registry.
-    # * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `Version`: the version of the license checker to use. The default is the latest version.
 
     # Examples
 
     ## Example 1
 
         BuildTasks:
-        - NodeLicenseChecker:
-            NpmRegistryUri: "http://registry.npmjs.org"
+        - NodeLicenseChecker
     
     This example will run `license-checker` against the modules listed in the `package.json` file located in the build root.
 
@@ -31,14 +29,14 @@ function Invoke-WhiskeyNodeLicenseChecker
 
         BuildTasks:
         - NodeLicenseChecker:
-            NpmRegistryUri: "http://registry.npmjs.org"
-            WorkingDirectory: app
+            Version: 13.0.1
     
-    This example will run `license-checker` against the modules listed in the `package.json` file that is located in the `(BUILD_ROOT)\app` directory.
+    This example will install and use version 13.0.1 of the license checker.
     #>
-
-    [Whiskey.Task("NodeLicenseChecker", SupportsClean=$true, SupportsInitialize=$true)]
     [CmdletBinding()]
+    [Whiskey.Task('NodeLicenseChecker')]
+    [Whiskey.RequiresTool('Node', 'NodePath')]
+    [Whiskey.RequiresTool('NodeModule::license-checker', 'LicenseCheckerPath', VersionParameterName='Version')]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -63,46 +61,19 @@ function Invoke-WhiskeyNodeLicenseChecker
         Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
     }
 
-    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
-    if (-not $npmRegistryUri) 
+    $licenseCheckerRoot = $TaskParameter['LicenseCheckerPath']
+    if( -not $licenseCheckerRoot -or -not (Test-Path -Path $licenseCheckerRoot -PathType Container) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry from which Node.js packages should be downloaded, e.g.,
-        
-        BuildTasks:
-        - NodeLicenseChecker:
-            NpmRegistryUri: https://registry.npmjs.org/
-
-        '
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install required Node module license-checker. Something pretty serious has gone wrong.')
     }
 
-    $workingDirectory = (Get-Location).ProviderPath
-
-    if ($TaskContext.ShouldClean())
+    $licenseCheckerPath = Join-Path -Path $licenseCheckerRoot -ChildPath 'bin\license-checker' -Resolve
+    if( -not $licenseCheckerPath )
     {
-        Write-Timing -Message 'Cleaning'
-        Uninstall-WhiskeyNodeModule -Name 'npm' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper -Force
-        Uninstall-WhiskeyNodeModule -Name 'license-checker' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper -Force
-        Write-Timing -Message 'COMPLETE'
-        return
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node license-checker module is missing a `{0}\bin\license-checker` script. Please use the `Version` property on your NodeLicenseChecker task and specify a version of the license checker that has this script.')
     }
 
-    Write-Timing -Message 'Installing license-checker'
-    $licenseCheckerModuleRoot = Install-WhiskeyNodeModule -Name 'license-checker' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
-    $licenseCheckerPath = Join-Path -Path $licenseCheckerModuleRoot -ChildPath 'bin\license-checker' -Resolve -ErrorAction Ignore
-    
-    if (-not $licenseCheckerPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download the ''license-checker'' module to ''{0}''.' -f (Join-Path -Path $workingDirectory -ChildPath 'node_modules'))
-    }
-    Write-Timing -Message 'COMPLETE'
-
-    if ($TaskContext.ShouldInitialize())
-    {
-        Write-Timing -Message 'Initialization Complete'
-        return
-    }
-
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
+    $nodePath = $TaskParameter['NodePath']
 
     Write-Timing -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {

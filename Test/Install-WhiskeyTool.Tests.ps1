@@ -274,8 +274,10 @@ Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
 }
 
 $context = $null
-$result = $null
 $threwException = $false
+$pathParameterName = 'ToolPath'
+$versionParameterName = $null
+$taskParameter = $null
 
 function GivenPackageJson
 {
@@ -287,18 +289,21 @@ function GivenPackageJson
     $InputObject | Set-Content -Path (Join-Path -Path $InDirectory -ChildPath 'package.json')
 }
 
+function GivenVersionParameterName
+{
+    param(
+        $Name
+    )
+
+    $script:versionParameterName = $Name
+}
+
 function Init
 {
     $script:context = $null
-    $script:result = $null
     $script:threwException = $false
-}
-
-function Remove-Node
-{
-    $empty = Join-Path -Path $TestDrive.FullName -ChildPath 'Empty'
-    New-Item -Path $empty -ItemType 'Directory' 
-    robocopy $empty (Join-Path -Path $TestDrive.FullName -ChildPath '.node') /MIR
+    $script:taskParameter = $null
+    $script:versionParameterName = $null
 }
 
 function ThenNodeInstalled
@@ -344,17 +349,45 @@ function ThenNodeInstalled
         & $nodePath $npmPath '--version' | Should -Be $NpmVersion
     }
 
-    It ('should return path to node.exe') {
-        $result | Should -Be (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+    It ('should set path to node.exe') {
+        $taskParameter[$pathParameterName] | Should -Be (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+    }
+}
+
+function ThenNodeModuleInstalled
+{
+    param(
+        $Name,
+        $AtVersion
+    )
+
+    It ('should install the node module') {
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath | Should -Exist
+        $taskParameter[$pathParameterName] | Should -Be $expectedPath
+
+        if( $AtVersion )
+        {
+            Get-Content -Path (Join-Path -Path $expectedPath -ChildPath 'package.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'version' | Should -Be $AtVersion
+        }
+    }
+}
+
+function ThenNodeModuleNotInstalled
+{
+    param(
+        $Name
+    )
+
+    It ('should not install the node module') {
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath | Should -Not -Exist
+        $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
     }
 }
 
 function ThenNodeNotInstalled
 {
-    It ('should stop the build') {
-        { Install-WhiskeyTool -Name Node -Context $context } | Should -Throw
-    }
-
     $nodePath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe'
     It ('should not install Node') {
         $nodePath | Should -Not -Exist
@@ -369,8 +402,8 @@ function ThenNodeNotInstalled
         $Error[0] | Should -Match 'NotFound'
     }
 
-    It ('should not return path to node') {
-        $result | Should -BeNullOrEmpty
+    It ('should not set path to node') {
+        $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
     }
 }
 
@@ -390,15 +423,24 @@ function WhenInstallingTool
 {
     [CmdletBinding()]
     param(
-        $Name
+        $Name,
+        $Parameter = @{ }
     )
 
     $Global:Error.Clear()
 
+    $toolAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name,$pathParameterName
+
+    if( $versionParameterName )
+    {
+        $toolAttribute.VersionParameterName = $versionParameterName
+    }
+
+    $script:taskParameter = $Parameter
+
     try
     {
-        $script:context = New-WhiskeyTestContext -ForDeveloper
-        $script:result = Install-WhiskeyTool -Name Node -Context $context
+        Install-WhiskeyTool -ToolInfo $toolAttribute -InstallRoot $TestDrive.FullName -TaskParameter $Parameter
     }
     catch
     {
@@ -543,6 +585,15 @@ Describe 'Install-WhiskeyTool.when package.json is in working directory' {
         $workingDir = Join-Path -Path $TestDrive.FullName -ChildPath 'app'
         New-Item -Path $workingDir -ItemType 'Directory'
 
+        # Put a package.json in the root to ensure package.json in the current directory is used first.
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.4"
+    }
+}
+'@
+
         GivenPackageJson @'
 {
     "engines": {
@@ -561,6 +612,50 @@ Describe 'Install-WhiskeyTool.when package.json is in working directory' {
         {
             Pop-Location
         }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node module' {
+    try
+    {
+        Init
+        WhenInstallingTool 'Node'
+        ThenNodeInstalled -AtLatestVersion
+        WhenInstallingTool 'NodeModule::license-checker'
+        ThenNodeModuleInstalled 'license-checker'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t installed' {
+    try
+    {
+        Init
+        WhenInstallingTool 'NodeModule::license-checker' -ErrorAction SilentlyContinue
+        ThenThrewException 'NPM not installed'
+        ThenNodeModuleNotInstalled 'license-checker'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing specific version of a Node module' {
+    try
+    {
+        Init
+        Install-Node
+        GivenVersionParameterName 'Fubar'
+        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '13.1.0' }
+        ThenNodeModuleInstalled 'license-checker' -AtVersion '13.1.0'
     }
     finally
     {

@@ -233,15 +233,26 @@ Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'
 }
 
-Describe 'Uninstall-WhiskeyTool.when uninstalling Node' {
-    $context = New-WhiskeyTestContext -ForDeveloper
-    Install-WhiskeyTool -Name Node -Context $context
-    $Global:Error.Clear()
-    Uninstall-WhiskeyTool -Name Node -Context $context
-    It ('should not write any errors') {
-        $Global:Error | Should -BeNullOrEmpty
+Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
+    try
+    {
+        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath') -InstallRoot $TestDrive.FullName -TaskParameter @{ }
+        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' 'NodeModule::rimraf','RimrafPath') -InstallRoot $TestDrive.FullName -TaskParameter @{ }
+        $Global:Error.Clear()
+        Uninstall-WhiskeyTool -Name Node -InstallRoot $TestDrive.FullName
+        Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -InstallRoot $TestDrive.FullName
+        It ('should not write any errors') {
+            $Global:Error | Should -BeNullOrEmpty
+        }
+        It ('should delete Node') {
+            Join-Path -Path $TestDrive.FullName -ChildPath '.node' | Should -Not -Exist
+        }
+        It ('should delete Node module') {
+            Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules\rimraf' | Should -Not -Exist
+        }
     }
-    It ('should delete Node') {
-        Join-Path -Path $context.BuildRoot -ChildPath '.node' | Should -Not -Exist
+    finally
+    {
+        Remove-Node
     }
 }

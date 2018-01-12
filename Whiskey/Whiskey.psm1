@@ -37,13 +37,16 @@ namespace Whiskey {
         
         public RequiresToolAttribute(string toolName, string toolPathParameterName)
         {
-            ToolName = toolName;
-            ToolPathParameterName = toolPathParameterName;
+            Name = toolName;
+            PathParameterName = toolPathParameterName;
+            VersionParameterName = "Version";
         }
 
-        public string ToolName { get; private set; }
+        public string Name { get; private set; }
 
-        public string ToolPathParameterName { get; set; }
+        public string PathParameterName { get; set; }
+
+        public string VersionParameterName { get; set; }
     }
 }
 '@;

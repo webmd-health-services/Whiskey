@@ -25,11 +25,17 @@ function Invoke-WhiskeyNpmCommand
 
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true,ParameterSetName='NodePath')]
+        [string]
+        $NodePath,
+
+        [Parameter(Mandatory=$true,ParameterSetName='NodePath')]
         [Parameter(Mandatory=$true,ParameterSetName='InvokeNpm')]
         [string]
         # The NPM command to execute.
         $NpmCommand,
         
+        [Parameter(ParameterSetName='NodePath')]
         [Parameter(ParameterSetName='InvokeNpm')]
         [string[]]
         # An array of arguments to be given to the NPM command being executed.
@@ -44,7 +50,8 @@ function Invoke-WhiskeyNpmCommand
         # The root directory of the target Node.js application. This directory will contain the application's `package.json` config file and will be where NPM will be executed from.
         $ApplicationRoot,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='InvokeNpm')]
+        [Parameter(Mandatory=$true,ParameterSetName='InitializeOnly')]
         # The URI to the registry from which NPM packages should be downloaded.
         $RegistryUri,
 
@@ -71,29 +78,23 @@ function Invoke-WhiskeyNpmCommand
     Write-Progress -Activity $activity -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)'
 
     Write-Timing -Message 'Installing Node.js'
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $RegistryUri -ApplicationRoot $ApplicationRoot -ForDeveloper:$ForDeveloper
-    Write-Timing -Message ('COMPLETE')
+    if( -not $NodePath )
+    {
+        $NodePath = Install-WhiskeyNodeJs -RegistryUri $RegistryUri -ApplicationRoot $ApplicationRoot -ForDeveloper:$ForDeveloper
+        Write-Timing -Message ('COMPLETE')
 
-    if (-not $nodePath)
-    {
-        Write-Error -Message 'Node.js version required for this package failed to install. Please see previous errors for details.'
-        $Global:LASTEXITCODE = 1
-        return
-    }
-    
-    $nodeRoot = $nodePath | Split-Path
-    $npmGlobalPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
-    if (-not $npmGlobalPath)
-    {
-        Write-Error -Message 'NPM didn''t get installed by NVM when installing Node. Please use NVM to uninstall this version of Node.'
-        $Global:LASTEXITCODE = 2
-        return
+        if (-not $NodePath)
+        {
+            Write-Error -Message 'Node.js version required for this package failed to install. Please see previous errors for details.'
+            $Global:LASTEXITCODE = 1
+            return
+        }
     }
 
-    Write-Progress -Activity $activity -Status 'Getting path to the version of NPM required for this package'
-
+    $nodeRoot = $NodePath | Split-Path
+        
     Write-Timing -Message 'Resolving path to NPM.'
-    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $ApplicationRoot
+    $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath
     Write-Timing -Message ('COMPLETE')
     
     if (-not $npmPath)
@@ -125,10 +126,10 @@ function Invoke-WhiskeyNpmCommand
 
         $npmCommandString = ('npm {0} {1} {2}' -f $NpmCommand,($Argument -join ' '),($defaultArguments -join ' '))
         Write-Progress -Activity $activity -Status ('Executing ''{0}''' -f $npmCommandString)
+        Write-Verbose $npmCommandString
         Invoke-Command -NoNewScope -ScriptBlock {
             & $nodePath $npmPath $NpmCommand $Argument $defaultArguments
         }
-
         if ($LASTEXITCODE -ne 0)
         {
             Write-Error -Message ('NPM command ''{0}'' failed with exit code {1}.' -f $npmCommandString,$LASTEXITCODE)

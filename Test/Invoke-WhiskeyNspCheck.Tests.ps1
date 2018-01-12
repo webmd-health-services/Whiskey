@@ -6,32 +6,33 @@ Set-StrictMode -Version 'Latest'
 $dependency = $null
 $devDependency = $null
 $failed = $false
-$givenWorkingDirectory = $null
-$npmRegistryUri = 'http://registry.npmjs.org'
-$nodeVersion = '^8.9.3'
 $output = $null
-$shouldClean = $false
-$shouldInitialize = $false
-$workingDirectory = $null
 $version = $null
 
 function Init
 {
+    param(
+        [Switch]
+        $NoNsp
+    )
+
     $script:dependency = $null
     $script:devDependency = $null
     $Global:Error.Clear()
     $script:failed = $false
-    $script:givenWorkingDirectory = $null
     $script:output = $null
-    $script:shouldClean = $false
-    $script:shouldInitialize = $false
-    $script:workingDirectory = $TestDrive.FullName
     $script:version = $null
+    $withModule = @{ WithModule = 'nsp' }
+    if( $NoNsp )
+    {
+        $withModule = @{ }
+    }
+    Install-Node @withModule
 }
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:workingDirectory -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
 
     @"
 {
@@ -41,9 +42,6 @@ function CreatePackageJson
     "repository": "bitbucket:example/repo",
     "private": true,
     "license": "MIT",
-    "engines": {
-        "node": "$nodeVersion"
-    },
     "dependencies": {
         $($script:dependency -join ',')
     },
@@ -61,7 +59,6 @@ function MockNsp
         $Failing
     )
 
-    Mock -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -MockWith { $TestDrive.FullName }
     Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -eq 'bin\nsp' } -MockWith { $TestDrive.FullName }
     
     if (-not $Failing)
@@ -92,28 +89,6 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
-function GivenCleanMode
-{
-    $script:shouldClean = $true
-    Mock -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey'
-}
-
-function GivenInitializeMode
-{
-    $script:shouldInitialize = $true
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $Directory
-    )
-    $script:givenWorkingDirectory = $Directory
-    $script:workingDirectory = Join-Path -Path $workingDirectory -ChildPath $Directory
-
-    New-Item -Path $workingDirectory -ItemType 'Directory' -Force | Out-Null
-}
-
 function GivenVersion
 {
     param(
@@ -126,29 +101,18 @@ function GivenVersion
 function WhenRunningTask
 {
     [CmdletBinding()]
-    param()
+    param(
+    )
+
+    $Global:Error.Clear()
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
     
-    $taskParameter = @{ 'NpmRegistryUri' = $script:npmRegistryUri }
-
-    if ($givenWorkingDirectory)
-    {
-        $taskParameter['WorkingDirectory'] = $givenWorkingDirectory
-    }
+    $taskParameter = @{ }
 
     if ($version)
     {
         $taskParameter['Version'] = $version
-    }
-
-    if ($shouldClean)
-    {
-        $taskContext.RunMode = 'Clean'
-    }
-    elseif ($shouldInitialize)
-    {
-        $taskContext.RunMode = 'Initialize'
     }
 
     try
@@ -170,14 +134,18 @@ function ThenNspInstalled
         $WithVersion
     )
 
+    $nspRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules\nsp'
     It 'should install NSP module' {
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'nsp' } -Times 1        
+        $nspRoot | Should -Exist
     }
 
     if( $WithVersion )
     {
         It ('should install NSP version ''{0}''' -f $WithVersion) {
-            Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $WithVersion } -Times 1
+            Get-Content -Path (Join-Path -Path $nspRoot -ChildPath 'package.json') -Raw | 
+                ConvertFrom-Json |
+                Select-Object -ExpandProperty 'Version' |
+                Should -Be $WithVersion
         }
     }
 }
@@ -257,77 +225,84 @@ function ThenUninstalledModule
     )
 
     It ('should uninstall the ''{0}'' module' -f $ModuleName) {
-        Assert-MockCalled -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModuleName } -Times 1
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq ('NodeModule::{0}' -f $ModuleName) } -Times 1
     }
 }
 
-Describe 'NspCheck.when running in Clean mode' {
-    Init
-    MockNsp
-    GivenCleanMode
-    WhenRunningTask
-    ThenUninstalledModule 'npm'
-    ThenUninstalledModule 'nsp'
-    ThenNspNotRun
-    ThenTaskSucceeded
-}
-
-Describe 'NspCheck.when running in Initialize mode' {
-    Init
-    MockNsp
-    GivenInitializeMode
-    WhenRunningTask
-    ThenNspInstalled
-    ThenNspNotRun
-    ThenTaskSucceeded
-}
-
 Describe 'NspCheck.when running nsp check' {
-    Init
-    MockNsp
-    WhenRunningTask
-    ThenNspInstalled
-    ThenNspRan
-    ThenTaskSucceeded
-}
-
-Describe 'NspCheck.when running nsp in given working directory' {
-    Init
-    GivenWorkingDirectory 'src\app'
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskSucceeded
+    try
+    {
+        Init
+        MockNsp
+        WhenRunningTask
+        ThenNspInstalled
+        ThenNspRan
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'NspCheck.when module has a security vulnerability' {
-    Init
-    GivenDependency '"minimatch": "3.0.0"'
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'found the following security vulnerabilities'
+    try
+    {
+        Init
+        GivenDependency '"minimatch": "3.0.0"'
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'found the following security vulnerabilities'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'NspCheck.when nsp does not return valid JSON' {
-    Init
-    MockNsp -Failing
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'did not return valid JSON'
+    try
+    {
+        Init
+        MockNsp -Failing
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'did not return valid JSON'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
-    Init
-    GivenVersion '2.7.0'
-    MockNsp
-    WhenRunningTask
-    ThenNspInstalled -WithVersion '2.7.0'
-    ThenNspRan -WithVersion '2.7.0'
-    ThenTaskSucceeded
+    try
+    {
+        Init -NoNsp
+        GivenVersion '2.7.0'
+        MockNsp
+        WhenRunningTask
+        ThenNspInstalled -WithVersion '2.7.0'
+        ThenNspRan -WithVersion '2.7.0'
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'NspCheck.when running nsp check specifically with v3.1.0' {
-    Init
-    GivenVersion '3.1.0'
-    MockNsp
-    WhenRunningTask
-    ThenNspInstalled -WithVersion '3.1.0'
-    ThenNspRan -WithVersion '3.1.0'
-    ThenTaskSucceeded
+    try
+    {
+        Init -NoNsp
+        GivenVersion '3.1.0'
+        MockNsp
+        WhenRunningTask
+        ThenNspInstalled -WithVersion '3.1.0'
+        ThenNspRan -WithVersion '3.1.0'
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

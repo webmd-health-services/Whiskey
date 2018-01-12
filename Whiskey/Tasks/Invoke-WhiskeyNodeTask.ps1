@@ -3,41 +3,14 @@ function Invoke-WhiskeyNodeTask
 {
     <#
     .SYNOPSIS
-    Runs a Node build.
+    ** OBSOLETE ** Use the `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker` tasks instead.
     
     .DESCRIPTION
-    The `Invoke-WhiskeyNodeTask` function runs Node builds. It uses NPM's `run` command to run a list of NPM scripts. These scripts are defined in your package.json file's `Scripts` property. If any script fails, the build will fail. This function checks if a script fails by looking at the exit code to `npm`. Any non-zero exit code is treated as a failure.
-
-    You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
-
-    You may additionally specify a version of NPM to use in the engines field of your package.json file. NPM will be downloaded into your package's 'node_modules' directory at the specified version. This local version of NPM will be used to execute the list of `NpmScript` and then will be removed from 'node_modules' at the end of the build.
-
-    This task accepts these parameters:
-
-    * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run SCRIPT_NAME`. Each script is run indepently.
-    * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-    * `NpmRegistryUri` the uri to set a custom npm registry
-    
-    Here's a sample `whiskey.yml` using the Node task:
-
-        BuildTasks:
-        - Node:
-          NpmScript:
-          - build
-          - test
-
-    This task also does the following as part of each Node.js build:
-
-    * Runs `npm install` to install your dependencies.
-    * Runs NSP, the Node Security Platform, to check for any vulnerabilities in your depedencies.
-    * Saves a report on each dependency's license.
-
-    .EXAMPLE
-    Invoke-WhiskeyNodeTask -TaskContext $context -TaskParameter @{ NpmScript = 'build','test', NpmRegistryUri = 'http://registry.npmjs.org/' }
-
-    Demonstrates how to run the `build` and `test` NPM targets in the directory specified by the `$context.BuildRoot` property. The function would run `npm run build test`.
+    ** OBSOLETE ** Use the `NpmInstall`, `NpmRunScript`, `NspCheck`, and `NodeLicenseChecker` tasks instead.
     #>
-    [Whiskey.Task("Node",SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.Task('Node',SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.RequiresTool('Node','NodePath')]
+    [Whiskey.RequiresTool('NodeModule::license-checker','LicenseCheckerPath',VersionParameterName='LicenseCheckerVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -51,7 +24,6 @@ function Invoke-WhiskeyNodeTask
         #
         # * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-        # * `NpmRegistryUri` the uri to set a custom npm registry
         $TaskParameter
     )
 
@@ -88,23 +60,11 @@ function Invoke-WhiskeyNodeTask
         return
     }
 
-    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
-    if (-not $npmRegistryUri) 
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry from which Node.js packages should be downloaded. E.g.,
-        
-        BuildTasks:
-        - Node:
-            NpmRegistryUri: https://registry.npmjs.org/
-        '
-    }
-
     $npmScripts = $TaskParameter['NpmScript']
     $npmScriptCount = $npmScripts | Measure-Object | Select-Object -ExpandProperty 'Count'
-    $numSteps = 6 + $npmScriptCount
+    $numSteps = 4 + $npmScriptCount
     $stepNum = 0
 
-    $originalPath = $env:PATH
     $activity = 'Running Node Task'
 
     function Update-Progress
@@ -122,49 +82,42 @@ function Invoke-WhiskeyNodeTask
     }
 
     $workingDirectory = (Get-Location).ProviderPath
+    $originalPath = $env:PATH
 
     try
     {
-        Update-Progress -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)' -Step ($stepNum++)
-        Write-Timing -Message 'Installing Node.js'
-        $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
-        Write-Timing -Message ('COMPLETE')
-        if( -not $nodePath )
+        $nodePath = $TaskParameter['NodePath']
+        if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node version required for this package failed to install. Please see previous errors for details.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')
         }
-        Update-Progress -Status ('Node.js version required for this package is installed') -Step ($stepNum++)
 
         $nodeRoot = $nodePath | Split-Path
-        $npmGlobalPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve
-        if( -not $npmGlobalPath )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM didn''t get installed by NVM when installing Node. Please use NVM to uninstall this version of Node.')
-        }
-
-        Update-Progress -Status ('Getting path to the version of NPM required for this package') -Step ($stepNum++)
-        Write-Timing -Message 'Resolving path to NPM.'
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
-        Write-Timing -Message ('COMPLETE')
-        if( -not $npmPath )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
-        }
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
-        $noColorArg = @()
-        if( ($TaskContext.ByBuildServer) -or $Host.Name -ne 'ConsoleHost' )
-        {
-            $noColorArg = '--no-color'
-        }
-
-        Update-Progress -Status ('npm install') -Step ($stepNum++)
-        Write-Timing -Message 'Installing Node.js modules.'
-        & $nodePath $npmPath 'install' '--production=false' $noColorArg
+        Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
+        Write-Timing -Message ('npm install')
+        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'install' -ApplicationRoot $workingDirectory -Argument '--production=false'
+        Write-Timing -Message ('COMPLETE')
         if( $LASTEXITCODE )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm install` failed with exit code {0}.' -f $LASTEXITCODE)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('npm install returned exit code {0}. Please see previous output for details.' -f $LASTEXITCODE)
+        }
+
+        Update-Progress -Status ('npm install nsp@2.7.0') -Step ($stepNum++)
+        Write-Timing -Message ('npm install nsp@2.7.0')
+        $nspRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -NodePath $nodePath -ApplicationRoot (Get-Location).ProviderPath -ForDeveloper:$TaskContext.ByDeveloper -Global
+        Write-Timing -Message ('COMPLETE')
+        if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module nsp@2.7.0. Something pretty serious has gone wrong.')
+        }
+
+        $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
+        if( -not $nspPath -or -not (Test-Path -Path $nspPath -PathType Leaf) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module nsp@2.7.0. Something pretty serious has gone wrong.')
         }
 
         if( $TaskContext.ShouldInitialize() )
@@ -186,40 +139,17 @@ BuildTasks:
 '@)
         }
 
-        # local version of npm gets removed by 'npm install', so call Get-WhiskeyNPMPath to download it again if necessary
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             Write-Timing -Message ('Running script ''{0}''.' -f $script)
-            & $nodePath $npmPath 'run' $script '--scripts-prepend-node-path=auto' $noColorArg 
+            Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'run-script' -Argument $script -ApplicationRoot (Get-Location).ProviderPath -ErrorAction Stop
             Write-Timing -Message ('COMPLETE')
-            if( $LASTEXITCODE )
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command `npm run {0}` failed with exit code {1}.' -f $script,$LASTEXITCODE)
-            }
         }
 
         Update-Progress -Status ('nsp check') -Step ($stepNum++)
-        $nodeModulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
-        $nspPath = Join-Path -Path $nodeModulesRoot -ChildPath 'nsp\bin\nsp'
-        $npmCmd = 'install'
-        if( (Test-Path -Path $nspPath -PathType Leaf) )
-        {
-            $npmCmd = 'update'
-        }
-
-        Write-Timing -Message ('Installing NSP.')
-        & $nodePath $npmPath $npmCmd 'nsp@2.7.0' '-g'
-        Write-Timing -Message ('COMPLETE')
-        if( -not (Test-Path -Path $nspPath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP module failed to install to ''{0}''.' -f $nodeModulesRoot)
-        }
-
         Write-Timing -Message ('Running NSP security check.')
-        $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
-                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } 
+        $output = & $nodePath $nspPath 'check' '--output' 'json'
         Write-Timing -Message ('COMPLETE')
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
@@ -229,18 +159,16 @@ BuildTasks:
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
-        $licenseCheckerPath = Join-Path -Path $nodeModulesRoot -ChildPath 'license-checker\bin\license-checker'
-        $npmCmd = 'install'
-        if( (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
+        $licenseCheckerRoot = $TaskParameter['LicenseCheckerPath']
+        if( -not $licenseCheckerRoot -or -not (Test-Path -Path $licenseCheckerRoot -PathType Container) )
         {
-            $npmCmd = 'update'
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module license-checker. Something pretty serious has gone wrong.')
         }
-        Write-Timing -Message ('Installing license checker.')
-        & $nodePath $npmPath $npmCmd 'license-checker@latest' '-g'
-        Write-Timing -Message ('COMPLETE')
-        if( -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
+
+        $licenseCheckerPath = Join-Path -Path $licenseCheckerRoot -ChildPath 'bin\license-checker' -Resolve
+        if( -not $licenseCheckerPath -or -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker module failed to install to ''{0}''.' -f $nodeModulesRoot)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node module ''{0}\bin\license-checker'' does not exist. Looks like the latest version of the license checker no longer works with Whiskey. Please migrate away from this task.' -f $licenseCheckerRoot)
         }
 
         Write-Timing -Message ('Generating license report.')
@@ -271,7 +199,6 @@ BuildTasks:
     finally
     {
         Set-Item -Path 'env:PATH' -Value $originalPath
-
         Write-Progress -Activity $activity -Completed -PercentComplete 100
     }
 }

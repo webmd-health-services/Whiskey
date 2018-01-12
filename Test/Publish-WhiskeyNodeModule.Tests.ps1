@@ -39,7 +39,7 @@ function GivenNpmVersion
         $Version
     )
 
-    $script:npmVersion = ('"npm": "{0}",' -f $Version)
+    $script:npmVersion = ('"npm": "{0}"' -f $Version)
 }
 
 function GivenNpmPublishReturnsNonZeroExitCode
@@ -72,14 +72,9 @@ function Init
     $script:npmRegistryUri = 'http://registry.npmjs.org/'
     $script:email = $defaultEmailAddress
     $script:npmVersion = $null
+    Install-Node
 }
 
-function GivenWithInitilizeFlag
-{
-    $script:context.RunMode = 'initialize'
-    $nvmPath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
-    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nvmPath}.GetNewClosure()
-}
 function New-PublishNodeModuleStructure
 {
     param(
@@ -105,6 +100,7 @@ function New-PublishNodeModuleStructure
         $testPackageJsonChildPath = (Join-Path -Path $workingDirectory -ChildPath 'package.json')
     }
 
+
     $testPackageJsonPath = Join-Path -Path $context.BuildRoot -ChildPath $testPackageJsonChildPath
     $testPackageJson = @"
 {
@@ -113,7 +109,6 @@ function New-PublishNodeModuleStructure
   "main": "index.js",
   "engines": {
     $($script:npmVersion)
-    "node": "^4.4.7"
   }
 }
 "@
@@ -127,15 +122,6 @@ function New-PublishNodeModuleStructure
     $script:context = $context
 
     return $returnContextParams
-}
-
-function ThenNodeShouldExist
-{
-    It 'should have a nodejs installed' {
-        Assert-MockCalled   -CommandName 'Install-WhiskeyNodeJs' `
-                            -ModuleName 'Whiskey' `
-                            -Times 1 -Exactly
-    }
 }
 
 function ThenNodeModulePublished
@@ -268,81 +254,111 @@ function WhenPublishingNodeModule
 }
 
 Describe 'PublishNodeModule.when publishing node module' {
-    Init
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished
+    try
+    {
+        Init
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule
+        ThenNpmrcCreated
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when publishing node module from custom working directory' {
-    Init
-    GivenWorkingDirectory 'App'
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated -In 'App'
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished    
+    try
+    {
+        Init
+        GivenWorkingDirectory 'App'
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule
+        ThenNpmrcCreated -In 'App'
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished    
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when NPM registry URI property is missing' {
-    Init
-    GivenNoNpmRegistryUri
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
+    try
+    {
+        Init
+        GivenNoNpmRegistryUri
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when credential ID property missing' {
-    Init
-    GivenNoCredentialID
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+    try
+    {
+        Init
+        GivenNoCredentialID
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when email address property missing' {
-    Init
-    GivenNoEmailAddress
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
-}
-
-Describe 'PublishNodeModule.when publishing node module with initialization mode' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenWithInitilizeFlag
-    WhenPublishingNodeModule
-    ThenNodeShouldExist
-    ThenNodeModuleIsNotPublished
-}
-Describe 'PublishNodeModule.when publishing node module using specific version of npm' {
-    Init
-    GivenNPMVersion '~4.6.1'
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished    
-    ThenLocalNpmInstalled
+    try
+    {
+        Init
+        GivenNoEmailAddress
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when npm publish returns non-zero exit code' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenNpmPublishReturnsNonZeroExitCode
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenNpmrcCreated
-    ThenTaskFailed 'NPM command ''npm publish'' failed with exit code ''1'''
+    try
+    {
+        Init
+        New-PublishNodeModuleStructure
+        GivenNpmPublishReturnsNonZeroExitCode
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenNpmrcCreated
+        ThenTaskFailed 'NPM command ''npm publish'' failed with exit code ''1'''
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when npm prune returns non-zero exit code' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenNpmPruneReturnsNonZeroExitCode
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenNpmrcCreated
-    ThenTaskFailed 'NPM command ''npm prune'' failed with exit code ''1'''
+    try
+    {
+        Init
+        New-PublishNodeModuleStructure
+        GivenNpmPruneReturnsNonZeroExitCode
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenNpmrcCreated
+        ThenTaskFailed 'NPM command ''npm prune'' failed with exit code ''1'''
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

@@ -4,27 +4,20 @@ Set-StrictMode -Version 'Latest'
 
 $dependency = $null
 $devDependency = $null
-$initialize = $null
 $failed = $false
-$nodeVersion = '^4.4.7'
-$npmRegistryUri = 'http://registry.npmjs.org'
-$givenWorkingDirectory = $null
-$workingDirectory = $null
 
 function Init
 {
     $Global:Error.Clear()
     $script:dependency = $null
     $script:devDependency = $null
-    $script:initialize = $null
     $script:failed = $false
-    $script:givenWorkingDirectory = $null
-    $script:workingDirectory = $TestDrive.FullName
+    Install-Node
 }
 
 function GivenPackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:workingDirectory -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
 
     @"
 {
@@ -34,9 +27,6 @@ function GivenPackageJson
     "repository": "bitbucket:example/repo",
     "private": true,
     "license": "MIT",
-    "engines": {
-        "node": "$nodeVersion"
-    },
     "dependencies": {
         $($script:dependency -join ',')
     },
@@ -45,23 +35,6 @@ function GivenPackageJson
     }
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
-}
-
-function Initialize-NodeProject
-{
-    # Run npm install so we have things to prune
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $script:npmRegistryUri -ApplicationRoot $script:workingDirectory
-    $npmPath = (Join-Path -Path ($NodePath | Split-Path) -ChildPath 'node_modules\npm\bin\npm-cli.js' -Resolve)
-    
-    Push-Location -Path $script:workingDirectory
-    try
-    {
-        & $nodePath $npmPath install
-    }
-    finally
-    {
-        Pop-Location
-    }
 }
 
 function GivenDependency 
@@ -82,39 +55,17 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
-function GivenInitializeMode
+function GivenNodeModulesInstalled
 {
-    $script:initialize = $true
-
-    Mock -CommandName 'Initialize-NodeProject'
-    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' -ParameterFilter { $ApplicationRoot -eq $workingDirectory }
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock -match 'prune' }
-}
-
-function GivenFailingNpm
-{
-    param (
-        $ExitCode
-    )
-
-    Mock -CommandName 'Initialize-NodeProject'
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock -match 'prune' } -MockWith { & cmd /c exit 1 }
-}
-
-function GivenMissingPackageJson
-{
-    Mock -CommandName 'Initialize-NodeProject'
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $Directory
-    )
-    $script:givenWorkingDirectory = $Directory
-    $script:workingDirectory = Join-Path -Path $workingDirectory -ChildPath $Directory
-
-    New-Item -Path $workingDirectory -ItemType 'Directory' -Force | Out-Null
+    Push-Location $TestDrive.FullName
+    try
+    {
+        & '.node\node.exe' '.node\node_modules\npm\bin\npm-cli.js' 'install'
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
 
 function WhenRunningTask
@@ -124,42 +75,16 @@ function WhenRunningTask
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
 
-    $taskParameter = @{ 'NpmRegistryUri' = $script:npmRegistryUri }
-
-    if ($givenWorkingDirectory)
-    {
-        $taskParameter['WorkingDirectory'] = $givenWorkingDirectory
-    }
-
-    if ($initialize)
-    {
-        $taskContext.RunMode = 'Initialize'
-    }
+    $taskParameter = @{ }
 
     try
     {
-        Initialize-NodeProject
-
         Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NpmPrune'
     }
     catch
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-}
-
-function ThenNodeJsInstalled
-{
-    It 'should install Node.js' {
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' -ParameterFilter { $ApplicationRoot -eq $workingDirectory } -Times 1
-    }
-}
-
-function ThenNpmPruneNotCalled
-{
-    It 'should not run ''npm prune''' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock -match 'prune' } -Times 0
     }
 }
 
@@ -179,7 +104,7 @@ function ThenPackage
         $DoesNotExist
     )
 
-    $packagePath = Join-Path -Path $script:workingDirectory -ChildPath ('node_modules\{0}' -f $PackageName)
+    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $PackageName)
 
     If ($Exists)
     {
@@ -195,25 +120,10 @@ function ThenPackage
     }
 }
 
-function ThenTaskFailedWithMessage
-{
-    param(
-        $Message
-    )
-
-    It 'task should fail' {
-        $failed | Should -Be $true
-    }
-
-    It ('error message should match [{0}]' -f $Message) {
-        $Global:Error[0] | Should -Match $Message
-    }
-}
-
 function ThenTaskSucceeded
 {
     It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -notmatch '\bnpm\ (notice|WARN)\b' } | Should -BeNullOrEmpty
     }
 
     It 'should not fail' {
@@ -221,51 +131,21 @@ function ThenTaskSucceeded
     }
 }
 
-Describe 'NpmPrune.when running in Initialize mode' {
-    Init
-    GivenInitializeMode
-    GivenPackageJson
-    WhenRunningTask
-    ThenNodeJsInstalled
-    ThenNpmPruneNotCalled
-    ThenTaskSucceeded
-}
-Describe 'NpmPrune.when missing package.json' {
-    Init
-    GivenMissingPackageJson
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage '''package.json'' file does not exist'
-}
-
 Describe 'NpmPrune.when pruning packages' {
-    Init
-    GivenDependency '"wrappy": "^1.0.2"'
-    GivenDevDependency '"pify": "^3.0.0"'
-    GivenPackageJson
-    WhenRunningTask
-    ThenPackage 'wrappy' -Exists
-    ThenPackage 'pify' -DoesNotExist
-    ThenTaskSucceeded
-}
-
-Describe 'NpmPrune.when pruning packages with given working directory' {
-    Init
-    GivenWorkingDirectory 'workdir'
-    GivenDependency '"wrappy": "^1.0.2"'
-    GivenDevDependency '"pify": "^3.0.0"'
-    GivenPackageJson
-    WhenRunningTask
-    ThenPackage 'wrappy' -Exists
-    ThenPackage 'pify' -DoesNotExist
-    ThenTaskSucceeded
-}
-
-Describe 'NpmPrune.when npm returns non-zero exit code' {
-    Init
-    GivenDependency '"wrappy": "^1.0.2"'
-    GivenDevDependency '"pify": "^3.0.0"'
-    GivenFailingNpm
-    GivenPackageJson
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'NPM command ''npm prune'' failed with exit code' 
+    try
+    {
+        Init
+        GivenDependency '"wrappy": "^1.0.2"'
+        GivenDevDependency '"pify": "^3.0.0"'
+        GivenPackageJson
+        GivenNodeModulesInstalled
+        WhenRunningTask
+        ThenPackage 'wrappy' -Exists
+        ThenPackage 'pify' -DoesNotExist
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

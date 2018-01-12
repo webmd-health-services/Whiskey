@@ -267,7 +267,7 @@ function Invoke-WhiskeyTask
         {
             foreach( $requiredTool in $requiredTools )
             {
-                Uninstall-WhiskeyTool -Context $TaskContext -Name $requiredTool.ToolName
+                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
             }
 
             if( -not $task.SupportsClean )
@@ -279,8 +279,7 @@ function Invoke-WhiskeyTask
 
         foreach( $requiredTool in $requiredTools )
         {
-            $toolPath = Install-WhiskeyTool -Context $TaskContext -Name $requiredTool.ToolName
-            $taskProperties[$requiredTool.ToolPathParameterName] = $toolPath
+            Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties
         }
 
         if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )

@@ -6,15 +6,16 @@ function Invoke-WhiskeyNspCheck
     Runs the Node Security Platform against a module's dependenices.
     
     .DESCRIPTION
-    The `NspCheck` task runs `node.exe nsp check`, the Node Security Platform, which checks a `package.json` and `npm-shrinkwrap.json` for known security vulnerabilities against the Node Security API. The latest version of the NSP module will be downloaded into the local `node_modules` directory located next to the module's `package.json` file. To use a specific version of the NSP module, include it in either the `devDependencies` or `dependencies` of the `package.json` file. If any security vulnerabilties are found the NSP module returns a non-zero exit code which will fail the task.
+    The `NspCheck` task runs `node.exe nsp check`, the Node Security Platform, which checks a `package.json` and `npm-shrinkwrap.json` for known security vulnerabilities against the Node Security API. The latest version of the NSP module is installed into a dedicated Node environment you can find in a .node directory in the same directory as your whiskey.yml file. If any security vulnerabilties are found, the NSP module returns a non-zero exit code which will fail the task.
 
-    You must specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
+    You must specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed into a .node directory in the same directory as your whiskey.yml file.
 
     If the application's `package.json` file does not exist in the build root next to the `whiskey.yml` file, specify a `WorkingDirectory` where it can be found.
 
+    This task will install the latest LTS version of Node into a `.node` directory (in the same directory as your whiskey.yml file). To use a specific version, set the `engines.node` property in your package.json file to the version you want. (See https://docs.npmjs.com/files/package.json#engines for more information.)
+
     # Properties
 
-    # * `NpmRegistryUri` (mandatory): the uri to set a custom npm registry.
     # * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     # * `Version`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
 
@@ -23,8 +24,7 @@ function Invoke-WhiskeyNspCheck
     ## Example 1
 
         BuildTasks:
-        - NspCheck:
-            NpmRegistryUri: "http://registry.npmjs.org"
+        - NspCheck
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file located in the build root.
 
@@ -32,7 +32,6 @@ function Invoke-WhiskeyNspCheck
 
         BuildTasks:
         - NspCheck:
-            NpmRegistryUri: "http://registry.npmjs.org"
             WorkingDirectory: app
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file that is located in the `(BUILD_ROOT)\app` directory.
@@ -41,13 +40,13 @@ function Invoke-WhiskeyNspCheck
 
         BuildTasks:
         - NspCheck:
-            NpmRegistryUri: "http://registry.npmjs.org"
             Version: 2.7.0
     
     This example will run `node.exe nsp check` by installing and running NSP version 2.7.0.
     #>
-
-    [Whiskey.Task("NspCheck", SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.Task("NspCheck")]
+    [Whiskey.RequiresTool("Node", "NodePath")]
+    [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -73,61 +72,29 @@ function Invoke-WhiskeyNspCheck
         Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
     }
 
-    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
-    if (-not $npmRegistryUri) 
+    $nspRoot = $TaskParameter['NspPath']
+    if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry from which Node.js packages should be downloaded, e.g.,
-        
-        BuildTasks:
-        - NspCheck:
-            NpmRegistryUri: https://registry.npmjs.org/
-
-        '
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP node module not installed by Whiskey. Something pretty serious has gone wrong.')
     }
 
-    $workingDirectory = (Get-Location).ProviderPath
-
-    if ($TaskContext.ShouldClean())
+    $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
+    if( -not $nspPath )
     {
-        Write-Timing -Message 'Cleaning'
-        Uninstall-WhiskeyNodeModule -Name 'npm' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper -Force
-        Uninstall-WhiskeyNodeModule -Name 'nsp' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper -Force
-        Write-Timing -Message 'COMPLETE'
-        return
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('It looks like the latest version of NSP doesn''t have a ''{0}\bin\nsp'' script. Please use the ''Version'' property on the NspCheck task to specify a version that includes this script.' -f $nspPath)
     }
 
-    Write-Timing -Message 'Installing NSP'
-
-    if( $TaskParameter['Version'] )
+    $nodePath = $TaskParameter['NodePath']
+    if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
     {
-        $nspVersion = ConvertTo-WhiskeySemanticVersion -InputObject $TaskParameter['Version']
-        $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version $nspVersion -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install Node. Something pretty serious has gone wrong.')
     }
-    else
-    {
-        $nspVersion = $null
-        $nspModuleRoot = Install-WhiskeyNodeModule -Name 'nsp' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
-    }
-
-    $nspPath = Join-Path -Path $nspModuleRoot -ChildPath 'bin\nsp' -Resolve -ErrorAction Ignore
-    if (-not $nspPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download the ''nsp'' module to ''{0}''.' -f (Join-Path -Path $workingDirectory -ChildPath 'node_modules'))
-    }
-    Write-Timing -Message 'COMPLETE'
-
-    if ($TaskContext.ShouldInitialize())
-    {
-        Write-Timing -Message 'Initialization Complete'
-        return
-    }
-
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
 
     Write-Timing -Message 'Running NSP security check'
 
     $formattingArg = '--output'
-    if( !$nspVersion -or $nspVersion -ge (ConvertTo-WhiskeySemanticVersion -InputObject '3.0.0') )
+    $isNsp3 = -not $TaskParameter.ContainsKey('Version') -or -not $TaskParameter['Version'] -match '^(0|1|2)\.'
+    if( $isNsp3 )
     {
         $formattingArg = '--reporter'
     }

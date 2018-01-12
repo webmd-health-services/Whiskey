@@ -186,10 +186,9 @@ function GivenScmBranch
 function GivenToolInstalledTo
 {
     param(
-        $Path
     )
 
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $Path }.GetNewClosure()
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
 }
 
 function GivenVariable
@@ -535,13 +534,21 @@ function ThenThrewException
 function ThenToolInstalled
 {
     param(
-        $ToolName
+        $ToolName,
+        $Parameter
     )
 
     $taskContext = $context
     It 'should install Node' {
-        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ToolName }
-        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { [Object]::ReferenceEquals($Context,$taskContext) }
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Toolinfo.Name -eq $ToolName }
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd('\')
+            Write-Debug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
+            Write-Debug -Message ('             actual    {0}' -f $InstallRoot)
+            $InstallRoot -eq $expectedInstallRoot
+        }
+
     }
 }
 
@@ -857,7 +864,8 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and insta
                 throw 'tool installation didn''t happen in the task''s working directory'
             }
         }
-    WhenRunningTask 'ToolTask' -Parameter @{ 'WorkingDirectory' = '.output' }
+    $parameter = @{ 'WorkingDirectory' = '.output' }
+    WhenRunningTask 'ToolTask' -Parameter $parameter
     ThenToolInstalled 'Node'
     ThenPipelineSucceeded
 }
@@ -1156,18 +1164,22 @@ Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults
 Describe 'Invoke-WhiskeyTask.when task requires tools' {
     Init
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
-    GivenToolInstalledTo 'C:\some\path\node.exe'
-    WhenRunningTask 'ToolTask' -Parameter @{ }
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    $parameter = @{ }
+    WhenRunningTask 'ToolTask' -Parameter $parameter
     ThenToolInstalled 'Node'
     ThenToolNotCleaned
-    ThenTaskRanWithParameter -ExpectedParameter @{ 'NodePath' = 'C:\some\path\node.exe' }
+    It 'should run the task' {
+        $taskRun | Should -Be $true
+    }
 }
 
 Describe 'Invoke-WhiskeyTask.when task requires tools and initializing' {
     Init
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
-    GivenToolInstalledTo 'C:\some\path\node.exe'
-    WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Initialize'
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    $parameter = @{ }
+    WhenRunningTask 'ToolTask' -Parameter $parameter -InRunMode 'Initialize'
     ThenToolInstalled 'Node'
     ThenTaskNotRun 
     ThenToolNotCleaned

@@ -6,14 +6,9 @@ Set-StrictMode -Version 'Latest'
 $dependency = $null
 $devDependency = $null
 $failed = $false
-$givenWorkingDirectory = $null
 $npmRegistryUri = 'http://registry.npmjs.org'
-$nodeVersion = '^4.4.7'
 $licenseReportPath = $null
 $output = $null
-$shouldClean = $false
-$shouldInitialize = $false
-$workingDirectory = $null
 
 function Init
 {
@@ -21,17 +16,14 @@ function Init
     $script:dependency = $null
     $script:devDependency = $null
     $script:failed = $false
-    $script:givenWorkingDirectory = $null
     $script:output = $null
-    $script:shouldClean = $false
-    $script:shouldInitialize = $false
-    $script:workingDirectory = $TestDrive.FullName
     $script:licenseReportPath = Join-Path -Path $TestDrive.FullName -ChildPath '.output\node-license-checker-report.json'
+    Install-Node -WithModule 'license-checker'
 }
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:workingDirectory -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
 
     @"
 {
@@ -41,9 +33,6 @@ function CreatePackageJson
     "repository": "bitbucket:example/repo",
     "private": true,
     "license": "MIT",
-    "engines": {
-        "node": "$nodeVersion"
-    },
     "dependencies": {
         $($script:dependency -join ',')
     },
@@ -57,13 +46,6 @@ function CreatePackageJson
 function GivenBadJson
 {
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'ConvertFrom-Json' }
-}
-
-function GivenCleanMode
-{
-    $script:shouldClean = $true
-    Mock -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--json' }
 }
 
 function GivenDependency 
@@ -84,25 +66,6 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
-function GivenInitializeMode
-{
-    $script:shouldInitialize = $true
-    Mock -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -eq 'bin\license-checker' } -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--json' }
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $Directory
-    )
-    $script:givenWorkingDirectory = $Directory
-    $script:workingDirectory = Join-Path -Path $workingDirectory -ChildPath $Directory
-
-    New-Item -Path $workingDirectory -ItemType 'Directory' -Force | Out-Null
-}
-
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -110,21 +73,7 @@ function WhenRunningTask
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
 
-    $taskParameter = @{ 'NpmRegistryUri' = $script:npmRegistryUri }
-
-    if ($givenWorkingDirectory)
-    {
-        $taskParameter['WorkingDirectory'] = $givenWorkingDirectory
-    }
-
-    if ($shouldClean)
-    {
-        $taskContext.RunMode = 'Clean'
-    }
-    elseif ($shouldInitialize)
-    {
-        $taskContext.RunMode = 'Initialize'
-    }
+    $taskParameter = @{ }
 
     try
     {
@@ -136,13 +85,6 @@ function WhenRunningTask
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
-    }
-}
-
-function ThenLicenseCheckerInstalled
-{
-    It 'should install the license-checker module' {
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'license-checker' } -Times 1        
     }
 }
 
@@ -225,48 +167,33 @@ function ThenUninstalledModule
     }
 }
 
-Describe 'NodeLicenseChecker.when running in Clean mode' {
-    Init
-    GivenCleanMode
-    WhenRunningTask
-    ThenUninstalledModule 'npm'
-    ThenUninstalledModule 'license-checker'
-    ThenLicenseCheckerNotRun
-    ThenTaskSucceeded
-}
-
-Describe 'NodeLicenseChecker.when running in Initialize mode' {
-    Init
-    GivenInitializeMode
-    WhenRunningTask
-    ThenLicenseCheckerInstalled
-    ThenLicenseCheckerNotRun
-    ThenTaskSucceeded
-}
-
 Describe 'NodeLicenseChecker.when running license-checker' {
-    Init
-    WhenRunningTask
-    ThenLicenseReportCreated
-    ThenLicenseReportIsValidJSON
-    ThenLicenseReportFormatTransformed
-    ThenTaskSucceeded
-}
-
-Describe 'NodeLicenseChecker.when given working directory' {
-    Init
-    GivenWorkingDirectory 'src\app'
-    WhenRunningTask
-    ThenLicenseReportCreated
-    ThenLicenseReportIsValidJSON
-    ThenLicenseReportFormatTransformed
-    ThenTaskSucceeded
+    try
+    {
+        Init
+        WhenRunningTask
+        ThenLicenseReportCreated
+        ThenLicenseReportIsValidJSON
+        ThenLicenseReportFormatTransformed
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'NodeLicenseChecker.when license checker did not return valid JSON' {
-    Init
-    GivenBadJson
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenLicenseReportNotCreated
-    ThenTaskFailedWithMessage 'failed to output a valid JSON report'
+    try
+    {
+        Init
+        GivenBadJson
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenLicenseReportNotCreated
+        ThenTaskFailedWithMessage 'failed to output a valid JSON report'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

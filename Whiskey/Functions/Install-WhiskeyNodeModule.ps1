@@ -34,25 +34,57 @@ function Install-WhiskeyNodeModule
         # The root directory of the target Node.js application. This directory will contain the application's `package.json` config file and will be where Node modules are installed.
         $ApplicationRoot,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='Legacy')]
         # The URI to the registry from which Node modules should be downloaded.
         $RegistryUri,
 
         [switch]
         # Node modules are being installed on a developer computer.
-        $ForDeveloper
+        $ForDeveloper,
+
+        [Parameter(Mandatory=$true,ParameterSetName='New')]
+        [string]
+        # The path to the node executable.
+        $NodePath,
+
+        [Switch]
+        # Whether or not to install the module globally.
+        $Global
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $npmArgument = $Name
-    if ($version)
+    $npmArgument = & {
+                        if( $Version )
+                        {
+                            ('{0}@{1}' -f $Name,$Version)
+                        }
+                        else
+                        {
+                            $Name
+                        }
+                        if( $Global )
+                        {
+                            '-g'
+                        }
+                    }
+
+    $nodeRoot = $ApplicationRoot
+    if( $Global )
     {
-        $npmArgument = ('{0}@{1}' -f $Name,$Version)
+        $nodeRoot = $NodePath | Split-Path
     }
 
-    Invoke-WhiskeyNpmCommand -NpmCommand 'install' -Argument $npmArgument -ApplicationRoot $ApplicationRoot -RegistryUri $RegistryUri -ForDeveloper:$ForDeveloper | Write-Verbose
+    $modulePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $Name)
+    if( (Test-Path -Path $modulePath -PathType Container) )
+    {
+        return $modulePath
+    }  
+
+    Invoke-WhiskeyNpmCommand -NodePath $NodePath -NpmCommand 'install' -Argument $npmArgument -ApplicationRoot $ApplicationRoot | Write-Verbose
+
+    #cat 'package-lock.json' -Raw | Write-Host
 
     if ($Global:LASTEXITCODE -ne 0)
     {
@@ -60,7 +92,6 @@ function Install-WhiskeyNodeModule
         return
     }
 
-    $modulePath = Join-Path -Path $ApplicationRoot -ChildPath ('node_modules\{0}' -f $Name)
 
     if (-not (Test-Path -Path $modulePath -PathType Container))
     {
