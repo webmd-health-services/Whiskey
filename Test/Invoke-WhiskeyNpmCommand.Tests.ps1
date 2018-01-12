@@ -6,29 +6,25 @@ Set-StrictMode -Version 'Latest'
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyNPMPath.ps1' -Resolve)
 
 
-$registryUri = 'http://registry.npmjs.org'
-$applicationRoot = $null
 $argument = @{}
 $dependency = $null
 $devDependency = $null
-$initializeOnly = $false
 $npmCommand = $null
 $nodeVersion = '^4.4.7'
 
 function Init
 {
     $Global:Error.Clear()
-    $script:applicationRoot = $TestDrive.FullName
     $script:argument = @{}
     $script:command = $null
     $script:dependency = $null
     $script:devDependency = $null
-    $script:initializeOnly = $false
+    Install-Node
 }
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:applicationRoot -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
 
     @"
 {
@@ -74,26 +70,12 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
-function GivenInitializeOnly
-{
-    $script:initializeOnly = $true
-    Mock -CommandName 'Invoke-Command'
-    Mock -CommandName 'Install-WhiskeyNodeJs' -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Join-Path' -ParameterFilter { $ChildPath -eq 'node_modules\npm\bin\npm-cli.js' } -MockWith { $TestDrive.FullName }
-    Mock -CommandName 'Get-WhiskeyNPMPath' -MockWith { $TestDrive.FullName }
-}
-
 function GivenNpmCommand
 {
     param(
         $Command
     )
     $script:npmCommand = $Command
-}
-
-function GivenFailingNodeJsInstall
-{
-    Mock -CommandName 'Install-WhiskeyNodeJs'
 }
 
 function GivenFailingNPMInstall
@@ -112,14 +94,15 @@ function WhenRunningNpmCommand
     param()
 
     CreatePackageJson
-
-    if ($initializeOnly)
+    $nodePath = Join-Path -Path $TestDrive.Fullname -ChildPath '.node\node.exe'
+    Push-Location $TestDrive.FullName
+    try
     {
-        Invoke-WhiskeyNpmCommand -InitializeOnly -ApplicationRoot $applicationRoot -RegistryUri $registryUri
+        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand $npmCommand @argument
     }
-    else
+    finally
     {
-        Invoke-WhiskeyNpmCommand -NpmCommand $npmCommand -ApplicationRoot $applicationRoot -RegistryUri $registryUri @argument
+        Pop-Location
     }
 }
 
@@ -137,7 +120,9 @@ function ThenErrorMessage
 function ThenNoErrorsWritten
 {
     It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
+        $Global:Error | 
+            Where-Object { $_ -notmatch '\bnpm\ (notice|warn)\b' } | 
+            Should -BeNullOrEmpty
     }
 }
 
@@ -157,7 +142,7 @@ function ThenPackage
         $DoesNotExist
     )
 
-    $packagePath = Join-Path -Path $script:applicationRoot -ChildPath ('node_modules\{0}' -f $PackageName)
+    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $PackageName)
 
     If ($Exists)
     {
@@ -184,13 +169,6 @@ function ThenExitCode
     }
 }
 
-function ThenNodeJsInstalled
-{
-    It 'should install Node.js' {
-        Assert-MockCalled -CommandName 'Install-WhiskeyNodeJs' -Times 1
-    }
-}
-
 function ThenNPMInstalled
 {
     It 'should install NPM' {
@@ -206,61 +184,42 @@ function ThenNpmNotRun
 }
 
 
-Describe 'Invoke-WhiskeyNpmCommand.when Node.js fails to install' {
-    Init
-    GivenNpmCommand 'install'
-    GivenFailingNodeJsInstall
-    WhenRunningNpmCommand -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Node.js version required for this package failed to install.'
-    ThenExitCode 1
-}
-
-Describe 'Invoke-WhiskeyNpmCommand.when NPM is missing from global Node.js install' {
-    Init
-    GivenNpmCommand 'install'
-    GivenMissingGlobalNPM
-    WhenRunningNpmCommand -ErrorAction SilentlyContinue
-    ThenErrorMessage 'NPM didn''t get installed by NVM when installing Node.'
-    ThenExitCode 2
-}
-
-Describe 'Invoke-WhiskeyNpmCommand.when NPM fails to install' {
-    Init
-    GivenNpmCommand 'install'
-    GivenFailingNPMInstall
-    WhenRunningNpmCommand -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Could not locate version of NPM that is required for this package.'
-    ThenExitCode 3
-}
-
 Describe 'Invoke-WhiskeyNpmCommand.when running successful NPM command' {
-    Init
-    GivenDependency '"wrappy": "^1.0.2"'
-    GivenDevDependency '"pify": "^3.0.0"'
-    GivenNpmCommand 'install'
-    GivenArgument '--production'
-    WhenRunningNpmCommand
-    Thenpackage 'wrappy' -Exists
-    ThenPackage 'pify' -DoesNotExist
-    ThenExitCode 0
-    ThenNoErrorsWritten
+    try
+    {
+        Init
+        GivenDependency '"wrappy": "^1.0.2"'
+        GivenDevDependency '"pify": "^3.0.0"'
+        GivenNpmCommand 'install'
+        GivenArgument '--production'
+        WhenRunningNpmCommand
+        Thenpackage 'wrappy' -Exists
+        ThenPackage 'pify' -DoesNotExist
+        ThenExitCode 0
+        ThenNoErrorsWritten
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'Invoke-WhiskeyNpmCommand.when NPM command with argument that fails' {
-    Init
-    GivenNpmCommand 'install'
-    GivenArgument 'thisisanonexistentpackage'
-    WhenRunningNpmCommand -ErrorAction SilentlyContinue
-    ThenExitCode 1
-}
-
-Describe 'Invoke-WhiskeyNpmCommand.when running with InitializeOnly' {
-    Init
-    GivenInitializeOnly
-    WhenRunningNpmCommand
-    ThenNodeJsInstalled
-    ThenNPMInstalled
-    ThenNpmNotRun
-    ThenExitCode 0
-    ThenNoErrorsWritten
+    try
+    {
+        Init
+        GivenNpmCommand 'install'
+        GivenArgument 'thisisanonexistentpackage'
+        WhenRunningNpmCommand -ErrorAction Stop
+        ThenExitCode 1
+        It ('should not stop because of NPM STDERR') {
+            $Global:Error | 
+                Where-Object { $_ -match 'failed\ with\ exit\ code' } | 
+                Should -Not -BeNullOrEmpty
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

@@ -41,20 +41,6 @@ function Invoke-WhiskeyNpmCommand
         # An array of arguments to be given to the NPM command being executed.
         $Argument,
 
-        [Parameter(ParameterSetName='InitializeOnly')]
-        [switch]
-        $InitializeOnly,
-
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The root directory of the target Node.js application. This directory will contain the application's `package.json` config file and will be where NPM will be executed from.
-        $ApplicationRoot,
-
-        [Parameter(Mandatory=$true,ParameterSetName='InvokeNpm')]
-        [Parameter(Mandatory=$true,ParameterSetName='InitializeOnly')]
-        # The URI to the registry from which NPM packages should be downloaded.
-        $RegistryUri,
-
         [switch]
         # NPM commands are being run on a developer computer.
         $ForDeveloper
@@ -74,71 +60,49 @@ function Invoke-WhiskeyNpmCommand
         Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
     }
 
-    $activity = ('Invoke npm command ''{0}''' -f $NpmCommand)
-    Write-Progress -Activity $activity -Status 'Validating package.json and starting installation of Node.js version required for this package (if required)'
-
-    Write-Timing -Message 'Installing Node.js'
-    if( -not $NodePath )
-    {
-        $NodePath = Install-WhiskeyNodeJs -RegistryUri $RegistryUri -ApplicationRoot $ApplicationRoot -ForDeveloper:$ForDeveloper
-        Write-Timing -Message ('COMPLETE')
-
-        if (-not $NodePath)
-        {
-            Write-Error -Message 'Node.js version required for this package failed to install. Please see previous errors for details.'
-            $Global:LASTEXITCODE = 1
-            return
-        }
-    }
-
     $nodeRoot = $NodePath | Split-Path
         
     Write-Timing -Message 'Resolving path to NPM.'
     $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath
     Write-Timing -Message ('COMPLETE')
     
-    if (-not $npmPath)
+    if( -not $npmPath )
     {
         Write-Error -Message ('Could not locate version of NPM that is required for this package. Please see previous errors for details.')
         $Global:LASTEXITCODE = 3
         return
     }
 
-    if ($InitializeOnly)
-    {
-        $Global:LASTEXITCODE = 0
-        Write-Timing -Message 'Initialization complete.'
-        return
-    }
-
     $originalPath = $env:PATH
 
-    Push-Location -Path $ApplicationRoot
+    Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
     try
     {
-        Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
         $defaultArguments = @('--scripts-prepend-node-path=auto')
-        if (-not $ForDeveloper)
+        if( -not $ForDeveloper )
         {
             $defaultArguments += '--no-color'
         }
 
         $npmCommandString = ('npm {0} {1} {2}' -f $NpmCommand,($Argument -join ' '),($defaultArguments -join ' '))
-        Write-Progress -Activity $activity -Status ('Executing ''{0}''' -f $npmCommandString)
+
+        Write-Progress -Activity $npmCommandString
         Write-Verbose $npmCommandString
         Invoke-Command -NoNewScope -ScriptBlock {
+            # The ISE bails if processes write anything to STDERR. Node writes notices and warnings to
+            # STDERR. We only want to stop a build if the command actually fails.
+            $ErrorActionPreference = 'Continue'
             & $nodePath $npmPath $NpmCommand $Argument $defaultArguments
         }
-        if ($LASTEXITCODE -ne 0)
+        if( $LASTEXITCODE -ne 0 )
         {
-            Write-Error -Message ('NPM command ''{0}'' failed with exit code {1}.' -f $npmCommandString,$LASTEXITCODE)
+            Write-Error -Message ('NPM command ''{0}'' failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
         }
     }
     finally
     {
         Set-Item -Path 'env:PATH' -Value $originalPath
-
-        Pop-Location
+        Write-Progress -Activity $npmCommandString -Completed -PercentComplete 100
     }
 }
