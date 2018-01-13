@@ -229,6 +229,7 @@ function Invoke-WhiskeyTask
         $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
+    $requiredTools = Get-RequiredTool -CommandName $task.CommandName
     $startedAt = Get-Date
     $result = 'SKIPPED'
     Push-Location -Path $workingDirectory
@@ -261,31 +262,26 @@ function Invoke-WhiskeyTask
             return
         }
     
-        $requiredTools = Get-RequiredTool -CommandName $task.CommandName
-
         if( $TaskContext.ShouldClean() )
         {
-            foreach( $requiredTool in $requiredTools )
-            {
-                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
-            }
-
             if( -not $task.SupportsClean )
             {
                 Write-Verbose -Message ('{0}  SKIPPED  SupportsClean: $false' -f $prefix)
                 return
             }
         }
-
-        foreach( $requiredTool in $requiredTools )
+        else
         {
-            Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties -ErrorAction Stop
-        }
+            foreach( $requiredTool in $requiredTools )
+            {
+                Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties -ErrorAction Stop
+            }
 
-        if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
-        {
-            Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
-            return
+            if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+            {
+                Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
+                return
+            }
         }
 
         Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
@@ -304,6 +300,15 @@ function Invoke-WhiskeyTask
     }
     finally
     {
+        # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
+        if( $TaskContext.ShouldClean() )
+        {
+            foreach( $requiredTool in $requiredTools )
+            {
+                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
+            }
+        }
+
         if( $TaskContext.Temp -and (Test-Path -Path $TaskContext.Temp -PathType Container) )
         {
             Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore

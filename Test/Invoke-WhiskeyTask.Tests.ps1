@@ -19,7 +19,7 @@ $variables = @{ }
 
 function Global::ToolTask
 {
-    [Whiskey.Task("ToolTask")]
+    [Whiskey.Task("ToolTask",SupportsClean=$true)]
     [Whiskey.RequiresTool("Node", "NodePath")]
     [CmdletBinding()]
     param(
@@ -888,7 +888,6 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and clean
         }
     WhenRunningTask 'ToolTask' -Parameter @{ 'WorkingDirectory' = '.output' } -InRunMode 'Clean'
     ThenPipelineSucceeded
-    ThenTaskNotRun
     ThenToolUninstalled 'Node'
 }
 
@@ -1161,12 +1160,14 @@ Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults
     ThenTaskRanInWorkingDirectory 'Snafu'
 }
 
+# this
 Describe 'Invoke-WhiskeyTask.when task requires tools' {
     Init
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
     Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
     $parameter = @{ }
     WhenRunningTask 'ToolTask' -Parameter $parameter
+    ThenPipelineSucceeded
     ThenToolInstalled 'Node'
     ThenToolNotCleaned
     It 'should run the task' {
@@ -1188,20 +1189,41 @@ Describe 'Invoke-WhiskeyTask.when task requires tools and initializing' {
     }
 }
 
+# this
 Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {
-    Init
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
-    WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Clean'
-    ThenToolUninstalled 'Node'
-    ThenTaskNotRun 
+    try
+    {
+        Init
+        Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+        WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Clean'
+        ThenToolUninstalled 'Node'
+        It ('should not install any tools in clean mode') {
+            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -Times 0
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
-Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {
-    Init
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
-    WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Clean'
-    ThenToolUninstalled 'Node'
-    ThenTaskNotRun 
+Describe 'Invoke-WhiskeyTask.when task needs a required tool in order to clean' {
+    try
+    {
+        Init
+        Install-Node
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey'
+        WhenRunningTask 'ToolTask' -Parameter @{} -InRunMode 'Clean'
+        ThenPipelineSucceeded
+        It 'should not re-install too' {
+            Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 0
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore
