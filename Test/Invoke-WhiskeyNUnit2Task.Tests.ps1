@@ -466,7 +466,7 @@ function Init
     $script:exclude = $null
     $Script:disableCodeCoverage = $null
 
-    robocopy $packagesRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
+    robocopy $packagesRoot (Join-Path -Path $TestDrive.FullName -ChildPath 'packages') /MT
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
 
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
