@@ -82,12 +82,8 @@ function Invoke-WhiskeyNodeTask
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('npm install')
-        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper
+        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-WhiskeyTiming -Message ('COMPLETE')
-        if( $LASTEXITCODE )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('npm install returned exit code {0}. Please see previous output for details.' -f $LASTEXITCODE)
-        }
 
         Update-Progress -Status ('npm install nsp@2.7.0') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('npm install nsp@2.7.0')

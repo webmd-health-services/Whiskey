@@ -35,6 +35,17 @@ function GivenPackageJson
     }
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
+
+    @"
+{
+    "name": "NpmPrune-Test-App",
+    "version": "0.0.1",
+    "lockfileVersion": 1,
+    "requires": true,
+    "dependencies": {
+    }
+} 
+"@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
 }
 
 function GivenDependency 
@@ -120,6 +131,17 @@ function ThenPackage
     }
 }
 
+function ThenTaskFailed
+{
+    It 'should write errors' {
+        $Global:Error | Should -Not -BeNullOrEmpty
+    }
+
+    It 'should fail' {
+        $failed | Should -Be $true
+    }
+}
+
 function ThenTaskSucceeded
 {
     It 'should not write any errors' {
@@ -143,6 +165,22 @@ Describe 'NpmPrune.when pruning packages' {
         ThenPackage 'wrappy' -Exists
         ThenPackage 'pify' -DoesNotExist
         ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'NpmPrune.when pruning packages fails' {
+    try
+    {
+        Init
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey'
+        WhenRunningTask
+        It ('should fail a build if prune fails') {
+            Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+        }
     }
     finally
     {

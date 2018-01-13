@@ -389,7 +389,7 @@ Describe 'Node.when a build task fails' {
     }
 }
 
-Describe 'Node.when `npm install` fails' {
+Describe 'Node.when npm install fails' {
     try
     {
         Init
