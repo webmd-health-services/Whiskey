@@ -339,7 +339,7 @@ function New-WhiskeyTestContext
 
 function Remove-Node
 {
-    Remove-Item -Path ('\\?\{0}\.node' -f $TestDrive.FullName) -Recurse -Force
+    Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules')
 }
 
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
@@ -348,6 +348,8 @@ function Remove-Node
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyMSBuildConfiguration.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
 Export-ModuleMember -Function '*'
 

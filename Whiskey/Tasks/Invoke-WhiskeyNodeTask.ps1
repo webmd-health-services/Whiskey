@@ -35,11 +35,8 @@ function Invoke-WhiskeyNodeTask
     if( $TaskContext.ShouldClean() )
     {
         Write-WhiskeyTiming -Message 'Cleaning'
-        $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
-        if( Test-Path $nodeModulesPath -PathType Container )
-        {
-            Remove-Item -Path ('\\?\{0}' -f $nodeModulesPath) -Recurse -Force
-        }
+        $nodeModulesPath = Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules'
+        Remove-WhiskeyFileSystemItem -Path $nodeModulesPath
         Write-WhiskeyTiming -Message 'COMPLETE'
         return
     }

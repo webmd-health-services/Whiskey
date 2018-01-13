@@ -53,8 +53,7 @@ function Uninstall-WhiskeyNodeModule
     {
         if( $Force )
         {
-            # Use the \\?\ qualifier to get past any path too long errors.
-            Remove-Item -Path ('\\?\{0}' -f $modulePath) -Recurse -Force
+            Remove-WhiskeyFileSystemItem -Path $modulePath
         }
         else
         {

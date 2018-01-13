@@ -58,7 +58,6 @@ function Remove-WhiskeyItem
         }
 
         $path | 
-            Where-Object { (Test-Path -Path $_) } |
-            ForEach-Object { Remove-Item -Path ('\\?\{0}' -f $_) -Force -Recurse }
+            ForEach-Object { Remove-WhiskeyFileSystemItem -Path $_ -ErrorAction Stop }
     }
 }

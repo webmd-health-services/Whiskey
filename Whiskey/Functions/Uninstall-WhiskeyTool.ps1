@@ -123,10 +123,7 @@ function Uninstall-WhiskeyTool
                     'Node'
                     {
                         $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
-                        if( (Test-Path -Path $dirToRemove -PathType Container) )
-                        {
-                            Remove-Item -Path ('\\?\{0}' -f $dirToRemove) -Recurse -Force
-                        }
+                        Remove-WhiskeyFileSystemItem -Path $dirToRemove
                     }
                     default
                     {
