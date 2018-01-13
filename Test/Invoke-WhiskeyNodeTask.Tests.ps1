@@ -398,7 +398,7 @@ Describe 'Node.when npm install fails' {
         GivenDevDependency -DevDependency '"idonotexist": "^1.0.0"'
         Initialize-NodeProject 
         WhenBuildIsStarted -ErrorAction SilentlyContinue
-        $errMsg = 'npm\ run\b.*\bfailed'
+        $errMsg = 'failed\ with\ exit\ code\ 1'
         if( $Host.Name -like '*ISE*' )
         {
             $errMsg = 'node\.exe\ :'

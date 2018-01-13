@@ -19,9 +19,9 @@ function Init
     Install-Node
 }
 
-function GivenModuleNotFound
+function GivenNpmSucceedsButModuleNotInstalled
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ParameterFilter { if( $ErrorActionPreference -ne 'Stop' ) { throw 'Must pass -ErrorAction Stop as a parameter to Invoke-WhiskeyNpmCommand.' } return $true }
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
 }
 
 function GivenName
@@ -229,7 +229,7 @@ Describe 'Install-WhiskeyNodeModule.when NPM executes successfully but module is
     {
         Init
         GivenName 'wrappy'
-        GivenModuleNotFound
+        GivenNpmSucceedsButModuleNotInstalled
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
         ThenErrorMessage 'NPM executed successfully when attempting to install ''wrappy'' but the module was not found'

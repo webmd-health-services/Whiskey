@@ -7,11 +7,18 @@ function Install-WhiskeyNodeModule
     
     .DESCRIPTION
     The `Install-WhiskeyNodeModule` function installs Node.js modules to the `node_modules` directory located in the current working directory. The path to the module's directory is returned.
+
+    Failing to install a module does not cause a bulid to fail. If you want a build to fail if the module fails to install, you must pass `-ErrorAction Stop`.
     
     .EXAMPLE
     Install-WhiskeyNodeModule -Name 'rimraf' -Version '^2.0.0' -NodePath $TaskParameter['NodePath']
 
     This example will install the Node module `rimraf` at the latest `2.x.x` version in the `node_modules` directory located in the current directory.
+    
+    .EXAMPLE
+    Install-WhiskeyNodeModule -Name 'rimraf' -Version '^2.0.0' -NodePath $TaskParameter['NodePath -ErrorAction Stop
+
+    Demonstrates how to fail a build if installing the module fails by setting the `ErrorAction` parameter to `Stop`.
     #>
     
     [CmdletBinding()]

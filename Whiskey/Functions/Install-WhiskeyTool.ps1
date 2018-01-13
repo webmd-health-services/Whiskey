@@ -136,7 +136,7 @@ function Install-WhiskeyTool
         {
             'NodeModule'
             {
-                $moduleRoot = Install-WhiskeyNodeModule -Name $name -NodePath $nodePath -Version $TaskParameter[$ToolInfo.VersionParameterName] -Global
+                $moduleRoot = Install-WhiskeyNodeModule -Name $name -NodePath $nodePath -Version $TaskParameter[$ToolInfo.VersionParameterName] -Global -ErrorAction Stop
                 $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
             }
             default
