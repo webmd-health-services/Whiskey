@@ -122,17 +122,11 @@ function Uninstall-WhiskeyTool
                 {
                     'Node'
                     {
-                        $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
-                        New-Item -Path $emptyDir -ItemType 'Directory'
                         $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
-                        robocopy $emptyDir $dirToRemove /MIR /R:0 /NP
-                        if( $LASTEXITCODE -ge 8 )
+                        if( (Test-Path -Path $dirToRemove -PathType Container) )
                         {
-                            Write-Error -Message ('Robocopy failed to remove contents of ''{0}'' (it returned exit code {1}). Please see previous output for details.' -f $dirToRemove,$LASTEXITCODE)
+                            Remove-Item -Path ('\\?\{0}' -f $dirToRemove) -Recurse -Force
                         }
-
-                        Remove-Item -Path $dirToRemove -Recurse -Force
-                        Remove-Item -Path $emptyDir -Recurse -Force
                     }
                     default
                     {
