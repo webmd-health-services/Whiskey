@@ -148,6 +148,7 @@
 * `ProGetUniversalPackage` should now be a little bit faster. Enable multi-threaded copies when copying files with Robocopy.
 * `NpmInstall` task can now install modules globally (i.e. in the `.node\node_modules` directory where Whiskey installs your copy of Node). Set the `Global` property to `true`.
 * `NspCheck` task renamed to `NodeNspCheck`.
+* Created `NpmConfig` task for setting NPM configuration in NPM's various .npmrc files.
 '@
         } # End of PSData hashtable
 

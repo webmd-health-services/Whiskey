@@ -107,8 +107,9 @@ function Install-Node
     robocopy (Join-Path -Path $downloadCachePath -ChildPath '.node') $destinationDir /COPY:D /E /NP /NFL /NDL /NJH /NJS /R:0 ('/MT:{0}' -f $numRobocopyThreads) $exclude
 
     Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |
-        ForEach-Object { New-Item -Path (Join-Path -Path $destinationDir -ChildPath $_.Name) -ItemType 'File' }
-
+        ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
+        Where-Object { -not (Test-Path -Path $_ -PathType Leaf) } |
+        ForEach-Object { New-Item -Path $_ -ItemType 'File' }
 }
 
 function New-AssemblyInfo
