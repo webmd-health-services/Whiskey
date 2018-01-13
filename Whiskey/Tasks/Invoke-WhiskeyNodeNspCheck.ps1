@@ -1,12 +1,12 @@
 
-function Invoke-WhiskeyNspCheck
+function Invoke-WhiskeyNodeNspCheck
 {
     <#
     .SYNOPSIS
     Runs the Node Security Platform against a module's dependenices.
     
     .DESCRIPTION
-    The `NspCheck` task runs `node.exe nsp check`, the Node Security Platform, which checks a `package.json` and `npm-shrinkwrap.json` for known security vulnerabilities against the Node Security API. The latest version of the NSP module is installed into a dedicated Node environment you can find in a .node directory in the same directory as your whiskey.yml file. If any security vulnerabilties are found, the NSP module returns a non-zero exit code which will fail the task.
+    The `NodeNspCheck` task runs `node.exe nsp check`, the Node Security Platform, which checks a `package.json` and `npm-shrinkwrap.json` for known security vulnerabilities against the Node Security API. The latest version of the NSP module is installed into a dedicated Node environment you can find in a .node directory in the same directory as your whiskey.yml file. If any security vulnerabilties are found, the NSP module returns a non-zero exit code which will fail the task.
 
     You must specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed into a .node directory in the same directory as your whiskey.yml file.
 
@@ -24,14 +24,14 @@ function Invoke-WhiskeyNspCheck
     ## Example 1
 
         BuildTasks:
-        - NspCheck
+        - NodeNspCheck
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file located in the build root.
 
     ## Example 2
 
         BuildTasks:
-        - NspCheck:
+        - NodeNspCheck:
             WorkingDirectory: app
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file that is located in the `(BUILD_ROOT)\app` directory.
@@ -39,12 +39,12 @@ function Invoke-WhiskeyNspCheck
     ## Example 3
 
         BuildTasks:
-        - NspCheck:
+        - NodeNspCheck:
             Version: 2.7.0
     
     This example will run `node.exe nsp check` by installing and running NSP version 2.7.0.
     #>
-    [Whiskey.Task("NspCheck")]
+    [Whiskey.Task("NodeNspCheck")]
     [Whiskey.RequiresTool("Node", "NodePath")]
     [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
     [CmdletBinding()]
@@ -70,7 +70,7 @@ function Invoke-WhiskeyNspCheck
     $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
     if( -not $nspPath )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('It looks like the latest version of NSP doesn''t have a ''{0}\bin\nsp'' script. Please use the ''Version'' property on the NspCheck task to specify a version that includes this script.' -f $nspPath)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('It looks like the latest version of NSP doesn''t have a ''{0}\bin\nsp'' script. Please use the ''Version'' property on the NodeNspCheck task to specify a version that includes this script.' -f $nspPath)
     }
 
     $nodePath = $TaskParameter['NodePath']

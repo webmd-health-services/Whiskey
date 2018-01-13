@@ -119,7 +119,7 @@ function WhenRunningTask
     {
         CreatePackageJson
 
-        Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NspCheck'
+        Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NodeNspCheck'
     }
     catch
     {
@@ -229,7 +229,7 @@ function ThenUninstalledModule
     }
 }
 
-Describe 'NspCheck.when running nsp check' {
+Describe 'NodeNspCheck.when running nsp check' {
     try
     {
         Init
@@ -245,7 +245,7 @@ Describe 'NspCheck.when running nsp check' {
     }
 }
 
-Describe 'NspCheck.when module has a security vulnerability' {
+Describe 'NodeNspCheck.when module has a security vulnerability' {
     try
     {
         Init
@@ -259,7 +259,7 @@ Describe 'NspCheck.when module has a security vulnerability' {
     }
 }
 
-Describe 'NspCheck.when nsp does not return valid JSON' {
+Describe 'NodeNspCheck.when nsp does not return valid JSON' {
     try
     {
         Init
@@ -273,7 +273,7 @@ Describe 'NspCheck.when nsp does not return valid JSON' {
     }
 }
 
-Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
+Describe 'NodeNspCheck.when running nsp check specifically with v2.7.0' {
     try
     {
         Init -NoNsp
@@ -290,7 +290,7 @@ Describe 'NspCheck.when running nsp check specifically with v2.7.0' {
     }
 }
 
-Describe 'NspCheck.when running nsp check specifically with v3.1.0' {
+Describe 'NodeNspCheck.when running nsp check specifically with v3.1.0' {
     try
     {
         Init -NoNsp
