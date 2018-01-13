@@ -91,21 +91,28 @@ function GivenPackage
 function WhenRunningTask
 {
     [CmdletBinding()]
-    param()
+    param(
+        [Switch]
+        $Global
+    )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
 
     $taskParameter = @{ }
 
-    if ($package)
+    if( $package )
     {
         $taskParameter['Package'] = $package
+    }
+
+    if( $Global )
+    {
+        $taskParameter['Global'] = 'true'
     }
 
     try
     {
         CreatePackageJson
-
         Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NpmInstall'
     }
     catch
@@ -135,10 +142,20 @@ function ThenPackage
 
         [Parameter(Mandatory=$true,ParameterSetName='DoesNotExist')]
         [switch]
-        $DoesNotExist
+        $DoesNotExist,
+
+        [Switch]
+        $Global
     )
 
-    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $PackageName)
+    $nodeRoot = $TestDrive.FullName 
+    if( $Global )
+    {
+        $nodeRoot = Join-Path -Path $nodeRoot -ChildPath '.node'
+    }
+
+    $packagePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $PackageName)
+
 
     If ($Exists)
     {
@@ -263,6 +280,21 @@ Describe 'NpmInstall.when given package with version number' {
         WhenRunningTask
         ThenPackage 'pify' -Exists
         ThenPackage 'wrappy' -Version '1.0.2' -Exists
+        ThenTaskSucceeded
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'NpmInstall.when installing module globally' {
+    try
+    {
+        Init
+        GivenPackage 'pify'
+        WhenRunningTask -Global
+        ThenPackage 'pify' -Exists -Global
         ThenTaskSucceeded
     }
     finally

@@ -25,6 +25,7 @@ function Invoke-WhiskeyNpmInstall
 
     * `Package`: a list of NPM packages to install. List items can simply be package names, `rimraf`, or package names with semantic version numbers that NPM understands, e.g. `rimraf: ^2.0.0`. When using the `Package` property the task will only install the given packages and not the ones listed in the `package.json` file.
     * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `Global`: installs the module in the global `node_modules` directory, i.e. in the `.node\node_modules` directory where Whiskey installs your global copy of Node. This property is only used if the `Package` property has a value, i.e. if you are installing specific Node modules.
 
     # Examples
 
@@ -98,6 +99,12 @@ function Invoke-WhiskeyNpmInstall
     }
     else
     {
+        $installGlobally = $false
+        if( $TaskParameter.ContainsKey('Global') )
+        {
+            $installGlobally = $TaskParameter['Global'] | ConvertFrom-WhiskeyYamlScalar
+        }
+
         foreach( $package in $TaskParameter['Package'] )
         {
             $packageVersion = ''
@@ -112,7 +119,13 @@ function Invoke-WhiskeyNpmInstall
             }
 
             Write-Timing -Message ('Installing {0}' -f $packageName)
-            Install-WhiskeyNodeModule -NodePath $nodePath -ApplicationRoot $workingDirectory -Name $packageName -Version $packageVersion -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+            Install-WhiskeyNodeModule -NodePath $nodePath `
+                                      -ApplicationRoot $workingDirectory `
+                                      -Name $packageName `
+                                      -Version $packageVersion `
+                                      -ForDeveloper:$TaskContext.ByDeveloper `
+                                      -Global:$installGlobally `
+                                      -ErrorAction Stop
             Write-Timing -Message 'COMPLETE'
         }
     }

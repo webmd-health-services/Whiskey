@@ -146,6 +146,7 @@
 * The `NpmInstall`, `NpmPrune`, `NspCheck`, `NodeLicenseChecker`, and `PublishNodeModule` tasks now install their own global Node (with NPM) into a `.node` directory (in the same directory as your whiskey.yml file). By default, Node's latest LTS version is installed. To install a specific version, update the `engines.node` property in your package.json file. You can specify a custom version of NPM with the `engines.npm` property in your package.json file. You can only upgrade to a newer version of NPM than what ships with the version of Node you're using. The `NspCheck` and `NodeLicenseChecker` tasks install the nsp and license-checker node modules, respectively, into this global Node environment.
 * `Invoke-WhiskeyNpmCommand` is now a public function. Task authors can use it to run NPM commands using the version of Node Whiskey installs. Tasks that use it must have the `[Whiskey.RequiresTool]` attribute.
 * `ProGetUniversalPackage` should now be a little bit faster. Enable multi-threaded copies when copying files with Robocopy.
+* `NpmInstall` task can now install modules globally (i.e. in the `.node\node_modules` directory where Whiskey installs your copy of Node). Set the `Global` property to `true`.
 '@
         } # End of PSData hashtable
 
