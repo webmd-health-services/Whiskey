@@ -49,13 +49,7 @@ function Invoke-WhiskeyNodeTask
         $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
         if( Test-Path $nodeModulesPath -PathType Container )
         {
-            $outputDirectory = Join-Path -path $TaskContext.BuildRoot -ChildPath '.output' 
-            $emptyDir = New-Item -Name 'TempEmptyDir' -Path $outputDirectory -ItemType 'Directory'
-            Write-Timing -Message ('Emptying {0}' -f $nodeModulesPath)
-            Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $nodeModulesPath | Write-Debug
-            Write-Timing -Message ('COMPLETE')
-            Remove-Item -Path $emptyDir
-            Remove-Item -Path $nodeModulesPath
+            Remove-Item -Path ('\\?\{0}' -f $nodeModulesPath) -Recurse -Force
         }
         return
     }
