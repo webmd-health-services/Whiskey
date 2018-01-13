@@ -75,10 +75,6 @@ function Invoke-WhiskeyNpmInstall
     $workingDirectory = (Get-Location).ProviderPath
 
     $nodePath = $TaskParameter['NodePath']
-    if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')
-    }
 
     if( -not $TaskParameter['Package'] )
     {
@@ -117,12 +113,15 @@ function Invoke-WhiskeyNpmInstall
 
             if( $TaskContext.ShouldClean() )
             {
-                Write-WhiskeyTiming -Message ('Unistalling {0}' -f $packageName)
-                Uninstall-WhiskeyNodeModule -NodePath $nodePath `
-                                            -Name $packageName `
-                                            -ForDeveloper:$TaskContext.ByDeveloper `
-                                            -Global:$installGlobally `
-                                            -ErrorAction Stop
+                if( $nodePath -and (Test-Path -Path $nodePath -PathType Leaf) )
+                {
+                    Write-WhiskeyTiming -Message ('Uninstalling {0}' -f $packageName)
+                    Uninstall-WhiskeyNodeModule -NodePath $nodePath `
+                                                -Name $packageName `
+                                                -ForDeveloper:$TaskContext.ByDeveloper `
+                                                -Global:$installGlobally `
+                                                -ErrorAction Stop
+                }
             }
             else
             {

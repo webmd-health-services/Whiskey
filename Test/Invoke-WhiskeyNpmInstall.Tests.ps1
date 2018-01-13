@@ -291,10 +291,16 @@ Describe 'NpmInstall.when given package' {
         ThenPackage 'wrappy' -DoesNotExist
         ThenTaskSucceeded
 
+        # Does it delete just the packages it installs?
         WhenRunningTask -InCleanMode
         ThenPackage 'rimraf' -DoesNotExist
         ThenPackage 'pify' -DoesNotExist
         ThenProjectNodeModules -Exists
+        ThenTaskSucceeded
+
+        # Does it handle that Node doesn't exist anymore?
+        WhenRunningTask -InCleanMode
+        ThenTaskSucceeded
     }
     finally
     {

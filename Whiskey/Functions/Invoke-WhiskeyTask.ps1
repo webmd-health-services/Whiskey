@@ -262,7 +262,8 @@ function Invoke-WhiskeyTask
             return
         }
     
-        if( $TaskContext.ShouldClean() )
+        $inCleanMode = $TaskContext.ShouldClean()
+        if( $inCleanMode )
         {
             if( -not $task.SupportsClean )
             {
@@ -270,18 +271,20 @@ function Invoke-WhiskeyTask
                 return
             }
         }
-        else
-        {
-            foreach( $requiredTool in $requiredTools )
-            {
-                Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties -ErrorAction Stop
-            }
 
-            if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
-            {
-                Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
-                return
-            }
+        foreach( $requiredTool in $requiredTools )
+        {
+            Install-WhiskeyTool -ToolInfo $requiredTool `
+                                -InstallRoot $TaskContext.BuildRoot `
+                                -TaskParameter $taskProperties `
+                                -InCleanMode:$inCleanMode `
+                                -ErrorAction Stop
+        }
+
+        if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+        {
+            Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
+            return
         }
 
         Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties

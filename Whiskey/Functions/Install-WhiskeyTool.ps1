@@ -43,6 +43,11 @@ function Install-WhiskeyTool
         # The task parameters for the currently running task.
         $TaskParameter,
 
+        [Parameter(ParameterSetName='Tool')]
+        [Switch]
+        # Running in clean mode, so don't install the tool if it isn't installed.
+        $InCleanMode,
+
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The name of the PowerShell module to download.
@@ -131,7 +136,7 @@ function Install-WhiskeyTool
 
         $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
         $nodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
-        
+
         switch( $provider )
         {
             'NodeModule'
@@ -145,6 +150,15 @@ function Install-WhiskeyTool
                 {
                     'Node'
                     {
+                        if( $InCleanMode )
+                        {
+                            if( (Test-Path -Path $nodepath -PathType Leaf) )
+                            {
+                                $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
+                            }
+                            return
+                        }
+
                         $npmVersionToInstall = $null
                         $versionToInstall = $null
                         $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
@@ -188,7 +202,6 @@ function Install-WhiskeyTool
                             $npmVersionToInstall = $versionToInstall.npm
                         }
                 
-
                         if( (Test-Path -Path $nodePath -PathType Leaf) )
                         {
                             $currentNodeVersion = & $nodePath '--version'
