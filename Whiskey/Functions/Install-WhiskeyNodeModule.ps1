@@ -57,7 +57,7 @@ function Install-WhiskeyNodeModule
                         }
                     }
 
-    $nodeRoot = $ApplicationRoot
+    $nodeRoot = (Get-Location).ProviderPath
     if( $Global )
     {
         $nodeRoot = $NodePath | Split-Path

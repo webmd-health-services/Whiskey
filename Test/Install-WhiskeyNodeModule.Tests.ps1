@@ -4,7 +4,6 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 
-$applicationRoot = $null
 $name = $null
 $output = $null
 $registryUri = 'http://registry.npmjs.org'
@@ -160,7 +159,7 @@ function ThenReturnedPathForModule
         $Module
     )
 
-    $modulePath = Join-Path -Path $applicationRoot -ChildPath ('node_modules\{0}' -f $Module)
+    $modulePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $Module)
     
     It 'should return the path to the module' {
         $output | Should -Be $modulePath
