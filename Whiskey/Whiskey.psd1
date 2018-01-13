@@ -149,6 +149,7 @@
 * `NpmInstall` task can now install modules globally (i.e. in the `.node\node_modules` directory where Whiskey installs your copy of Node). Set the `Global` property to `true`.
 * `NspCheck` task renamed to `NodeNspCheck`.
 * Created `NpmConfig` task for setting NPM configuration in NPM's various .npmrc files.
+* Fixed: `NpmInstall` task doesn't delete the modules it installs when run in clean mode.
 '@
         } # End of PSData hashtable
 

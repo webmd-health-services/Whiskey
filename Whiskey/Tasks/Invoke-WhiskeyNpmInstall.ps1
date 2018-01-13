@@ -56,7 +56,7 @@ function Invoke-WhiskeyNpmInstall
 
     This example will install the Node packages `gulp` and the latest 2.x.x version of `rimraf` to the `BUILD_ROOT\app\node_modules` directory.
     #>
-    [Whiskey.Task('NpmInstall')]
+    [Whiskey.Task('NpmInstall',SupportsClean=$true)]
     [Whiskey.RequiresTool('Node', 'NodePath')]
     [CmdletBinding()]
     param(
@@ -82,8 +82,16 @@ function Invoke-WhiskeyNpmInstall
 
     if( -not $TaskParameter['Package'] )
     {
-        Write-WhiskeyTiming -Message 'Installing Node modules'
-        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+        if( $TaskContext.ShouldClean() )
+        {
+            Write-WhiskeyTiming -Message 'Removing project node_modules'
+            Remove-WhiskeyFileSystemItem -Path 'node_modules' -ErrorAction Stop
+        }
+        else
+        {
+            Write-WhiskeyTiming -Message 'Installing Node modules'
+            Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+        }
         Write-WhiskeyTiming -Message 'COMPLETE'
     }
     else
@@ -107,13 +115,25 @@ function Invoke-WhiskeyNpmInstall
                 $packageName = $package
             }
 
-            Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
-            Install-WhiskeyNodeModule -NodePath $nodePath `
-                                      -Name $packageName `
-                                      -Version $packageVersion `
-                                      -ForDeveloper:$TaskContext.ByDeveloper `
-                                      -Global:$installGlobally `
-                                      -ErrorAction Stop
+            if( $TaskContext.ShouldClean() )
+            {
+                Write-WhiskeyTiming -Message ('Unistalling {0}' -f $packageName)
+                Uninstall-WhiskeyNodeModule -NodePath $nodePath `
+                                            -Name $packageName `
+                                            -ForDeveloper:$TaskContext.ByDeveloper `
+                                            -Global:$installGlobally `
+                                            -ErrorAction Stop
+            }
+            else
+            {
+                Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
+                Install-WhiskeyNodeModule -NodePath $nodePath `
+                                          -Name $packageName `
+                                          -Version $packageVersion `
+                                          -ForDeveloper:$TaskContext.ByDeveloper `
+                                          -Global:$installGlobally `
+                                          -ErrorAction Stop
+            }
             Write-WhiskeyTiming -Message 'COMPLETE'
         }
     }

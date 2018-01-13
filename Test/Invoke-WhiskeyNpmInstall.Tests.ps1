@@ -93,7 +93,10 @@ function WhenRunningTask
     [CmdletBinding()]
     param(
         [Switch]
-        $Global
+        $Global,
+
+        [Switch]
+        $InCleanMode
     )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
@@ -108,6 +111,11 @@ function WhenRunningTask
     if( $Global )
     {
         $taskParameter['Global'] = 'true'
+    }
+
+    if( $InCleanMode )
+    {
+        $taskContext.RunMode = 'Clean'
     }
 
     try
@@ -179,6 +187,31 @@ function ThenPackage
     }
 }
 
+function ThenProjectNodeModules
+{
+    param(
+        [Switch]
+        $Exists,
+
+        [Switch]
+        $DoesNotExist
+    )
+
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'node_modules'
+    if( $Exists )
+    {
+        It ('should not delete project''s node_modules directory') {
+            $path | Should -Exist
+        }
+    }
+    else
+    {
+        It ('should delete project''s node_modules directory') {
+            $path | Should -Not -Exist
+        }
+    }
+}
+
 function ThenTaskFailedWithMessage
 {
     param(
@@ -234,6 +267,10 @@ Describe 'NpmInstall.when installing packages from package.json' {
         ThenPackage 'wrappy' -Exists
         ThenPackage 'pify' -Exists
         ThenTaskSucceeded
+
+        WhenRunningTask -InCleanMode
+        ThenProjectNodeModules -DoesNotExist
+        ThenTaskSucceeded
     }
     finally
     {
@@ -253,6 +290,11 @@ Describe 'NpmInstall.when given package' {
         ThenPackage 'pify' -Exists
         ThenPackage 'wrappy' -DoesNotExist
         ThenTaskSucceeded
+
+        WhenRunningTask -InCleanMode
+        ThenPackage 'rimraf' -DoesNotExist
+        ThenPackage 'pify' -DoesNotExist
+        ThenProjectNodeModules -Exists
     }
     finally
     {
@@ -284,6 +326,11 @@ Describe 'NpmInstall.when installing module globally' {
         GivenPackage 'pify'
         WhenRunningTask -Global
         ThenPackage 'pify' -Exists -Global
+        ThenTaskSucceeded
+
+        WhenRunningTask -Global -InCleanMode
+        ThenPackage 'pify' -DoesNotExist -Global
+        ThenPackage 'npm' -Exists -Global
         ThenTaskSucceeded
     }
     finally

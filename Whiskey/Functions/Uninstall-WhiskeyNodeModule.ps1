@@ -39,15 +39,35 @@ function Uninstall-WhiskeyNodeModule
 
         [switch]
         # Remove the module manually if NPM fails to uninstall it
-        $Force
+        $Force,
+
+        [Switch]
+        # Uninstall the module from the global cache.
+        $Global
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Invoke-WhiskeyNpmCommand -Name 'uninstall' -ArgumentList $Name -NodePath $NodePath -ForDeveloper:$ForDeveloper
+    $argumentList = & {
+                        $Name
+                        if( $Global )
+                        {
+                            '-g'
+                        }
+                    }
+
+    Invoke-WhiskeyNpmCommand -Name 'uninstall' `
+                             -ArgumentList $argumentList `
+                             -NodePath $NodePath `
+                             -ForDeveloper:$ForDeveloper
     
-    $modulePath = Join-Path -Path (Get-Location).ProviderPath -ChildPath ('node_modules\{0}' -f $Name)
+    $nodeRoot = (Get-Location).ProviderPath
+    if( $Global )
+    {
+        $nodeRoot = $NodePath | Split-Path
+    }
+    $modulePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $Name)
 
     if( Test-Path -Path $modulePath -PathType Container )
     {
