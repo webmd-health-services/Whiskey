@@ -189,25 +189,18 @@ function Install-WhiskeyTool
                         }
                 
 
-                        if( -not (Test-Path -Path $nodeRoot -PathType Container) )
-                        {
-                            New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
-                        }
-
                         if( (Test-Path -Path $nodePath -PathType Leaf) )
                         {
                             $currentNodeVersion = & $nodePath '--version'
                             if( $currentNodeVersion -ne $versionToInstall.version )
                             {
-                                $emptyDir = Join-Path -Path $env:Temp -ChildPath ([IO.Path]::GetRandomFileName())
-                                New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
-                                Write-Verbose ('Removing Node {0} from {1}.' -f $currentNodeVersion,$nodeRoot)
-                                robocopy $emptyDir $nodeRoot /MIR /NP /R:0 | Write-Debug
-                                if( $LASTEXITCODE -ge 8 )
-                                {
-                                    throw ('Failed to uninstall Node {0} from {1}. Please re-run your current build. If the problem persists, please manually delete the {1} directory.' -f $currentNodeVersion,$nodeRoot)
-                                }
+                                Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
                             }
+                        }
+
+                        if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+                        {
+                            New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
                         }
 
                         $extractedDirName = 'node-{0}-win-x64' -f $versionToInstall.version
