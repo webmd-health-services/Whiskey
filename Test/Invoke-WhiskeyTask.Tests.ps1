@@ -1199,7 +1199,7 @@ Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {
         WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Clean'
         ThenToolUninstalled 'Node'
         It ('should not install any tools in clean mode') {
-            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -Times 0
+            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $InCleanMode -eq $true }
         }
     }
     finally

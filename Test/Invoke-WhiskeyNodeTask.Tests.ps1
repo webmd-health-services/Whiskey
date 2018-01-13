@@ -114,6 +114,7 @@ function WhenBuildIsStarted
     {
         $script:failed = $true
         Write-Error -ErrorRecord $_
+        Write-Error -Message $_.ScriptStackTrace
         return
     }
     if( $script:withCleanSwitch )

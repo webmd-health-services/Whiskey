@@ -336,7 +336,6 @@ Describe 'NpmInstall.when installing module globally' {
 
         WhenRunningTask -Global -InCleanMode
         ThenPackage 'pify' -DoesNotExist -Global
-        ThenPackage 'npm' -Exists -Global
         ThenTaskSucceeded
     }
     finally

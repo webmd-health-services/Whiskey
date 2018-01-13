@@ -68,6 +68,7 @@ function Invoke-WhiskeyNodeTask
     try
     {
         $nodePath = $TaskParameter['NodePath']
+
         if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')

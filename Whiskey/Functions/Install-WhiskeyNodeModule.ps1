@@ -43,7 +43,11 @@ function Install-WhiskeyNodeModule
 
         [Switch]
         # Whether or not to install the module globally.
-        $Global
+        $Global,
+
+        [Switch]
+        # Are we running in clean mode?
+        $InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'
@@ -74,7 +78,11 @@ function Install-WhiskeyNodeModule
     if( (Test-Path -Path $modulePath -PathType Container) )
     {
         return $modulePath
-    }  
+    }
+    elseif( $InCleanMode )
+    {
+        return
+    }
 
     Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -NodePath $NodePath -ForDeveloper:$ForDeveloper | Write-Verbose
     if( $LASTEXITCODE )
