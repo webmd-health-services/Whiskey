@@ -7,7 +7,6 @@ $argument = @{}
 $dependency = $null
 $devDependency = $null
 $npmCommand = $null
-$nodeVersion = '^4.4.7'
 
 function Init
 {
@@ -31,9 +30,6 @@ function CreatePackageJson
     "repository": "bitbucket:example/repo",
     "private": true,
     "license": "MIT",
-    "engines": {
-        "node": "$nodeVersion"
-    },
     "dependencies": {
         $($script:dependency -join ',')
     }
@@ -195,7 +191,7 @@ Describe 'Invoke-WhiskeyNpmCommand.when NPM command with argument that fails' {
         Init
         GivenNpmCommand 'install'
         GivenArgument 'thisisanonexistentpackage'
-        WhenRunningNpmCommand -ErrorAction Stop
+        WhenRunningNpmCommand
         ThenExitCode 1
         It ('should not stop because of NPM STDERR') {
             $Global:Error | 

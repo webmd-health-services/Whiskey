@@ -81,11 +81,11 @@ function Invoke-WhiskeyNodeNspCheck
 
     Write-WhiskeyTiming -Message 'Running NSP security check'
 
-    $formattingArg = '--output'
-    $isNsp3 = -not $TaskParameter.ContainsKey('Version') -or -not $TaskParameter['Version'] -match '^(0|1|2)\.'
-    if( $isNsp3 )
+    $formattingArg = '--reporter'
+    $isPreNsp3 = $TaskParameter.ContainsKey('Version') -and $TaskParameter['Version'] -match '^(0|1|2)\.'
+    if( $isPreNsp3 )
     {
-        $formattingArg = '--reporter'
+        $formattingArg = '--output'
     }
 
     $output = Invoke-Command -NoNewScope -ScriptBlock {

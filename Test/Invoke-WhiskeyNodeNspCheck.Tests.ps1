@@ -50,6 +50,17 @@ function CreatePackageJson
     }
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
+
+    @"
+{
+    "name": "NPM-Test-App",
+    "version": "0.0.1",
+    "lockfileVersion": 1,
+    "requires": true,
+    "dependencies": {
+    }
+} 
+"@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
 }
 
 function MockNsp

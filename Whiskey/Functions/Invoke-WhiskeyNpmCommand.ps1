@@ -58,20 +58,24 @@ function Invoke-WhiskeyNpmCommand
         return
     }
 
+    # Assign to new variables otherwise Invoke-Command can't find them.
+    $commandName = $Name
+    $commandArgs = & {
+                        $ArgumentList
+                        '--scripts-prepend-node-path=auto'
+                        if( -not $ForDeveloper )
+                        {
+                            '--no-color'
+                        }
+                    }
+
+    $npmCommandString = ('npm {0} {1}' -f $commandName,($commandArgs -join ' '))
+
     $originalPath = $env:PATH
     Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
     try
     {
-        $defaultArguments = @('--scripts-prepend-node-path=auto')
-        if( -not $ForDeveloper )
-        {
-            $defaultArguments += '--no-color'
-        }
-
-        $npmCommandString = ('npm {0} {1} {2}' -f $Name,($ArgumentList -join ' '),($defaultArguments -join ' '))
-
         Write-Progress -Activity $npmCommandString
-        Write-Verbose $npmCommandString
         Invoke-Command -ScriptBlock {
             # The ISE bails if processes write anything to STDERR. Node writes notices and warnings to
             # STDERR. We only want to stop a build if the command actually fails.
@@ -79,7 +83,8 @@ function Invoke-WhiskeyNpmCommand
             {
                 $ErrorActionPreference = 'Continue'
             }
-            & $nodePath $npmPath $Name $ArgumentList $defaultArguments
+            Write-Verbose ('{0} {1} {2} {3}' -f $NodePath,$npmPath,$commandName,($commandArgs -join ' '))
+            & $nodePath $npmPath $commandName $commandArgs
         }
         if( $LASTEXITCODE -ne 0 )
         {

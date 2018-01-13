@@ -69,11 +69,15 @@ function Install-WhiskeyNodeModule
         return $modulePath
     }  
 
-    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -NodePath $NodePath -ForDeveloper:$ForDeveloper -ErrorAction Stop | Write-Verbose
-
-    if (-not (Test-Path -Path $modulePath -PathType Container))
+    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -NodePath $NodePath -ForDeveloper:$ForDeveloper | Write-Verbose
+    if( $LASTEXITCODE )
     {
-        Write-Error -Message ('NPM executed successfully when attempting to install ''{0}'' but the module was not found at ''{1}''' -f $npmArgument,$modulePath)
+        return
+    }
+
+    if( -not (Test-Path -Path $modulePath -PathType Container))
+    {
+        Write-Error -Message ('NPM executed successfully when attempting to install ''{0}'' but the module was not found at ''{1}''' -f ($npmArgument -join ' '),$modulePath)
         return
     }
 

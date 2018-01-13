@@ -279,7 +279,7 @@ function Invoke-WhiskeyTask
 
         foreach( $requiredTool in $requiredTools )
         {
-            Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties
+            Install-WhiskeyTool -ToolInfo $requiredTool -InstallRoot $TaskContext.BuildRoot -TaskParameter $taskProperties -ErrorAction Stop
         }
 
         if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )

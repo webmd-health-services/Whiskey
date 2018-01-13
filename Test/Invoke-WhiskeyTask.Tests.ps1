@@ -1183,6 +1183,9 @@ Describe 'Invoke-WhiskeyTask.when task requires tools and initializing' {
     ThenToolInstalled 'Node'
     ThenTaskNotRun 
     ThenToolNotCleaned
+    It ('should fail the build if installation fails') {
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+    }
 }
 
 Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {

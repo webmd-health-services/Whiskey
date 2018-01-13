@@ -2,6 +2,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 
 $originalNodeEnv = $env:NODE_ENV
 $startedWithNodeEnv = (Test-Path -Path 'env:NODE_ENV')
@@ -472,6 +473,26 @@ Describe 'Node.when run in initialization mode' {
         Remove-Node
     }
 }
+
+Describe 'Node.when installing NSP fails' {
+    try
+    {
+        Mock -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey'
+        Init 
+        GivenBuildByBuildServer
+        # Run a failing build to test that we just install and don't run a full build
+        Initialize-NodeProject 
+        WhenBuildIsStarted -ErrorAction SilentlyContinue
+        It ('should fail the build') {
+            Assert-MockCalled -CommandName 'Install-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
 
 if( $startedWithNodeEnv )
 {

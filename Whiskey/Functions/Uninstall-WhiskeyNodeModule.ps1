@@ -47,7 +47,7 @@ function Uninstall-WhiskeyNodeModule
 
     Invoke-WhiskeyNpmCommand -Name 'uninstall' -ArgumentList $Name -NodePath $NodePath -ForDeveloper:$ForDeveloper
     
-    $modulePath = Join-Path -Path ($NodePath | Split-Path) -ChildPath ('node_modules\{0}' -f $Name)
+    $modulePath = Join-Path -Path (Get-Location).ProviderPath -ChildPath ('node_modules\{0}' -f $Name)
 
     if( Test-Path -Path $modulePath -PathType Container )
     {

@@ -214,6 +214,9 @@ Describe 'Install-WhiskeyNodeModule.when given bad module name' {
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
         ThenErrorMessage 'failed\ with\ exit\ code\ 1'
+        It ('should not report NPM finished successfully') {
+            $Global:Error | Where-Object { $_ -match 'NPM\ executed\ successfully' } | Should -BeNullOrEmpty
+        }
     }
     finally
     {

@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Uninstall-WhiskeyNodeModule.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
 $force = $false
 $name = $null
@@ -66,7 +67,7 @@ function GivenFailingNpmUninstall
 
 function GivenFailingRemoveItem
 {
-    Mock -CommandName 'Remove-Item'
+    Mock -CommandName 'Remove-WhiskeyFileSystemItem'
 }
 
 function GivenInstalledModule
