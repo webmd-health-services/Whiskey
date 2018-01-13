@@ -6,7 +6,7 @@ function Uninstall-WhiskeyNodeModule
     Uninstalls Node.js modules.
     
     .DESCRIPTION
-    The `Uninstall-WhiskeyNodeModule` function will uninstall Node.js modules from the `node_modules` directory in the `ApplicationRoot`. The function will use `Invoke-WhiskeyNpmCommand` to run `npm prune` on the given module `Name`.
+    The `Uninstall-WhiskeyNodeModule` function will uninstall Node.js modules from the `node_modules` directory in the current working directory. It uses the `npm prune` command to remove the module.
     
     If the `npm prune` command fails to uninstall the module and the `Force` parameter was not specified then the function will write an error and return. If the `Force` parameter is specified then the function will attempt to manually remove the module if `npm prune` fails.
     
@@ -49,19 +49,16 @@ function Uninstall-WhiskeyNodeModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Invoke-WhiskeyNpmCommand -NpmCommand 'prune' -Argument $Name -ApplicationRoot $ApplicationRoot -RegistryUri $RegistryUri -ForDeveloper:$ForDeveloper
+    Invoke-WhiskeyNpmCommand -Name 'uninstall' -ArgumentList $Name -NodePath (Join-Path -Path $ApplicationRoot -ChildPath '.node\node.exe') -ForDeveloper:$ForDeveloper
     
     $modulePath = Join-Path -Path $ApplicationRoot -ChildPath ('node_modules\{0}' -f $Name)
 
-    if (Test-Path -Path $modulePath -PathType Container)
+    if( Test-Path -Path $modulePath -PathType Container )
     {
-        if ($Force)
+        if( $Force )
         {
-            # Try to remove the module manually if 'npm prune' failed
-            $emptyDir = New-Item -Name ([System.IO.Path]::GetRandomFileName()) -Path $ApplicationRoot -ItemType 'Directory' -Force
-            Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $modulePath | Write-Debug
-            Remove-Item -Path $emptyDir -Force
-            Remove-Item -Path $modulePath -Force
+            # Use the \\?\ qualifier to get past any path too long errors.
+            Remove-Item -Path ('\\?\{0}' -f $modulePath) -Recurse -Force
         }
         else
         {
@@ -70,7 +67,7 @@ function Uninstall-WhiskeyNodeModule
         }
     }
 
-    if (Test-Path -Path $modulePath -PathType Container)
+    if( Test-Path -Path $modulePath -PathType Container )
     {
         Write-Error -Message ('Failed to remove Node module ''{0}'' from ''{1}'' using both ''npm prune'' and manual removal. See previous errors for more details.' -f $Name,$modulePath)
         return

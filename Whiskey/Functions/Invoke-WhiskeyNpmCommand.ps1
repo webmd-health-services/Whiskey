@@ -6,40 +6,39 @@ function Invoke-WhiskeyNpmCommand
     Runs `npm` with given command and argument.
     
     .DESCRIPTION
-    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands with given arguments in a Node.js project. The function will first call `Install-WhiskeyNodeJs` and `Get-WhiskeyNPMPath` to download and install the desired versions of Node.js and npm listed in the project's `package.json` `engines` field. Then `npm` will be invoked with the given `NpmCommand` and `Argument` in the `ApplicationRoot` directory. If `npm` returns a non-zero exit code this function will write an error indicating that the npm command failed.
+    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`) to the `NodePath` parameter. The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
 
-    You must specify the `npm` command you would like to run with the `NpmCommand` parameter. Optionally, you may specify arguments for the `npm command` with the `Argument` parameter.
+    Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with the `ArgumentList`.
 
-    The `ApplicationRoot` parameter must contain the path to the directory where the Node.js module's `package.json` can be found.
+    Task authors should add the `RequiresTool` attribute to their task functions to ensure that Whiskey installs Node and NPM, e.g.
+
+        function MyTask
+        {
+            [Whiskey.Task('MyTask')]
+            [Whiskey.RequiresTool('Node', 'NodePath')]
+            param(
+            )
+        }
 
     .EXAMPLE
-    Invoke-WhiskeyNpmCommand -NpmCommand 'install' -ApplicationRoot 'src\app' -RegistryUri 'http://registry.npmjs.org' -ForDeveloper
+    Invoke-WhiskeyNpmCommand -Name 'install' -NodePath $TaskParameter['NodePath'] -ForDeveloper:$Context.ByDeveloper
 
-    Runs the `npm install' command without any arguments in the 'src\app' directory as a developer.
-
-    .EXAMPLE
-    Invoke-WhiskeyNpmCommand -NpmCommand 'run' -Argument 'test --silent' -ApplicationRoot 'src\app' -RegistryUri 'http://registry.npmjs.org'
-
-    Executes `npm run test --silent` in the 'src\app' directory.
+    Demonstrates how to run the `npm install` command from a task. 
     #>
-
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='NodePath')]
+        [Parameter(Mandatory=$true)]
         [string]
-        $NodePath,
-
-        [Parameter(Mandatory=$true,ParameterSetName='NodePath')]
-        [Parameter(Mandatory=$true,ParameterSetName='InvokeNpm')]
-        [string]
-        # The NPM command to execute.
-        $NpmCommand,
+        # The NPM command to execute, e.g. `install`, `prune`, `run-script`, etc.
+        $Name,
         
-        [Parameter(ParameterSetName='NodePath')]
-        [Parameter(ParameterSetName='InvokeNpm')]
         [string[]]
         # An array of arguments to be given to the NPM command being executed.
-        $Argument,
+        $ArgumentList,
+
+        [Parameter(Mandatory=$true)]
+        [string]
+        $NodePath,
 
         [switch]
         # NPM commands are being run on a developer computer.
@@ -69,15 +68,18 @@ function Invoke-WhiskeyNpmCommand
             $defaultArguments += '--no-color'
         }
 
-        $npmCommandString = ('npm {0} {1} {2}' -f $NpmCommand,($Argument -join ' '),($defaultArguments -join ' '))
+        $npmCommandString = ('npm {0} {1} {2}' -f $Name,($ArgumentList -join ' '),($defaultArguments -join ' '))
 
         Write-Progress -Activity $npmCommandString
         Write-Verbose $npmCommandString
-        Invoke-Command -NoNewScope -ScriptBlock {
+        Invoke-Command -ScriptBlock {
             # The ISE bails if processes write anything to STDERR. Node writes notices and warnings to
             # STDERR. We only want to stop a build if the command actually fails.
-            $ErrorActionPreference = 'Continue'
-            & $nodePath $npmPath $NpmCommand $Argument $defaultArguments
+            if( $ErrorActionPreference -ne 'SilentlyContinue' -and $ErrorActionPreference -ne 'Ignore' )
+            {
+                $ErrorActionPreference = 'Continue'
+            }
+            & $nodePath $npmPath $Name $ArgumentList $defaultArguments
         }
         if( $LASTEXITCODE -ne 0 )
         {

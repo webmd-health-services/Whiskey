@@ -42,8 +42,8 @@ function Invoke-WhiskeyNpmRunScript
     
     This example will run the `test` NPM script. The root of the Node.js package and `package.json` file are located in the `(BUILD_ROOT)\app` directory.
     #>
-
-    [Whiskey.Task("NpmRunScript", SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.Task('NpmRunScript')]
+    [Whiskey.RequiresTool('Node','NodePath')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -69,42 +69,6 @@ function Invoke-WhiskeyNpmRunScript
         Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
     }
 
-    $npmRegistryUri = $TaskParameter['NpmRegistryUri']
-    if (-not $NpmRegistryUri) 
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory. It should be the URI to the registry from which Node.js packages should be downloaded, e.g.,
-        
-        BuildTasks:
-        - NpmRunScript:
-            NpmRegistryUri: https://registry.npmjs.org/
-
-        '
-    }
-
-    $workingDirectory = (Get-Location).ProviderPath
-
-    if ($TaskContext.ShouldClean())
-    {
-        Write-Timing -Message 'Cleaning'
-        Uninstall-WhiskeyNodeModule -Name 'npm' -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper -Force
-        Write-Timing -Message 'COMPLETE'
-        return
-    }
-
-    if ($TaskContext.ShouldInitialize())
-    {
-        Write-Timing -Message 'Initializing'
-        Invoke-WhiskeyNpmCommand -InitializeOnly -ApplicationRoot $workingDirectory -RegistryUri $npmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
-
-        if ($Global:LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Task initialization failed.'
-        }
-
-        Write-Timing -Message 'COMPLETE'
-        return
-    }
-
     $npmScripts = $TaskParameter['Script']
     if (-not $npmScripts)
     {
@@ -122,12 +86,7 @@ function Invoke-WhiskeyNpmRunScript
     foreach ($script in $npmScripts)
     {
         Write-Timing -Message ('Running script ''{0}''.' -f $script)
-        Invoke-WhiskeyNpmCommand -NpmCommand 'run' -Argument $script -ApplicationRoot $workingDirectory -RegistryUri $NpmRegistryUri -ForDeveloper:$TaskContext.ByDeveloper
+        Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-Timing -Message ('COMPLETE')
-
-        if ($Global:LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM script ''{0}'' failed with exit code ''{1}''.' -f $script,$LASTEXITCODE)
-        }
     }
 }

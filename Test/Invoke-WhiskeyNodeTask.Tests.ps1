@@ -242,7 +242,6 @@ function Initialize-NodeProject
 }
 "@ | Set-Content -Path (Join-Path -Path ($packageJsonPath | Split-Path) -ChildPath 'package-lock.json')
 
-    Get-Content -Path $packageJsonPath -Raw | Write-Verbose -Verbose
     @'
 console.log('BUILDING')
 '@ | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'build.js')
@@ -338,7 +337,6 @@ function Init
 
 Describe 'Node.when running a build' {
     Context 'by developer' {
-        return
         try
         {
             Init

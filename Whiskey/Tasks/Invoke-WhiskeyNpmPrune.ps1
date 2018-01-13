@@ -61,5 +61,5 @@ function Invoke-WhiskeyNpmPrune
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')
     }
 
-    Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'prune' -Argument '--production' -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
+    Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper
 }

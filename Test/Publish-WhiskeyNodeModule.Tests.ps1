@@ -13,10 +13,8 @@ $credID = $null
 $credential = $null
 $parameter = $null
 $context = $null
-$workingDirectory = $null
 $threwException = $false
 $email = $null
-$npmVersion = $null
 
 function GivenNoCredentialID
 {
@@ -33,35 +31,14 @@ function GivenNoNpmRegistryUri
     $script:npmRegistryUri = $null
 }
 
-function GivenNpmVersion
-{
-    param(
-        $Version
-    )
-
-    $script:npmVersion = ('"npm": "{0}"' -f $Version)
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $Path
-    )
-
-    $script:workingDirectory = $Path
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path) -ItemType 'Directory' -Force
-}
-
 function Init
 {
     $script:credID = $defaultCredID
     $script:credential = New-Object 'pscredential' $defaultUserName,(ConvertTo-SecureString -String $defaultPassword -AsPlainText -Force)
     $script:parameter = @{ }
     $script:context = $null
-    $script:workingDirectory = $null
     $script:npmRegistryUri = 'http://registry.npmjs.org/'
     $script:email = $defaultEmailAddress
-    $script:npmVersion = $null
     Install-Node
 }
 
@@ -82,22 +59,12 @@ function New-PublishNodeModuleStructure
 
     $testPackageJsonChildPath = 'package.json'
 
-    if ($workingDirectory)
-    {
-        $taskParameter['WorkingDirectory'] = $workingDirectory
-        $testPackageJsonChildPath = (Join-Path -Path $workingDirectory -ChildPath 'package.json')
-    }
-
-
     $testPackageJsonPath = Join-Path -Path $context.BuildRoot -ChildPath $testPackageJsonChildPath
     $testPackageJson = @"
 {
   "name": "publishnodemodule_test",
   "version": "1.2.0",
-  "main": "index.js",
-  "engines": {
-    $($script:npmVersion)
-  }
+  "main": "index.js"
 }
 "@
 
@@ -117,7 +84,7 @@ function ThenNodeModulePublished
     It ('should publish the module') {
         Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                             -ModuleName 'Whiskey' `
-                            -ParameterFilter { $NpmCommand -eq 'publish' } -Times 1 -Exactly
+                            -ParameterFilter { $Name -eq 'publish' } -Times 1 -Exactly
     }
 }
 
@@ -126,7 +93,7 @@ function ThenNodeModuleIsNotPublished
     It 'should not publish the module' {
         Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                             -ModuleName 'Whiskey' `
-                            -ParameterFilter { $NpmCommand -eq 'publish' } -Times 0 -Exactly
+                            -ParameterFilter { $Name -eq 'publish' } -Times 0 -Exactly
     }
 }
 
@@ -135,10 +102,10 @@ function ThenNpmPackagesPruned
     It 'should prune npm packages' {
         Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                             -ModuleName 'Whiskey' `
-                            -ParameterFilter { $NpmCommand -eq 'prune' } -Times 1 -Exactly
+                            -ParameterFilter { $Name -eq 'prune' } -Times 1 -Exactly
         Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                             -ModuleName 'Whiskey' `
-                            -ParameterFilter { $NpmCommand -eq 'prune' -and $Argument[0] -eq '--production' } -Times 1 -Exactly
+                            -ParameterFilter { $Name -eq 'prune' -and $ArgumentList[0] -eq '--production' } -Times 1 -Exactly
     }
 }
 

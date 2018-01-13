@@ -77,7 +77,7 @@ function GivenFailingNpmInstall
         $ErrorMessage
     )
 
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $NpmCommand -eq 'install' } -MockWith { Write-Error $ErrorMessage }.GetNewClosure()
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { if( $ErrorActionPreference -ne 'Stop' ) { throw 'You must pass -ErrorAction Stop parameter.' } return true }
 }
 
 function GivenPackage
@@ -115,20 +115,6 @@ function WhenRunningTask
             $script:failed = $true
             Write-Error -ErrorRecord $_
         }
-    }
-}
-
-function ThenNpmInitialized
-{
-    It 'should initialize Node and NPM' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $InitializeOnly -eq $true } -Times 1
-    }
-}
-
-function ThenNpmInstallNotCalled
-{
-    It 'should not run ''npm install''' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $NpmCommand -eq 'install' } -Times 0
     }
 }
 

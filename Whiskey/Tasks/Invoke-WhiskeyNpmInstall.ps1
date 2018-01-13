@@ -93,7 +93,7 @@ function Invoke-WhiskeyNpmInstall
     if( -not $TaskParameter['Package'] )
     {
         Write-Timing -Message 'Installing Node modules'
-        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'install' -Argument '--production=false' -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-Timing -Message 'COMPLETE'
     }
     else

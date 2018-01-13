@@ -4,13 +4,11 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Uninstall-WhiskeyNodeModule.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyNpmCommand.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
 
 $applicationRoot = $null
 $force = $false
 $name = $null
-$nodeVersion = '^4.4.7'
 $registryUri = 'http://registry.npmjs.org'
 
 function Init
@@ -19,8 +17,8 @@ function Init
     $script:applicationRoot = $TestDrive.FullName
     $script:name = $null
     $script:force = $false
-
     CreatePackageJson
+    Install-Node
 }
 
 function CreatePackageJson
@@ -34,12 +32,20 @@ function CreatePackageJson
     "description": "test",
     "repository": "bitbucket:example/repo",
     "private": true,
-    "license": "MIT",
-    "engines": {
-        "node": "$nodeVersion"
-    }
+    "license": "MIT"
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
+
+    @"
+{
+    "name": "NPM-Test-App",
+    "version": "0.0.1",
+    "lockfileVersion": 1,
+    "requires": true,
+    "dependencies": {
+    }
+} 
+"@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
 }
 
 function GivenName
@@ -55,9 +61,9 @@ function GivenForce
     $script:force = $true
 }
 
-function GivenFailingNpmPrune
+function GivenFailingNpmUninstall
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ParameterFilter { $NpmCommand -eq 'prune' }
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand'
 }
 
 function GivenFailingRemoveItem
@@ -71,7 +77,15 @@ function GivenInstalledModule
         $Name
     )
 
-    Install-WhiskeyNodeModule -Name $Name -ApplicationRoot $applicationRoot -RegistryUri $registryUri | Out-Null
+    Push-Location $TestDrive.FullName
+    try
+    {
+        Install-WhiskeyNodeModule -Name $Name -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe') -ApplicationRoot $applicationRoot | Out-Null
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
 
 function WhenUninstallingNodeModule
@@ -79,7 +93,15 @@ function WhenUninstallingNodeModule
     [CmdletBinding()]
     param()
     
-    Uninstall-WhiskeyNodeModule -Name $name -ApplicationRoot $applicationRoot -RegistryUri $registryUri -Force:$force
+    Push-Location $TestDrive.FullName
+    try
+    {
+        Uninstall-WhiskeyNodeModule -Name $name -ApplicationRoot $applicationRoot -RegistryUri $registryUri -Force:$force
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
 
 function ThenModule
@@ -118,7 +140,7 @@ function ThenModule
 function ThenNoErrorsWritten
 {
     It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -notmatch '\bnpm (notice|warn)\b' } | Should -BeNullOrEmpty
     }
 }
 
@@ -129,58 +151,93 @@ function ThenErrorMessage
     )
 
     It ('error message should match [{0}]' -f $Message) {
-        $Global:Error[0] | Should -Match $Message
+        $Global:Error | Should -Match $Message
     }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
-    Init
-    GivenName 'wrappy'
-    WhenUninstallingNodeModule
-    ThenNoErrorsWritten
-    ThenModule 'wrappy' -DoesNotExist
+    try
+    {
+        Init
+        GivenName 'wrappy'
+        WhenUninstallingNodeModule
+        ThenNoErrorsWritten
+        ThenModule 'wrappy' -DoesNotExist
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
-    Init
-    GivenInstalledModule 'wrappy'
-    GivenInstalledModule 'pify'
-    GivenName 'wrappy'
-    WhenUninstallingNodeModule
-    ThenModule 'wrappy' -DoesNotExist
-    ThenModule 'pify' -Exists
-    ThenNoErrorsWritten
+    try
+    {
+        Init
+        GivenInstalledModule 'wrappy'
+        GivenInstalledModule 'pify'
+        GivenName 'wrappy'
+        WhenUninstallingNodeModule
+        ThenModule 'wrappy' -DoesNotExist
+        ThenModule 'pify' -Exists
+        ThenNoErrorsWritten
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
-Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm prune fails to remove module' {
-    Init
-    GivenInstalledModule 'wrappy'
-    GivenInstalledModule 'pify'
-    GivenName 'wrappy'
-    GivenForce
-    GivenFailingNpmPrune
-    WhenUninstallingNodeModule
-    ThenModule 'wrappy' -DoesNotExist
-    ThenModule 'pify' -Exists
-    ThenNoErrorsWritten
+Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails to remove module' {
+    try
+    {
+        Init
+        GivenInstalledModule 'wrappy'
+        GivenInstalledModule 'pify'
+        GivenName 'wrappy'
+        GivenForce
+        GivenFailingNpmUninstall
+        WhenUninstallingNodeModule
+        ThenModule 'wrappy' -DoesNotExist
+        ThenModule 'pify' -Exists
+        ThenNoErrorsWritten
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
-Describe 'Uninstall-WhiskeyNodeModule.when npm prune fails to remove module' {
-    Init
-    GivenInstalledModule 'wrappy'
-    GivenName 'wrappy'
-    GivenFailingNpmPrune
-    WhenUninstallingNodeModule -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module' {
+    try
+    {
+        Init
+        GivenInstalledModule 'wrappy'
+        GivenName 'wrappy'
+        GivenFailingNpmUninstall
+        WhenUninstallingNodeModule -ErrorAction SilentlyContinue
+        ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails' {
-    Init
-    GivenInstalledModule 'wrappy'
-    GivenName 'wrappy'
-    GivenForce
-    GivenFailingNpmPrune
-    GivenFailingRemoveItem
-    WhenUninstallingNodeModule -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+    try
+    {
+        Init
+        GivenInstalledModule 'wrappy'
+        GivenName 'wrappy'
+        GivenForce
+        GivenFailingNpmUninstall
+        GivenFailingRemoveItem
+        WhenUninstallingNodeModule -ErrorAction SilentlyContinue
+        ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

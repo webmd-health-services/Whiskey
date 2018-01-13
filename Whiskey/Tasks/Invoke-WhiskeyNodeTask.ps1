@@ -98,7 +98,7 @@ function Invoke-WhiskeyNodeTask
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
         Write-Timing -Message ('npm install')
-        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'install' -ApplicationRoot $workingDirectory -Argument '--production=false'
+        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper
         Write-Timing -Message ('COMPLETE')
         if( $LASTEXITCODE )
         {
@@ -143,7 +143,7 @@ BuildTasks:
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             Write-Timing -Message ('Running script ''{0}''.' -f $script)
-            Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand 'run-script' -Argument $script -ApplicationRoot (Get-Location).ProviderPath -ErrorAction Stop
+            Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
             Write-Timing -Message ('COMPLETE')
         }
 

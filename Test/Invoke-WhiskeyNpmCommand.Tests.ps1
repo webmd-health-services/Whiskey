@@ -2,7 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyNpmCommand.ps1' -Resolve)
 
 $argument = @{}
 $dependency = $null
@@ -47,7 +46,7 @@ function GivenArgument
     param(
         $Argument
     )
-    $script:argument = @{ 'Argument' = $Argument }
+    $script:argument = @{ 'ArgumentList' = $Argument }
 }
 
 function GivenDependency 
@@ -91,7 +90,7 @@ function WhenRunningNpmCommand
     Push-Location $TestDrive.FullName
     try
     {
-        Invoke-WhiskeyNpmCommand -NodePath $nodePath -NpmCommand $npmCommand @argument
+        Invoke-WhiskeyNpmCommand -Name $npmCommand @argument -NodePath $nodePath 
     }
     finally
     {

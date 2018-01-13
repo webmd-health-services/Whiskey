@@ -104,7 +104,6 @@ function Install-Node
                                 $_.FullName
                             }
                 }
-    Write-Verbose ($exclude -join ' ') -Verbose
     robocopy (Join-Path -Path $downloadCachePath -ChildPath '.node') $destinationDir /COPY:D /E /NP /NFL /NDL /NJH /NJS /R:0 ('/MT:{0}' -f $numRobocopyThreads) $exclude
 
     Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |

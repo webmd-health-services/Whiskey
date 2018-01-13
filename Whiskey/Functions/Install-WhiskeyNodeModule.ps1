@@ -6,11 +6,7 @@ function Install-WhiskeyNodeModule
     Installs Node.js modules
     
     .DESCRIPTION
-    The `Install-WhiskeyNodeModule` function installs Node.js modules to the `node_modules` directory located in the given `ApplicationRoot` parameter and returns the path to the installed module.
-    
-    The function will use `Invoke-WhiskeyNpmCommand` to execute `npm install` with the given module `Name` to install the Node module.
-    
-    If `Invoke-WhiskeyNpmCommand` returns a non-zero exit code an error will be written and the function will return nothing. If NPM executes successfully but the module to be installed cannot be found then an error will be written and nothing will be returned.
+    The `Install-WhiskeyNodeModule` function installs Node.js modules to the `node_modules` directory located in the current working directory. The path to the module's directory is returned.
     
     .EXAMPLE
     Install-WhiskeyNodeModule -Name 'rimraf' -Version '^2.0.0' -ApplicationRoot 'C:\build\app' -RegistryUri 'http://registry.npmjs.org'
@@ -82,16 +78,7 @@ function Install-WhiskeyNodeModule
         return $modulePath
     }  
 
-    Invoke-WhiskeyNpmCommand -NodePath $NodePath -NpmCommand 'install' -Argument $npmArgument -ApplicationRoot $ApplicationRoot | Write-Verbose
-
-    #cat 'package-lock.json' -Raw | Write-Host
-
-    if ($Global:LASTEXITCODE -ne 0)
-    {
-        Write-Error -Message ('Failed to install Node module ''{0}''. See previous errors for more details.' -f $npmArgument)
-        return
-    }
-
+    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -NodePath $NodePath -ForDeveloper:$ForDeveloper -ErrorAction Stop | Write-Verbose
 
     if (-not (Test-Path -Path $modulePath -PathType Container))
     {
