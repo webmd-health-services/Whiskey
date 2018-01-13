@@ -87,7 +87,7 @@ function Invoke-WhiskeyNodeTask
 
         Update-Progress -Status ('npm install nsp@2.7.0') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('npm install nsp@2.7.0')
-        $nspRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -NodePath $nodePath -ApplicationRoot (Get-Location).ProviderPath -ForDeveloper:$TaskContext.ByDeveloper -Global
+        $nspRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -Global
         Write-WhiskeyTiming -Message ('COMPLETE')
         if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
         {

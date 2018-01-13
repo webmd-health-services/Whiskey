@@ -109,7 +109,6 @@ function Invoke-WhiskeyNpmInstall
 
             Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
             Install-WhiskeyNodeModule -NodePath $nodePath `
-                                      -ApplicationRoot $workingDirectory `
                                       -Name $packageName `
                                       -Version $packageVersion `
                                       -ForDeveloper:$TaskContext.ByDeveloper `

@@ -9,9 +9,9 @@ function Install-WhiskeyNodeModule
     The `Install-WhiskeyNodeModule` function installs Node.js modules to the `node_modules` directory located in the current working directory. The path to the module's directory is returned.
     
     .EXAMPLE
-    Install-WhiskeyNodeModule -Name 'rimraf' -Version '^2.0.0' -ApplicationRoot 'C:\build\app' -RegistryUri 'http://registry.npmjs.org'
+    Install-WhiskeyNodeModule -Name 'rimraf' -Version '^2.0.0' -NodePath $TaskParameter['NodePath']
 
-    This example will install the Node module `rimraf` at the latest `2.x.x` version in the `node_modules` directory located in `C:\build\app`.
+    This example will install the Node module `rimraf` at the latest `2.x.x` version in the `node_modules` directory located in the current directory.
     #>
     
     [CmdletBinding()]
@@ -25,20 +25,11 @@ function Install-WhiskeyNodeModule
         # The version of the module to install.
         $Version,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        # The root directory of the target Node.js application. This directory will contain the application's `package.json` config file and will be where Node modules are installed.
-        $ApplicationRoot,
-
-        [Parameter(Mandatory=$true,ParameterSetName='Legacy')]
-        # The URI to the registry from which Node modules should be downloaded.
-        $RegistryUri,
-
         [switch]
         # Node modules are being installed on a developer computer.
         $ForDeveloper,
 
-        [Parameter(Mandatory=$true,ParameterSetName='New')]
+        [Parameter(Mandatory=$true)]
         [string]
         # The path to the node executable.
         $NodePath,
