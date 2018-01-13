@@ -50,17 +50,6 @@ function Invoke-WhiskeyNodeLicenseChecker
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     $licenseCheckerRoot = $TaskParameter['LicenseCheckerPath']
     if( -not $licenseCheckerRoot -or -not (Test-Path -Path $licenseCheckerRoot -PathType Container) )
     {
@@ -75,11 +64,11 @@ function Invoke-WhiskeyNodeLicenseChecker
 
     $nodePath = $TaskParameter['NodePath']
 
-    Write-Timing -Message ('Generating license report')
+    Write-WhiskeyTiming -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
         & $nodePath $licenseCheckerPath '--json'
     }
-    Write-Timing -Message ('COMPLETE')
+    Write-WhiskeyTiming -Message ('COMPLETE')
 
     $report = Invoke-Command -NoNewScope -ScriptBlock {
         ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
@@ -89,7 +78,7 @@ function Invoke-WhiskeyNodeLicenseChecker
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'License Checker failed to output a valid JSON report.'
     }
 
-    Write-Timing -Message 'Converting license report.'
+    Write-WhiskeyTiming -Message 'Converting license report.'
     # The default license checker report has a crazy format. It is an object with properties for each module.
     # Let's transform it to a more sane format: an array of objects.
     [object[]]$newReport = $report | 
@@ -103,5 +92,5 @@ function Invoke-WhiskeyNodeLicenseChecker
     $licensePath = 'node-license-checker-report.json'
     $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
     ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
-    Write-Timing -Message ('COMPLETE')
+    Write-WhiskeyTiming -Message ('COMPLETE')
 }

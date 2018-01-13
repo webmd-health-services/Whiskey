@@ -61,17 +61,6 @@ function Invoke-WhiskeyNspCheck
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     $nspRoot = $TaskParameter['NspPath']
     if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
     {
@@ -90,7 +79,7 @@ function Invoke-WhiskeyNspCheck
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install Node. Something pretty serious has gone wrong.')
     }
 
-    Write-Timing -Message 'Running NSP security check'
+    Write-WhiskeyTiming -Message 'Running NSP security check'
 
     $formattingArg = '--output'
     $isNsp3 = -not $TaskParameter.ContainsKey('Version') -or -not $TaskParameter['Version'] -match '^(0|1|2)\.'
@@ -108,7 +97,7 @@ function Invoke-WhiskeyNspCheck
             ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
     } -ArgumentList $formattingArg
 
-    Write-Timing -Message 'COMPLETE'
+    Write-WhiskeyTiming -Message 'COMPLETE'
 
     try
     {

@@ -58,17 +58,6 @@ function Invoke-WhiskeyNpmRunScript
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     $npmScripts = $TaskParameter['Script']
     if (-not $npmScripts)
     {
@@ -85,8 +74,8 @@ function Invoke-WhiskeyNpmRunScript
 
     foreach ($script in $npmScripts)
     {
-        Write-Timing -Message ('Running script ''{0}''.' -f $script)
+        Write-WhiskeyTiming -Message ('Running script ''{0}''.' -f $script)
         Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
     }
 }

@@ -32,25 +32,15 @@ function Invoke-WhiskeyNodeTask
 
     Write-Warning -Message ('The ''Node'' task has been deprecated and will be removed in a future version of Whiskey. It''s functionality has been broken up into individual smaller tasks, ''NpmInstall'', ''NpmRunScript'', ''NspCheck'', and ''NodeLicenseChecker''. Update the build configuration in ''{0}'' to use the new tasks.' -f $TaskContext.ConfigurationPath)
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     if( $TaskContext.ShouldClean() )
     {
-        Write-Timing -Message 'Cleaning'
+        Write-WhiskeyTiming -Message 'Cleaning'
         $nodeModulesPath = (Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules')
         if( Test-Path $nodeModulesPath -PathType Container )
         {
             Remove-Item -Path ('\\?\{0}' -f $nodeModulesPath) -Recurse -Force
         }
+        Write-WhiskeyTiming -Message 'COMPLETE'
         return
     }
 
@@ -91,18 +81,18 @@ function Invoke-WhiskeyNodeTask
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
-        Write-Timing -Message ('npm install')
+        Write-WhiskeyTiming -Message ('npm install')
         Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
         if( $LASTEXITCODE )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('npm install returned exit code {0}. Please see previous output for details.' -f $LASTEXITCODE)
         }
 
         Update-Progress -Status ('npm install nsp@2.7.0') -Step ($stepNum++)
-        Write-Timing -Message ('npm install nsp@2.7.0')
+        Write-WhiskeyTiming -Message ('npm install nsp@2.7.0')
         $nspRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -NodePath $nodePath -ApplicationRoot (Get-Location).ProviderPath -ForDeveloper:$TaskContext.ByDeveloper -Global
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
         if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module nsp@2.7.0. Something pretty serious has gone wrong.')
@@ -116,7 +106,7 @@ function Invoke-WhiskeyNodeTask
 
         if( $TaskContext.ShouldInitialize() )
         {
-            Write-Timing -Message 'Initialization complete.'
+            Write-WhiskeyTiming -Message 'Initialization complete.'
             return
         }
 
@@ -136,15 +126,15 @@ BuildTasks:
         foreach( $script in $npmScripts )
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
-            Write-Timing -Message ('Running script ''{0}''.' -f $script)
+            Write-WhiskeyTiming -Message ('Running script ''{0}''.' -f $script)
             Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
-            Write-Timing -Message ('COMPLETE')
+            Write-WhiskeyTiming -Message ('COMPLETE')
         }
 
         Update-Progress -Status ('nsp check') -Step ($stepNum++)
-        Write-Timing -Message ('Running NSP security check.')
+        Write-WhiskeyTiming -Message ('Running NSP security check.')
         $output = & $nodePath $nspPath 'check' '--output' 'json'
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
         {
@@ -165,16 +155,16 @@ BuildTasks:
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node module ''{0}\bin\license-checker'' does not exist. Looks like the latest version of the license checker no longer works with Whiskey. Please migrate away from this task.' -f $licenseCheckerRoot)
         }
 
-        Write-Timing -Message ('Generating license report.')
+        Write-WhiskeyTiming -Message ('Generating license report.')
         $reportJson = & $nodePath $licenseCheckerPath '--json'
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
         $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
         if( -not $report )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker failed to output a valid JSON report.')
         }
 
-        Write-Timing -Message ('Converting license report.')
+        Write-WhiskeyTiming -Message ('Converting license report.')
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
         [object[]]$newReport = $report | 
@@ -188,7 +178,7 @@ BuildTasks:
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
         ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
-        Write-Timing -Message ('COMPLETE')
+        Write-WhiskeyTiming -Message ('COMPLETE')
     }
     finally
     {

@@ -72,17 +72,6 @@ function Invoke-WhiskeyNpmInstall
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $startedAt = Get-Date
-    function Write-Timing
-    {
-        param(
-            $Message
-        )
-
-        $now = Get-Date
-        Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
-    }
-
     $workingDirectory = (Get-Location).ProviderPath
 
     $nodePath = $TaskParameter['NodePath']
@@ -93,9 +82,9 @@ function Invoke-WhiskeyNpmInstall
 
     if( -not $TaskParameter['Package'] )
     {
-        Write-Timing -Message 'Installing Node modules'
+        Write-WhiskeyTiming -Message 'Installing Node modules'
         Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
-        Write-Timing -Message 'COMPLETE'
+        Write-WhiskeyTiming -Message 'COMPLETE'
     }
     else
     {
@@ -118,7 +107,7 @@ function Invoke-WhiskeyNpmInstall
                 $packageName = $package
             }
 
-            Write-Timing -Message ('Installing {0}' -f $packageName)
+            Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
             Install-WhiskeyNodeModule -NodePath $nodePath `
                                       -ApplicationRoot $workingDirectory `
                                       -Name $packageName `
@@ -126,7 +115,7 @@ function Invoke-WhiskeyNpmInstall
                                       -ForDeveloper:$TaskContext.ByDeveloper `
                                       -Global:$installGlobally `
                                       -ErrorAction Stop
-            Write-Timing -Message 'COMPLETE'
+            Write-WhiskeyTiming -Message 'COMPLETE'
         }
     }
 }
