@@ -194,17 +194,6 @@ function ThenTaskFailedWithMessage
     }
 }
 
-function ThenUninstalledModule
-{
-    param(
-        $ModuleName
-    )
-
-    It ('should uninstall the ''{0}'' module' -f $ModuleName) {
-        Assert-MockCalled -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModuleName } -Times 1
-    }
-}
-
 function ThenTaskSucceeded
 {
     It 'should not write any errors' {

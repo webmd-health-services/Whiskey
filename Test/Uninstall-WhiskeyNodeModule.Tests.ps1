@@ -95,7 +95,7 @@ function WhenUninstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        Uninstall-WhiskeyNodeModule -Name $name -ApplicationRoot $applicationRoot -RegistryUri $registryUri -Force:$force
+        Uninstall-WhiskeyNodeModule -Name $name -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe') -Force:$force
     }
     finally
     {

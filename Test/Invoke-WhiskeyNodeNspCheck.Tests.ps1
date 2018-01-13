@@ -218,17 +218,6 @@ function ThenTaskSucceeded
     }
 }
 
-function ThenUninstalledModule
-{
-    param(
-        $ModuleName
-    )
-
-    It ('should uninstall the ''{0}'' module' -f $ModuleName) {
-        Assert-MockCalled -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq ('NodeModule::{0}' -f $ModuleName) } -Times 1
-    }
-}
-
 Describe 'NodeNspCheck.when running nsp check' {
     try
     {

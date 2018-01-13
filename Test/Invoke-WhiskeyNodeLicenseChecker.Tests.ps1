@@ -156,17 +156,6 @@ function ThenTaskSucceeded
     }
 }
 
-function ThenUninstalledModule
-{
-    param(
-        $ModuleName
-    )
-
-    It ('should uninstall the ''{0}'' module' -f $ModuleName) {
-        Assert-MockCalled -CommandName 'Uninstall-WhiskeyNodeModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModuleName } -Times 1
-    }
-}
-
 Describe 'NodeLicenseChecker.when running license-checker' {
     try
     {
