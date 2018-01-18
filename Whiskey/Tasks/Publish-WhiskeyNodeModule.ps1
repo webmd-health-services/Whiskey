@@ -122,9 +122,8 @@ function Publish-WhiskeyNodeModule
             } |
             Write-Verbose
 
-        $nodePath = $TaskParameter['NodePath']
-        Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $nodePath -ErrorAction Stop
-        Invoke-WhiskeyNpmCommand -Name 'publish' -NodePath $nodePath -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'publish' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
     }
     finally
     {

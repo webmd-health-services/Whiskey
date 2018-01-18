@@ -66,12 +66,6 @@ function Invoke-WhiskeyNpmConfig
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $nodePath = $TaskParameter['NodePath']
-    if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install Node. Something pretty serious has gone wrong.')
-    }
-
     $configuration = $TaskParameter['Configuration']
     if( -not $configuration )
     {
@@ -127,7 +121,7 @@ function Invoke-WhiskeyNpmConfig
                                 }
                         }
 
-        Invoke-WhiskeyNpmCommand -Name 'config' -ArgumentList $argumentList -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper
+        Invoke-WhiskeyNpmCommand -Name 'config' -ArgumentList $argumentList -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper
     }
     
 }

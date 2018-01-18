@@ -53,13 +53,5 @@ function Invoke-WhiskeyNpmPrune
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $workingDirectory = (Get-Location).ProviderPath
-
-    $nodePath = $TaskParameter['NodePath']
-    if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')
-    }
-
-    Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+    Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
 }

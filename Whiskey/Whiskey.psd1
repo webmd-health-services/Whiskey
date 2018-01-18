@@ -77,6 +77,8 @@
                             'Add-WhiskeyApiKey',
                             'Add-WhiskeyCredential',
                             'Add-WhiskeyVariable',
+                            'Assert-WhiskeyNodePath',
+                            'Assert-WhiskeyNodeModulePath',
                             'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',

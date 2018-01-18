@@ -48,6 +48,12 @@ function Invoke-WhiskeyNpmCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $NodePath = Assert-WhiskeyNodePath -Path $NodePath
+    if( -not $NodePath )
+    {
+        return
+    }
+
     $nodeRoot = $NodePath | Split-Path
         
     $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'

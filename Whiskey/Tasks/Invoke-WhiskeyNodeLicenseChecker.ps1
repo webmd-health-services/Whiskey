@@ -50,11 +50,7 @@ function Invoke-WhiskeyNodeLicenseChecker
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $licenseCheckerRoot = $TaskParameter['LicenseCheckerPath']
-    if( -not $licenseCheckerRoot -or -not (Test-Path -Path $licenseCheckerRoot -PathType Container) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install required Node module license-checker. Something pretty serious has gone wrong.')
-    }
+    $licenseCheckerRoot = Assert-WhiskeyNodeModulePath -Path $TaskParameter['LicenseCheckerPath'] -ErrorAction Stop
 
     $licenseCheckerPath = Join-Path -Path $licenseCheckerRoot -ChildPath 'bin\license-checker' -Resolve
     if( -not $licenseCheckerPath )
@@ -62,7 +58,7 @@ function Invoke-WhiskeyNodeLicenseChecker
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node license-checker module is missing a `{0}\bin\license-checker` script. Please use the `Version` property on your NodeLicenseChecker task and specify a version of the license checker that has this script.')
     }
 
-    $nodePath = $TaskParameter['NodePath']
+    $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
 
     Write-WhiskeyTiming -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {

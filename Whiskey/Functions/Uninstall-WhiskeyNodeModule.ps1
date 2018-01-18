@@ -65,6 +65,11 @@ function Uninstall-WhiskeyNodeModule
     $nodeRoot = (Get-Location).ProviderPath
     if( $Global )
     {
+        $NodePath = Assert-WhiskeyNodePath -Path $NodePath
+        if( -not $NodePath )
+        {
+            return
+        }
         $nodeRoot = $NodePath | Split-Path
     }
     $modulePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $Name)

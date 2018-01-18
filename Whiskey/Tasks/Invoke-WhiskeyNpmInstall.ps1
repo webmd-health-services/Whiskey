@@ -74,8 +74,6 @@ function Invoke-WhiskeyNpmInstall
 
     $workingDirectory = (Get-Location).ProviderPath
 
-    $nodePath = $TaskParameter['NodePath']
-
     if( -not $TaskParameter['Package'] )
     {
         if( $TaskContext.ShouldClean() )
@@ -86,7 +84,7 @@ function Invoke-WhiskeyNpmInstall
         else
         {
             Write-WhiskeyTiming -Message 'Installing Node modules'
-            Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+            Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         }
         Write-WhiskeyTiming -Message 'COMPLETE'
     }
@@ -113,10 +111,10 @@ function Invoke-WhiskeyNpmInstall
 
             if( $TaskContext.ShouldClean() )
             {
-                if( $nodePath -and (Test-Path -Path $nodePath -PathType Leaf) )
+                if( $TaskParameter.ContainsKey('NodePath') -and (Test-Path -Path $TaskParameter['NodePath'] -PathType Leaf) )
                 {
                     Write-WhiskeyTiming -Message ('Uninstalling {0}' -f $packageName)
-                    Uninstall-WhiskeyNodeModule -NodePath $nodePath `
+                    Uninstall-WhiskeyNodeModule -NodePath $TaskParameter['NodePath'] `
                                                 -Name $packageName `
                                                 -ForDeveloper:$TaskContext.ByDeveloper `
                                                 -Global:$installGlobally `
@@ -126,7 +124,7 @@ function Invoke-WhiskeyNpmInstall
             else
             {
                 Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
-                Install-WhiskeyNodeModule -NodePath $nodePath `
+                Install-WhiskeyNodeModule -NodePath $TaskParameter['NodePath'] `
                                           -Name $packageName `
                                           -Version $packageVersion `
                                           -ForDeveloper:$TaskContext.ByDeveloper `

@@ -61,11 +61,7 @@ function Invoke-WhiskeyNodeNspCheck
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $nspRoot = $TaskParameter['NspPath']
-    if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP node module not installed by Whiskey. Something pretty serious has gone wrong.')
-    }
+    $nspRoot = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -ErrorAction Stop
 
     $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
     if( -not $nspPath )
@@ -73,13 +69,7 @@ function Invoke-WhiskeyNodeNspCheck
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('It looks like the latest version of NSP doesn''t have a ''{0}\bin\nsp'' script. Please use the ''Version'' property on the NodeNspCheck task to specify a version that includes this script.' -f $nspPath)
     }
 
-    $nodePath = $TaskParameter['NodePath']
-    if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install Node. Something pretty serious has gone wrong.')
-    }
-
-    Write-WhiskeyTiming -Message 'Running NSP security check'
+    $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
 
     $formattingArg = '--reporter'
     $isPreNsp3 = $TaskParameter.ContainsKey('Version') -and $TaskParameter['Version'] -match '^(0|1|2)\.'
@@ -88,6 +78,7 @@ function Invoke-WhiskeyNodeNspCheck
         $formattingArg = '--output'
     }
 
+    Write-WhiskeyTiming -Message 'Running NSP security check'
     $output = Invoke-Command -NoNewScope -ScriptBlock {
         param(
             $JsonOutputFormat

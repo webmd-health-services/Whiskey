@@ -71,6 +71,11 @@ function Install-WhiskeyNodeModule
     $nodeRoot = (Get-Location).ProviderPath
     if( $Global )
     {
+        $NodePath = Assert-WhiskeyNodePath -Path $NodePath
+        if( -not $NodePath )
+        {
+            return
+        }
         $nodeRoot = $NodePath | Split-Path
     }
 

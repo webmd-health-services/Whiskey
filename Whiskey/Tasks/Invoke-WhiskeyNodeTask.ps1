@@ -67,13 +67,7 @@ function Invoke-WhiskeyNodeTask
 
     try
     {
-        $nodePath = $TaskParameter['NodePath']
-
-        if( -not $nodePath -or -not (Test-Path -Path $nodePath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey didn''t install Node. Something pretty serious has gone wrong.')
-        }
-
+        $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
         $nodeRoot = $nodePath | Split-Path
 
         Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
@@ -137,11 +131,7 @@ BuildTasks:
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
-        $licenseCheckerRoot = $TaskParameter['LicenseCheckerPath']
-        if( -not $licenseCheckerRoot -or -not (Test-Path -Path $licenseCheckerRoot -PathType Container) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module license-checker. Something pretty serious has gone wrong.')
-        }
+        $licenseCheckerRoot = Assert-WhiskeyNodeModulePath -Path $TaskParameter['LicenseCheckerPath'] -ErrorAction Stop
 
         $licenseCheckerPath = Join-Path -Path $licenseCheckerRoot -ChildPath 'bin\license-checker' -Resolve
         if( -not $licenseCheckerPath -or -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
