@@ -46,22 +46,28 @@ function ThenConfigNotSetAtProjectLevel
     }
 }
 
+function ThenConfigNotSetAtProjectLevel
+{
+    It ('should not set config at the project level') {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '-userconfig' }
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '.npmrc' }
+    }
+}
+
 function ThenConfigSetAtGlobalLevel
 {
     It ('should set config in the user''s .npmrc file') {
         Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -contains '-g' }
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '-userconfig' }
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '.npmrc' }
     }
+    ThenConfigNotSetAtProjectLevel
 }
 
 function ThenConfigSetAtUserLevel
 {
     It ('should set config in the global .npmrc file') {
         Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '-g' }
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '-userconfig' }
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $ArgumentList -notcontains '.npmrc' }
     }
+    ThenConfigNotSetAtProjectLevel
 }
 
 function ThenNpmrcDoesNotExist

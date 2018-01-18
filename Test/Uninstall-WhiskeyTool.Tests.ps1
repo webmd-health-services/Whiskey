@@ -247,9 +247,6 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
         It ('should delete Node') {
             Join-Path -Path $TestDrive.FullName -ChildPath '.node' | Should -Not -Exist
         }
-        It ('should delete Node module') {
-            Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules\rimraf' | Should -Not -Exist
-        }
     }
     finally
     {

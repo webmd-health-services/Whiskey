@@ -57,7 +57,9 @@ function Remove-WhiskeyItem
             continue
         }
 
-        $path | 
-            ForEach-Object { Remove-WhiskeyFileSystemItem -Path $_ -ErrorAction Stop }
+        foreach( $pathItem in $path )
+        {
+            Remove-WhiskeyFileSystemItem -Path $pathitem -ErrorAction Stop
+        }
     }
 }

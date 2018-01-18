@@ -70,16 +70,6 @@ function GivenDevDependency
     $script:devDependency = $DevDependency
 }
 
-function GivenFailingNpmInstall
-{
-    param(
-        [string]
-        $ErrorMessage
-    )
-
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { if( $ErrorActionPreference -ne 'Stop' ) { throw 'You must pass -ErrorAction Stop parameter.' } return true }
-}
-
 function GivenPackage
 {
     param(

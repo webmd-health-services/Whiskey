@@ -6,7 +6,7 @@ function Invoke-WhiskeyNpmConfig
     Runs the `npm config` command to set global-level, user-level, or project-level NPM configuration.
 
     .DESCRIPTION
-    The `NpmConfig` task runs the `npm config` commadn to set NPM configuration. By default, it sets configuration at the project level (i.e. in a .npmrc file in the current directory). To set the configuration at the user-level, set the `Scope` property to `User`. To set the configuration globally, set the `Scope` property to `Global`.
+    The `NpmConfig` task runs the `npm config` command to set NPM configuration. By default, it sets configuration at the project level (i.e. in a .npmrc file in the current directory). To set the configuration at the user-level, set the `Scope` property to `User`. To set the configuration globally, set the `Scope` property to `Global`.
 
     Set the `Configuration` property to key/value pairs. The keys should be the name of the configuration setting; the value should be its value. For example,
 
@@ -18,8 +18,8 @@ function Invoke-WhiskeyNpmConfig
      
     # Properties
 
-    * `Configuration`: the key/value pairs to set.
-    * `Scope`: the level at which the configuration is set. By default (i.e. if this property is missing), the configuration is set at the project leel, in an .npmrc file in the current directory. Allowed value are `Projec`, `User`, or `Global` to set the configuration in the project, user, or global  NPM configuration files, respectively.
+    * `Configuration` (*mandatory*): the key/value pairs to set.
+    * `Scope`: the level at which the configuration is set. By default (i.e. if this property is missing), the configuration is set at the project level, in an .npmrc file in the current directory. Allowed value are `Project`, `User`, or `Global` to set the configuration in the project, user, or global  NPM configuration files, respectively.
     * `WorkingDirectory`: the directory in which to run the `npm config` command. The default is the directory of your whiskey.yml file.
 
     # Examples

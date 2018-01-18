@@ -234,7 +234,12 @@ function Install-WhiskeyTool
                             catch
                             {
                                 $responseStatus = $_.Exception.Response.StatusCode
-                                throw ('Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}. It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $versionToInstall.version,$responseStatus,[int]$responseStatus,$uri)
+                                $errorMsg = 'Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}.' -f $versionToInstall.version,$responseStatus,[int]$responseStatus,$uri
+                                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+                                {
+                                    $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                                }
+                                throw $errorMsg
                             }
                         }
 

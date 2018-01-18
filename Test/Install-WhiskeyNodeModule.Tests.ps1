@@ -12,7 +12,6 @@ $version = $null
 function Init
 {
     $Global:Error.Clear()
-    $script:applicationRoot = $TestDrive.FullName
     $script:name = $null
     $script:output = $null
     $script:version = $null
@@ -42,7 +41,7 @@ function GivenVersion
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:applicationRoot -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
 
     @"
 {
@@ -111,7 +110,7 @@ function ThenModule
         $DoesNotExist
     )
 
-    $modulePath = Join-Path -Path $script:applicationRoot -ChildPath ('node_modules\{0}' -f $Name)
+    $modulePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $Name)
 
     if ($Exists)
     {

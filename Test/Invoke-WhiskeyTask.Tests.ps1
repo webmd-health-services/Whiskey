@@ -183,14 +183,6 @@ function GivenScmBranch
     $script:scmBranch = $Branch
 }
 
-function GivenToolInstalledTo
-{
-    param(
-    )
-
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
-}
-
 function GivenVariable
 {
     param(
@@ -601,7 +593,6 @@ function WhenRunningTask
 
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
     Mock -CommandName 'invoke-PostTaskPlugin' -ModuleName 'Whiskey'
-    #Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
 
     $byItDepends = @{ 'ForDeveloper' = $true }
     if( $runByBuildServer )
@@ -1160,7 +1151,6 @@ Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults
     ThenTaskRanInWorkingDirectory 'Snafu'
 }
 
-# this
 Describe 'Invoke-WhiskeyTask.when task requires tools' {
     Init
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
@@ -1189,7 +1179,6 @@ Describe 'Invoke-WhiskeyTask.when task requires tools and initializing' {
     }
 }
 
-# this
 Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {
     try
     {

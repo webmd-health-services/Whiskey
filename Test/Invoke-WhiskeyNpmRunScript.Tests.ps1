@@ -52,18 +52,6 @@ throw ('FAILING')
 
 }
 
-function GivenFailingNpmInstall
-{
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { 
-        if( $ErrorActionPreference -ne 'Stop' ) 
-        { 
-            throw 'You must pass -ErrorAction Stop to Invoke-WhiskeyNpmCommand.' 
-        } 
-        return $true
-    }
-         
-}
-
 function GivenScript
 {
     param(

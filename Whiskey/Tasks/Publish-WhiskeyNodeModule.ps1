@@ -12,7 +12,9 @@ function Publish-WhiskeyNodeModule
 
     # Properties
     
-
+    * `NpmRegistryUri` (*mandatory*): the URI to the registry where the module should be published.
+    * `CredentialID` (*mandatory*): the credential to use when publishing. Credentials are added to your build with the `Add-WhiskeyCredential` function. This `CredentialID` property should be the same value as the `ID` parameter used when adding the credential with `Add-WhiskeyCredential`.
+    * `EmailAddress` (*mandatory*): the email address to use when publishing.
     * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     
     # Examples

@@ -60,10 +60,7 @@ function Invoke-WhiskeyTask
             }
             finally
             {
-                if( (Test-Path -Path $TaskContext.Temp -PathType Container) )
-                {
-                    Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
-                }
+                Remove-WhiskeyFileSystemItem -Path $TaskContext.Temp
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
                 Write-Verbose ('{0}  {1}  {2} in {3}' -f $prefix,(' ' * ($EventName.Length + 4)),$result,$duration)

@@ -398,12 +398,15 @@ function ThenNodeNotInstalled
         $npmPath | Should -Not -Exist
     }
 
-    It ('should report failure to download') {
-        $Error[0] | Should -Match 'NotFound'
-    }
-
     It ('should not set path to node') {
         $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
+    }
+}
+
+function ThenNodePackageNotFound
+{
+    It ('should report failure to download') {
+        $Error[0] | Should -Match 'NotFound'
     }
 }
 
@@ -476,6 +479,7 @@ Describe 'Install-WhiskeyTool.when installing old version of Node' {
         WhenInstallingTool 'Node' -ErrorAction SilentlyContinue
         ThenThrewException 'Failed to download Node v4\.4\.7'
         ThenNodeNotInstalled
+        ThenNodePackageNotFound
     }
     finally
     {
