@@ -427,7 +427,8 @@ function WhenInstallingTool
     [CmdletBinding()]
     param(
         $Name,
-        $Parameter = @{ }
+        $Parameter = @{ },
+        $Version
     )
 
     $Global:Error.Clear()
@@ -437,6 +438,11 @@ function WhenInstallingTool
     if( $versionParameterName )
     {
         $toolAttribute.VersionParameterName = $versionParameterName
+    }
+
+    if( $Version )
+    {
+        $toolAttribute.Version = $Version
     }
 
     $script:taskParameter = $Parameter
@@ -652,14 +658,28 @@ Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t instal
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing specific version of a Node module' {
+Describe 'Install-WhiskeyTool.when installing specific version of a Node module via version parameter' {
     try
     {
         Init
         Install-Node
         GivenVersionParameterName 'Fubar'
-        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '13.1.0' }
+        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '13.1.0' } -Version '16.0.0'
         ThenNodeModuleInstalled 'license-checker' -AtVersion '13.1.0'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing specific version of a Node module via RequiresTool attribute''s Version property' {
+    try
+    {
+        Init
+        Install-Node
+        WhenInstallingTool 'NodeModule::nsp' @{ } -Version '2.7.0'
+        ThenNodeModuleInstalled 'nsp' -AtVersion '2.7.0'
     }
     finally
     {

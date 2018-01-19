@@ -50,6 +50,8 @@ namespace Whiskey {
 
         public string PathParameterName { get; set; }
 
+        public string Version { get; set; }
+
         public string VersionParameterName { get; set; }
     }
 }

@@ -61,13 +61,7 @@ function Invoke-WhiskeyNodeNspCheck
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $nspRoot = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -ErrorAction Stop
-
-    $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
-    if( -not $nspPath )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('It looks like the latest version of NSP doesn''t have a ''{0}\bin\nsp'' script. Please use the ''Version'' property on the NodeNspCheck task to specify a version that includes this script.' -f $nspPath)
-    }
+    $nspPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -CommandPath 'bin\nsp' -ErrorAction Stop
 
     $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
 

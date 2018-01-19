@@ -11,6 +11,7 @@ function Invoke-WhiskeyNodeTask
     [Whiskey.Task('Node',SupportsClean=$true,SupportsInitialize=$true)]
     [Whiskey.RequiresTool('Node','NodePath')]
     [Whiskey.RequiresTool('NodeModule::license-checker','LicenseCheckerPath',VersionParameterName='LicenseCheckerVersion')]
+    [Whiskey.RequiresTool('NodeModule::nsp','NspPath',VersionParameterName='PINNED_TO_NSP_2_7_0',Version='2.7.0')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -77,21 +78,6 @@ function Invoke-WhiskeyNodeTask
         Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-WhiskeyTiming -Message ('COMPLETE')
 
-        Update-Progress -Status ('npm install nsp@2.7.0') -Step ($stepNum++)
-        Write-WhiskeyTiming -Message ('npm install nsp@2.7.0')
-        $nspRoot = Install-WhiskeyNodeModule -Name 'nsp' -Version '2.7.0' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -Global -ErrorAction Stop
-        Write-WhiskeyTiming -Message ('COMPLETE')
-        if( -not $nspRoot -or -not (Test-Path -Path $nspRoot -PathType Container) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module nsp@2.7.0. Something pretty serious has gone wrong.')
-        }
-
-        $nspPath = Join-Path -Path $nspRoot -ChildPath 'bin\nsp' -Resolve
-        if( -not $nspPath -or -not (Test-Path -Path $nspPath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Whiskey failed to install node module nsp@2.7.0. Something pretty serious has gone wrong.')
-        }
-
         if( $TaskContext.ShouldInitialize() )
         {
             Write-WhiskeyTiming -Message 'Initialization complete.'
@@ -121,6 +107,7 @@ BuildTasks:
 
         Update-Progress -Status ('nsp check') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('Running NSP security check.')
+        $nspPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -CommandPath 'bin\nsp' -ErrorAction Stop
         $output = & $nodePath $nspPath 'check' '--output' 'json'
         Write-WhiskeyTiming -Message ('COMPLETE')
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
@@ -131,15 +118,10 @@ BuildTasks:
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
-        $licenseCheckerRoot = Assert-WhiskeyNodeModulePath -Path $TaskParameter['LicenseCheckerPath'] -ErrorAction Stop
-
-        $licenseCheckerPath = Join-Path -Path $licenseCheckerRoot -ChildPath 'bin\license-checker' -Resolve
-        if( -not $licenseCheckerPath -or -not (Test-Path -Path $licenseCheckerPath -PathType Leaf) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node module ''{0}\bin\license-checker'' does not exist. Looks like the latest version of the license checker no longer works with Whiskey. Please migrate away from this task.' -f $licenseCheckerRoot)
-        }
-
         Write-WhiskeyTiming -Message ('Generating license report.')
+
+        $licenseCheckerPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['LicenseCheckerPath'] -CommandPath 'bin\license-checker' -ErrorAction Stop
+
         $reportJson = & $nodePath $licenseCheckerPath '--json'
         Write-WhiskeyTiming -Message ('COMPLETE')
         $report = ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json

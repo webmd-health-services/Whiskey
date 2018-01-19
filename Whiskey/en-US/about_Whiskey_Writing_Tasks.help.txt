@@ -92,7 +92,11 @@ LONG DESCRIPTION
 
     ## Installing a Specific Tool Version
 
-    The `Whiskey.RequiresTool` attribute has a `VersionParameterName` property that should be set to a property name users can use in their whiskey.yml file to control what version of a tool to use. The default parameter name is `Version`. For example, if your `Whiskey.RequiresTool` attribute looks like this:
+    If your task requires a specific version of a tool, use the `Whiskey.RequiresTool` attribute's `Version` property:
+
+        [Whiskey.RequiresTool('NodeModule::nsp', 'NspPath', Version='2.7.0')]
+
+    If you want the user to be able to control what version of a tool to use, the `Whiskey.RequiresTool` attribute has a `VersionParameterName` property that should be set to a property name users can use in their whiskey.yml file to control what version of a tool to use. The default name is `Version`. For example, if your `Whiskey.RequiresTool` attribute looks like this:
 
          [Whiskey.RequiresTool('NodeModule::nsp', 'NspPath', VersionParameterName='NspVersion')]
 

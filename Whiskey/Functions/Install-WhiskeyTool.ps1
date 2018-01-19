@@ -137,13 +137,20 @@ function Install-WhiskeyTool
         $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
         $nodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
 
+        $version = $TaskParameter[$ToolInfo.VersionParameterName]
+        if( -not $version )
+        {
+            $version = $ToolInfo.Version
+        }
+
         switch( $provider )
         {
             'NodeModule'
             {
+                
                 $moduleRoot = Install-WhiskeyNodeModule -Name $name `
                                                         -NodePath $nodePath `
-                                                        -Version $TaskParameter[$ToolInfo.VersionParameterName] `
+                                                        -Version $version `
                                                         -Global `
                                                         -InCleanMode:$InCleanMode `
                                                         -ErrorAction Stop 
