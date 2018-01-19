@@ -28,6 +28,26 @@ function Install-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [Whiskey.RequiresToolAttribute]
+        # The attribute that defines what tool is necessary.
+        $ToolInfo,
+        
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [string]
+        # The directory where you want the tools installed.
+        $InstallRoot,
+
+        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [hashtable]
+        # The task parameters for the currently running task.
+        $TaskParameter,
+
+        [Parameter(ParameterSetName='Tool')]
+        [Switch]
+        # Running in clean mode, so don't install the tool if it isn't installed.
+        $InCleanMode,
+
         [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The name of the PowerShell module to download.
@@ -44,7 +64,8 @@ function Install-WhiskeyTool
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         $Version,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
+        [Parameter(Mandatory=$true,ParameterSetName='PowerShell')]
         [string]
         # The root directory where the tools should be downloaded. The default is your build root.
         #
@@ -100,8 +121,177 @@ function Install-WhiskeyTool
         Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
         if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
         {
-           & $nugetPath install $NuGetPackageName -version $Version -OutputDirectory $packagesRoot | Write-CommandOutput -Description ('Nuget.exe install')
+           & $nugetPath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('Nuget.exe install')
         }
         return $nuGetRoot
+    }
+    elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
+    {
+        $provider,$name = $ToolInfo.Name -split '::'
+        if( -not $name )
+        {
+            $name = $provider
+            $provider = ''
+        }
+
+        $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
+        $nodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
+
+        $version = $TaskParameter[$ToolInfo.VersionParameterName]
+        if( -not $version )
+        {
+            $version = $ToolInfo.Version
+        }
+
+        switch( $provider )
+        {
+            'NodeModule'
+            {
+                
+                $moduleRoot = Install-WhiskeyNodeModule -Name $name `
+                                                        -NodePath $nodePath `
+                                                        -Version $version `
+                                                        -Global `
+                                                        -InCleanMode:$InCleanMode `
+                                                        -ErrorAction Stop 
+                $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
+            }
+            default
+            {
+                switch( $name )
+                {
+                    'Node'
+                    {
+                        if( $InCleanMode )
+                        {
+                            if( (Test-Path -Path $nodepath -PathType Leaf) )
+                            {
+                                $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
+                            }
+                            return
+                        }
+
+                        $npmVersionToInstall = $null
+                        $nodeVersionToInstall = $null
+                        $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
+                        if( $version )
+                        {
+                            $nodeVersionToInstall = $nodeVersions | Where-Object { $_.version -like 'v{0}' -f $version } | Select-Object -First 1
+                            if( -not $nodeVersionToInstall )
+                            {
+                                throw ('Node v{0} does not exist.' -f $version)
+                            }
+                        }
+                        else
+                        {
+                            $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
+                            if( -not (Test-Path -Path $packageJsonPath -PathType Leaf) )
+                            {
+                                $packageJsonPath = Join-Path -Path $InstallRoot -ChildPath 'package.json'
+                            }
+
+                            if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
+                            {
+                                Write-Verbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
+                                $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
+                                if( $packageJson -and ($packageJson | Get-Member 'engines') )
+                                {
+                                    if( ($packageJson.engines | Get-Member 'node') -and $packageJson.engines.node -match '(\d+\.\d+\.\d+)' )
+                                    {
+                                        $nodeVersionToInstall = 'v{0}' -f $Matches[1]
+                                        $nodeVersionToInstall =  $nodeVersions |
+                                                        Where-Object { $_.version -eq $nodeVersionToInstall } |
+                                                        Select-Object -First 1
+                                    }
+
+                                    if( ($packageJson.engines | Get-Member 'npm') -and $packageJson.engines.npm -match '(\d+\.\d+\.\d+)' )
+                                    {
+                                        $npmVersionToInstall = $Matches[1]
+                                    }
+                                }
+                            }
+                        }
+
+                        if( -not $nodeVersionToInstall )
+                        {
+                            $nodeVersionToInstall = $nodeVersions |
+                                                       Where-Object { ($_ | Get-Member 'lts') -and $_.lts } |
+                                                        Select-Object -First 1
+                        }
+
+                        if( -not $npmVersionToInstall )
+                        {
+                            $npmVersionToInstall = $nodeVersionToInstall.npm
+                        }
+                
+                        if( (Test-Path -Path $nodePath -PathType Leaf) )
+                        {
+                            $currentNodeVersion = & $nodePath '--version'
+                            if( $currentNodeVersion -ne $nodeVersionToInstall.version )
+                            {
+                                Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
+                            }
+                        }
+
+                        if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+                        {
+                            New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
+                        }
+
+                        $extractedDirName = 'node-{0}-win-x64' -f $nodeVersionToInstall.version
+                        $filename = '{0}.zip' -f $extractedDirName
+                        $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
+                        if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
+                        {
+                            $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
+                            try
+                            {
+                                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
+                            }
+                            catch
+                            {
+                                $responseStatus = $_.Exception.Response.StatusCode
+                                $errorMsg = 'Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}.' -f $nodeVersionToInstall.version,$responseStatus,[int]$responseStatus,$uri
+                                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+                                {
+                                    $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                                }
+                                throw $errorMsg
+                            }
+                        }
+
+                        if( -not (Test-Path -Path $nodePath -PathType Leaf) )
+                        {
+                            Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
+                            & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y'
+
+                            Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
+                                Get-ChildItem |
+                                Move-Item -Destination $nodeRoot
+                        }
+
+                        $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+                        $npmVersion = & $nodePath $npmPath '--version'
+                        if( $npmVersion -ne $npmVersionToInstall )
+                        {
+                            Write-Verbose ('Installing npm@{0}.' -f $npmVersionToInstall)
+                            # Bug in NPM 5 that won't delete these files in the node home directory. 
+                            Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include 'npm.cmd','npm','npx.cmd','npx' | Remove-Item
+                            & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g'
+                            if( $LASTEXITCODE )
+                            {
+                                throw ('Failed to update to NPM {0}. Please see previous output for details.' -f $npmVersionToInstall)
+                            }
+                        }
+
+                        $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
+                    }
+                    default
+                    {
+                        throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $name)
+                    }
+                }
+            }
+        }
     }
 } 

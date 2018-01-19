@@ -79,6 +79,8 @@ function Invoke-WhiskeyBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $script:buildStartedAt = Get-Date
+
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
     $succeeded = $false

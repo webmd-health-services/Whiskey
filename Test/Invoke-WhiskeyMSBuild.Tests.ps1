@@ -39,7 +39,7 @@ function GivenAProjectThatCompiles
     $source = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $ProjectName)
     $destination = Get-BuildRoot
     $destination = Join-Path -Path $destination -ChildPath $ProjectName
-    robocopy $source $destination '/MIR' '/NP' '/R:0'
+    robocopy $source $destination '/MIR' '/NP' '/R:0' '/MT'
     $script:path = '{0}\{0}.sln' -f $ProjectName
     $script:assembly = '{0}.dll' -f $ProjectName
 }

@@ -11,3 +11,4 @@ Modules
 .whsgallerykey
 *.orig
 packages
+Test/.downloadcache

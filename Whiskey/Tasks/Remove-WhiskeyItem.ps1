@@ -5,7 +5,9 @@ function Remove-WhiskeyItem
     Deletes files or directories.
 
     .DESCRIPTION
-    The `Delete` task deletes files or directories. If the file/directory doesn't exist, nothing happens. When deleting a directory, uses `robocopy.exe` to copy an empty directory on top of the directory to delete, then deletes the empty directory. (This allows the `Delete` task to handle paths longer than 260 characters.)
+    The `Delete` task deletes files or directories. If the file/directory doesn't exist, nothing happens.
+
+    This task also deletes files when a build is cleaning.
 
     ## Properties
     * `Path` (mandatory): a list of paths to delete. Must be relative to the `whiskey.yml` file. Paths that don't exist are ignored. Wildcards are allowed.
@@ -55,18 +57,9 @@ function Remove-WhiskeyItem
             continue
         }
 
-        $path | ForEach-Object {
-            if( (Test-Path -Path $_ -PathType Container) )
-            {
-                $emptyDir = Join-Path -Path $TaskContext.OutputDirectory -ChildPath 'empty'
-                if( -not (Test-Path -Path $emptyDir -PathType Container) )
-                {
-                    New-Item -Path $emptyDir -ItemType 'Directory'
-                }
-
-                robocopy $emptyDir $_ /MIR /R:0 /NP /NFL /NDL
-            }
-            Remove-Item -Path $_ -Force -Recurse
+        foreach( $pathItem in $path )
+        {
+            Remove-WhiskeyFileSystemItem -Path $pathitem -ErrorAction Stop
         }
     }
 }
