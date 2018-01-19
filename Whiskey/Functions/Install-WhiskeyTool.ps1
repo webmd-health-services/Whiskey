@@ -172,52 +172,62 @@ function Install-WhiskeyTool
                         }
 
                         $npmVersionToInstall = $null
-                        $versionToInstall = $null
-                        $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
-                        if( -not (Test-Path -Path $packageJsonPath -PathType Leaf) )
+                        $nodeVersionToInstall = $null
+                        $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
+                        if( -not $version )
                         {
-                            $packageJsonPath = Join-Path -Path $InstallRoot -ChildPath 'package.json'
-                        }
-
-                        if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
-                        {
-                            Write-Verbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
-                            $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
-                            if( $packageJson -and ($packageJson | Get-Member 'engines') )
+                            $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
+                            if( -not (Test-Path -Path $packageJsonPath -PathType Leaf) )
                             {
-                                if( ($packageJson.engines | Get-Member 'node') -and $packageJson.engines.node -match '(\d+\.\d+\.\d+)' )
-                                {
-                                    $versionToInstall = 'v{0}' -f $Matches[1]
-                                    $versionToInstall = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
-                                                            ForEach-Object { $_ } |
-                                                            Where-Object { $_.version -eq $versionToInstall } |
-                                                            Select-Object -First 1
-                                }
+                                $packageJsonPath = Join-Path -Path $InstallRoot -ChildPath 'package.json'
+                            }
 
-                                if( ($packageJson.engines | Get-Member 'npm') -and $packageJson.engines.npm -match '(\d+\.\d+\.\d+)' )
+                            if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
+                            {
+                                Write-Verbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
+                                $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
+                                if( $packageJson -and ($packageJson | Get-Member 'engines') )
                                 {
-                                    $npmVersionToInstall = $Matches[1]
+                                    if( ($packageJson.engines | Get-Member 'node') -and $packageJson.engines.node -match '(\d+\.\d+\.\d+)' )
+                                    {
+                                        $nodeVersionToInstall = 'v{0}' -f $Matches[1]
+                                        $nodeVersionToInstall =  $nodeVersions |
+                                                        Where-Object { $_.version -eq $nodeVersionToInstall } |
+                                                        Select-Object -First 1
+                                    }
+
+                                    if( ($packageJson.engines | Get-Member 'npm') -and $packageJson.engines.npm -match '(\d+\.\d+\.\d+)' )
+                                    {
+                                        $npmVersionToInstall = $Matches[1]
+                                    }
                                 }
                             }
                         }
 
-                        if( -not $versionToInstall )
+                        if( $version )
                         {
-                            $versionToInstall = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
-                                                    ForEach-Object { $_ } |
-                                                    Where-Object { ($_ | Get-Member 'lts') -and $_.lts } |
-                                                    Select-Object -First 1
+                            $nodeVersionToInstall = $nodeVersions | Where-Object { $_.version -like 'v{0}' -f $version } | Select-Object -First 1
+                            if( -not $nodeVersionToInstall )
+                            {
+                                throw ('Node v{0} does not exist.' -f $version)
+                            }
+                        }
+                        else
+                        {
+                            $nodeVersionToInstall = $nodeVersions |
+                                                       Where-Object { ($_ | Get-Member 'lts') -and $_.lts } |
+                                                        Select-Object -First 1
                         }
 
                         if( -not $npmVersionToInstall )
                         {
-                            $npmVersionToInstall = $versionToInstall.npm
+                            $npmVersionToInstall = $nodeVersionToInstall.npm
                         }
                 
                         if( (Test-Path -Path $nodePath -PathType Leaf) )
                         {
                             $currentNodeVersion = & $nodePath '--version'
-                            if( $currentNodeVersion -ne $versionToInstall.version )
+                            if( $currentNodeVersion -ne $nodeVersionToInstall.version )
                             {
                                 Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
                             }
@@ -228,12 +238,12 @@ function Install-WhiskeyTool
                             New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
                         }
 
-                        $extractedDirName = 'node-{0}-win-x64' -f $versionToInstall.version
+                        $extractedDirName = 'node-{0}-win-x64' -f $nodeVersionToInstall.version
                         $filename = '{0}.zip' -f $extractedDirName
                         $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
                         if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
                         {
-                            $uri = 'https://nodejs.org/dist/{0}/{1}' -f $versionToInstall.version,$filename
+                            $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
                             try
                             {
                                 Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
@@ -241,7 +251,7 @@ function Install-WhiskeyTool
                             catch
                             {
                                 $responseStatus = $_.Exception.Response.StatusCode
-                                $errorMsg = 'Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}.' -f $versionToInstall.version,$responseStatus,[int]$responseStatus,$uri
+                                $errorMsg = 'Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}.' -f $nodeVersionToInstall.version,$responseStatus,[int]$responseStatus,$uri
                                 if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
                                 {
                                     $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg

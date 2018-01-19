@@ -544,6 +544,49 @@ Describe 'Install-WhiskeyTool.when upgrading to a new version of Node' {
     }
 }
 
+Describe 'Install-WhiskeyTool.when user specifies version of Node in whiskey.yml and uses wildcard' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0",
+        "npm": "5.6.0"
+    }
+}
+'@
+        GivenVersionParameterName 'Fubar'
+        WhenInstallingTool 'Node' @{ 'Fubar' = '8.8.*' }
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when task author specifies version of Node' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0",
+        "npm": "5.6.0"
+    }
+}
+'@
+        WhenInstallingTool 'Node' @{  } -Version '8.8.*'
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
 Describe 'Install-WhiskeyTool.when using custom version of NPM' {
     try
     {
