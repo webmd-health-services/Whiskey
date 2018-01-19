@@ -8,7 +8,7 @@ LONG DESCRIPTION
 
     A Whiskey task is a PowerShell function that has:
 
-    * the `Whiskey.Tool` attribute
+    * the `Whiskey.Task` attribute
     * a `TaskContext` parameter
     * a `TaskParameter` parameter that's a hashtable
 
