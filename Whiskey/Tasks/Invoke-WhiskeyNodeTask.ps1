@@ -108,7 +108,8 @@ BuildTasks:
         Update-Progress -Status ('nsp check') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('Running NSP security check.')
         $nspPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -CommandPath 'bin\nsp' -ErrorAction Stop
-        $output = & $nodePath $nspPath 'check' '--output' 'json'
+        $output = & $nodePath $nspPath 'check' '--output' 'json' 2>&1 |
+                        ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
         Write-WhiskeyTiming -Message ('COMPLETE')
         $results = ($output -join [Environment]::NewLine) | ConvertFrom-Json
         if( $LASTEXITCODE )
