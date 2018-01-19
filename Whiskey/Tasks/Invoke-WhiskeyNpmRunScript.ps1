@@ -16,7 +16,6 @@ function Invoke-WhiskeyNpmRunScript
 
     * `Script` (*mandatory*): a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run independently.
     * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-    * `NpmRegistryUri` (*mandatory*): the uri to set a custom npm registry.
     * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. By default, the version of NPM that shipped with that version of Node is used. You can customize what version of NPM to use by setting the `engines.npm` property in your package.json file to the version you want.
 
     # Examples
