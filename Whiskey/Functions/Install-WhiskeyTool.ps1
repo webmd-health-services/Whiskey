@@ -174,7 +174,15 @@ function Install-WhiskeyTool
                         $npmVersionToInstall = $null
                         $nodeVersionToInstall = $null
                         $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
-                        if( -not $version )
+                        if( $version )
+                        {
+                            $nodeVersionToInstall = $nodeVersions | Where-Object { $_.version -like 'v{0}' -f $version } | Select-Object -First 1
+                            if( -not $nodeVersionToInstall )
+                            {
+                                throw ('Node v{0} does not exist.' -f $version)
+                            }
+                        }
+                        else
                         {
                             $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
                             if( -not (Test-Path -Path $packageJsonPath -PathType Leaf) )
@@ -204,15 +212,7 @@ function Install-WhiskeyTool
                             }
                         }
 
-                        if( $version )
-                        {
-                            $nodeVersionToInstall = $nodeVersions | Where-Object { $_.version -like 'v{0}' -f $version } | Select-Object -First 1
-                            if( -not $nodeVersionToInstall )
-                            {
-                                throw ('Node v{0} does not exist.' -f $version)
-                            }
-                        }
-                        else
+                        if( -not $nodeVersionToInstall )
                         {
                             $nodeVersionToInstall = $nodeVersions |
                                                        Where-Object { ($_ | Get-Member 'lts') -and $_.lts } |
