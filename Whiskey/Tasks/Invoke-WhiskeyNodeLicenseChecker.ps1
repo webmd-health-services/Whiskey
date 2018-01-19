@@ -15,6 +15,7 @@ function Invoke-WhiskeyNodeLicenseChecker
     # Properties
 
     * `Version`: the version of the license checker to use. The default is the latest version.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. 
 
     # Examples
 
@@ -35,7 +36,7 @@ function Invoke-WhiskeyNodeLicenseChecker
     #>
     [CmdletBinding()]
     [Whiskey.Task('NodeLicenseChecker')]
-    [Whiskey.RequiresTool('Node', 'NodePath')]
+    [Whiskey.RequiresTool('Node', 'NodePath',VersionParameterName='NodeVersion')]
     [Whiskey.RequiresTool('NodeModule::license-checker', 'LicenseCheckerPath', VersionParameterName='Version')]
     param(
         [Parameter(Mandatory=$true)]

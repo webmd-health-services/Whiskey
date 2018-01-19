@@ -16,8 +16,9 @@ function Invoke-WhiskeyNodeNspCheck
 
     # Properties
 
-    # * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-    # * `Version`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
+    * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `Version`: the version of NSP to install and utilize for security checks. Defaults to the latest stable version of NSP.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. 
 
     # Examples
 
@@ -45,7 +46,7 @@ function Invoke-WhiskeyNodeNspCheck
     This example will run `node.exe nsp check` by installing and running NSP version 2.7.0.
     #>
     [Whiskey.Task("NodeNspCheck")]
-    [Whiskey.RequiresTool("Node", "NodePath")]
+    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
     [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
     [CmdletBinding()]
     param(

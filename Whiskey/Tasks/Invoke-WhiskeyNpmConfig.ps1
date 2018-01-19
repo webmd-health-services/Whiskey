@@ -52,7 +52,7 @@ function Invoke-WhiskeyNpmConfig
         email=buildmaster@example.com
     #>
     [Whiskey.Task('NpmConfig')]
-    [Whiskey.RequiresTool('Node','NodePath')]
+    [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [object]

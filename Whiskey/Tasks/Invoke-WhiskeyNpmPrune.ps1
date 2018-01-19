@@ -17,6 +17,7 @@ function Invoke-WhiskeyNpmPrune
     # Properties
 
     * `WorkingDirectory`: the directory from which to run the `npm prune` command, defaults to the build root. **Must** be a relative path to the `whiskey.yml` file and **must** contain the node module's `package.json` file.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. By default, the version of NPM that shipped with that version of Node is used. You can customize what version of NPM to use by setting the `engines.npm` property in your package.json file to the version you want.
 
     # Examples
 
@@ -36,7 +37,7 @@ function Invoke-WhiskeyNpmPrune
     This example demonstrates running `npm prune` from the `BUILD_ROOT\src\node-module-root` directory where the node module's `package.json` can be found.
     #>
     [Whiskey.Task('NpmPrune')]
-    [Whiskey.RequiresTool('Node','NodePath')]
+    [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

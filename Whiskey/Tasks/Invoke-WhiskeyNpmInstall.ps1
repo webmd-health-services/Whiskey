@@ -26,6 +26,7 @@ function Invoke-WhiskeyNpmInstall
     * `Package`: a list of NPM packages to install. List items can simply be package names, `rimraf`, or package names with semantic version numbers that NPM understands, e.g. `rimraf: ^2.0.0`. When using the `Package` property the task will only install the given packages and not the ones listed in the `package.json` file.
     * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
     * `Global`: installs the module in the global `node_modules` directory, i.e. in the `.node\node_modules` directory where Whiskey installs your global copy of Node. This property is only used if the `Package` property has a value, i.e. if you are installing specific Node modules.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. By default, the version of NPM that shipped with that version of Node is used. You can customize what version of NPM to use by setting the `engines.npm` property in your package.json file to the version you want.
 
     # Examples
 
@@ -57,7 +58,7 @@ function Invoke-WhiskeyNpmInstall
     This example will install the Node packages `gulp` and the latest 2.x.x version of `rimraf` to the `BUILD_ROOT\app\node_modules` directory.
     #>
     [Whiskey.Task('NpmInstall',SupportsClean=$true)]
-    [Whiskey.RequiresTool('Node', 'NodePath')]
+    [Whiskey.RequiresTool('Node', 'NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

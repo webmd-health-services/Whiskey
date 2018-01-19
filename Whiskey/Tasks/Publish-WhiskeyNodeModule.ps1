@@ -16,6 +16,7 @@ function Publish-WhiskeyNodeModule
     * `CredentialID` (*mandatory*): the credential to use when publishing. Credentials are added to your build with the `Add-WhiskeyCredential` function. This `CredentialID` property should be the same value as the `ID` parameter used when adding the credential with `Add-WhiskeyCredential`.
     * `EmailAddress` (*mandatory*): the email address to use when publishing.
     * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. 
     
     # Examples
     
@@ -35,7 +36,7 @@ function Publish-WhiskeyNodeModule
     Demonstrates how to publish a Node module that isn't in the same directory as your whiskey.yml file. In this example, the Node moule in the `app` directory is published (`app` is resolved relative to your whiskey.yml file).
     #>
     [Whiskey.Task("PublishNodeModule")]
-    [Whiskey.RequiresTool("Node", "NodePath")]
+    [Whiskey.RequiresTool("Node", "NodePath",VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
