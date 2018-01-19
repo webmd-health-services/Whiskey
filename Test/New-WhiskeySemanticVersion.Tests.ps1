@@ -96,7 +96,7 @@ function ThenAddedBuildMetadataToSemanticVersionOf
     }
 
     $buildServerSemVer = $developerSemVer = $Version
-    if ($Version -match '^\d{4}\.\d{4}$')
+    if ($Version -match '^\d{4}\.\d{3,4}$')
     {
         $buildServerSemVer = '{0}.{1}' -f $Version,$buildServerMetadataObject.BuildNumber
         $developerSemVer   = '{0}.{1}' -f $Version,$developerMetadataObject.BuildNumber
@@ -176,7 +176,21 @@ Describe 'New-WhiskeySemanticVersion.when passed 3' {
 Describe 'New-WhiskeySemanticVersion.when not passed a Version' {
     Init
     WhenGettingSemanticVersion
-    ThenAddedBuildMetadataToSemanticVersionOf (Get-Date).ToString('yyyy.MMdd')
+    ThenAddedBuildMetadataToSemanticVersionOf (Get-Date).ToString('yyyy.Mdd')
+}
+
+Describe 'New-WhiskeySemanticVersion.when not passed a Version on single digit month/day' {
+    Init
+    Mock -CommandName 'Get-Date' -MockWith { [datetime]'1/1/2030' }
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '2030.101'
+}
+
+Describe 'New-WhiskeySemanticVersion.when not passed a Version on double digit month/day' {
+    Init
+    Mock -CommandName 'Get-Date' -MockWith { [datetime]'12/12/2030' }
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '2030.1212'
 }
 
 Describe 'New-WhiskeySemanticVersion.when passed ''5.6.7-rc.3''' {
@@ -226,7 +240,23 @@ Describe 'New-WhiskeySemanticVersion.when passed only Prerelease ''rc.4''' {
     Init
     GivenPrerelease 'rc.4'
     WhenGettingSemanticVersion
-    ThenAddedBuildMetadataToSemanticVersionOf (Get-Date).ToString('yyyy.MMdd')
+    ThenAddedBuildMetadataToSemanticVersionOf (Get-Date).ToString('yyyy.Mdd')
+}
+
+Describe 'New-WhiskeySemanticVersion.when passed only Prerelease ''rc.4'' on single digit month/day' {
+    Init
+    GivenPrerelease 'rc.4'
+    Mock -CommandName 'Get-Date' -MockWith { [datetime]'1/1/2030' }
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '2030.101'
+}
+
+Describe 'New-WhiskeySemanticVersion.when passed only Prerelease ''rc.4'' on double digit month/day' {
+    Init
+    GivenPrerelease 'rc.4'
+    Mock -CommandName 'Get-Date' -MockWith { [datetime]'12/12/2030' }
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '2030.1212'
 }
 
 Describe 'New-WhiskeySemanticVersion.when given invalid Path' {

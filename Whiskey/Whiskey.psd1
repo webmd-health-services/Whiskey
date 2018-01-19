@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.25.0'
+    ModuleVersion = '0.26.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -77,17 +77,16 @@
                             'Add-WhiskeyApiKey',
                             'Add-WhiskeyCredential',
                             'Add-WhiskeyVariable',
+                            'Assert-WhiskeyNodePath',
+                            'Assert-WhiskeyNodeModulePath',
                             'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
-                            'Install-WhiskeyNodeJs',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
-                            'Invoke-WhiskeyNUnit2Task',
-                            'Invoke-WhiskeyPester3Task',
-                            'Invoke-WhiskeyPester4Task',
+                            'Invoke-WhiskeyNpmCommand',
                             'Invoke-WhiskeyPipeline',
                             'Invoke-WhiskeyBuild',
                             'Invoke-WhiskeyTask',
@@ -144,9 +143,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: PowerShell modules would fail to download if they were found in more than one registered PowerShellGet repository.
-* Added support for .NET csproj files for the `VersionFrom` Whiskey build configuration property.
-* Added common WorkingDirectory property. Setting it on a task will result in that task running in the given directory. The path must be relative to the build root.
+* Fixed: variables in common task property values (i.e. OnlyBy, ExceptDuring, OnlyOnBranch, WorkingDirectory, etc.) aren't resolved.
+* Fixed: common task properties in task default properties are ignored.
+* The `NpmInstall`, `NpmPrune`, `NodeNspCheck`, `NodeLicenseChecker`, and `PublishNodeModule` tasks now install their own global Node (with NPM) into a `.node` directory (in the same directory as your whiskey.yml file). By default, Node's latest LTS version is installed. To install a specific version, update the `engines.node` property in your package.json file. You can specify a custom version of NPM with the `engines.npm` property in your package.json file. You can only upgrade to a newer version of NPM than what ships with the version of Node you're using. The `NodeNspCheck` and `NodeLicenseChecker` tasks install the nsp and license-checker node modules, respectively, into this global Node environment.
+* `Invoke-WhiskeyNpmCommand` is now a public function. Task authors can use it to run NPM commands using the version of Node Whiskey installs. Tasks that use it must have the `[Whiskey.RequiresTool]` attribute.
+* `ProGetUniversalPackage` should now be a little bit faster. Enable multi-threaded copies when copying files with Robocopy.
+* `NpmInstall` task can now install modules globally (i.e. in the `.node\node_modules` directory where Whiskey installs your copy of Node). Set the `Global` property to `true`.
+* `NspCheck` task renamed to `NodeNspCheck`.
+* Created `NpmConfig` task for setting NPM configuration in NPM's various .npmrc files.
+* Fixed: `NpmInstall` task doesn't delete the modules it installs when run in clean mode.
 '@
         } # End of PSData hashtable
 

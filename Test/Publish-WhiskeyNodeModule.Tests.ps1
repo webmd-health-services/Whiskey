@@ -13,10 +13,8 @@ $credID = $null
 $credential = $null
 $parameter = $null
 $context = $null
-$workingDirectory = $null
 $threwException = $false
 $email = $null
-$npmVersion = $null
 
 function GivenNoCredentialID
 {
@@ -33,60 +31,22 @@ function GivenNoNpmRegistryUri
     $script:npmRegistryUri = $null
 }
 
-function GivenNpmVersion
-{
-    param(
-        $Version
-    )
-
-    $script:npmVersion = ('"npm": "{0}",' -f $Version)
-}
-
-function GivenNpmPublishReturnsNonZeroExitCode
-{
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'} -MockWith { & cmd /c exit 1 }
-}
-
-function GivenNpmPruneReturnsNonZeroExitCode
-{
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'prune'} -MockWith { & cmd /c exit 1 }
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $Path
-    )
-
-    $script:workingDirectory = $Path
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path) -ItemType 'Directory' -Force
-}
-
 function Init
 {
     $script:credID = $defaultCredID
     $script:credential = New-Object 'pscredential' $defaultUserName,(ConvertTo-SecureString -String $defaultPassword -AsPlainText -Force)
     $script:parameter = @{ }
     $script:context = $null
-    $script:workingDirectory = $null
     $script:npmRegistryUri = 'http://registry.npmjs.org/'
     $script:email = $defaultEmailAddress
-    $script:npmVersion = $null
+    Install-Node
 }
 
-function GivenWithInitilizeFlag
-{
-    $script:context.RunMode = 'initialize'
-    $nvmPath = Join-Path $context.BuildRoot -ChildPath '\nvm\v4.4.7\node.exe'
-    Mock -CommandName 'Install-WhiskeyNodeJs' -ModuleName 'Whiskey' {$nvmPath}.GetNewClosure()
-}
 function New-PublishNodeModuleStructure
 {
     param(
     )
 
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'prune --production --no-color'}
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {$ScriptBlock -match 'publish'}
     Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -99,22 +59,12 @@ function New-PublishNodeModuleStructure
 
     $testPackageJsonChildPath = 'package.json'
 
-    if ($workingDirectory)
-    {
-        $taskParameter['WorkingDirectory'] = $workingDirectory
-        $testPackageJsonChildPath = (Join-Path -Path $workingDirectory -ChildPath 'package.json')
-    }
-
     $testPackageJsonPath = Join-Path -Path $context.BuildRoot -ChildPath $testPackageJsonChildPath
     $testPackageJson = @"
 {
   "name": "publishnodemodule_test",
   "version": "1.2.0",
-  "main": "index.js",
-  "engines": {
-    $($script:npmVersion)
-    "node": "^4.4.7"
-  }
+  "main": "index.js"
 }
 "@
 
@@ -129,49 +79,34 @@ function New-PublishNodeModuleStructure
     return $returnContextParams
 }
 
-function ThenNodeShouldExist
-{
-    It 'should have a nodejs installed' {
-        Assert-MockCalled   -CommandName 'Install-WhiskeyNodeJs' `
-                            -ModuleName 'Whiskey' `
-                            -Times 1 -Exactly
-    }
-}
-
 function ThenNodeModulePublished
 {
     It ('should publish the module') {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 1 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                            -ModuleName 'Whiskey' `
+                            -ParameterFilter { $Name -eq 'publish' } -Times 1 -Exactly
     }
 }
 
 function ThenNodeModuleIsNotPublished
 {
     It 'should not publish the module' {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-                            -ParameterFilter {$ScriptBlock -match 'publish'} -Times 0 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                            -ModuleName 'Whiskey' `
+                            -ParameterFilter { $Name -eq 'publish' } -Times 0 -Exactly
     }
 }
 
 function ThenNpmPackagesPruned
 {
     It 'should prune npm packages' {
-        Assert-MockCalled   -CommandName 'Invoke-Command' -ModuleName 'Whiskey' `
-                            -ParameterFilter {$ScriptBlock -match 'prune --production --no-color'} -Times 1 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                            -ModuleName 'Whiskey' `
+                            -ParameterFilter { $Name -eq 'prune' } -Times 1 -Exactly
+        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                            -ModuleName 'Whiskey' `
+                            -ParameterFilter { $Name -eq 'prune' -and $ArgumentList[0] -eq '--production' } -Times 1 -Exactly
     }
-}
-
-function ThenLocalNpmInstalled
-{
-    $npmPath = (Join-Path -Path $context.BuildRoot -ChildPath 'node_modules\npm\bin\npm-cli.js')
-
-    It 'should install a specific local version of npm' {
-        $npmPath | Should -Exist
-    }
-
-    # npm module path in TestDrive is too long for Pester to cleanup with Remove-Item
-    & cmd /C rmdir /S /Q (Join-Path -Path $TestDrive.FullName -ChildPath 'node_modules\npm')
 }
 
 function ThenNpmrcCreated
@@ -240,6 +175,16 @@ function WhenPublishingNodeModule
     param(
     )
 
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter { 
+            if( $ErrorActionPreference -ne 'Stop' ) 
+            { 
+                throw 'Invoke-WhiskeyNpmCommand must be called with `-ErrorAction Stop`.' 
+            } 
+            return $true
+        }
+
     if( $credID )
     {
         $parameter['CredentialID'] = $credID
@@ -268,81 +213,62 @@ function WhenPublishingNodeModule
 }
 
 Describe 'PublishNodeModule.when publishing node module' {
-    Init
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished
-}
-
-Describe 'PublishNodeModule.when publishing node module from custom working directory' {
-    Init
-    GivenWorkingDirectory 'App'
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated -In 'App'
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished    
+    try
+    {
+        Init
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule
+        ThenNpmrcCreated
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when NPM registry URI property is missing' {
-    Init
-    GivenNoNpmRegistryUri
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
+    try
+    {
+        Init
+        GivenNoNpmRegistryUri
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when credential ID property missing' {
-    Init
-    GivenNoCredentialID
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+    try
+    {
+        Init
+        GivenNoCredentialID
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }
 
 Describe 'PublishNodeModule.when email address property missing' {
-    Init
-    GivenNoEmailAddress
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
-}
-
-Describe 'PublishNodeModule.when publishing node module with initialization mode' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenWithInitilizeFlag
-    WhenPublishingNodeModule
-    ThenNodeShouldExist
-    ThenNodeModuleIsNotPublished
-}
-Describe 'PublishNodeModule.when publishing node module using specific version of npm' {
-    Init
-    GivenNPMVersion '~4.6.1'
-    New-PublishNodeModuleStructure
-    WhenPublishingNodeModule
-    ThenNpmrcCreated
-    ThenNpmPackagesPruned
-    ThenNodeModulePublished    
-    ThenLocalNpmInstalled
-}
-
-Describe 'PublishNodeModule.when npm publish returns non-zero exit code' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenNpmPublishReturnsNonZeroExitCode
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenNpmrcCreated
-    ThenTaskFailed 'NPM command ''npm publish'' failed with exit code ''1'''
-}
-
-Describe 'PublishNodeModule.when npm prune returns non-zero exit code' {
-    Init
-    New-PublishNodeModuleStructure
-    GivenNpmPruneReturnsNonZeroExitCode
-    WhenPublishingNodeModule -ErrorAction SilentlyContinue
-    ThenNpmrcCreated
-    ThenTaskFailed 'NPM command ''npm prune'' failed with exit code ''1'''
+    try
+    {
+        Init
+        GivenNoEmailAddress
+        New-PublishNodeModuleStructure
+        WhenPublishingNodeModule -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+    }
+    finally
+    {
+        Remove-Node
+    }
 }

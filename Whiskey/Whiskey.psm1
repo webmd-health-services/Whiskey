@@ -1,12 +1,16 @@
+$numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
+$numRobocopyThreads *= 2
 
 $events = @{ }
 
-$type = [AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('Whiskey.TaskAttribute') } | Select-Object -First 1
+$7z = Join-Path -Path $PSScriptRoot -ChildPath 'bin\7-Zip\7z.exe' -Resolve
 
-if( -not $type )
-{
-    Add-Type -TypeDefinition @"
+$buildStartedAt = [DateTime]::MinValue
 
+$types = @(
+                @{
+                    Name = 'Whiskey.TaskAttribute';
+                    Definition = @'
 namespace Whiskey {
 
     public sealed class TaskAttribute : System.Attribute {
@@ -26,10 +30,50 @@ namespace Whiskey {
     }
 
 }
+'@;
+                },
+                @{
+                    Name = 'Whiskey.RequiresToolAttribute';
+                    Definition = @'
+namespace Whiskey {
+    
+    public sealed class RequiresToolAttribute : System.Attribute {
+        
+        public RequiresToolAttribute(string toolName, string toolPathParameterName)
+        {
+            Name = toolName;
+            PathParameterName = toolPathParameterName;
+            VersionParameterName = "Version";
+        }
 
-"@ -ErrorAction Ignore
+        public string Name { get; private set; }
+
+        public string PathParameterName { get; set; }
+
+        public string Version { get; set; }
+
+        public string VersionParameterName { get; set; }
+    }
 }
+'@;
+                }
+        )
 
+foreach( $typeDef in $types )
+{
+    $type = [AppDomain]::CurrentDomain.GetAssemblies() | 
+                ForEach-Object { $_.GetType($typeDef.Name) } | 
+                Select-Object -First 1
+
+
+    if( $type )
+    {
+        continue
+    }
+
+    Add-Type -TypeDefinition $typeDef.Definition 
+}
+            
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'SupportsClean') )
 {

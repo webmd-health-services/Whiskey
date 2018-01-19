@@ -36,7 +36,7 @@ function GivenSolution
     )
 
     $sourcePath = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $Name)
-    robocopy $sourcePath $TestDrive.FullName /S
+    robocopy $sourcePath $TestDrive.FullName /S /MT
 }
 
 function GivenPath

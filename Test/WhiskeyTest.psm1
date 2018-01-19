@@ -1,3 +1,11 @@
+$numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
+$numRobocopyThreads *= 2
+
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath '.downloadcache'
+if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
+{
+    New-Item -Path $downloadCachePath -ItemType 'Directory'
+}
 
 function ConvertTo-Yaml
 {
@@ -56,6 +64,52 @@ function ConvertTo-Yaml
             return $wrt.ToString()
         }
     }
+}
+
+function Install-Node
+{
+    param(
+        [string[]]
+        $WithModule
+    )
+
+    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath'
+    Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
+
+    $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
+    $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+    foreach( $name in $WithModule )
+    {
+        if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )
+        {
+            continue
+        }
+
+        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name),('{0}Path' -f $name)) -InstallRoot $downloadCachePath -TaskParameter @{ }
+    }
+
+    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
+    if( -not (Test-Path -Path $destinationDir -PathType Container) )
+    {
+        New-Item -Path $destinationDir -ItemType 'Directory'
+    }
+
+    $exclude = & {
+                        '/XF'
+                        '*.zip'
+                        Get-ChildItem -Path $modulesRoot |
+                            Where-Object { $_.Name -ne 'npm' -and $WithModule -notcontains $_.Name } |
+                            ForEach-Object {
+                                '/XD'
+                                $_.FullName
+                            }
+                }
+    robocopy (Join-Path -Path $downloadCachePath -ChildPath '.node') $destinationDir /COPY:D /E /NP /NFL /NDL /NJH /NJS /R:0 ('/MT:{0}' -f $numRobocopyThreads) $exclude
+
+    Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |
+        ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
+        Where-Object { -not (Test-Path -Path $_ -PathType Leaf) } |
+        ForEach-Object { New-Item -Path $_ -ItemType 'File' }
 }
 
 function New-AssemblyInfo
@@ -283,12 +337,19 @@ function New-WhiskeyTestContext
     return $context
 }
 
+function Remove-Node
+{
+    Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules')
+}
+
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyMSBuildConfiguration.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
 Export-ModuleMember -Function '*'
 

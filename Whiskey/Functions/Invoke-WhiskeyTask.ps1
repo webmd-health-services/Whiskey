@@ -60,10 +60,7 @@ function Invoke-WhiskeyTask
             }
             finally
             {
-                if( (Test-Path -Path $TaskContext.Temp -PathType Container) )
-                {
-                    Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
-                }
+                Remove-WhiskeyFileSystemItem -Path $TaskContext.Temp
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
                 Write-Verbose ('{0}  {1}  {2} in {3}' -f $prefix,(' ' * ($EventName.Length + 4)),$result,$duration)
@@ -110,48 +107,39 @@ function Invoke-WhiskeyTask
         }
     }
 
-    $TaskContext.TaskName = $Name
+    function Get-RequiredTool
+    {
+        param(
+            $CommandName
+        )
 
-    #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
-    $prefix = '[{0}]' -f $Name
+        $cmd = Get-Command -Name $CommandName -ErrorAction Ignore
+        if( -not $cmd -or -not (Get-Member -InputObject $cmd -Name 'ScriptBlock') )
+        {
+            return
+        }
 
-    $onlyDuring = $Parameter['OnlyDuring']
-    $exceptDuring = $Parameter['ExceptDuring']
-
-    if ($onlyDuring -and $exceptDuring)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
-    }
-    elseif ($onlyDuring -and ($onlyDuring -notin @('Clean', 'Initialize')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $onlyDuring)
-    }
-    elseif ($exceptDuring -and ($exceptDuring -notin @('Clean', 'Initialize')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $exceptDuring)
-    }
-
-    if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))
-    {
-        Write-Verbose -Message ('{0}  SKIPPED  OnlyDuring: {1} -- Current RunMode: {2}' -f $prefix,$onlyDuring,$TaskContext.RunMode)
-        return
-    }
-    elseif ($exceptDuring -and ($TaskContext.RunMode -eq $exceptDuring))
-    {
-        Write-Verbose -Message ('{0}  SKIPPED  ExceptDuring: {1} -- Current RunMode: {2}' -f $prefix,$exceptDuring,$TaskContext.RunMode)
-        return
+        $cmd.ScriptBlock.Attributes | 
+            Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
     
-    if( $TaskContext.ShouldClean() -and -not $task.SupportsClean )
+    $TaskContext.TaskName = $Name
+
+    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
     {
-        Write-Verbose -Message ('{0}  SKIPPED  SupportsClean: $false' -f $prefix)
-        return
+        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
     }
-    if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+
+    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
+
+    $taskProperties = $Parameter.Clone()
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory' ) )
     {
-        Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
-        return
+        $taskProperties.Remove($commonPropertyName)
     }
+    
+    #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
+    $prefix = '[{0}]' -f $Name
 
     $onlyBy = $Parameter['OnlyBy']
     if( $onlyBy )
@@ -226,7 +214,7 @@ function Invoke-WhiskeyTask
         }
     }
     
-    if( !$executeTaskOnBranch )
+    if( -not $executeTaskOnBranch )
     {
         Write-Verbose -Message ('{0}  SKIPPED  {1} not configured to execute this task.' -f $prefix, $branch)
         return
@@ -238,28 +226,70 @@ function Invoke-WhiskeyTask
         $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
-    $taskProperties = $Parameter.Clone()
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory' ) )
-    {
-        $taskProperties.Remove($commonPropertyName)
-    }
-    
-    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
-    {
-        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $taskProperties
-    }
-
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $taskProperties | Out-Null
-
-    Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
-    Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix -Property $taskProperties
-
-    Write-Verbose -Message $prefix
+    $requiredTools = Get-RequiredTool -CommandName $task.CommandName
     $startedAt = Get-Date
-    $result = 'FAILED'
+    $result = 'SKIPPED'
     Push-Location -Path $workingDirectory
     try
     {
+        $onlyDuring = $Parameter['OnlyDuring']
+        $exceptDuring = $Parameter['ExceptDuring']
+
+        if ($onlyDuring -and $exceptDuring)
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
+        }
+        elseif ($onlyDuring -and ($onlyDuring -notin @('Clean', 'Initialize')))
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $onlyDuring)
+        }
+        elseif ($exceptDuring -and ($exceptDuring -notin @('Clean', 'Initialize')))
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $exceptDuring)
+        }
+
+        if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))
+        {
+            Write-Verbose -Message ('{0}  SKIPPED  OnlyDuring: {1} -- Current RunMode: {2}' -f $prefix,$onlyDuring,$TaskContext.RunMode)
+            return
+        }
+        elseif ($exceptDuring -and ($TaskContext.RunMode -eq $exceptDuring))
+        {
+            Write-Verbose -Message ('{0}  SKIPPED  ExceptDuring: {1} -- Current RunMode: {2}' -f $prefix,$exceptDuring,$TaskContext.RunMode)
+            return
+        }
+    
+        $inCleanMode = $TaskContext.ShouldClean()
+        if( $inCleanMode )
+        {
+            if( -not $task.SupportsClean )
+            {
+                Write-Verbose -Message ('{0}  SKIPPED  SupportsClean: $false' -f $prefix)
+                return
+            }
+        }
+
+        foreach( $requiredTool in $requiredTools )
+        {
+            Install-WhiskeyTool -ToolInfo $requiredTool `
+                                -InstallRoot $TaskContext.BuildRoot `
+                                -TaskParameter $taskProperties `
+                                -InCleanMode:$inCleanMode `
+                                -ErrorAction Stop
+        }
+
+        if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+        {
+            Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
+            return
+        }
+
+        Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
+        Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix -Property $taskProperties
+
+        Write-Verbose -Message $prefix
+        $result = 'FAILED'
+        $startedAt = Get-Date
         $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
         if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
         {
@@ -270,7 +300,16 @@ function Invoke-WhiskeyTask
     }
     finally
     {
-        if( (Test-Path -Path $TaskContext.Temp -PathType Container) )
+        # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
+        if( $TaskContext.ShouldClean() )
+        {
+            foreach( $requiredTool in $requiredTools )
+            {
+                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
+            }
+        }
+
+        if( $TaskContext.Temp -and (Test-Path -Path $TaskContext.Temp -PathType Container) )
         {
             Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
         }

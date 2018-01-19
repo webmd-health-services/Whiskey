@@ -6,24 +6,37 @@ function Publish-WhiskeyNodeModule
     Publishes a Node module package to the target NPM registry
     
     .DESCRIPTION
-    The `Publish-WhiskeyNodeModule` function utilizes NPM's `publish` command to publish Node module packages.
+    The `PublishNodeModule` task runs `npm publish` in the current working directory.
 
-    You are required to specify what version of Node.js you want in the engines field of your package.json file. (See https://docs.npmjs.com/files/package.json#engines for more information.) The version of Node is installed for you using NVM. 
+    This task will install the latest LTS version of Node into a `.node` directory (in the same directory as your whiskey.yml file). To use a specific version, set the `engines.node` property in your package.json file to the version you want. (See https://docs.npmjs.com/files/package.json#engines for more information.)
 
-    This task accepts these parameters:
-
-    * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    # Properties
     
-    .EXAMPLE
-    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{}
+    * `NpmRegistryUri` (*mandatory*): the URI to the registry where the module should be published.
+    * `CredentialID` (*mandatory*): the credential to use when publishing. Credentials are added to your build with the `Add-WhiskeyCredential` function. This `CredentialID` property should be the same value as the `ID` parameter used when adding the credential with `Add-WhiskeyCredential`.
+    * `EmailAddress` (*mandatory*): the email address to use when publishing.
+    * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. 
+    
+    # Examples
+    
+    ## Example 1
+    
+        BuildTasks:
+	- PublishNodeModule
 
-    Demonstrates how to `publish` the Node module package located in the directory specified by the `$context.BuildRoot` property. The function would run `npm publish`.
+    Demonstrates how to publish the Node module located in the same directory as your whiskey.yml file
+    
+    ## Example 2
+    
+    	BuildTasks:
+	- PublishNodeModule:
+    	    WorkingDirectory: 'app'
 
-    Publish-WhiskeyNodeModule -TaskContext $context -TaskParameter @{ WorkingDirectory = '\PathToPackage\RelativeTo\whiskey.yml' }
-
-    Demonstrates how to `publish` the Node module package located in the directory specified by the `WorkingDirectory` property. The function would run `npm publish`.
+    Demonstrates how to publish a Node module that isn't in the same directory as your whiskey.yml file. In this example, the Node moule in the `app` directory is published (`app` is resolved relative to your whiskey.yml file).
     #>
-    [Whiskey.Task("PublishNodeModule", SupportsInitialize=$true)]
+    [Whiskey.Task("PublishNodeModule")]
+    [Whiskey.RequiresTool("Node", "NodePath",VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -53,12 +66,6 @@ function Publish-WhiskeyNodeModule
     - PublishNodeModule:
         NpmRegistryUri: https://registry.npmjs.org/
     '
-    }
-    $nodePath = Install-WhiskeyNodeJs -RegistryUri $npmRegistryUri -ApplicationRoot $workingDirectory -ForDeveloper:$TaskContext.ByDeveloper
-    
-    if( $TaskContext.ShouldInitialize() )
-    {
-        return
     }
 
     if (!$TaskContext.Publish)
@@ -116,28 +123,8 @@ function Publish-WhiskeyNodeModule
             } |
             Write-Verbose
 
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
-        Write-Verbose -Message 'Removing extraneous packages with ''npm prune'''
-        Invoke-Command -ScriptBlock {
-            & $nodePath $npmPath prune --production --no-color
-        }
-        
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm prune'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
-        }
-        
-        # local version of npm gets removed by 'npm prune', so call Get-WhiskeyNPMPath to download it again so we can also use the desired version of npm for publishing
-        $npmPath = Get-WhiskeyNPMPath -NodePath $nodePath -ApplicationRoot $workingDirectory
-        Write-Verbose -Message 'Publishing package with ''npm publish'''
-        Invoke-Command -ScriptBlock {
-            & $nodePath $npmPath publish
-        }
-        
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NPM command ''npm publish'' failed with exit code ''{0}''.' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'publish' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
     }
     finally
     {

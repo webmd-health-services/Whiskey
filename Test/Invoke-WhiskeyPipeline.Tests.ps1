@@ -297,6 +297,48 @@ BuildTasks:
     }
 }
 
+Describe 'Invoke-WhiskeyPipeline.when task has a default property' {
+    GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- Exec: This is a default property
+"@
+    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'This is a default property' }
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+
+    It 'should call the task with the default property' {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'This is a default property' }
+    }
+}
+
+Describe 'Invoke-WhiskeyPipeline.when task has a default property with quoted arguments' {
+    GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- Exec: robocopy.exe "C:\Source File" 'C:\Destination\File' /MIR
+"@
+    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" ''C:\Destination\File'' /MIR' }
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+
+    It 'should call the task with the default property' {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" ''C:\Destination\File'' /MIR' }
+    }
+}
+
+Describe 'Invoke-WhiskeyPipeline.when task has a default property when entire string is quoted' {
+    GivenWhiskeyYmlBuildFile @"
+BuildTasks:
+- Exec: 'robocopy.exe "C:\Source File" C:\Destination\File /MIR'
+"@
+    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" C:\Destination\File /MIR' }
+    WhenRunningPipeline 'BuildTasks'
+    ThenPipelineSucceeded
+
+    It 'should call the task with the default property' {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" C:\Destination\File /MIR' }
+    }
+}
+
 Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
     GivenWhiskeyYmlBuildFile @"
 "@
