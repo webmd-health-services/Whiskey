@@ -121,15 +121,13 @@ LONG DESCRIPTION
 
     The `NodePath` string is the name of the key where the path to Node should be saved in the `TaskParameter` hashtable when calling your task.
 
-    To control what version of Node to use, users must specify an `engines.node` property in their package.json file, e.g.
+    If the user doesn't use the version parameter to control what version of Node to use, Whiskey also looks in the user's package.json file at the `engines.node` property, e.g.
 
        {
             "engines": {
                 "node": "^8.9.4"
             }
        }
-
-    In other words, Whiskey ignores your task's `Whiskey.RequiresTool` attribute's VersionParameterName property.
 
     Node is installed to a `.node` directory in the build root. This gives every project its own version of Node to use.
 
