@@ -50,12 +50,12 @@ function Assert-WhiskeyNodeModulePath
 
     $commandName = $CommandPath | Split-Path -Leaf
 
-    $Path = Join-Path -Path $Path -ChildPath $CommandPath
-    if( -not (Test-Path -Path $Path -PathType Leaf) )
+    $fullCommandPath = Join-Path -Path $Path -ChildPath $CommandPath
+    if( -not (Test-Path -Path $fullCommandPath -PathType Leaf) )
     {
-        Write-Error -Message ('Node module ''{0}'' does not contain command ''{1}'' at ''{2}''. Whiskey or NPM maybe failed to install this module correctly or that command doesn''t exist in this version of the module. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$commandName,$Path)
+        Write-Error -Message ('Node module ''{0}'' does not contain command ''{1}'' at ''{2}''. Whiskey or NPM maybe failed to install this module correctly or that command doesn''t exist in this version of the module. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$commandName,$fullCommandPath)
         return
     }
 
-    return $Path
+    return $fullCommandPath
 }

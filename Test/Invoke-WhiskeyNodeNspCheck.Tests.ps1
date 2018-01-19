@@ -70,8 +70,6 @@ function MockNsp
         $Failing
     )
 
-    Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -eq 'bin\nsp' } -MockWith { $TestDrive.FullName }
-    
     if (-not $Failing)
     {
         Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'check' } -MockWith { & cmd /c 'ECHO [] && exit 0' }

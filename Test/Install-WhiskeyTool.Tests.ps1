@@ -692,7 +692,7 @@ Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t instal
     {
         Init
         WhenInstallingTool 'NodeModule::license-checker' -ErrorAction SilentlyContinue
-        ThenThrewException 'Whiskey failed to install NPM'
+        ThenThrewException 'Whiskey\ maybe\ failed\ to\ install\ Node\ correctly'
         ThenNodeModuleNotInstalled 'license-checker'
     }
     finally
