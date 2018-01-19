@@ -272,3 +272,460 @@ Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
         $newManifest.Version | Should -Be $manifest.Version
     }
 }
+
+$context = $null
+$threwException = $false
+$pathParameterName = 'ToolPath'
+$versionParameterName = $null
+$taskParameter = $null
+
+function GivenPackageJson
+{
+    param(
+        $InputObject,
+        $InDirectory = $TestDrive.FullName
+    )
+
+    $InputObject | Set-Content -Path (Join-Path -Path $InDirectory -ChildPath 'package.json')
+}
+
+function GivenVersionParameterName
+{
+    param(
+        $Name
+    )
+
+    $script:versionParameterName = $Name
+}
+
+function Init
+{
+    $script:context = $null
+    $script:threwException = $false
+    $script:taskParameter = $null
+    $script:versionParameterName = $null
+}
+
+function ThenNodeInstalled
+{
+    param(
+        [string]
+        $NodeVersion,
+
+        [string]
+        $NpmVersion,
+
+        [Switch]
+        $AtLatestVersion
+    )
+
+    $nodePath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe'
+    if( $AtLatestVersion )
+    {
+        $expectedVersion = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
+                                ForEach-Object { $_ } |
+                                Where-Object { $_.lts } |
+                                Select-Object -First 1
+        $NodeVersion = $expectedVersion.version
+        if( -not $NpmVersion )
+        {
+            $NpmVersion = $expectedVersion.npm
+            }
+    }
+
+    It ('should download Node ZIP file') {
+        Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-win-x64.zip' -f $NodeVersion) | Should -Exist
+    }
+
+    It ('should install Node') {
+        $nodePath | Should -Exist
+        & $nodePath '--version' | Should -Be $NodeVersion
+    }
+
+
+    $npmPath = Join-Path -Path $TestDRive.FullName -ChildPath '.node\node_modules\npm\bin\npm-cli.js'
+    It ('should install NPM') {
+        $npmPath | Should -Exist
+        & $nodePath $npmPath '--version' | Should -Be $NpmVersion
+    }
+
+    It ('should set path to node.exe') {
+        $taskParameter[$pathParameterName] | Should -Be (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+    }
+}
+
+function ThenNodeModuleInstalled
+{
+    param(
+        $Name,
+        $AtVersion
+    )
+
+    It ('should install the node module') {
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath | Should -Exist
+        $taskParameter[$pathParameterName] | Should -Be $expectedPath
+
+        if( $AtVersion )
+        {
+            Get-Content -Path (Join-Path -Path $expectedPath -ChildPath 'package.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'version' | Should -Be $AtVersion
+        }
+    }
+}
+
+function ThenNodeModuleNotInstalled
+{
+    param(
+        $Name
+    )
+
+    It ('should not install the node module') {
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath | Should -Not -Exist
+        $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
+    }
+}
+
+function ThenNodeNotInstalled
+{
+    $nodePath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe'
+    It ('should not install Node') {
+        $nodePath | Should -Not -Exist
+    }
+
+    $npmPath = Join-Path -Path $TestDRive.FullName -ChildPath '.node\node_modules\npm\bin\npm-cli.js'
+    It ('should not install NPM') {
+        $npmPath | Should -Not -Exist
+    }
+
+    It ('should not set path to node') {
+        $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
+    }
+}
+
+function ThenNodePackageNotFound
+{
+    It ('should report failure to download') {
+        $Error[0] | Should -Match 'NotFound'
+    }
+}
+
+function ThenThrewException
+{
+    param(
+        $Regex
+    )
+
+    It ('should throw an exception') {
+        $threwException | Should -Be $true
+        $Global:Error[0] | Should -Match $Regex
+    }
+}
+
+function WhenInstallingTool
+{
+    [CmdletBinding()]
+    param(
+        $Name,
+        $Parameter = @{ },
+        $Version
+    )
+
+    $Global:Error.Clear()
+
+    $toolAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name,$pathParameterName
+
+    if( $versionParameterName )
+    {
+        $toolAttribute.VersionParameterName = $versionParameterName
+    }
+
+    if( $Version )
+    {
+        $toolAttribute.Version = $Version
+    }
+
+    $script:taskParameter = $Parameter
+
+    try
+    {
+        Install-WhiskeyTool -ToolInfo $toolAttribute -InstallRoot $TestDrive.FullName -TaskParameter $Parameter
+    }
+    catch
+    {
+        $script:threwException = $true
+        Write-Error -ErrorRecord $_
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node' {
+    try
+    {
+        Init
+        WhenInstallingTool 'Node'
+        ThenNodeInstalled -AtLatestVersion
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing old version of Node' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "4.4.7"
+    }
+}
+'@ 
+        WhenInstallingTool 'Node' -ErrorAction SilentlyContinue
+        ThenThrewException 'Failed to download Node v4\.4\.7'
+        ThenNodeNotInstalled
+        ThenNodePackageNotFound
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing specific version of Node' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "9.2.1"
+    }
+}
+'@ 
+        WhenInstallingTool 'Node' 
+        ThenNodeInstalled 'v9.2.1' -NpmVersion '5.5.1'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when upgrading to a new version of Node' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.8.1"
+    }
+}
+'@ 
+        WhenInstallingTool 'Node' 
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0",
+        "npm": "5.6.0"
+    }
+}
+'@
+        WhenInstallingTool 'Node'
+        ThenNodeInstalled 'v8.9.0' -NpmVersion '5.6.0'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when user specifies version of Node in whiskey.yml and uses wildcard' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0",
+        "npm": "5.6.0"
+    }
+}
+'@
+        GivenVersionParameterName 'Fubar'
+        WhenInstallingTool 'Node' @{ 'Fubar' = '8.8.*' }
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when task author specifies version of Node' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0",
+        "npm": "5.6.0"
+    }
+}
+'@
+        WhenInstallingTool 'Node' @{  } -Version '8.8.*'
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when using custom version of NPM' {
+    try
+    {
+        Init
+        GivenPackageJson @'
+{
+    "engines": {
+        "npm": "5.6.0"
+    }
+}
+'@ 
+        WhenInstallingTool 'Node' 
+        ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when already installed' {
+    try
+    {
+        Init
+        WhenInstallingTool 'Node' 
+        ThenNodeInstalled -AtLatestVersion
+
+        Mock -CommandName 'Invoke-WebRequest' -Module 'Whiskey'
+        $nodeUnzipPath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node-*-win-x64'
+        Get-ChildItem -Path $nodeUnzipPath -Directory | Remove-Item
+        WhenInstallingTool 'Node'
+        It ('should not re-unzip ZIP file') {
+            $nodeUnzipPath | Should -Not -Exist
+        }
+        It 'should not re-download Node' {
+            Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 0
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when package.json is in working directory' {
+    try
+    {
+        Init
+        $workingDir = Join-Path -Path $TestDrive.FullName -ChildPath 'app'
+        New-Item -Path $workingDir -ItemType 'Directory'
+
+        # Put a package.json in the root to ensure package.json in the current directory is used first.
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.4"
+    }
+}
+'@
+
+        GivenPackageJson @'
+{
+    "engines": {
+        "node": "8.9.0"
+    }
+}
+'@ -InDirectory $workingDir
+
+        Push-Location -Path $workingDir
+        try
+        {
+            WhenInstallingTool 'Node' 
+            ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1'
+        }
+        finally
+        {
+            Pop-Location
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node module' {
+    try
+    {
+        Init
+        WhenInstallingTool 'Node'
+        ThenNodeInstalled -AtLatestVersion
+        WhenInstallingTool 'NodeModule::license-checker'
+        ThenNodeModuleInstalled 'license-checker'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t installed' {
+    try
+    {
+        Init
+        WhenInstallingTool 'NodeModule::license-checker' -ErrorAction SilentlyContinue
+        ThenThrewException 'Whiskey\ maybe\ failed\ to\ install\ Node\ correctly'
+        ThenNodeModuleNotInstalled 'license-checker'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing specific version of a Node module via version parameter' {
+    try
+    {
+        Init
+        Install-Node
+        GivenVersionParameterName 'Fubar'
+        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '13.1.0' } -Version '16.0.0'
+        ThenNodeModuleInstalled 'license-checker' -AtVersion '13.1.0'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing specific version of a Node module via RequiresTool attribute''s Version property' {
+    try
+    {
+        Init
+        Install-Node
+        WhenInstallingTool 'NodeModule::nsp' @{ } -Version '2.7.0'
+        ThenNodeModuleInstalled 'nsp' -AtVersion '2.7.0'
+    }
+    finally
+    {
+        Remove-Node
+    }
+}

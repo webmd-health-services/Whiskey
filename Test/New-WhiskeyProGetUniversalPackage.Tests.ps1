@@ -169,11 +169,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         [Switch]
         $withInitialize
     )
-    $7zipInstalled = Test-path (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*')
 
-    if( $7zipInstalled ){
-        remove-Item (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*') -Recurse -Force
-    }
     if( -not $Version )
     {
         $now = [DateTime]::Now
@@ -294,7 +290,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
         }
     }
 
-    & (Join-Path -Path $PSScriptRoot -ChildPath '..\packages\7-Zip\7z.exe') x $packagePath ('-o{0}' -f $expandPath)
+    & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\7-Zip\7z.exe') x $packagePath ('-o{0}' -f $expandPath)
 
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
@@ -413,11 +409,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
     #endregion
 }
 
-function Given7ZipIsInstalled
-{
-    Install-WhiskeyTool -NuGetPackageName '7-zip.x64' -Version '16.2.1' -DownloadRoot (Get-BuildRoot)
-}
-
 function Initialize-Test
 {
     param( 
@@ -495,20 +486,6 @@ function Initialize-Test
     }
 
     return $repoRoot
-}
-
-function Then7zipShouldNotExist
-{
-    It 'should delete 7zip NuGet package' {
-        Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Not -Exist
-    }
-}
-
-function Then7zipShouldExist
-{
-    It 'should have 7zip NuGet package installed' {
-        Join-Path -Path (Get-BuildRoot) -ChildPath 'packages\7-zip*' | Should -Exist
-    }
 }
 
 function Get-BuildRoot
@@ -635,7 +612,7 @@ function WhenPackaging
     if( -not $SkipExpand -and $packageInfo )
     {
         $script:expandPath = Join-Path -Path $taskContext.OutputDirectory -ChildPath 'extracted'
-        & (Join-Path -Path $PSScriptRoot -ChildPath '..\packages\7-Zip\7z.exe') x $packageInfo.FullName ('-o{0}' -f $expandPath)
+        & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\7-Zip\7z.exe') x $packageInfo.FullName ('-o{0}' -f $expandPath)
     }
 }
 
@@ -949,29 +926,6 @@ Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
     { Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'ProGetUniversalPackage' } | Should Throw
 
     ThenTaskFails 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
-}
-
-Describe 'ProGetUniversalPackage.when cleaning' {
-    Init
-    $file = 'project.json'    
-    Given7ZipIsInstalled
-    $outputFilePath = Initialize-Test -RootFileName $file
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-                                            -WhenCleaning `
-                                            -ShouldReturnNothing `
-                                            -ShouldNotCreatePackage 
-    Then7zipShouldNotExist
-}
-
-Describe 'ProGetUniversalPackage.when initializing' {
-    Init
-    $file = 'project.json'    
-    $outputFilePath = Initialize-Test -RootFileName $file
-    Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
-                                            -withInitialize `
-                                            -ShouldReturnNothing `
-                                            -ShouldNotCreatePackage 
-    Then7zipShouldExist
 }
 
 Describe 'ProGetUniversalPackage.when packaging given a full relative path' {

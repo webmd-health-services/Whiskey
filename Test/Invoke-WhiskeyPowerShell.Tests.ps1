@@ -191,12 +191,13 @@ Describe 'Invoke-WhiskeyPowerShell.when script passes' {
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script fails' {
+Describe 'Invoke-WhiskeyPowerShell.when script fails due to non-zero exit code' {
     GivenNoWorkingDirectory
     GivenAFailingScript
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheScriptRan
     ThenTheTaskFails
+    ThenTheLastErrorMatches 'failed, exited with code'
 }
 
 Describe 'Invoke-WhiskeyPowerShell.when script passes after a previous command fails' {
@@ -215,7 +216,7 @@ throw 'fubar!'
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'terminating\ exception'
+    ThenTheLastErrorMatches 'threw a terminating exception'
 }
 
 Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop' {
@@ -227,9 +228,23 @@ throw 'fubar'
     WhenTheTaskRuns -ErrorAction SilentlyContinue
     ThenTheTaskFails
     ThenTheScriptRan
-    ThenTheLastErrorMatches 'terminating\ exception'
+    ThenTheLastErrorMatches 'threw a terminating exception'
     ThenTheLastErrorDoesNotMatch 'fubar'
-    ThenTheLastErrorDoesNotMatch 'exiting\ with\ code'
+    ThenTheLastErrorDoesNotMatch 'failed, exited with code'
+}
+
+Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop and script doesn''t complete successfully' {
+    GivenAScript @'
+$ErrorActionPreference = 'Stop'
+Non-ExistingCmdlet -Name 'Test'
+throw 'fubar'
+'@ 
+    WhenTheTaskRuns -ErrorAction SilentlyContinue
+    ThenTheTaskFails
+    ThenTheScriptRan
+    ThenTheLastErrorMatches 'threw a terminating exception'
+    ThenTheLastErrorDoesNotMatch 'fubar'
+    ThenTheLastErrorDoesNotMatch 'failed, exited with code'
 }
 
 Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {

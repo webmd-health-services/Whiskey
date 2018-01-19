@@ -243,7 +243,7 @@ function New-WhiskeyProGetUniversalPackage
     Notice that the top-level Whiskey directory found on the file system isn't part of the package. Because it is defined as the source root, it is considered the root of the files to put in the package, so is omitted from the package.
     #>
     [CmdletBinding()]
-    [Whiskey.Task("ProGetUniversalPackage",SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.Task("ProGetUniversalPackage")]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -256,24 +256,6 @@ function New-WhiskeyProGetUniversalPackage
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    $7zipPackageName = '7-zip.x64'
-    $7zipVersion = '16.2.1'
-    # The directory name where NuGet puts this package is different than the version number.
-    $7zipDirNameVersion = '16.02.1'
-    if( $TaskContext.ShouldClean() )
-    {
-        Uninstall-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipDirNameVersion -BuildRoot $TaskContext.BuildRoot
-        return
-    }
-    $7zipRoot = Install-WhiskeyTool -NuGetPackageName $7zipPackageName -Version $7zipVersion -DownloadRoot $TaskContext.BuildRoot
-    $7zipRoot = $7zipRoot -replace [regex]::Escape($7zipVersion),$7zipDirNameVersion
-    $7zExePath = Join-Path -Path $7zipRoot -ChildPath 'tools\7z.exe' -Resolve
-
-    if( $TaskContext.ShouldInitialize() )
-    {
-        return
-    }
 
     foreach( $mandatoryName in @( 'Name', 'Description' ) )
     {
@@ -453,7 +435,7 @@ function New-WhiskeyProGetUniversalPackage
     }
 
     Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
-    & $7zExePath 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
+    & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
 
     Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
     $outFile

@@ -13,6 +13,23 @@ $postTaskPluginCalled = $false
 $output = $null
 $taskDefaults = @{ }
 $scmBranch = $null
+$taskProperties = @{ }
+$taskRun = $false
+$variables = @{ }
+
+function Global::ToolTask
+{
+    [Whiskey.Task("ToolTask",SupportsClean=$true)]
+    [Whiskey.RequiresTool("Node", "NodePath")]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+        $TaskParameter
+    )
+
+    $script:taskProperties = $TaskParameter
+    $script:taskRun = $true
+}
 
 function Invoke-PreTaskPlugin
 {
@@ -157,6 +174,25 @@ function GivenDefaults
     $script:taskDefaults[$ForTask] = $Default
 }
 
+function GivenScmBranch
+{
+    param(
+        [string]
+        $Branch
+    )
+    $script:scmBranch = $Branch
+}
+
+function GivenVariable
+{
+    param(
+        $Name,
+        $Value
+    )
+
+    $variables[$Name] = $Value
+}
+
 function GivenWhiskeyYmlBuildFile
 {
     param(
@@ -172,23 +208,23 @@ function GivenWhiskeyYmlBuildFile
     return $whiskeyymlpath
 }
 
-function GivenScmBranch
-{
-    param(
-        [string]
-        $Branch
-    )
-    $script:scmBranch = $Branch
-}
-
 function GivenWorkingDirectory
 {
     param(
         [string]
-        $Directory
+        $Directory,
+
+        [Switch]
+        $SkipMock
     )
 
     $wd = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+    New-Item -Path $wd -ItemType 'Directory' -Force
+
+    if( $SkipMock )
+    {
+        return
+    }
 
     Mock -CommandName 'Push-Location' -ModuleName 'Whiskey' -ParameterFilter { $workingDirectory -eq $wd }
     Mock -CommandName 'Pop-Location' -ModuleName 'Whiskey'
@@ -199,6 +235,9 @@ function Init
     $script:taskDefaults = @{ }
     $script:output = $null
     $script:scmBranch = $null
+    $script:taskProperties = @{ }
+    $script:taskRun = $false
+    $script:variables = @{ }
 }
 
 function ThenPipelineFailed
@@ -331,8 +370,17 @@ function ThenTaskNotRun
         $CommandName
     )
 
-    It ('should not run task ''{0}''' -f $CommandName) {
-        Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -Times 0
+    if( $CommandName )
+    {
+        It ('should not run task ''{0}''' -f $CommandName) {
+            Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -Times 0
+        }
+    }
+    else
+    {
+        It ('should not run the task') {
+            $taskRun | Should -Be $false
+        }
     }
 }
 
@@ -352,12 +400,21 @@ function ThenTaskRanWithParameter
         $TimesParam = @{ 'Times' = $Times; 'Exactly' = $true }
     }
 
-    It ('should call {0} with parameters' -f $CommandName) {
-        $Global:actualParameter = $null
-        Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -ParameterFilter {
-            $global:actualParameter = $TaskParameter
-            return $true
-        } @TimesParam
+    It ('should call task with parameters') {
+
+        if( $CommandName )
+        {
+            $Global:actualParameter = $null
+            Assert-MockCalled -CommandName $CommandName -ModuleName 'Whiskey' -ParameterFilter {
+                $global:actualParameter = $TaskParameter
+                return $true
+            } @TimesParam
+        }
+        else
+        {
+            $taskRun | Should -Be $true
+            $actualParameter = $taskProperties
+        }
 
         function Assert-Hashtable
         {
@@ -381,7 +438,7 @@ function ThenTaskRanWithParameter
             }
         }
         Assert-Hashtable -Expected $ExpectedParameter -Actual $actualParameter
-        Remove-Variable -Name 'actualParameter' -Scope 'Global'
+        Remove-Variable -Name 'actualParameter' -Scope 'Global' -ErrorAction Ignore
     }
 }
 
@@ -466,6 +523,60 @@ function ThenThrewException
     }
 }
 
+function ThenToolInstalled
+{
+    param(
+        $ToolName,
+        $Parameter
+    )
+
+    $taskContext = $context
+    It 'should install Node' {
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Toolinfo.Name -eq $ToolName }
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd('\')
+            Write-Debug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
+            Write-Debug -Message ('             actual    {0}' -f $InstallRoot)
+            $InstallRoot -eq $expectedInstallRoot
+        }
+
+    }
+}
+
+function ThenToolNotCleaned
+{
+    It ('should not clean the tool') {
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -Times 0
+    }
+}
+
+function ThenToolPathPassedToTask
+{
+    param(
+        $ParameterName,
+        $Path
+    )
+
+    It ('should pass path to tool to task as property') {
+        $taskProperties.ContainsKey($ParameterName) | Should -Be $true
+        $taskProperties[$ParameterName] | Should -Be $Path
+    }
+}
+
+function ThenToolUninstalled
+{
+    param(
+        $ToolName
+    )
+
+    $taskContext = $context
+    It 'should uninstall Node' {
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ToolName }
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { [Object]::ReferenceEquals($Context,$taskContext) }
+    }
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -506,6 +617,11 @@ function WhenRunningTask
     }
 
     Mock -CommandName 'New-Item' -ModuleName 'Whiskey' -MockWith { [IO.Directory]::CreateDirectory($Path) }
+
+    foreach( $variableName in $variables.Keys )
+    {
+        Add-WhiskeyVariable -Context $context -Name $variableName -Value $variables[$variableName]
+    }
 
     $Global:Error.Clear()
     $script:threwException = $false
@@ -724,6 +840,48 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined' {
     ThenTaskRanWithoutParameter 'Invoke-WhiskeyPowerShell' 'WorkingDirectory'
 }
 
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and installing a tool' {
+    Init
+    GivenRunByDeveloper
+    GivenWorkingDirectory '.output' -SkipMock
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { 
+            #$DebugPreference = 'Continue'
+            $currentPath = (Get-Location).ProviderPath
+            $expectedPath = (Resolve-Path -Path 'TestDrive:\.output').ProviderPath
+            Write-Debug ('Current  Path   {0}' -f $currentPath)
+            Write-Debug ('Expected Path   {0}' -f $expectedPath)
+            if( $currentPath -ne $expectedPath )
+            {
+                throw 'tool installation didn''t happen in the task''s working directory'
+            }
+        }
+    $parameter = @{ 'WorkingDirectory' = '.output' }
+    WhenRunningTask 'ToolTask' -Parameter $parameter
+    ThenToolInstalled 'Node'
+    ThenPipelineSucceeded
+}
+
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and cleaning' {
+    Init
+    GivenRunByDeveloper
+    GivenWorkingDirectory '.output' -SkipMock
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { 
+            #$DebugPreference = 'Continue'
+            $currentPath = (Get-Location).ProviderPath
+            $expectedPath = (Resolve-Path -Path 'TestDrive:\.output').ProviderPath
+            Write-Debug ('Current  Path   {0}' -f $currentPath)
+            Write-Debug ('Expected Path   {0}' -f $expectedPath)
+            if( $currentPath -ne $expectedPath )
+            {
+                throw 'tool uninstallation didn''t happen in the task''s working directory'
+            }
+        }
+    WhenRunningTask 'ToolTask' -Parameter @{ 'WorkingDirectory' = '.output' } -InRunMode 'Clean'
+    ThenPipelineSucceeded
+    ThenToolUninstalled 'Node'
+}
+
 Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
     Init
     GivenRunByDeveloper
@@ -731,54 +889,6 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
     WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
     ThenThrewException 'BuildTasks.+WorkingDirectory.+does not exist.'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell' 
-}
-
-$tasks = Get-WhiskeyTask
-foreach( $task in ($tasks) )
-{
-    $taskName = $task.Name
-    $functionName = $task.CommandName
-
-    Describe ('Invoke-WhiskeyTask.when calling {0} task' -f $taskName) {
-
-        function Assert-TaskCalled
-        {
-            param(
-            )
-
-            $context = $script:context
-
-            It 'should pass context to task' {
-                Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                    [object]::ReferenceEquals($TaskContext, $Context) 
-                }
-            }
-            
-            It 'should pass task parameters' {
-                Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                    #$DebugPreference = 'Continue'
-                    $TaskParameter | Out-String | Write-Debug
-                    Write-Debug ('Path  EXPECTED  {0}' -f $TaskParameter['Path'])
-                    Write-Debug ('      ACTUAL    {0}' -f $taskName)
-                    return $TaskParameter.ContainsKey('Path') -and $TaskParameter['Path'] -eq $taskName
-                }
-            }
-        }
-
-        Mock -CommandName $functionName -ModuleName 'Whiskey'
-
-        $pipelineName = 'BuildTasks'
-        $whiskeyYml = (@'
-{0}:
-- {1}:
-    Path: {1}
-'@ -f $pipelineName,$taskName)
-
-        Init
-        WhenRunningTask $taskName -Parameter @{ Path = $taskName }
-        ThenPipelineSucceeded
-        Assert-TaskCalled
-    }
 }
 
 Describe 'Invoke-WhiskeyTask.when run in clean mode' {
@@ -952,3 +1062,157 @@ Describe 'Invoke-WhiskeyTask.when OnlyDuring or ExceptDuring contains invalid va
         RemoveMockTask
     }
 }
+
+foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+{
+    Describe ('Invoke-WhiskeyTask.when {0} property has variable for a value' -f $commonPropertyName) {
+        Init
+        $taskProperties = @{ }
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+        GivenVariable 'Fubar' 'Snafu'
+        WhenRunningTask 'PowerShell' -Parameter @{ $commonPropertyName = '$(Fubar)' } -ErrorAction SilentlyContinue
+        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when OnlyOnBranch property has variable for a value') {
+    Init
+    $taskProperties = @{ }
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'OnlyOnBranch' = '$(Fubar)' }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' -ExpectedParameter @{ }
+}
+
+Describe ('Invoke-WhiskeyTask.when ExceptOnBranch property has variable for a value') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'ExceptOnBranch' = '$(Fubar)' }
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property has a variable for a value') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenWorkingDirectory 'Snafu'
+    GivenVariable 'Fubar' 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = '$(Fubar)' }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+{
+    Describe ('Invoke-WhiskeyTask.when {0} property comes from defaults' -f $commonPropertyName) {
+        Init
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+        GivenDefaults @{ $commonPropertyName = 'Snafu' } -ForTask 'PowerShell'
+        WhenRunningTask 'PowerShell' -Parameter @{ } -ErrorAction SilentlyContinue
+        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when OnlyOnBranch property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenDefaults @{ 'OnlyOnBranch' = 'Snafu' } -ForTask 'PowerShell'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' -ExpectedParameter @{ }
+}
+
+Describe ('Invoke-WhiskeyTask.when ExceptOnBranch property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenDefaults @{ 'ExceptOnBranch' = 'Snafu' } -ForTask 'PowerShell'
+    GivenScmBranch 'Snafu'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenWorkingDirectory 'Snafu'
+    GivenDefaults @{ 'WorkingDirectory' = 'Snafu' } -ForTask 'PowerShell'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+Describe ('Invoke-WhiskeyTask.when WorkingDirectory property comes from defaults and default has a variable') {
+    Init
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    GivenVariable 'Fubar' 'Snafu'
+    GivenWorkingDirectory 'Snafu'
+    GivenDefaults @{ 'WorkingDirectory' = '$(Fubar)' } -ForTask 'PowerShell'
+    WhenRunningTask 'PowerShell' -Parameter @{ }
+    ThenTaskRanInWorkingDirectory 'Snafu'
+}
+
+Describe 'Invoke-WhiskeyTask.when task requires tools' {
+    Init
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    $parameter = @{ }
+    WhenRunningTask 'ToolTask' -Parameter $parameter
+    ThenPipelineSucceeded
+    ThenToolInstalled 'Node'
+    ThenToolNotCleaned
+    It 'should run the task' {
+        $taskRun | Should -Be $true
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when task requires tools and initializing' {
+    Init
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    $parameter = @{ }
+    WhenRunningTask 'ToolTask' -Parameter $parameter -InRunMode 'Initialize'
+    ThenToolInstalled 'Node'
+    ThenTaskNotRun 
+    ThenToolNotCleaned
+    It ('should fail the build if installation fails') {
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when task requires tools and cleaning' {
+    try
+    {
+        Init
+        Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+        WhenRunningTask 'ToolTask' -Parameter @{ } -InRunMode 'Clean'
+        ThenToolUninstalled 'Node'
+        It ('should not install any tools in clean mode') {
+            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $InCleanMode -eq $true }
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when task needs a required tool in order to clean' {
+    try
+    {
+        Init
+        Install-Node
+        Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey'
+        WhenRunningTask 'ToolTask' -Parameter @{} -InRunMode 'Clean'
+        ThenPipelineSucceeded
+        It 'should not re-install too' {
+            Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 0
+        }
+    }
+    finally
+    {
+        Remove-Node
+    }
+}
+
+Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore
