@@ -151,7 +151,7 @@ function New-WhiskeyContext
             $taskParameterDefaults = $taskDefaults[$task]
             foreach ($parameter in $taskParameterDefaults | Select-Object -ExpandProperty 'Keys')
             {
-                Add-WhiskeyTaskDefault -Context $context -TaskName $task -ParameterName $parameter -Value $taskParameterDefaults[$parameter]
+                Add-WhiskeyTaskDefault -Context $context -Task $task -Parameter $parameter -Value $taskParameterDefaults[$parameter]
             }
         }
     }

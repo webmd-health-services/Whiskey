@@ -5,8 +5,8 @@ Set-StrictMode -Version 'Latest'
 $context = $null
 $configurationPath = $null
 $force = $false
-$parameterName = $null
-$taskName = $null
+$parameter = $null
+$task = $null
 $threwException = $false
 $value = $null
 
@@ -16,8 +16,8 @@ function Init
     $script:context = $null
     $script:configurationPath = $null
     $script:force = $false
-    $script:parameterName = $null
-    $script:taskName = $null
+    $script:parameter = $null
+    $script:task = $null
     $script:threwException = $false
     $script:value = $null
 }
@@ -47,22 +47,22 @@ function GivenForce
     $script:force = $true
 }
 
-function GivenTaskName
+function GivenTask
 {
     param(
         $Name
     )
     
-    $script:taskName = $Name
+    $script:task = $Name
 }
 
-function GivenParameterName
+function GivenParameter
 {
     param(
         $Name
     )
 
-    $script:parameterName = $Name
+    $script:parameter = $Name
 }
 
 function GivenValue
@@ -93,7 +93,7 @@ function WhenAddingTaskDefault
 
     try
     {
-        Add-WhiskeyTaskDefault -Context $context -TaskName $taskName -ParameterName $parameterName -Value $value @forceParam
+        Add-WhiskeyTaskDefault -Context $context -Task $task -Parameter $parameter -Value $value @forceParam
     }
     catch
     {
@@ -142,28 +142,28 @@ function ThenTaskDefaultsContains
 Describe 'Add-WhiskeyTaskDefault.when context object is missing TaskDefaults property' {
     Init
     GivenContext [pscustomobject]@{ RunMode = 'Build' }
-    GivenTaskName 'MSBuild'
-    GivenParameterName 'Version'
+    Giventask 'MSBuild'
+    GivenParameter 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault -ErrorAction SilentlyContinue
     ThenFailedWithError 'does not contain a ''TaskDefaults'' property'
 }
 
-Describe 'Add-WhiskeyTaskDefault.when given an invalid TaskName' {
+Describe 'Add-WhiskeyTaskDefault.when given an invalid task' {
     Init
     GivenContext
-    GivenTaskName 'NotARealTask'
-    GivenParameterName 'Version'
+    Giventask 'NotARealTask'
+    GivenParameter 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault -ErrorAction SilentlyContinue
-    ThenFailedWithError 'The TaskName ''NotARealTask'' is not a valid Whiskey task'
+    ThenFailedWithError 'The task ''NotARealTask'' is not a valid Whiskey task'
 }
 
 Describe 'Add-WhiskeyTaskDefault.when setting MSBuild ''Version'' property to 12.0 and then trying to set it again' {
     Init
     GivenContext
-    GivenTaskName 'MSBuild'
-    GivenParameterName 'Version'
+    Giventask 'MSBuild'
+    GivenParameter 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault
     ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
@@ -188,8 +188,8 @@ TaskDefaults:
         - 3
 '@
     GivenContext
-    GivenTaskName 'MSBuild'
-    GivenParameterName 'Version'
+    Giventask 'MSBuild'
+    GivenParameter 'Version'
     GivenValue 15.0
     GivenForce
     WhenAddingTaskDefault
@@ -207,8 +207,8 @@ TaskDefaults:
         Symbols: Yes
 '@
     GivenContext
-    GivenTaskName 'MSBuild'
-    GivenParameterName 'Verbosity'
+    Giventask 'MSBuild'
+    GivenParameter 'Verbosity'
     GivenValue 'd'
     WhenAddingTaskDefault
 
