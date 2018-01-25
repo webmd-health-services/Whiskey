@@ -401,3 +401,88 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SCM_URI' {
     WhenResolving '$(WHISKEY_SCM_URI.Host)'
     ThenValueIs 'example.com'
 }
+
+Describe 'Resolve-WhiskeyVariable.when variable not terminated' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$(Fubar' -ErrorAction SilentlyContinue
+    ThenValueIs '$(Fubar'
+}
+
+Describe 'Resolve-WhiskeyVariable.when variable not terminated but escaped' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$$(Fubar'
+    ThenValueIs '$(Fubar'
+}
+
+Describe 'Resolve-WhiskeyVariable.when calling variable object method' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$(Fubar.Substring(0,7))'
+    ThenValueIs $value.Substring(0,7)
+    WhenResolving '$(Fubar.Trim("T",''.''))'
+    ThenValueIs $value.Trim('T','.')
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parmeters have whitespace' {
+    Init
+    GivenVariable 'Fubar' ' a '
+    WhenResolving '$(Fubar.Trim(  "b"  ))'
+    ThenValueIs ' a '
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter contains a comma' {
+    Init
+    GivenVariable 'Fubar' ',,ab,,'
+    WhenResolving '$(Fubar.Trim(  "b", ","  ))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter contains whitespace' {
+    Init
+    GivenVariable 'Fubar' ' a '
+    WhenResolving '$(Fubar.Trim(" "))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter is double-quoted and contains double quote' {
+    Init
+    GivenVariable 'Fubar' '"a"'
+    WhenResolving '$(Fubar.Trim(""""))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter is single-quoted and contains single quote' {
+    Init
+    GivenVariable 'Fubar' "'a'"
+    WhenResolving "`$(Fubar.Trim(''''))"
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method parameter is enumeration' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/whiskey'
+    WhenResolving '$(WHISKEY_SCM_URI.GetLeftPart(Scheme))'
+    ThenValueIs 'https://'
+    WhenResolving '$(WHISKEY_SCM_URI.GetLeftPart(''Scheme''))'
+    ThenValueIs 'https://'
+}
+
+Describe 'Resolve-WhiskeyVariable.when getting substring of a variable value' {
+    Init
+    $context.BuildMetadata.ScmCommitID = 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb'
+    WhenResolving '$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))'
+    ThenValueIs 'deadbee'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
+    Init
+    GivenVariable 'Fubar' 'g'
+    WhenResolving '$(Fubar.Substring(0,7))' -ErrorAction SilentlyContinue
+    ThenValueIs '$(Fubar.Substring(0,7))'
+}
+

@@ -178,14 +178,88 @@ function Resolve-WhiskeyVariable
                 }
             }
 
-            $needleEnd = $haystack.IndexOf(')', $needleStart)
-            $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
-            $propertyName = $null
+            $needleEnd = $needleStart + 2
+            $depth = 0
+            while( $needleEnd -lt $haystack.Length )
+            {
+                $currentChar = $haystack[$needleEnd]
+                if( $currentChar -eq ')' )
+                {
+                    if( $depth -eq 0 )
+                    {
+                        break
+                    }
 
-            if( $variableName -match '([^.]+)\.([^.]+)' )
+                    $depth--
+                }
+                elseif( $currentChar -eq '(' )
+                {
+                    $depth++
+                }
+                ++$needleEnd
+            }
+            
+            $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
+            $memberName = $null
+            $arguments = $null
+
+            if( $variableName -match '([^.]+)\.([^.(]+)(\(([^)]+)\))?' )
             {
                 $variableName = $Matches[1]
-                $propertyName = $Matches[2]
+                $memberName = $Matches[2]
+                $arguments = $Matches[4]
+                $arguments = & {
+                                    if( -not $arguments )
+                                    {
+                                        return
+                                    }
+
+                                    $currentArg = New-Object 'Text.StringBuilder'
+                                    $currentChar = $null
+                                    $inString = $false
+                                    for( $idx = 0; $idx -lt $arguments.Length; ++$idx )
+                                    {
+                                        $nextChar = ''
+                                        if( ($idx + 1) -lt $arguments.Length )
+                                        {
+                                            $nextChar = $arguments[$idx + 1]
+                                        }
+
+                                        $currentChar = $arguments[$idx]
+                                        if( $currentChar -eq '"' -or $currentChar -eq "'" )
+                                        {
+                                            if( $inString )
+                                            {
+                                                if( $nextChar -eq $currentChar )
+                                                {
+                                                    [void]$currentArg.Append($currentChar)
+                                                    $idx++
+                                                    continue
+                                                }
+                                            }
+                                            
+                                            $inString = -not $inString
+                                            continue
+                                        }
+
+                                        if( $currentChar -eq ',' -and -not $inString )
+                                        {
+                                            $currentArg.ToString()
+                                            [void]$currentArg.Clear()
+                                            continue
+                                        }
+
+                                        if( $inString -or -not [string]::IsNullOrWhiteSpace($currentChar) )
+                                        {
+                                            [void]$currentArg.Append($currentChar)
+                                        }
+                                    }
+                                    if( $currentArg.Length )
+                                    {
+                                        $currentArg.ToString()
+                                    }
+                               }
+
             }
 
             $envVarPath = 'env:{0}' -f $variableName
@@ -218,17 +292,40 @@ function Resolve-WhiskeyVariable
                 $value = ''
             }
 
-            if( $value -ne $null -and $propertyName )
+            if( $value -ne $null -and $memberName )
             {
-                if( -not (Get-Member -Name $propertyName -InputObject $value ) )
+                if( -not (Get-Member -Name $memberName -InputObject $value ) )
                 {
-                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$propertyName,[Environment]::NewLine,($value | Get-Member | Out-String))
+                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
                     return $InputObject
                 }
-                $value = $value.$propertyName
+
+                if( $arguments )
+                {
+                    try
+                    {
+                        $value = $value.$memberName.Invoke($arguments)
+                    }
+                    catch
+                    {
+                        Write-Error -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
+                        return $InputObject
+                    }
+                }
+                else
+                {
+                    $value = $value.$memberName
+                }
             }
 
-            $haystack = $haystack.Remove($needleStart,$needleEnd - $needleStart + 1)
+            $variableNumChars = $needleEnd - $needleStart + 1
+            if( $needleStart + $variableNumChars -gt $haystack.Length )
+            {
+                Write-Error -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
+                return $InputObject
+            }
+
+            $haystack = $haystack.Remove($needleStart,$variableNumChars)
             $haystack = $haystack.Insert($needleStart,$value)
             # No need to keep searching where we've already looked.
             $startAt = $needleStart

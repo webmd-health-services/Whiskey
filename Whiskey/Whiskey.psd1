@@ -146,11 +146,11 @@
 * Added new Whiskey variables:
     * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer1-compatible version number.
     * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer2-compatible version number.
-* You can now reference properties on Whiskey variable objects using the syntax `$(VARIABLE_NAME.PROPERTY_NAME)`. Most variables are strings, so you can only use the `Length` parameter. The following variables are objects:
-   * WHISKEY_SEMVER1: a `SemVersion.SemanticVersion` object. Available properties are `Major`, `Minor`, `Patch`, and `Prerelease`, e.g. `$(WHISKEY_SEMVER1.Prerelease)`.
-   * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object. Available properties are `Major`, `Minor`, `Patch`, `Prerelease`, and `Build`, e.g. `$(WHISKEY_SEMVER1.Prerelease)`.
-   * WHISKEY_VERSION: a `System.Version` object. Properties are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
-   * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Properties are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
+* You can now call properties and methods on Whiskey variable objects using the syntax `$(VARIABLE_NAME.PROPERTY_NAME)` or `$(VARIABLE_NAME.METHOD_NAME(PARAMETER)`. When calling methods, every parameter is parsed from your YAML file as a string. PowerShell must be able to parse that string to each parameter's type. Most variables are string objects. Exceptions are:
+   * WHISKEY_SEMVER1: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_VERSION: a `System.Version` object. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
+   * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
 '@
         } # End of PSData hashtable
 
