@@ -296,17 +296,25 @@ Describe 'Resolve-WhiskeyVariable.when value is empty' {
     ThenValueIs 'prefixsuffix'
 }
 
+Describe 'Resolve-WhiskeyVariable.when variable doesn''t have a requested property' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_SCM_URI.FubarSnafu)' -ErrorAction SilentlyContinue
+    ThenValueIs '$(WHISKEY_SCM_URI.FubarSnafu)'
+    ThenErrorIs ('does\ not\ have\ a\ ''FubarSnafu''\ member')
+}
+
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE' {
     Init
     $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
-    WhenResolving '$(WHISKEY_SEMVER2_PRERELEASE)'
+    WhenResolving '$(WHISKEY_SEMVER2.Prerelease)'
     ThenValueIs 'fubar.5'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_BUILD' {
     Init
     $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
-    WhenResolving '$(WHISKEY_SEMVER2_BUILD)'
+    WhenResolving '$(WHISKEY_SEMVER2.Build)'
     ThenValueIs 'snafu.6'
 }
 
@@ -320,28 +328,28 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_VERSION' {
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MAJOR' {
     Init
     $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
-    WhenResolving '$(WHISKEY_SEMVER2_MAJOR)'
+    WhenResolving '$(WHISKEY_SEMVER2.Major)'
     ThenValueIs '1'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MINOR' {
     Init
     $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
-    WhenResolving '$(WHISKEY_SEMVER2_MINOR)'
+    WhenResolving '$(WHISKEY_SEMVER2.Minor)'
     ThenValueIs '2'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PATCH' {
     Init
     $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
-    WhenResolving '$(WHISKEY_SEMVER2_PATCH)'
+    WhenResolving '$(WHISKEY_SEMVER2.Patch)'
     ThenValueIs '3'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PRERELEASE' {
     Init
     $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
-    WhenResolving '$(WHISKEY_SEMVER1_PRERELEASE)'
+    WhenResolving '$(WHISKEY_SEMVER1.Prerelease)'
     ThenValueIs 'fubar5'
 }
 
@@ -355,20 +363,41 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_VERSION' {
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MAJOR' {
     Init
     $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
-    WhenResolving '$(WHISKEY_SEMVER1_MAJOR)'
+    WhenResolving '$(WHISKEY_SEMVER1.Major)'
     ThenValueIs '1'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MINOR' {
     Init
     $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
-    WhenResolving '$(WHISKEY_SEMVER1_MINOR)'
+    WhenResolving '$(WHISKEY_SEMVER1.Minor)'
     ThenValueIs '2'
 }
 
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PATCH' {
     Init
     $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
-    WhenResolving '$(WHISKEY_SEMVER1_PATCH)'
+    WhenResolving '$(WHISKEY_SEMVER1.Patch)'
     ThenValueIs '3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_BUILD_URI' {
+    Init
+    $context.BuildMetadata.BuildUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_BUILD_URI.Host)'
+    ThenValueIs 'example.com'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_JOB_URI' {
+    Init
+    $context.BuildMetadata.JobUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_JOB_URI.Host)'
+    ThenValueIs 'example.com'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SCM_URI' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_SCM_URI.Host)'
+    ThenValueIs 'example.com'
 }

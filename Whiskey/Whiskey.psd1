@@ -144,17 +144,13 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Added new Whiskey variables:
-    * WHISKEY_SEMVER1_MAJOR: the major field of the SemVer1-compatible version number.
-    * WHISKEY_SEMVER1_MINOR: the minor field of the SemVer1-compatible version number.
-    * WHISKEY_SEMVER1_PATCH: the patch field of the SemVer1-compatible version number.
-    * WHISKEY_SEMVER1_PRERELEASE: the prerelease metadata of the SemVer1-compatible version number.
     * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer1-compatible version number.
-    * WHISKEY_SEMVER2_BUILD: the build metadata of the SemVer2-compatible version number.
-    * WHISKEY_SEMVER1_MAJOR: the major field of the SemVer2-compatible version number.
-    * WHISKEY_SEMVER1_MINOR: the minor field of the SemVer2-compatible version number.
-    * WHISKEY_SEMVER1_PATCH: the patch field of the SemVer2-compatible version number.
-    * WHISKEY_SEMVER1_PRERELEASE: the prerelease metadata of the SemVer2-compatible version number.
     * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer2-compatible version number.
+* You can now reference properties on Whiskey variable objects using the syntax `$(VARIABLE_NAME.PROPERTY_NAME)`. Most variables are strings, so you can only use the `Length` parameter. The following variables are objects:
+   * WHISKEY_SEMVER1: a `SemVersion.SemanticVersion` object. Available properties are `Major`, `Minor`, `Patch`, and `Prerelease`, e.g. `$(WHISKEY_SEMVER1.Prerelease)`.
+   * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object. Available properties are `Major`, `Minor`, `Patch`, `Prerelease`, and `Build`, e.g. `$(WHISKEY_SEMVER1.Prerelease)`.
+   * WHISKEY_VERSION: a `System.Version` object. Properties are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
+   * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Properties are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
 '@
         } # End of PSData hashtable
 

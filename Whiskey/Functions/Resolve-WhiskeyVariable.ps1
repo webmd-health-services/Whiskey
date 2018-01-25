@@ -98,27 +98,19 @@ function Resolve-WhiskeyVariable
                                     'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
                                     'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
                                     'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServerName;
-                                    'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
+                                    'WHISKEY_BUILD_URI' = [uri]$buildInfo.BuildUri;
                                     'WHISKEY_ENVIRONMENT' = $Context.Environment;
-                                    'WHISKEY_JOB_URI' = $buildInfo.JobUri;
+                                    'WHISKEY_JOB_URI' = [uri]$buildInfo.JobUri;
                                     'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
                                     'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
                                     'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
                                     'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
                                     'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
-                                    'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
+                                    'WHISKEY_SCM_URI' = [uri]$buildInfo.ScmUri;
                                     'WHISKEY_SEMVER1' = $version.SemVer1;
-                                    'WHISKEY_SEMVER1_MAJOR' = $version.SemVer1.Major;
-                                    'WHISKEY_SEMVER1_MINOR' = $version.SemVer1.Minor;
-                                    'WHISKEY_SEMVER1_PATCH' = $version.SemVer1.Patch;
-                                    'WHISKEY_SEMVER1_PRERELEASE' = $version.SemVer1.Prerelease;
                                     'WHISKEY_SEMVER1_VERSION' = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch;
                                     'WHISKEY_SEMVER2' = $version.SemVer2;
-                                    'WHISKEY_SEMVER2_BUILD' = $version.SemVer2.Build;
-                                    'WHISKEY_SEMVER2_MAJOR' = $version.SemVer2.Major;
-                                    'WHISKEY_SEMVER2_MINOR' = $version.SemVer2.Minor;
                                     'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
-                                    'WHISKEY_SEMVER2_PATCH' = $version.SemVer2.Patch;
                                     'WHISKEY_SEMVER2_PRERELEASE' = $version.SemVer2.Prerelease;
                                     'WHISKEY_SEMVER2_VERSION' = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch;
                                     'WHISKEY_TASK_NAME' = $Context.TaskName;
@@ -188,6 +180,13 @@ function Resolve-WhiskeyVariable
 
             $needleEnd = $haystack.IndexOf(')', $needleStart)
             $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
+            $propertyName = $null
+
+            if( $variableName -match '([^.]+)\.([^.]+)' )
+            {
+                $variableName = $Matches[1]
+                $propertyName = $Matches[2]
+            }
 
             $envVarPath = 'env:{0}' -f $variableName
             if( $Context.Variables.ContainsKey($variableName) )
@@ -217,6 +216,16 @@ function Resolve-WhiskeyVariable
             if( $value -eq $null )
             {
                 $value = ''
+            }
+
+            if( $value -ne $null -and $propertyName )
+            {
+                if( -not (Get-Member -Name $propertyName -InputObject $value ) )
+                {
+                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$propertyName,[Environment]::NewLine,($value | Get-Member | Out-String))
+                    return $InputObject
+                }
+                $value = $value.$propertyName
             }
 
             $haystack = $haystack.Remove($needleStart,$needleEnd - $needleStart + 1)
