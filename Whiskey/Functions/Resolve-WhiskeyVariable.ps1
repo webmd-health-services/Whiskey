@@ -94,25 +94,36 @@ function Resolve-WhiskeyVariable
         $version = $Context.Version
         $buildInfo = $Context.BuildMetadata;
         $wellKnownVariables = @{
-                                    'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
-                                    'WHISKEY_ENVIRONMENT' = $Context.Environment;
-                                    'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
-                                    'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
-                                    'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
-                                    'WHISKEY_TASK_NAME' = $Context.TaskName;
-                                    'WHISKEY_SEMVER2' = $version.SemVer2;
-                                    'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
-                                    'WHISKEY_VERSION' = $version.Version;
-                                    'WHISKEY_SEMVER1' = $version.SemVer1;
-                                    'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
                                     'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
+                                    'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
+                                    'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
                                     'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServerName;
                                     'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
+                                    'WHISKEY_ENVIRONMENT' = $Context.Environment;
                                     'WHISKEY_JOB_URI' = $buildInfo.JobUri;
+                                    'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
+                                    'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
+                                    'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
                                     'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
                                     'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
                                     'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
-                               }
+                                    'WHISKEY_SEMVER1' = $version.SemVer1;
+                                    'WHISKEY_SEMVER1_MAJOR' = $version.SemVer1.Major;
+                                    'WHISKEY_SEMVER1_MINOR' = $version.SemVer1.Minor;
+                                    'WHISKEY_SEMVER1_PATCH' = $version.SemVer1.Patch;
+                                    'WHISKEY_SEMVER1_PRERELEASE' = $version.SemVer1.Prerelease;
+                                    'WHISKEY_SEMVER1_VERSION' = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch;
+                                    'WHISKEY_SEMVER2' = $version.SemVer2;
+                                    'WHISKEY_SEMVER2_BUILD' = $version.SemVer2.Build;
+                                    'WHISKEY_SEMVER2_MAJOR' = $version.SemVer2.Major;
+                                    'WHISKEY_SEMVER2_MINOR' = $version.SemVer2.Minor;
+                                    'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
+                                    'WHISKEY_SEMVER2_PATCH' = $version.SemVer2.Patch;
+                                    'WHISKEY_SEMVER2_PRERELEASE' = $version.SemVer2.Prerelease;
+                                    'WHISKEY_SEMVER2_VERSION' = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch;
+                                    'WHISKEY_TASK_NAME' = $Context.TaskName;
+                                    'WHISKEY_VERSION' = $version.Version;
+                                }
     }
 
     process

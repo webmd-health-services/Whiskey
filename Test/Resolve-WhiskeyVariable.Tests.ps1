@@ -295,3 +295,80 @@ Describe 'Resolve-WhiskeyVariable.when value is empty' {
     WhenResolving 'prefix$(FUBAR)suffix'
     ThenValueIs 'prefixsuffix'
 }
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_PRERELEASE)'
+    ThenValueIs 'fubar.5'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_BUILD' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_BUILD)'
+    ThenValueIs 'snafu.6'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_VERSION' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_VERSION)'
+    ThenValueIs '1.2.3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MAJOR' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_MAJOR)'
+    ThenValueIs '1'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MINOR' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_MINOR)'
+    ThenValueIs '2'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PATCH' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_PATCH)'
+    ThenValueIs '3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PRERELEASE' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_PRERELEASE)'
+    ThenValueIs 'fubar5'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_VERSION' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_VERSION)'
+    ThenValueIs '1.2.3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MAJOR' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_MAJOR)'
+    ThenValueIs '1'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MINOR' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_MINOR)'
+    ThenValueIs '2'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PATCH' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_PATCH)'
+    ThenValueIs '3'
+}
