@@ -93,6 +93,18 @@ function Resolve-WhiskeyVariable
 
         $version = $Context.Version
         $buildInfo = $Context.BuildMetadata;
+        $sem1Version = ''
+        if( $version.SemVer1 )
+        {
+            $sem1Version = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch;
+        }
+
+        $sem2Version = ''
+        if( $version.SemVer2 )
+        {
+            $sem2Version = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch;
+        }
+
         $wellKnownVariables = @{
                                     'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
                                     'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
@@ -108,11 +120,10 @@ function Resolve-WhiskeyVariable
                                     'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
                                     'WHISKEY_SCM_URI' = [uri]$buildInfo.ScmUri;
                                     'WHISKEY_SEMVER1' = $version.SemVer1;
-                                    'WHISKEY_SEMVER1_VERSION' = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch;
+                                    'WHISKEY_SEMVER1_VERSION' = $sem1Version;
                                     'WHISKEY_SEMVER2' = $version.SemVer2;
                                     'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
-                                    'WHISKEY_SEMVER2_PRERELEASE' = $version.SemVer2.Prerelease;
-                                    'WHISKEY_SEMVER2_VERSION' = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch;
+                                    'WHISKEY_SEMVER2_VERSION' = $sem2Version;
                                     'WHISKEY_TASK_NAME' = $Context.TaskName;
                                     'WHISKEY_VERSION' = $version.Version;
                                 }
