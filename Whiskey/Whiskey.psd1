@@ -144,8 +144,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added support for setting task parameter default values using a `TaskDefaults` global property in a Whiskey configuration file.
 * Added `Add-WhiskeyTaskDefault` function for adding new task default parameter values to an existing task context object.
+* Added `TaskDefaults` task for setting default values for task properties.
 '@
         } # End of PSData hashtable
 

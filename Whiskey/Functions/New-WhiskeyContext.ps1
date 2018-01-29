@@ -143,19 +143,6 @@ function New-WhiskeyContext
     $context.Publish = $publish
     $context.RunMode = 'Build'
 
-    if ($config.ContainsKey('TaskDefaults'))
-    {
-        $taskDefaults = $config['TaskDefaults']
-        foreach ($task in ($taskDefaults | Select-Object -ExpandProperty 'Keys'))
-        {
-            $taskParameterDefaults = $taskDefaults[$task]
-            foreach ($parameter in $taskParameterDefaults | Select-Object -ExpandProperty 'Keys')
-            {
-                Add-WhiskeyTaskDefault -Context $context -Task $task -Parameter $parameter -Value $taskParameterDefaults[$parameter]
-            }
-        }
-    }
-
     if( $config['Variable'] )
     {
         Write-Error -Message ('{0}: The ''Variable'' property is no longer supported. Use the `SetVariable` task instead. Move your `Variable` property (and values) into your `BuildTasks` pipeline as the first task. Rename `Variable` to `SetVariable`.' -f $ConfigurationPath) -ErrorAction Stop

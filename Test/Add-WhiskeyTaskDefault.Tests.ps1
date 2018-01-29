@@ -52,7 +52,7 @@ function GivenTask
     param(
         $Name
     )
-    
+
     $script:task = $Name
 }
 
@@ -211,7 +211,6 @@ TaskDefaults:
     GivenParameter 'Verbosity'
     GivenValue 'd'
     WhenAddingTaskDefault
-
     ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
     ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Verbosity' -Value 'd'
     ThenTaskDefaultsContains -Task 'NuGetPack' -Property 'Symbols' -Value $true

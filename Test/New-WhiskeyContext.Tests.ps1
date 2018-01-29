@@ -11,18 +11,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     $context = $null
     $path = "bad"
     $runMode = $null
-    $threwException = $false
-
-    function Init
-    {
-        $Global:Error.Clear()
-        $script:runMode = $null
-        $script:configurationPath = ''
-        $script:context = $null
-        $script:path = "bad"
-        $script:threwException = $false
-    }
-
 
     function Assert-Context
     {
@@ -247,6 +235,14 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         $Yaml | Set-Content -Path $script:configurationPath
     }
 
+    function Init
+    {
+        $script:runMode = $null
+        $script:configurationPath = ''
+        $script:context = $null
+        $script:path = "bad"
+    }
+
     function ThenSemVer1Is
     {
         param(
@@ -306,6 +302,9 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [string]
             $Environment = 'developer',
 
+            [string]
+            $ThenCreationFailsWithErrorMessage,
+
             [Switch]
             $ByDeveloper,
 
@@ -323,6 +322,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                 $optionalArgs['DownloadRoot'] = $WithDownloadRoot
             }
 
+            $Global:Error.Clear()
+            $threwException = $false
             try
             {
                 $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $script:ConfigurationPath @optionalArgs
@@ -337,35 +338,30 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             }
             catch
             {
-                $script:threwException = $true
-                Write-Error -ErrorRecord $_
+                $threwException = $true
+                $_ | Write-Error 
             }
-        }
-    }
 
-    function ThenNoErrors
-    {
-        It 'should not throw an exception' {
-            $script:threwException | Should -Be $false
-        }
+            if( $ThenCreationFailsWithErrorMessage )
+            {
+                It 'should throw an exception' {
+                    $threwException | Should Be $true
+                }
 
-        It 'should not write an error' {
-            $Global:Error | Should -BeNullOrEmpty
-        }
-    }
+                It 'should write an error' {
+                    $Global:Error | Should Match $ThenCreationFailsWithErrorMessage
+                }
+            }
+            else
+            {
+                It 'should not throw an exception' {
+                    $threwException | Should Be $false
+                }
 
-    function ThenFailedWithError
-    {
-        param(
-            $ErrorMessage
-        )
-
-        It 'should throw an exception' {
-            $script:threwException | Should -Be $true
-        }
-
-        It ('should write error message matching /{0}/' -f $ErrorMessage) {
-            $Global:Error[0] | Should -Match $ErrorMessage
+                It 'should not write an error' {
+                    $Global:Error | Should BeNullOrEmpty
+                }
+            }
         }
     }
 
@@ -507,7 +503,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByDeveloper -Environment 'fubar'
         ThenDeveloperContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -Environment 'fubar'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when version number uses build number' {
@@ -516,14 +511,12 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             GivenConfiguration -WithVersion '1.2.$(WHISKEY_BUILD_NUMBER)' -BuildNumber '0'
             WhenCreatingContext -ByDeveloper -Environment 'fubar'
             ThenDeveloperContextCreated -WithSemanticVersion '1.2.0' -Environment 'fubar'
-            ThenNoErrors
         }
         Context 'by build server' {
             Init
             GivenConfiguration -WithVersion '1.2.$(WHISKEY_BUILD_NUMBER)' -BuildNumber '45' -ForBuildServer
             WhenCreatingContext -ByBuildServer -Environment 'fubar'
             ThenBuildServerContextCreated -WithSemanticVersion '1.2.45' -Environment 'fubar'
-            ThenNoErrors
         }
     }
 
@@ -533,21 +526,18 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByDeveloper 
         ThenDeveloperContextCreated -WithSemanticVersion ('1.2.3+{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME)
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run by developer and configuration file does not exist' {
         Init
         GivenConfigurationFileDoesNotExist
-        WhenCreatingContext -ByDeveloper -ErrorAction SilentlyContinue
-        ThenFailedWithError 'does not exist'
+        WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'does not exist' -ErrorAction SilentlyContinue
     }
 
     Describe 'New-WhiskeyContext.when run by developer and version is not a semantic version' {
         Init
         GivenConfiguration -WithVersion 'fubar'
-        WhenCreatingContext -ByDeveloper -ErrorAction SilentlyContinue
-        ThenFailedWithError 'unable to convert ''fubar'' to a semantic version'
+        WhenCreatingContext -ByDeveloper -ThenCreationFailsWithErrorMessage 'unable\ to\ convert\ ''fubar''\ to\ a\ semantic\ version' -ErrorAction SilentlyContinue
     }
 
     Describe 'New-WhiskeyContext.when run by the build server' {
@@ -556,7 +546,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer -Environment 'fubar'
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -Environment 'fubar'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {
@@ -565,7 +554,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when application name in configuration file' {
@@ -574,7 +562,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByDeveloper
         ThenDeveloperContextCreated -WithSemanticVersion '1.2.3'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on master branch' {
@@ -583,7 +570,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on feature branch' {
@@ -592,7 +578,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on release branch' {
@@ -601,7 +586,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on long-lived release branch' {
@@ -610,7 +594,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on develop branch' {
@@ -619,7 +602,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on hot fix branch' {
@@ -628,7 +610,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer 
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building on bug fix branch' {
@@ -637,7 +618,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when publishing on custom branch' {
@@ -646,7 +626,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByBuildServer
         ThenBuildServerContextCreated -WithSemanticVersion '1.2.3'
         ThenPublishes
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and building on one of them' {
@@ -654,7 +633,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         GivenConfiguration -WithVersion '1.2.3' -OnBranch 'fubarsnafu' -ForBuildServer -PublishingOn @( 'feature/3.0', 'fubar*' ) 
         WhenCreatingContext -ByBuildServer
         ThenPublishes
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and not building on one of them' {
@@ -662,7 +640,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         GivenConfiguration -WithVersion '1.2.3' -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3.0', 'master' ) 
         WhenCreatingContext -ByBuildServer
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run by developer on a prerelease branch' {
@@ -671,7 +648,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ByDeveloper
         ThenSemVer2Is '1.2.3'
         ThenDoesNotPublish
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when publishing on a prerelease branch' {
@@ -681,14 +657,12 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer2Is '1.2.3-alpha.93+93.alpha-2.0.deadbee'
         ThenVersionIs '1.2.3'
         ThenSemVer1Is '1.2.3-alpha93'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when a PrereleaseMap has multiple keys' {
         Init
         GivenConfiguration  @{ 'Version' = '1.2.3' ; 'PublishOn' = @( 'alpha/*' ); 'PrereleaseMap' = @( @{ 'alpha/*' = 'alpha' ; 'beta/*' = 'beta' } ); } -OnBranch 'alpha/2.0' -ForBuildServer
-        WhenCreatingContext -ByBuildServer -ErrorAction SilentlyContinue
-        ThenFailedWithError 'must be a list of objects'
+        WhenCreatingContext -ByBuildServer -ThenCreationFailsWithErrorMessage 'must be a list of objects' -ErrorAction SilentlyContinue
     }
 
     Describe 'New-WhiskeyContext.when there prerelease branches but not building on one of them' {
@@ -698,7 +672,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer2Is '1.2.3+94.master.deadbee'
         ThenVersionIs '1.2.3'
         ThenSemVer1Is '1.2.3'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
@@ -710,7 +683,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenVersionIs '9.4.6'
         ThenSemVer2NoBuildMetadataIs '9.4.6'
         ThenSemVer1Is '9.4.6'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
@@ -722,7 +694,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenVersionIs '9.4.6'
         ThenSemVer2NoBuildMetadataIs '9.4.6'
         ThenSemVer1Is '9.4.6'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building a Node module by a build server' {
@@ -734,7 +705,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenVersionIs '9.4.6'
         ThenSemVer2NoBuildMetadataIs '9.4.6'
         ThenSemVer1Is '9.4.6'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building a Powershell module by a build server' {
@@ -746,7 +716,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenVersionIs '9.4.6'
         ThenSemVer2NoBuildMetadataIs '9.4.6'
         ThenSemVer1Is '9.4.6'
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when building a Node.js application and ignoring package.json version number' {
@@ -755,14 +724,12 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         GivenNodeVersionFrom -AtVersion '9.4.6' -withPath 'package.json' 
         WhenCreatingContext 
         ThenVersionMatches ('^{0}\.' -f (Get-Date).ToString('yyyy\\.Mdd'))
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when configuration is just a property name' {
         Init
         GivenWhiskeyYml 'BuildTasks'
         WhenCreatingContext
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run mode is ''Clean''' {
@@ -772,7 +739,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext
         ThenShouldCleanIs $true
         ThenShouldInitializeIs $false
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run mode is ''Initialize''' {
@@ -782,7 +748,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $true
-        ThenNoErrors
     }
 
     Describe 'New-WhiskeyContext.when run mode is default' {
@@ -791,38 +756,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
-        ThenNoErrors
     }
-
-    Describe 'New-WhiskeyContext.when setting TaskDefaults' {
-        Init
-        GivenWhiskeyYml @'
-TaskDefaults:
-    MSBuild:
-        Version: 12.0
-    Exec:
-        WorkingDirectory: workdir
-        SuccessExitCode:
-        - 1
-        - 2
-        - '>=100'
-'@
-        WhenCreatingContext
-        ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
-        ThenTaskDefaultsContains -Task 'Exec' -Property 'WorkingDirectory' -Value 'workdir'
-        ThenTaskDefaultsContains -Task 'Exec' -Property 'SuccessExitCode' -Value @(1, 2, '>=100')
-        ThenNoErrors
-    }
-
-    Describe 'New-WhiskeyContext.when setting TaskDefaults for non-existent task' {
-        Init
-        GivenWhiskeyYml @'
-TaskDefaults:
-    NotARealTask:
-        Version: 12.0
-'@
-        WhenCreatingContext -ErrorAction SilentlyContinue
-        ThenFailedWithError 'is not a valid Whiskey task'
-    }
-
+    
 }

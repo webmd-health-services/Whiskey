@@ -714,14 +714,8 @@ Describe 'Invoke-WhiskeyTask.when there are task-specific registered event handl
 
 Describe 'Invoke-WhiskeyTask.when there are task defaults' {
     Init
-    GivenWhiskeyYml @'
-TaskDefaults:
-    PowerShell:
-        Path: defaultScript.ps1
-        Argument:
-            Param1: value
-'@
     GivenContext
+    GivenDefaults @{ 'Path' = 'defaultScript.ps1'; 'Argument' = @{ 'Param1' = 'value' }} -ForTask 'PowerShell'
     GivenParameter @{
         'Path' = 'script.ps1';
         'Argument' = @{ 'Force' = $true }
@@ -734,14 +728,10 @@ TaskDefaults:
     ThenTaskRanWithParameter -Task 'PowerShell' -Parameter 'Argument' -Value @{ 'Force' = $true; 'Param1' = 'value'; }
 }
 
-Describe 'Invoke-WhiskeyTask.when there are task defaults that should get overriden by given task parameters' {
+Describe 'Invoke-WhiskeyTask.when there are task defaults that should get overwritten by given task parameters' {
     Init
-    GivenWhiskeyYml @'
-TaskDefaults:
-    PowerShell:
-        SomeParam: foo
-'@
     GivenContext
+    GivenDefaults @{ 'SomeParam' = 'foo' } -ForTask 'PowerShell'
     GivenParameter @{
         'Path' = 'script.ps1';
         'SomeParam' = 'bar';
