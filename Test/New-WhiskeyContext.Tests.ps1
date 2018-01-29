@@ -467,21 +467,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     }
 
-    function ThenTaskDefaultsContains
-    {
-        param(
-            $Task,
-            $Property,
-            $Value
-        )
-
-        It ('should set ''{0}'' property ''{1}'' to ''{2}''' -f $Task,$Property,($Value -join ', ')) {
-            $script:context.TaskDefaults.ContainsKey($Task) | Should -Be $true
-            $script:context.TaskDefaults[$Task].ContainsKey($Property) | Should -Be $true
-            $script:context.TaskDefaults[$Task][$Property] | Should -Be $Value
-        }
-    }
-
     function ThenVersionMatches
     {
         param(
