@@ -177,42 +177,17 @@ Describe 'Add-WhiskeyTaskDefault.when setting MSBuild ''Version'' property to 12
 
 Describe 'Add-WhiskeyTaskDefault.when a task parameter already contains a default value but ''Force'' was used' {
     Init
-    GivenWhiskeyYml @'
-TaskDefaults:
-    MSBuild:
-        Version: 12.0
-    Exec:
-        SuccessExitCode:
-        - 1
-        - 2
-        - 3
-'@
     GivenContext
+    Giventask 'MSBuild'
+    GivenParameter 'Version'
+    GivenValue 12.0
+    WhenAddingTaskDefault
+
     Giventask 'MSBuild'
     GivenParameter 'Version'
     GivenValue 15.0
     GivenForce
     WhenAddingTaskDefault
     ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 15.0
-    ThenTaskDefaultsContains -Task 'Exec' -Property 'SuccessExitCode' -Value @(1, 2, 3)
-    ThenNoErrors
-}
-Describe 'Add-WhiskeyTaskDefault.when adding task default after existing defaults defined from whiskey.yml' {
-    Init
-    GivenWhiskeyYml @'
-TaskDefaults:
-    MSBuild:
-        Version: 12.0
-    NuGetPack:
-        Symbols: Yes
-'@
-    GivenContext
-    Giventask 'MSBuild'
-    GivenParameter 'Verbosity'
-    GivenValue 'd'
-    WhenAddingTaskDefault
-    ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
-    ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Verbosity' -Value 'd'
-    ThenTaskDefaultsContains -Task 'NuGetPack' -Property 'Symbols' -Value $true
     ThenNoErrors
 }
