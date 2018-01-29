@@ -136,10 +136,12 @@ function ThenNpmrcCreated
     $npmrcFileLine2 = ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
     $npmrcFileLine3 = ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
     $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $email)
+    $npmrcFileLine5 = ('registry={0}' -f $npmRegistryUri)
     $npmrcFileContents = @"
 $npmrcFileLine2
 $npmrcFileLine3
 $npmrcFileLine4
+$npmrcFileLine5
 "@
 
     It ('.npmrc file should be{0}{1}' -f [Environment]::newLine,$npmrcFileLine2){
