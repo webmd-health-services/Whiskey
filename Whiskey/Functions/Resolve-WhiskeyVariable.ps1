@@ -96,13 +96,13 @@ function Resolve-WhiskeyVariable
         $sem1Version = ''
         if( $version.SemVer1 )
         {
-            $sem1Version = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch;
+            $sem1Version = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch
         }
 
         $sem2Version = ''
         if( $version.SemVer2 )
         {
-            $sem2Version = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch;
+            $sem2Version = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch
         }
 
         $wellKnownVariables = @{
@@ -174,6 +174,7 @@ function Resolve-WhiskeyVariable
         $haystack = $InputObject.ToString()
         do
         {
+            # Parse the variable expression, everything between $( and )
             $needleStart = $haystack.IndexOf('$(',$startAt)
             if( $needleStart -lt 0 )
             {
@@ -189,6 +190,9 @@ function Resolve-WhiskeyVariable
                 }
             }
 
+            # Variable expressions can contain method calls, which begin and end with parenthesis, so
+            # make sure you don't treat the close parenthesis of a method call as the close parenthesis
+            # to the current variable expression.
             $needleEnd = $needleStart + 2
             $depth = 0
             while( $needleEnd -lt $haystack.Length )
@@ -214,6 +218,7 @@ function Resolve-WhiskeyVariable
             $memberName = $null
             $arguments = $null
 
+            # Does the variable expression contain a method call?
             if( $variableName -match '([^.]+)\.([^.(]+)(\(([^)]+)\))?' )
             {
                 $variableName = $Matches[1]
@@ -228,6 +233,11 @@ function Resolve-WhiskeyVariable
                                     $currentArg = New-Object 'Text.StringBuilder'
                                     $currentChar = $null
                                     $inString = $false
+                                    # Parse each of the arguments in the method call. Each argument is
+                                    # seperated by a comma. Ignore whitespace. Commas and whitespace that
+                                    # are part of an argument must be double or single quoted. To include
+                                    # a double quote inside a double-quoted string, double it. To include
+                                    # a single quote inside a single-quoted string, double it.
                                     for( $idx = 0; $idx -lt $arguments.Length; ++$idx )
                                     {
                                         $nextChar = ''

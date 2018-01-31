@@ -7,7 +7,7 @@ SHORT DESCRIPTION
 
 LONG DESCRIPTION
 
-    ## Using
+    ## Using Variables
 
     You can define and use variables in your whiskey.yml file. Use variables 
     with  this syntax: `$(VARIABLE_NAME)`. The variable name must be enclosed in
@@ -63,8 +63,9 @@ LONG DESCRIPTION
        running any MSBuild task. This is always `Debug` when run by developers 
        and `Release` otherwise.
      * [string] WHISKEY_OUTPUT_DIRECTORY: the path to the directory where 
-       build results, packages, and other output is put.
-     * [string] WHISKEY_PIPELINE_NAME: the name of the pipeline that is 
+       build results, packages, and other output is put. Usually it is in a
+       .output directory in the build root 
+     * [string] WHISKEY_PIPELINE_NAME: the name of the Whiskey pipeline that is 
        currently running.
      * [string] WHISKEY_SCM_BRANCH: the branch on which the current build is 
        running.

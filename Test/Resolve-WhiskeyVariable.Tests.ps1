@@ -408,6 +408,7 @@ Describe 'Resolve-WhiskeyVariable.when variable not terminated' {
     GivenVariable 'Fubar' $value
     WhenResolving '$(Fubar' -ErrorAction SilentlyContinue
     ThenValueIs '$(Fubar'
+    ThenErrorIs 'Unclosed\ variable\ expression'
 }
 
 Describe 'Resolve-WhiskeyVariable.when variable not terminated but escaped' {
@@ -484,5 +485,8 @@ Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
     GivenVariable 'Fubar' 'g'
     WhenResolving '$(Fubar.Substring(0,7))' -ErrorAction SilentlyContinue
     ThenValueIs '$(Fubar.Substring(0,7))'
+    It ('should explain that method call failed') {
+        $Global:Error[0] | Should -Match 'Failed\ to\ call\b.*\bSubstring\b'
+    }
 }
 
