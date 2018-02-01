@@ -151,6 +151,7 @@
    * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object.
    * WHISKEY_VERSION: a `System.Version` object. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
    * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
+* Fixed: `PublishNodeModule` task should also set the `registry` config value in the `.npmrc` file it creates prior to publishing.>>>>>>> develop
 '@
         } # End of PSData hashtable
 
