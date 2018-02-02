@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.26.1'
+    ModuleVersion = '0.27.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -143,7 +143,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `PublishNodeModule` task should also set the `registry` config value in the `.npmrc` file it creates prior to publishing.
+* Added new Whiskey variables:
+    * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer1-compatible version number.
+    * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer2-compatible version number.
+* You can now call properties and methods on Whiskey variable objects using the syntax `$(VARIABLE_NAME.PROPERTY_NAME)` or `$(VARIABLE_NAME.METHOD_NAME(PARAMETER)`. When calling methods, every parameter is parsed from your YAML file as a string. PowerShell must be able to parse that string to each parameter's type. Most variables are string objects. Exceptions are:
+   * WHISKEY_SEMVER1: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_VERSION: a `System.Version` object. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
+   * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
+* Fixed: `PublishNodeModule` task should also set the `registry` config value in the `.npmrc` file it creates prior to publishing.>>>>>>> develop
 '@
         } # End of PSData hashtable
 

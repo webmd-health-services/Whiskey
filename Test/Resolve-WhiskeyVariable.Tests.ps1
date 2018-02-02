@@ -295,3 +295,198 @@ Describe 'Resolve-WhiskeyVariable.when value is empty' {
     WhenResolving 'prefix$(FUBAR)suffix'
     ThenValueIs 'prefixsuffix'
 }
+
+Describe 'Resolve-WhiskeyVariable.when variable doesn''t have a requested property' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_SCM_URI.FubarSnafu)' -ErrorAction SilentlyContinue
+    ThenValueIs '$(WHISKEY_SCM_URI.FubarSnafu)'
+    ThenErrorIs ('does\ not\ have\ a\ ''FubarSnafu''\ member')
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2.Prerelease)'
+    ThenValueIs 'fubar.5'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_BUILD' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2.Build)'
+    ThenValueIs 'snafu.6'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_VERSION' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2_VERSION)'
+    ThenValueIs '1.2.3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MAJOR' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2.Major)'
+    ThenValueIs '1'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_MINOR' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2.Minor)'
+    ThenValueIs '2'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PATCH' {
+    Init
+    $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+    WhenResolving '$(WHISKEY_SEMVER2.Patch)'
+    ThenValueIs '3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PRERELEASE' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1.Prerelease)'
+    ThenValueIs 'fubar5'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_VERSION' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1_VERSION)'
+    ThenValueIs '1.2.3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MAJOR' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1.Major)'
+    ThenValueIs '1'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_MINOR' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1.Minor)'
+    ThenValueIs '2'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PATCH' {
+    Init
+    $context.Version.SEMVER1 = [SemVersion.SemanticVersion]'1.2.3-fubar5'
+    WhenResolving '$(WHISKEY_SEMVER1.Patch)'
+    ThenValueIs '3'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_BUILD_URI' {
+    Init
+    $context.BuildMetadata.BuildUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_BUILD_URI.Host)'
+    ThenValueIs 'example.com'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_JOB_URI' {
+    Init
+    $context.BuildMetadata.JobUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_JOB_URI.Host)'
+    ThenValueIs 'example.com'
+}
+
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SCM_URI' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/path?query=string'
+    WhenResolving '$(WHISKEY_SCM_URI.Host)'
+    ThenValueIs 'example.com'
+}
+
+Describe 'Resolve-WhiskeyVariable.when variable not terminated' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$(Fubar' -ErrorAction SilentlyContinue
+    ThenValueIs '$(Fubar'
+    ThenErrorIs 'Unclosed\ variable\ expression'
+}
+
+Describe 'Resolve-WhiskeyVariable.when variable not terminated but escaped' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$$(Fubar'
+    ThenValueIs '$(Fubar'
+}
+
+Describe 'Resolve-WhiskeyVariable.when calling variable object method' {
+    Init
+    $value = "The quick brown fox jumped over the lazy dog."
+    GivenVariable 'Fubar' $value
+    WhenResolving '$(Fubar.Substring(0,7))'
+    ThenValueIs $value.Substring(0,7)
+    WhenResolving '$(Fubar.Trim("T",''.''))'
+    ThenValueIs $value.Trim('T','.')
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parmeters have whitespace' {
+    Init
+    GivenVariable 'Fubar' ' a '
+    WhenResolving '$(Fubar.Trim(  "b"  ))'
+    ThenValueIs ' a '
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter contains a comma' {
+    Init
+    GivenVariable 'Fubar' ',,ab,,'
+    WhenResolving '$(Fubar.Trim(  "b", ","  ))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter contains whitespace' {
+    Init
+    GivenVariable 'Fubar' ' a '
+    WhenResolving '$(Fubar.Trim(" "))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter is double-quoted and contains double quote' {
+    Init
+    GivenVariable 'Fubar' '"a"'
+    WhenResolving '$(Fubar.Trim(""""))'
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call parameter is single-quoted and contains single quote' {
+    Init
+    GivenVariable 'Fubar' "'a'"
+    WhenResolving "`$(Fubar.Trim(''''))"
+    ThenValueIs 'a'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method parameter is enumeration' {
+    Init
+    $context.BuildMetadata.ScmUri = 'https://example.com/whiskey'
+    WhenResolving '$(WHISKEY_SCM_URI.GetLeftPart(Scheme))'
+    ThenValueIs 'https://'
+    WhenResolving '$(WHISKEY_SCM_URI.GetLeftPart(''Scheme''))'
+    ThenValueIs 'https://'
+}
+
+Describe 'Resolve-WhiskeyVariable.when getting substring of a variable value' {
+    Init
+    $context.BuildMetadata.ScmCommitID = 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb'
+    WhenResolving '$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))'
+    ThenValueIs 'deadbee'
+}
+
+Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
+    Init
+    GivenVariable 'Fubar' 'g'
+    WhenResolving '$(Fubar.Substring(0,7))' -ErrorAction SilentlyContinue
+    ThenValueIs '$(Fubar.Substring(0,7))'
+    It ('should explain that method call failed') {
+        $Global:Error[0] | Should -Match 'Failed\ to\ call\b.*\bSubstring\b'
+    }
+}
+

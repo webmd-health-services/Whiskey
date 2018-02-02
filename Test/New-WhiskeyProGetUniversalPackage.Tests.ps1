@@ -21,10 +21,10 @@ function GivenBuildVersion
     )
 
     $script:buildVersion = New-WhiskeyVersionObject
-    $buildVersion.SemVer2 = $Version
+    $buildVersion.SemVer2 = [SemVersion.SemanticVersion]$Version
     $buildVersion.Version = [Version]('{0}.{1}.{2}' -f $Version.Major,$Version.Minor,$Version.Patch)
-    $buildVersion.SemVer2NoBuildMetadata = '{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,$Version.Prerelease
-    $buildVersion.SemVer1 = '{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,($Version.Prerelease -replace '[^A-Za-z0-9]','')
+    $buildVersion.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,$Version.Prerelease)
+    $buildVersion.SemVer1 = [SemVersion.SemanticVersion]('{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,($Version.Prerelease -replace '[^A-Za-z0-9]',''))
 }
 
 function GivenPackageVersion
