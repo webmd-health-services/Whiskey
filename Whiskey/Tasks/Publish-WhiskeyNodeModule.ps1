@@ -15,8 +15,6 @@ function Publish-WhiskeyNodeModule
     * `NpmRegistryUri` (*mandatory*): the URI to the registry where the module should be published.
     * `CredentialID` (*mandatory*): the credential to use when publishing. Credentials are added to your build with the `Add-WhiskeyCredential` function. This `CredentialID` property should be the same value as the `ID` parameter used when adding the credential with `Add-WhiskeyCredential`.
     * `EmailAddress` (*mandatory*): the email address to use when publishing.
-    * `WorkingDirectory`: the directory where the NPM publish command will be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. 
     
     # Examples
     
@@ -112,6 +110,7 @@ function Publish-WhiskeyNodeModule
         Add-Content -Path $packageNpmrc -Value ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
         Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
         Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
+        Add-Content -Path $packageNpmrc -Value ('registry={0}' -f $npmRegistryUri)
         Write-Verbose -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
         Get-Content -Path $packageNpmrc |
             ForEach-Object {

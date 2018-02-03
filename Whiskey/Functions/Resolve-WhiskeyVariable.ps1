@@ -93,26 +93,40 @@ function Resolve-WhiskeyVariable
 
         $version = $Context.Version
         $buildInfo = $Context.BuildMetadata;
+        $sem1Version = ''
+        if( $version.SemVer1 )
+        {
+            $sem1Version = '{0}.{1}.{2}' -f $version.SemVer1.Major,$version.SemVer1.Minor,$version.SemVer1.Patch
+        }
+
+        $sem2Version = ''
+        if( $version.SemVer2 )
+        {
+            $sem2Version = '{0}.{1}.{2}' -f $version.SemVer2.Major,$version.SemVer2.Minor,$version.SemVer2.Patch
+        }
+
         $wellKnownVariables = @{
-                                    'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
-                                    'WHISKEY_ENVIRONMENT' = $Context.Environment;
+                                    'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
+                                    'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
                                     'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
+                                    'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServerName;
+                                    'WHISKEY_BUILD_URI' = [uri]$buildInfo.BuildUri;
+                                    'WHISKEY_ENVIRONMENT' = $Context.Environment;
+                                    'WHISKEY_JOB_URI' = [uri]$buildInfo.JobUri;
+                                    'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
                                     'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
                                     'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
-                                    'WHISKEY_TASK_NAME' = $Context.TaskName;
-                                    'WHISKEY_SEMVER2' = $version.SemVer2;
-                                    'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
-                                    'WHISKEY_VERSION' = $version.Version;
-                                    'WHISKEY_SEMVER1' = $version.SemVer1;
-                                    'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
-                                    'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
-                                    'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServerName;
-                                    'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
-                                    'WHISKEY_JOB_URI' = $buildInfo.JobUri;
                                     'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
                                     'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
-                                    'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
-                               }
+                                    'WHISKEY_SCM_URI' = [uri]$buildInfo.ScmUri;
+                                    'WHISKEY_SEMVER1' = $version.SemVer1;
+                                    'WHISKEY_SEMVER1_VERSION' = $sem1Version;
+                                    'WHISKEY_SEMVER2' = $version.SemVer2;
+                                    'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
+                                    'WHISKEY_SEMVER2_VERSION' = $sem2Version;
+                                    'WHISKEY_TASK_NAME' = $Context.TaskName;
+                                    'WHISKEY_VERSION' = $version.Version;
+                                }
     }
 
     process
@@ -160,6 +174,7 @@ function Resolve-WhiskeyVariable
         $haystack = $InputObject.ToString()
         do
         {
+            # Parse the variable expression, everything between $( and )
             $needleStart = $haystack.IndexOf('$(',$startAt)
             if( $needleStart -lt 0 )
             {
@@ -175,8 +190,98 @@ function Resolve-WhiskeyVariable
                 }
             }
 
-            $needleEnd = $haystack.IndexOf(')', $needleStart)
+            # Variable expressions can contain method calls, which begin and end with parenthesis, so
+            # make sure you don't treat the close parenthesis of a method call as the close parenthesis
+            # to the current variable expression.
+            $needleEnd = $needleStart + 2
+            $depth = 0
+            while( $needleEnd -lt $haystack.Length )
+            {
+                $currentChar = $haystack[$needleEnd]
+                if( $currentChar -eq ')' )
+                {
+                    if( $depth -eq 0 )
+                    {
+                        break
+                    }
+
+                    $depth--
+                }
+                elseif( $currentChar -eq '(' )
+                {
+                    $depth++
+                }
+                ++$needleEnd
+            }
+            
             $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
+            $memberName = $null
+            $arguments = $null
+
+            # Does the variable expression contain a method call?
+            if( $variableName -match '([^.]+)\.([^.(]+)(\(([^)]+)\))?' )
+            {
+                $variableName = $Matches[1]
+                $memberName = $Matches[2]
+                $arguments = $Matches[4]
+                $arguments = & {
+                                    if( -not $arguments )
+                                    {
+                                        return
+                                    }
+
+                                    $currentArg = New-Object 'Text.StringBuilder'
+                                    $currentChar = $null
+                                    $inString = $false
+                                    # Parse each of the arguments in the method call. Each argument is
+                                    # seperated by a comma. Ignore whitespace. Commas and whitespace that
+                                    # are part of an argument must be double or single quoted. To include
+                                    # a double quote inside a double-quoted string, double it. To include
+                                    # a single quote inside a single-quoted string, double it.
+                                    for( $idx = 0; $idx -lt $arguments.Length; ++$idx )
+                                    {
+                                        $nextChar = ''
+                                        if( ($idx + 1) -lt $arguments.Length )
+                                        {
+                                            $nextChar = $arguments[$idx + 1]
+                                        }
+
+                                        $currentChar = $arguments[$idx]
+                                        if( $currentChar -eq '"' -or $currentChar -eq "'" )
+                                        {
+                                            if( $inString )
+                                            {
+                                                if( $nextChar -eq $currentChar )
+                                                {
+                                                    [void]$currentArg.Append($currentChar)
+                                                    $idx++
+                                                    continue
+                                                }
+                                            }
+                                            
+                                            $inString = -not $inString
+                                            continue
+                                        }
+
+                                        if( $currentChar -eq ',' -and -not $inString )
+                                        {
+                                            $currentArg.ToString()
+                                            [void]$currentArg.Clear()
+                                            continue
+                                        }
+
+                                        if( $inString -or -not [string]::IsNullOrWhiteSpace($currentChar) )
+                                        {
+                                            [void]$currentArg.Append($currentChar)
+                                        }
+                                    }
+                                    if( $currentArg.Length )
+                                    {
+                                        $currentArg.ToString()
+                                    }
+                               }
+
+            }
 
             $envVarPath = 'env:{0}' -f $variableName
             if( $Context.Variables.ContainsKey($variableName) )
@@ -208,7 +313,40 @@ function Resolve-WhiskeyVariable
                 $value = ''
             }
 
-            $haystack = $haystack.Remove($needleStart,$needleEnd - $needleStart + 1)
+            if( $value -ne $null -and $memberName )
+            {
+                if( -not (Get-Member -Name $memberName -InputObject $value ) )
+                {
+                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
+                    return $InputObject
+                }
+
+                if( $arguments )
+                {
+                    try
+                    {
+                        $value = $value.$memberName.Invoke($arguments)
+                    }
+                    catch
+                    {
+                        Write-Error -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
+                        return $InputObject
+                    }
+                }
+                else
+                {
+                    $value = $value.$memberName
+                }
+            }
+
+            $variableNumChars = $needleEnd - $needleStart + 1
+            if( $needleStart + $variableNumChars -gt $haystack.Length )
+            {
+                Write-Error -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
+                return $InputObject
+            }
+
+            $haystack = $haystack.Remove($needleStart,$variableNumChars)
             $haystack = $haystack.Insert($needleStart,$value)
             # No need to keep searching where we've already looked.
             $startAt = $needleStart

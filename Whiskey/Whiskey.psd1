@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.26.0'
+    ModuleVersion = '0.27.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -143,15 +143,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: variables in common task property values (i.e. OnlyBy, ExceptDuring, OnlyOnBranch, WorkingDirectory, etc.) aren't resolved.
-* Fixed: common task properties in task default properties are ignored.
-* The `NpmInstall`, `NpmPrune`, `NodeNspCheck`, `NodeLicenseChecker`, and `PublishNodeModule` tasks now install their own global Node (with NPM) into a `.node` directory (in the same directory as your whiskey.yml file). By default, Node's latest LTS version is installed. To install a specific version, update the `engines.node` property in your package.json file. You can specify a custom version of NPM with the `engines.npm` property in your package.json file. You can only upgrade to a newer version of NPM than what ships with the version of Node you're using. The `NodeNspCheck` and `NodeLicenseChecker` tasks install the nsp and license-checker node modules, respectively, into this global Node environment.
-* `Invoke-WhiskeyNpmCommand` is now a public function. Task authors can use it to run NPM commands using the version of Node Whiskey installs. Tasks that use it must have the `[Whiskey.RequiresTool]` attribute.
-* `ProGetUniversalPackage` should now be a little bit faster. Enable multi-threaded copies when copying files with Robocopy.
-* `NpmInstall` task can now install modules globally (i.e. in the `.node\node_modules` directory where Whiskey installs your copy of Node). Set the `Global` property to `true`.
-* `NspCheck` task renamed to `NodeNspCheck`.
-* Created `NpmConfig` task for setting NPM configuration in NPM's various .npmrc files.
-* Fixed: `NpmInstall` task doesn't delete the modules it installs when run in clean mode.
+* Added new Whiskey variables:
+    * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer1-compatible version number.
+    * WHISKEY_SEMVER1_VERSION: the major.minor.patch fields of the SemVer2-compatible version number.
+* You can now call properties and methods on Whiskey variable objects using the syntax `$(VARIABLE_NAME.PROPERTY_NAME)` or `$(VARIABLE_NAME.METHOD_NAME(PARAMETER)`. When calling methods, every parameter is parsed from your YAML file as a string. PowerShell must be able to parse that string to each parameter's type. Most variables are string objects. Exceptions are:
+   * WHISKEY_SEMVER1: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_SEMVER2: a `SemVersion.SemanticVersion` object.
+   * WHISKEY_VERSION: a `System.Version` object. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.version.aspx).
+   * WHISKEY_BUILD_URI, WHISKEY_JOB_URI, and WHISKEY_SCM_URI: `System.Uri` objects. Members are documented [here](https://msdn.microsoft.com/en-us/library/system.uri.aspx).
+* Fixed: `PublishNodeModule` task should also set the `registry` config value in the `.npmrc` file it creates prior to publishing.>>>>>>> develop
 '@
         } # End of PSData hashtable
 
