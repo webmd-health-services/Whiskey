@@ -96,7 +96,7 @@ function Invoke-WhiskeyTask
             if( $TargetParameter.ContainsKey($key) )
             {
                 $targetValue = $TargetParameter[$key]
-                if( $targetValue -is [hashtable] -and $sourceValue -is [hashtable] )
+                if( ($targetValue | Get-Member -Name 'Keys') -and ($sourceValue | Get-Member -Name 'Keys') )
                 {
                     Merge-Parameter -SourceParameter $sourceValue -TargetParameter $targetValue
                 }

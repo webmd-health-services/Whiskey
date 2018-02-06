@@ -167,6 +167,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
         if( $withPath )
         {
+            $withPath = Join-Path -Path $TestDrive.FullName -ChildPath $withPath
             $Configuration['VersionFrom'] = $withPath
             $Script:path = $withPath
         }
@@ -189,6 +190,30 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function GivenConfigurationFileDoesNotExist
     {
         $script:configurationPath = 'I\do\not\exist'
+    }
+
+    function GivenNodeVersionFrom
+    {
+        param(
+            [string]
+            $AtVersion,
+            [string]
+            $WithPath
+        )
+
+        Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $WithPath) -Value ('{{"version":"{0}"}}' -f $AtVersion)
+    }
+
+    function GivenModuleVersionFrom
+    {
+        param(
+            [string]
+            $WithPath,
+            [string]
+            $AtVersion
+        )
+        
+        Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $WithPath) -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
     }
 
     function GivenRunMode
@@ -634,28 +659,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer1Is '1.2.3'
     }
 
-    function GivenNodeVersionFrom
-    {
-        param(
-            [string]
-            $AtVersion,
-            [string]
-            $withPath
-        )
-        New-Item -Force $withPath -type file -value ('{{"version":"{0}"}}' -f $AtVersion)
-    }
-    function GivenModuleVersionFrom
-    {
-        param(
-            [string]
-            $withPath,
-            [string]
-            $AtVersion
-        )
-        
-        New-Item -Force $withPath -type file -Value ("@{{""ModuleVersion""= ""{0}""}}" -f $AtVersion)
-
-    }
     Describe 'New-WhiskeyContext.when building a Node module by a developer' {
         Init
         GivenConfiguration -withPath 'package.json'
@@ -739,4 +742,5 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
     }
+    
 }
