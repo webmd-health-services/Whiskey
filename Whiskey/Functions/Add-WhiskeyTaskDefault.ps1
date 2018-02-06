@@ -13,14 +13,14 @@ function Add-WhiskeyTaskDefault
     By default, existing defaults are left in place. To override any existing defaults, use the `-Force`... switch.
 
     .EXAMPLE
-    Add-WhiskeyTaskDefault -Context $context -Task 'MSBuild' -Parameter 'Version' -Value 12.0
+    Add-WhiskeyTaskDefault -Context $context -TaskName 'MSBuild' -PropertyName 'Version' -Value 12.0
 
-    Demonstrates setting the default value of the `MSBuild` task's `Version` parameter to `12.0`.
+    Demonstrates setting the default value of the `MSBuild` task's `Version` property to `12.0`.
 
     .EXAMPLE
-    Add-WhiskeyTaskDefault -Context $context -Task 'MSBuild' -Parameter 'Version' -Value 15.0 -Force
+    Add-WhiskeyTaskDefault -Context $context -TaskName 'MSBuild' -PropertyName 'Version' -Value 15.0 -Force
 
-    Demonstrates overwriting the current default value for `MSBuild` task's `Version` parameter to `15.0`.
+    Demonstrates overwriting the current default value for `MSBuild` task's `Version` property to `15.0`.
     #>
     [CmdletBinding()]
     param(

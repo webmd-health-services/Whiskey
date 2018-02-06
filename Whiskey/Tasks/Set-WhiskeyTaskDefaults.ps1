@@ -35,9 +35,9 @@ function Set-WhiskeyTaskDefaults
 
     foreach ($taskName in $TaskParameter.Keys)
     {
-        foreach ($parameterName in $TaskParameter[$taskName].Keys)
+        foreach ($propertyName in $TaskParameter[$taskName].Keys)
         {
-            Add-WhiskeyTaskDefault -Context $TaskContext -Task $taskName -Parameter $parameterName -Value $TaskParameter[$taskName][$parameterName] -Force
+            Add-WhiskeyTaskDefault -Context $TaskContext -TaskName $taskName -PropertyName $propertyname -Value $TaskParameter[$taskName][$propertyName] -Force
         }
     }
 }

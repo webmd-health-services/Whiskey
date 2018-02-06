@@ -126,7 +126,7 @@ Describe 'TaskDefaults.when given invalid task name' {
     Init
     GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'NotARealTask'
     WhenSettingTaskDefaults -ErrorAction SilentlyContinue
-    ThenFailedWithError 'The Task ''NotARealTask'' is not a valid Whiskey task.'
+    ThenFailedWithError 'Task ''NotARealTask'' does not exist.'
 }
 
 Describe 'TaskDefaults.when setting defaults during Clean mode' {
