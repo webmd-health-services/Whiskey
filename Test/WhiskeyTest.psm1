@@ -269,7 +269,11 @@ function New-WhiskeyTestContext
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
-    if( -not $ConfigurationPath )
+    if( $ConfigurationPath )
+    {
+        $configData = Import-WhiskeyYaml -Path $ConfigurationPath
+    }
+    else
     {
         $ConfigurationPath = Join-Path -Path $ForBuildRoot -ChildPath 'whiskey.yml'
         if( $ForYaml )
@@ -290,9 +294,12 @@ function New-WhiskeyTestContext
         }
     }
 
-    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $ConfigurationPath
+    $context = New-WhiskeyContextObject
     $context.BuildRoot = $ForBuildRoot
+    $context.Environment = 'Verificaiton'
+    $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
+    $context.Configuration = $configData
 
     if( -not $ForOutputDirectory )
     {
