@@ -6,7 +6,11 @@ function Add-WhiskeyTaskDefault
     Sets default values for task parameters.
 
     .DESCRIPTION
-    The `Add-WhiskeyTaskDefault` function adds default values for task parameters in the `TaskDefaults` property of the task context object. The function will ensure that the context object already contains a `TaskDefaults` property and if not will throw an error. The given `Task` will also be validated to ensure it is a known valid Whiskey task name, if not an error is thrown. The function will only set a task default if an existing default does not already exist, otherwise an error will be thrown. To overwrite an existing task default use the `Force` parameter.
+    The `Add-WhiskeyTaskDefault` functions sets default properties for tasks. These defaults are only used if the property is missing from the task in your `whiskey.yml` file, i.e. properties defined in your whiskey.yml file take precedence over task defaults.
+
+    `TaskName` must be the name of an existing task. Otherwise, `Add-WhiskeyTaskDefault` will throw an terminating error.
+
+    By default, existing defaults are left in place. To override any existing defaults, use the `-Force`... switch.
 
     .EXAMPLE
     Add-WhiskeyTaskDefault -Context $context -Task 'MSBuild' -Parameter 'Version' -Value 12.0
@@ -28,12 +32,12 @@ function Add-WhiskeyTaskDefault
         [Parameter(Mandatory=$true)]
         [string]
         # The name of the task that a default parameter value will be set.
-        $Task,
+        $TaskName,
 
         [Parameter(Mandatory=$true)]
         [string]
         # The name of the task parameter to set a default value for.
-        $Parameter,
+        $PropertyName,
 
         [Parameter(Mandatory=$true)]
         # The default value for the task parameter.
@@ -52,24 +56,24 @@ function Add-WhiskeyTaskDefault
         throw 'The given ''Context'' object does not contain a ''TaskDefaults'' property. Create a proper Whiskey context object using the ''New-WhiskeyContext'' function.'
     }
 
-    if ($Task -notin (Get-WhiskeyTask | Select-Object -ExpandProperty 'Name'))
+    if ($TaskName -notin (Get-WhiskeyTask | Select-Object -ExpandProperty 'Name'))
     {
-        throw 'The Task ''{0}'' is not a valid Whiskey task.' -f $Task
+        throw 'Task ''{0}'' does not exist.' -f $TaskName
     }
 
-    if ($context.TaskDefaults.ContainsKey($Task))
+    if ($context.TaskDefaults.ContainsKey($TaskName))
     {
-        if ($context.TaskDefaults[$Task].ContainsKey($Parameter) -and -not $Force)
+        if ($context.TaskDefaults[$TaskName].ContainsKey($PropertyName) -and -not $Force)
         {
-            throw 'The ''{0}'' task already contains a default value for the parameter ''{1}''. Use the ''Force'' parameter to overwrite the current value.' -f $Task,$Parameter
+            throw 'The ''{0}'' task already contains a default value for the property ''{1}''. Use the ''Force'' parameter to overwrite the current value.' -f $TaskName,$PropertyName
         }
         else
         {
-            $context.TaskDefaults[$Task][$Parameter] = $Value
+            $context.TaskDefaults[$TaskName][$PropertyName] = $Value
         }
     }
     else
     {
-        $context.TaskDefaults[$Task] = @{ $Parameter = $Value }
+        $context.TaskDefaults[$TaskName] = @{ $PropertyName = $Value }
     }
 }

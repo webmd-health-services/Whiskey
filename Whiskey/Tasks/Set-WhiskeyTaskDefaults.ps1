@@ -6,7 +6,7 @@ function Set-WhiskeyTaskDefaults
     Sets default values for task properties.
 
     .DESCRIPTION
-    The `TaskDefaults` task will set default values for Whiskey task properties. Define task defaults just as you would define the task itself, except nest it under a `TaskDefaults` task. If an invalid task name is given the build will be failed. The `TaskDefaults` task will *always* overwrite any existing task default values for a task.
+    The `TaskDefaults` task will set default values for Whiskey task properties. Define task defaults just as you would define the task itself, except nest it under a `TaskDefaults` task. If an invalid task name is given the build will fail. Task defaults can also be set using the `Add-WhiskeyTaskDefault` function. The last defaults set take precedence over previous defaults.
 
     .EXAMPLE
     The following example demonstrates setting default values for the `MSBuild` task `Version` property and the `NuGetPack` task `Symbols` property.

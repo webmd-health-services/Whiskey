@@ -5,8 +5,8 @@ Set-StrictMode -Version 'Latest'
 $context = $null
 $configurationPath = $null
 $force = $false
-$parameter = $null
-$task = $null
+$propertyName = $null
+$taskName = $null
 $threwException = $false
 $value = $null
 
@@ -16,8 +16,8 @@ function Init
     $script:context = $null
     $script:configurationPath = $null
     $script:force = $false
-    $script:parameter = $null
-    $script:task = $null
+    $script:propertyName = $null
+    $script:taskName= $null
     $script:threwException = $false
     $script:value = $null
 }
@@ -47,22 +47,22 @@ function GivenForce
     $script:force = $true
 }
 
-function GivenTask
+function GivenTaskName
 {
     param(
         $Name
     )
 
-    $script:task = $Name
+    $script:taskName = $Name
 }
 
-function GivenParameter
+function GivenPropertyName
 {
     param(
         $Name
     )
 
-    $script:parameter = $Name
+    $script:propertyName = $Name
 }
 
 function GivenValue
@@ -93,7 +93,7 @@ function WhenAddingTaskDefault
 
     try
     {
-        Add-WhiskeyTaskDefault -Context $context -Task $task -Parameter $parameter -Value $value @forceParam
+        Add-WhiskeyTaskDefault -Context $context -TaskName $taskName -PropertyName $propertyName -Value $value @forceParam
     }
     catch
     {
@@ -127,43 +127,43 @@ function ThenFailedWithError
 function ThenTaskDefaultsContains
 {
     param(
-        $Task,
+        $TaskName,
         $Property,
         $Value
     )
 
-    It ('should set ''{0}'' property ''{1}'' to ''{2}''' -f $Task,$Property,($Value -join ', ')) {
-        $script:context.TaskDefaults.ContainsKey($Task) | Should -Be $true
-        $script:context.TaskDefaults[$Task].ContainsKey($Property) | Should -Be $true
-        $script:context.TaskDefaults[$Task][$Property] | Should -Be $Value
+    It ('should set ''{0}'' property ''{1}'' to ''{2}''' -f $TaskName,$Property,($Value -join ', ')) {
+        $script:context.TaskDefaults.ContainsKey($TaskName) | Should -Be $true
+        $script:context.TaskDefaults[$TaskName].ContainsKey($Property) | Should -Be $true
+        $script:context.TaskDefaults[$TaskName][$Property] | Should -Be $Value
     }
 }
 
 Describe 'Add-WhiskeyTaskDefault.when context object is missing TaskDefaults property' {
     Init
     GivenContext [pscustomobject]@{ RunMode = 'Build' }
-    Giventask 'MSBuild'
-    GivenParameter 'Version'
+    GiventaskName 'MSBuild'
+    GivenPropertyName 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault -ErrorAction SilentlyContinue
     ThenFailedWithError 'does not contain a ''TaskDefaults'' property'
 }
 
-Describe 'Add-WhiskeyTaskDefault.when given an invalid task' {
+Describe 'Add-WhiskeyTaskDefault.when given an invalid task name' {
     Init
     GivenContext
-    Giventask 'NotARealTask'
-    GivenParameter 'Version'
+    GiventaskName 'NotARealTask'
+    GivenPropertyName 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault -ErrorAction SilentlyContinue
-    ThenFailedWithError 'The task ''NotARealTask'' is not a valid Whiskey task'
+    ThenFailedWithError 'Task ''NotARealTask'' does not exist.'
 }
 
 Describe 'Add-WhiskeyTaskDefault.when setting MSBuild ''Version'' property to 12.0 and then trying to set it again' {
     Init
     GivenContext
-    Giventask 'MSBuild'
-    GivenParameter 'Version'
+    GiventaskName 'MSBuild'
+    GivenPropertyName 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault
     ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
@@ -171,20 +171,20 @@ Describe 'Add-WhiskeyTaskDefault.when setting MSBuild ''Version'' property to 12
 
     Context 'MSBuild ''Version'' already set' {
         WhenAddingTaskDefault -ErrorAction SilentlyContinue
-        ThenFailedWithError 'task already contains a default value for the parameter'
+        ThenFailedWithError 'task already contains a default value for the property'
     }
 }
 
-Describe 'Add-WhiskeyTaskDefault.when a task parameter already contains a default value but ''Force'' was used' {
+Describe 'Add-WhiskeyTaskDefault.when a task property already contains a default value but ''Force'' was used' {
     Init
     GivenContext
-    Giventask 'MSBuild'
-    GivenParameter 'Version'
+    GiventaskName 'MSBuild'
+    GivenPropertyName 'Version'
     GivenValue 12.0
     WhenAddingTaskDefault
 
-    Giventask 'MSBuild'
-    GivenParameter 'Version'
+    GiventaskName 'MSBuild'
+    GivenPropertyName 'Version'
     GivenValue 15.0
     GivenForce
     WhenAddingTaskDefault

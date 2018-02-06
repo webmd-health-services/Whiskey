@@ -13,19 +13,14 @@ function New-WhiskeyContext
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
     * `BuildMetadata`: metadata information of the current build on a build server.
-    * `Configuration`: the object returned from the YAML parser that describes the YAML file configuration.
     * `ConfigurationPath`: the absolute path to the YAML file passed via the `ConfigurationPath` parameter.
-    * `Credentials`: any credentials needed by tasks are stored here with a unique ID. Use `Add-WhiskeyCredential` to add credentials to this property.
-    * `DownloadRoot`: the path to a directory where tools can be downloaded when needed.
     * `Environment`: the environment the build is running in.
     * `OutputDirectory`: the path to a directory where build output, reports, etc. should be saved. This directory is created for you.
     * `PipelineName`: the currently running task pipeline.
     * `Publish`: a flag indicating if the PublishTasks pipeline should run.
     * `RunMode`: the current run mode of the build, `Build`, `Clean`, or `Initialize`. Defaults to `build`.
     * `TaskName`: The currently running task.
-    * `TaskDefaults`: default task parameter values parsed from the `TaskDefaults` property of the YAML file.
     * `Temp`: the temporary work directory for the current task.
-    * `Variables`: any variables set using the `SetVariable` task.
     * `Version`: a `SemVersion.SemanticVersion` object representing the semantic version to use when building the application. This object has two extended properties: `Version`, a `Version` object that represents the semantic version with all pre-release and build metadata stripped off; and `ReleaseVersion` a `SemVersion.SemanticVersion` object with all build metadata stripped off.
 
     .EXAMPLE
