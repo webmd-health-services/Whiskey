@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.28.0'
+    ModuleVersion = '0.28.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,8 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added `Add-WhiskeyTaskDefault` function for adding new task default parameter values to an existing task context object.
-* Added `TaskDefaults` task for setting default values for task properties.
+* Fixed: `New-WhiskeySemanticVersion` could not read `Version` property from .csproj files if they contained a default xml namespace.
 '@
         } # End of PSData hashtable
 
