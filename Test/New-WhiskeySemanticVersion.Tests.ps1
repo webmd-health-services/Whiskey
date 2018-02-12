@@ -410,3 +410,18 @@ Describe 'New-WhiskeySemanticVersion.when given Path to a ''.csproj'' with a val
     WhenGettingSemanticVersion
     ThenAddedBuildMetadataToSemanticVersionOf '1.2.3'
 }
+
+Describe 'New-WhiskeySemanticVersion.when given Path to a ''.csproj'' with a valid version and a default xml namespace' {
+    Init
+    GivenFile 'dotnetlibrary.csproj' @'
+    <Project Sdk="Microsoft.NET.Sdk" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+        <PropertyGroup>
+            <Description>Library description</Description>
+            <Version>1.2.3</Version>
+        </PropertyGroup>
+    </Project>
+'@
+    GivenPath 'dotnetlibrary.csproj'
+    WhenGettingSemanticVersion
+    ThenAddedBuildMetadataToSemanticVersionOf '1.2.3'
+}

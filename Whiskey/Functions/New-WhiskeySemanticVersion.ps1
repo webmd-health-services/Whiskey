@@ -128,11 +128,18 @@ function New-WhiskeySemanticVersion
                 return
             }
 
-            $csprojVersion = $csprojXml.SelectNodes('/Project/PropertyGroup/Version') | Select-Object -ExpandProperty '#text'
+            $xmlns = New-Object System.Xml.XmlNamespaceManager($csprojXml.NameTable)
+            $xmlns.AddNamespace('ns', $csprojXml.DocumentElement.NamespaceURI)
+            $csprojVersionNode = $csprojXml.SelectSingleNode('//ns:Version', $xmlns)
+            $csprojVersion = $null
+            if( $csprojVersionNode )
+            {
+                $csprojVersion = $csprojVersionNode.InnerXml
+            }
 
             if( -not $csprojVersion )
             {
-                Write-Error -Message ('Unable to get the version to build from the csproj file ''{0}'' as it either did''t contain a ''Version'' element or the element text was empty. Please make sure there is a valid ''Version'' element located under ''/Project/PropertyGroup'', e.g.
+                Write-Error -Message ('Unable to get the version to build from the csproj file ''{0}'' as it either didn''t contain a ''Version'' element or the element text was empty. Please make sure there is a valid ''Version'' element located under ''/Project/PropertyGroup'', e.g.
 
                 <Project Sdk="Microsoft.NET.Sdk">
                     <PropertyGroup>

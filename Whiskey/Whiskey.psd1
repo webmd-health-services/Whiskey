@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.29.0'
+    ModuleVersion = '0.29.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* `MSBuild` task can now use 32-bit MSBuild.exe. Set the new `Use32Bit` task property to `true`.
+* Fixed: `New-WhiskeySemanticVersion` could not read `Version` property from .csproj files if they contained a default xml namespace.
 '@
         } # End of PSData hashtable
 
