@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.28.0'
+    ModuleVersion = '0.29.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,8 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added `Add-WhiskeyTaskDefault` function for adding new task default parameter values to an existing task context object.
-* Added `TaskDefaults` task for setting default values for task properties.
+* `MSBuild` task can now use 32-bit MSBuild.exe. Set the new `Use32Bit` task property to `true`.
 '@
         } # End of PSData hashtable
 

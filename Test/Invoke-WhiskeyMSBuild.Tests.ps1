@@ -10,6 +10,7 @@ $assembly = $null
 $previousBuildRunAt = $null
 $version = $null
 $nuGetVersion = $null
+$use32Bit = $null
 
 $assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
 foreach( $item in @( 'bin', 'obj', 'packages' ) )
@@ -85,6 +86,15 @@ function GivenProjectsThatCompile
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.yml') -Destination (Get-BuildRoot)
 }
 
+function GivenUse32BitIs
+{
+    param(
+        $Value
+    )
+
+    $script:use32Bit = $value
+}
+
 function GivenVersion
 {
     param(
@@ -107,6 +117,7 @@ function Init
 {
     $script:version = $null
     $script:nuGetVersion = $null
+    $script:use32Bit = $false
 }
 
 function WhenRunningTask
@@ -172,6 +183,11 @@ function WhenRunningTask
     if( $nuGetVersion )
     {
         $WithParameter['NuGetVersion'] = $nuGetVersion
+    }
+
+    if( $use32Bit )
+    {
+        $WithParameter['Use32Bit'] = $use32Bit
     }
     
     $Global:Error.Clear()
@@ -634,4 +650,36 @@ Describe 'MSBuild Task.when run by developer using a specific version of NuGet' 
     WhenRunningTask -AsDeveloper
     ThenSpecificNuGetVersionInstalled
     ThenNuGetPackagesRestored
+}
+
+$procArchProject = @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="Build">
+        <Message Text="PROCESSOR_ARCHITECTURE = `$(PROCESSOR_ARCHITECTURE)" Importance="High" />
+    </Target>
+</Project>
+"@
+
+Describe 'MSBuild Task.when using 32-bit MSBuild is undefined' {
+    Init
+    GivenProject $procArchProject
+    WhenRunningTask -AsDeveloper
+    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
+}
+
+Describe 'MSBuild Task.when using 32-bit MSBuild' {
+    Init
+    GivenProject $procArchProject
+    GivenUse32BitIs 'true'
+    WhenRunningTask -AsDeveloper
+    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
+}
+
+Describe 'MSBuild Task.when explicitly not using 32-bit MSBuild' {
+    Init
+    GivenProject $procArchProject
+    GivenUse32BitIs 'false'
+    WhenRunningTask -AsDeveloper
+    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
 }
