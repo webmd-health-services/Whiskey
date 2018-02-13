@@ -232,6 +232,7 @@ function Invoke-WhiskeyTask
     Push-Location -Path $workingDirectory
     try
     {
+        $modes = @( 'Clean', 'Initialize', 'Build' )
         $onlyDuring = $Parameter['OnlyDuring']
         $exceptDuring = $Parameter['ExceptDuring']
 
@@ -239,13 +240,13 @@ function Invoke-WhiskeyTask
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
         }
-        elseif ($onlyDuring -and ($onlyDuring -notin @('Clean', 'Initialize')))
+        elseif ($onlyDuring -and ($onlyDuring -notin $modes))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $onlyDuring)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are: ''{1}''.' -f $onlyDuring,($modes -join "', '"))
         }
-        elseif ($exceptDuring -and ($exceptDuring -notin @('Clean', 'Initialize')))
+        elseif ($exceptDuring -and ($exceptDuring -notin $modes))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are the run modes ''Clean'' or ''Initialize''.' -f $exceptDuring)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are: ''{1}''.' -f $exceptDuring,($modes -join "', '"))
         }
 
         if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))
