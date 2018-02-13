@@ -121,16 +121,7 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper
-    
-    if( $InCleanMode )
-    {
-        $context.RunMode = 'Clean'
-    }
-    elseif( $InInitMode )
-    {
-        $context.RunMode = 'Initialize'
-    }
+    $context = New-WhiskeyTestContext -ForDeveloper -InCleanMode:$InCleanMode -InInitMode:$InInitMode
     
     $failed = $false
 

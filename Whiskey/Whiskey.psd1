@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* The `PowerShell` task now runs in every mode: initialize, build, and clean. If you want a task to only run during a subset of these modes, use the `OnlyDuring` and `ExceptDuring` task properties.
+* ***BREAKING CHANGE***: The "PowerShell" and "Exec" tasks now run in every mode: initialize, build, and clean. If you want them to only run during a subset of these modes, use the `OnlyDuring` or `ExceptDuring` task properties.
 '@
         } # End of PSData hashtable
 

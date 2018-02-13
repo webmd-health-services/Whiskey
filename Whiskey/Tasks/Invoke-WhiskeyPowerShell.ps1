@@ -8,7 +8,7 @@ function Invoke-WhiskeyPowerShell
     .DESCRIPTION
     The PowerShell tasks runs PowerShell scripts. You specify the scripts to run via the `Path` property. Paths must be relative to the whiskey.yml file. Pass arguments to the scripts with the `Argument` property, which is a hash table of parameter names and values. PowerShell scripts are run in new, background processes.
 
-    The PowerShell task runs your script in *all* build modes: during builds, during initialization, and during clean. If you want your script to only run in one mode, use the global `OnlyDuring` property to specify the mode you want it to run in or the `ExceptDuring` property to specify the run mode you don't want it to run in.
+    The PowerShell task runs your script in *all* build modes: during builds, during initialization, and during clean. If you want your script to only run in one mode, use the `OnlyDuring` property to specify the mode you want it to run in or the `ExceptDuring` property to specify the run mode you don't want it to run in.
 
     The PowerShell task will fail a build if the script it runs returns a non-zero exit code or sets the `$?` variable to `$false`.
 
