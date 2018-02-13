@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.29.1'
+    ModuleVersion = '0.30.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `New-WhiskeySemanticVersion` could not read `Version` property from .csproj files if they contained a default xml namespace.
+* ***BREAKING CHANGE***: The "PowerShell" and "Exec" tasks now run in every mode: initialize, build, and clean. If you want them to only run during a subset of these modes, use the `OnlyDuring` or `ExceptDuring` task properties.
 '@
         } # End of PSData hashtable
 

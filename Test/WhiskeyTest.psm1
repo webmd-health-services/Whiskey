@@ -254,7 +254,13 @@ function New-WhiskeyTestContext
         $DownloadRoot,
 
         [Switch]
-        $IgnoreExistingOutputDirectory
+        $IgnoreExistingOutputDirectory,
+
+        [Switch]
+        $InCleanMode,
+
+        [Switch]
+        $InInitMode
     )
 
     Set-StrictMode -Version 'Latest'
@@ -300,6 +306,15 @@ function New-WhiskeyTestContext
     $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
+
+    if( $InCleanMode )
+    {
+        $context.RunMode = 'Clean'
+    }
+    elseif( $InInitMode )
+    {
+        $context.RunMode = 'Initialize'
+    }
 
     if( -not $ForOutputDirectory )
     {
