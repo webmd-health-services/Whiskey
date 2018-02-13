@@ -379,21 +379,15 @@ param(
 }
 
 Describe 'PowerShell.when run in Clean mode' {
-    GivenAScript @'
-New-Item -Path 'clean' -itemType 'File'
-'@
+    GivenAScript
     WhenTheTaskRuns -InCleanMode
-    It ('should run the script') {
-        ThenFile -Path 'clean'
-    }
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }
 
 Describe 'PowerShell.when run in Initialize mode' {
-    GivenAScript @'
-New-Item -Path 'init' -itemType 'File'
-'@
+    GivenAScript 
     WhenTheTaskRuns -InInitMode
-    It ('should run the script') {
-        ThenFile -Path 'init'
-    }
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }

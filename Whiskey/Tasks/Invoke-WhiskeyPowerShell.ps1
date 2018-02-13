@@ -6,7 +6,7 @@ function Invoke-WhiskeyPowerShell
     Executes PowerShell tasks.
 
     .DESCRIPTION
-    The PowerShell tasks runs PowerShell scripts. You specify the scripts to run via the `Path` property. Paths must be relative to the whiskey.yml file. Pass arguments to the scripts with the `Argument` property, which is a hash table of parameter names and values. PowerShell scripts are run in new, background processes.
+    The PowerShell task runs PowerShell scripts. You specify the scripts to run via the `Path` property. Paths must be relative to the whiskey.yml file. Pass arguments to the scripts with the `Argument` property, which is a hash table of parameter names and values. PowerShell scripts are run in new, background processes.
 
     The PowerShell task runs your script in *all* build modes: during builds, during initialization, and during clean. If you want your script to only run in one mode, use the `OnlyDuring` property to specify the mode you want it to run in or the `ExceptDuring` property to specify the run mode you don't want it to run in.
 
@@ -23,7 +23,6 @@ function Invoke-WhiskeyPowerShell
 
     ## Properties
     * **Path** (mandatory): the paths to the PowerShell scripts to run. Paths must be relative to the  whiskey.yml file. Script arguments are not supported.
-    * **WorkingDirectory**: the directory from which the scripts should be run. This path can be absolute. The default is the  whiskey.yml file's directory.
     * **Argument**: a hash table of name/value pairs that are passed to your script as arguments. The hash table is actually splatted when passed to your script.
 
     ## Examples

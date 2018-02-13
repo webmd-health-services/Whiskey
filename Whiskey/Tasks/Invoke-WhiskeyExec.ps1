@@ -71,7 +71,7 @@ function Invoke-WhiskeyExec
             - /C
             - init.bat
 
-    Demonstrates how to run an executable except when the build is cleaning. If you have am executable you want to use to initialize your build environment, it should run during the build and initialize modes. Set the `ExceptDuring` property to `Clean` to make that happen.
+    Demonstrates how to run an executable except when the build is cleaning. If you have an executable you want to use to initialize your build environment, it should run during the build and initialize modes. Set the `ExceptDuring` property to `Clean` to make that happen.
 
     ### Example 5
 
