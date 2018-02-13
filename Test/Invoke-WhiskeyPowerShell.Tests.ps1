@@ -95,9 +95,14 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-
         [object]
-        $WithArgument
+        $WithArgument,
+
+        [Switch]
+        $InCleanMode,
+
+        [Switch]
+        $InInitMode
     )
 
     $taskParameter = @{
@@ -117,6 +122,15 @@ function WhenTheTaskRuns
     }
 
     $context = New-WhiskeyTestContext -ForDeveloper
+    
+    if( $InCleanMode )
+    {
+        $context.RunMode = 'Clean'
+    }
+    elseif( $InInitMode )
+    {
+        $context.RunMode = 'Initialize'
+    }
     
     $failed = $false
 
@@ -371,4 +385,24 @@ param(
 "@
     WhenTheTaskRuns -WithArgument @{ }
     ThenTheTaskPasses
+}
+
+Describe 'PowerShell.when run in Clean mode' {
+    GivenAScript @'
+New-Item -Path 'clean' -itemType 'File'
+'@
+    WhenTheTaskRuns -InCleanMode
+    It ('should run the script') {
+        ThenFile -Path 'clean'
+    }
+}
+
+Describe 'PowerShell.when run in Initialize mode' {
+    GivenAScript @'
+New-Item -Path 'init' -itemType 'File'
+'@
+    WhenTheTaskRuns -InInitMode
+    It ('should run the script') {
+        ThenFile -Path 'init'
+    }
 }
