@@ -9,7 +9,7 @@ LONG DESCRIPTION
     ## Overview
 
     Think of Whiskey as a build server you can run from the command line. 
-    Insted of writing a bunch of PowerShell/batch/whatever scripts, what you 
+    Instead of writing a bunch of PowerShell/batch/whatever scripts, what you 
     want to happen during your build is written as [YAML](http://yaml.org/) 
     into a "whiskey.yml" text file and committed into the root of your 
     source code repository.
