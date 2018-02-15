@@ -6,8 +6,9 @@ PublishOn:
 BuildTasks:
 - PowerShell:
     Path: init.ps1
-    
+
 - Pester4:
+    OnlyBy: BuildServer
     Path: Test\*.Tests.ps1
     DescribeDurationReportCount: 20
     
