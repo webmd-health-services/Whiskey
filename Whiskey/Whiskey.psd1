@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `New-WhiskeySemanticVersion` could not read `Version` property from .csproj files if they contained a default xml namespace.
+* Added `WHISKEY_BUILD_STARTED_AT` variable. It's a `[datetime]` object that is the date/time the build started.
 '@
         } # End of PSData hashtable
 

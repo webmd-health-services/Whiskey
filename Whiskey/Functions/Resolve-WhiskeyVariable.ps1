@@ -10,29 +10,7 @@ function Resolve-WhiskeyVariable
     
     You can add variables to replace via the `Add-WhiskeyVariable` function. If a variable doesn't exist, environment variables are used. If a variable has the same name as an environment variable, the variable value is used instead of the environment variable's value. If no variable or environment variable is found, `Resolve-WhiskeyVariable` will write an error and return the origin string.
 
-    Well-known Whiskey variables you can use are:
-
-    * `WHISKEY_MSBUILD_CONFIGURATION`: The configuration used when building with MSBuild. `Debug` when run by a developer. `Release` otherwise.
-    * `WHISKEY_ENVIRONMENT`: The environment.
-    * `WHISKEY_BUILD_ROOT`: The directory of the `whiskey.yml` file that controls this build.
-    * `WHISKEY_OUTPUT_DIRECTORY`: The directory where build output is put.
-    * `WHISKEY_PIPELINE_NAME`: The name of the pipeline being run. `Build` when a build is running. `Publish` when publishing.
-    * `WHISKEY_TASK_NAME`: The name of the current task.
-    * `WHISKEY_SEMVER2`: The semantic version of the current build in the Semantic Versioning 2.0.0 format.
-    * `WHISKEY_SEMVER2_NO_BUILD_METADATA`: The semantic version of the curren build with no build metadata.
-    * `WHISKEY_VERSION`: The version number of the build, with no prerelease or build metadata.
-    * `WHISKEY_SEMVER1`: The semantic version of the current build in the Semantic Versioning 1.0.0 format.
-
-    The following additional variables are available, but they only have values when running under a build server.
-
-    * `WHISKEY_BUILD_NUMBER`: The current build number.
-    * `WHISKEY_BUILD_ID`: The unique ID that distinguishes this build from all others.
-    * `WHISKEY_BUILD_SERVER_NAME`: The name of the build server running the build.
-    * `WHISKEY_BUILD_URI`: The URI to this build's build report.
-    * `WHISKEY_JOB_URI`: The URI to the jobs that is running this build.
-    * `WHISKEY_SCM_BRANCH`: The branch the build is happening on.
-    * `WHISKEY_SCM_COMMIT_ID`: The commit ID that is being built.
-    * `WHISKEY_SCM_URI`: The URI to the repository where the source code being built came from.
+    See the `about_Whiskey_Variables` help topic for a list of variables.
 
     .EXAMPLE
     '$(COMPUTERNAME)' | Resolve-WhiskeyVariable
@@ -110,15 +88,16 @@ function Resolve-WhiskeyVariable
                                     'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
                                     'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
                                     'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServer;
-                                    'WHISKEY_BUILD_URI' = [uri]$buildInfo.BuildUri;
+                                    'WHISKEY_BUILD_STARTED_AT' = $Context.StartedAt;
+                                    'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
                                     'WHISKEY_ENVIRONMENT' = $Context.Environment;
-                                    'WHISKEY_JOB_URI' = [uri]$buildInfo.JobUri;
+                                    'WHISKEY_JOB_URI' = $buildInfo.JobUri;
                                     'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
                                     'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
                                     'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
                                     'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
                                     'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
-                                    'WHISKEY_SCM_URI' = [uri]$buildInfo.ScmUri;
+                                    'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
                                     'WHISKEY_SEMVER1' = $version.SemVer1;
                                     'WHISKEY_SEMVER1_VERSION' = $sem1Version;
                                     'WHISKEY_SEMVER2' = $version.SemVer2;

@@ -55,7 +55,7 @@ function Invoke-WhiskeyBuild
     [CmdletBinding(DefaultParameterSetName='Build')]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context for the build. Use `New-WhiskeyContext` to create context objects.
         $Context,
 
@@ -79,7 +79,7 @@ function Invoke-WhiskeyBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $script:buildStartedAt = Get-Date
+    $Context.StartedAt = $script:buildStartedAt = Get-Date
 
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
