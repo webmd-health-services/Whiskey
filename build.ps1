@@ -34,6 +34,10 @@ $assemblyVersion = @"
 "@ 
 
 $assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
+if( -not (Test-Path -Path $assemblyVersionPath -PathType Leaf) )
+{
+    '' | Set-Content -Path $assemblyVersionPath
+}
 
 $currentAssemblyVersion = Get-Content -Path $assemblyVersionPath -Raw
 if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
