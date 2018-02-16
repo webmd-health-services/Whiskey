@@ -57,9 +57,6 @@ if( $LASTEXITCODE )
     exit 1
 }
 
-$nugetExePath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe' -Resolve
-& $nugetExePath 'install' 'xunit.runner.console' '-Version' '2.3.1' '-OutputDirectory' 'packages'
-
 $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
 $whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\bin\Release'
 foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )

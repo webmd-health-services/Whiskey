@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Whiskey
@@ -8,17 +10,21 @@ namespace Whiskey
         public Context()
         {
             ApiKeys = new Dictionary<string, string>();
-            RunBy = RunBy.Developer;
             BuildMetadata = new BuildInfo();
+            RunBy = RunBy.Developer;
             Configuration = new Dictionary<object, object>();
             Credentials = new Dictionary<string, object>();
             RunMode = RunMode.Build;
             TaskDefaults = new Dictionary<string, Dictionary<string, object>>();
             TaskIndex = -1;
+            Variables = new Dictionary<string, object>();
             Version = new BuildVersion();
+            Environment = "";
+            PipelineName = "";
+            TaskName = "";
         }
 
-        public Dictionary<string,string> ApiKeys { get; private set; }
+        public IDictionary ApiKeys { get; private set; }
 
         public DirectoryInfo BuildRoot { get; set; }
 
@@ -26,13 +32,13 @@ namespace Whiskey
 
         public bool ByDeveloper { get { return this.RunBy == RunBy.Developer; } }
 
-        public BuildInfo BuildMetadata { get; private set; }
+        public BuildInfo BuildMetadata { get; set; }
 
-        public Dictionary<object,object> Configuration { get; set; }
+        public IDictionary Configuration { get; set; }
 
         public FileInfo ConfigurationPath { get; set; }
 
-        public Dictionary<string,object> Credentials { get; private set; }
+        public IDictionary Credentials { get; private set; }
 
         public DirectoryInfo DownloadRoot { get; set; }
 
@@ -48,16 +54,24 @@ namespace Whiskey
 
         public RunMode RunMode { get; set; }
 
+        public bool ShouldClean { get { return RunMode == RunMode.Clean; } }
+
+        public bool ShouldInitialize { get { return RunMode == RunMode.Initialize; } }
+
+        public DateTime StartedAt { get; set; }
+
         public string TaskName { get; set; }
 
         public int TaskIndex { get; set; }
 
-        public Dictionary<string,Dictionary<string,object>> TaskDefaults { get; private set; }
+        public IDictionary TaskDefaults { get; private set; }
 
         public DirectoryInfo Temp { get; set; }
 
-        public Dictionary<string,string> Variables { get; private set; }
+        public IDictionary Variables { get; private set; }
 
         public BuildVersion Version { get; set; }
+
+
     }
 }

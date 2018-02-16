@@ -90,7 +90,7 @@ function Invoke-WhiskeyNUnit3Task
     [Whiskey.Task("NUnit3",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -128,7 +128,7 @@ function Invoke-WhiskeyNUnit3Task
         $reportGeneratorVersionParam['Version'] = $TaskParameter['ReportGeneratorVersion']
     }
 
-    if ($TaskContext.ShouldClean())
+    if( $TaskContext.ShouldClean )
     {
         Uninstall-WhiskeyTool -NuGetPackageName $nunitPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
         Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionParam
@@ -154,7 +154,7 @@ function Invoke-WhiskeyNUnit3Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''ReportGenerator'' failed to install.'
     }
 
-    if ($TaskContext.ShouldInitialize())
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }

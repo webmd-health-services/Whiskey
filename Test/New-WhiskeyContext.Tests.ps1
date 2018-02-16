@@ -15,6 +15,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function Assert-Context
     {
         param(
+            [Whiskey.Context]
             $Context,
 
             $Environment,
@@ -60,7 +61,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
 
         It 'should have TaskDefaults property' {
-            $Context.TaskDefaults | Should -BeOfType ([hashtable])
+            $Context.TaskDefaults | Should -BeOfType ([Collections.IDictionary])
         }
 
         ThenSemVer2Is $SemanticVersion
@@ -77,7 +78,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer2NoBuildMetadataIs $expectedReleaseVersion
 
         It 'should set raw configuration hashtable' {
-            $Context.Configuration | Should -BeOfType ([Collections.Generic.Dictionary[object,object]])
+            $Context.Configuration | Should -BeOfType ([Collections.IDictionary])
             $Context.Configuration.ContainsKey('SomProperty') | Should Be $true
             $Context.Configuration['SomProperty'] | Should Be 'SomeValue'
         }
@@ -88,7 +89,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
 
         It 'should set download root' {
-            $Context.DownloadRoot | Should Be $DownloadRoot
+            $Context.DownloadRoot.FullName | Should -Be $DownloadRoot.FullName
         }
 
         It 'should set build server flag' {
@@ -101,17 +102,17 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
 
         It 'ApiKeys property should be a hashtable' {
-            $Context.ApiKeys | Should -BeOfType ([hashtable])
+            $Context.ApiKeys | Should -BeOfType ([Collections.IDictionary])
         }
 
         It ('should have ShouldClean method') {
             $Context | Get-Member -Name 'ShouldClean' | Should -BE $true
-            $Context.ShouldClean() | Should -Be $false
+            $Context.ShouldClean | Should -Be $false
         }
 
         It ('should have ShouldInitialize method') {
             $Context | Get-Member -Name 'ShouldInitialize' | Should -BE $true
-            $Context.ShouldClean() | Should -Be $false
+            $Context.ShouldInitialize | Should -Be $false
         }
 
         It ('should have BuildMetadata property') {
@@ -121,7 +122,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
         It ('should have Variables property') {
             $Context | Get-Member -Name 'Variables' | Should -Not -BeNullOrEmpty
-            $Context.Variables | Should -BeOfType ([hashtable])
+            $Context.Variables | Should -BeOfType ([Collections.IDictionary])
         }
     }
 
@@ -144,7 +145,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $PublishingOn,
 
             [Parameter(Position=0)]
-            [hashtable]
+            [Collections.IDictionary]
             $Configuration,
 
             $BuildNumber = '1'
@@ -180,7 +181,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         {
             $buildInfo.ScmBranch = $OnBranch
             $buildInfo.ScmCommitID = 'deadbee'
-            $buildInfo.BuildServerName = 'Jenkins'
+            $buildInfo.BuildServer = [Whiskey.BuildServer]::Jenkins
         }
 
         $yaml = $Configuration | ConvertTo-Yaml
@@ -451,8 +452,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $ExpectedValue
         )
 
-        It ('ShouldClean() should be ''{0}''' -f $ExpectedValue) {
-            $script:context.ShouldClean() | Should -Be $ExpectedValue
+        It ('ShouldClean should be ''{0}''' -f $ExpectedValue) {
+            $script:context.ShouldClean | Should -Be $ExpectedValue
         }
     }
 
@@ -462,8 +463,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $ExpectedValue
         )
 
-        It ('ShouldInitialize() should be ''{0}''' -f $ExpectedValue) {
-            $script:context.ShouldInitialize() | Should -Be $ExpectedValue
+        It ('ShouldInitialize should be ''{0}''' -f $ExpectedValue) {
+            $script:context.ShouldInitialize | Should -Be $ExpectedValue
         }
     }
 
@@ -536,8 +537,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when run by the build server and customizing download root' {
         Init
         GivenConfiguration -WithVersion '1.2.3-fubar+snafu' -ForBuildServer
-        WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive.FullName
-        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive.FullName
+        WhenCreatingContext -ByBuildServer -WithDownloadRoot $TestDrive
+        ThenBuildServerContextCreated -WithSemanticVersion '1.2.3-fubar+snafu' -WithDownloadRoot $TestDrive
         ThenDoesNotPublish
     }
 

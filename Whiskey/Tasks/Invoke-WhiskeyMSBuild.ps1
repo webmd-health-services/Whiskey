@@ -53,7 +53,7 @@ function Invoke-WhiskeyMSBuild
     [Whiskey.Task("MSBuild",SupportsClean=$true)]
     [CmdletBinding()]
     param(
-        [object]
+        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
         
@@ -113,7 +113,7 @@ function Invoke-WhiskeyMSBuild
     Write-Verbose -Message ('{0}' -f $msbuildExePath)
     
     $target = @( 'build' )
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         $target = 'clean'
     }
@@ -131,7 +131,7 @@ function Invoke-WhiskeyMSBuild
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
-            if( $TaskContext.ShouldClean() )
+            if( $TaskContext.ShouldClean )
             {
                 $packageDirectoryPath = Join-Path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )

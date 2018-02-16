@@ -236,7 +236,7 @@ InModuleScope 'Whiskey' {
         $scriptPropertyName = 'Is{0}' -f $Name
 
         It ('should be running by {0}' -f $Name) {
-            $buildInfo.BuildServerName | Should Be $Name
+            $buildInfo.BuildServer | Should Be $Name
             $buildInfo.$scriptPropertyName | Should Be $true
             $buildInfo.IsDeveloper | Should Be $false
             $buildInfo.IsBuildServer | Should Be $true
@@ -247,7 +247,7 @@ InModuleScope 'Whiskey' {
     {
         $buildInfo = $script:buildInfo
         It ('should be running as developer') {
-            $buildInfo.BuildServerName | Should BeNullOrEmpty
+            $buildInfo.BuildServer | Should BeNullOrEmpty
             $buildInfo.IsDeveloper | Should Be $true
             $buildInfo.IsBuildServer | Should Be $false
         }

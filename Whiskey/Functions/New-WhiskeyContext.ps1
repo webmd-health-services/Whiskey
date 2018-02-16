@@ -127,8 +127,12 @@ function New-WhiskeyContext
 
     $context = New-WhiskeyContextObject
     $context.BuildRoot = $buildRoot
-    $context.ByBuildServer = $byBuildServer
-    $context.ByDeveloper = (-not $byBuildServer)
+    $runBy = [Whiskey.RunBy]::Developer
+    if( $byBuildServer )
+    {
+        $runBy = [Whiskey.RunBy]::BuildServer
+    }
+    $context.RunBy = $runBy
     $context.BuildMetadata = $buildMetadata
     $context.Configuration = $config
     $context.ConfigurationPath = $ConfigurationPath
@@ -136,7 +140,7 @@ function New-WhiskeyContext
     $context.Environment = $Environment
     $context.OutputDirectory = $outputDirectory
     $context.Publish = $publish
-    $context.RunMode = 'Build'
+    $context.RunMode = [Whiskey.RunMode]::Build
 
     if( $config['Variable'] )
     {

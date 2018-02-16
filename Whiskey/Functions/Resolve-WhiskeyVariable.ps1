@@ -81,7 +81,7 @@ function Resolve-WhiskeyVariable
         $InputObject,
 
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context of the current build. Necessary to lookup any variables.
         $Context
     )
@@ -109,7 +109,7 @@ function Resolve-WhiskeyVariable
                                     'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
                                     'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
                                     'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
-                                    'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServerName;
+                                    'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServer;
                                     'WHISKEY_BUILD_URI' = [uri]$buildInfo.BuildUri;
                                     'WHISKEY_ENVIRONMENT' = $Context.Environment;
                                     'WHISKEY_JOB_URI' = [uri]$buildInfo.JobUri;

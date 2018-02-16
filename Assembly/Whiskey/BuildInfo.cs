@@ -8,6 +8,10 @@ namespace Whiskey
     {
         public BuildInfo()
         {
+            BuildID = "";
+            JobName = "";
+            ScmBranch = "";
+            ScmCommitID = "";
         }
 
         public int BuildNumber { get; set; }

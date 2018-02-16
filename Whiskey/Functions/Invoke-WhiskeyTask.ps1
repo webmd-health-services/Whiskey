@@ -11,7 +11,7 @@ function Invoke-WhiskeyTask
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
 
@@ -259,7 +259,7 @@ function Invoke-WhiskeyTask
             return
         }
     
-        $inCleanMode = $TaskContext.ShouldClean()
+        $inCleanMode = $TaskContext.ShouldClean
         if( $inCleanMode )
         {
             if( -not $task.SupportsClean )
@@ -278,7 +278,7 @@ function Invoke-WhiskeyTask
                                 -ErrorAction Stop
         }
 
-        if( $TaskContext.ShouldInitialize() -and -not $task.SupportsInitialize )
+        if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
         {
             Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
             return
@@ -301,7 +301,7 @@ function Invoke-WhiskeyTask
     finally
     {
         # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
-        if( $TaskContext.ShouldClean() )
+        if( $TaskContext.ShouldClean )
         {
             foreach( $requiredTool in $requiredTools )
             {

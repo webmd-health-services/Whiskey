@@ -67,7 +67,7 @@ function Invoke-WhiskeyNUnit2Task
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -112,7 +112,7 @@ function Invoke-WhiskeyNUnit2Task
         $reportGeneratorArgs += $TaskParameter['ReportGeneratorArgument']
     }
     
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         Write-WhiskeyTiming -Message ('Uninstalling ReportGenerator.')
         Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
@@ -190,7 +190,7 @@ function Invoke-WhiskeyNUnit2Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find ReportGenerator.exe in ReportGenerator NuGet package at ''{0}''.' -f $reportGeneratorRoot)
     }
 
-    if( $TaskContext.ShouldInitialize() )
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }

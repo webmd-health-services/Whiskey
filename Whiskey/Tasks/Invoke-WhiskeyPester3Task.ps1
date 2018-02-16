@@ -21,7 +21,7 @@ function Invoke-WhiskeyPester3Task
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -52,7 +52,7 @@ function Invoke-WhiskeyPester3Task
         $version = '3.*'
     }
 
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
@@ -60,7 +60,7 @@ function Invoke-WhiskeyPester3Task
     
     $pesterModulePath = Install-WhiskeyTool -ModuleName 'Pester' -Version $version -DownloadRoot $TaskContext.BuildRoot
 
-    if( $TaskContext.ShouldInitialize() )
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }

@@ -10,7 +10,7 @@ $buildServerMetadataObject = New-WhiskeyBuildMetadataObject
 $buildServerMetadataObject.BuildNumber = '80'
 $buildServerMetadataObject.ScmBranch = 'feature/fubar'
 $buildServerMetadataObject.ScmCommitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
-$buildServerMetadataObject.BuildServerName = 'Jenkins'
+$buildServerMetadataObject.BuildServer = [Whiskey.BuildServer]::Jenkins
 
 $buildServerMetadataString = '80.feature-fubar.deadbee'
 $developerMetadataString = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
