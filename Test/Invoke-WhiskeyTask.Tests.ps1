@@ -985,7 +985,7 @@ Describe 'Invoke-WhiskeyTask.when given OnlyDuring parameter' {
         Init
         GivenMockTask -SupportsClean -SupportsInitialize
 
-        foreach ($runMode in @('Clean', 'Initialize'))
+        foreach( $runMode in @('Clean', 'Initialize', 'Build') )
         {
             Context ('OnlyDuring is {0}' -f $runMode) {
                 $TaskParameter = @{ 'OnlyDuring' = $runMode }
@@ -1009,7 +1009,7 @@ Describe 'Invoke-WhiskeyTask.when given ExceptDuring parameter' {
         Init
         GivenMockTask -SupportsClean -SupportsInitialize
 
-        foreach ($runMode in @('Clean', 'Initialize'))
+        foreach ($runMode in @('Clean', 'Initialize', 'Build'))
         {
             Context ('ExceptDuring is {0}' -f $runMode) {
                 $TaskParameter = @{ 'ExceptDuring' = $runMode }

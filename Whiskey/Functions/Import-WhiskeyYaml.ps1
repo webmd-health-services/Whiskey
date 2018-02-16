@@ -1,6 +1,7 @@
 
 function Import-WhiskeyYaml
 {
+    [CmdletBinding()]
     param(
         $Path
     )

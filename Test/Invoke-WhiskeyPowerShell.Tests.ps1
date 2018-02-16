@@ -95,9 +95,14 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-
         [object]
-        $WithArgument
+        $WithArgument,
+
+        [Switch]
+        $InCleanMode,
+
+        [Switch]
+        $InInitMode
     )
 
     $taskParameter = @{
@@ -116,7 +121,7 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper
+    $context = New-WhiskeyTestContext -ForDeveloper -InCleanMode:$InCleanMode -InInitMode:$InInitMode
     
     $failed = $false
 
@@ -371,4 +376,18 @@ param(
 "@
     WhenTheTaskRuns -WithArgument @{ }
     ThenTheTaskPasses
+}
+
+Describe 'PowerShell.when run in Clean mode' {
+    GivenAScript
+    WhenTheTaskRuns -InCleanMode
+    ThenTheTaskPasses
+    ThenTheScriptRan
+}
+
+Describe 'PowerShell.when run in Initialize mode' {
+    GivenAScript 
+    WhenTheTaskRuns -InInitMode
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }
