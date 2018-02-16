@@ -56,6 +56,9 @@ if( -not $msbuild )
     Write-Error ('Unable to find MSBuild 15.0.')
 }
 
+$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe'
+& $nugetPath restore (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey.sln')
+
 & $msbuild.Path /target:build ('/property:Version={0}' -f $version) '/property:Configuration=Release' 'Assembly\Whiskey.sln' '/v:m'
 if( $LASTEXITCODE )
 {
