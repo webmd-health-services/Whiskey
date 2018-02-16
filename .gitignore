@@ -17,3 +17,5 @@ Whiskey/bin/SemanticVersion.dll
 Assembly/**/obj/**
 Assembly/**/bin/**
 **/.vs/**
+Assembly/Whiskey/Properties/AssemblyVersion.cs
+*.user
