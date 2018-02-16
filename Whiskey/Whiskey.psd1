@@ -145,6 +145,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Added `WHISKEY_BUILD_STARTED_AT` variable. It's a `[datetime]` object that is the date/time the build started.
+* Fixed: Whiskey fails builds if a version of Visual Studio 2017 is installed that doesn't have a MSBuild.
 '@
         } # End of PSData hashtable
 

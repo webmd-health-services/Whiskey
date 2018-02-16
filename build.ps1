@@ -47,6 +47,7 @@ if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
 }
 
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\VSSetup')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Use-CallerPreference.ps1')
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
 
 $msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' }
