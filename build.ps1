@@ -9,19 +9,49 @@ param(
     $Initialize
 )
 
+$ErrorActionPreference = 'Stop'
 #Requires -Version 4
 Set-StrictMode -Version Latest
 
-# Build the assembly first!
-
+# We can't use Whiskey to build Whiskey's assembly because we need Whiskey's assembly to use Whiskey.
 $manifest = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -Raw
 if( $manifest -notmatch '\bModuleVersion\b\s*=\s*(''|")([^''"]+)' )
 {
-    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.' -ErrorAction Stop
+    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.'
 }
 $version = $Matches[2]
 
-dotnet build '--configuration' 'Release' ('-p:Version={0}' -f $version) 'Assembly\Whiskey.sln'
+$commitID = git rev-parse HEAD
+$commitID = $commitID.Substring(0,7)
+
+$branch = git rev-parse --abbrev-ref HEAD
+$branch = $branch -replace '[^A-Za-z0-9-]','-'
+
+$assemblyVersion = @"
+[assembly: System.Reflection.AssemblyVersion("$version")]
+[assembly: System.Reflection.AssemblyFileVersion("$version")]
+[assembly: System.Reflection.AssemblyInformationalVersion("$version+$branch.$commitID")]
+"@ 
+
+$assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
+
+$currentAssemblyVersion = Get-Content -Path $assemblyVersionPath -Raw
+if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
+{
+    Write-Verbose -Message ('Assembly version has changed.')
+    $assemblyVersion | Set-Content -Path $assemblyVersionPath
+}
+
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\VSSetup')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
+
+$msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' }
+if( -not $msbuild )
+{
+    Write-Error ('Unable to find MSBuild 15.0.')
+}
+
+& $msbuild.Path /target:build ('/property:Version={0}' -f $version) '/property:Configuration=Release' 'Assembly\Whiskey.sln' '/v:m'
 if( $LASTEXITCODE )
 {
     exit 1
@@ -30,17 +60,22 @@ if( $LASTEXITCODE )
 $nugetExePath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe' -Resolve
 & $nugetExePath 'install' 'xunit.runner.console' '-Version' '2.3.1' '-OutputDirectory' 'packages'
 
-$xunitConsoleExePath = Join-Path -Path $PSScriptRoot -ChildPath 'packages\xunit.runner.console.2.3.1\tools\net452\xunit.console.exe'
-& $xunitConsoleExePath 'Assembly\SemanticVersionTest\bin\Release\SemanticVersionTest.dll'
-if( $LASTEXITCODE )
+$whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
+$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\bin\Release'
+foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 {
-    exit 1
-}
+    $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name
+    if( (Test-Path -Path $destinationPath -PathType Leaf) )
+    {
+        $sourceHash = Get-FileHash -Path $assembly.FullName
+        $destinationHash = Get-FileHash -Path $destinationPath
+        if( $sourceHash.Hash -eq $destinationHash.Hash )
+        {
+            continue
+        }
+    }
 
-robocopy 'Assembly\Whiskey\bin\Release\netstandard2.0' 'Whiskey\bin' '*.dll' '/NP'
-if( $LASTEXITCODE -ge 8 )
-{
-    exit 1
+    Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
