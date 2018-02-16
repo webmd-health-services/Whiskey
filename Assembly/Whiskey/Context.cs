@@ -15,7 +15,7 @@ namespace Whiskey
             Configuration = new Dictionary<object, object>();
             Credentials = new Dictionary<string, object>();
             RunMode = RunMode.Build;
-            TaskDefaults = new Dictionary<string, Dictionary<string, object>>();
+            TaskDefaults = new Dictionary<string, IDictionary>();
             TaskIndex = -1;
             Variables = new Dictionary<string, object>();
             Version = new BuildVersion();

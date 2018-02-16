@@ -247,8 +247,14 @@ function WhenRunningBuild
     $context.BuildRoot = $TestDrive.FullName;
     $context.Configuration = $config;
     $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
-    $context.ByDeveloper = $runByDeveloper;
-    $context.ByBuildServer = $runByBuildServer;
+    if( $runByDeveloper )
+    {
+        $context.RunBy = [Whiskey.RunBy]::Developer
+    }
+    if( $runByBuildServer )
+    {
+        $context.RunBy = [Whiskey.RunBy]::BuildServer
+    }
     $context.Publish = $publish;
     $context.RunMode = 'Build';
 

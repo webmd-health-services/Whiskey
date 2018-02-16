@@ -6,7 +6,7 @@ Set-StrictMode -Version 'Latest'
 $whiskeyYmlPath = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
-$context = $null
+[Whiskey.Context]$context = $null
 $warnings = $null
 $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
@@ -604,7 +604,10 @@ function WhenRunningTask
     $context.PipelineName = 'Build';
     $context.TaskName = $null;
     $context.TaskIndex = 1;
-    $context.TaskDefaults = $taskDefaults;
+    foreach( $key in $taskDefaults.Keys )
+    {
+        $context.TaskDefaults.Add($key,$taskDefaults[$key])
+    }
 
     if( $InRunMode )
     {

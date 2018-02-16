@@ -5,7 +5,7 @@ function Publish-WhiskeyBBServerTag
     [Whiskey.Task("PublishBitbucketServerTag")]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]
@@ -50,7 +50,7 @@ function Publish-WhiskeyBBServerTag
         $projectKey = $TaskParameter['ProjectKey']
         $repoKey = $TaskParameter['RepositoryKey']
     }
-    elseif( $TaskContext.BuildMetadata.ScmUri )
+    elseif( $TaskContext.BuildMetadata.ScmUri -and $TaskContext.BuildMetadata.ScmUri.Segments )
     {
         $uri = [uri]$TaskContext.BuildMetadata.ScmUri
         $projectKey = $uri.Segments[-2].Trim('/')

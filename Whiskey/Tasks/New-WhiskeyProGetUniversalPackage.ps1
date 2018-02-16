@@ -418,7 +418,11 @@ function New-WhiskeyProGetUniversalPackage
                     }
 
                     Write-Verbose -Message $operationDescription
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-Verbose
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-Verbose -Verbose
+                    # Get rid of empty directories. Robocopy doesn't sometimes.
+                    Get-ChildItem -Path $destination -Directory -Recurse | 
+                        Where-Object { -not ($_ | Get-ChildItem) } |
+                        Remove-Item
                 }
             }
         }

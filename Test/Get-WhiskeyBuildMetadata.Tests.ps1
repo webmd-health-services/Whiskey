@@ -35,6 +35,7 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
@@ -74,6 +75,7 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
@@ -115,6 +117,7 @@ InModuleScope 'Whiskey' {
     {
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $VcsNumber,
@@ -173,16 +176,23 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
             [Parameter(Mandatory=$true)]
             $JobName,
             [Parameter(Mandatory=$true)]
+            [AllowNull()]
+            [uri]
             $JobUri,
             [Parameter(Mandatory=$true)]
+            [AllowNull()]
+            [uri]
             $BuildUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [AllowNull()]
+            [uri]
             $ScmUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
             $ScmCommit,
@@ -247,7 +257,7 @@ InModuleScope 'Whiskey' {
     {
         $buildInfo = $script:buildInfo
         It ('should be running as developer') {
-            $buildInfo.BuildServer | Should BeNullOrEmpty
+            $buildInfo.BuildServer | Should -Be ([Whiskey.BuildServer]::None)
             $buildInfo.IsDeveloper | Should Be $true
             $buildInfo.IsBuildServer | Should Be $false
         }
@@ -284,7 +294,7 @@ InModuleScope 'Whiskey' {
         Init
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri '' -ScmUri '' -ScmCommit '' -ScmBranch '' -JobUri ''
+        ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri $null -ScmUri $null -ScmCommit '' -ScmBranch '' -JobUri $null
         ThenRunByDeveloper
     }
 
