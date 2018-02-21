@@ -210,6 +210,30 @@
             }
             $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $path)
         }
+        elseif( $fileInfo.Extension -eq '.csproj' )
+        {
+            [xml]$csprojXml = $null
+            try
+            {
+                $csprojxml = Get-Content -Path $Path -Raw
+            }
+            catch
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .cspoj file ''{0}'' contains invalid XMl.' -f $path)
+            }
+
+            if( $csprojXml.DocumentElement.Attributes['xmlns'] )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .csproj file ''{0}'' has an "xmlns" attribute. .NET Core/Standard .csproj files should not have a default namespace anymore (see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" attribute from the root "Project" document element. If this is a .NET framework .csproj, it doesn''t support versioning. Use the Whiskey Version task''s Version property to version your assemblies.' -f $path)
+            }
+            $csprojVersionNode = $csprojXml.SelectSingleNode('/Project/PropertyGroup/Version')
+            if( -not $csprojVersionNode )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $path)
+            }
+            $rawVersion = $csprojVersionNode.InnerText
+            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $path)
+        }
     }
     else
     {
@@ -221,7 +245,7 @@
         $buildSuffix = ''
         if( $semver.Build )
         {
-            $buildSuffix = '+{0}' -f $buildSuffix
+            $buildSuffix = '+{0}' -f $semver.Build
         }
 
         $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$TaskParameter['Prerelease'],$buildSuffix

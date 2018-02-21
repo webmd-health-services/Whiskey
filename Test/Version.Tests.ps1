@@ -261,3 +261,87 @@ Describe 'Version.when version in package.json is invalid' {
     ThenTaskFailed
     ThenErrorIs 'from\ Node\ package\.json'
 }
+
+Describe 'Version.when reading version from .csproj file' {
+    Init
+    GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>0.0.2</Version>
+  </PropertyGroup>
+</Project>
+'@
+    GivenProperty @{ Path = 'lib.csproj' }
+    WhenRunningTask 
+    ThenVersionIs '0.0.2'
+    ThenSemVer1Is '0.0.2'
+    ThenSemVer2Is '0.0.2'
+}
+
+Describe 'Version.when reading version from .csproj file that has namespace' {
+    Init
+    GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Version>0.0.2</Version>
+  </PropertyGroup>
+</Project>
+'@
+    GivenProperty @{ Path = 'lib.csproj' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'remove\ the\ "xmlns"\ attribute'
+}
+
+Describe 'Version.when version in .csproj file is missing' {
+    Init
+    GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  </PropertyGroup>
+</Project>
+'@
+    GivenProperty @{ Path = 'lib.csproj' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'element\ ''/Project/PropertyGroup/Version''\ does\ not\ exist'
+}
+
+Describe 'Version.when .csproj contains invalid XML' {
+    Init
+    GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+  </PropertyGroup>
+'@
+    GivenProperty @{ Path = 'lib.csproj' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    $Global:Error.RemoveAt($Global:Error.Count - 1)
+    ThenErrorIs 'contains\ invalid\ xml'
+}
+
+Describe 'Version.when version in .csproj is invalid' {
+    Init
+    GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>4.2</Version>
+  </PropertyGroup>
+</Project>
+'@
+    GivenProperty @{ Path = 'lib.csproj' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs '\.NET\ \.csproj\ file'
+}
+
+Describe 'Version.when file and whiskey.yml both contain build and prerelease metadata' {
+    Init
+    GivenFile 'package.json' '{ "Version": "4.2.3-rc.1+fubar.snafu" }'
+    GivenProperty @{ Path = 'package.json' ; Prerelease = 'rc.5' ; Build = 'fizz.buzz' }
+    WhenRunningTask 
+    ThenVersionIs '4.2.3'
+    ThenSemVer1Is '4.2.3-rc5'
+    ThenSemVer2Is '4.2.3-rc.5+fizz.buzz'
+}
