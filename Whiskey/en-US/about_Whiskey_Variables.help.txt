@@ -49,8 +49,8 @@ LONG DESCRIPTION
      * [int] WHISKEY_BUILD_NUMBER: the unique number/ID for the current build.
        Unique to the current build only. Build servers usually increment this 
        number every time a new build runs.
-     * [string] WHISKEY_BUILD_ROOT: the directory where your whiskey.yml file 
-       is.
+     * [System.IO.DirectoryInfo] WHISKEY_BUILD_ROOT: the directory where your 
+       whiskey.yml file is.
      * [string] WHISKEY_BUILD_SERVER_NAME: the computer name of the current 
        build server.
      * [datetime] WHISKEY_BUILD_STARTED_AT: the date/time the build started.
