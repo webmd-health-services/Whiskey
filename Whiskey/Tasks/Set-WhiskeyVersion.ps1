@@ -143,7 +143,39 @@
     {
         $rawVersion = $TaskParameter['Version']
     }
+    $propertyName = 'Version'
 
+    function ConvertTo-SemVer
+    {
+        param(
+            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+            $InputObject,
+            $PropertyName,
+            $VersionSource
+        )
+
+        process
+        {
+            [SemVersion.SemanticVersion]$semver = $null
+            if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
+            {
+                if( $VersionSource )
+                {
+                    $VersionSource = ' ({0})' -f $VersionSource
+                }
+                $optionalParam = @{ }
+                if( $PropertyName )
+                {
+                    $optionalParam['PropertyName'] = $PropertyName
+                }
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}''{1} is not a semantic version. See http://semver.org for documentation on semantic versions.' -f $rawVersion,$VersionSource) @optionalParam
+            }
+            return $semver
+        }
+    }
+
+    [SemVersion.SemanticVersion]$semver = $null
+    $buildVersion = $TaskContext.Version
     if( $TaskParameter['Path'] )
     {
         $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -156,15 +188,32 @@
         if( $fileInfo.Extension -eq '.psd1' )
         {
             $rawVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore  | Select-Object -ExpandProperty 'Version'
+            if( -not $rawVersion )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $path)
+            }
+            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $path)
+        }
+        elseif( $fileInfo.Name -eq 'package.json' )
+        {
+            try
+            {
+                $rawVersion = Get-Content -Path $path -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version' -ErrorAction Ignore
+            }
+            catch
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node package.json file ''{0}'' contains invalid JSON.' -f $path)
+            }
+            if( -not $rawVersion )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $path)
+            }
+            $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $path)
         }
     }
-
-    $buildVersion = $TaskContext.Version
-
-    [SemVersion.SemanticVersion]$semver = $null
-    if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
+    else
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('''{0}'' is not a semantic version. See http://semver.org for documentation on semantic versions.' -f $rawVersion)
+        $semver = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
 
     if( $TaskParameter.ContainsKey('Prerelease') )

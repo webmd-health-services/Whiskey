@@ -205,3 +205,59 @@ Describe 'Version.when pulling version from PowerShell module manifest' {
     ThenSemVer1Is '4.2.3'
     ThenSemVer2Is '4.2.3'
 }
+
+Describe 'Version.when pulling version from PowerShell module manifest and version is missing' {
+    Init
+    GivenFile 'manifest.psd1' '@{ }'
+    GivenProperty @{ Path = 'manifest.psd1' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'is\ invalid\ or\ doesn''t contain\ a\ ''ModuleVersion''\ property'
+}
+
+Describe 'Version.when pulling version from PowerShell module manifest and version is invalid' {
+    Init
+    GivenFile 'manifest.psd1' '@{ ModuleVersion = ''4.2'' }'
+    GivenProperty @{ Path = 'manifest.psd1' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'Powershell\ module\ manifest'
+}
+
+Describe 'Version.when pulling version from package.json' {
+    Init
+    GivenFile 'package.json' '{ "Version": "4.2.3-rc.1" }'
+    GivenProperty @{ Path = 'package.json' }
+    WhenRunningTask
+    ThenVersionIs '4.2.3'
+    ThenSemVer1Is '4.2.3-rc1'
+    ThenSemVer2Is '4.2.3-rc.1'
+}
+
+Describe 'Version.when version in package.json is missing' {
+    Init
+    GivenFile 'package.json' '{ }'
+    GivenProperty @{ Path = 'package.json' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs '''Version''\ property\ is\ missing'
+}
+
+Describe 'Version.when package.json is invalid JSON' {
+    Init
+    GivenFile 'package.json' '{ "Version" =  }'
+    GivenProperty @{ Path = 'package.json' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    $Global:Error.RemoveAt($Global:Error.Count -1)
+    ThenErrorIs 'package\.json''\ contains\ invalid\ JSON'
+}
+
+Describe 'Version.when version in package.json is invalid' {
+    Init
+    GivenFile 'package.json' '{ "Version": "4.2"  }'
+    GivenProperty @{ Path = 'package.json' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'from\ Node\ package\.json'
+}
