@@ -4,12 +4,14 @@
 [Whiskey.Context]$context = $null
 $property = $null
 $failed = $false
+$branch = $null
 
 function Init
 {
     $script:context = $null
     $script:version = $null
     $script:failed = $false
+    $script:branch = $null
 }
 
 function GivenFile
@@ -29,6 +31,15 @@ function GivenProperty
     )
 
     $script:property = $Property
+}
+
+function GivenBranch
+{
+    param(
+        $Name
+    )
+
+    $script:branch = $Name
 }
 
 function ThenErrorIs
@@ -96,6 +107,11 @@ function WhenRunningTask
     )
 
     $script:context = New-WhiskeyTestContext -ForBuildServer
+    if( $branch )
+    {
+        $context.BuildMetadata.ScmBranch = $branch
+    }
+
     $Global:Error.Clear()
     try
     {
@@ -188,12 +204,13 @@ Describe 'Version.when using Build property to set build metadata' {
     ThenVersionIs '4.5.6'
 }
 
-Describe 'Version.when Prerelease property is not a valid build metadata' {
+Describe 'Version.when Build property is not a valid build metadata' {
     Init
-    GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = '~!@#$%^&*()_+' }
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailed
-    ThenErrorIs 'not\ valid\ build\ metadata'
+    GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = 'feature/fubar-snafu.deadbee' }
+    WhenRunningTask 
+    ThenVersionIs '4.5.6'
+    ThenSemVer1Is '4.5.6'
+    ThenSemVer2Is '4.5.6+feature-fubar-snafu.deadbee'
 }
 
 Describe 'Version.when pulling version from PowerShell module manifest' {
@@ -344,4 +361,53 @@ Describe 'Version.when file and whiskey.yml both contain build and prerelease me
     ThenVersionIs '4.2.3'
     ThenSemVer1Is '4.2.3-rc5'
     ThenSemVer2Is '4.2.3-rc.5+fizz.buzz'
+}
+
+Describe 'Version.when Prerelease is a list of branch maps' {
+    Context 'by developer' {
+        Init
+        GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+        WhenRunningTask
+        ThenVersionIs '1.2.3'
+        ThenSemVer1Is '1.2.3'
+        ThenSemVer2Is '1.2.3'
+    }
+    Context 'by build server' {
+        Init
+        GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+        GivenBranch 'beta/some-feature'
+        WhenRunningTask
+        ThenVersionIs '1.2.3'
+        ThenSemVer1Is '1.2.3-beta2'
+        ThenSemVer2Is '1.2.3-beta.2'
+    }
+}
+
+Describe 'Version.when Prerelease is a branch map' {
+    Init
+    GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @{ 'alpha/*' = 'alpha.1'; 'beta/*' = 'beta.2' } }
+    GivenBranch 'beta/fubar'
+    WhenRunningTask
+    ThenVersionIs '1.2.3'
+    ThenSemVer1Is '1.2.3-beta2'
+    ThenSemVer2Is '1.2.3-beta.2'
+}
+
+Describe 'Version.when Prerelease is a branch map' {
+    Init
+    GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1'; 'beta/*' = 'beta.2' } ) }
+    GivenBranch 'beta/fubar'
+    WhenRunningTask
+    ThenVersionIs '1.2.3'
+    ThenSemVer1Is '1.2.3-beta2'
+    ThenSemVer2Is '1.2.3-beta.2'
+}
+
+Describe 'Version.when Prerelease branch map isn''t a map' {
+    Init
+    GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( 'alpha/*' ) }
+    GivenBranch 'beta/fubar'
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs 'unable\ to\ find\ keys'
 }

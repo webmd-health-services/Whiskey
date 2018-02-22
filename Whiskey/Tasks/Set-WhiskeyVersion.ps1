@@ -9,8 +9,7 @@
     The `Version` task sets the version for the current build. Whiskey only supports [semantic versions](http://semver.org).
     
     You can set the version explicitly with the `Version` property. Whiskey can read the version from a .NET Core .csproj file, a PowerShell module manifest, or a Node package.json file. Set the `Path` property to the path to the file to read from. If it is unsupported or doesn't contain a version, you'll get an error.
-
-    You can set custom prerelease metadata with the `Prerelease` property and custom build metadata with the `Build` property.
+    You can set custom prerelease metadata with the `Prerelease` property and custom build metadata with the `Build` property. These properties ovewrite any existing prereleaes version of build metadata from the `Version` property or the version read from a file. Prerelease metadata must only consist of letters, numbers, periods, or hyphens. Build metadata has the same restriction, but Whiskey replaces all non letters, numbers, and periods with hyphens (since build metadata typically comes from systems that don't have these restrictions).
 
     ## Per-Branch Prerelease Metadata
 
@@ -192,6 +191,7 @@
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $path)
             }
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from PowerShell module manifest ''{1}''.' -f $rawVersion,$path)
             $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $path)
         }
         elseif( $fileInfo.Name -eq 'package.json' )
@@ -208,6 +208,7 @@
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $path)
             }
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from Node package.json ''{1}''.' -f $rawVersion,$path)
             $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $path)
         }
         elseif( $fileInfo.Extension -eq '.csproj' )
@@ -232,6 +233,7 @@
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $path)
             }
             $rawVersion = $csprojVersionNode.InnerText
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$path)
             $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $path)
         }
     }
@@ -240,7 +242,55 @@
         $semver = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
 
-    if( $TaskParameter.ContainsKey('Prerelease') )
+    $prerelease = $TaskParameter['Prerelease']
+    if( $prerelease -isnot [string] )
+    {
+        $foundLabel = $false
+        foreach( $object in $prerelease )
+        {
+            foreach( $map in $object )
+            {
+                if( -not ($map | Get-Member -Name 'Keys') )
+                {
+                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('Unable to find keys in ''[{1}]{0}''. It looks like you''re trying use the Prerelease property to map branches to prerelease versions. If you want a static prerelease version, the syntax should be:
+    
+    BuildTasks:
+    - Version:
+        Prerelease: {0}
+        
+If you want certain branches to always have certain prerelease versions, set Prerelease to a list of key/value pairs:
+    
+    BuildTasks:
+    - Version:
+        Prerelease:
+        - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
+        - develop: beta.$(WHISKEY_BUILD_NUMBER)
+    ' -f $map,$map.GetType().FullName)
+                }
+                foreach( $wildcardPattern in $map.Keys )
+                {
+                    if( $TaskContext.BuildMetadata.ScmBranch -like $wildcardPattern )
+                    {
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}     -like  {1}' -f $TaskContext.BuildMetadata.ScmBranch,$wildcardPattern)
+                        $foundLabel = $true
+                        $prerelease = $map[$wildcardPattern]
+                        break
+                    }
+                    else
+                    {
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}  -notlike  {1}' -f $TaskContext.BuildMetadata.ScmBranch,$wildcardPattern)
+                    }
+                }
+            }
+        }
+
+        if( -not $foundLabel )
+        {
+            $prerelease = ''
+        }
+    }
+
+    if( $prerelease )
     {
         $buildSuffix = ''
         if( $semver.Build )
@@ -248,14 +298,15 @@
             $buildSuffix = '+{0}' -f $semver.Build
         }
 
-        $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$TaskParameter['Prerelease'],$buildSuffix
+        $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prerelease,$buildSuffix
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('''{0}'' is not a valid prerelease version. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $TaskParameter['Prerelease'])
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('''{0}'' is not a valid prerelease version. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $prerelease)
         }
     }
 
-    if( $TaskParameter.ContainsKey('Build') )
+    $build = $TaskParameter['Build']
+    if( $build )
     {
         $prereleaseSuffix = ''
         if( $semver.Prerelease )
@@ -263,20 +314,25 @@
             $prereleaseSuffix = '-{0}' -f $semver.Prerelease
         }
         
-        $rawVersion = '{0}.{1}.{2}{3}+{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prereleaseSuffix,$TaskParameter['Build']
+        $build = $build -replace '[^A-Za-z0-9\.-]','-'
+        $rawVersion = '{0}.{1}.{2}{3}+{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prereleaseSuffix,$build
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message ('''{0}'' is not valid build metadata. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $TaskParameter['Build'])
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message ('''{0}'' is not valid build metadata. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $build)
         }
     }
 
     $buildVersion.SemVer2 = $semver
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Building version {0}' -f $semver)
     $buildVersion.Version = [version]('{0}.{1}.{2}' -f $semver.Major,$semver.Minor,$semver.Patch)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('Version                 {0}' -f $buildVersion.Version)
     $buildVersion.SemVer2NoBuildMetadata = New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver.Prerelease)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('SemVer2NoBuildMetadata  {0}' -f $buildVersion.SemVer2NoBuildMetadata)
     $semver1Prerelease = $semver.Prerelease
     if( $semver1Prerelease )
     {
         $semver1Prerelease = $semver1Prerelease -replace '[^A-Za-z0-9]',''
     }
     $buildVersion.SemVer1 = New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver1Prerelease)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('SemVer1                 {0}' -f $buildVersion.SemVer1)
 }
