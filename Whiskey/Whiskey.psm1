@@ -7,6 +7,8 @@ $7z = Join-Path -Path $PSScriptRoot -ChildPath 'bin\7-Zip\7z.exe' -Resolve
 
 $buildStartedAt = [DateTime]::MinValue
 
+$supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
+
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'SupportsClean') )
 {
