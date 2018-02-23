@@ -161,19 +161,17 @@ Whiskey also no longer automatically adds build metadata to your version number.
 
         $versionTask = @{
                             Version = ('{0:yyyy.Mdd}.$(WHISKEY_BUILD_NUMBER)' -f (Get-Date))
+                            Build = '$(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID)'
                         }
 
         if( $config['Version'] )
         {
-            $versionTask = @{
-                                Version = $config['Version']
-                            }
+            $versionTask['Version'] = $config['Version']
         }
         elseif( $config['VersionFrom'] )
         {
-            $versionTask = @{
-                                Path = $config['VersionFrom']
-                            }
+            $versionTask.Remove('Version')
+            $versionTask['Path'] = $config['VersionFrom']
         }
 
         if( $config['PrereleaseMap'] )
@@ -251,8 +249,18 @@ Whiskey also no longer automatically adds build metadata to your version number.
     BuildTasks
     - Version:
         Version: $(WHISKEY_BUILD_STARTED_AT.ToString(''yyyy.Mdd'')).$(WHISKEY_BUILD_NUMBER)
+        Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID)
  ')
-        $context.Version = New-WhiskeyVersionObject -s ('{0:yyyy.Mdd}.{1}' -f (Get-Date),$context.BuildMetadata.BuildNumber)
+        $rawVersion = '{0:yyyy.Mdd}.{1}' -f (Get-Date),$context.BuildMetadata.BuildNumber
+        if( $context.ByBuildServer )
+        {
+            $branch = $buildMetadata.ScmBranch
+            $branch = $branch -replace '[^A-Za-z0-9-]','-'
+            $commitID = $buildMetadata.ScmCommitID.Substring(0,7)
+            $buildInfo = '{0}.{1}.{2}' -f $buildMetadata.BuildNumber,$branch,$commitID
+            $rawVersion = '{0}+{1}' -f $rawVersion,$buildInfo
+        }
+        $context.Version = New-WhiskeyVersionObject -SemVer $rawVersion
     }
 
     return $context
