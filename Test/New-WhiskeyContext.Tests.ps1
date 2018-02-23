@@ -62,10 +62,11 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $Context.TaskDefaults | Should -BeOfType ([Collections.IDictionary])
         }
 
-        ThenVersionIs '0.0.0'
-        ThenSemVer2NoBuildMetadataIs '0.0.0'
-        ThenSemVer2Is '0.0.0'
-        ThenSemVer1Is '0.0.0'
+        $expectedVersion = '{0:yyyy.Mdd}.{1}' -f (Get-Date),$Context.BuildMetadata.BuildNumber
+        ThenVersionIs $expectedVersion
+        ThenSemVer2NoBuildMetadataIs $expectedVersion
+        ThenSemVer2Is $expectedVersion
+        ThenSemVer1Is $expectedVersion
 
         It 'should set raw configuration hashtable' {
             $Context.Configuration | Should -BeOfType ([Collections.IDictionary])
@@ -598,4 +599,78 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenShouldInitializeIs $false
     }
     
+    Describe 'New-WhiskeyContext.when Version property is used' {
+        Init
+        GivenWhiskeyYml @'
+Version: 1.2.3-rc.1+fubar.snafu
+'@
+        WhenCreatingContext
+        # Run a build to ensure the Version task is in the build tasks.
+        Invoke-WhiskeyBuild -Context $script:context
+        ThenSemVer1Is '1.2.3-rc1'
+        ThenSemVer2Is '1.2.3-rc.1+fubar.snafu'
+        ThenSemVer2NoBuildMetadataIs '1.2.3-rc.1'
+    }
+
+    Describe 'New-WhiskeyContext.when VersionFrom property is used' {
+        Init
+        '@{ ModuleVersion = "1.2.3" }' | Set-Content -Path (Join-Path -Path $TestDrive.Fullname -ChildPath 'module.psd1')
+        GivenWhiskeyYml @'
+VersionFrom: module.psd1
+'@
+        WhenCreatingContext
+        # Run a build to ensure the Version task is in the build tasks.
+        Invoke-WhiskeyBuild -Context $script:context
+        ThenSemVer1Is '1.2.3'
+        ThenSemVer2Is '1.2.3'
+        ThenSemVer2NoBuildMetadataIs '1.2.3'
+    }
+
+    Describe 'New-WhiskeyContext.when Version task already exists' {
+        Init
+        GivenWhiskeyYml @'
+Version: 4.5.6
+
+BuildTasks:
+- Version:
+    Version: 1.2.3
+'@
+        WhenCreatingContext
+        # Run a build to ensure the Version task is in the build tasks.
+        Invoke-WhiskeyBuild -Context $script:context
+        ThenSemVer1Is '1.2.3'
+        ThenSemVer2Is '1.2.3'
+        ThenSemVer2NoBuildMetadataIs '1.2.3'
+    }
+
+    Describe 'New-WhiskeyContext.when PrereleaseMap property exists' {
+        Init
+        GivenWhiskeyYml @'
+PrereleaseMap:
+- "develop": "beta"
+- "feature/*": alpha
+'@
+        WhenCreatingContext
+        $script:context.BuildMetadata.ScmBranch = 'feature/snafu'
+        $script:context.BuildMetadata.BuildNumber = $buildNumber = '50'
+        # Run a build to ensure the Version task is in the build tasks.
+        Invoke-WhiskeyBuild -Context $script:context
+        $expectedVersion = '{0:yyyy.Mdd}.{1}' -f $script:context.StartedAt,$buildNumber
+        ThenSemVer1Is ('{0}-alpha{1}' -f $expectedVersion,$buildNumber)
+        ThenSemVer2Is ('{0}-alpha.{1}' -f $expectedVersion,$buildNumber)
+        ThenSemVer2NoBuildMetadataIs ('{0}-alpha.{1}' -f $expectedVersion,$buildNumber)
+    }
+
+    Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties' {
+        Init
+        GivenConfiguration -BuildNumber 50 -Configuration @{ 'BuildTasks' = @( @{ 'Exec' = 'cmd /C echo' } ) }
+        WhenCreatingContext
+        # Run a build to ensure the Version task is in the build tasks.
+        Invoke-WhiskeyBuild -Context $script:context
+        $expectedVersion = '{0:yyyy.Mdd}.50' -f $script:context.StartedAt
+        ThenVersionIs $expectedVersion
+        ThenSemVer1Is $expectedVersion
+        ThenSemVer2Is $expectedVersion
+        ThenSemVer2NoBuildMetadataIs $expectedVersion
+    }
 }

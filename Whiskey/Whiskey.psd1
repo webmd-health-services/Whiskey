@@ -157,9 +157,9 @@
 
 ## Upgrade Instructions
 
-### Removing `Version`, `VersionFrom` and `PrereleaseMap` Properties
+### Removing `Version` and `PrereleaseMap` Properties
 
-To migrate your `Version`, `VersionFrom`, and/or `PrereleaseMap` properties, create a `Version` task as the first task in your pipeline. If your whiskey.yml file looks like this:
+To migrate your `Version` and/or `PrereleaseMap` properties, create a `Version` task as the first task in your pipeline. If your whiskey.yml file looks like this:
 
     Version: 1.2.3
 
@@ -179,6 +179,8 @@ your new whiskey.yml file should look like this:
         - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
     - Pester:
         Path: Tests\*.Tests.ps1
+
+### Removing `VersionFrom` Property
 
 If you use the `VersionFrom` property, change your whiskey.yml file from this:
 
