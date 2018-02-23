@@ -1,9 +1,10 @@
-VersionFrom: Whiskey\Whiskey.psd1
-
 PublishOn: 
 - master
 
 BuildTasks:
+- Version:
+    Path: Whiskey\Whiskey.psd1
+
 - PowerShell:
     Path: init.ps1
 
