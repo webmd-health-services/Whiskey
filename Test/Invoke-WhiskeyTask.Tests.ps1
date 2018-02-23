@@ -1074,7 +1074,7 @@ foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
         Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
         GivenVariable 'Fubar' 'Snafu'
         WhenRunningTask 'PowerShell' -Parameter @{ $commonPropertyName = '$(Fubar)' } -ErrorAction SilentlyContinue
-        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value:\ ''Snafu'''
     }
 }
 
@@ -1113,7 +1113,7 @@ foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
         Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
         GivenDefaults @{ $commonPropertyName = 'Snafu' } -ForTask 'PowerShell'
         WhenRunningTask 'PowerShell' -Parameter @{ } -ErrorAction SilentlyContinue
-        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value:\ ''Snafu'''
     }
 }
 
