@@ -165,7 +165,7 @@ function Invoke-WhiskeyExec
         {
             if( $exitCode -eq [int]$Matches[0] )
             {
-                Write-Verbose -Message ('  Exit code {0} = {1}' -f $exitCode,$Matches[0])
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} = {1}' -f $exitCode,$Matches[0])
                 return
             }
         }
@@ -180,7 +180,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -lt $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} < {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} < {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -188,7 +188,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -le $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} <= {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} <= {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -196,7 +196,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -gt $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} > {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} > {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -204,7 +204,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -ge $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} >= {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} >= {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -215,7 +215,7 @@ function Invoke-WhiskeyExec
         {
             if( $exitCode -ge [int]$Matches[1] -and $exitCode -le [int]$Matches[2] )
             {
-                Write-Verbose -Message ('  Exit code {0} <= {1} <= {2}' -f $Matches[1],$exitCode,$Matches[2])
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exit code {0} <= {1} <= {2}' -f $Matches[1],$exitCode,$Matches[2])
                 return
             }
         }

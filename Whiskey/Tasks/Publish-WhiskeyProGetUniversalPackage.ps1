@@ -121,10 +121,10 @@ function Publish-WhiskeyProGetUniversalPackage
         $optionalParam['Force'] = $TaskParameter['Overwrite'] | ConvertFrom-WhiskeyYamlScalar
     }
 
-    Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}' -f $taskPrefix)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}' -f $taskPrefix)
     foreach( $package in $packages )
     {
-        Write-Verbose -Message ('[PublishProGetUniversalPackage]  {0}  {1}' -f (' ' * $taskPrefix.Length),$package)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}  {1}' -f (' ' * $taskPrefix.Length),$package)
         Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package @optionalParam -ErrorAction Stop
     }
 }

@@ -9,6 +9,8 @@ function Write-WhiskeyInfo
         $Context,
 
         [Parameter(Mandatory=$true)]
+        [AllowEmptyString()]
+        [AllowNull()]
         [string]
         # The message to write.
         $Message

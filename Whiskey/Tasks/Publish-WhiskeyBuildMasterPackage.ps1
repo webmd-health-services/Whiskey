@@ -113,7 +113,7 @@ function Publish-WhiskeyBuildMasterPackage
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to create and deploy a release package in BuildMaster. Either the ''{0}'' application doesn''t exist or it doesn''t have a ''{1}'' release.' -f $applicationName,$releaseName)
     }
 
-    $release | Format-List | Out-String | Write-Verbose
+    $release | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 
     if( $TaskParameter['PackageName'] )
     {
@@ -125,17 +125,17 @@ function Publish-WhiskeyBuildMasterPackage
     }
     
     $package = New-BMPackage -Session $buildMasterSession -Release $release -PackageNumber $packageName -Variable $variables -ErrorAction Stop
-    $package | Format-List | Out-String | Write-Verbose
+    $package | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 
     if( ConvertFrom-WhiskeyYamlScalar -InputObject $TaskParameter['SkipDeploy'] )
     {
-        Write-Verbose -Message ('Skipping deploy. SkipDeploy property is true')
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('Skipping deploy. SkipDeploy property is true')
     }
     else
     {
         $optionalParams = @{ 'Stage' = $TaskParameter['StartAtStage'] }
         
         $deployment = Publish-BMReleasePackage -Session $buildMasterSession -Package $package @optionalParams -ErrorAction Stop
-        $deployment | Format-List | Out-String | Write-Verbose
+        $deployment | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
     }
 }

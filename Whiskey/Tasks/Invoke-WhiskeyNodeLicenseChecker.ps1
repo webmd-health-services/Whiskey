@@ -78,7 +78,7 @@ function Invoke-WhiskeyNodeLicenseChecker
                                 ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
     # show the report
-    $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
+    $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 
     $licensePath = 'node-license-checker-report.json'
     $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath

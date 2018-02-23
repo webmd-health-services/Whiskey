@@ -32,7 +32,6 @@ function Invoke-WhiskeyTask
     function Invoke-Event
     {
         param(
-            $Prefix,
             $EventName,
             $Property
         )
@@ -44,8 +43,8 @@ function Invoke-WhiskeyTask
 
         foreach( $commandName in $events[$EventName] )
         {
-            Write-Verbose -Message $prefix
-            Write-Verbose -Message ('{0}  [On{1}]  {2}' -f $prefix,$EventName,$commandName)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ''
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('[On{0}]  {1}' -f $EventName,$commandName)
             $startedAt = Get-Date
             $result = 'FAILED'
             try
@@ -63,7 +62,7 @@ function Invoke-WhiskeyTask
                 Remove-WhiskeyFileSystemItem -Path $TaskContext.Temp
                 $endedAt = Get-Date
                 $duration = $endedAt - $startedAt
-                Write-Verbose ('{0}  {1}  {2} in {3}' -f $prefix,(' ' * ($EventName.Length + 4)),$result,$duration)
+                Write-WhiskeyVerbose -Context $TaskContext ('{0}  {1} in {2}' -f (' ' * ($EventName.Length + 4)),$result,$duration)
             }
         }
     }
@@ -138,9 +137,6 @@ function Invoke-WhiskeyTask
         $taskProperties.Remove($commonPropertyName)
     }
     
-    #I feel like this is missing a piece, because the current way that Whiskey tasks are named, they will never be run by this logic.
-    $prefix = '[{0}]' -f $Name
-
     $onlyBy = $Parameter['OnlyBy']
     if( $onlyBy )
     {
@@ -150,7 +146,7 @@ function Invoke-WhiskeyTask
             {
                 if( -not $TaskContext.ByDeveloper )
                 {
-                    Write-Verbose -Message ('{0}  SKIPPED  OnlyBy: {1}; ByBuildServer: {2}' -f $prefix,$onlyBy,$TaskContext.ByBuildServer)
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  OnlyBy: {2}; ByBuildServer: {1}' -f $onlyBy,$TaskContext.ByBuildServer)
                     return
                 }
             }
@@ -158,7 +154,7 @@ function Invoke-WhiskeyTask
             {
                 if( -not $TaskContext.ByBuildServer )
                 {
-                    Write-Verbose -Message ('{0}  SKIPPED  OnlyBy: {1}; ByDeveloper: {2}' -f $prefix,$onlyBy,$TaskContext.ByDeveloper)
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  OnlyBy: {0}; ByDeveloper: {1}' -f $onlyBy,$TaskContext.ByDeveloper)
                     return
                 }
             }
@@ -180,43 +176,43 @@ function Invoke-WhiskeyTask
     if( $Parameter['OnlyOnBranch'] )
     {
         $executeTaskOnBranch =$false
-        Write-Verbose -Message ('OnlyOnBranch')
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('OnlyOnBranch')
         foreach( $wildcard in $Parameter['OnlyOnBranch'] )
         {
             if( $branch -like $wildcard )
             {
-                Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
                 $executeTaskOnBranch = $true
                 break
             }
             else
             {
-                Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
             }
         }
     }
 
     if( $Parameter['ExceptOnBranch'] )
     {
-        Write-Verbose -Message ('ExceptOnBranch')
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('ExceptOnBranch')
         foreach( $wildcard in $Parameter['ExceptOnBranch'] )
         {
             if( $branch -like $wildcard )
             {
-                Write-Verbose -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('               {0}     -like  {1}' -f $branch, $wildcard)
                 $executeTaskOnBranch = $false
                 break
             }
             else
             {
-                Write-Verbose -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('               {0}  -notlike  {1}' -f $branch, $wildcard)
             }
         }
     }
     
     if( -not $executeTaskOnBranch )
     {
-        Write-Verbose -Message ('{0}  SKIPPED  {1} not configured to execute this task.' -f $prefix, $branch)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  {0} not configured to execute this task.' -f $branch)
         return
     }
 
@@ -251,12 +247,12 @@ function Invoke-WhiskeyTask
 
         if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))
         {
-            Write-Verbose -Message ('{0}  SKIPPED  OnlyDuring: {1} -- Current RunMode: {2}' -f $prefix,$onlyDuring,$TaskContext.RunMode)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  OnlyDuring: {0} -- Current RunMode: {1}' -f $onlyDuring,$TaskContext.RunMode)
             return
         }
         elseif ($exceptDuring -and ($TaskContext.RunMode -eq $exceptDuring))
         {
-            Write-Verbose -Message ('{0}  SKIPPED  ExceptDuring: {1} -- Current RunMode: {2}' -f $prefix,$exceptDuring,$TaskContext.RunMode)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  ExceptDuring: {0} -- Current RunMode: {1}' -f $exceptDuring,$TaskContext.RunMode)
             return
         }
     
@@ -265,7 +261,7 @@ function Invoke-WhiskeyTask
         {
             if( -not $task.SupportsClean )
             {
-                Write-Verbose -Message ('{0}  SKIPPED  SupportsClean: $false' -f $prefix)
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  SupportsClean: $false')
                 return
             }
         }
@@ -281,14 +277,14 @@ function Invoke-WhiskeyTask
 
         if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
         {
-            Write-Verbose -Message ('{0}  SKIPPED  SupportsInitialize: $false' -f $prefix)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('SKIPPED  SupportsInitialize: $false')
             return
         }
 
-        Invoke-Event -EventName 'BeforeTask' -Prefix $prefix -Property $taskProperties
-        Invoke-Event -EventName ('Before{0}Task' -f $Name) -Prefix $prefix -Property $taskProperties
+        Invoke-Event -EventName 'BeforeTask' -Property $taskProperties
+        Invoke-Event -EventName ('Before{0}Task' -f $Name) -Property $taskProperties
 
-        Write-Verbose -Message $prefix
+        Write-WhiskeyVerbose -Context $TaskContext -Message ''
         $result = 'FAILED'
         $startedAt = Get-Date
         $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
@@ -316,12 +312,11 @@ function Invoke-WhiskeyTask
         }
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
-        Write-Verbose ('{0}  {1} in {2}' -f $prefix,$result,$duration)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0} in {1}' -f $result,$duration)
         Pop-Location
     }
 
-    Invoke-Event -Prefix $prefix -EventName 'AfterTask' -Property $taskProperties
-    Invoke-Event -Prefix $prefix -EventName ('After{0}Task' -f $Name) -Property $taskProperties
-    Write-Verbose ($prefix)
-    Write-Verbose ''
+    Invoke-Event -EventName 'AfterTask' -Property $taskProperties
+    Invoke-Event -EventName ('After{0}Task' -f $Name) -Property $taskProperties
+    Write-WhiskeyVerbose -Context $TaskContext -Message ''
 }

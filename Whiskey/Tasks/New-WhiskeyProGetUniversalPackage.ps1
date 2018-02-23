@@ -387,7 +387,7 @@ function New-WhiskeyProGetUniversalPackage
                 #if parent doesn't exist in the destination dir, create it
                 if( -not ( Test-Path -Path $parentDestinationPath ) )
                 {
-                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-Verbose
+                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-WhiskeyVerbose -Context $TaskContext
                 }
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
@@ -417,8 +417,8 @@ function New-WhiskeyProGetUniversalPackage
                         $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
                     }
 
-                    Write-Verbose -Message $operationDescription
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-Verbose -Verbose
+                    Write-WhiskeyInfo -Context $TaskContext -Message $operationDescription
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-WhiskeyVerbose -Context $TaskContext
                     # Get rid of empty directories. Robocopy doesn't sometimes.
                     Get-ChildItem -Path $destination -Directory -Recurse | 
                         Where-Object { -not ($_ | Get-ChildItem) } |
@@ -438,9 +438,9 @@ function New-WhiskeyProGetUniversalPackage
         Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
     }
 
-    Write-Verbose -Message ('Creating universal package {0}' -f $outFile)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating universal package {0}' -f $outFile)
     & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
 
-    Write-Verbose -Message ('returning package path ''{0}''' -f $outFile)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('returning package path ''{0}''' -f $outFile)
     $outFile
 }

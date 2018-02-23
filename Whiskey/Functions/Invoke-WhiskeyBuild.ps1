@@ -87,11 +87,6 @@ function Invoke-WhiskeyBuild
     Push-Location -Path $Context.BuildRoot
     try
     {
-        Write-Verbose -Message ('Building version {0}' -f $Context.Version.SemVer2)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer2NoBuildMetadata)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
-
         $Context.RunMode = $PSCmdlet.ParameterSetName
 
         if( $PipelineName )
