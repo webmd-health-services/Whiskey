@@ -19,12 +19,5 @@ function Write-WhiskeyInfo
     
     $fullMessage = '[{0}][{1}][{2}]  {3}' -f $Context.PipelineName,$Context.TaskIndex,$Context.TaskName,$Message
     
-    if( $supportsWriteInformation )
-    {
-         Write-Information -MessageData $fullMessage
-    }
-    else
-    {
-        Write-Output -InputObject $fullMessage
-    }
+    Write-Output -InputObject $fullMessage
 }
