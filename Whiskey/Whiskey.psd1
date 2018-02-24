@@ -151,6 +151,7 @@
 * Added `WHISKEY_BUILD_STARTED_AT` variable. It's a `[datetime]` object that is the date/time the build started.
 * Fixed: Whiskey fails builds if a version of Visual Studio 2017 is installed that doesn't have a MSBuild.
 * Created `Version` task to replace the `Version`, `VersionFrom`, and `PrereleaseMap` whiskey.yml properties.
+* Fixed: when a build that has an Exec task runs in a background job, the build immediately stops after the Exec task executes the process.
 * ***BREAKING CHANGE***: We've removed the `Version`, `VersionFrom`, and `PrereleaseMap` properties from whiskey.yml. Use the new `Version` task instead (see the "Upgrade Instructions" below).
 * ***BREAKING CHANGE***: Whiskey no longer automatically adds build metadata to your version. Use the new `Version` task to set your build metadata (see the "Upgrade Instructions" below).
 * ***BREAKING CHANGE***: Whiskey's default version number is now '0.0.0'. Use the new `Version` task to customize your version number (see the "Upgrade Instructions" below).
