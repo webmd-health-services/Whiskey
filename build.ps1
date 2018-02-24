@@ -9,6 +9,7 @@ param(
     $Initialize
 )
 
+$ErrorActionPreference = 'Stop'
 #Requires -Version 4
 Set-StrictMode -Version Latest
 
@@ -16,7 +17,7 @@ Set-StrictMode -Version Latest
 $manifest = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -Raw
 if( $manifest -notmatch '\bModuleVersion\b\s*=\s*(''|")([^''"]+)' )
 {
-    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.' -ErrorAction Stop
+    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.'
 }
 $version = $Matches[2]
 
@@ -52,7 +53,7 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\VSSetup')
 $msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' }
 if( -not $msbuild )
 {
-    Write-Error ('Unable to find MSBuild 15.0.') -ErrorAction Stop
+    Write-Error ('Unable to find MSBuild 15.0.')
 }
 
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe'
@@ -81,6 +82,8 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 
     Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
+
+$ErrorActionPreference = 'Continue'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
