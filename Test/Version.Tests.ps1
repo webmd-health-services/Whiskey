@@ -61,11 +61,12 @@ function ThenSemVer2Is
     )
 
     It ('should set SemVer2') {
-        $context.Version.SemVer2 | Should -Be $ExpectedVersion
+        $context.Version.SemVer2.ToString() | Should -Be $ExpectedVersion.ToString()
     }
 
     It ('should set SemVer2NoBuildMetadata') {
-        $context.Version.SemVer2NoBuildMetadata | Should -Be (New-Object 'SemVersion.SemanticVersion' ($ExpectedVersion.Major,$ExpectedVersion.Minor,$ExpectedVersion.Patch,$ExpectedVersion.Prerelease))
+        $ExpectedVersion = New-Object 'SemVersion.SemanticVersion' ($ExpectedVersion.Major,$ExpectedVersion.Minor,$ExpectedVersion.Patch,$ExpectedVersion.Prerelease)
+        $context.Version.SemVer2NoBuildMetadata.ToString() | Should -Be $ExpectedVersion.ToString()
     }
 }
 
@@ -77,7 +78,7 @@ function ThenSemVer1Is
     )
 
     It ('should set SemVer1') {
-        $context.Version.SemVer1 | Should -Be $ExpectedVersion
+        $context.Version.SemVer1.ToString() | Should -Be $ExpectedVersion.ToString()
     }
 }
 
@@ -104,9 +105,17 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
+        [Switch]
+        $AsDeveloper
     )
 
-    $script:context = New-WhiskeyTestContext -ForBuildServer
+    $forParam = @{ ForBuildServer = $true }
+    if( $AsDeveloper )
+    {
+        $forParam = @{ ForDeveloper = $true }
+    }
+
+    $script:context = New-WhiskeyTestContext @forParam
     if( $branch )
     {
         $context.BuildMetadata.ScmBranch = $branch
@@ -130,6 +139,15 @@ Describe 'Version.when using simplified syntax' {
     GivenProperty @{ '' = '4.4.5-rc.5+branch.deadbee' }
     WhenRunningTask
     ThenSemVer2Is '4.4.5-rc.5+branch.deadbee'
+    ThenSemVer1Is '4.4.5-rc5'
+    ThenVersionIs '4.4.5'
+}
+
+Describe 'Version.when running as a developer' {
+    Init
+    GivenProperty @{ '' = '4.4.5-rc.5+branch.deadbee' }
+    WhenRunningTask -AsDeveloper
+    ThenSemVer2Is '4.4.5-rc.5'
     ThenSemVer1Is '4.4.5-rc5'
     ThenVersionIs '4.4.5'
 }
