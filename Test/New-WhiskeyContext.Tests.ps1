@@ -260,7 +260,10 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             [string]
             $ThenCreationFailsWithErrorMessage,
 
-            $WithDownloadRoot
+            $WithDownloadRoot,
+
+            [Whiskey.RunBy]
+            $RunBy
         )
 
         process
@@ -276,6 +279,11 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             try
             {
                 $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $script:ConfigurationPath @optionalArgs
+                if( $RunBy )
+                {
+                    $script:context.RunBy = $RunBy
+                }
+
                 if( $script:runMode )
                 {
                     $script:context.RunMode = $script:runMode
@@ -599,7 +607,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when Version property is used' {
         Init
         GivenConfiguration @{ 'BuildTasks' = @(@{ 'Exec' = 'cmd /C echo' }) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
-        WhenCreatingContext
+        WhenCreatingContext -RunBy 'BuildServer'
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context
         ThenSemVer1Is '1.2.3-rc1'
@@ -611,7 +619,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         Init
         '@{ ModuleVersion = "1.2.3" }' | Set-Content -Path (Join-Path -Path $TestDrive.Fullname -ChildPath 'module.psd1')
         GivenConfiguration @{ 'VersionFrom' = 'module.psd1' }
-        WhenCreatingContext
+        WhenCreatingContext -RunBy 'BuildServer'
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context
         ThenSemVer1Is '1.2.3'
@@ -647,7 +655,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                                                 @{ 'feature/*' = 'alpha' }
                                             ); 
                         }
-        WhenCreatingContext
+        WhenCreatingContext -RunBy 'BuildServer'
         $script:context.BuildMetadata.ScmBranch = 'feature/snafu'
         $script:context.BuildMetadata.BuildNumber = $buildNumber = '50'
         # Run a build to ensure the Version task is in the build tasks.
