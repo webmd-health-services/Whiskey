@@ -69,7 +69,7 @@
 
     * **Version**: The version for the current build.
     * **Path**: The path to a file from which Whiskey will read the current version. Whiskey supports .NET Core .csproj files, PowerShell module manifests, or Node package.json files.
-    * **Prerelease**: Any custom pre-release metadata to add to the version. This will overwrite any existing prerelease metadata. You usually only use this property when reading a version from a file with the `Path` property since some platforms don't natively support prerelease metadata.
+    * **Prerelease**: Any custom pre-release metadata to add to the version. This will overwrite any existing prerelease metadata. You usually only use this property when reading a version from a file with the `Path` property since some platforms don't natively support prerelease metadata. 
     * **Build**: Any custom build metadata to add to the version. This will overwrite any existing build metadata. You usually only use this property when reading a version from a file with the `Path` property since some platforms don't natively support prerelease metadata.
 
     # Examples
@@ -124,6 +124,18 @@
     Demonstrates how to have custom prerelease metadata on different branches. Set the "Prerelease" element to a list of key/value pairs. The keys are wildcard patterns that match branch names in your source code repository. The value is the prerelease metadata to use.
 
     In this example, if the current build number is 43, all builds on branches that match the wildcard pattern "feature/*" would have prerelease be "alpha.43", branches that matched pattern "bugfix/*" would have prerelease "beta.43", etc.
+
+    ### Example 6
+        
+        BuildTasks:
+        - Version:
+            Version: 4.5.6
+        - Version:
+            OnlyBy: BuildServer
+            Prerelease: alpha.$(WHISKEY_BUILD_NUMBER)
+            Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
+
+    Demonstrates that you can use the Version task to set just the Prerelease version and the Build metadata without affecting the version number. In this example, when being bun by a developer, the version number will be 4.5.6; when being run by the build server, the version number will be "4.5.6-alpha.6+develop.775e171" (assuming the current branch is "develop" and the current commit is "775e1711a1fe190f59f4c46ae3063f12e0040e58").
     #>
     [CmdletBinding()]
     [Whiskey.Task("Version")]
@@ -139,13 +151,6 @@
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    $rawVersion = $TaskParameter['']
-    if( -not $rawVersion )
-    {
-        $rawVersion = $TaskParameter['Version']
-    }
-    $propertyName = 'Version'
 
     function ConvertTo-SemVer
     {
@@ -176,9 +181,20 @@
         }
     }
 
-    [SemVersion.SemanticVersion]$semver = $null
-    $buildVersion = $TaskContext.Version
-    if( $TaskParameter['Path'] )
+    [Whiskey.BuildVersion]$buildVersion = $TaskContext.Version
+    [SemVersion.SemanticVersion]$semver = $buildVersion.SemVer2
+
+    if( $TaskParameter[''] )
+    {
+        $rawVersion = $TaskParameter['']
+        $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
+    }
+    elseif( $TaskParameter['Version'] )
+    {
+        $rawVersion = $TaskParameter['Version']
+        $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
+    }
+    elseif( $TaskParameter['Path'] )
     {
         $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
         if( -not $path )
@@ -239,10 +255,6 @@
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$path)
             $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $path)
         }
-    }
-    else
-    {
-        $semver = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
 
     $prerelease = $TaskParameter['Prerelease']

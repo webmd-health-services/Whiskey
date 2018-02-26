@@ -5,6 +5,7 @@
 $property = $null
 $failed = $false
 $branch = $null
+$initialVersion = $null
 
 function Init
 {
@@ -12,6 +13,7 @@ function Init
     $script:version = $null
     $script:failed = $false
     $script:branch = $null
+    $script:initialVersion = New-WhiskeyVersionObject '0.0.0'
 }
 
 function GivenFile
@@ -51,6 +53,15 @@ function ThenErrorIs
     It ('should write an error') {
         $Global:Error | Should -Match $Regex
     }
+}
+
+function GivenCurrentVersion
+{
+    param(
+        $Version
+    )
+
+    $script:initialVersion = New-WhiskeyVersionObject $Version
 }
 
 function ThenSemVer2Is
@@ -116,6 +127,7 @@ function WhenRunningTask
     }
 
     $script:context = New-WhiskeyTestContext @forParam
+    $context.Version = $initialVersion
     if( $branch )
     {
         $context.BuildMetadata.ScmBranch = $branch
@@ -428,4 +440,45 @@ Describe 'Version.when Prerelease branch map isn''t a map' {
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailed
     ThenErrorIs 'unable\ to\ find\ keys'
+}
+
+Describe 'Version.when setting just prerelease' {
+    Init 
+    GivenCurrentVersion '0.0.0-prerelease+build'
+    GivenProperty @{ 'Prerelease' = 'alpha' }
+    WhenRunningTask
+    ThenVersionIs '0.0.0'
+    ThenSemVer1Is '0.0.0-alpha'
+    ThenSemVer2Is '0.0.0-alpha+build'
+}
+
+Describe 'Version.when setting just build' {
+    Init
+    GivenCurrentVersion '0.0.0-prerelease+build'
+    GivenProperty @{ 'Build' = 'fubar' }
+    WhenRunningTask
+    ThenVersionIs '0.0.0'
+    ThenSemVer1Is '0.0.0-prerelease'
+    ThenSemVer2Is '0.0.0-prerelease+fubar'
+}
+
+Describe 'Version.when setting just version' {
+    Init
+    GivenCurrentVersion '0.0.0-prerelease+build'
+    GivenProperty @{ 'Version' = '1.1.1' }
+    WhenRunningTask
+    ThenVersionIs '1.1.1'
+    ThenSemVer1Is '1.1.1'
+    ThenSemVer2Is '1.1.1'
+}
+
+Describe 'Version.when setting just version from path' {
+    Init
+    GivenCurrentVersion '0.0.0-prerelease+build'
+    GivenFile 'package.json' '{ "Version": "1.1.1" }'
+    GivenProperty @{ Path = 'package.json' ; }
+    WhenRunningTask
+    ThenVersionIs '1.1.1'
+    ThenSemVer1Is '1.1.1'
+    ThenSemVer2Is '1.1.1'
 }
