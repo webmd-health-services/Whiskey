@@ -65,7 +65,7 @@ function Publish-WhiskeyBuildMasterPackage
     [Whiskey.Task("PublishBuildMasterPackage")]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

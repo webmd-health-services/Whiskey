@@ -246,7 +246,7 @@ function New-WhiskeyProGetUniversalPackage
     [Whiskey.Task("ProGetUniversalPackage")]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

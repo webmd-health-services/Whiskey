@@ -40,7 +40,7 @@ function Invoke-WhiskeyNodeLicenseChecker
     [Whiskey.RequiresTool('NodeModule::license-checker', 'LicenseCheckerPath', VersionParameterName='Version')]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

@@ -48,7 +48,7 @@ function Publish-WhiskeyProGetUniversalPackage
     [Whiskey.Task("PublishProGetUniversalPackage")]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

@@ -60,7 +60,7 @@
     [Whiskey.Task("Pipeline", SupportsClean=$true, SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]
