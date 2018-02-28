@@ -67,7 +67,7 @@ function Invoke-WhiskeyNUnit2Task
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -112,7 +112,7 @@ function Invoke-WhiskeyNUnit2Task
         $reportGeneratorArgs += $TaskParameter['ReportGeneratorArgument']
     }
     
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         Write-WhiskeyTiming -Message ('Uninstalling ReportGenerator.')
         Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
@@ -190,7 +190,7 @@ function Invoke-WhiskeyNUnit2Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to find ReportGenerator.exe in ReportGenerator NuGet package at ''{0}''.' -f $reportGeneratorRoot)
     }
 
-    if( $TaskContext.ShouldInitialize() )
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }
@@ -216,22 +216,22 @@ function Invoke-WhiskeyNUnit2Task
     
     $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
     $VerbosePreference = 'Continue'
-    Write-Verbose -Message ('  Path                {0}' -f ($Path | Select-Object -First 1))
-    $Path | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
-    Write-Verbose -Message ('  Framework           {0}' -f $frameworkParam)
-    Write-Verbose -Message ('  Include             {0}' -f $includeParam)
-    Write-Verbose -Message ('  Exclude             {0}' -f $excludeParam)
-    Write-Verbose -Message ('  Argument            /xml={0}' -f $reportPath)
-    $extraArgs | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
-    Write-Verbose -Message ('  CoverageFilter      {0}' -f ($TaskParameter['CoverageFilter'] | Select-Object -First 1))
-    $TaskParameter['CoverageFilter'] | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
-    Write-Verbose -Message ('  Output              {0}' -f $openCoverReport)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path | Select-Object -First 1))
+    $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $frameworkParam)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Include             {0}' -f $includeParam)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exclude             {0}' -f $excludeParam)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Argument            /xml={0}' -f $reportPath)
+    $extraArgs | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  CoverageFilter      {0}' -f ($TaskParameter['CoverageFilter'] | Select-Object -First 1))
+    $TaskParameter['CoverageFilter'] | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Output              {0}' -f $openCoverReport)
     $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
-    Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
-    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs | Select-Object -First 1))
-    $openCoverArgs | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
-    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs | Select-Object -First 1))
-    $reportGeneratorArgs | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('                      {0}' -f $_) }
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgs | Select-Object -First 1))
+    $openCoverArgs | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgs | Select-Object -First 1))
+    $reportGeneratorArgs | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
     
     if( -not $disableCodeCoverage )
     {

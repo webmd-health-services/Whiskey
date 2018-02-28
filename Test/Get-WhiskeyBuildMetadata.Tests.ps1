@@ -35,6 +35,7 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
@@ -74,6 +75,7 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
@@ -115,6 +117,7 @@ InModuleScope 'Whiskey' {
     {
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $VcsNumber,
@@ -173,16 +176,23 @@ InModuleScope 'Whiskey' {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory=$true)]
+            [int]
             $BuildNumber,
             [Parameter(Mandatory=$true)]
             $BuildID,
             [Parameter(Mandatory=$true)]
             $JobName,
             [Parameter(Mandatory=$true)]
+            [AllowNull()]
+            [uri]
             $JobUri,
             [Parameter(Mandatory=$true)]
+            [AllowNull()]
+            [uri]
             $BuildUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [AllowNull()]
+            [uri]
             $ScmUri,
             [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
             $ScmCommit,
@@ -236,7 +246,7 @@ InModuleScope 'Whiskey' {
         $scriptPropertyName = 'Is{0}' -f $Name
 
         It ('should be running by {0}' -f $Name) {
-            $buildInfo.BuildServerName | Should Be $Name
+            $buildInfo.BuildServer | Should Be $Name
             $buildInfo.$scriptPropertyName | Should Be $true
             $buildInfo.IsDeveloper | Should Be $false
             $buildInfo.IsBuildServer | Should Be $true
@@ -247,7 +257,7 @@ InModuleScope 'Whiskey' {
     {
         $buildInfo = $script:buildInfo
         It ('should be running as developer') {
-            $buildInfo.BuildServerName | Should BeNullOrEmpty
+            $buildInfo.BuildServer | Should -Be ([Whiskey.BuildServer]::None)
             $buildInfo.IsDeveloper | Should Be $true
             $buildInfo.IsBuildServer | Should Be $false
         }
@@ -277,14 +287,14 @@ InModuleScope 'Whiskey' {
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' `
                             -JobUri 'https://job.example.com' 
-        ThenBuildServerIs 'Jenkins'
+        ThenBuildServerIs ([Whiskey.BuildServer]::Jenkins)
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when run by a developer' {
         Init
         GivenDeveloperEnvironment
         WhenGettingBuildMetadata
-        ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri '' -ScmUri '' -ScmCommit '' -ScmBranch '' -JobUri ''
+        ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri $null -ScmUri $null -ScmCommit '' -ScmBranch '' -JobUri $null
         ThenRunByDeveloper
     }
 
@@ -309,7 +319,7 @@ InModuleScope 'Whiskey' {
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' `
                             -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug' 
-        ThenBuildServerIs 'AppVeyor'
+        ThenBuildServerIs ([Whiskey.BuildServer]::AppVeyor)
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when running under TeamCity' {
@@ -330,7 +340,7 @@ InModuleScope 'Whiskey' {
                             -ScmUri 'https://git.example.com' `
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' 
-        ThenBuildServerIs 'TeamCity'
+        ThenBuildServerIs ([Whiskey.BuildServer]::TeamCity)
     }
 
 }

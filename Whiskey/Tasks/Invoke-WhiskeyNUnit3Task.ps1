@@ -90,7 +90,7 @@ function Invoke-WhiskeyNUnit3Task
     [Whiskey.Task("NUnit3",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -128,7 +128,7 @@ function Invoke-WhiskeyNUnit3Task
         $reportGeneratorVersionParam['Version'] = $TaskParameter['ReportGeneratorVersion']
     }
 
-    if ($TaskContext.ShouldClean())
+    if( $TaskContext.ShouldClean )
     {
         Uninstall-WhiskeyTool -NuGetPackageName $nunitPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
         Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionParam
@@ -154,7 +154,7 @@ function Invoke-WhiskeyNUnit3Task
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''ReportGenerator'' failed to install.'
     }
 
-    if ($TaskContext.ShouldInitialize())
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }
@@ -239,16 +239,16 @@ function Invoke-WhiskeyNUnit3Task
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
     
     $separator = '{0}VERBOSE:                       ' -f [Environment]::NewLine
-    Write-Verbose -Message ('  Path                {0}' -f ($Path -join $separator))
-    Write-Verbose -Message ('  Framework           {0}' -f $framework)
-    Write-Verbose -Message ('  TestFilter          {0}' -f $testFilter)
-    Write-Verbose -Message ('  Argument            {0}' -f ($nunitExtraArgument -join $separator))
-    Write-Verbose -Message ('  NUnit Report        {0}' -f $nunitReport)
-    Write-Verbose -Message ('  CoverageFilter      {0}' -f $coverageFilter)
-    Write-Verbose -Message ('  OpenCover Report    {0}' -f $openCoverReport)
-    Write-Verbose -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
-    Write-Verbose -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgument -join ' '))
-    Write-Verbose -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgument -join ' '))
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path -join $separator))
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $framework)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  TestFilter          {0}' -f $testFilter)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Argument            {0}' -f ($nunitExtraArgument -join $separator))
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  NUnit Report        {0}' -f $nunitReport)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  CoverageFilter      {0}' -f $coverageFilter)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  OpenCover Report    {0}' -f $openCoverReport)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgument -join ' '))
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgument -join ' '))
     
     $nunitExitCode = 0
     $reportGeneratorExitCode = 0

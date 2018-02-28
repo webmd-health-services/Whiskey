@@ -3,7 +3,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$context = $null
+[Whiskey.Context]$context = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
 $publish = $false
@@ -247,11 +247,17 @@ function WhenRunningBuild
     $context.BuildRoot = $TestDrive.FullName;
     $context.Configuration = $config;
     $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
-    $context.ByDeveloper = $runByDeveloper;
-    $context.ByBuildServer = $runByBuildServer;
+    if( $runByDeveloper )
+    {
+        $context.RunBy = [Whiskey.RunBy]::Developer
+    }
+    if( $runByBuildServer )
+    {
+        $context.RunBy = [Whiskey.RunBy]::BuildServer
+    }
     $context.Publish = $publish;
-    $context.RunMode = 'Build';
-
+    $context.RunMode = [Whiskey.RunMode]::build
+    
     $Global:Error.Clear()
     $script:threwException = $false
     try
@@ -271,7 +277,13 @@ function WhenRunningBuild
         {
             $optionalParams['PipelineName'] = $PipelineName
         }
+        $startedAt = Get-Date
+        Start-Sleep -Milliseconds 1
+        $context.StartedAt = [DateTime]::MinValue
         Invoke-WhiskeyBuild -Context $context @optionalParams
+        It ('should set build start time') {
+            $context.StartedAt | Should -BeGreaterThan $startedAt
+        }
     }
     catch
     {

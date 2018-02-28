@@ -55,7 +55,7 @@ function Invoke-WhiskeyNpmConfig
     [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

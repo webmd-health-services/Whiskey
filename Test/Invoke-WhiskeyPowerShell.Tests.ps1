@@ -95,9 +95,14 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-
         [object]
-        $WithArgument
+        $WithArgument,
+
+        [Switch]
+        $InCleanMode,
+
+        [Switch]
+        $InInitMode
     )
 
     $taskParameter = @{
@@ -116,7 +121,7 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper
+    $context = New-WhiskeyTestContext -ForDeveloper -InCleanMode:$InCleanMode -InInitMode:$InInitMode
     
     $failed = $false
 
@@ -336,6 +341,16 @@ $(
             throw ('TaskContext missing member ''{0}''.' -f `$expectedMember)
         }
     }
+
+    if( `$TaskContext.Version -is [string] )
+    {
+        throw ('TaskContext.Version is a string instead of a [Whiskey.BuildVersion].')
+    }
+
+    if( `$TaskContext.BuildMetadata -is [string] )
+    {
+        throw ('TaskContext.BuildMetadata is a string instead of a [Whiskey.BuildInfo].')
+    }
 "@
     WhenTheTaskRuns 
     ThenTheTaskPasses
@@ -371,4 +386,18 @@ param(
 "@
     WhenTheTaskRuns -WithArgument @{ }
     ThenTheTaskPasses
+}
+
+Describe 'PowerShell.when run in Clean mode' {
+    GivenAScript
+    WhenTheTaskRuns -InCleanMode
+    ThenTheTaskPasses
+    ThenTheScriptRan
+}
+
+Describe 'PowerShell.when run in Initialize mode' {
+    GivenAScript 
+    WhenTheTaskRuns -InInitMode
+    ThenTheTaskPasses
+    ThenTheScriptRan
 }

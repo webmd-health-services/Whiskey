@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $result = $null
-$context = $null
+[Whiskey.Context]$context = $null
 
 function GivenVariable
 {
@@ -381,6 +381,13 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PATCH' {
     ThenValueIs '3'
 }
 
+Describe 'Resolve-WhiskeyVariable.WHISKEY_BUILD_STARTED_AT' {
+    Init
+    $context.StartedAt = Get-Date
+    WhenResolving '$(WHISKEY_BUILD_STARTED_AT.Year)'
+    ThenValueIs $context.StartedAt.Year.ToString()
+}
+
 Describe 'Resolve-WhiskeyVariable.WHISKEY_BUILD_URI' {
     Init
     $context.BuildMetadata.BuildUri = 'https://example.com/path?query=string'
@@ -489,4 +496,3 @@ Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
         $Global:Error[0] | Should -Match 'Failed\ to\ call\b.*\bSubstring\b'
     }
 }
-

@@ -5,7 +5,7 @@ function Publish-WhiskeyPowerShellModule
     param(
 
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]

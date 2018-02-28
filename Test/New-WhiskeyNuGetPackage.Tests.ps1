@@ -57,15 +57,13 @@ function GivenABuiltLibrary
 
     #Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
     $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
-    $context.ByDeveloper = $false
-    $context.ByBuildServer = $false
     if( $InReleaseMode )
     {
-        $context.ByBuildServer = $true
+        $context.RunBy = [Whiskey.RunBy]::BuildServer
     }
     else
     {
-        $context.ByDeveloper = $true
+        $context.RunBy = [Whiskey.RunBy]::Developer
     }
     Invoke-WhiskeyBuild -Context $context
     #Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose

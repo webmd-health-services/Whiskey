@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Whiskey.Tests", "Whiskey.Tests\Whiskey.Tests.csproj", "{F3AF6CE7-6070-4320-ADE6-94CEB38A6BCF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Whiskey", "Whiskey\Whiskey.csproj", "{023659A0-0632-4B73-8901-BD95988748D7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3AF6CE7-6070-4320-ADE6-94CEB38A6BCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3AF6CE7-6070-4320-ADE6-94CEB38A6BCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3AF6CE7-6070-4320-ADE6-94CEB38A6BCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3AF6CE7-6070-4320-ADE6-94CEB38A6BCF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{023659A0-0632-4B73-8901-BD95988748D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{023659A0-0632-4B73-8901-BD95988748D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{023659A0-0632-4B73-8901-BD95988748D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{023659A0-0632-4B73-8901-BD95988748D7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {235DD15D-76D6-4EA6-BA6A-0977828FBA14}
+	EndGlobalSection
+EndGlobal

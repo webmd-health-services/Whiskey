@@ -52,7 +52,7 @@ function Publish-WhiskeyProGetAsset
     [Whiskey.Task("PublishProGetAsset")]
     [CmdletBinding()]
     param(
-        [object]
+        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
         

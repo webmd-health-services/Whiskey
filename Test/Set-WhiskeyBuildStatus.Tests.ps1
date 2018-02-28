@@ -112,7 +112,7 @@ function WhenReportingBuildStatus
     $context.BuildMetadata.ScmCommitID = 'deadbee'
     $context.BuildMetadata.BuildUri = 'https://job.example.com/build'
     $context.BuildMetadata.JobName = 'snafu'
-    $context.BuildMetadata.BuildServerName = 'Jenkins'
+    $context.BuildMetadata.BuildServer = [Whiskey.BuildServer]::Jenkins
     $context.BuildMetadata.JobUri = 'https://job.example.com/'
     $Global:Error.Clear()
     try

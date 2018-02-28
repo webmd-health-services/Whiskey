@@ -55,7 +55,7 @@ function Invoke-WhiskeyBuild
     [CmdletBinding(DefaultParameterSetName='Build')]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context for the build. Use `New-WhiskeyContext` to create context objects.
         $Context,
 
@@ -79,7 +79,7 @@ function Invoke-WhiskeyBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $script:buildStartedAt = Get-Date
+    $Context.StartedAt = $script:buildStartedAt = Get-Date
 
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
@@ -87,11 +87,6 @@ function Invoke-WhiskeyBuild
     Push-Location -Path $Context.BuildRoot
     try
     {
-        Write-Verbose -Message ('Building version {0}' -f $Context.Version.SemVer2)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer2NoBuildMetadata)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.Version)
-        Write-Verbose -Message ('                 {0}' -f $Context.Version.SemVer1)
-
         $Context.RunMode = $PSCmdlet.ParameterSetName
 
         if( $PipelineName )

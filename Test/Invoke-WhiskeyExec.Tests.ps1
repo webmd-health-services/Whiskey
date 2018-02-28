@@ -110,6 +110,14 @@ function GivenTaskDefaultProperty
 
 function WhenRunningExecutable
 {
+    param(
+        [Switch]
+        $InCleanMode,
+
+        [Switch]
+        $InInitializeMode
+    )
+
     $TaskParameter = @{}
 
     if( $path )
@@ -137,7 +145,7 @@ function WhenRunningExecutable
         $TaskParameter[''] = $defaultProperty
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot)
+    $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot) -InCleanMode:$InCleanMode -InInitMode:$InInitializeMode
 
     Try 
     {
@@ -256,7 +264,7 @@ Describe 'Invoke-WhiskeyExec.when utilizing default task property to define exec
     GivenTaskDefaultProperty 'executable.bat Arg1 Arg2 "Arg 3" ''Arg 4'''
     WhenRunningExecutable
     ThenExecutableRan
-    ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', '"Arg 3"', '''Arg 4'''
+    ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', '"Arg 3"', '"Arg 4"'
     ThenTaskSuccess
 }
 
@@ -455,4 +463,22 @@ Describe 'Invoke-WhiskeyExec.when running executable located by the Path environ
     ThenExecutableRan
     ThenRanInWorkingDirectory '.'
     ThenTaskSuccess
+}
+
+Describe 'Exec.when running in Clean mode' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
+    WhenRunningExecutable -InCleanMode
+    ThenTaskSuccess
+    ThenExecutableRan
+}
+
+Describe 'Exec.when running in Initialize mode' {
+    Init
+    GivenExecutableFile 'executable.bat' 'exit 0'
+    GivenPath 'executable.bat'
+    WhenRunningExecutable -InInitializeMode
+    ThenTaskSuccess
+    ThenExecutableRan
 }

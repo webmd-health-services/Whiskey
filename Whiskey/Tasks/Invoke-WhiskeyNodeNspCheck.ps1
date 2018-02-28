@@ -51,7 +51,7 @@ function Invoke-WhiskeyNodeNspCheck
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

@@ -41,7 +41,7 @@ function Invoke-WhiskeyNpmPrune
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context the task is running under.
         $TaskContext,
 

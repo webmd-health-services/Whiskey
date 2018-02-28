@@ -1,13 +1,12 @@
-VersionFrom: Whiskey\Whiskey.psd1
-
 PublishOn: 
 - master
 
 BuildTasks:
-- PowerShell:
-    Path: init.ps1
-    
+- Version:
+    Path: Whiskey\Whiskey.psd1
+
 - Pester4:
+    OnlyBy: BuildServer
     Path: Test\*.Tests.ps1
     DescribeDurationReportCount: 20
     
