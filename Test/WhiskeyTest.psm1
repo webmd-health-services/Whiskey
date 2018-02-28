@@ -312,11 +312,11 @@ function New-WhiskeyTestContext
 
     if( $InCleanMode )
     {
-        $context.RunMode = 'Clean'
+        $context.RunMode = [Whiskey.RunMode]::Clean
     }
     elseif( $InInitMode )
     {
-        $context.RunMode = 'Initialize'
+        $context.RunMode = [Whiskey.RunMode]::Initialize
     }
 
     if( -not $ForOutputDirectory )

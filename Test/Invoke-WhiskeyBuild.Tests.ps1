@@ -256,8 +256,8 @@ function WhenRunningBuild
         $context.RunBy = [Whiskey.RunBy]::BuildServer
     }
     $context.Publish = $publish;
-    $context.RunMode = 'Build';
-
+    $context.RunMode = [Whiskey.RunMode]::build
+    
     $Global:Error.Clear()
     $script:threwException = $false
     try
