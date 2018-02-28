@@ -9,6 +9,11 @@ $buildStartedAt = [DateTime]::MinValue
 
 $supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
 
+# Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
+Update-TypeData -TypeName 'Whiskey.BuildContext' -SerializationDepth 50 -ErrorAction Ignore
+Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorAction Ignore
+Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
+
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'SupportsClean') )
 {
