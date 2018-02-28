@@ -340,7 +340,7 @@ InModuleScope 'Whiskey' {
                             -ScmUri 'https://git.example.com' `
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' 
-        ThenBuildServerIs (([Whiskey.BuildServer]::TeamCity)
+        ThenBuildServerIs ([Whiskey.BuildServer]::TeamCity)
     }
 
 }
