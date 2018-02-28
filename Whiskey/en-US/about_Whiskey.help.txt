@@ -50,11 +50,12 @@ LONG DESCRIPTION
        BuildTasks:
        
        PublishTasks:
-       
-    To define a pipeline, prefix each task name with `- ` after its 
-    pipeline. Task properties should start on the next line and be indented 
-    four spaces from the `-`. If a task has properties, the task name must 
-    end with a `:`. For example:
+    
+    A pipeline is a list of tasks. Each task has properties that control what
+    the task does. In Yaml, you create a list by prefixing each item with 
+    `- `. Task properties should start on the next line and be indented four 
+    spaces. If a task has properties, the task name must end with a `:`. For 
+    example:
 
         BuildTasks:
         - TaskOne:

@@ -33,7 +33,7 @@ PublishBuildStatusTo:
 #
 # See the documentation for each individual task for YML samples.
 BuildTasks:
-# The Version tassSets the current build's version number. You should almost always 
+# The Version task sets the current build's version number. You should almost always 
 # have one of these.
 - Version:
     Version: 0.0.0

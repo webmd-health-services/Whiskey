@@ -8,11 +8,11 @@
     .DESCRIPTION
     The `Version` task sets the version for the current build. Whiskey only supports [semantic versions](http://semver.org).
     
-    You can set the version explicitly with the `Version` property. Whiskey can read the version from a .NET Core .csproj file, a PowerShell module manifest, or a Node package.json file. Set the `Path` property to the path to the file to read from. If it is unsupported or doesn't contain a version, you'll get an error.
+    You can set the version explicitly with the `Version` property. Whiskey can read the version from a .NET Core .csproj file, a PowerShell module manifest, or a Node package.json file. Set the `Path` property to the path to the file to read from. If it is unsupported or doesn't contain a version, the build will fail.
 
     You can set custom prerelease metadata with the `Prerelease` property and custom build metadata with the `Build` property. These properties ovewrite any existing prereleaes version of build metadata from the `Version` property or the version read from a file. Prerelease metadata must only consist of letters, numbers, periods, or hyphens. Build metadata has the same restriction, but Whiskey replaces all non letters, numbers, and periods with hyphens (since build metadata typically comes from systems that don't have these restrictions).
 
-    When run by a develop, the version will never have any build metadata (i.e. build metadata is only available when running under/by a build server).
+    When run by a developer, the version will never have any build metadata (i.e. build metadata is only available when running under/by a build server).
 
     ## Per-Branch Prerelease Metadata
 
@@ -24,8 +24,8 @@
         - Version:
             Version: 5.6.3
             Prerelease:
-            - feature/*: beta.$(WHISKEY_BUILD_NUMBER)
-            - develop: alpha.$(WHISKEY_BUILD_NUMBER)
+            - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
+            - develop: beta.$(WHISKEY_BUILD_NUMBER)
 
     ## Reading Versions from Files
 
