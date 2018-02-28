@@ -287,7 +287,7 @@ InModuleScope 'Whiskey' {
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' `
                             -JobUri 'https://job.example.com' 
-        ThenBuildServerIs 'Jenkins'
+        ThenBuildServerIs ([Whiskey.BuildServer]::Jenkins)
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when run by a developer' {
@@ -319,7 +319,7 @@ InModuleScope 'Whiskey' {
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' `
                             -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug' 
-        ThenBuildServerIs 'AppVeyor'
+        ThenBuildServerIs ([Whiskey.BuildServer]::AppVeyor)
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when running under TeamCity' {
@@ -340,7 +340,7 @@ InModuleScope 'Whiskey' {
                             -ScmUri 'https://git.example.com' `
                             -ScmCommit 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                             -ScmBranch 'master' 
-        ThenBuildServerIs 'TeamCity'
+        ThenBuildServerIs (([Whiskey.BuildServer]::TeamCity)
     }
 
 }
