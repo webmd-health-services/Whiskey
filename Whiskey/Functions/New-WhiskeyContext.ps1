@@ -10,7 +10,7 @@ function New-WhiskeyContext
 
     * Reads in the whiskey.yml file containing the build you want to run.
     * Creates a ".output" directory in the same directory as your whiskey.yml file for storing build output, logs, results, temp files, etc.
-    * Reads build metadata created by the current build server (if being run by a build server)
+    * Reads build metadata created by the current build server (if being run by a build server).
     * Sets the version number to "0.0.0".
 
     ## Whiskey.Context
@@ -28,7 +28,7 @@ function New-WhiskeyContext
     * `Temp`: the temporary work directory for the current task.
     * `Version`: a `Whiskey.BuildVersion` object representing version being built (see below).
 
-    Any other property is considered private and may removed, renamed, and/or reimplemented at our discretion without notice.
+    Any other property is considered private and may be removed, renamed, and/or reimplemented at our discretion without notice.
 
     ## Whiskey.BuildInfo
 
@@ -36,7 +36,7 @@ function New-WhiskeyContext
 
     * `BuildNumber`: the current build number. This comes from the build server. (If the build is being run by a developer, this is always "0".) It increments with every new build (or should). This number is unique only to the current build job.
     * `ScmBranch`: the branch name from which the current build is running.
-    * `ScmCommitID`: the unique commit ID from which the current build is running. This ID distinguishes the current commit from all others in the source repository.
+    * `ScmCommitID`: the unique commit ID from which the current build is running. The commit ID distinguishes the current commit from all others in the source repository and is the same across copies of a repository.
 
     ## Whiskey.BuildVersion
 
@@ -127,7 +127,7 @@ function New-WhiskeyContext
     - "alpha/*": alpha
     - "release/*": rc
     
-add a Version task to your build pipeline that looks like this::
+add a Version task to your build pipeline that looks like this:
     
     BuildTasks:
     - Version:
@@ -148,7 +148,7 @@ Update it to look like this:
     - Version:
         Path: Whiskey\Whiskey.psd1
  
-Whiskey also no longer automatically adds build metadata to your version number. To preserver Whiskey''s old default build metadata, add a "Build" property to your new "Version" task that looks like this:
+Whiskey also no longer automatically adds build metadata to your version number. To preserve Whiskey''s old default build metadata, add a "Build" property to your new "Version" task that looks like this:
  
     BuildTasks:
     - Version:
