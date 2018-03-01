@@ -288,9 +288,12 @@ function New-WhiskeyTestContext
         }
         else
         {
-            $configData = @{
-                                'Version' = $ForVersion.ToString()
-                           }
+            $configData = @{ }
+            if( $ForVersion )
+            {
+                $configData['Version'] = $ForVersion.ToString()
+            }
+
             if( $ForTaskName )
             {
                 $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
@@ -309,11 +312,11 @@ function New-WhiskeyTestContext
 
     if( $InCleanMode )
     {
-        $context.RunMode = 'Clean'
+        $context.RunMode = [Whiskey.RunMode]::Clean
     }
     elseif( $InInitMode )
     {
-        $context.RunMode = 'Initialize'
+        $context.RunMode = [Whiskey.RunMode]::Initialize
     }
 
     if( -not $ForOutputDirectory )
@@ -327,8 +330,13 @@ function New-WhiskeyTestContext
         $context.DownloadRoot
     }
 
-    $context.Publish = $context.ByBuildServer = $PSCmdlet.ParameterSetName -eq 'ByBuildServer'
-    $context.ByDeveloper = $PSCmdlet.ParameterSetName -eq 'ByDeveloper'
+    $runBy = [Whiskey.RunBy]::BuildServer
+    if( $PSCmdlet.ParameterSetName -eq 'ByDeveloper' )
+    {
+        $runBy = [Whiskey.RunBy]::Developer
+    }
+    $context.Publish = $PSCmdlet.ParameterSetName -eq 'ByBuildServer'
+    $context.RunBy = $runBy
 
     if( $ForTaskName )
     {

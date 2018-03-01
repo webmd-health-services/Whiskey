@@ -7,73 +7,13 @@ $7z = Join-Path -Path $PSScriptRoot -ChildPath 'bin\7-Zip\7z.exe' -Resolve
 
 $buildStartedAt = [DateTime]::MinValue
 
-$types = @(
-                @{
-                    Name = 'Whiskey.TaskAttribute';
-                    Definition = @'
-namespace Whiskey {
+$supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
 
-    public sealed class TaskAttribute : System.Attribute {
+# Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
+Update-TypeData -TypeName 'Whiskey.BuildContext' -SerializationDepth 50 -ErrorAction Ignore
+Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorAction Ignore
+Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
 
-        public TaskAttribute(string name)
-        {
-            Name = name;
-        }
-
-        public string CommandName { get; set; }
-
-        public string Name { get; private set; }
-
-        public bool SupportsClean { get; set; }
-
-        public bool SupportsInitialize { get; set; }
-    }
-
-}
-'@;
-                },
-                @{
-                    Name = 'Whiskey.RequiresToolAttribute';
-                    Definition = @'
-namespace Whiskey {
-    
-    public sealed class RequiresToolAttribute : System.Attribute {
-        
-        public RequiresToolAttribute(string toolName, string toolPathParameterName)
-        {
-            Name = toolName;
-            PathParameterName = toolPathParameterName;
-            VersionParameterName = "Version";
-        }
-
-        public string Name { get; private set; }
-
-        public string PathParameterName { get; set; }
-
-        public string Version { get; set; }
-
-        public string VersionParameterName { get; set; }
-    }
-}
-'@;
-                }
-        )
-
-foreach( $typeDef in $types )
-{
-    $type = [AppDomain]::CurrentDomain.GetAssemblies() | 
-                ForEach-Object { $_.GetType($typeDef.Name) } | 
-                Select-Object -First 1
-
-
-    if( $type )
-    {
-        continue
-    }
-
-    Add-Type -TypeDefinition $typeDef.Definition 
-}
-            
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'SupportsClean') )
 {

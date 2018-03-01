@@ -63,7 +63,7 @@ function Invoke-WhiskeyPowerShell
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]
@@ -76,7 +76,7 @@ function Invoke-WhiskeyPowerShell
     
     if( -not ($TaskParameter.ContainsKey('Path')) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
         
         BuildTasks:
         - PowerShell:

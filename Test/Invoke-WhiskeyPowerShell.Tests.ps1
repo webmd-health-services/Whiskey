@@ -341,6 +341,16 @@ $(
             throw ('TaskContext missing member ''{0}''.' -f `$expectedMember)
         }
     }
+
+    if( `$TaskContext.Version -is [string] )
+    {
+        throw ('TaskContext.Version is a string instead of a [Whiskey.BuildVersion].')
+    }
+
+    if( `$TaskContext.BuildMetadata -is [string] )
+    {
+        throw ('TaskContext.BuildMetadata is a string instead of a [Whiskey.BuildInfo].')
+    }
 "@
     WhenTheTaskRuns 
     ThenTheTaskPasses

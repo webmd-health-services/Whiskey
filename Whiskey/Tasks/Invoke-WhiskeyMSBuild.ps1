@@ -53,7 +53,7 @@ function Invoke-WhiskeyMSBuild
     [Whiskey.Task("MSBuild",SupportsClean=$true)]
     [CmdletBinding()]
     param(
-        [object]
+        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
         
@@ -110,10 +110,10 @@ function Invoke-WhiskeyMSBuild
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('A 32-bit version of MSBuild {0} does not exist.' -f $version)
         }
     }
-    Write-Verbose -Message ('{0}' -f $msbuildExePath)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}' -f $msbuildExePath)
     
     $target = @( 'build' )
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         $target = 'clean'
     }
@@ -127,22 +127,22 @@ function Invoke-WhiskeyMSBuild
 
     foreach( $projectPath in $path )
     {
-        Write-Verbose -Message ('  {0}' -f $projectPath)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $projectPath)
         $errors = $null
         if( $projectPath -like '*.sln' )
         {
-            if( $TaskContext.ShouldClean() )
+            if( $TaskContext.ShouldClean )
             {
                 $packageDirectoryPath = Join-Path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
-                    Write-Verbose -Message ('  Removing NuGet packages at {0}.' -f $packageDirectoryPath)
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Removing NuGet packages at {0}.' -f $packageDirectoryPath)
                     Remove-Item $packageDirectoryPath -Recurse -Force
                 }
             }
             else
             {
-                Write-Verbose -Message ('  Restoring NuGet packages.')
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('  Restoring NuGet packages.')
                 & $nugetPath restore $projectPath
             }
         }
@@ -157,7 +157,7 @@ function Invoke-WhiskeyMSBuild
                     $assemblyInfoPath = $assemblyInfo.FullName
                     $newContent = Get-Content -Path $assemblyInfoPath | Where-Object { $_ -notmatch '\bAssembly(File|Informational)?Version\b' }
                     $newContent | Set-Content -Path $assemblyInfoPath
-                    Write-Verbose -Message ('    Updating version in {0}.' -f $assemblyInfoPath)
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('    Updating version in {0}.' -f $assemblyInfoPath)
     @"
 [assembly: System.Reflection.AssemblyVersion("{0}")]
 [assembly: System.Reflection.AssemblyFileVersion("{0}")]
@@ -215,9 +215,9 @@ function Invoke-WhiskeyMSBuild
                                             }
                                       } | Where-Object { $_ }
         $separator = '{0}VERBOSE:               ' -f [Environment]::NewLine
-        Write-Verbose -Message ('  Target      {0}' -f ($target -join $separator))
-        Write-Verbose -Message ('  Property    {0}' -f ($property -join $separator))
-        Write-Verbose -Message ('  Argument    {0}' -f ($msbuildArgs -join $separator))
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Target      {0}' -f ($target -join $separator))
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Property    {0}' -f ($property -join $separator))
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Argument    {0}' -f ($msbuildArgs -join $separator))
 
         $propertyArgs = $property | ForEach-Object { 
             $item = $_

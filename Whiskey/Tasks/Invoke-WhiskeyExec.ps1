@@ -89,7 +89,7 @@ function Invoke-WhiskeyExec
     [Whiskey.Task("Exec",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]
@@ -108,7 +108,7 @@ function Invoke-WhiskeyExec
         $TaskParameter['Path'] = $defaultProperty[0]
         if( $defaultProperty.Count -gt 1 )
         {
-            $TaskParameter['Argument'] = $defaultProperty[1..($defaultProperty.Count - 1)]
+            $TaskParameter['Argument'] = $defaultProperty[1..($defaultProperty.Count - 1)] | ForEach-Object { $_.Trim("'",'"') }
         }
     }
 
@@ -142,16 +142,27 @@ function Invoke-WhiskeyExec
         }
     }
 
-    $workingDirectory = (Get-Location).ProviderPath
-
-    $argumentListParam = @{}
-    if ( $TaskParameter['Argument'] )
+    $logArgumentList = $TaskParameter['Argument'] | 
+                            ForEach-Object { 
+                                if( $_ -match '\ ' ) 
+                                {
+                                    '"{0}"' -f $_.Trim('"',"'")
+                                }
+                                else
+                                {
+                                    $_
+                                }
+                            }
+    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} {1}' -f $path,($logArgumentList -join ' '))
+    Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
+    $argumentPrefix = ' ' * ($path.Length + 2)
+    foreach( $argument in $TaskParameter['Argument'] )
     {
-        $argumentListParam['ArgumentList'] = $TaskParameter['Argument']
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument)
     }
-    
-    $process = Start-Process -FilePath $path @argumentListParam -WorkingDirectory $workingDirectory -NoNewWindow -Wait -PassThru
-    $exitCode = $process.ExitCode
+    # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately terminates the build. Full stop.
+    & $path $TaskParameter['Argument']
+    $exitCode = $LASTEXITCODE
     
     $successExitCodes = $TaskParameter['SuccessExitCode']
     if( -not $successExitCodes )
@@ -165,7 +176,7 @@ function Invoke-WhiskeyExec
         {
             if( $exitCode -eq [int]$Matches[0] )
             {
-                Write-Verbose -Message ('  Exit code {0} = {1}' -f $exitCode,$Matches[0])
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} = {1}' -f $exitCode,$Matches[0])
                 return
             }
         }
@@ -180,7 +191,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -lt $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} < {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} < {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -188,7 +199,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -le $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} <= {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} <= {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -196,7 +207,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -gt $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} > {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} > {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -204,7 +215,7 @@ function Invoke-WhiskeyExec
                 {
                     if( $exitCode -ge $successExitCode )
                     {
-                        Write-Verbose -Message ('  Exit code {0} >= {1}' -f $exitCode,$successExitCode)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} >= {1}' -f $exitCode,$successExitCode)
                         return
                     }
                 }
@@ -215,7 +226,7 @@ function Invoke-WhiskeyExec
         {
             if( $exitCode -ge [int]$Matches[1] -and $exitCode -le [int]$Matches[2] )
             {
-                Write-Verbose -Message ('  Exit code {0} <= {1} <= {2}' -f $Matches[1],$exitCode,$Matches[2])
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} <= {1} <= {2}' -f $Matches[1],$exitCode,$Matches[2])
                 return
             }
         }

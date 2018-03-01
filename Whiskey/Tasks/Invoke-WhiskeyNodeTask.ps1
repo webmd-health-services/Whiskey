@@ -15,7 +15,7 @@ function Invoke-WhiskeyNodeTask
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context the task is running under.
         $TaskContext,
 
@@ -33,7 +33,7 @@ function Invoke-WhiskeyNodeTask
 
     Write-Warning -Message ('The ''Node'' task has been deprecated and will be removed in a future version of Whiskey. It''s functionality has been broken up into individual smaller tasks, ''NpmInstall'', ''NpmRunScript'', ''NodeNspCheck'', and ''NodeLicenseChecker''. Update the build configuration in ''{0}'' to use the new tasks.' -f $TaskContext.ConfigurationPath)
 
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         Write-WhiskeyTiming -Message 'Cleaning'
         $nodeModulesPath = Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules'
@@ -78,7 +78,7 @@ function Invoke-WhiskeyNodeTask
         Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-WhiskeyTiming -Message ('COMPLETE')
 
-        if( $TaskContext.ShouldInitialize() )
+        if( $TaskContext.ShouldInitialize )
         {
             Write-WhiskeyTiming -Message 'Initialization complete.'
             return
@@ -140,7 +140,7 @@ BuildTasks:
                                     ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
         # show the report
-        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-Verbose
+        $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 
         $licensePath = 'node-license-checker-report.json'
         $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath

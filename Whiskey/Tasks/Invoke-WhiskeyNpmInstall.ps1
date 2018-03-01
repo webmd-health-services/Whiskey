@@ -62,7 +62,7 @@ function Invoke-WhiskeyNpmInstall
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]
@@ -77,7 +77,7 @@ function Invoke-WhiskeyNpmInstall
 
     if( -not $TaskParameter['Package'] )
     {
-        if( $TaskContext.ShouldClean() )
+        if( $TaskContext.ShouldClean )
         {
             Write-WhiskeyTiming -Message 'Removing project node_modules'
             Remove-WhiskeyFileSystemItem -Path 'node_modules' -ErrorAction Stop
@@ -110,7 +110,7 @@ function Invoke-WhiskeyNpmInstall
                 $packageName = $package
             }
 
-            if( $TaskContext.ShouldClean() )
+            if( $TaskContext.ShouldClean )
             {
                 if( $TaskParameter.ContainsKey('NodePath') -and (Test-Path -Path $TaskParameter['NodePath'] -PathType Leaf) )
                 {

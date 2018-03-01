@@ -1,6 +1,13 @@
 
 function Get-MSBuild
 {
+    [CmdletBinding()]
+    param(
+    )
+
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
     function Resolve-MSBuildToolsPath
     {
         param(
@@ -73,6 +80,12 @@ function Get-MSBuild
     foreach( $instance in (Get-VSSetupInstance) )
     {
         $msbuildRoot = Join-Path -Path $instance.InstallationPath -ChildPath 'MSBuild'
+        if( -not (Test-Path -Path $msbuildRoot -PathType Container) )
+        {
+            Write-Verbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
+            continue
+        }
+
         $versionRoots = Get-ChildItem -Path $msbuildRoot -Directory | 
                             Where-Object { Test-Version $_.Name }
 

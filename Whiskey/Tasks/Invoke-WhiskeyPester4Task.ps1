@@ -52,7 +52,7 @@ function Invoke-WhiskeyPester4Task
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
     
         [Parameter(Mandatory=$true)]
@@ -83,7 +83,7 @@ function Invoke-WhiskeyPester4Task
         $version = '4.*'
     }
 
-    if( $TaskContext.ShouldClean() )
+    if( $TaskContext.ShouldClean )
     {
         Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
@@ -91,7 +91,7 @@ function Invoke-WhiskeyPester4Task
     
     $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
     
-    if( $TaskContext.ShouldInitialize() )
+    if( $TaskContext.ShouldInitialize )
     {
         return
     }
@@ -128,10 +128,10 @@ function Invoke-WhiskeyPester4Task
 
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ($outputFileNameFormat -f $testIdx)
 
-    Write-Verbose -Message ('[Pester4]  {0}' -f $pesterModulePath)
-    Write-Verbose -Message ('[Pester4]    Script      {0}' -f ($Path | Select-Object -First 1))
-    $Path | Select-Object -Skip 1 | ForEach-Object { Write-Verbose -Message ('[Pester4]                {0}' -f $_) }
-    Write-Verbose -Message ('[Pester4]    OutputFile  {0}' -f $outputFile)
+    Write-WhiskeyVerbose -Context $TaskContext -Message $pesterModulePath
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Script      {0}' -f ($Path | Select-Object -First 1))
+    $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('              {0}' -f $_) }
+    Write-Verbose -Message ('  OutputFile  {0}' -f $outputFile)
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $script = $using:Path

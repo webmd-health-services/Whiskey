@@ -22,7 +22,7 @@ function Set-WhiskeyTaskDefaults
     [Whiskey.Task("TaskDefaults",SupportsClean=$true,SupportsInitialize=$true)]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         $TaskContext,
 
         [Parameter(Mandatory=$true)]

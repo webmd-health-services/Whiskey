@@ -264,7 +264,7 @@ Describe 'Invoke-WhiskeyExec.when utilizing default task property to define exec
     GivenTaskDefaultProperty 'executable.bat Arg1 Arg2 "Arg 3" ''Arg 4'''
     WhenRunningExecutable
     ThenExecutableRan
-    ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', '"Arg 3"', '''Arg 4'''
+    ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', '"Arg 3"', '"Arg 4"'
     ThenTaskSuccess
 }
 

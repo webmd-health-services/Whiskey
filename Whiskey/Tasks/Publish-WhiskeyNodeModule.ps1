@@ -38,7 +38,7 @@ function Publish-WhiskeyNodeModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
+        [Whiskey.Context]
         # The context the task is running under.
         $TaskContext,
 
@@ -111,7 +111,7 @@ function Publish-WhiskeyNodeModule
         Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
         Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
         Add-Content -Path $packageNpmrc -Value ('registry={0}' -f $npmRegistryUri)
-        Write-Verbose -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
         Get-Content -Path $packageNpmrc |
             ForEach-Object {
                 if( $_ -match '_password' )
@@ -120,7 +120,7 @@ function Publish-WhiskeyNodeModule
                 }
                 return $_
             } |
-            Write-Verbose
+            Write-WhiskeyVerbose -Context $TaskContext
 
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
         Invoke-WhiskeyNpmCommand -Name 'publish' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
@@ -129,7 +129,7 @@ function Publish-WhiskeyNodeModule
     {
         if (Test-Path $packageNpmrc)
         {
-            Write-Verbose -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
         }
     }

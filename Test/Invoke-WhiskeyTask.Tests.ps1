@@ -6,7 +6,7 @@ Set-StrictMode -Version 'Latest'
 $whiskeyYmlPath = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
-$context = $null
+[Whiskey.Context]$context = $null
 $warnings = $null
 $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
@@ -604,7 +604,10 @@ function WhenRunningTask
     $context.PipelineName = 'Build';
     $context.TaskName = $null;
     $context.TaskIndex = 1;
-    $context.TaskDefaults = $taskDefaults;
+    foreach( $key in $taskDefaults.Keys )
+    {
+        $context.TaskDefaults.Add($key,$taskDefaults[$key])
+    }
 
     if( $InRunMode )
     {
@@ -1071,7 +1074,7 @@ foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
         Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
         GivenVariable 'Fubar' 'Snafu'
         WhenRunningTask 'PowerShell' -Parameter @{ $commonPropertyName = '$(Fubar)' } -ErrorAction SilentlyContinue
-        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value:\ ''Snafu'''
     }
 }
 
@@ -1110,7 +1113,7 @@ foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
         Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
         GivenDefaults @{ $commonPropertyName = 'Snafu' } -ForTask 'PowerShell'
         WhenRunningTask 'PowerShell' -Parameter @{ } -ErrorAction SilentlyContinue
-        ThenThrewException 'has\ an\ invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value:\ ''Snafu'''
     }
 }
 

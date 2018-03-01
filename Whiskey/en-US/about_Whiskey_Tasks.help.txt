@@ -18,7 +18,7 @@ LONG DESCRIPTION
     * `MSBuild`: runs MSBuild, the Microsoft build engine.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that 
       scans and reports on Node module license metadata.
-    * `NodeNspCheck`: runs NSP, a Node security scanner.
+    * `NodeNspCheck`: runs NSP, a vulnerability scanner for Node projects.
     * `NpmConfig`: runs the Node `npm config` command.
     * `NpmInstall`: runs the Node `npm install` command.
     * `NpmPrune`: runs the Node `npm prune` command.
@@ -54,10 +54,10 @@ LONG DESCRIPTION
       values are `Developer` or `BuildServer`.
     * `OnlyDuring`/`ExceptDuring': controls if a task will run in the current
       run mode. Valid values are `Initialize`, `Build`, and `Clean`. Useful
-      for having custom initialization task, cleaning tasks, etc. 
-      Additionally, each task must opt-in to run during Initialize and Clean 
-      modes. If a task doesn't do anything in either of those modes, these 
-      properties have no effect.
+      for having custom initialization tasks, cleaning tasks, etc. Make sure
+      the task actually does work in the chosen mode. Some tasks don't have
+      anything to clean or initialize, in which case these properties would 
+      have no affect.
     * `OnlyOnBranch`/`ExceptOnBranch`: controls what branch a task should run
       on. By default, a task runs on every branch. When a build is run by a
       developer, there is no branch information, so tasks that have this 
