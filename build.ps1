@@ -23,16 +23,22 @@ if( $manifest -notmatch '\bModuleVersion\b\s*=\s*(''|")([^''"]+)' )
 }
 $version = $Matches[2]
 
-$commitID = git rev-parse HEAD
-$commitID = $commitID.Substring(0,7)
+$buildInfo = ''
+if( Test-Path -Path ('env:APPVEYOR') )
+{
+    $commitID = $env:APPVEYOR_REPO_COMMIT
+    $commitID = $commitID.Substring(0,7)
 
-$branch = git rev-parse --abbrev-ref HEAD
-$branch = $branch -replace '[^A-Za-z0-9-]','-'
+    $branch = $env:APPVEYOR_REPO_BRANCH
+    $branch = $branch -replace '[^A-Za-z0-9-]','-'
+
+    $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+}
 
 $assemblyVersion = @"
 [assembly: System.Reflection.AssemblyVersion("$version")]
 [assembly: System.Reflection.AssemblyFileVersion("$version")]
-[assembly: System.Reflection.AssemblyInformationalVersion("$version+$branch.$commitID")]
+[assembly: System.Reflection.AssemblyInformationalVersion("$version$buildInfo")]
 "@ 
 
 $assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
