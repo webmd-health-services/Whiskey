@@ -7,7 +7,7 @@ function Install-WhiskeyTool
 
     .DESCRIPTION
     The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
-    
+
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
 
     .EXAMPLE
@@ -19,11 +19,11 @@ function Install-WhiskeyTool
     Install-WhiskeyTool -ModuleName 'Pester' -Version 3
 
     Demonstrates how to instals the most recent version of a specific major version of a module. In this case, Pester version 3.6.4 would be installed (which is the most recent 3.x version of Pester as of this writing).
-    
+
     .EXAMPLE
     Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
 
-    Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed. 
+    Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed.
 
     #>
     [CmdletBinding()]
@@ -32,7 +32,7 @@ function Install-WhiskeyTool
         [Whiskey.RequiresToolAttribute]
         # The attribute that defines what tool is necessary.
         $ToolInfo,
-        
+
         [Parameter(Mandatory=$true,ParameterSetName='Tool')]
         [string]
         # The directory where you want the tools installed.
@@ -107,7 +107,7 @@ function Install-WhiskeyTool
         return $expectedPath
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
-    {        
+    {
         $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
         $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
         $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
@@ -147,13 +147,13 @@ function Install-WhiskeyTool
         {
             'NodeModule'
             {
-                
+
                 $moduleRoot = Install-WhiskeyNodeModule -Name $name `
                                                         -NodePath $nodePath `
                                                         -Version $version `
                                                         -Global `
                                                         -InCleanMode:$InCleanMode `
-                                                        -ErrorAction Stop 
+                                                        -ErrorAction Stop
                 $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
             }
             default
@@ -223,7 +223,7 @@ function Install-WhiskeyTool
                         {
                             $npmVersionToInstall = $nodeVersionToInstall.npm
                         }
-                
+
                         if( (Test-Path -Path $nodePath -PathType Leaf) )
                         {
                             $currentNodeVersion = & $nodePath '--version'
@@ -275,7 +275,7 @@ function Install-WhiskeyTool
                         if( $npmVersion -ne $npmVersionToInstall )
                         {
                             Write-Verbose ('Installing npm@{0}.' -f $npmVersionToInstall)
-                            # Bug in NPM 5 that won't delete these files in the node home directory. 
+                            # Bug in NPM 5 that won't delete these files in the node home directory.
                             Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include 'npm.cmd','npm','npx.cmd','npx' | Remove-Item
                             & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g'
                             if( $LASTEXITCODE )
@@ -286,12 +286,50 @@ function Install-WhiskeyTool
 
                         $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
                     }
+                    'Dotnet'
+                    {
+                        $globalJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'global.json'
+                        if (-not (Test-Path -Path $globalJsonPath -PathType Leaf))
+                        {
+                            $globalJsonPath = Join-Path -Path $InstallRoot -ChildPath 'global.json'
+                        }
+
+                        $sdkVersion = $null
+                        if ($Version)
+                        {
+                            $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -Version $Version
+                        }
+                        elseif (Test-Path -Path $globalJsonPath -PathType Leaf)
+                        {
+                            $globalJsonVersion = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json |
+                                                 Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
+                                                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+
+                            if ($globalJsonVersion)
+                            {
+                                $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -Version $globalJsonVersion
+                            }
+                        }
+
+                        if (-not $sdkVersion)
+                        {
+                            $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -LatestLTS
+                        }
+
+                        $dotnetRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+
+                        $dotnetPath = Install-WhiskeyDotnetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -SearchExisting
+
+                        $TaskParameter[$ToolInfo.PathParameterName] = $dotnetPath
+
+                        Set-WhiskeyDotnetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SDKVersion $sdkVersion
+                    }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $name)
+                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''Dotnet''.' -f $name)
                     }
                 }
             }
         }
     }
-} 
+}
