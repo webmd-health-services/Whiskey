@@ -500,11 +500,11 @@ catch {
 }
 
 # Successfully downloaded dotnet sdk so remove any "Failed to download" messages that were added to the error record.
-$failedToDownloadMessages = $Error |
+$failedToDownloadMessages = $Global:Error |
                             Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } |
                             Where-Object { $_.Exception.Message -like ('*Failed to download {0}/*.zip*' -f $AzureFeed) }
 
-foreach ($failure in $failedToDownloadMessages) { $Error.Remove($failure) }
+foreach ($failure in $failedToDownloadMessages) { $Global:Error.Remove($failure) }
 
 Say-Verbose "Extracting zip from $DownloadLink"
 Extract-Dotnet-Package -ZipPath $ZipPath -OutPath $InstallRoot
