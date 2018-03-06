@@ -94,20 +94,6 @@ function GivenVerbosity
     $script:verbosity = $Level
 }
 
-function ThenBuiltCorrectVersion
-{
-    $builtAssemblies = Get-ChildItem -Path $TestDrive.FullName -Filter '*.dll' -Recurse | Select-Object -ExpandProperty 'FullName'
-
-    It 'should build the correct version' {
-        $builtAssemblies | Should -Not -BeNullOrEmpty
-
-        foreach ($assembly in $builtAssemblies) {
-            $builtVersion = Get-Item -Path $assembly | Select-Object -ExpandProperty 'VersionInfo' | Select-Object -ExpandProperty 'ProductVersion'
-            $builtVersion | Should -Be $taskContext.Version.SemVer1.ToString()
-        }
-    }
-}
-
 function ThenOutput
 {
     param(
@@ -155,10 +141,17 @@ function ThenProjectBuilt
         $outputDir = Join-Path -Path $TestDrive.FullName -ChildPath 'bin\Release\netcoreapp2.0'
     }
 
-    It 'should build the project' {
-        foreach ($name in $Assembly)
-        {
-            Join-Path -Path $outputDir -ChildPath $name | Should -Exist
+    foreach ($name in $Assembly)
+    {
+        $assemblyPath = Join-Path -Path $outputDir -ChildPath $name
+        $builtVersion = Get-Item -Path $assemblyPath | Select-Object -ExpandProperty 'VersionInfo' | Select-Object -ExpandProperty 'ProductVersion'
+
+        It 'should build the project' {
+            $assemblyPath | Should -Exist
+        }
+
+        It 'should set the correct version' {
+            $builtVersion | Should -Be $taskContext.Version.SemVer1.ToString()
         }
     }
 }
@@ -286,7 +279,6 @@ Describe 'DotNetBuild.when not given any Paths' {
         GivenDotnetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForDeveloper
         ThenProjectBuilt 'DotNetCore.dll'
-        ThenBuiltCorrectVersion
         ThenVerbosityIs -Minimal
         ThenTaskSuccess
     }
@@ -296,7 +288,6 @@ Describe 'DotNetBuild.when not given any Paths' {
         GivenDotnetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForBuildServer
         ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
-        ThenBuiltCorrectVersion
         ThenVerbosityIs -Detailed
         ThenTaskSuccess
     }
@@ -314,7 +305,6 @@ Describe 'DotNetBuild.when given Path to a csproj file' {
     GivenPath 'DotNetCore.csproj'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll'
-    ThenBuiltCorrectVersion
     ThenTaskSuccess
 }
 
@@ -340,7 +330,6 @@ Describe 'DotNetBuild.when given multiple Paths to csproj files' {
     GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll','DotNetCore2.dll'
-    ThenBuiltCorrectVersion
     ThenTaskSuccess
 }
 
@@ -351,7 +340,6 @@ Describe 'DotNetBuild.when given verbosity level' {
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild
         ThenProjectBuilt 'DotNetCore.dll'
-        ThenBuiltCorrectVersion
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
     }
@@ -362,7 +350,6 @@ Describe 'DotNetBuild.when given verbosity level' {
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild
         ThenProjectBuilt 'DotNetCore.dll'
-        ThenBuiltCorrectVersion
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
     }
@@ -374,7 +361,6 @@ Describe 'DotNetBuild.when given output directory' {
     GivenOutputDirectory 'Output Dir'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll' -Directory 'Output Dir'
-    ThenBuiltCorrectVersion
     ThenTaskSuccess
 }
 
@@ -386,7 +372,6 @@ Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' 
     GivenArgument '--no-restore','-nologo'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll'
-    ThenBuiltCorrectVersion
     ThenOutput -DoesNotContain '\bRestore\ completed\b'
     ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
     ThenTaskSuccess
