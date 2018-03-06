@@ -149,6 +149,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: PowerShell task fails when Whiskey is stored in a directory that isn't named "Whiskey".
+* Fixed: NuGetPush task fails when pushing to nuget.org.
 '@
         } # End of PSData hashtable
 
