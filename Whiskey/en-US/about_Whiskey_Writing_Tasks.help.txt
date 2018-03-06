@@ -62,11 +62,11 @@ LONG DESCRIPTION
     * ExceptBy
     * WorkingDirectory
 
-    In other words, your task isn't allowed to have these properties. 
+    In other words, your task isn't allowed to have these properties.
 
     # Tools
 
-    Whiskey can automatically install some tools for your task. The path to that tool is passed to your task in the `TaskParameter` parameter. 
+    Whiskey can automatically install some tools for your task. The path to that tool is passed to your task in the `TaskParameter` parameter.
 
     To tell Whiskey what tools you depend on, add a `Whiskey.RequiresTool` attribute. It has two parameters: the name of the tool, and the name of the key to use in the `TaskParameter` hashtable where the path to your tool is saved.
 
@@ -147,13 +147,13 @@ LONG DESCRIPTION
     To install the .NET Core SDK, add this to your task:
 
         [Whiskey.RequiresTool('Dotnet','DotnetPath')]
-    
-    The `DotnetPath` string is the name of the key where the path to the `dotnet.exe` command should be saved in the `$TaskParamter` hashtable when calling your task.
 
-    If the SDK version to install is not defined in the `whiskey.yml` file, then Whiskey will look for a .NET Core `global.json` file in both the task's working directory and in the same directory as the `whiskey.yml` file.
+    The `DotnetPath` string is the name of the key where the path to the `dotnet.exe` command should be saved in the `$TaskParameter` hashtable when calling your task.
+
+    If the SDK version to install is not defined in the `whiskey.yml` file, then Whiskey will look for a .NET Core `global.json` file first in the task's working directory and then in the same directory as the `whiskey.yml` file.
 
     If no SDK version is found in the `whiskey.yml` or `global.json`, Whiskey will use the latest LTS release of the .NET Core SDK.
 
     Before installing the .NET Core SDK to the build root, Whiskey will first search for global .NET Core installs containing the desired version. If a global install is found with the correct version, that path is used and the install to the local build root is skipped.
 
-    Whiskey will *always* update the `sdk:version` property within the `global.json` file found in the build root or working directory with the version of the SDK that task is using. If a `global.json` file does not exist in either the working directory or build root, one is created in the build root.
+    Whiskey will *always* update the `sdk:version` property within the `global.json` file found in the task working directory or the Whiskey build root with the version of the SDK that task is using. If a `global.json` file does not exist in either the working directory or build root, one is created in the build root.
