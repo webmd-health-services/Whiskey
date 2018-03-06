@@ -111,7 +111,10 @@ function WhenRunningNuGetPackTask
         $ForMultiplePackages,
 
         [Switch]
-        $Symbols
+        $Symbols,
+
+        [Switch]
+        $SkipUploadedCheck
     )
 
     $script:context = New-WhiskeyTestContext -ForVersion $packageVersion -ForBuildServer -IgnoreExistingOutputDirectory
@@ -141,6 +144,11 @@ function WhenRunningNuGetPackTask
     if( $version )
     {
         $taskParameter['Version'] = $version
+    }
+
+    if( $SkipUploadedCheck )
+    {
+        $taskParameter['SkipUploadedCheck'] = 'true'
     }
 
     Mock -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey'
@@ -304,7 +312,7 @@ function ThenPackageNotPublished
     }
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
+Describe 'NuGetPush.when publishing a NuGet package' {
     InitTest
     GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
@@ -313,7 +321,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerlease metadata' {
+Describe 'NuGetPush.when publishing a NuGet package with prerlease metadata' {
     InitTest
     GivenPackageVersion '1.2.3-preleasee45'
     GivenANuGetPackage 'Fubar.1.2.3-preleasee45.nupkg'
@@ -322,7 +330,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package with prerl
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing a symbols NuGet package' {
+Describe 'NuGetPush.when publishing a symbols NuGet package' {
     InitTest
     GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.symbols.nupkg'
@@ -333,7 +341,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a symbols NuGet package' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
+Describe 'NuGetPush.when creating multiple packages for publishing' {
     InitTest
     GivenPackageVersion '3.4.5'
     GivenANuGetPackage 'Fubar.3.4.5.nupkg','Snafu.3.4.5.nupkg'
@@ -343,7 +351,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating multiple packages for publis
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
+Describe 'NuGetPush.when publishing fails' {
     InitTest
     GivenPackageVersion '9.0.1'
     GivenPackagePublishFails
@@ -353,7 +361,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing fails' {
     ThenPackagePublished -Name 'Fubar' -Path 'Fubar.9.0.1.nupkg' -PackageVersion '9.0.1'
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
+Describe 'NuGetPush.when package already exists' {
     InitTest
     GivenPackageVersion '2.3.4'
     GivenPackageAlreadyPublished
@@ -363,7 +371,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when package already exists' {
     ThenPackageNotPublished
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
+Describe 'NuGetPush.when creating WebRequest fails' {
     InitTest
     GivenPackageVersion '5.6.7'
     GivenTheCheckIfThePackageExistsFails
@@ -373,7 +381,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when creating WebRequest fails' {
     ThenPackageNotPublished
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
+Describe 'NuGetPush.when URI property is missing' {
     InitTest
     GivenPackageVersion '8.9.0'
     GivenANuGetPackage 'Fubar.8.9.0.nupkg'
@@ -383,7 +391,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when URI property is missing' {
     ThenTaskThrowsAnException '\bURI\b.*\bmandatory\b'
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
+Describe 'NuGetPush.when ApiKeyID property is missing' {
     InitTest
     GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
@@ -393,7 +401,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when ApiKeyID property is missing' {
     ThenTaskThrowsAnException '\bApiKeyID\b.*\bmandatory\b'
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
+Describe 'NuGetPush.when publishing custom packages' {
     InitTest
     GivenPackageVersion '4.5.6'
     GivenANuGetPackage 'someotherdir\MyPack.4.5.6.nupkg'
@@ -403,7 +411,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing custom packages' {
     ThenPackagePublished -Name 'MyPack' -Path 'someotherdir\MyPack.4.5.6.nupkg' -PackageVersion '4.5.6'
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when there are only symbols packages' {
+Describe 'NuGetPush.when there are only symbols packages' {
     InitTest
     GivenANuGetPackage 'Package.1.2.3.symbols.nupkg'
     WhenRunningNuGetPackTask
@@ -411,7 +419,7 @@ Describe 'Publish-WhiskeyNuGetPackage.when there are only symbols packages' {
     ThenPackageNotPublished
 }
 
-Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package using a specific version of NuGet' {
+Describe 'NuGetPush.when publishing a NuGet package using a specific version of NuGet' {
     InitTest
     GivenPackageVersion '1.2.3'
     GivenANuGetPackage 'Fubar.1.2.3.nupkg'
@@ -420,4 +428,17 @@ Describe 'Publish-WhiskeyNuGetPackage.when publishing a NuGet package using a sp
     ThenSpecificNuGetVersionInstalled
     ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -PackageVersion '1.2.3'
     ThenTaskSucceeds
+}
+
+Describe 'NuGetPush.when skipping publish check' {
+    InitTest
+    GivenPackageVersion '1.2.3'
+    GivenANuGetPackage 'Fubar.1.2.3.nupkg'
+    GivenPackagePublishFails
+    WhenRunningNuGetPackTask -SkipUploadedCheck
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.2.3.nupkg' -PackageVersion '1.2.3'
+    ThenTaskSucceeds
+    It ('should call Invoke-WebRequest once') {
+        Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 1
+    }
 }

@@ -1,22 +1,6 @@
 
 function Publish-WhiskeyNuGetPackage
 {
-    <#
-    .SYNOPSIS
-    Creates a NuGet package from .NET .csproj files.
-
-    .DESCRIPTION
-    The `Invoke-WhiskeyNuGetPackTask` runs `nuget.exe` against a list of .csproj files, which create a .nupkg file from that project's build output. The package can be uploaded to NuGet, ProGet, or other package management repository that supports NuGet.
-
-    You must supply the path to the .csproj files to pack with the `$TaskParameter.Path` parameter, the directory where the packaged .nupkg files go with the `$Context.OutputDirectory` parameter, and the version being packaged with the `$Context.Version` parameter.
-
-    You *must* include paths to build with the `Path` parameter.
-
-    .EXAMPLE
-    Invoke-WhiskeyNuGetPackageTask -Context $TaskContext -TaskParameter $TaskParameter
-
-    Demonstrates how to package the assembly built by `TaskParameter.Path` into a .nupkg file in the `$Context.OutputDirectory` directory. It will generate a package at version `$Context.ReleaseVersion`.
-    #>
     [Whiskey.Task("PublishNuGetLibrary")]
     [Whiskey.Task("PublishNuGetPackage")]
     [Whiskey.Task("NuGetPush")]
@@ -135,14 +119,17 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
 
         # Publish package and symbols to NuGet
         Invoke-WhiskeyNuGetPush -Path $path -Uri $source -ApiKey $apiKey -NuGetPath $nuGetPath
-            
-        try
-        {
-            Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
-        }
-        catch [Net.WebException]
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to publish NuGet package {0} {1} to {2}. When we checked if that package existed, we got a {3} HTTP status code. Please see build output for more information.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
+        
+        if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
+        { 
+            try
+            {
+                Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
+            }
+            catch [Net.WebException]
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to publish NuGet package {0} {1} to {2}. When we checked if that package existed, we got a {3} HTTP status code. Please see build output for more information.' -f $projectName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
+            }
         }
     }
 } 
