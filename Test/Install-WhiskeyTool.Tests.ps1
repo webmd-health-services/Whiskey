@@ -276,6 +276,7 @@ Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
 $context = $null
 $globalDotnetDirectory = $null
 $threwException = $false
+$originalPath = $env:Path
 $pathParameterName = 'ToolPath'
 $versionParameterName = $null
 $taskParameter = $null
@@ -363,7 +364,12 @@ function Remove-DotnetInstallsFromPath
     }
 }
 
-function ThenDotnetInstalled
+function Restore-OriginalPathEnvironment
+{
+    $env:Path = $originalPath
+}
+
+function ThenDotnetSdkVersion
 {
     param(
         [string]
@@ -383,7 +389,7 @@ function ThenDotnetInstalled
     }
 }
 
-function ThenDotnetNotInstalled
+function ThenDotnetNotLocallyInstalled
 {
     param(
         $Version
@@ -397,19 +403,8 @@ function ThenDotnetNotInstalled
 
 function ThenDotnetPathAddedToTaskParameter
 {
-    param(
-        [switch]
-        $Global
-    )
-
-    $expectedDotnetPath = Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet\dotnet.exe'
-    if ($Global)
-    {
-        $expectedDotnetPath = Join-Path -Path $globalDotnetDirectory -ChildPath 'dotnet.exe'
-    }
-
     It ('should set path to the dotnet.exe') {
-        $taskParameter[$pathParameterName] | Should -Be $expectedDotnetPath
+        $taskParameter[$pathParameterName] | Should -BeLike '*\dotnet.exe'
     }
 }
 
@@ -852,54 +847,65 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
 
 Describe 'Install-WhiskeyTool.when installing Dotnet and no version specified' {
     Init
-    Remove-DotnetInstallsFromPath
     WhenInstallingTool -Name 'Dotnet'
     ThenDotnetPathAddedToTaskParameter
     ThenGlobalJsonVersion (Get-DotnetLatestLTSVersion)
-    ThenDotnetInstalled (Get-DotnetLatestLTSVersion)
+    ThenDotnetSdkVersion (Get-DotnetLatestLTSVersion)
 }
 
 Describe 'Install-WhiskeyTool.when installing specific version of Dotnet from whiskey.yml' {
     Init
-    Remove-DotnetInstallsFromPath
-    GivenGlobalJsonSdkVersion '2.1.4'
+    GivenGlobalJsonSdkVersion '1.1.5'
     GivenVersionParameterName 'SDKVersion'
-    WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.0.3' }
+    WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.1.4' }
     ThenDotnetPathAddedToTaskParameter
-    ThenGlobalJsonVersion '2.0.3'
-    ThenDotnetInstalled '2.0.3'
+    ThenGlobalJsonVersion '2.1.4'
+    ThenDotnetSdkVersion '2.1.4'
 }
 
 Describe 'Install-WhiskeyTool.when installing specific version of Dotnet from global.json' {
     Init
-    Remove-DotnetInstallsFromPath
-    GivenGlobalJsonSdkVersion '2.0.3'
+    GivenGlobalJsonSdkVersion '2.1.4'
     WhenInstallingTool -Name 'Dotnet'
     ThenDotnetPathAddedToTaskParameter
-    ThenGlobalJsonVersion '2.0.3'
-    ThenDotnetInstalled '2.0.3'
+    ThenGlobalJsonVersion '2.1.4'
+    ThenDotnetSdkVersion '2.1.4'
 }
 
 Describe 'Install-WhiskeyTool.when specified version of dotnet exists globally' {
-    Init
     Remove-DotnetInstallsFromPath
-    GivenGlobalDotnetInstalled '2.0.3'
-    GivenVersionParameterName 'SDKVersion'
-    WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.0.3' }
-    ThenDotnetPathAddedToTaskParameter -Global
-    ThenGlobalJsonVersion '2.0.3'
-    ThenDotnetNotInstalled '2.0.3'
+    try
+    {
+        Init
+        GivenGlobalDotnetInstalled '2.1.4'
+        GivenVersionParameterName 'SDKVersion'
+        WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.1.4' }
+        ThenDotnetPathAddedToTaskParameter
+        ThenGlobalJsonVersion '2.1.4'
+        ThenDotnetNotLocallyInstalled '2.1.4'
+    }
+    finally
+    {
+        Restore-OriginalPathEnvironment
+    }
 }
 
 Describe 'Install-WhiskeyTool.when installing Dotnet and global.json exists in both build root and working directory' {
-    Init
     Remove-DotnetInstallsFromPath
-    Mock -CommandName 'Install-WhiskeyDotnetSdk' -ModuleName 'Whiskey'
-    GivenWorkingDirectory 'app'
-    GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
-    GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
-    GivenVersionParameterName 'SDKVersion'
-    WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '1.1.5' }
-    ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
-    ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
+    try
+    {
+        Init
+        GivenGlobalDotnetInstalled '1.1.5'
+        GivenWorkingDirectory 'app'
+        GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
+        GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
+        GivenVersionParameterName 'SDKVersion'
+        WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '1.1.5' }
+        ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
+        ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
+    }
+    finally
+    {
+        Restore-OriginalPathEnvironment
+    }
 }
