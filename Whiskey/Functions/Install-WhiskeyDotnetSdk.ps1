@@ -81,5 +81,19 @@ function Install-WhiskeyDotnetSdk
         & $dotnetInstall -NoPath -InstallDir $InstallDir -Version $VersionNumber @Verbose
     }
 
-    return Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe' -Resolve
+    $dotnetPath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe' -Resolve -ErrorAction Ignore
+    if (-not $dotnetPath)
+    {
+        Write-Error -Message ('After attempting to install .NET Core SDK version ''{0}'', the ''dotnet.exe'' was not found in ''{1}''' -f $Version,$InstallRoot)
+        return
+    }
+
+    $sdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}' -f $Version)
+    if (-not (Test-Path -Path $sdkPath -PathType Container))
+    {
+        Write-Error -Message ('The ''dotnet.exe'' command was installed but version ''{0}'' of the SDK was not found at ''{1}''' -f $Version,$sdkPath)
+        return
+    }
+
+    return $dotnetPath
 }
