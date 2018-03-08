@@ -62,7 +62,7 @@ function WhenSettingGlobalJson
     [CmdletBinding()]
     param()
 
-    Set-WhiskeyDotNetGlobalJson -Directory $globalJsonDirectory -SDKVersion $sdkVersion
+    Set-WhiskeyDotNetGlobalJson -Directory $globalJsonDirectory -SdkVersion $sdkVersion
 }
 
 Describe 'Set-WhiskeyDotNetGlobalJson.when global.json root directory does not exist' {

@@ -13,7 +13,7 @@ function Invoke-WhiskeyDotNetBuild
     * `Argument`: a list of additional arguments to pass to the `dotnet.exe build` command.
     * `Path`: a list of paths to .NET Core solution or project files to build. If not specified, any solution or project files in the task working directory will be built.
     * `OutputDirectory`: the directory where assemblies should be compiled to. The default is the location specified in each project file.
-    * `SDKVersion`: the version of the .NET Core SDK to use to build the project. Supports wildcard values. If not specified, the task will look for the SDK version from the `global.json` file if it is found in the task working directory or the Whiskey build root. If no SDK version can be located, the task will default to using the SDK version that comes with the latest LTS release of the .NET Core runtime. Whiskey will *always* update the SDK version property in the `global.json` file with the SDK version that task is running with. If no `global.json` file exists, one will be created in the Whiskey build root.
+    * `SdkVersion`: the version of the .NET Core SDK to use to build the project. Supports wildcard values. If not specified, the task will look for the SDK version from the `global.json` file if it is found in the task working directory or the Whiskey build root. If no SDK version can be located, the task will default to using the SDK version that comes with the latest LTS release of the .NET Core runtime. Whiskey will *always* update the SDK version property in the `global.json` file with the SDK version that task is running with. If no `global.json` file exists, one will be created in the Whiskey build root.
     * `Verbosity`: sets the verbosity level of dotnet.exe's output. For developers, the default is dotnet.exe's default verbosity. On build servers, the default is `detailed`. Allowed values are `q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]`, and `diag[nostic]`.
 
     # Examples
@@ -56,13 +56,13 @@ function Invoke-WhiskeyDotNetBuild
         - DotNetBuild:
             Path:
             - DotNetCoreSolution.sln
-            SDKVersion: 2.*
+            SdkVersion: 2.*
 
     Demonstrates building a .NET Core solution with the latest `2.*` version of the .NET Core SDK.
     #>
     [CmdletBinding()]
     [Whiskey.Task("DotNetBuild")]
-    [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SDKVersion')]
+    [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [object]

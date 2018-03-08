@@ -239,7 +239,7 @@ function WhenRunningDotNetBuild
     }
 
     $script:taskContext = New-WhiskeyTestContext @developerOrBuildServer -ForBuildRoot $TestDrive.FullName
-    $taskParameter = @{ 'SDKVersion' = '2.*' }
+    $taskParameter = @{ 'SdkVersion' = '2.*' }
 
     if ($outputDirectory)
     {

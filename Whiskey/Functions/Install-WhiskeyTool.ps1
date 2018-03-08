@@ -322,7 +322,7 @@ function Install-WhiskeyTool
 
                         $TaskParameter[$ToolInfo.PathParameterName] = $dotnetPath
 
-                        Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SDKVersion $sdkVersion
+                        Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SdkVersion $sdkVersion
                     }
                     default
                     {

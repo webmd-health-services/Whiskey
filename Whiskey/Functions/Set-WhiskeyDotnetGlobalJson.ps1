@@ -9,7 +9,7 @@ function Set-WhiskeyDotNetGlobalJson
     The `Set-WhiskeyDotNetGlobalJson` function sets values within a .NET Core `global.json` file. If the `global.json` file does not exist in the given `Directory` then it will be created. If the `global.json` file already exists, then the function will only update the desired values and leave the rest of the content as-is.
 
     .EXAMPLE
-    Set-WhiskeyDotNetGlobalJson -Directory 'C:\Build\app' -SDKVersion '2.1.4'
+    Set-WhiskeyDotNetGlobalJson -Directory 'C:\Build\app' -SdkVersion '2.1.4'
 
     Demonstrates setting the 'sdk:version' property in global.json to '2.1.4'.
     #>
@@ -23,13 +23,13 @@ function Set-WhiskeyDotNetGlobalJson
         [Parameter(Mandatory=$true)]
         [string]
         # The version of the SDK to set within the `global.json` file.
-        $SDKVersion
+        $SdkVersion
     )
 
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Write-Verbose -Message ('[{0}] Setting global.json properties: ''sdk:version'' => ''{1}''' -f $MyInvocation.MyCommand,$SDKVersion)
+    Write-Verbose -Message ('[{0}] Setting global.json properties: ''sdk:version'' => ''{1}''' -f $MyInvocation.MyCommand,$SdkVersion)
 
     if (-not (Test-Path -Path $Directory -PathType Container))
     {
@@ -64,7 +64,7 @@ function Set-WhiskeyDotNetGlobalJson
             $globalJson.sdk | Add-Member -MemberType NoteProperty -Name 'version' -Value (New-Object -TypeName PSCustomObject)
         }
 
-        $globalJson.sdk.version = $SDKVersion
+        $globalJson.sdk.version = $SdkVersion
     }
     else
     {
@@ -72,7 +72,7 @@ function Set-WhiskeyDotNetGlobalJson
         Write-Verbose -Message ('[{0}] Creating ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
         $globalJson = @{
                             'sdk' = @{
-                                'version' = $SDKVersion
+                                'version' = $SdkVersion
                             }
                        }
     }

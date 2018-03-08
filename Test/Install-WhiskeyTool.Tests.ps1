@@ -856,8 +856,8 @@ Describe 'Install-WhiskeyTool.when installing DotNet and no version specified' {
 Describe 'Install-WhiskeyTool.when installing specific version of DotNet from whiskey.yml' {
     Init
     GivenGlobalJsonSdkVersion '1.1.5'
-    GivenVersionParameterName 'SDKVersion'
-    WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '2.1.4' }
+    GivenVersionParameterName 'SdkVersion'
+    WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SdkVersion' = '2.1.4' }
     ThenDotNetPathAddedToTaskParameter
     ThenGlobalJsonVersion '2.1.4'
     ThenDotNetSdkVersion '2.1.4'
@@ -878,8 +878,8 @@ Describe 'Install-WhiskeyTool.when specified version of DotNet exists globally' 
     {
         Init
         GivenGlobalDotNetInstalled '2.1.4'
-        GivenVersionParameterName 'SDKVersion'
-        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '2.1.4' }
+        GivenVersionParameterName 'SdkVersion'
+        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SdkVersion' = '2.1.4' }
         ThenDotNetPathAddedToTaskParameter
         ThenGlobalJsonVersion '2.1.4'
         ThenDotNetNotLocallyInstalled '2.1.4'
@@ -899,8 +899,8 @@ Describe 'Install-WhiskeyTool.when installing DotNet and global.json exists in b
         GivenWorkingDirectory 'app'
         GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
         GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
-        GivenVersionParameterName 'SDKVersion'
-        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '1.1.5' }
+        GivenVersionParameterName 'SdkVersion'
+        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SdkVersion' = '1.1.5' }
         ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
         ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
     }

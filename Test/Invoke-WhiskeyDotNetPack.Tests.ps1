@@ -69,7 +69,7 @@ function GivenBuiltDotNetCoreProject
     $context = New-WhiskeyTestContext @developerOrBuildServer -ForBuildRoot $TestDrive.FullName
     $parameter = @{
         'Path' = $Name
-        'SDKVersion' = '2.*'
+        'SdkVersion' = '2.*'
     }
 
     Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'DotNetBuild' | Out-Null
@@ -252,7 +252,7 @@ function WhenRunningDotNetPack
     }
 
     $script:taskContext = New-WhiskeyTestContext @developerOrBuildServer -ForBuildRoot $TestDrive.FullName
-    $taskParameter = @{ 'SDKVersion' = '2.*' }
+    $taskParameter = @{ 'SdkVersion' = '2.*' }
 
     if ($argument)
     {
