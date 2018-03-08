@@ -62,7 +62,7 @@ function Invoke-WhiskeyDotNetBuild
     #>
     [CmdletBinding()]
     [Whiskey.Task("DotNetBuild")]
-    [Whiskey.RequiresTool('Dotnet','DotnetPath',VersionParameterName='SDKVersion')]
+    [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SDKVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [object]
@@ -79,7 +79,7 @@ function Invoke-WhiskeyDotNetBuild
     Set-Item -Path 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value $true
     Set-Item -Path 'env:DOTNET_CLI_TELEMETRY_OPTOUT' -Value $true
 
-    $dotnetExe = $TaskParameter['DotnetPath']
+    $dotnetExe = $TaskParameter['DotNetPath']
 
     $projectPaths = ''
     if ($TaskParameter['Path'])

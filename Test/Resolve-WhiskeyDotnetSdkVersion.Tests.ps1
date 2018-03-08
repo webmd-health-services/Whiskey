@@ -1,6 +1,6 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotnetSdkVersion.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $givenVersion = $null
 $resolvedVersion = $null
@@ -90,10 +90,10 @@ function WhenResolvingSdkVersion
         $versionParam['Version'] = $givenVersion
     }
 
-    $script:resolvedVersion = Resolve-WhiskeyDotnetSdkVersion @versionParam
+    $script:resolvedVersion = Resolve-WhiskeyDotNetSdkVersion @versionParam
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when given SDK version that does not exist' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version that does not exist' {
     Init
     GivenVersion '0.0.1'
     WhenResolvingSdkVersion -ErrorAction SilentlyContinue
@@ -101,34 +101,34 @@ Describe 'Resolve-WhiskeyDotnetSdkVersion.when given SDK version that does not e
     ThenReturnedNothing
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when given SDK version ''2.1.2''' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.1.2''' {
     Init
     GivenVersion '2.1.2'
     WhenResolvingSdkVersion
     ThenResolvedVersion '2.1.2'
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when given SDK version ''2.*''' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.*''' {
     Init
     GivenVersion '2.*'
     WhenResolvingSdkVersion
     ThenResolvedWildcardVersion '2.*'
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when given SDK version ''1.0.*''' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''1.0.*''' {
     Init
     GivenVersion '1.0.*'
     WhenResolvingSdkVersion
     ThenResolvedWildcardVersion '1.0.*'
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when resolving latest LTS version' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving latest LTS version' {
     Init
     WhenResolvingSdkVersion
     ThenResolvedLatestLTSVersion
 }
 
-Describe 'Resolve-WhiskeyDotnetSdkVersion.when latest version API doesn''t return a valid version' {
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t return a valid version' {
     Init
     Mock -CommandName Invoke-RestMethod -MockWith { '1' }
     WhenResolvingSdkVersion -ErrorAction SilentlyContinue

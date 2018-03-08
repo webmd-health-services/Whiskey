@@ -42,7 +42,7 @@ function Uninstall-WhiskeyTool
     Demonstrates how to uninstall the `rimraf` Node module from the `.node\node_modules` directory in your build root.
 
     .EXAMPLE
-    Uninstall-WhiskeyTool -Name 'Dotnet' -InstallRoot $TaskContext.BuildRoot
+    Uninstall-WhiskeyTool -Name 'DotNet' -InstallRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall the .NET Core SDK from the `.dotnet` directory in your build root.
     #>
@@ -143,14 +143,14 @@ function Uninstall-WhiskeyTool
                         $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
                         Remove-WhiskeyFileSystemItem -Path $dirToRemove
                     }
-                    'Dotnet'
+                    'DotNet'
                     {
                         $dotnetToolRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
                         Remove-WhiskeyFileSystemItem -Path $dotnetToolRoot
                     }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''Dotnet''.' -f $Name)
+                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
                     }
                 }
             }

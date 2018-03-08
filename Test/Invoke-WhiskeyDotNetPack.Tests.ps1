@@ -1,9 +1,9 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotnetSdkVersion.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $argument = $null
-$dotnetOutput = $null
+$dotNetOutput = $null
 $failed = $false
 $path = $null
 $taskContext = $null
@@ -13,7 +13,7 @@ $verbosity = $null
 function Init
 {
     $script:argument = $null
-    $script:dotnetOutput = $null
+    $script:dotNetOutput = $null
     $script:failed = $false
     $script:path = $null
     $script:taskContext = $null
@@ -30,7 +30,7 @@ function GivenArgument
     $script:argument = $Argument
 }
 
-function GivenBuiltDotnetCoreProject
+function GivenBuiltDotNetCoreProject
 {
     [CmdletBinding(DefaultParameterSetName='ForDeveloper')]
     param(
@@ -158,13 +158,13 @@ function ThenOutput
     if ($Contains)
     {
         It ('output should contain ''{0}''' -f $Contains) {
-            $dotnetOutput | Should -Match $Contains
+            $dotNetOutput | Should -Match $Contains
         }
     }
     else
     {
         It ('output should not contain ''{0}''' -f $DoesNotContain) {
-            $dotnetOutput | Should -Not -Match $DoesNotContain
+            $dotNetOutput | Should -Not -Match $DoesNotContain
         }
     }
 }
@@ -224,7 +224,7 @@ function ThenVerbosityIs
         $maxLines = 10000000
     }
 
-    $outputLines = $dotnetOutput | Measure-Object | Select-Object -ExpandProperty 'Count'
+    $outputLines = $dotNetOutput | Measure-Object | Select-Object -ExpandProperty 'Count'
 
     It 'should run with correct verbosity' {
         $outputLines | Should -BeGreaterThan $minLines
@@ -277,7 +277,7 @@ function WhenRunningDotNetPack
     try
     {
         $Global:Error.Clear()
-        $script:dotnetOutput = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'DotNetPack'
+        $script:dotNetOutput = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'DotNetPack'
     }
     catch
     {
@@ -289,7 +289,7 @@ function WhenRunningDotNetPack
 Describe 'DotNetPack.when not given any Paths' {
     Context 'By Developer' {
         Init
-        GivenBuiltDotnetCoreProject 'DotNetCore.csproj' -ForDeveloper
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
         WhenRunningDotNetPack -ForDeveloper
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Minimal
@@ -298,7 +298,7 @@ Describe 'DotNetPack.when not given any Paths' {
 
     Context 'By BuildServer' {
         Init
-        GivenBuiltDotnetCoreProject 'DotNetCore.csproj' -ForBuildServer
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
         WhenRunningDotNetPack -ForBuildServer
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Detailed
@@ -314,7 +314,7 @@ Describe 'DotNetPack.when not given any Paths and no csproj or solution exists' 
 
 Describe 'DotNetPack.when given Path to a csproj file' {
     Init
-    GivenBuiltDotnetCoreProject 'DotNetCore.csproj'
+    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
     GivenPath 'DotNetCore.csproj'
     WhenRunningDotNetPack
     ThenCreatedPackage 'DotNetCore'
@@ -338,7 +338,7 @@ Describe 'DotNetPack.when dotnet pack fails' {
 
 Describe 'DotNetPack.when given multiple Paths to csproj files' {
     Init
-    GivenBuiltDotnetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
+    GivenBuiltDotNetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
     GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
     WhenRunningDotNetPack
     ThenTaskSuccess
@@ -347,7 +347,7 @@ Describe 'DotNetPack.when given multiple Paths to csproj files' {
 Describe 'DotNetPack.when given verbosity level' {
     Context 'By Developer' {
         Init
-        GivenBuiltDotnetCoreProject 'DotNetCore.csproj' -ForDeveloper
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetPack -ForDeveloper
         ThenCreatedPackage 'DotNetCore'
@@ -357,7 +357,7 @@ Describe 'DotNetPack.when given verbosity level' {
 
     Context 'By BuildServer' {
         Init
-        GivenBuiltDotnetCoreProject 'DotNetCore.csproj' -ForBuildServer
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetPack -ForBuildServer
         ThenCreatedPackage 'DotNetCore'
@@ -368,7 +368,7 @@ Describe 'DotNetPack.when given verbosity level' {
 
 Describe 'DotNetPack.when given including symbols' {
     Init
-    GivenBuiltDotnetCoreProject 'DotNetCore.csproj'
+    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
     GivenSymbols 'true'
     WhenRunningDotNetPack
     ThenCreatedPackage 'DotNetCore' -WithSymbols
@@ -377,7 +377,7 @@ Describe 'DotNetPack.when given including symbols' {
 
 Describe 'DotNetPack.when given additional argument ''-nologo''' {
     Init
-    GivenBuiltDotnetCoreProject 'DotNetCore.csproj'
+    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
     GivenArgument '-nologo'
     WhenRunningDotNetPack
     ThenCreatedPackage 'DotNetCore'

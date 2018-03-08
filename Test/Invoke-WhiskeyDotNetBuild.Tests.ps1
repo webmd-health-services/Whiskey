@@ -1,9 +1,9 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotnetSdkVersion.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $argument = $null
-$dotnetOutput = $null
+$dotNetOutput = $null
 $failed = $false
 $outputDirectory = $null
 $path = $null
@@ -13,7 +13,7 @@ $verbosity = $null
 function Init
 {
     $script:argument = $null
-    $script:dotnetOutput = $null
+    $script:dotNetOutput = $null
     $script:failed = $false
     $script:outputDirectory = $null
     $script:path = $null
@@ -107,13 +107,13 @@ function ThenOutput
     if ($Contains)
     {
         It ('output should contain ''{0}''' -f $Contains) {
-            $dotnetOutput | Should -Match $Contains
+            $dotNetOutput | Should -Match $Contains
         }
     }
     else
     {
         It ('output should not contain ''{0}''' -f $DoesNotContain) {
-            $dotnetOutput | Should -Not -Match $DoesNotContain
+            $dotNetOutput | Should -Not -Match $DoesNotContain
         }
     }
 }
@@ -211,7 +211,7 @@ function ThenVerbosityIs
         $maxLines = 10000000
     }
 
-    $outputLines = $dotnetOutput | Measure-Object | Select-Object -ExpandProperty 'Count'
+    $outputLines = $dotNetOutput | Measure-Object | Select-Object -ExpandProperty 'Count'
 
     It 'should run with correct verbosity' {
         $outputLines | Should -BeGreaterThan $minLines
@@ -264,7 +264,7 @@ function WhenRunningDotNetBuild
     try
     {
         $Global:Error.Clear()
-        $script:dotnetOutput = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'DotNetBuild'
+        $script:dotNetOutput = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'DotNetBuild'
     }
     catch
     {
@@ -276,7 +276,7 @@ function WhenRunningDotNetBuild
 Describe 'DotNetBuild.when not given any Paths' {
     Context 'By Developer' {
         Init
-        GivenDotnetCoreProject 'DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForDeveloper
         ThenProjectBuilt 'DotNetCore.dll'
         ThenVerbosityIs -Minimal
@@ -285,7 +285,7 @@ Describe 'DotNetBuild.when not given any Paths' {
 
     Context 'By BuildServer' {
         Init
-        GivenDotnetCoreProject 'DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForBuildServer
         ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
         ThenVerbosityIs -Detailed
@@ -301,7 +301,7 @@ Describe 'DotNetBuild.when not given any Paths and no csproj or solution exists'
 
 Describe 'DotNetBuild.when given Path to a csproj file' {
     Init
-    GivenDotnetCoreProject 'DotNetCore.csproj'
+    GivenDotNetCoreProject 'DotNetCore.csproj'
     GivenPath 'DotNetCore.csproj'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll'
@@ -317,7 +317,7 @@ Describe 'DotNetBuild.when given Path to nonexistent csproj file' {
 
 Describe 'DotNetBuild.when dotnet build fails' {
     Init
-    GivenDotnetCoreProject 'DotNetCore.csproj'
+    GivenDotNetCoreProject 'DotNetCore.csproj'
     GivenFailingDotNetCoreProject 'FailingDotNetCore.csproj'
     GivenPath 'DotNetCore.csproj','FailingDotNetCore.csproj'
     WhenRunningDotNetBuild -ErrorAction SilentlyContinue
@@ -326,7 +326,7 @@ Describe 'DotNetBuild.when dotnet build fails' {
 
 Describe 'DotNetBuild.when given multiple Paths to csproj files' {
     Init
-    GivenDotnetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
+    GivenDotNetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
     GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll','DotNetCore2.dll'
@@ -336,7 +336,7 @@ Describe 'DotNetBuild.when given multiple Paths to csproj files' {
 Describe 'DotNetBuild.when given verbosity level' {
     Context 'By Developer' {
         Init
-        GivenDotnetCoreProject 'DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild
         ThenProjectBuilt 'DotNetCore.dll'
@@ -346,7 +346,7 @@ Describe 'DotNetBuild.when given verbosity level' {
 
     Context 'By BuildServer' {
         Init
-        GivenDotnetCoreProject 'DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild
         ThenProjectBuilt 'DotNetCore.dll'
@@ -357,7 +357,7 @@ Describe 'DotNetBuild.when given verbosity level' {
 
 Describe 'DotNetBuild.when given output directory' {
     Init
-    GivenDotnetCoreProject 'DotNetCore.csproj'
+    GivenDotNetCoreProject 'DotNetCore.csproj'
     GivenOutputDirectory 'Output Dir'
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll' -Directory 'Output Dir'
@@ -366,7 +366,7 @@ Describe 'DotNetBuild.when given output directory' {
 
 Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' {
     Init
-    GivenDotnetCoreProject 'DotNetCore.csproj'
+    GivenDotNetCoreProject 'DotNetCore.csproj'
     WhenRunningDotNetBuild
 
     GivenArgument '--no-restore','-nologo'

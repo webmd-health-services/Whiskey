@@ -1,20 +1,20 @@
 
-function Install-WhiskeyDotnetSdk
+function Install-WhiskeyDotNetSdk
 {
     <#
     .SYNOPSIS
     Installs the .NET Core SDK tooling.
 
     .DESCRIPTION
-    The `Install-WhiskeyDotnetSdk` function will install the .NET Core SDK tools and return the path to the installed `dotnet.exe` command. If you specify the `SearchExisting` switch then the function will first look for any globally installed .NET Core SDK's with the desired version already installed. If one is found, then install is skipped and the path to the global install is returned. The function uses the `dotnet-install.ps1` script from the [dotnet-cli](https://github.com/dotnet/cli) GitHub repository to download and install the SDK.
+    The `Install-WhiskeyDotNetSdk` function will install the .NET Core SDK tools and return the path to the installed `dotnet.exe` command. If you specify the `SearchExisting` switch then the function will first look for any globally installed .NET Core SDK's with the desired version already installed. If one is found, then install is skipped and the path to the global install is returned. The function uses the `dotnet-install.ps1` script from the [dotnet-cli](https://github.com/dotnet/cli) GitHub repository to download and install the SDK.
 
     .EXAMPLE
-    Install-WhiskeyDotnetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4'
+    Install-WhiskeyDotNetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4'
 
     Demonstrates installing .NET Core SDK version 2.1.4 to the 'C:\Build\.dotnet' directory. After install the function will return the path 'C:\Build\.dotnet\dotnet.exe'.
 
     .EXAMPLE
-    Install-WhiskeyDotnetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4' -SearchExisting
+    Install-WhiskeyDotNetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4' -SearchExisting
 
     Demonstrates searching for an existing global install of the .NET Core SDK version '2.1.4'. If not found globally, the SDK will be installed to 'C:\Build\.dotnet'.
     #>

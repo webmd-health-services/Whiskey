@@ -274,7 +274,7 @@ Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
 }
 
 $context = $null
-$globalDotnetDirectory = $null
+$globalDotNetDirectory = $null
 $threwException = $false
 $originalPath = $env:Path
 $pathParameterName = 'ToolPath'
@@ -282,21 +282,21 @@ $versionParameterName = $null
 $taskParameter = $null
 $workingDirectory = $null
 
-function Get-DotnetLatestLTSVersion
+function Get-DotNetLatestLTSVersion
 {
     Invoke-RestMethod -Uri 'https://dotnetcli.blob.core.windows.net/dotnet/Sdk/LTS/latest.version' | Where-Object { $_ -match '(\d+\.\d+\.\d+)'} | Out-Null
     return $Matches[1]
 }
 
-function GivenGlobalDotnetInstalled
+function GivenGlobalDotNetInstalled
 {
     param(
         $Version
     )
 
-    New-Item -Path (Join-Path -Path $globalDotnetDirectory -ChildPath 'dotnet.exe') -ItemType File -Force | Out-Null
-    New-Item -Path (Join-Path -Path $globalDotnetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)) -ItemType File -Force | Out-Null
-    $env:Path += (';{0}' -f $globalDotnetDirectory)
+    New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath 'dotnet.exe') -ItemType File -Force | Out-Null
+    New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)) -ItemType File -Force | Out-Null
+    $env:Path += (';{0}' -f $globalDotNetDirectory)
 }
 
 
@@ -346,21 +346,21 @@ function GivenWorkingDirectory
 function Init
 {
     $script:context = $null
-    $script:globalDotnetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath 'GlobalDotnetSDK'
+    $script:globalDotNetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath 'GlobalDotNetSDK'
     $script:threwException = $false
     $script:taskParameter = $null
     $script:versionParameterName = $null
     $script:workingDirectory = $TestDrive.FullName
 }
 
-function Remove-DotnetInstallsFromPath
+function Remove-DotNetInstallsFromPath
 {
-    $dotnetInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
-    foreach ($path in $dotnetInstalls)
+    $dotNetInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
+    foreach ($path in $dotNetInstalls)
     {
-        $dotnetDirectory = [regex]::Escape(($path | Split-Path -Parent))
-        $dotnetDirectory = ('{0}\\?' -f $dotnetDirectory)
-        $env:Path = $env:Path -replace $dotnetDirectory,''
+        $dotNetDirectory = [regex]::Escape(($path | Split-Path -Parent))
+        $dotNetDirectory = ('{0}\\?' -f $dotNetDirectory)
+        $env:Path = $env:Path -replace $dotNetDirectory,''
     }
 }
 
@@ -369,7 +369,7 @@ function Restore-OriginalPathEnvironment
     $env:Path = $originalPath
 }
 
-function ThenDotnetSdkVersion
+function ThenDotNetSdkVersion
 {
     param(
         [string]
@@ -389,19 +389,19 @@ function ThenDotnetSdkVersion
     }
 }
 
-function ThenDotnetNotLocallyInstalled
+function ThenDotNetNotLocallyInstalled
 {
     param(
         $Version
     )
 
-    $dotnetSdkPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.dotnet\sdk\{0}' -f $Version)
+    $dotNetSdkPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.dotnet\sdk\{0}' -f $Version)
     It 'should not install .NET Core SDK locally' {
-        $dotnetSdkPath | Should -Not -Exist
+        $dotNetSdkPath | Should -Not -Exist
     }
 }
 
-function ThenDotnetPathAddedToTaskParameter
+function ThenDotNetPathAddedToTaskParameter
 {
     It ('should set path to the dotnet.exe') {
         $taskParameter[$pathParameterName] | Should -BeLike '*\dotnet.exe'
@@ -845,44 +845,44 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing Dotnet and no version specified' {
+Describe 'Install-WhiskeyTool.when installing DotNet and no version specified' {
     Init
-    WhenInstallingTool -Name 'Dotnet'
-    ThenDotnetPathAddedToTaskParameter
-    ThenGlobalJsonVersion (Get-DotnetLatestLTSVersion)
-    ThenDotnetSdkVersion (Get-DotnetLatestLTSVersion)
+    WhenInstallingTool -Name 'DotNet'
+    ThenDotNetPathAddedToTaskParameter
+    ThenGlobalJsonVersion (Get-DotNetLatestLTSVersion)
+    ThenDotNetSdkVersion (Get-DotNetLatestLTSVersion)
 }
 
-Describe 'Install-WhiskeyTool.when installing specific version of Dotnet from whiskey.yml' {
+Describe 'Install-WhiskeyTool.when installing specific version of DotNet from whiskey.yml' {
     Init
     GivenGlobalJsonSdkVersion '1.1.5'
     GivenVersionParameterName 'SDKVersion'
-    WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.1.4' }
-    ThenDotnetPathAddedToTaskParameter
+    WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '2.1.4' }
+    ThenDotNetPathAddedToTaskParameter
     ThenGlobalJsonVersion '2.1.4'
-    ThenDotnetSdkVersion '2.1.4'
+    ThenDotNetSdkVersion '2.1.4'
 }
 
-Describe 'Install-WhiskeyTool.when installing specific version of Dotnet from global.json' {
+Describe 'Install-WhiskeyTool.when installing specific version of DotNet from global.json' {
     Init
     GivenGlobalJsonSdkVersion '2.1.4'
-    WhenInstallingTool -Name 'Dotnet'
-    ThenDotnetPathAddedToTaskParameter
+    WhenInstallingTool -Name 'DotNet'
+    ThenDotNetPathAddedToTaskParameter
     ThenGlobalJsonVersion '2.1.4'
-    ThenDotnetSdkVersion '2.1.4'
+    ThenDotNetSdkVersion '2.1.4'
 }
 
-Describe 'Install-WhiskeyTool.when specified version of dotnet exists globally' {
-    Remove-DotnetInstallsFromPath
+Describe 'Install-WhiskeyTool.when specified version of DotNet exists globally' {
+    Remove-DotNetInstallsFromPath
     try
     {
         Init
-        GivenGlobalDotnetInstalled '2.1.4'
+        GivenGlobalDotNetInstalled '2.1.4'
         GivenVersionParameterName 'SDKVersion'
-        WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '2.1.4' }
-        ThenDotnetPathAddedToTaskParameter
+        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '2.1.4' }
+        ThenDotNetPathAddedToTaskParameter
         ThenGlobalJsonVersion '2.1.4'
-        ThenDotnetNotLocallyInstalled '2.1.4'
+        ThenDotNetNotLocallyInstalled '2.1.4'
     }
     finally
     {
@@ -890,17 +890,17 @@ Describe 'Install-WhiskeyTool.when specified version of dotnet exists globally' 
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing Dotnet and global.json exists in both build root and working directory' {
-    Remove-DotnetInstallsFromPath
+Describe 'Install-WhiskeyTool.when installing DotNet and global.json exists in both build root and working directory' {
+    Remove-DotNetInstallsFromPath
     try
     {
         Init
-        GivenGlobalDotnetInstalled '1.1.5'
+        GivenGlobalDotNetInstalled '1.1.5'
         GivenWorkingDirectory 'app'
         GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
         GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
         GivenVersionParameterName 'SDKVersion'
-        WhenInstallingTool -Name 'Dotnet' -Parameter @{ 'SDKVersion' = '1.1.5' }
+        WhenInstallingTool -Name 'DotNet' -Parameter @{ 'SDKVersion' = '1.1.5' }
         ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
         ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
     }

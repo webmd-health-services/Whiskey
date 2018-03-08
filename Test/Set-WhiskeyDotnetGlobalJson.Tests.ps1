@@ -1,6 +1,6 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Set-WhiskeyDotnetGlobalJson.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Set-WhiskeyDotNetGlobalJson.ps1' -Resolve)
 
 $globalJsonDirectory = $null
 $sdkVersion = $null
@@ -62,10 +62,10 @@ function WhenSettingGlobalJson
     [CmdletBinding()]
     param()
 
-    Set-WhiskeyDotnetGlobalJson -Directory $globalJsonDirectory -SDKVersion $sdkVersion
+    Set-WhiskeyDotNetGlobalJson -Directory $globalJsonDirectory -SDKVersion $sdkVersion
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when global.json root directory does not exist' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when global.json root directory does not exist' {
     Init
     $script:globalJsonDirectory = 'a non existent directory'
     GivenSdkVersion '2.1.4'
@@ -73,7 +73,7 @@ Describe 'Set-WhiskeyDotnetGlobalJson.when global.json root directory does not e
     ThenError 'does\ not\ exist\.'
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when global.json contains invalid JSON' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when global.json contains invalid JSON' {
     Init
     GivenExistingGlobalJson @"
     {
@@ -84,7 +84,7 @@ Describe 'Set-WhiskeyDotnetGlobalJson.when global.json contains invalid JSON' {
     ThenError 'contains\ invalid\ JSON.'
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when global.json does not exist' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when global.json does not exist' {
     Init
     GivenSdkVersion '2.1.4'
     WhenSettingGlobalJson
@@ -97,7 +97,7 @@ Describe 'Set-WhiskeyDotnetGlobalJson.when global.json does not exist' {
 "@
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when adding ''sdk'' property to existing global.json' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''sdk'' property to existing global.json' {
     Init
     GivenExistingGlobalJson @"
 {
@@ -116,7 +116,7 @@ Describe 'Set-WhiskeyDotnetGlobalJson.when adding ''sdk'' property to existing g
 "@
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when adding ''version'' property to existing global.json' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''version'' property to existing global.json' {
     Init
     GivenExistingGlobalJson @"
 {
@@ -139,7 +139,7 @@ Describe 'Set-WhiskeyDotnetGlobalJson.when adding ''version'' property to existi
 "@
 }
 
-Describe 'Set-WhiskeyDotnetGlobalJson.when updating existing sdk version in global.json' {
+Describe 'Set-WhiskeyDotNetGlobalJson.when updating existing sdk version in global.json' {
     Init
     GivenExistingGlobalJson @"
 {

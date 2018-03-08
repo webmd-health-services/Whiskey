@@ -1,15 +1,15 @@
 
-function Set-WhiskeyDotnetGlobalJson
+function Set-WhiskeyDotNetGlobalJson
 {
     <#
     .SYNOPSIS
     Sets values within a .NET Core global.json file.
 
     .DESCRIPTION
-    The `Set-WhiskeyDotnetGlobalJson` function sets values within a .NET Core `global.json` file. If the `global.json` file does not exist in the given `Directory` then it will be created. If the `global.json` file already exists, then the function will only update the desired values and leave the rest of the content as-is.
+    The `Set-WhiskeyDotNetGlobalJson` function sets values within a .NET Core `global.json` file. If the `global.json` file does not exist in the given `Directory` then it will be created. If the `global.json` file already exists, then the function will only update the desired values and leave the rest of the content as-is.
 
     .EXAMPLE
-    Set-WhiskeyDotnetGlobalJson -Directory 'C:\Build\app' -SDKVersion '2.1.4'
+    Set-WhiskeyDotNetGlobalJson -Directory 'C:\Build\app' -SDKVersion '2.1.4'
 
     Demonstrates setting the 'sdk:version' property in global.json to '2.1.4'.
     #>

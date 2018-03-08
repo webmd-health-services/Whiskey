@@ -286,7 +286,7 @@ function Install-WhiskeyTool
 
                         $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
                     }
-                    'Dotnet'
+                    'DotNet'
                     {
                         $globalJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'global.json'
                         if (-not (Test-Path -Path $globalJsonPath -PathType Leaf))
@@ -297,7 +297,7 @@ function Install-WhiskeyTool
                         $sdkVersion = $null
                         if ($Version)
                         {
-                            $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -Version $Version
+                            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
                         }
                         elseif (Test-Path -Path $globalJsonPath -PathType Leaf)
                         {
@@ -307,26 +307,26 @@ function Install-WhiskeyTool
 
                             if ($globalJsonVersion)
                             {
-                                $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -Version $globalJsonVersion
+                                $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion
                             }
                         }
 
                         if (-not $sdkVersion)
                         {
-                            $sdkVersion = Resolve-WhiskeyDotnetSdkVersion -LatestLTS
+                            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
                         }
 
                         $dotnetRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
 
-                        $dotnetPath = Install-WhiskeyDotnetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -SearchExisting -ErrorAction Stop
+                        $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -SearchExisting -ErrorAction Stop
 
                         $TaskParameter[$ToolInfo.PathParameterName] = $dotnetPath
 
-                        Set-WhiskeyDotnetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SDKVersion $sdkVersion
+                        Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SDKVersion $sdkVersion
                     }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''Dotnet''.' -f $name)
+                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $name)
                     }
                 }
             }

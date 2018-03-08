@@ -146,9 +146,9 @@ LONG DESCRIPTION
 
     To install the .NET Core SDK, add this to your task:
 
-        [Whiskey.RequiresTool('Dotnet','DotnetPath')]
+        [Whiskey.RequiresTool('DotNet','DotNetPath')]
 
-    The `DotnetPath` string is the name of the key where the path to the `dotnet.exe` command should be saved in the `$TaskParameter` hashtable when calling your task.
+    The `DotNetPath` string is the name of the key where the path to the `dotnet.exe` command should be saved in the `$TaskParameter` hashtable when calling your task.
 
     If the SDK version to install is not defined in the `whiskey.yml` file, then Whiskey will look for a .NET Core `global.json` file first in the task's working directory and then in the same directory as the `whiskey.yml` file.
 

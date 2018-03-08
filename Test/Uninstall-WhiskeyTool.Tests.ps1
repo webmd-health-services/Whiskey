@@ -257,7 +257,7 @@ function ThenNoErrors
     }
 }
 
-function ThenUninstalledDotnet
+function ThenUninstalledDotNet
 {
     It 'should delete .NET Core SDK' {
         Join-Path -Path $toolsInstallRoot -ChildPath '.dotnet' | Should -Not -Exist
@@ -304,17 +304,17 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
     }
 }
 
-Describe 'Uninstall-WhiskeyTool.when uninstalling Dotnet SDK' {
+Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
     Init
-    GivenToolInstalled 'dotnet'
-    WhenUninstallingTool 'Dotnet'
-    ThenUninstalledDotnet
+    GivenToolInstalled 'DotNet'
+    WhenUninstallingTool 'DotNet'
+    ThenUninstalledDotNet
     ThenNoErrors
 
     # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
     Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-    GivenToolInstalled 'dotnet'
-    WhenUninstallingTool 'Dotnet'
+    GivenToolInstalled 'DotNet'
+    WhenUninstallingTool 'DotNet'
     It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }

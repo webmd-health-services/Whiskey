@@ -1,25 +1,25 @@
 
-function Resolve-WhiskeyDotnetSdkVersion
+function Resolve-WhiskeyDotNetSdkVersion
 {
     <#
     .SYNOPSIS
     Searches for a version of the .NET Core SDK to ensure it exists and returns the resolved version.
 
     .DESCRIPTION
-    The `Resolve-WhiskeyDotnetSdkVersion` function ensures a given version is a valid released version of the .NET Core SDK. By default, the function will return the latest LTS version of the SDK. If a `Version` number is given then that version is compared against the list of released SDK versions to ensure the given version is valid. If no valid version is found matching `Version`, then an error is written and nothing is returned.
+    The `Resolve-WhiskeyDotNetSdkVersion` function ensures a given version is a valid released version of the .NET Core SDK. By default, the function will return the latest LTS version of the SDK. If a `Version` number is given then that version is compared against the list of released SDK versions to ensure the given version is valid. If no valid version is found matching `Version`, then an error is written and nothing is returned.
 
     .EXAMPLE
-    Resolve-WhiskeyDotnetSdkVersion -LatestLTS
+    Resolve-WhiskeyDotNetSdkVersion -LatestLTS
 
     Demonstrates returning the latest LTS version of the .NET Core SDK.
 
     .EXAMPLE
-    Resolve-WhiskeyDotnetSdkVersion -Version '2.1.2'
+    Resolve-WhiskeyDotNetSdkVersion -Version '2.1.2'
 
     Demonstrates ensuring that version '2.1.2' is a valid released version of the .NET Core SDK.
 
     .EXAMPLE
-    Resolve-WhiskeyDotnetSdkVersion -Version '2.*'
+    Resolve-WhiskeyDotNetSdkVersion -Version '2.*'
 
     Demonstrates resolving the latest '2.x.x' version of the .NET Core SDK.
     #>
