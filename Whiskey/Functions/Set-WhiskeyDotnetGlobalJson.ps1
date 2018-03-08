@@ -56,12 +56,12 @@ function Set-WhiskeyDotNetGlobalJson
 
         if (-not ($globalJson | Get-Member -Name 'sdk'))
         {
-            $globalJson | Add-Member -MemberType NoteProperty -Name 'sdk' -Value (New-Object -TypeName PSCustomObject)
+            $globalJson | Add-Member -MemberType NoteProperty -Name 'sdk' -Value ([pscustomobject]@{ })
         }
 
         if (-not ($globalJson.sdk | Get-Member -Name 'version'))
         {
-            $globalJson.sdk | Add-Member -MemberType NoteProperty -Name 'version' -Value (New-Object -TypeName PSCustomObject)
+            $globalJson.sdk | Add-Member -MemberType NoteProperty -Name 'version' -Value ([pscustomobject]@{ })
         }
 
         $globalJson.sdk.version = $SdkVersion
