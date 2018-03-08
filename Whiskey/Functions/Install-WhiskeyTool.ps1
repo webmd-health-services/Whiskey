@@ -318,7 +318,7 @@ function Install-WhiskeyTool
 
                         $dotnetRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
 
-                        $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -SearchExisting -ErrorAction Stop
+                        $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -Global -ErrorAction Stop
 
                         $TaskParameter[$ToolInfo.PathParameterName] = $dotnetPath
 

@@ -150,10 +150,10 @@ function WhenInstallingDotNet
         $Version,
 
         [switch]
-        $SearchExisting
+        $Global
     )
 
-    $script:dotNetPath = Install-WhiskeyDotNetSdk -InstallRoot $localDotNetDirectory -Version $Version -SearchExisting:$SearchExisting
+    $script:dotNetPath = Install-WhiskeyDotNetSdk -InstallRoot $localDotNetDirectory -Version $Version -Global:$Global
 }
 
 Describe 'Install-WhiskeyDotNetSdk.when installing the SDK version ''1.0.1''' {
@@ -196,7 +196,7 @@ Describe 'Install-WhiskeyDotNetSdk.when SDK version ''1.0.1'' already installed 
         Init
         MockDotNetInstall
         GivenGlobalDotNet '1.0.1'
-        WhenInstallingDotNet '1.0.1' -SearchExisting
+        WhenInstallingDotNet '1.0.1' -Global
         ThenNotInstalledDotNet '1.0.1'
         ThenReturnedPathToDotNet -Global
     }
@@ -213,7 +213,7 @@ Describe 'Install-WhiskeyDotNetSdk.when global SDK install exists but not at cor
         Init
         MockDotNetInstall
         GivenGlobalDotNet '1.0.1'
-        WhenInstallingDotNet '1.0.4' -SearchExisting
+        WhenInstallingDotNet '1.0.4' -Global
         ThenInstalledDotNet '1.0.4'
         ThenReturnedPathToDotNet
     }
