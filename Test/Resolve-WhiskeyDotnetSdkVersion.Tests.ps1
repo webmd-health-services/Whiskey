@@ -61,9 +61,9 @@ function ThenResolvedWildcardVersion
 
     $releasesJson = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/dotnet/core/master/release-notes/releases.json'
     $sdkVersions =  $releasesJson |
-                    Select-Object -ExpandProperty 'version-sdk' -Unique |
-                    Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-                    Sort-Object -Descending
+                        Select-Object -ExpandProperty 'version-sdk' -Unique |
+                        Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+                        Sort-Object -Descending
 
     $expectedVersion = $sdkVersions | Where-Object { [version]$_ -like $WildcardVersion } | Select-Object -First 1
 

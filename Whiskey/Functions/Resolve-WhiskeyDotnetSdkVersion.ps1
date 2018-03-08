@@ -47,13 +47,13 @@ function Resolve-WhiskeyDotNetSdkVersion
         $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
 
         $sdkVersions =  $releasesJson |
-                        Select-Object -ExpandProperty 'version-sdk' -Unique |
-                        Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-                        Sort-Object -Descending
+                            Select-Object -ExpandProperty 'version-sdk' -Unique |
+                            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+                            Sort-Object -Descending
 
         $resolvedVersion =  $sdkVersions |
-                            Where-Object { $_ -like $Version } |
-                            Select-Object -First 1
+                                Where-Object { $_ -like $Version } |
+                                Select-Object -First 1
 
         if (-not $resolvedVersion)
         {
