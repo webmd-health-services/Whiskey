@@ -19,6 +19,8 @@ function Init
     $script:path = $null
     $script:taskContext = $null
     $script:verbosity = $null
+
+    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -like 'env:DOTNET_*' }
 }
 
 function GivenArgument
@@ -92,6 +94,41 @@ function GivenVerbosity
     )
 
     $script:verbosity = $Level
+}
+
+function ThenDotnetEnvironmentVariables
+{
+    [CmdletBinding(DefaultParameterSetName='Set')]
+    param(
+        [Parameter(ParameterSetName='Set')]
+        [switch]
+        $Set,
+
+        [Parameter(ParameterSetName='NotSet')]
+        [switch]
+        $NotSet
+    )
+
+    If ($Set)
+    {
+        It 'should set telemetry opt out and skip first use environment variables' {
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter {
+                $Path -eq 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -and `
+                $Value -eq $true
+            }
+
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter {
+                $Path -eq 'env:DOTNET_CLI_TELEMETRY_OPTOUT' -and `
+                $Value -eq $true
+            }
+        }
+    }
+    else
+    {
+        It 'should not set any .NET Core SDK environment variables' {
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -like 'env:DOTNET_*' } -Times 0
+        }
+    }
 }
 
 function ThenOutput
@@ -280,6 +317,7 @@ Describe 'DotNetBuild.when not given any Paths' {
         WhenRunningDotNetBuild -ForDeveloper
         ThenProjectBuilt 'DotNetCore.dll'
         ThenVerbosityIs -Minimal
+        ThenDotnetEnvironmentVariables -NotSet
         ThenTaskSuccess
     }
 
@@ -289,6 +327,7 @@ Describe 'DotNetBuild.when not given any Paths' {
         WhenRunningDotNetBuild -ForBuildServer
         ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
         ThenVerbosityIs -Detailed
+        ThenDotnetEnvironmentVariables -Set
         ThenTaskSuccess
     }
 }
@@ -338,9 +377,10 @@ Describe 'DotNetBuild.when given verbosity level' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
-        WhenRunningDotNetBuild
+        WhenRunningDotNetBuild -ForDeveloper
         ThenProjectBuilt 'DotNetCore.dll'
         ThenVerbosityIs -Diagnostic
+        ThenDotnetEnvironmentVariables -NotSet
         ThenTaskSuccess
     }
 
@@ -348,9 +388,10 @@ Describe 'DotNetBuild.when given verbosity level' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
-        WhenRunningDotNetBuild
-        ThenProjectBuilt 'DotNetCore.dll'
+        WhenRunningDotNetBuild -ForBuildServer
+        ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
         ThenVerbosityIs -Diagnostic
+        ThenDotnetEnvironmentVariables -Set
         ThenTaskSuccess
     }
 }

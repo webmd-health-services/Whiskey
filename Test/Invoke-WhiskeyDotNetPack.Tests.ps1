@@ -19,6 +19,8 @@ function Init
     $script:taskContext = $null
     $script:symbols = $null
     $script:verbosity = $null
+
+    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -like 'env:DOTNET_*' }
 }
 
 function GivenArgument
@@ -141,6 +143,41 @@ function ThenCreatedPackage
 
         It 'should create the NuGet symbols package' {
             $symbolsPackage | Should -Exist
+        }
+    }
+}
+
+function ThenDotnetEnvironmentVariables
+{
+    [CmdletBinding(DefaultParameterSetName='Set')]
+    param(
+        [Parameter(ParameterSetName='Set')]
+        [switch]
+        $Set,
+
+        [Parameter(ParameterSetName='NotSet')]
+        [switch]
+        $NotSet
+    )
+
+    If ($Set)
+    {
+        It 'should set telemetry opt out and skip first use environment variables' {
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter {
+                $Path -eq 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -and `
+                $Value -eq $true
+            }
+
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter {
+                $Path -eq 'env:DOTNET_CLI_TELEMETRY_OPTOUT' -and `
+                $Value -eq $true
+            }
+        }
+    }
+    else
+    {
+        It 'should not set any .NET Core SDK environment variables' {
+            Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -like 'env:DOTNET_*' } -Times 0
         }
     }
 }
@@ -293,6 +330,7 @@ Describe 'DotNetPack.when not given any Paths' {
         WhenRunningDotNetPack -ForDeveloper
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Minimal
+        ThenDotnetEnvironmentVariables -NotSet
         ThenTaskSuccess
     }
 
@@ -302,6 +340,7 @@ Describe 'DotNetPack.when not given any Paths' {
         WhenRunningDotNetPack -ForBuildServer
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Detailed
+        ThenDotnetEnvironmentVariables -Set
         ThenTaskSuccess
     }
 }
@@ -352,6 +391,7 @@ Describe 'DotNetPack.when given verbosity level' {
         WhenRunningDotNetPack -ForDeveloper
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Diagnostic
+        ThenDotnetEnvironmentVariables -NotSet
         ThenTaskSuccess
     }
 
@@ -362,6 +402,7 @@ Describe 'DotNetPack.when given verbosity level' {
         WhenRunningDotNetPack -ForBuildServer
         ThenCreatedPackage 'DotNetCore'
         ThenVerbosityIs -Diagnostic
+        ThenDotnetEnvironmentVariables -Set
         ThenTaskSuccess
     }
 }

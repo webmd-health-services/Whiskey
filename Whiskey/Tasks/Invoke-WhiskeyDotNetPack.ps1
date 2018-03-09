@@ -17,8 +17,11 @@ function Invoke-WhiskeyDotNetPack
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Set-Item -Path 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value $true
-    Set-Item -Path 'env:DOTNET_CLI_TELEMETRY_OPTOUT' -Value $true
+    if ($TaskContext.ByBuildServer)
+    {
+        Set-Item -Path 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value $true
+        Set-Item -Path 'env:DOTNET_CLI_TELEMETRY_OPTOUT' -Value $true
+    }
 
     $dotnetExe = $TaskParameter['DotNetPath']
 
