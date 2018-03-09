@@ -60,18 +60,35 @@ function Invoke-WhiskeyDotNetBuild
         $TaskParameter['Argument']
     }
 
-    Write-WhiskeyVerbose -Context $TaskContext -Message     (' dotnet.exe command path:    {0}' -f $dotnetExe)
-    Write-WhiskeyVerbose -Context $TaskContext -Message     (' dotnet.exe SDK version:     {0}' -f (& $dotnetExe --version))
-    Write-WhiskeyVerbose -Context $TaskContext -Message     (' dotnet.exe build arguments: {0}' -f ($dotnetArgs | Select-Object -First 1))
+    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f $dotnetExe)
+    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f (& $dotnetExe --version))
+    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f ($dotnetArgs | Select-Object -First 1))
     $dotnetArgs | Select-Object -Skip 1 | ForEach-Object {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('                             {0}' -f $_)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('       {0}' -f $_)
     }
     Write-WhiskeyVerbose -Context $TaskContext -Message ''
 
     foreach($project in $projectPaths)
     {
-        $fullCommandString = '{0} build {1} {2}' -f $dotnetExe,($dotnetArgs -join ' '),$project
-        Write-WhiskeyVerbose -Context $TaskContext -Message (' Executing: {0}' -f $fullCommandString)
+        $infoMessage = & {
+                            if( $dotnetExe -match '\ ' )
+                            {
+                                '&'
+                            }
+                            $dotnetExe
+                            'build'
+                            $dotnetArgs
+                            $project
+                        } |
+                        ForEach-Object {
+                            if( $_ -match '\ ' )
+                            {
+                                return '"{0}"' -f $_
+                            }
+                            return $_
+                        }
+
+        Write-WhiskeyInfo -Context $TaskContext -Message ($infoMessage -join ' ')
 
         & $dotnetExe build $dotnetArgs $project
 
