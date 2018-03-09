@@ -7,6 +7,15 @@ SUMMARY
 DESCRIPTION
     The `DotNetPack` tasks runs the `dotnet.exe pack` command to create a NuGet package from .NET projects targeting .NET Core and .NET Standard. Pass a list of solution files or .NET Core project files to the `Path` property. If no files are provided to `Path`, then the .NET Core SDK will search for any solution or project files in the working directory and create packages for those. If the `dotnet.exe pack` command returns a non-zero exit code the build will fail.
 
+    The task will automatically apply the following switches to the `dotnet.exe pack` command and are not modifiable:
+
+        * `--configuration=(Debug|Release)`: `Debug` when build run by a developer and `Release` when build run by a build server.
+        * `--output=$(WHISKEY_OUTPUT_DIRECTORY)`: The default Whiskey build output directory.
+        * `-p:PackageVersion=$(WHISKEY_VERSION_SEMVER1)`: The semver version 1 version for the current build.
+        * `--no-build`: Skip building the project prior to packaging.
+        * `--no-dependencies`: Ignore project to project references and only restore root project.
+        * `--no-restore`: Does not do an implicit restore when executing `dotnet.exe pack`.
+
 PROPERTIES
     * `Argument`: a list of additional arguments to pass to the `dotnet.exe pack` command.
     * `Path`: a list of paths to .NET Core solution or project files to create NuGet packages from. If not specified, any solution or project files in the task working directory will be packaged.

@@ -7,6 +7,11 @@ SUMMARY
 DESCRIPTION
     The `DotNetBuild` tasks runs the `dotnet.exe build` command for building .NET projects targeting .NET Core and .NET Standard. Pass a list of solutions files or .NET Core project files to the `Path` property. If no files are provided to `Path`, then the .NET Core SDK will search for any solution or project files in the working directory and build those. If the `dotnet.exe build` command returns a non-zero exit code the build will fail.
 
+    The task will automatically apply the following switches to the `dotnet.exe build` command and are not modifiable:
+    
+        * `--configuration=(Debug|Release)`: `Debug` when build run by a developer and `Release` when build run by a build server.
+        * `-p:Version=$(WHISKEY_VERSION_SEMVER1)`: the semver version 1 version for the current build.
+
 PROPERTIES
     * `Argument`: a list of additional arguments to pass to the `dotnet.exe build` command.
     * `Path`: a list of paths to .NET Core solution or project files to build. If not specified, any solution or project files in the task working directory will be built.
