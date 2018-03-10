@@ -8,6 +8,8 @@ function Install-WhiskeyTool
     .DESCRIPTION
     The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
+    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
+
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
 
     .EXAMPLE
@@ -25,6 +27,26 @@ function Install-WhiskeyTool
 
     Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed.
 
+    .EXAMPLE
+    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')
+
+    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'NodeVersion' = 7.3.* }
+
+    Demonstrates installing the latest 7.3.* version of the Node.js runtime for a Whiskey task.
+
+    .EXAMPLE
+    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
+
+    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'Version' = 3.2.0 }
+
+    Demonstrates installing version 3.2.0 of the 'nsp' Node.js module for a Whiskey task.
+
+    .EXAMPLE
+    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
+
+    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'SdkVersion' = 2.* }
+
+    Demonstrates installing the latest 2.* version of the .NET Core SDK for a Whiskey task.
     #>
     [CmdletBinding()]
     param(
