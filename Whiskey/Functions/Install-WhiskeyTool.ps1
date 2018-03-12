@@ -310,41 +310,7 @@ function Install-WhiskeyTool
                     }
                     'DotNet'
                     {
-                        $globalJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'global.json'
-                        if (-not (Test-Path -Path $globalJsonPath -PathType Leaf))
-                        {
-                            $globalJsonPath = Join-Path -Path $InstallRoot -ChildPath 'global.json'
-                        }
-
-                        $sdkVersion = $null
-                        if ($Version)
-                        {
-                            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
-                        }
-                        elseif (Test-Path -Path $globalJsonPath -PathType Leaf)
-                        {
-                            $globalJsonVersion = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json |
-                                                 Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                                                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore
-
-                            if ($globalJsonVersion)
-                            {
-                                $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion
-                            }
-                        }
-
-                        if (-not $sdkVersion)
-                        {
-                            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
-                        }
-
-                        $dotnetRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
-
-                        $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $dotnetRoot -Version $sdkVersion -Global -ErrorAction Stop
-
-                        $TaskParameter[$ToolInfo.PathParameterName] = $dotnetPath
-
-                        Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SdkVersion $sdkVersion
+                        $TaskParameter[$ToolInfo.PathParameterName] = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot -WorkingDirectory (Get-Location).ProviderPath -Version $version -ErrorAction Stop
                     }
                     default
                     {
