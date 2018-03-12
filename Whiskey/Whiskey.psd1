@@ -150,7 +150,7 @@
             ReleaseNotes = @'
 * Fixed: PowerShell task fails when Whiskey is stored in a directory that isn't named "Whiskey".
 * Added "SkipUploadedCheck" property to NuGetPush task. If set to `true`, it doesn't check if the just-pushed package can be downloaded. This should work around the NuGetPush task failing when publishing to nuget.org, since nuget.org takes an hour or so to make new packages available for download.
-* Whiskey can now install the required version of the .NET Core SDK needed by "DotNet" tasks into a ".dotnet" directory in the build root.
+* Whiskey can now install .NET Core SDK automatically for tasks that need it. The SDK is installed into a ".dotnet" directory in the build root. See the "about_Whiskey_Writing_Tasks" help topic for more information.
 * Added "DotNetBuild" task for building .NET Core and .NET Standard projects.
 * Added 'DotNetPack" task for creating NuGet pacakges from .NET Core and .NET Standard projects.
 '@
