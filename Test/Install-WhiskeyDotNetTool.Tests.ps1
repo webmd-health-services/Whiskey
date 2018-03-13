@@ -19,7 +19,7 @@ function Init
     $script:workingDirectory = $null
 }
 
-function Get-DotNetLatestLTSVersion
+function Get-DotNetLatestLtsVersion
 {
     Invoke-RestMethod -Uri 'https://dotnetcli.blob.core.windows.net/dotnet/Sdk/LTS/latest.version' | Where-Object { $_ -match '(\d+\.\d+\.\d+)'} | Out-Null
     return $Matches[1]
@@ -77,7 +77,7 @@ function GivenWorkingDirectory
     New-Item -Path $workingDirectory -ItemType Directory -Force | Out-Null
 }
 
-function MockDotNetInstall
+function GivenDotNetSuccessfullyInstalls
 {
     Mock -CommandName 'Install-WhiskeyDotNetSdk' -MockWith {
         $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe'
@@ -90,7 +90,7 @@ function MockDotNetInstall
     }
 }
 
-function Remove-DotNetInstallsFromPath
+function GivenDotNetNotInstalled
 {
     $dotNetInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
     foreach ($path in $dotNetInstalls)
@@ -101,7 +101,7 @@ function Remove-DotNetInstallsFromPath
     }
 }
 
-function Restore-OriginalPathEnvironment
+function ThenRestoreOriginalPathEnvironment
 {
     $env:Path = $originalPath
 }
@@ -169,9 +169,9 @@ function ThenGlobalJsonVersion
     )
 
     $globalJsonVersion = Get-Content -Path (Join-Path -Path $Directory -ChildPath 'global.json') -Raw |
-                         ConvertFrom-Json |
-                         Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                         Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+                            ConvertFrom-Json |
+                            Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
+                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore
 
     It ('should update global.json sdk version to ''{0}''' -f $Version) {
         $globalJsonVersion | Should -Be $Version
@@ -259,32 +259,25 @@ Describe 'Install-WhiskeyDotNetTool.when no version specified and global.json do
     Init
     WhenInstallingDotNetTool
     ThenReturnedValidDotNetPath
-    ThenGlobalJsonVersion (Get-DotNetLatestLTSVersion)
-    ThenDotNetSdkVersion (Get-DotNetLatestLTSVersion)
+    ThenGlobalJsonVersion (Get-DotNetLatestLtsVersion)
+    ThenDotNetSdkVersion (Get-DotNetLatestLtsVersion)
 }
 
-Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet does not exist globally' {
-    try
-    {
-        Remove-DotNetInstallsFromPath
+try
+{
+    GivenDotNetNotInstalled
+
+    Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet does not exist globally' {
         Init
-        MockDotNetInstall
+        GivenDotNetSuccessfullyInstalls
         GivenVersion '2.1.4'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
         ThenGlobalJsonVersion '2.1.4'
         ThenDotNetLocallyInstalled '2.1.4'
     }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
-}
 
-Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet exists globally' {
-    try
-    {
-        Remove-DotNetInstallsFromPath
+    Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet exists globally' {
         Init
         GivenGlobalDotNetInstalled '2.1.4'
         GivenVersion '2.1.4'
@@ -293,16 +286,8 @@ Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet exists glob
         ThenGlobalJsonVersion '2.1.4'
         ThenDotNetNotLocallyInstalled '2.1.4'
     }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
-}
 
-Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json exists in both install root and working directory' {
-    try
-    {
-        Remove-DotNetInstallsFromPath
+    Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json exists in both install root and working directory' {
         Init
         GivenGlobalDotNetInstalled '1.1.5'
         GivenWorkingDirectory 'app'
@@ -315,8 +300,8 @@ Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json exist
         ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
         ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
     }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
+}
+finally
+{
+    ThenRestoreOriginalPathEnvironment
 }
