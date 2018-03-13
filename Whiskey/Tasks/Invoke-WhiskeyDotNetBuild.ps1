@@ -51,38 +51,23 @@ function Invoke-WhiskeyDotNetBuild
             '--output={0}' -f $outputDirectory
         }
 
-        $TaskParameter['Argument']
+        if ($TaskParameter['Argument'])
+        {
+            $TaskParameter['Argument']
+        }
     }
 
-    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f $dotnetExe)
-    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f (& $dotnetExe --version))
-    Write-WhiskeyVerbose -Context $TaskContext -Message     ('dotnet {0}' -f ($dotnetArgs | Select-Object -First 1))
-    $dotnetArgs | Select-Object -Skip 1 | ForEach-Object {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('       {0}' -f $_)
-    }
-    Write-WhiskeyVerbose -Context $TaskContext -Message ''
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('.NET Core SDK {0}' -f (& $dotnetExe --version))
 
     foreach($project in $projectPaths)
     {
-        $infoMessage = & {
-                            if( $dotnetExe -match '\ ' )
-                            {
-                                '&'
-                            }
-                            $dotnetExe
-                            'build'
-                            $dotnetArgs
-                            $project
-                        } |
-                        ForEach-Object {
-                            if( $_ -match '\ ' )
-                            {
-                                return '"{0}"' -f $_
-                            }
-                            return $_
-                        }
+        $fullArgumentList = & {
+            'build'
+            $dotnetArgs
+            $project
+        }
 
-        Write-WhiskeyInfo -Context $TaskContext -Message ($infoMessage -join ' ')
+        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
 
         & $dotnetExe build $dotnetArgs $project
 

@@ -142,24 +142,8 @@ function Invoke-WhiskeyExec
         }
     }
 
-    $logArgumentList = $TaskParameter['Argument'] | 
-                            ForEach-Object { 
-                                if( $_ -match '\ ' ) 
-                                {
-                                    '"{0}"' -f $_.Trim('"',"'")
-                                }
-                                else
-                                {
-                                    $_
-                                }
-                            }
-    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} {1}' -f $path,($logArgumentList -join ' '))
-    Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
-    $argumentPrefix = ' ' * ($path.Length + 2)
-    foreach( $argument in $TaskParameter['Argument'] )
-    {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument)
-    }
+    Write-WhiskeyCommand -Context $TaskContext -Path $path -ArgumentList $TaskParameter['Argument']
+
     # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately terminates the build. Full stop.
     & $path $TaskParameter['Argument']
     $exitCode = $LASTEXITCODE
