@@ -11,7 +11,7 @@ DESCRIPTION
 
         * `--configuration=(Debug|Release)`: `Debug` when build run by a developer and `Release` when build run by a build server.
         * `--output=$(WHISKEY_OUTPUT_DIRECTORY)`: The default Whiskey build output directory.
-        * `-p:PackageVersion=$(WHISKEY_VERSION_SEMVER1)`: The semver version 1 version for the current build.
+        * `-p:PackageVersion=$(WHISKEY_VERSION_SEMVER1)`: The semver version 1 version for the current build. Use a `Version` task in your whiskey.yml file to set the version number.
         * `--no-build`: Skip building the project prior to packaging.
         * `--no-dependencies`: Ignore project to project references and only restore root project.
         * `--no-restore`: Does not do an implicit restore when executing `dotnet.exe pack`.

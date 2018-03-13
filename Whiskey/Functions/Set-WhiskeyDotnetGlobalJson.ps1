@@ -11,7 +11,7 @@ function Set-WhiskeyDotNetGlobalJson
     .EXAMPLE
     Set-WhiskeyDotNetGlobalJson -Directory 'C:\Build\app' -SdkVersion '2.1.4'
 
-    Demonstrates setting the 'sdk:version' property in global.json to '2.1.4'.
+    Demonstrates setting the `sdk.version` property in global.json to '2.1.4'.
     #>
     [CmdletBinding()]
     param(
@@ -29,7 +29,7 @@ function Set-WhiskeyDotNetGlobalJson
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Write-Verbose -Message ('[{0}] Setting global.json properties: ''sdk:version'' => ''{1}''' -f $MyInvocation.MyCommand,$SdkVersion)
+    Write-Verbose -Message ('[{0}] Setting global.json properties: ''sdk.version'' => ''{1}''' -f $MyInvocation.MyCommand,$SdkVersion)
 
     if (-not (Test-Path -Path $Directory -PathType Container))
     {

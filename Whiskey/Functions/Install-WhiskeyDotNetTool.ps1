@@ -6,22 +6,22 @@ function Install-WhiskeyDotNetTool
     Installs the .NET Core SDK tooling for a Whiskey task.
 
     .DESCRIPTION
-    The `Install-WhiskeyDotNetTool` function installs the desired version of the .NET Core SDK for a Whiskey task. When given a `Version` the function will attempt to resolve that version to a valid released version of the SDK. If `Version` is null the function will search for a `global.json` file, first in the `WorkingDirectory` and then the `InstallRoot`, and if found it will look for the desired SDK verson in the `sdk:version` property of that file. After installing the SDK the function will update the `global.json`, creating it in the `InstallRoot` if it doesn't exist, `sdk:version` property with the installed version of the SDK. The function returns the path to the installed `dotnet.exe` command.
+    The `Install-WhiskeyDotNetTool` function installs the desired version of the .NET Core SDK for a Whiskey task. When given a `Version` the function will attempt to resolve that version to a valid released version of the SDK. If `Version` is null the function will search for a `global.json` file, first in the `WorkingDirectory` and then the `InstallRoot`, and if found it will look for the desired SDK verson in the `sdk.version` property of that file. After installing the SDK the function will update the `global.json`, creating it in the `InstallRoot` if it doesn't exist, `sdk.version` property with the installed version of the SDK. The function returns the path to the installed `dotnet.exe` command.
 
     .EXAMPLE
-    Install-WhiskeyDotNetTool -InstallRoot "$(WHISKEY_BUILD_ROOT)\.dotnet" -WorkingDirectory "$(WHISKEY_BUILD_ROOT)" -Version '2.1.4'
+    Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src' -Version '2.1.4'
     
-    Demonstrates installing version '2.1.4' of the .NET Core SDK to a '.dotnet' directory in Whiskey's build root.
+    Demonstrates installing version '2.1.4' of the .NET Core SDK to a '.dotnet' directory in the 'C:\Build\Project' directory.
 
     .EXAMPLE
-    Install-WhiskeyDotNetTool -InstallRoot "$(WHISKEY_BUILD_ROOT)\.dotnet" -WorkingDirectory "$(WHISKEY_BUILD_ROOT)" -Version '2.*'
+    Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src' -Version '2.*'
     
-    Demonstrates installing the latest '2.*' version of the .NET Core SDK to a '.dotnet' directory in the Whiskey build root.
+    Demonstrates installing the latest '2.*' version of the .NET Core SDK to a '.dotnet' directory in the 'C:\Build\Project' directory.
 
     .EXAMPLE
-    Install-WhiskeyDotNetTool -InstallRoot "$(WHISKEY_BUILD_ROOT)\.dotnet" -WorkingDirectory "$(WHISKEY_BUILD_ROOT)"
+    Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src'
     
-    Demonstrates installing the version of the .NET Core SDK specified in the `sdk:version` property of the `global.json` file in the Whiskey build root.
+    Demonstrates installing the version of the .NET Core SDK specified in the `sdk.version` property of the `global.json` file found in either the `WorkingDirectory` or the `InstallRoot` paths.
     #>
     [CmdletBinding()]
     param(
