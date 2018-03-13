@@ -26,27 +26,6 @@ function Install-WhiskeyTool
     Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
 
     Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed.
-
-    .EXAMPLE
-    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')
-
-    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'NodeVersion' = 7.3.* }
-
-    Demonstrates installing the latest 7.3.* version of the Node.js runtime for a Whiskey task.
-
-    .EXAMPLE
-    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
-
-    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'Version' = 3.2.0 }
-
-    Demonstrates installing version 3.2.0 of the 'nsp' Node.js module for a Whiskey task.
-
-    .EXAMPLE
-    Given the following attribute in a Whiskey task function: [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
-
-    Install-WhiskeyTool -ToolInfo $requiresToolAttributeInfo -InstallRoot $TaskContext.BuildRoot -TaskParameter @{ 'SdkVersion' = 2.* }
-
-    Demonstrates installing the latest 2.* version of the .NET Core SDK for a Whiskey task.
     #>
     [CmdletBinding()]
     param(
