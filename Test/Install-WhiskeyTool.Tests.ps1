@@ -34,11 +34,11 @@ function Invoke-PowershellInstall
 
     if( -not $ForRealsies )
     {
-        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell5' ) 
+        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell5' )
         {
             $LikePowerShell4 = $false
         }
-        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell4' ) 
+        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell4' )
         {
             $LikePowerShell5 = $false
         }
@@ -53,7 +53,7 @@ function Invoke-PowershellInstall
                                                 Version = '0.1.1'
                                                 Repository = 'Repository'
                                             }
-                              )            
+                              )
         }
 
         Mock -CommandName 'Save-Module' -ModuleName 'Whiskey' -MockWith {
@@ -120,7 +120,7 @@ function Invoke-PowershellInstall
     }
 }
 
-function Invoke-NuGetInstall 
+function Invoke-NuGetInstall
 {
     [CmdletBinding()]
     param(
@@ -135,18 +135,18 @@ function Invoke-NuGetInstall
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
-            It 'should exist' {                    
+            It 'should exist' {
                 $result | Should -Exist
             }
             It 'should get installed into $DownloadRoot\packages' {
                 $result | Should -BeLike ('{0}\packages\*' -f $TestDrive.FullName)
             }
-        }        
+        }
     }
     else
     {
         Context 'the Invalid NuGet Package' {
-            It 'should NOT exist' {                    
+            It 'should NOT exist' {
                 $result | Should Not Exist
             }
             it 'should write errors' {
@@ -173,7 +173,7 @@ Describe 'Install-WhiskeyTool.when given a NuGet Package with an empty version s
 }
 
 Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
-    
+
     $Global:Error.Clear()
 
     Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
@@ -225,7 +225,7 @@ Describe 'Install-WhiskeyTool.when version of module doesn''t exist' {
     $Global:Error.Clear()
 
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
-    
+
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
     }
@@ -240,7 +240,7 @@ Describe 'Install-WhiskeyTool.for non-existent module when version parameter is 
     $Global:Error.Clear()
 
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
-    
+
     It 'shouldn''t return anything' {
         $result | Should BeNullOrEmpty
     }
@@ -273,11 +273,11 @@ Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
     }
 }
 
-$context = $null
 $threwException = $false
 $pathParameterName = 'ToolPath'
 $versionParameterName = $null
 $taskParameter = $null
+$taskWorkingDirectory = $null
 
 function GivenPackageJson
 {
@@ -298,12 +298,29 @@ function GivenVersionParameterName
     $script:versionParameterName = $Name
 }
 
+function GivenWorkingDirectory
+{
+    param(
+        $Directory
+    )
+
+    $script:taskWorkingDirectory = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+    New-Item -Path $taskWorkingDirectory -ItemType Directory -Force | Out-Null
+}
+
 function Init
 {
-    $script:context = $null
     $script:threwException = $false
     $script:taskParameter = $null
     $script:versionParameterName = $null
+    $script:taskWorkingDirectory = $TestDrive.FullName
+}
+
+function ThenDotNetPathAddedToTaskParameter
+{
+    It ('should set path to the dotnet.exe') {
+        $taskParameter[$pathParameterName] | Should -BeLike '*\dotnet.exe'
+    }
 }
 
 function ThenNodeInstalled
@@ -362,7 +379,7 @@ function ThenNodeModuleInstalled
     )
 
     It ('should install the node module') {
-        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name)
         $expectedPath | Should -Exist
         $taskParameter[$pathParameterName] | Should -Be $expectedPath
 
@@ -380,7 +397,7 @@ function ThenNodeModuleNotInstalled
     )
 
     It ('should not install the node module') {
-        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name) 
+        $expectedPath = Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node_modules\{0}' -f $Name)
         $expectedPath | Should -Not -Exist
         $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
     }
@@ -447,6 +464,7 @@ function WhenInstallingTool
 
     $script:taskParameter = $Parameter
 
+    Push-Location -path $taskWorkingDirectory
     try
     {
         Install-WhiskeyTool -ToolInfo $toolAttribute -InstallRoot $TestDrive.FullName -TaskParameter $Parameter
@@ -455,6 +473,10 @@ function WhenInstallingTool
     {
         $script:threwException = $true
         Write-Error -ErrorRecord $_
+    }
+    finally
+    {
+        Pop-Location
     }
 }
 
@@ -481,7 +503,7 @@ Describe 'Install-WhiskeyTool.when installing old version of Node' {
         "node": "4.4.7"
     }
 }
-'@ 
+'@
         WhenInstallingTool 'Node' -ErrorAction SilentlyContinue
         ThenThrewException 'Failed to download Node v4\.4\.7'
         ThenNodeNotInstalled
@@ -503,8 +525,8 @@ Describe 'Install-WhiskeyTool.when installing specific version of Node' {
         "node": "9.2.1"
     }
 }
-'@ 
-        WhenInstallingTool 'Node' 
+'@
+        WhenInstallingTool 'Node'
         ThenNodeInstalled 'v9.2.1' -NpmVersion '5.5.1'
     }
     finally
@@ -523,8 +545,8 @@ Describe 'Install-WhiskeyTool.when upgrading to a new version of Node' {
         "node": "8.8.1"
     }
 }
-'@ 
-        WhenInstallingTool 'Node' 
+'@
+        WhenInstallingTool 'Node'
         ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
 
         GivenPackageJson @'
@@ -597,8 +619,8 @@ Describe 'Install-WhiskeyTool.when using custom version of NPM' {
         "npm": "5.6.0"
     }
 }
-'@ 
-        WhenInstallingTool 'Node' 
+'@
+        WhenInstallingTool 'Node'
         ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0'
     }
     finally
@@ -611,7 +633,7 @@ Describe 'Install-WhiskeyTool.when already installed' {
     try
     {
         Init
-        WhenInstallingTool 'Node' 
+        WhenInstallingTool 'Node'
         ThenNodeInstalled -AtLatestVersion
 
         Mock -CommandName 'Invoke-WebRequest' -Module 'Whiskey'
@@ -635,8 +657,7 @@ Describe 'Install-WhiskeyTool.when package.json is in working directory' {
     try
     {
         Init
-        $workingDir = Join-Path -Path $TestDrive.FullName -ChildPath 'app'
-        New-Item -Path $workingDir -ItemType 'Directory'
+        GivenWorkingDirectory 'app'
 
         # Put a package.json in the root to ensure package.json in the current directory is used first.
         GivenPackageJson @'
@@ -653,18 +674,10 @@ Describe 'Install-WhiskeyTool.when package.json is in working directory' {
         "node": "8.9.0"
     }
 }
-'@ -InDirectory $workingDir
+'@ -InDirectory $taskWorkingDirectory
 
-        Push-Location -Path $workingDir
-        try
-        {
-            WhenInstallingTool 'Node' 
-            ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1'
-        }
-        finally
-        {
-            Pop-Location
-        }
+        WhenInstallingTool 'Node'
+        ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1'
     }
     finally
     {
@@ -728,4 +741,28 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
     {
         Remove-Node
     }
+}
+
+Describe 'Install-WhiskeyTool.when installing .NET Core SDK' {
+    Init
+    Mock -CommandName 'Install-WhiskeyDotNetTool' -ModuleName 'Whiskey' -MockWith { Join-Path -Path $InstallRoot -ChildPath '.dotnet\dotnet.exe' }
+    GivenWorkingDirectory 'app'
+    GivenVersionParameterName 'SdkVersion'
+    WhenInstallingTool 'DotNet' @{ 'SdkVersion' = '2.1.4' }
+    ThenDotNetPathAddedToTaskParameter
+    It 'should call Install-WhiskeyDotNetTool' {
+        Assert-MockCalled -CommandName 'Install-WhiskeyDotNetTool' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            $InstallRoot -eq $TestDrive.FullName -and `
+            $WorkingDirectory -eq $taskWorkingDirectory -and `
+            $version -eq '2.1.4'
+        }
+    }
+}
+
+Describe 'Install-WhiskeyTool.when .NET Core SDK fails to install' {
+    Init
+    Mock -CommandName 'Install-WhiskeyDotNetTool' -ModuleName 'Whiskey' -MockWith { Write-Error -Message 'Failed to install .NET Core SDK' }
+    GivenVersionParameterName 'SdkVersion'
+    WhenInstallingTool 'DotNet' @{ 'SdkVersion' = '2.1.4' } -ErrorAction SilentlyContinue
+    ThenThrewException 'Failed\ to\ install\ .NET\ Core\ SDK'
 }
