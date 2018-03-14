@@ -18,7 +18,7 @@ function Write-WhiskeyCommand
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     $logArgumentList = Invoke-Command {
-                                          if( $Path.Contains(' ') )
+                                          if( $Path -match '\ ' )
                                           {
                                               '&'
                                           }
@@ -26,7 +26,7 @@ function Write-WhiskeyCommand
                                           $ArgumentList
                                       } |
                                       ForEach-Object { 
-                                          if( $_.Contains(' ') )
+                                          if( $_ -match '\ ' )
                                           {
                                               '"{0}"' -f $_.Trim('"',"'")
                                           }
