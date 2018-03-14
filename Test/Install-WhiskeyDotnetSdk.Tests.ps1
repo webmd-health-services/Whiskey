@@ -192,6 +192,14 @@ try
 {
     GivenDotNetNotInstalled
 
+    Describe 'Install-WhiskeyDotNetSdk.when searching globally and SDK not installed anywhere' {
+        Init
+        GivenDotNetSuccessfullyInstalls
+        WhenInstallingDotNet '2.1.4' -Global
+        ThenInstalledDotNet '2.1.4'
+        ThenReturnedPathToDotNet
+    }
+
     Describe 'Install-WhiskeyDotNetSdk.when installing SDK version ''1.0.1'' which already exists globally but not searching globally' {
         Init
         GivenDotNetSuccessfullyInstalls
