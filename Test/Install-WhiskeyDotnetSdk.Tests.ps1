@@ -30,7 +30,7 @@ function GivenGlobalDotNet
     $env:Path += (';{0}' -f $globalDotNetDirectory)
 }
 
-function MockDotNetInstall
+function GivenDotNetSuccessfullyInstalls
 {
     Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } -MockWith {
         $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe'
@@ -41,12 +41,12 @@ function MockDotNetInstall
     }
 }
 
-function MockFailedDotNetInstall
+function GivenDotNetCommandFailsToInstall
 {
     Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' }
 }
 
-function MockFailedSdkVersionInstall
+function GivenDotNetSdkFailsToInstall
 {
     Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } -MockWith {
         $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe'
@@ -57,7 +57,7 @@ function MockFailedSdkVersionInstall
     }
 }
 
-function Remove-DotNetInstallsFromPath
+function GivenDotNetNotInstalled
 {
     $dotNetInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
     foreach ($path in $dotNetInstalls)
@@ -68,7 +68,7 @@ function Remove-DotNetInstallsFromPath
     }
 }
 
-function Restore-OriginalPathEnvironment
+function ThenRestoreOriginalPathEnvironment
 {
     $env:Path = $originalPath
 }
@@ -172,60 +172,9 @@ Describe 'Install-WhiskeyDotNetSdk.when installing the SDK version ''1.0.1''' {
     }
 }
 
-Describe 'Install-WhiskeyDotNetSdk.when installing SDK version ''1.0.1'' which already exists globally but not searching globally' {
-    Remove-DotNetInstallsFromPath
-    try
-    {
-        Init
-        MockDotNetInstall
-        GivenGlobalDotNet '1.0.1'
-        WhenInstallingDotNet '1.0.1'
-        ThenInstalledDotNet '1.0.1'
-        ThenReturnedPathToDotNet
-    }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
-}
-
-Describe 'Install-WhiskeyDotNetSdk.when SDK version ''1.0.1'' already installed globally' {
-    Remove-DotNetInstallsFromPath
-    try
-    {
-        Init
-        MockDotNetInstall
-        GivenGlobalDotNet '1.0.1'
-        WhenInstallingDotNet '1.0.1' -Global
-        ThenNotInstalledDotNet '1.0.1'
-        ThenReturnedPathToDotNet -Global
-    }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
-}
-
-Describe 'Install-WhiskeyDotNetSdk.when global SDK install exists but not at correct version' {
-    Remove-DotNetInstallsFromPath
-    try
-    {
-        Init
-        MockDotNetInstall
-        GivenGlobalDotNet '1.0.1'
-        WhenInstallingDotNet '1.0.4' -Global
-        ThenInstalledDotNet '1.0.4'
-        ThenReturnedPathToDotNet
-    }
-    finally
-    {
-        Restore-OriginalPathEnvironment
-    }
-}
-
 Describe 'Install-WhiskeyDotNetSdk.when cannot find dotnet.exe after install' {
     Init
-    MockFailedDotNetInstall
+    GivenDotNetCommandFailsToInstall
     WhenInstallingDotNet '1.0.4' -ErrorAction SilentlyContinue
     ThenReturnedNothing
     ThenErrorIs '''dotnet.exe''\ was\ not\ found'
@@ -233,8 +182,52 @@ Describe 'Install-WhiskeyDotNetSdk.when cannot find dotnet.exe after install' {
 
 Describe 'Install-WhiskeyDotNetSdk.when installing SDK but desired SDK version was not found after install' {
     Init
-    MockFailedSdkVersionInstall
+    GivenDotNetSdkFailsToInstall
     WhenInstallingDotNet '1.0.4' -ErrorAction SilentlyContinue
     ThenReturnedNothing
     ThenErrorIs 'version\ ''1.0.4''\ of\ the\ SDK\ was\ not\ found'
+}
+
+try
+{
+    GivenDotNetNotInstalled
+
+    Describe 'Install-WhiskeyDotNetSdk.when searching globally and SDK not installed anywhere' {
+        Init
+        GivenDotNetSuccessfullyInstalls
+        WhenInstallingDotNet '2.1.4' -Global
+        ThenInstalledDotNet '2.1.4'
+        ThenReturnedPathToDotNet
+    }
+
+    Describe 'Install-WhiskeyDotNetSdk.when installing SDK version ''1.0.1'' which already exists globally but not searching globally' {
+        Init
+        GivenDotNetSuccessfullyInstalls
+        GivenGlobalDotNet '1.0.1'
+        WhenInstallingDotNet '1.0.1'
+        ThenInstalledDotNet '1.0.1'
+        ThenReturnedPathToDotNet
+    }
+
+    Describe 'Install-WhiskeyDotNetSdk.when SDK version ''1.0.1'' already installed globally' {
+        Init
+        GivenDotNetSuccessfullyInstalls
+        GivenGlobalDotNet '1.0.1'
+        WhenInstallingDotNet '1.0.1' -Global
+        ThenNotInstalledDotNet '1.0.1'
+        ThenReturnedPathToDotNet -Global
+    }
+
+    Describe 'Install-WhiskeyDotNetSdk.when global SDK install exists but not at correct version' {
+        Init
+        GivenDotNetSuccessfullyInstalls
+        GivenGlobalDotNet '1.0.1'
+        WhenInstallingDotNet '1.0.4' -Global
+        ThenInstalledDotNet '1.0.4'
+        ThenReturnedPathToDotNet
+    }
+}
+finally
+{
+    ThenRestoreOriginalPathEnvironment
 }

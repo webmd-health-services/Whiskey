@@ -40,7 +40,7 @@ function Install-WhiskeyDotNetSdk
 
     if ($Global)
     {
-        $dotnetGlobalInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source'
+        $dotnetGlobalInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Path'
         if ($dotnetGlobalInstalls)
         {
             Write-Verbose -Message ('[{0}] Found global installs of .NET Core SDK: ''{1}''' -f $MyInvocation.MyCommand,($dotnetGlobalInstalls -join '","'))
