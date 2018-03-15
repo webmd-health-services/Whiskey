@@ -3,7 +3,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\Invoke-WhiskeyPowerShell.ps1' -Resolve)
 
 $workingDirectory = $null
 $failed = $false
@@ -186,9 +185,12 @@ function ThenTheTaskPasses
     It 'the task should pass' {
         $failed | Should -Be $false
     }
+    It ('should write no errors') {
+        $Global:Error | Should -BeNullOrEmpty
+    }
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script passes' {
+Describe 'PowerShell.when script passes' {
     GivenAPassingScript
     GivenNoWorkingDirectory
     WhenTheTaskRuns
@@ -196,7 +198,7 @@ Describe 'Invoke-WhiskeyPowerShell.when script passes' {
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script fails due to non-zero exit code' {
+Describe 'PowerShell.when script fails due to non-zero exit code' {
     GivenNoWorkingDirectory
     GivenAFailingScript
     WhenTheTaskRuns -ErrorAction SilentlyContinue
@@ -205,7 +207,7 @@ Describe 'Invoke-WhiskeyPowerShell.when script fails due to non-zero exit code' 
     ThenTheLastErrorMatches 'failed, exited with code'
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script passes after a previous command fails' {
+Describe 'PowerShell.when script passes after a previous command fails' {
     GivenNoWorkingDirectory
     GivenAPassingScript
     GivenLastExitCode 1
@@ -214,7 +216,7 @@ Describe 'Invoke-WhiskeyPowerShell.when script passes after a previous command f
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script throws a terminating exception' {
+Describe 'PowerShell.when script throws a terminating exception' {
     GivenAScript @'
 throw 'fubar!'
 '@ 
@@ -224,7 +226,7 @@ throw 'fubar!'
     ThenTheLastErrorMatches 'threw a terminating exception'
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop' {
+Describe 'PowerShell.when script''s error action preference is Stop' {
     GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
@@ -238,7 +240,7 @@ throw 'fubar'
     ThenTheLastErrorDoesNotMatch 'failed, exited with code'
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script''s error action preference is Stop and script doesn''t complete successfully' {
+Describe 'PowerShell.when script''s error action preference is Stop and script doesn''t complete successfully' {
     GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Non-ExistingCmdlet -Name 'Test'
@@ -252,7 +254,7 @@ throw 'fubar'
     ThenTheLastErrorDoesNotMatch 'failed, exited with code'
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when working directory does not exist' {
+Describe 'PowerShell.when working directory does not exist' {
     GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
     GivenAPassingScript
     WhenTheTaskRuns  -ErrorAction SilentlyContinue
@@ -271,7 +273,7 @@ function ThenFile
     Get-Content -Path $fullpath | Should -Be $HasContent
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when passing positional parameters' {
+Describe 'PowerShell.when passing positional parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
@@ -291,7 +293,7 @@ param(
     }
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when passing named parameters' {
+Describe 'PowerShell.when passing named parameters' {
     GivenNoWorkingDirectory
     GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
@@ -314,7 +316,7 @@ param(
     }
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script has TaskContext parameter' {
+Describe 'PowerShell.when script has TaskContext parameter' {
     $emptyContext = New-WhiskeyContextObject
     GivenAScript @"
 exit 0
@@ -356,7 +358,7 @@ $(
     ThenTheTaskPasses
 }
 
-Describe 'Invoke-WhiskeyPowerShell.when script has Switch parameter' {
+Describe 'PowerShell.when script has Switch parameter' {
     GivenAScript @"
 if( -not `$SomeBool -or `$SomeOtherBool )
 {
@@ -376,7 +378,7 @@ param(
 }
 
 
-Describe 'Invoke-WhiskeyPowerShell.when script has a common parameter that isn''t an argument' {
+Describe 'PowerShell.when script has a common parameter that isn''t an argument' {
     GivenAScript @"
 Write-Debug 'Fubar'
 "@ -WithParam @"
@@ -400,4 +402,23 @@ Describe 'PowerShell.when run in Initialize mode' {
     WhenTheTaskRuns -InInitMode
     ThenTheTaskPasses
     ThenTheScriptRan
+}
+
+Describe 'PowerShell.when Whiskey stored in a directory that doesn''t match module name' {
+    $whiskeyRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.whiskey'
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve) `
+              -Recurse `
+              -Destination $whiskeyRoot
+    & (Join-Path -Path $whiskeyRoot -ChildPath 'Import-Whiskey.ps1' -Resolve)
+    try
+    {
+        GivenAScript
+        WhenTheTaskRuns
+        ThenTheTaskPasses
+        ThenTheScriptRan
+    }
+    finally
+    {
+        Remove-Module -Name 'Whiskey' -Force
+    }
 }

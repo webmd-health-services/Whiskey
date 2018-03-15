@@ -23,12 +23,12 @@ function GivenAnInstalledPowerShellModule
     $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
     $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
     if( $LikePowerShell4 )
-    {        
+    {
         $Name = '{0}' -f $WithName
     }
     elseif( $LikePowerShell5 )
     {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion 
+        $Name = '{0}\{1}' -f $WithName, $WithVersion
     }
     $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $Name
 
@@ -107,12 +107,12 @@ function ThenPowerShellModuleUninstalled
 
     $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
     if( $LikePowerShell4 )
-    {        
+    {
         $Name = '{0}' -f $WithName
     }
     elseif( $LikePowerShell5 )
     {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion 
+        $Name = '{0}\{1}' -f $WithName, $WithVersion
     }
 
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
@@ -233,23 +233,89 @@ Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'
 }
 
+$toolsInstallRoot = $null
+
+function Init
+{
+    $Global:Error.Clear()
+    $script:toolsInstallRoot = $TestDrive.FullName
+}
+
+function GivenToolInstalled
+{
+    param(
+        $Name
+    )
+
+    New-Item -Path (Join-Path -Path $toolsInstallRoot -ChildPath ('.{0}\{0}.exe' -f $Name)) -ItemType File -Force | Out-Null
+}
+
+function ThenNoErrors
+{
+    It 'should not write any errors' {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+function ThenUninstalledDotNet
+{
+    It 'should delete .NET Core SDK' {
+        Join-Path -Path $toolsInstallRoot -ChildPath '.dotnet' | Should -Not -Exist
+    }
+}
+
+function ThenUninstalledNode
+{
+    It 'should delete Node' {
+        Join-Path -Path $toolsInstallRoot -ChildPath '.node' | Should -Not -Exist
+    }
+}
+
+function WhenUninstallingTool
+{
+    param(
+        $Name
+    )
+
+    Uninstall-WhiskeyTool -Name $Name -InstallRoot $toolsInstallRoot
+}
+
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
     try
     {
-        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath') -InstallRoot $TestDrive.FullName -TaskParameter @{ }
-        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' 'NodeModule::rimraf','RimrafPath') -InstallRoot $TestDrive.FullName -TaskParameter @{ }
-        $Global:Error.Clear()
-        Uninstall-WhiskeyTool -Name Node -InstallRoot $TestDrive.FullName
-        Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -InstallRoot $TestDrive.FullName
-        It ('should not write any errors') {
-            $Global:Error | Should -BeNullOrEmpty
-        }
-        It ('should delete Node') {
-            Join-Path -Path $TestDrive.FullName -ChildPath '.node' | Should -Not -Exist
+        Init
+        GivenToolInstalled 'node'
+        WhenUninstallingTool 'Node'
+        WhenUninstallingTool 'NodeModule::rimraf'
+        ThenUninstalledNode
+        ThenNoErrors
+
+        # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
+        Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
+        GivenToolInstalled 'node'
+        WhenUninstallingTool 'Node'
+        It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
+            Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
         }
     }
     finally
     {
         Remove-Node
+    }
+}
+
+Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
+    Init
+    GivenToolInstalled 'DotNet'
+    WhenUninstallingTool 'DotNet'
+    ThenUninstalledDotNet
+    ThenNoErrors
+
+    # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
+    Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
+    GivenToolInstalled 'DotNet'
+    WhenUninstallingTool 'DotNet'
+    It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
+        Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }

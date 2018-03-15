@@ -5,7 +5,7 @@ function Uninstall-WhiskeyTool
     Removes a tool installed with `Install-WhiskeyTool`.
 
     .DESCRIPTION
-    The `Uninstall-WhiskeyTool` function removes tools that were installed with `Install-WhiskeyTool`. It removes PowerShell modules, NuGet packages, Node, and Node modules that Whiskey installs into your build root. PowerShell modules are removed from the `Modules` direcory. NuGet packages are removed from the `packages` directory. Node and node modules are removed from the `.node` directory. 
+    The `Uninstall-WhiskeyTool` function removes tools that were installed with `Install-WhiskeyTool`. It removes PowerShell modules, NuGet packages, Node, Node modules, and .NET Core SDKs that Whiskey installs into your build root. PowerShell modules are removed from the `Modules` direcory. NuGet packages are removed from the `packages` directory. Node and node modules are removed from the `.node` directory. The .NET Core SDK is removed from the `.dotnet` directory.
 
     When uninstalling a Node module, its name should be prefixed with `NodeModule::`, e.g. `NodeModule::rimraf`.
     
@@ -40,6 +40,11 @@ function Uninstall-WhiskeyTool
     Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -InstallRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall the `rimraf` Node module from the `.node\node_modules` directory in your build root.
+
+    .EXAMPLE
+    Uninstall-WhiskeyTool -Name 'DotNet' -InstallRoot $TaskContext.BuildRoot
+
+    Demonstrates how to uninstall the .NET Core SDK from the `.dotnet` directory in your build root.
     #>
     [CmdletBinding()]
     param(
@@ -138,9 +143,14 @@ function Uninstall-WhiskeyTool
                         $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
                         Remove-WhiskeyFileSystemItem -Path $dirToRemove
                     }
+                    'DotNet'
+                    {
+                        $dotnetToolRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+                        Remove-WhiskeyFileSystemItem -Path $dotnetToolRoot
+                    }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tool is Node.' -f $Name)
+                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
                     }
                 }
             }

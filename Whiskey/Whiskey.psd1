@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.31.0'
+    ModuleVersion = '0.32.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -148,74 +148,11 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added `WHISKEY_BUILD_STARTED_AT` variable. It's a `[datetime]` object that is the date/time the build started.
-* Fixed: Whiskey fails builds if a version of Visual Studio 2017 is installed that doesn't have a MSBuild.
-* Created `Version` task to replace the `Version`, `VersionFrom`, and `PrereleaseMap` whiskey.yml properties.
-* Fixed: when a build that has an Exec task runs in a background job, the build immediately stops after the Exec task executes the process.
-* ***BREAKING CHANGE***: We've removed the `Version`, `VersionFrom`, and `PrereleaseMap` properties from whiskey.yml. Use the new `Version` task instead (see the "Upgrade Instructions" below).
-* ***BREAKING CHANGE***: Whiskey no longer automatically adds build metadata to your version. Use the new `Version` task to set your build metadata (see the "Upgrade Instructions" below).
-* ***BREAKING CHANGE***: Whiskey's default version number is now '0.0.0'. Use the new `Version` task to customize your version number (see the "Upgrade Instructions" below).
-
-## Upgrade Instructions
-
-### Removing `Version` and `PrereleaseMap` Properties
-
-To migrate your `Version` and/or `PrereleaseMap` properties, create a `Version` task as the first task in your pipeline. If your whiskey.yml file looks like this:
-
-    Version: 1.2.3
-
-    PrereleaseMap:
-    - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
-
-    BuildTasks:
-    - Pester:
-        Path: Tests\*.Tests.ps1
-
-your new whiskey.yml file should look like this:
-
-    BuildTasks:
-    - Version:
-        Version: 1.2.3
-        Prerelease:
-        - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
-    - Pester:
-        Path: Tests\*.Tests.ps1
-
-### Removing `VersionFrom` Property
-
-If you use the `VersionFrom` property, change your whiskey.yml file from this:
-
-    VersionFrom: Whiskey\Whiskey.psd1
-
-    BuildTasks:
-    - Pester:
-        Path: Tests\*.Tests.ps1
-
-to this:
-
-    BuildTasks:
-    - Version:
-        Path: Whiskey\Whiskey.psd1
-    - Pester:
-        Path: Tests\*.Tests.ps1
-
-### Preserving Default Version Number
-
-To preserve Whiskey's default version numbering, add a Version task to your build pipeline that looks like this:
-
-    BuildTasks:
-    - Version: 
-        Version: $(WHISKEY_BUILD_STARTED_AT.ToString('yyyy.Mdd')).$(WHISKEY_BUILD_NUMBER)
-
-### Preserving Build Metadata
-
-To preserve Whiskey's old default build metadata, add a Version task to your build pipeline whose "Build" property looks like this:
-
-    BuildTasks:
-    - Version:
-        Version: 1.2.3
-        Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
-
+* Fixed: PowerShell task fails when Whiskey is stored in a directory that isn't named "Whiskey".
+* Added "SkipUploadedCheck" property to NuGetPush task. If set to `true`, it doesn't check if the just-pushed package can be downloaded. This should work around the NuGetPush task failing when publishing to nuget.org, since nuget.org takes an hour or so to make new packages available for download.
+* Whiskey can now install .NET Core SDK automatically for tasks that need it. The SDK is installed into a ".dotnet" directory in the build root. See the "about_Whiskey_Writing_Tasks" help topic for more information.
+* Added "DotNetBuild" task for building .NET Core and .NET Standard projects.
+* Added 'DotNetPack" task for creating NuGet pacakges from .NET Core and .NET Standard projects.
 '@
         } # End of PSData hashtable
 
