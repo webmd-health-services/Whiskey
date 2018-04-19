@@ -1,0 +1,29 @@
+TOPIC
+    about_Whiskey_Parallel_Task
+
+SUMMARY
+    Runs tasks in parallel.
+
+DESCRIPTION
+    The `Parallel` task runs other tasks in parallel/asynchronously. It waits until each task finishes. As each task finishes, it emits its output. If a task fails, the other remaining tasks are cancelled. Specify what tasks to run under a `Task` property.
+
+PROPERTIES
+    * `Task`: a list of tasks to run. Tasks are defined here just like they are defined under a pipeline.
+
+EXAMPLES
+    Example 1
+
+        BuildTasks:
+        - Parallel:
+            Task:
+                NUnit2:
+                    DisableCodeCoverage: true
+                    Path: myassembly.dll
+                NUnit2:
+                    DisableCodeCoverage: true
+                    Path: myassembly2.dll
+                NUnit2:
+                    DisableCodeCoverage: true
+                    Path: myassembly3.dll
+
+    Demonstrates how to run tasks in parallel. In this example, three NUnit tests will be run at the same time.
