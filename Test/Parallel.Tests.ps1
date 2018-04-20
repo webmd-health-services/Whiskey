@@ -43,6 +43,7 @@ function WhenRunningTask
 
     $Global:Error.Clear()
     $script:failed = $false
+    $jobCount = Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count'
     try
     {
         Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter
@@ -54,7 +55,7 @@ function WhenRunningTask
     }
 
     It ('should cleanup jobs') {
-        Get-Job | Should -BeNullOrEmpty
+        Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count' | Should -Be $jobCount
     }
 }
 
@@ -108,7 +109,7 @@ Describe 'Parallel.when one task fails' {
     GivenFile 'two.ps1' 'Start-Sleep -Seconds 10'
     WhenRunningTask @{ 'Task' = @( @{ 'PowerShell' = @{ 'Path' = 'two.ps1' } }, @{ 'PowerShell' = @{ 'Path' = 'one.ps1' } } ) } -ErrorAction SilentlyContinue
     ThenFailed
-    ThenErrorIs 'Task\ "PowerShell\[1\]"\ failed\.'
+    ThenErrorIs 'Task\ "PowerShell"\ failed\.'
 }
 
 
