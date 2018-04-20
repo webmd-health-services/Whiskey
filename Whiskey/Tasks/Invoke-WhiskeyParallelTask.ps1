@@ -71,6 +71,8 @@ function Invoke-WhiskeyParallelTask
                 . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
                 . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyVersionObject.ps1' -Resolve)
 
+                # The task context gets serialized/deserialized into this new job process. We need to
+                # correctly deserialize it back to an actual `Whiskey.Context` object. 
                 $buildInfo = New-WhiskeyBuildMetadataObject
                 Sync-ObjectProperty -Source $originalContext.BuildMetada -Destination $buildInfo -Exclude @( 'BuildServer' )
                 if( $originalContext.BuildMetadata.BuildServer )
