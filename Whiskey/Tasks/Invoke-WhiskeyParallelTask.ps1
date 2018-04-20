@@ -23,14 +23,17 @@ function Invoke-WhiskeyParallelTask
     }
 
     $jobs = New-Object 'Collections.ArrayList'
-    $taskIdx = 0
+    $taskIdx = -1
     foreach( $task in $tasks )
     {
+        $taskIdx++
         $rsTaskName = $task.Keys | Select-Object -First 1
         $rsTaskParameter = $task[$rsTaskName]
         $whiskeyModulePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey.psd1' -Resolve
-        $jobName = '{0}[{1}]' -f $rsTaskName,$taskIdx++
-        $job = Start-Job -Name $jobName -ScriptBlock {
+
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  Starting background task.' -f $taskIdx,$rsTaskName)
+
+        $job = Start-Job -Name $rsTaskName -ScriptBlock {
 
                 function Sync-ObjectProperty
                 {
@@ -53,6 +56,8 @@ function Invoke-WhiskeyParallelTask
 
                 }
 
+                $VerbosePreference = $using:VerbosePreference
+                $DebugPreferece = $using:DebugPreference
                 $whiskeyModulePath = $using:whiskeyModulePath 
                 $originalContext = $using:TaskContext
                 $taskName = $using:rsTaskName
@@ -87,6 +92,7 @@ function Invoke-WhiskeyParallelTask
 
                 Invoke-WhiskeyTask -TaskContext $context -Name $taskName -Parameter $taskParameter
             }
+            $job | Add-Member -MemberType NoteProperty -Name 'TaskIndex' -Value $taskIdx
             [void]$jobs.Add($job)
     }
 
@@ -94,8 +100,10 @@ function Invoke-WhiskeyParallelTask
     {
         foreach( $job in $jobs )
         {
-            $Global:Error.Clear()
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  Waiting for background task.' -f $job.TaskIndex,$job.Name)
             $job | Wait-Job | Receive-Job
+            $duration = $job.PSEndTime - $job.PSBeginTime
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  {2} in {3}' -f $job.TaskIndex,$job.Name,$job.State.ToString().ToUpperInvariant(),$duration)
             if( $job.JobStateInfo.State -eq [Management.Automation.JobState]::Failed )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Task "{0}" failed. See previous output for error information.' -f $job.Name)
