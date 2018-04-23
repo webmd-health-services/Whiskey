@@ -28,6 +28,7 @@ LONG DESCRIPTION
     * `NuGetRestore`: runs the `nuget.exe restore` command.
     * `NUnit2`: tests .NET assemblies with NUnit 2.
     * `NUnit3`: tests .NET assemblies with NUnit 3.
+    * `Parallel`: runs queues of tasks in parallel/asynchronously.
     * `Pester3`: runs PowerShell tests wth Pester 3.
     * `Pester4`: runs PowerShell tests with Pester 4.
     * `Pipeline`: runs pipelines defined in the current whiskey.yml file.
