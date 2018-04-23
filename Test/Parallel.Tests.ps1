@@ -83,12 +83,31 @@ function ThenFailed
     }
 }
 
-Describe 'Parallel.when running multiple tasks' {
+function ThenNoErrors
+{
+    It ('should write no errors') {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Parallel.when running multiple queues' {
     Init
     GivenFile 'one.ps1' '1 | sc one.txt'
     GivenFile 'two.ps1' '2 | sc two.txt'
     GivenFile 'three.ps1' '3 | sc three.txt'
-    WhenRunningTask @{ 'Task' = @( @{ 'PowerShell' = @{ 'Path' = 'one.ps1' } }, @{ 'PowerShell' = @{ 'Path' = 'two.ps1' } }, @{ 'PowerShell' = @{ 'Path' = 'three.ps1' } } ) }
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+- Tasks:
+    - PowerShell:
+        Path: two.ps1
+- Tasks:
+    - PowerShell:
+        Path: three.ps1
+'@
+    WhenRunningTask $task
     It ('should run each task') {
         File 'one.txt' -ContentShouldBe   "1`r`n"
         File 'two.txt' -ContentShouldBe   "2`r`n"
@@ -96,28 +115,66 @@ Describe 'Parallel.when running multiple tasks' {
     }
 }
 
-Describe 'Parallel.when no tasks' {
+Describe 'Parallel.when no queues' {
     Init
     WhenRunningTask @{ } -ErrorAction SilentlyContinue
     ThenFailed
-    ThenErrorIs 'Property\ "Task"\ is\ mandatory'
+    ThenErrorIs 'Property\ "Queues"\ is\ mandatory'
 }
 
-Describe 'Parallel.when one task fails' {
+Describe 'Parallel.when queue missing task' {
+    Init
+    GivenFile 'one.ps1' 'Start-Sleep -Seconds 1 ; 1'
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+- 
+    - PowerShell:
+        Path: two.ps1
+'@
+    [object[]]$result = WhenRunningTask $task -ErrorAction SilentlyContinue
+    ThenFailed
+    ThenErrorIs 'Queue\[1\]:\ Property\ "Tasks"\ is\ mandatory'
+    It ('should cancel other queues') {
+        $result | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Parallel.when one queue fails' {
     Init
     GivenFile 'one.ps1' 'throw "fubar!"'
     GivenFile 'two.ps1' 'Start-Sleep -Seconds 10'
-    WhenRunningTask @{ 'Task' = @( @{ 'PowerShell' = @{ 'Path' = 'two.ps1' } }, @{ 'PowerShell' = @{ 'Path' = 'one.ps1' } } ) } -ErrorAction SilentlyContinue
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: two.ps1
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+'@
+    WhenRunningTask $task -ErrorAction SilentlyContinue
     ThenFailed
-    ThenErrorIs 'Task\ "PowerShell"\ failed\.'
+    ThenErrorIs 'Queue\[1\]\ failed\.'
 }
 
 
-Describe 'Parallel.when one task writes an error' {
+Describe 'Parallel.when one queue writes an error' {
     Init
     GivenFile 'one.ps1' 'Write-Error "fubar!" ; 1 | sc "one.txt"'
     GivenFile 'two.ps1' '2 | sc "two.txt"'
-    WhenRunningTask @{ 'Task' = @( @{ 'PowerShell' = @{ 'Path' = 'one.ps1' } }, @{ 'PowerShell' = @{ 'Path' = 'two.ps1' } } ) } -ErrorAction SilentlyContinue
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+- Tasks:
+    - PowerShell:
+        Path: two.ps1
+'@
+    WhenRunningTask $task -ErrorAction SilentlyContinue
     ThenCompleted
     It ('should run both tasks') {
         File 'one.txt' -ContentShouldBe "1`r`n"
@@ -125,3 +182,52 @@ Describe 'Parallel.when one task writes an error' {
     }
 }
 
+Describe 'Parallel.when second queue finishes before first queue' {
+    Init
+    GivenFile 'one.ps1' 'Start-Sleep -Second 3 ; 1'
+    GivenFile 'two.ps1' '2'
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+- Tasks:
+    - PowerShell:
+        Path: two.ps1
+'@
+    [object[]]$output = WhenRunningTask $task -ErrorAction SilentlyContinue
+    ThenCompleted
+    It ('should finish tasks as the complete') {
+        $output.Count | Should -Be 2
+        $output[0] | Should -Be 2
+        $output[1] | Should -Be 1
+    }
+    ThenNoErrors
+}
+
+Describe 'Parallel.when multiple tasks per queue' {
+    Init
+    GivenFile 'one.ps1' '1'
+    GivenFile 'two.ps1' '2'
+    GivenFile 'three.ps1' '3'
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - PowerShell:
+        Path: one.ps1
+    - PowerShell:
+        Path: two.ps1
+- Tasks:
+    - PowerShell:
+        Path: three.ps1
+'@
+    [object[]]$output = WhenRunningTask $task
+    ThenCompleted
+    It ('should finish tasks as the complete') {
+        $output.Count | Should -Be 3
+        $output -contains 1 | Should -Be $true
+        $output -contains 2 | Should -Be $true
+        $output -contains 3 | Should -Be $true
+    }
+    ThenNoErrors
+}
