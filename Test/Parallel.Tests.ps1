@@ -231,3 +231,17 @@ Queues:
     }
     ThenNoErrors
 }
+
+Describe 'Parallel.when a task definition is invalid' {
+    Init
+    $task = Import-WhiskeyYaml -Yaml @'
+Queues:
+- Tasks:
+    - 
+'@
+    WhenRunningTask $task -ErrorAction SilentlyContinue
+    ThenFailed
+    It ('should parse task YAML') {
+        $Global:Error[2] | Should -Match 'Invalid\ task\ YAML'
+    }
+}

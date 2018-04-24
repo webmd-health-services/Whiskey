@@ -63,31 +63,15 @@ function Invoke-WhiskeyPipeline
     foreach( $taskItem in $config[$Name] )
     {
         $taskIdx++
-        if( $taskItem -is [string] )
-        {
-            $taskName = $taskItem
-            $taskItem = @{ }
-        }
-        elseif( ($taskItem | Get-Member -Name 'Keys') )
-        {
-            $taskName = $taskItem.Keys | Select-Object -First 1
-            $taskItem = $taskItem[$taskName]
-            if( -not $taskItem )
-            {
-                $taskItem = @{ }
-            }
-            elseif( $taskItem -is [string] )
-            {
-                $taskItem = @{ '' = $taskItem }
-            }
-        }
-        else
+
+        $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $taskItem -ErrorAction Stop
+        if( -not $taskName )
         {
             continue
         }
 
         $Context.TaskIndex = $taskIdx
 
-        Invoke-WhiskeyTask -TaskContext $Context -Name $taskName -Parameter $taskItem
+        Invoke-WhiskeyTask -TaskContext $Context -Name $taskName -Parameter $taskParameter
     }
 }

@@ -95,6 +95,7 @@ function Invoke-WhiskeyParallelTask
                     . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyContextObject.ps1' -Resolve)
                     . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
                     . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyVersionObject.ps1' -Resolve)
+                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\ConvertTo-WhiskeyTask.ps1' -Resolve)
 
                     # The task context gets serialized/deserialized into this new job process. We need to
                     # correctly deserialize it back to an actual `Whiskey.Context` object. 
@@ -120,8 +121,7 @@ function Invoke-WhiskeyParallelTask
                     $tasks = $using:queue['Tasks']
                     foreach( $task in $tasks )
                     {
-                        $taskName = $task.Keys | Select-Object -First 1
-                        $taskParameter = $task[$taskName]
+                        $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $task -ErrorAction Stop
                         Invoke-WhiskeyTask -TaskContext $context -Name $taskName -Parameter $taskParameter
                     }
                 }
