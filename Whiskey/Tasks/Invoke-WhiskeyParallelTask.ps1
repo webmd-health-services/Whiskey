@@ -163,7 +163,7 @@ function Invoke-WhiskeyParallelTask
 
             if( $notified )
             {
-                $notified = $true
+                $notified = $false
                 $lastNotice = Get-Date
             }
         }
