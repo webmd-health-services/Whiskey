@@ -13,6 +13,8 @@ LONG DESCRIPTION
 
     * `CopyFile`: copies files.
     * `Delete`: deletes files.
+    * `DotNetBuild`: runs `dotnet build` command.
+    * `DotNetPack`: runs `dotnet pack` command.
     * `Exec`: runs an executable/program.
     * `GetPowerShellModule`: installs a PowerShell module.
     * `MSBuild`: runs MSBuild, the Microsoft build engine.
@@ -45,6 +47,7 @@ LONG DESCRIPTION
     * `SetVariable`: creates a variable that you can use in your whiskey.yml
       file.
     * `TaskDefaults`: sets default task properties.
+    * `Version`: sets the version number for the current build.
 
     ## Common Task Properties
 
