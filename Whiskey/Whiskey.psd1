@@ -151,7 +151,8 @@
             ReleaseNotes = @'
 # 0.33.1
 
-* Fixed: errors from tasks run by the Parallel task don't show script stack traces.
+* Fixed: show stack traces in errors.
+* Fixed: API keys, credentials, variables, and task defaults aren't available to tasks run by the Parallel task.
 
 
 # 0.33.0

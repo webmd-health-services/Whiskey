@@ -285,6 +285,7 @@ function New-WhiskeyTestContext
         if( $ForYaml )
         {
             $ForYaml | Set-Content -Path $ConfigurationPath
+            $configData = ConvertFrom-Yaml -Yaml $ForYaml
         }
         else
         {
