@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.33.0'
+    ModuleVersion = '0.33.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -61,6 +61,7 @@
 
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
+                            'Formats\System.Exception.format.ps1xml',
                             'Formats\Whiskey.BuildInfo.format.ps1xml',
                             'Formats\Whiskey.BuildVersion.format.ps1xml',
                             'Formats\Whiskey.Context.format.ps1xml'
@@ -148,6 +149,13 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+# 0.33.1
+
+* Fixed: errors from tasks run by the Parallel task don't show script stack traces.
+
+
+# 0.33.0
+
 * Created `Parallel` task for running build tasks asynchronously.
 '@
         } # End of PSData hashtable
