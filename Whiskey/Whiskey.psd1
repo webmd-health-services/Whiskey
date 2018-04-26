@@ -153,6 +153,7 @@
 
 * Fixed: show stack traces in errors.
 * Fixed: API keys, credentials, variables, and task defaults aren't available to tasks run by the Parallel task.
+* Fixed: XML reports are lost when NUnit2 and NUnit3 tasks are run by the Parallel task.
 
 
 # 0.33.0
