@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.33.1'
+    ModuleVersion = '0.34.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -149,16 +149,10 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-# 0.33.1
+# 0.34.0
 
-* Fixed: show stack traces in errors.
-* Fixed: API keys, credentials, variables, and task defaults aren't available to tasks run by the Parallel task.
-* Fixed: XML reports are lost when NUnit2 and NUnit3 tasks are run by the Parallel task.
-
-
-# 0.33.0
-
-* Created `Parallel` task for running build tasks asynchronously.
+* Fixed: `Pester3` and `Pester4` tasks overwrite test results when run in parallel.
+* ***Breaking Change***: `Pester4` and `Pester3` tasks XML output file names changed. They used to be named `pester-NUMBER.xml`. They now use the pattern `pester+RANDOM_STRING.xml`, where `RANDOM_STRING` is a random string of ASCII characters.
 '@
         } # End of PSData hashtable
 
