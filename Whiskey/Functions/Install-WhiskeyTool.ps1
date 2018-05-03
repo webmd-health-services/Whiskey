@@ -86,7 +86,7 @@ function Install-WhiskeyTool
     }
     $installLock = New-Object 'Threading.Mutex' $true,$mutexName
     Write-Verbose -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
-    $installLock.WaitOne()
+    [void]$installLock.WaitOne()
     Write-Verbose -Message ('Process "{0}" obtained mutex "{1}".' -f $PID,$mutexName)
 
     try
