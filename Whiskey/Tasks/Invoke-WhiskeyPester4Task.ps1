@@ -51,7 +51,7 @@ function Invoke-WhiskeyPester4Task
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
         
         BuildTasks:
         - Pester4:
@@ -61,6 +61,30 @@ function Invoke-WhiskeyPester4Task
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+
+    if( $TaskParameter['Exclude'] )
+    {
+        $path = $path |
+                    Where-Object {
+                        foreach( $exclusion in $TaskParameter['Exclude'] )
+                        {
+                            if( $_ -like $exclusion )
+                            {
+                                Write-WhiskeyVerbose -Context $TaskContext -Message ('EXCLUDE  {0} -like    {1}' -f $_,$exclusion) -Verbose
+                                return $false
+                            }
+                            else
+                            {
+                                Write-WhiskeyVerbose -Context $TaskContext -Message ('         {0} -notlike {1}' -f $_,$exclusion) -Verbose
+                            }
+                        }
+                        return $true
+                    }
+        if( -not $path )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run. Property "Exclude" matched all paths in the "Path" property. Please update your exclusion rules to include at least one test. View verbose output to see what exclusion filters excluded what test files.')
+        }
+    }
     
     if( -not $pesterModulePath )
     {
