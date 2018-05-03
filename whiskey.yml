@@ -2,6 +2,10 @@ PublishOn:
 - master
 
 BuildTasks:
+- TaskDefaults:
+    Pester4:
+        DescribeDurationReportCount: 20
+
 - Version:
     Path: Whiskey\Whiskey.psd1
 
