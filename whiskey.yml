@@ -5,9 +5,6 @@ BuildTasks:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
-- Pester4:
-    Path: Test\*License*
-
 - Parallel:
     OnlyBy: BuildServer
     Queues:
@@ -17,7 +14,8 @@ BuildTasks:
             Exclude:
             - "*\\*Pester*.ps1"
             - "*\\*NUnit*.ps1"
-            - "*\\*Node*.ps1"
+            - "*\\*NodeTask*.ps1"
+            - "*\\Install-WhiskeyTool.Tests.ps1"
     - Tasks:
         Pester4:
             Path: Test\*Pester*.ps1
@@ -27,6 +25,9 @@ BuildTasks:
     - Tasks:
         Pester4:
             Path: Test\*NodeTask*.ps1
+    - Tasks:
+        Pester4:
+            Path: Tests\Install-WhiskeyTool.Tests.ps1
 
 PublishTasks:
 - PublishPowerShellModule:

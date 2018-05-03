@@ -107,20 +107,34 @@ function Install-WhiskeyTool
                 return
             }
 
-            $module = Resolve-WhiskeyPowerShellModule -Name $ModuleName -Version $Version
-            if( -not $module )
-            {
-                return
-            }
+            $whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
+            Start-Job -ScriptBlock {
+                $moduleName = $using:ModuleName
+                $version = $using:Version
+                $modulesRoot = $using:modulesRoot
+                $whiskeyRoot = $using:whiskeyRoot
+                $expectedPath = $using:expectedPath
 
-            Save-Module -Name $ModuleName -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $ErrorActionPreference
+                Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'Whiskey.psd1')
+                Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'PackageManagement' -Resolve)
+                Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'PowerShellGet' -Resolve)
 
-            if( -not (Test-Path -Path $expectedPath -PathType Container) )
-            {
-                Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $ModuleName,$Version)
-            }
+                $module = Resolve-WhiskeyPowerShellModule -Name $moduleName -Version $version
+                if( -not $module )
+                {
+                    return
+                }
+                
+                Save-Module -Name $moduleName -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot -ErrorVariable 'errors' -ErrorAction $using:ErrorActionPreference
 
-            return $expectedPath
+                if( -not (Test-Path -Path $expectedPath -PathType Container) )
+                {
+                    Write-Error -Message ('Failed to download {0} {1} from the PowerShell Gallery. Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $moduleName,$version)
+                }
+
+                return $expectedPath
+
+            } | Wait-Job | Receive-Job
         }
         elseif( $PSCmdlet.ParameterSetName -eq 'NuGet' )
         {

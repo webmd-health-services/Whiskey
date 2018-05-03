@@ -74,21 +74,26 @@ function Publish-WhiskeyPowerShellModule
     $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString 
     $manifest | Set-Content $manifestPath
 
-    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
-    {
-        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
-    }
+    $whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
+    Start-Job -ScriptBlock {
+        $repositoryName = $using:repositoryName
+        $publishLocation = $using:publishLocation
+        $apiKey = $using:apiKey
+        $whiskeyRoot = $using:whiskeyRoot
+        $path = $using:path
+
+        Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'Whiskey.psd1')
+        Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'PackageManagement' -Resolve)
+        Import-Module -Name (Join-Path -Path $whiskeyRoot -ChildPath 'PowerShellGet' -Resolve)
+
+        if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
+        {
+            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet  -Verbose
+        }
   
-    # Publish-Module needs nuget.exe. If it isn't in the PATH, it tries to install it, which doesn't work when running non-interactively.
-    $binPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin' -Resolve
-    $originalPath = $env:PATH
-    Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $binPath,$env:PATH)
-    try
-    {
+        # Publish-Module needs nuget.exe. If it isn't in the PATH, it tries to install it, which doesn't work when running non-interactively.
+        $binPath = Join-Path -Path $whiskeyRoot -ChildPath 'bin' -Resolve
+        Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $binPath,$env:PATH)
         Publish-Module -Path $path -Repository $repositoryName -Verbose -NuGetApiKey $apiKey
-    }
-    finally
-    {
-        Set-Item -Path 'env:PATH' -Value $originalPath
-    }
+    } | Wait-Job | Receive-Job
 }

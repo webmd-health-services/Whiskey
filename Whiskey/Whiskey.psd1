@@ -71,8 +71,6 @@
     NestedModules = @(
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'PackageManagement',
-                        'PowerShellGet',
                         'ProGetAutomation',
                         'VSSetup'
                      )

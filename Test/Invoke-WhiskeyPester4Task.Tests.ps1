@@ -1,6 +1,22 @@
 
 Set-StrictMode -Version 'Latest'
 
+foreach( $name in @( 'PackageManagement','PowerShellGet' ) )
+{
+    if( (Get-Module -Name $name) )
+    {
+        Remove-Module $name -Force
+    }
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\Whiskey\{0}' -f $name) -Resolve) -Force
+}
+
+$testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\Modules'
+if( -not (Test-Path -Path $testModulesRoot) )
+{
+    New-Item -Path $testModulesRoot -ItemType 'Directory'
+}
+Save-Module -Name 'Pester' -Path $testModulesRoot
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $context = $null
@@ -66,8 +82,11 @@ function New-WhiskeyPesterTestContext
         {
             New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
         }
-        $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
-        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
+        $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
+        Get-ChildItem -Path $sourceRoot |
+            ForEach-Object { robocopy $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) /MIR } | 
+            Out-Null
+        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
         return $context
     }
 }
@@ -231,8 +250,7 @@ function ThenPesterShouldBeUninstalled
     {
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
-        $version = $latestPester.Version 
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
+        $script:Taskparameter['Version'] = $latestPester.Version 
     }
     else
     {
@@ -368,7 +386,6 @@ Describe 'Pester4.when running failing Pester tests' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'FailingTests'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 0
     ThenTestShouldFail -failureMessage 'Pester tests failed'
@@ -378,7 +395,6 @@ Describe 'Pester4.when running multiple test scripts' {
     Init
     GivenTestContext
     GivenPesterPath 'FailingTests','PassingTests'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
 }
@@ -387,21 +403,18 @@ Describe 'Pester4.when run multiple times in the same build' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'  
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-    ThenPesterShouldBeInstalled '4.0.3'
     ThenTestShouldCreateMultipleReportFiles
 }
 
 Describe 'Pester4.when missing Path Configuration' {
     Init
     GivenTestContext
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
+    ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
 }
 
 Describe 'Pester4.when missing Version configuration' {
@@ -437,7 +450,6 @@ Describe 'Pester4.when a task path is absolute' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'C:\FubarSnafu'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
     ThenTestShouldFail -failureMessage 'absolute'
@@ -457,7 +469,6 @@ Describe 'Pester4.when running passing Pester tests with Clean Switch' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
     GivenWithCleanFlag
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
@@ -468,8 +479,8 @@ Describe 'Pester4.when running passing Pester tests with initialization switch' 
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
     GivenWithInitilizeFlag
+    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
     ThenPesterShouldBeInstalled '4.0.3'
