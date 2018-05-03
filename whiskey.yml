@@ -5,10 +5,25 @@ BuildTasks:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
-- Pester4:
+- Parallel:
     OnlyBy: BuildServer
-    Path: Test\*.Tests.ps1
-    DescribeDurationReportCount: 20
+    Queues:
+    - Tasks:
+        Pester4:
+            Path: Tests\*.Tests.ps1
+            Exclude:
+            - *\*Pester*.ps1
+            - *\*NUnit*.ps1
+            - *\*Node*.ps1
+    - Tasks:
+        Pester4:
+            Path: Tests\*Pester*.ps1
+    - Tasks:
+        Pester4:
+            Path: Tests\*NUnit*.ps1
+    - Tasks:
+        Pester4:
+            Path: Tests\*NodeTask*.ps1
     
 PublishTasks:
 - PublishPowerShellModule:
