@@ -84,6 +84,8 @@ function Install-WhiskeyTool
     {
         $mutexName = $DownloadRoot
     }
+    # Back slashes in mutex names are reserved.
+    $mutexName = $mutexName -replace '\\','/'
     $installLock = New-Object 'Threading.Mutex' $true,$mutexName
     Write-Verbose -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
     [void]$installLock.WaitOne()

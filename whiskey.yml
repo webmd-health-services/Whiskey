@@ -5,6 +5,9 @@ BuildTasks:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
+- Pester4:
+    Path: Test\*License*
+
 - Parallel:
     OnlyBy: BuildServer
     Queues:
