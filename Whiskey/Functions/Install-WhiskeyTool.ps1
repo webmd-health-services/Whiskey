@@ -88,11 +88,20 @@ function Install-WhiskeyTool
     $mutexName = $mutexName -replace '\\','/'
     $installLock = New-Object 'Threading.Mutex' $true,$mutexName
     Write-Verbose -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
-    [void]$installLock.WaitOne()
-    Write-Verbose -Message ('Process "{0}" obtained mutex "{1}".' -f $PID,$mutexName)
 
     try
     {
+        try
+        {
+            [void]$installLock.WaitOne()
+        }
+        catch [Threading.AbandonedMutexException]
+        {
+            Write-Verbose -Message ('Process "{0}" caught "{1}" exception waiting to acquire mutex "{2}": {3}.' -f $PID,$_.Exception.GetType().FullName,$mutexName,$_)
+            $Global:Error.RemoveAt(0)
+        }
+
+        Write-Verbose -Message ('Process "{0}" obtained mutex "{1}".' -f $PID,$mutexName)
 
         if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
         {
