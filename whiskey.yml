@@ -20,6 +20,10 @@ BuildTasks:
             - "*\\*NUnit*.ps1"
             - "*\\*NodeTask*.ps1"
             - "*\\Install-WhiskeyTool.Tests.ps1"
+            - "*\\Get-WhiskeyPowerShellModule.Tests.ps1"
+    - Tasks:
+        Pester4:
+            Path: Test\Get-WhiskeyPowerShellModule.Tests.ps1.ps1
     - Tasks:
         Pester4:
             Path: Test\*Pester*.ps1
