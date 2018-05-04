@@ -90,7 +90,7 @@ function Install-WhiskeyTool
     $startedUsingAt = Get-Date
     $installLock = New-Object 'Threading.Mutex' $true,$mutexName
     $DebugPreference = 'Continue'
-    Write-Debug -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
+    Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
 
     try
     {
@@ -100,12 +100,12 @@ function Install-WhiskeyTool
         }
         catch [Threading.AbandonedMutexException]
         {
-            Write-Verbose -Message ('Process "{0}" caught "{1}" exception waiting to acquire mutex "{2}": {3}.' -f $PID,$_.Exception.GetType().FullName,$mutexName,$_)
+            Write-DEbug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
             $Global:Error.RemoveAt(0)
         }
 
         $waitedFor = (Get-Date) - $startedWaitingAt
-        Write-Debug -Message ('Process "{0}" obtained mutex "{1}" in {2}.' -f $PID,$mutexName,$waitedFor)
+        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" obtained mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$waitedFor)
         $DebugPreference = 'SilentlyContinue'
         $startedUsingAt = Get-Date
 
@@ -348,11 +348,14 @@ function Install-WhiskeyTool
     {
         $DebugPreference = 'Continue'
         $usedFor = (Get-Date) - $startedUsingAt
-        Write-Debug -Message ('Process "{0}" releasing mutex "{1}" after using it for {2}.' -f $PID,$mutexName,$usedFor)
+        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" releasing mutex "{2}" after using it for {3}.' -f (Get-Date),$PID,$mutexName,$usedFor)
         $startedReleasingAt = Get-Date
         $installLock.ReleaseMutex();
+        $installLock.Dispose()
+        $installLock.Close()
+        $installLock = $null
         $releasedDuration = (Get-Date) - $startedReleasingAt
-        Write-Debug -Message ('Process "{0}" released mutex "{1}" in {2}.' -f $PID,$mutexName,$releasedDuration)
+        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" released mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$releasedDuration)
         $DebugPreference = 'SilentlyContinue'
     }
 }
