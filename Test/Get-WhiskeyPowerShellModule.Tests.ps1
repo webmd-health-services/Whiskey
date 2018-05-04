@@ -95,7 +95,7 @@ function ThenErrorShouldBeThrown
     )
 
     It ('should throw an error that matches /{0}/' -f $Message) {
-        $Global:Error | Should -Match $Message
+        $Global:Error | Where-Object { $_ -match $Message } | Should -Not -BeNullOrEmpty
     }
 }
 Describe 'GetPowerShellModule.when given a module Name' {
