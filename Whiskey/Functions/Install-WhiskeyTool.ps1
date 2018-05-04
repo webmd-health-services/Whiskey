@@ -88,7 +88,7 @@ function Install-WhiskeyTool
     $mutexName = $mutexName -replace '\\','/'
     $startedWaitingAt = Get-Date
     $startedUsingAt = Get-Date
-    $installLock = New-Object 'Threading.Mutex' $true,$mutexName
+    $installLock = New-Object 'Threading.Mutex' $false,$mutexName
     $DebugPreference = 'Continue'
     Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
 
@@ -100,7 +100,7 @@ function Install-WhiskeyTool
         }
         catch [Threading.AbandonedMutexException]
         {
-            Write-DEbug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
+            Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
             $Global:Error.RemoveAt(0)
         }
 
