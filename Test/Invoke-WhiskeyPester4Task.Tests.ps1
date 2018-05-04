@@ -1,14 +1,7 @@
 
 Set-StrictMode -Version 'Latest'
 
-foreach( $name in @( 'PackageManagement','PowerShellGet' ) )
-{
-    if( (Get-Module -Name $name) )
-    {
-        Remove-Module $name -Force
-    }
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\Whiskey\{0}' -f $name) -Resolve) -Force
-}
+& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\Modules'
 if( -not (Test-Path -Path $testModulesRoot) )
@@ -16,8 +9,6 @@ if( -not (Test-Path -Path $testModulesRoot) )
     New-Item -Path $testModulesRoot -ItemType 'Directory'
 }
 Save-Module -Name 'Pester' -Path $testModulesRoot
-
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $context = $null
 $pesterPath = $null
