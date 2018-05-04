@@ -86,8 +86,11 @@ function Install-WhiskeyTool
     }
     # Back slashes in mutex names are reserved.
     $mutexName = $mutexName -replace '\\','/'
+    $startedWaitingAt = Get-Date
+    $startedUsingAt = Get-Date
     $installLock = New-Object 'Threading.Mutex' $true,$mutexName
-    Write-Verbose -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
+    $DebugPreference = 'Continue'
+    Write-Debug -Message ('Process "{0}" is waiting for mutex "{1}".' -f $PID,$mutexName)
 
     try
     {
@@ -101,7 +104,10 @@ function Install-WhiskeyTool
             $Global:Error.RemoveAt(0)
         }
 
-        Write-Verbose -Message ('Process "{0}" obtained mutex "{1}".' -f $PID,$mutexName)
+        $waitedFor = (Get-Date) - $startedWaitingAt
+        Write-Debug -Message ('Process "{0}" obtained mutex "{1}" in {2}.' -f $PID,$mutexName,$waitedFor)
+        $DebugPreference = 'SilentlyContinue'
+        $startedUsingAt = Get-Date
 
         if( $PSCmdlet.ParameterSetName -eq 'PowerShell' )
         {
@@ -340,8 +346,13 @@ function Install-WhiskeyTool
     }
     finally
     {
-        Write-Verbose -Message ('Process "{0}" releasing mutex "{1}".' -f $PID,$mutexName)
+        $DebugPreference = 'Continue'
+        $usedFor = (Get-Date) - $startedUsingAt
+        Write-Debug -Message ('Process "{0}" releasing mutex "{1}" after using it for {2}.' -f $PID,$mutexName,$usedFor)
+        $startedReleasingAt = Get-Date
         $installLock.ReleaseMutex();
-        Write-Verbose -Message ('Process "{0}" released mutex "{1}".' -f $PID,$mutexName)
+        $releasedDuration = (Get-Date) - $startedReleasingAt
+        Write-Debug -Message ('Process "{0}" released mutex "{1}" in {2}.' -f $PID,$mutexName,$releasedDuration)
+        $DebugPreference = 'SilentlyContinue'
     }
 }
