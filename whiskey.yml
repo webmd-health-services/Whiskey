@@ -13,6 +13,7 @@ BuildTasks:
     OnlyBy: BuildServer
     Queues:
     - Tasks:
+        # 20 minutes
         Pester4:
             Path: Test\*.Tests.ps1
             Exclude:
@@ -29,6 +30,9 @@ BuildTasks:
         Pester4:
             Path: 
             - Test\Install-WhiskeyTool.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path:
             - Test\Invoke-WhiskeyPester4Task.Tests.ps1
             - Test\Invoke-WhiskeyPester3Task.Tests.ps1
     - Tasks:
@@ -36,9 +40,16 @@ BuildTasks:
             Path: 
             - Test\Get-WhiskeyPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
-            # Imporant that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
-            - Test\Invoke-WhiskeyMSBuild.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path: 
             - Test\Invoke-WhiskeyNodeTask.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path: 
+            # Imporant that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
+            # These three tests must be in the same queue.
+            - Test\Invoke-WhiskeyMSBuild.Tests.ps1
             - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
             - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
 
