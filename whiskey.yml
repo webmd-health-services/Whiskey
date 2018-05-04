@@ -34,12 +34,13 @@ BuildTasks:
     - Tasks:
         Pester4:
             Path: 
-            - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
-            - Test\Invoke-WhiskeyNodeTask.Tests.ps1
-            - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
-            - Test\Invoke-WhiskeyMSBuild.Tests.ps1
             - Test\Get-WhiskeyPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
+            # Imporant that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
+            - Test\Invoke-WhiskeyMSBuild.Tests.ps1
+            - Test\Invoke-WhiskeyNodeTask.Tests.ps1
+            - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
+            - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
 
 PublishTasks:
 - PublishPowerShellModule:
