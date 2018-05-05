@@ -13,19 +13,49 @@ BuildTasks:
     OnlyBy: BuildServer
     Queues:
     - Tasks:
-        # 20 minutes
         Pester4:
             Path: Test\*.Tests.ps1
             Exclude:
-            - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyPester4Task.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyPester3Task.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNUnit2Task.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNodeTask.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNUnit3Task.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyMSBuild.Tests.ps1"
             - "*\\Test\\Get-WhiskeyPowerShellModule.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyDotNetSdk.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
             - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyDotNetBuild.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyDotNetPack.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyMSBuild.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyNodeNspCheck.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyNodeTask.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyNpmInstall.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyNUnit2Task.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyNUnit3Task.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyPester3Task.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyPester4Task.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyPowerShell.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
+            - "*\\Test\\New-WhiskeyNuGetPackage.Tests.ps1"
+            - "*\\Test\\Parallel.Tests.ps1"
+            - "*\\Test\\Publish-WhiskeyNodeModule.Tests.ps1"
+            - "*\\Test\\Publish-WhiskeyNuGetPackage.Tests.ps1"
+            - "*\\Test\\Uninstall-WhiskeyNodeModule.Tests.ps1"
+            - "*\\Test\\Uninstall-WhiskeyTool.Tests.ps1"
+    - Tasks:
+        Pester4:
+            Path:
+            - Test\Install-WhiskeyDotNetSdk.Tests.ps1
+            - Test\Install-WhiskeyDotNetTool.Tests.ps1
+            - Test\Invoke-WhiskeyDotNetBuild.Tests.ps1
+            - Test\Invoke-WhiskeyDotNetPack.Tests.ps1
+            - Test\Invoke-WhiskeyNodeNspCheck.Tests.ps1
+            - Test\Invoke-WhiskeyNpmInstall.Tests.ps1
+            - Test\Invoke-WhiskeyPowerShell.Tests.ps1
+            - Test\Invoke-WhiskeyTask.Tests.ps1
+            - Test\New-WhiskeyNuGetPackage.Tests.ps1
+            - Test\Parallel.Tests.ps1
+            - Test\Publish-WhiskeyNodeModule.Tests.ps1
+            - Test\Publish-WhiskeyNuGetPackage.Tests.ps1
+            - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
+            - Test\Uninstall-WhiskeyTool.Tests.ps1
     - Tasks:
         Pester4:
             Path: 
