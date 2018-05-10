@@ -43,11 +43,11 @@ LONG DESCRIPTION
     ### Overview
 
     A Whiskey build has two phases: building and publishing (i.e. 
-    promoting). These are handled by the `BuildTasks` and `PublishTasks` 
+    promoting). These are handled by the `Build` and `PublishTasks` 
     pipelines in your whiskey.yml file. A pipeline is a list of tasks to 
     perform when running that pipeline. Your first pipelines are empty:
 
-       BuildTasks:
+       Build:
        
        PublishTasks:
     
@@ -57,7 +57,7 @@ LONG DESCRIPTION
     spaces. If a task has properties, the task name must end with a `:`. For 
     example:
 
-        BuildTasks:
+        Build:
         - TaskOne:
             Property1: Value
             Property2: Value2
@@ -72,11 +72,11 @@ LONG DESCRIPTION
 
     ### Building
 
-    Under the "BuildTasks" pipeline in your whiskey.yml file, add tasks you 
+    Under the "Build" pipeline in your whiskey.yml file, add tasks you 
     want to run when building. For example, Whiskey's build process looks 
     like this:
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.Tests.ps1
 

@@ -33,7 +33,7 @@ function Invoke-WhiskeyNUnit3Task
 
     # Example 1
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - RootAssembly.dll
@@ -43,7 +43,7 @@ function Invoke-WhiskeyNUnit3Task
 
     # Example 2
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll
@@ -54,7 +54,7 @@ function Invoke-WhiskeyNUnit3Task
 
     # Example 3
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll
@@ -68,7 +68,7 @@ function Invoke-WhiskeyNUnit3Task
 
     # Example 4
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll
@@ -217,7 +217,7 @@ function Invoke-WhiskeyNUnit3Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
 
-            BuildTasks:
+            Build:
             - NUnit3:
                 Path:
                 - Assembly.dll

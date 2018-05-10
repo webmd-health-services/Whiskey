@@ -296,7 +296,7 @@ function New-WhiskeyTestContext
 
             if( $ForTaskName )
             {
-                $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+                $configData['Build'] = @( @{ $ForTaskName = $TaskParameter } )
             }
 
             $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath

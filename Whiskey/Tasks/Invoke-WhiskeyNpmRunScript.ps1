@@ -22,7 +22,7 @@ function Invoke-WhiskeyNpmRunScript
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NpmRunScript:
             Script:
             - build
@@ -32,7 +32,7 @@ function Invoke-WhiskeyNpmRunScript
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NpmRunScript:
             Script:
             - test
@@ -61,7 +61,7 @@ function Invoke-WhiskeyNpmRunScript
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''Script'' is mandatory. It should be a list of one or more npm scripts to run during your build, e.g.,
 
-        BuildTasks:
+        Build:
         - NpmRunScript:
             Script:
             - build

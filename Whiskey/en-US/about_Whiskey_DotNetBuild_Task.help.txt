@@ -22,7 +22,7 @@ PROPERTIES
 EXAMPLES
     Example 1
 
-        BuildTasks:
+        Build:
         - DotNetBuild:
             Path:
             - DotNetCoreSolution.sln
@@ -31,7 +31,7 @@ EXAMPLES
 
     Example 2
 
-        BuildTasks:
+        Build:
         - DotNetBuild:
             Path:
             - DotNetCoreSolution.sln
@@ -42,7 +42,7 @@ EXAMPLES
 
     Example 3
 
-        BuildTasks:
+        Build:
         - DotNetBuild:
             Path:
             - src\DotNetStandardLibrary.csproj
@@ -54,7 +54,7 @@ EXAMPLES
 
     Example 4
 
-        BuildTasks:
+        Build:
         - DotNetBuild:
             Path:
             - DotNetCoreSolution.sln

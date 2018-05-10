@@ -23,7 +23,7 @@ function Invoke-WhiskeyPester4Task
 
     ### Example 1
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
 
@@ -31,7 +31,7 @@ function Invoke-WhiskeyPester4Task
 
     ### Example 2
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
             Version: 4.0.6
@@ -40,7 +40,7 @@ function Invoke-WhiskeyPester4Task
 
     ### Example 3
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
             DescribeDurationReportCount: 20
@@ -100,7 +100,7 @@ function Invoke-WhiskeyPester4Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
         
-        BuildTasks:
+        Build:
         - Pester4:
             Path:
             - My.Tests.ps1

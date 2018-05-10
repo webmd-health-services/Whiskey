@@ -21,7 +21,7 @@ function Invoke-WhiskeyParallelTask
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property "Queues" is mandatory. It should be an array of queues to run. Each queue should contain a "Tasks" property that is an array of task to run, e.g.
  
-    BuildTasks:
+    Build:
     - Parallel:
         Queues:
         - Tasks:
@@ -46,7 +46,7 @@ function Invoke-WhiskeyParallelTask
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Queue[{0}]: Property "Tasks" is mandatory. Each queue should have a "Tasks" property that is an array of Whiskey task to run, e.g.
  
-    BuildTasks:
+    Build:
     - Parallel:
         Queues:
         - Tasks:

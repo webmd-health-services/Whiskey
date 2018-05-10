@@ -31,7 +31,7 @@ function Invoke-WhiskeyNUnit2Task
 
     ### Example 1
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll
@@ -41,7 +41,7 @@ function Invoke-WhiskeyNUnit2Task
 
     ### Example 2
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll
@@ -53,7 +53,7 @@ function Invoke-WhiskeyNUnit2Task
 
     ### Example 3
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll
@@ -200,7 +200,7 @@ function Invoke-WhiskeyNUnit2Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g. 
         
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - Assembly.dll

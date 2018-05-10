@@ -24,14 +24,14 @@ function Invoke-WhiskeyNodeNspCheck
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NodeNspCheck
     
     This example will run `node.exe nsp check` against the modules listed in the `package.json` file located in the build root.
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NodeNspCheck:
             WorkingDirectory: app
     
@@ -39,7 +39,7 @@ function Invoke-WhiskeyNodeNspCheck
 
     ## Example 3
 
-        BuildTasks:
+        Build:
         - NodeNspCheck:
             Version: 2.7.0
     
