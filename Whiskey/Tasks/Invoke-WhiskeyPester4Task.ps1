@@ -53,7 +53,7 @@ function Invoke-WhiskeyPester4Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
         
-        BuildTasks:
+        Build:
         - Pester4:
             Path:
             - My.Tests.ps1

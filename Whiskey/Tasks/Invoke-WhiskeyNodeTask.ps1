@@ -89,7 +89,7 @@ function Invoke-WhiskeyNodeTask
             Write-WhiskeyWarning -TaskContext $TaskContext -Message (@'
 Property 'NpmScript' is missing or empty. Your build isn''t *doing* anything. The 'NpmScript' property should be a list of one or more npm scripts to run during your build, e.g.
 
-BuildTasks:
+Build:
 - Node:
   NpmScript:
   - build

@@ -1,4 +1,4 @@
-BuildTasks:
+Build:
 - Version: "4.5.6-rc1"
 
 - MSBuild:

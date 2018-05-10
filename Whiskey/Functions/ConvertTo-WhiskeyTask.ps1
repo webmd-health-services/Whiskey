@@ -55,7 +55,7 @@ function ConvertTo-WhiskeyTask
                 ForEach-Object { '    {0}' -f $_ }
     Write-Error -Message ('Invalid task YAML:{0} {0}{1}{0}A task must have a name followed by optional parameters, e.g.
  
-    BuildTasks:
+    Build:
     - Task1
     - Task2:
         Parameter1: Value1

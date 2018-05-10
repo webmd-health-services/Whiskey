@@ -16,7 +16,7 @@ function Remove-WhiskeyItem
 
     ### Example 1
 
-    BuildTasks:
+    Build:
     - Delete:
         Path:
         - result.json
@@ -26,7 +26,7 @@ function Remove-WhiskeyItem
 
     ### Example 2
 
-    BuildTasks:
+    Build:
     - Delete:
         Path:
         - Test\bin

@@ -25,7 +25,7 @@ EXAMPLES
 
   EXAMPLE 1
 
-      BuildTasks:
+      Build:
       - NuGetPush:
           Uri: https://nuget.org/api/v2/package
           ApiKeyID: nuget.org
@@ -36,7 +36,7 @@ EXAMPLES
 
   EXAMPLE 2
 
-      BuildTasks:
+      Build:
       - NuGetPush:
           Uri: https://proget.example.com/nuget/NuGet/
           ApiKeyID: ProGet
@@ -47,7 +47,7 @@ EXAMPLES
 
   EXAMPLE 3
 
-      BuildTasks:
+      Build:
       - NuGetPush:
           Uri: https://nuget.org/api/v2/package
           ApiKeyID: nuget.org
@@ -58,7 +58,7 @@ EXAMPLES
 
   EXAMPLE 4
 
-      BuildTasks:
+      Build:
       - NuGetPush:
           Uri: https://proget.example.com/nuget/NuGet/
           ApiKeyID: ProGet

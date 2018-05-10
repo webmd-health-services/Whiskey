@@ -20,7 +20,7 @@
 
     So, if you wanted to publish alpha versions in branches that begin with "feature/" and beta versions on a branch named "develop", your "Prerelease" property would look like this:
 
-        BuildTasks:
+        Build:
         - Version:
             Version: 5.6.3
             Prerelease:
@@ -76,14 +76,14 @@
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - Version: 5.6.3
 
     Demonstrates the simplest syntax to set the version for the current build. Do this if you want to completely control the version for every build.
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - Version: 
             Version: 5.6.3
             OnlyBy: BuildServer
@@ -92,7 +92,7 @@
     
     ## Example 3
     
-        BuildTasks:
+        Build:
         - Version: $(WHISKEY_BUILD_STARTED_AT.ToString('yyyy.M.d'))+$(WHISKEY_BUILD_NUMBER).$(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
 
     Demonstrates how to use a dynamic, date-based version number. In this example, if the current date is 6 Feb. 2018, the current build number is `43`, your current branch is `develop`, and your current commit ID is `c7d950be9982156d5d9aaa1a6c23594eaaba9b27`, your version number would be '2018.2.16+43.develop.c7d950b'.
@@ -101,7 +101,7 @@
 
     ### Example 4
 
-        BuildTasks:
+        Build:
         - Version:
             Path: Whiskey\Whiskey.psd1
             Prerelease: alpha.$(WHISKEY_BUILD_NUMBER)
@@ -111,7 +111,7 @@
 
     ### Example 5
 
-        BuildTasks:
+        Build:
         - Version:
             Path: Assembly\Whiskey.csproj
             Prerelease: 
@@ -127,7 +127,7 @@
 
     ### Example 6
         
-        BuildTasks:
+        Build:
         - Version:
             Version: 4.5.6
         - Version:
@@ -269,13 +269,13 @@
                 {
                     Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('Unable to find keys in ''[{1}]{0}''. It looks like you''re trying use the Prerelease property to map branches to prerelease versions. If you want a static prerelease version, the syntax should be:
     
-    BuildTasks:
+    Build:
     - Version:
         Prerelease: {0}
         
 If you want certain branches to always have certain prerelease versions, set Prerelease to a list of key/value pairs:
     
-    BuildTasks:
+    Build:
     - Version:
         Prerelease:
         - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)

@@ -29,7 +29,7 @@ EXAMPLE
 
 ## Example 1
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
 
@@ -37,7 +37,7 @@ EXAMPLE
 
 ## Example 2
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
             Version: 4.0.6
@@ -46,7 +46,7 @@ EXAMPLE
 
 ## Example 3
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Test\*.ps1
             DescribeDurationReportCount: 20
@@ -56,7 +56,7 @@ EXAMPLE
 
 ## Example 3
 
-        BuildTasks:
+        Build:
         - Pester4:
             Path: Tests\*.Tests.ps1
             Exclude:

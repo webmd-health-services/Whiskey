@@ -49,7 +49,7 @@ function Publish-WhiskeyNuGetPackage
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Uri'' is mandatory. It should be the URI where NuGet packages should be published, e.g. 
             
-    BuildTasks:
+    Build:
     - PublishNuGetPackage:
         Uri: https://nuget.org
     ')
@@ -60,7 +60,7 @@ function Publish-WhiskeyNuGetPackage
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It should be the ID/name of the API key to use when publishing NuGet packages to {0}, e.g.:
             
-    BuildTasks:
+    Build:
     - PublishNuGetPackage:
         Uri: {0}
         ApiKeyID: API_KEY_ID

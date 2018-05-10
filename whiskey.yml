@@ -1,7 +1,7 @@
 PublishOn: 
 - master
 
-BuildTasks:
+Build:
 - TaskDefaults:
     Pester4:
         DescribeDurationReportCount: 20
