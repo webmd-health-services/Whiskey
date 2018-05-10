@@ -11,9 +11,9 @@ function Invoke-WhiskeyBuild
         $context = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath 'whiskey.yml'
         Invoke-WhiskeyBuild -Context $context
 
-    Builds can run in three modes: `Build`, `Clean`, and `Initialize`. The default behavior is `Build` mode. 
+    Builds can run in three modes: `Build`, `Clean`, and `Initialize`. The default behavior is `Build` mode.
 
-    In `Build` mode, each task in the `BuildTasks` pipeline is run. If you're on a publishing branch, and being run on a build server, each task in the `PublishTasks` pipeline is also run.
+    In `Build` mode, each task in the `Build` pipeline is run. If you're on a publishing branch, and being run on a build server, each task in the `PublishTasks` pipeline is also run.
 
     In `Clean` mode, each task that supports clean mode is run. In this mode, tasks clean up any build artifacts they create. Tasks opt-in to this mode. If a task isn't cleaning up, it should be updated to support clean mode.
 
@@ -35,17 +35,17 @@ function Invoke-WhiskeyBuild
     .EXAMPLE
     Invoke-WhiskeyBuild -Context $context
 
-    Demonstrates how to run a complete build. In this example, the `BuildTasks` pipeline is run, and, if running on a build server and on a publishing branch, the `PublishTasks` pipeline is run.
+    Demonstrates how to run a complete build. In this example, the `Build` pipeline is run, and, if running on a build server and on a publishing branch, the `PublishTasks` pipeline is run.
 
     .EXAMPLE
     Invoke-WhiskeyBuild -Context $context -Clean
 
-    Demonstrates how to run a build in `Clean` mode. In this example, each task in the `BuildTasks` and `PublishTasks` pipelines that support `Clean` mode is run so they can delete any build output, downloaded depedencies, etc.
+    Demonstrates how to run a build in `Clean` mode. In this example, each task in the `Build` and `PublishTasks` pipelines that support `Clean` mode is run so they can delete any build output, downloaded depedencies, etc.
 
     .EXAMPLE
     Invoke-WhiskeyBuild -Context $context -Initialize
 
-    Demonstrates how to run a build in `Initialize` mode. In this example, each task in the `BuildTasks` and `PublishTasks` pipelines that supports `Initialize` mode is run so they can download/install/configure any tools or dependencies.
+    Demonstrates how to run a build in `Initialize` mode. In this example, each task in the `Build` and `PublishTasks` pipelines that supports `Initialize` mode is run so they can download/install/configure any tools or dependencies.
 
     .EXAMPLE
     Invoke-WhiskeyBuild -Context $context -PipelineName 'App1','App2'
@@ -60,7 +60,7 @@ function Invoke-WhiskeyBuild
         $Context,
 
         [string[]]
-        # The name(s) of any pipelines to run. Default behavior is to run the `BuildTasks` pipeline and, if on a publishing branch, the `PublishTasks` pipeline.
+        # The name(s) of any pipelines to run. Default behavior is to run the `Build` pipeline and, if on a publishing branch, the `PublishTasks` pipeline.
         #
         # If you pass a value to this parameter, the `PublishTasks` pipeline is *not* run implicitly. You must pass its name to run it.
         $PipelineName,
@@ -98,9 +98,16 @@ function Invoke-WhiskeyBuild
         }
         else
         {
-            Invoke-WhiskeyPipeline -Context $Context -Name 'BuildTasks'
-
             $config = $Context.Configuration
+
+            $buildPipelineName = 'Build'
+            if( $config.ContainsKey('BuildTasks') )
+            {
+                $buildPipelineName = 'BuildTasks'
+            }
+
+            Invoke-WhiskeyPipeline -Context $Context -Name $buildPipelineName
+
             Write-Verbose -Message ('Publish?           {0}' -f $Context.Publish)
             Write-Verbose -Message ('Publish Pipeline?  {0}' -f $config.ContainsKey('PublishTasks'))
             if( $Context.Publish -and $config.ContainsKey('PublishTasks') )
