@@ -52,17 +52,33 @@ function Publish-WhiskeyProGetUniversalPackage
 
     $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
 
-    if( $TaskParameter.ContainsKey('Path') )
+    if( -not ($TaskParameter.ContainsKey('Path')) )
     {
-        $packages = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $TaskParameter['Path'] = Join-Path -Path ($TaskContext.OutputDirectory | Split-Path -Leaf) -ChildPath '*.upack'
     }
-    else
+    
+    $errorActionParam = @{ }
+    $allowMissingPackages = $false
+    if( $TaskParameter.ContainsKey('AllowMissingPackage') )
     {
-        $packages = Get-ChildItem -Path $TaskContext.OutputDirectory -Filter '*.upack' -ErrorAction Ignore | Select-Object -ExpandProperty 'FullName'
-        if( -not $packages )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('There are no packages to publish in the output directory ''{0}''. By default, the PublishProGetUniversalPackage task publishes all .upack files in the output directory. Check your whiskey.yml file to make sure you''re running the `ProGetUniversalPackage` task before this task (or some other task that creates universal ProGet packages). To publish other .upack files, set this task''s `Path` property to the path to those files.' -f $TaskContext.OutputDirectory)
-        }
+        $allowMissingPackages = $TaskParameter['AllowMissingPackage'] | ConvertFrom-WhiskeyYamlScalar
+    }
+
+    if( $allowMissingPackages )
+    {
+        $errorActionParam['ErrorAction'] = 'Ignore'
+    }
+    $packages = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @errorActionParam
+
+    if( $allowMissingPackages -and -not $packages )
+    {
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('There are no packages to publish.')
+        return
+    }
+
+    if( -not $packages )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('Found no packages to publish. By default, the PublishProGetUniversalPackage task publishes all files with a .upack extension in the output directory. Check your whiskey.yml file to make sure you''re running the `ProGetUniversalPackage` task before this task (or some other task that creates universal ProGet packages). To publish other .upack files, set this task''s `Path` property to the path to those files. If you don''t want your build to fail when there are missing packages, then set this task''s `AllowMissingPackage` property to `true`.' -f $TaskContext.OutputDirectory)
     }
 
     $feedName = $TaskParameter['FeedName']

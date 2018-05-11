@@ -19,6 +19,7 @@ PROPERTIES
     * `Path`: the path to any upack files to upload. By default, all `*.upack` files in the `.output` directory are uploaded.
     * `Timeout`: the timeout, in seconds, to use when uploading the file. If the upload request takes longer than this, it will be cancelled and the build will fail.
     * `Overwrite`: replace/overwrite the package if it already exists in ProGet. The default behavior is to fail/stop if the package exists.
+    * `AllowMissingPackage`: by default, if the paths in the `Path` property don't exist, the build will fail. To not fail the build when there are missing packages, set this property to `true`.
 
 EXAMPLES
 

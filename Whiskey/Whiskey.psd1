@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.33.0'
+    ModuleVersion = '0.34.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -148,7 +148,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Created `Parallel` task for running build tasks asynchronously.
+* Added "AllowMissingPackage" property to "PublishProGetUniversalPackage" task. Set this property to "true" to not fail a build if there are no universal packages to publish.
 '@
         } # End of PSData hashtable
 
