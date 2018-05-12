@@ -133,7 +133,7 @@ function Invoke-WhiskeyTask
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
     $taskProperties = $Parameter.Clone()
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory' ) )
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists' ) )
     {
         $taskProperties.Remove($commonPropertyName)
     }
@@ -246,6 +246,30 @@ function Invoke-WhiskeyTask
             Write-WhiskeyVerbose -Context $TaskContext -Message ('ExceptDuring.{0} -ne Build.RunMode.{1}' -f $exceptDuring,$TaskContext.RunMode)
             $result = 'SKIPPED'
             return
+        }
+
+        if( $Parameter['IfExists'] )
+        {
+            $exists = Test-Path -Path $Parameter['IfExists']
+            if( -not $exists )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('IfExists  {0}  not exists' -f $Parameter['IfExists']) -Verbose
+                $result = 'SKIPPED'
+                return
+            }
+            Write-WhiskeyVerbose -Context $TaskContext -Message     ('IfExists  {0}      exists' -f $Parameter['IfExists']) -Verbose
+        }
+    
+        if( $Parameter['UnlessExists'] )
+        {
+            $exists = Test-Path -Path $Parameter['UnlessExists']
+            if( $exists )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('UnlessExists  {0}      exists' -f $Parameter['UnlessExists']) -Verbose
+                $result = 'SKIPPED'
+                return
+            }
+            Write-WhiskeyVerbose -Context $TaskContext -Message     ('UnlessExists  {0}  not exists' -f $Parameter['UnlessExists']) -Verbose
         }
     
         $inCleanMode = $TaskContext.ShouldClean
