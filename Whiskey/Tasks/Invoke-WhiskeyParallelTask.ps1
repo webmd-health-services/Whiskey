@@ -37,6 +37,7 @@ function Invoke-WhiskeyParallelTask
     {
         $jobs = New-Object 'Collections.ArrayList'
         $queueIdx = -1
+
         foreach( $queue in $queues )
         {
             $queueIdx++
@@ -62,12 +63,16 @@ function Invoke-WhiskeyParallelTask
 
             $job = Start-Job -Name $queueIdx -ScriptBlock {
 
+                    Set-StrictMode -Version 'Latest'
+
                     function Sync-ObjectProperty
                     {
                         param(
+                            [Parameter(Mandatory=$true)]
                             [object]
                             $Source,
 
+                            [Parameter(Mandatory=$true)]
                             [object]
                             $Destination,
 
@@ -81,6 +86,50 @@ function Invoke-WhiskeyParallelTask
                             Select-Object -ExpandProperty 'Name' |
                             ForEach-Object { Write-Debug ('{0}  {1} -> {2}' -f $_,$Destination.$_,$Source.$_) ; $Destination.$_ = $Source.$_ }
 
+                        Write-Debug ('Source      -eq $null  ?  {0}' -f ($Source -eq $null))
+                        if( $Source -ne $null )
+                        {
+                            Write-Debug -Message 'Source'
+                            Get-Member -InputObject $Source | Out-String | Write-Debug
+                        }
+
+                        Write-Debug ('Destination -eq $null  ?  {0}' -f ($Destination -eq $null))
+                        if( $Destination -ne $null )
+                        {
+                            Write-Debug -Message 'Destination'
+                            Get-Member -InputObject $Destination | Out-String | Write-Debug
+                        }
+
+                        Get-Member -InputObject $Destination -MemberType Property |
+                            Where-Object { $ExcludeProperty -notcontains $_.Name } |
+                            Where-Object { 
+                                $name = $_.Name
+                                if( -not $name )
+                                {
+                                    return
+                                }
+
+                                $value = $Destination.$name
+                                if( $value -eq $null )
+                                {
+                                    return
+                                }
+
+                                Write-Debug ('Destination.{0,-20} -eq $null  ?  {1}' -f $name,($value -eq $null))
+                                Write-Debug ('           .{0,-20} is            {1}' -f $name,$value.GetType())
+                                return Get-Member -InputObject $value -Name 'Keys'
+                            } |
+                            ForEach-Object {
+                                $propertyName = $_.Name
+                                Write-Debug -Message ('{0}.{1} -> {2}.{1}' -f $Source.GetType(),$propertyName,$Destination.GetType())
+                                $keys = $source.$propertyName.Keys
+                                foreach( $key in $keys )
+                                {
+                                    $value = $source.$propertyName[$key]
+                                    Write-Debug ('    [{0,-20}] -> {1}' -f $key,$value)
+                                    $Destination.$propertyName[$key] = $source.$propertyName[$key]
+                                }
+                            }
                     }
 
                     $VerbosePreference = $using:VerbosePreference
@@ -100,7 +149,7 @@ function Invoke-WhiskeyParallelTask
                     # The task context gets serialized/deserialized into this new job process. We need to
                     # correctly deserialize it back to an actual `Whiskey.Context` object. 
                     $buildInfo = New-WhiskeyBuildMetadataObject
-                    Sync-ObjectProperty -Source $originalContext.BuildMetada -Destination $buildInfo -Exclude @( 'BuildServer' )
+                    Sync-ObjectProperty -Source $originalContext.BuildMetadata -Destination $buildInfo -Exclude @( 'BuildServer' )
                     if( $originalContext.BuildMetadata.BuildServer )
                     {
                         $buildInfo.BuildServer = $originalContext.BuildMetadata.BuildServer
@@ -113,10 +162,15 @@ function Invoke-WhiskeyParallelTask
                     $buildVersion.SemVer2NoBuildMetadata = $originalContext.Version.SemVer2NoBuildMetadata.ToString()
 
                     $context = New-WhiskeyContextObject
-                    Sync-ObjectProperty -Source $originalContext -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Version' )
+                    Sync-ObjectProperty -Source $originalContext -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version' )
 
                     $context.BuildMetadata = $buildInfo
                     $context.Version = $buildVersion
+
+                    $context.Variables | ConvertTo-Json -Depth 50 | Write-Debug
+                    $context.ApiKeys | ConvertTo-Json -Depth 50 | Write-Debug
+                    $context.Credentials | ConvertTo-Json -Depth 50 | Write-Debug
+                    $context.TaskDefaults | ConvertTo-Json -Depth 50 | Write-Debug
 
                     $tasks = $using:queue['Tasks']
                     foreach( $task in $tasks )
