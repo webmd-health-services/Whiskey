@@ -93,6 +93,16 @@ function New-WhiskeyContext
         Write-Warning ('{0}: The default "BuildTasks" pipeline has been renamed to "Build". Backwards compatibility with "BuildTasks" will be removed in the next major version of Whiskey. Rename your "BuildTasks" pipeline to "Build".' -f $ConfigurationPath)
     }
 
+    if( $config.ContainsKey('Publish') -and $config.ContainsKey('PublishTasks') )
+    {
+        throw ('{0}: The configuration file contains both "Publish" and the deprecated "PublishTasks" pipelines. Move all your publish tasks under "Publish" and remove the "PublishTasks" pipeline.' -f $ConfigurationPath)
+    }
+
+    if( $config.ContainsKey('PublishTasks') )
+    {
+        Write-Warning ('{0}: The default "PublishTasks" pipeline has been renamed to "Publish". Backwards compatibility with "PublishTasks" will be removed in the next major version of Whiskey. Rename your "PublishTasks" pipeline to "Publish".' -f $ConfigurationPath)
+    }
+
     $buildRoot = $ConfigurationPath | Split-Path
     if( -not $DownloadRoot )
     {

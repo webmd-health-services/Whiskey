@@ -10,7 +10,7 @@ Build:
     Path: Test\*.Tests.ps1
     DescribeDurationReportCount: 20
     
-PublishTasks:
+Publish:
 - PublishPowerShellModule:
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/

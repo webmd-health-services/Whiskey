@@ -11,6 +11,7 @@ $publishingTasks = $null
 $buildPipelineFails = $false
 $buildPipelineName = 'Build'
 $publishPipelineFails = $false
+$publishPipelineName = 'Publish'
 
 function Init
 {
@@ -22,6 +23,7 @@ function Init
     $script:buildPipelineFails = $false
     $script:buildPipelineName = 'Build'
     $script:publishPipelineFails = $false
+    $script:publishPipelineName = 'Publish'
 }
 
 function Assert-ContextPassedTo
@@ -87,6 +89,15 @@ function GivenPublishing
 function GivenPublishingPipelineFails
 {
     $script:publishPipelineFails = $true
+}
+
+function GivenPublishPipelineName
+{
+    param(
+        $Name
+    )
+
+    $script:publishPipelineName = $Name
 }
 
 function GivenPublishingPipelineSucceeds
@@ -213,12 +224,12 @@ function ThenContextPassedWhenSettingBuildStatus
 
 function ThenPublishPipelineRan
 {
-    ThenPipelineRan -Name 'PublishTasks' -Times 1
+    ThenPipelineRan -Name $publishPipelineName -Times 1
 }
 
 function ThenPublishPipelineNotRun
 {
-    ThenPipelineRan -Name 'PublishTasks' -Times 0
+    ThenPipelineRan -Name $publishPipelineName -Times 0
 }
 
 function WhenRunningBuild
@@ -252,9 +263,9 @@ function WhenRunningBuild
             throw ('Build pipeline fails!')
         }
 
-        if( `$Name -eq 'PublishTasks' -and `$publishPipelineFails )
+        if( `$Name -eq "$publishPipelineName" -and `$publishPipelineFails )
         {
-            throw ('PublishTasks pipeline fails!')
+            throw ('Publish pipeline fails!')
         }
 "@))
 
@@ -264,7 +275,7 @@ function WhenRunningBuild
 
     if( $publishingTasks )
     {
-        $config['PublishTasks'] = $publishingTasks
+        $config[$publishPipelineName] = $publishingTasks
     }
 
     $script:context = New-WhiskeyContextObject

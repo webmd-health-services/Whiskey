@@ -43,13 +43,13 @@ LONG DESCRIPTION
     ### Overview
 
     A Whiskey build has two phases: building and publishing (i.e. 
-    promoting). These are handled by the `Build` and `PublishTasks` 
+    promoting). These are handled by the `Build` and `Publish` 
     pipelines in your whiskey.yml file. A pipeline is a list of tasks to 
     perform when running that pipeline. Your first pipelines are empty:
 
        Build:
        
-       PublishTasks:
+       Publish:
     
     A pipeline is a list of tasks. Each task has properties that control what
     the task does. In Yaml, you create a list by prefixing each item with 
@@ -98,10 +98,10 @@ LONG DESCRIPTION
 
     The "PublishOn" property is a list of branch names. Wildcards are allowed.
 
-    When publishing, Whiskey runs all the tasks in the "PublishTasks" 
+    When publishing, Whiskey runs all the tasks in the "Publish" 
     pipeline. For example, Whiskey's publish process looks like this:
 
-        PublishTasks:
+        Publish:
         - PublishPowerShellModule:
             RepositoryName: PSGallery
             RepositoryUri: https://powershellgallery.com/

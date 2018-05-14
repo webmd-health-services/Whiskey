@@ -11,11 +11,11 @@ function Invoke-WhiskeyPipeline
         Build:
         - TaskOne
         - TaskTwo
-        PublishTasks:
+        Publish:
         - TaskOne
         - Task
 
-    Defines two pipelines: `Build` and `PublishTasks`.
+    Defines two pipelines: `Build` and `Publish`.
 
     .EXAMPLE
     Invoke-WhiskeyPipeline -Context $context -Name 'Build'
