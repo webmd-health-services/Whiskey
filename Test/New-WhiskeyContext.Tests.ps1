@@ -718,6 +718,15 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ "Build"\ and\ the\ deprecated\ "BuildTasks"\ pipelines' -ErrorAction SilentlyContinue
     }
 
+    Describe 'New-WhiskeyContext.when both Publish and PublishTasks pipelines exists' {
+        Init
+        GivenConfiguration @{
+            Publish = @();
+            PublishTasks = @();
+        }
+        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ "Publish"\ and\ the\ deprecated\ "PublishTasks"\ pipelines' -ErrorAction SilentlyContinue
+    }
+
     Describe 'New-WhiskeyContext.when BuildTasks pipeline exists' {
         Init
         GivenConfiguration @{
@@ -727,5 +736,19 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
         WhenCreatingContext
         ThenWarning 'The\ default\ "BuildTasks"\ pipeline\ has\ been\ renamed\ to\ "Build"'
+    }
+
+    Describe 'New-WhiskeyContext.when PublishTasks pipeline exists' {
+        Init
+        GivenConfiguration @{
+            Build = @(
+                @{ Version = '1.0.0' }
+            );
+            PublishTasks = @(
+                'NuGetPush'
+            );
+        }
+        WhenCreatingContext
+        ThenWarning 'The\ default\ "PublishTasks"\ pipeline\ has\ been\ renamed\ to\ "Publish"'
     }
 }

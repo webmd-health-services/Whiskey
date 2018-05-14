@@ -83,7 +83,7 @@ Build:
             - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
             - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
 
-PublishTasks:
+Publish:
 - PublishPowerShellModule:
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/

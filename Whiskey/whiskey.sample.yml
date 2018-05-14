@@ -1,9 +1,9 @@
 # The `PublishOn` property is a list of branch names. After a successful build on a 
-# branch that matches any name in this list, the `PublishTasks` pipeline will run. With 
-# an empty `PublishOn` property, your `PublishTasks` pipeline will never run.
+# branch that matches any name in this list, the `Publish` pipeline will run. With 
+# an empty `PublishOn` property, your `Publish` pipeline will never run.
 #
 # Wildcards are supported. For example, if `release/*` is in the list, the 
-# `PublishTasks` pipeline would run on the `release/6.3` branch but not the `release`
+# `Publish` pipeline would run on the `release/6.3` branch but not the `release`
 # branch.
 PublishOn:
  - master
@@ -75,4 +75,4 @@ Build:
 # Publishing branches are configured with the `PublishOn` property.
 #
 # See the documentation for each individual task for YML samples.
-PublishTasks:
+Publish:
