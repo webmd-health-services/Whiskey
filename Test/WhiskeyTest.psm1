@@ -285,6 +285,7 @@ function New-WhiskeyTestContext
         if( $ForYaml )
         {
             $ForYaml | Set-Content -Path $ConfigurationPath
+            $configData = Import-WhiskeyYaml -Yaml $ForYaml
         }
         else
         {
@@ -296,7 +297,7 @@ function New-WhiskeyTestContext
 
             if( $ForTaskName )
             {
-                $configData['BuildTasks'] = @( @{ $ForTaskName = $TaskParameter } )
+                $configData['Build'] = @( @{ $ForTaskName = $TaskParameter } )
             }
 
             $configData | ConvertTo-Yaml | Set-Content -Path $ConfigurationPath

@@ -144,7 +144,7 @@ Describe 'Pipeline.when running another pipeline' {
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 - CopyFile:
@@ -153,7 +153,7 @@ Describe 'Pipeline.when running another pipeline' {
 '@
     WhenRunningTask
     ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
-    ThenPipelineRun 'BuildTasks' -BecauseFileExists 'BuildTasks\whiskey.yml'
+    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
 }
 
 Describe 'Pipeline.when running multiple pipelines' {
@@ -169,7 +169,7 @@ Describe 'Pipeline.when running multiple pipelines' {
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
 
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline:
     Name: 
     - Fubar
@@ -181,12 +181,12 @@ Describe 'Pipeline.when running multiple pipelines' {
     WhenRunningTask
     ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
     ThenPipelineRun 'Snafu' -BecauseFileExists 'Snafu\whiskey.yml'
-    ThenPipelineRun 'BuildTasks' -BecauseFileExists 'BuildTasks\whiskey.yml'
+    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
 }
 
 Describe 'Pipeline.when Name property is missing' {
     Init
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline
 '@
     WhenRunningTask -ErrorAction SilentlyContinue
@@ -195,7 +195,7 @@ Describe 'Pipeline.when Name property is missing' {
 
 Describe 'Pipeline.when Name property doesn''t have a value' {
     Init
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline:
     Name: 
 '@
@@ -211,7 +211,7 @@ Describe 'Pipeline.when running in Clean mode' {
     Name: Whiskey
     Version: 0.18.0
 '@
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@
@@ -227,7 +227,7 @@ Describe 'Pipeline.when running in Initialize mode' {
     Name: Whiskey
     Version: 0.18.0
 '@
-    GivenPipeline 'BuildTasks' @'
+    GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@

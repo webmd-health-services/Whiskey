@@ -1,4 +1,4 @@
-BuildTasks:
+Build:
 - Pester4:
     Path: PassingTests
     DescribeDurationReportCount: 10

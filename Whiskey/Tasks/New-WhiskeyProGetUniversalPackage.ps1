@@ -58,7 +58,7 @@ function New-WhiskeyProGetUniversalPackage
 
     ### Example 1
 
-        BuildTasks:
+        Build:
         - ProGetUniversalPackage:
             Name: Example1
             Description: This package demonstrates the YAML for using the ProGetUniversalPackage task.
@@ -96,7 +96,7 @@ function New-WhiskeyProGetUniversalPackage
 
     ### Example 2
 
-        BuildTasks:
+        Build:
         - ProGetUniversalPackage
             Name: Example2
             Description: This package demonstrates the YAML for using the ProGetUniversalPackage task.
@@ -131,7 +131,7 @@ function New-WhiskeyProGetUniversalPackage
 
     ## Example 3
 
-        BuildTasks:
+        Build:
         - ProGetUniversalPackage
             Name: Example3
             Description: This package demonstrates how the `ThirdPartyPath` property works.
@@ -174,7 +174,7 @@ function New-WhiskeyProGetUniversalPackage
 
     ## Example 4
 
-        BuildTasks:
+        Build:
         - ProGetUniversalPackage
             Name: Example4
             Description: This package demonstrates how the customize paths in the package.
@@ -202,7 +202,7 @@ function New-WhiskeyProGetUniversalPackage
 
     ## Example 5
 
-        BuildTasks:
+        Build:
         - ProGetUniversalPackage
             Name: Example5
             Description: Demonstration of the SourceRoot property.

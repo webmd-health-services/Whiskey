@@ -38,7 +38,7 @@ LONG DESCRIPTION
 
     To use your task in a whiskey.yml file, use the name from the `Whiskey.Task` attribute, e.g.
 
-        BuildTasks:
+        Build:
         - TASK_NAME:
             Property: Value
             Property2:
@@ -102,7 +102,7 @@ LONG DESCRIPTION
 
     A user could use the `NspVersion` property to control what version of Node they want to use:
 
-         BuildTasks:
+         Build:
          - TASK_NAME:
             NspVersion: 8.9.4
 

@@ -1,7 +1,7 @@
 PublishOn: 
 - master
 
-BuildTasks:
+Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
@@ -10,7 +10,7 @@ BuildTasks:
     Path: Test\*.Tests.ps1
     DescribeDurationReportCount: 20
     
-PublishTasks:
+Publish:
 - PublishPowerShellModule:
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/

@@ -11,7 +11,7 @@ function Set-WhiskeyTaskDefaults
     .EXAMPLE
     The following example demonstrates setting default values for the `MSBuild` task `Version` property and the `NuGetPack` task `Symbols` property.
    
-        BuildTasks:
+        Build:
         - TaskDefaults:
             MSBuild:
                 Version: 13.0

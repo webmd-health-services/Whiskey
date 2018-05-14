@@ -245,3 +245,63 @@ Queues:
         $Global:Error[2] | Should -Match 'Invalid\ task\ YAML'
     }
 }
+
+Describe 'Parallel.when API keys, variables, credentials, and task defaults are defined' {
+    Init
+    GivenFile 'one.ps1' -Content @'
+param(
+    [object]
+    $TaskContext
+)
+
+if( $TaskContext.Variables['Fubar'] -ne 'Snafu' )
+{
+    throw ('Fubar variable value is not "Snafu".')
+}
+
+if( $TaskContext.ApiKeys['ApiKey'] -ne 'ApiKey' )
+{
+    throw ('API key "ApiKey" doesn''t have its expected value of "ApiKey".')
+}
+
+$cred = $TaskContext.Credentials['Credential']
+if( -not $cred )
+{
+    throw ('Credential "Credential" is missing.')
+}
+
+if( $cred.UserName -ne 'cred' )
+{
+    throw ('Credential''s UserName isn''t "cred".')
+}
+
+if( $cred.GetNetworkCredential().Password -ne 'cred' )
+{
+    throw ('Credential''s Password isn''t "cred".')
+}
+
+exit 0
+'@
+    $yaml = @'
+Build:
+- TaskDefaults:
+    PowerShell:
+        Path: one.ps1
+- SetVariable:
+    Fubar: Snafu
+- Parallel:
+    Queues:
+    - Tasks:
+        - PowerShell:
+            Argument:
+                VariableValue: $(Fubar)
+'@
+    $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml
+    Add-WhiskeyApiKey -Context $context -ID 'ApiKey' -Value 'ApiKey'
+    Add-WhiskeyCredential -Context $context -ID 'Credential' -Credential (New-Object 'PsCredential' ('cred',(ConvertTo-SecureString -String 'cred' -AsPlainText -Force)))
+    $Global:Error.Clear()
+    Invoke-WhiskeyBuild -Context $context
+    It ('should write no errors') {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}

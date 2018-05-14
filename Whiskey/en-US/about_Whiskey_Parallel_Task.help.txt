@@ -17,7 +17,7 @@ PROPERTIES
 EXAMPLES
     Example 1
 
-        BuildTasks:
+        Build:
         - Parallel:
             Queues:
             - Tasks:

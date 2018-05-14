@@ -21,14 +21,14 @@ function Invoke-WhiskeyNodeLicenseChecker
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NodeLicenseChecker
     
     This example will run `license-checker` against the modules listed in the `package.json` file located in the build root.
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NodeLicenseChecker:
             Version: 13.0.1
     

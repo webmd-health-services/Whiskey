@@ -10,7 +10,7 @@ function Invoke-WhiskeyNpmInstall
     
     You can install a specific package with the `Package` property. It should be a list of package names. You can specify a specific version of the module with this syntax:
 
-        BuildTasks:
+        Build:
         - NpmInstall:
             Package:
             - rimraf: ^2.0.0
@@ -32,14 +32,14 @@ function Invoke-WhiskeyNpmInstall
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NpmInstall
 
     This example will install all the Node packages listed in the `package.json` file to the `BUILD_ROOT\node_modules` directory.
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NpmInstall:
             Package:
             - gulp
@@ -48,7 +48,7 @@ function Invoke-WhiskeyNpmInstall
 
     ## Example 3
 
-        BuildTasks:
+        Build:
         - NpmInstall:
             WorkingDirectory: app
             Package:

@@ -452,7 +452,7 @@ Describe 'Invoke-WhiskeyExec.when given bad working directory' {
     GivenPath 'executable.bat'
     GivenWorkingDirectory 'badworkdir'
     WhenRunningExecutable
-    ThenTaskFailedWithMessage 'BuildTasks.+WorkingDirectory.+does not exist.'    
+    ThenTaskFailedWithMessage 'Build.+WorkingDirectory.+does not exist.'    
 }
 
 Describe 'Invoke-WhiskeyExec.when running executable located by the Path environment variable' {
