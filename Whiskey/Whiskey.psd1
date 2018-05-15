@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.33.0'
+    ModuleVersion = '0.34.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -61,6 +61,7 @@
 
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
+                            'Formats\System.Exception.format.ps1xml',
                             'Formats\Whiskey.BuildInfo.format.ps1xml',
                             'Formats\Whiskey.BuildVersion.format.ps1xml',
                             'Formats\Whiskey.Context.format.ps1xml'
@@ -70,8 +71,6 @@
     NestedModules = @(
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'PackageManagement',
-                        'PowerShellGet',
                         'ProGetAutomation',
                         'VSSetup'
                      )
@@ -148,7 +147,11 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Created `Parallel` task for running build tasks asynchronously.
+# 0.34.0
+
+* Fixed: "Pester3" and "Pester4" tasks overwrite test results when run in parallel.
+* ***Breaking Change***: "Pester4" and "Pester3" tasks XML output file names changed. They used to be named "pester-NUMBER.xml". They now use the pattern "pester+RANDOM_STRING.xml", where "RANDOM_STRING" is a random string of ASCII characters.
+* Added "Exclude" property to "Pester4" task for filtering out tests that match any wildcards in the task's "Path" property.
 '@
         } # End of PSData hashtable
 

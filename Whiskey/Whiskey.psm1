@@ -22,17 +22,3 @@ if( -not ($attr | Get-Member 'SupportsClean') )
 
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
     ForEach-Object { . $_.FullName }
-
-if( (Get-Module -Name 'PackageManagement') )
-{
-    Remove-Module -Name 'PackageManagement' -Force
-}
-
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '.\PackageManagement\PackageManagement.psd1')
-
-if( (Get-Module -Name 'PowerShellGet') )
-{
-    Remove-Module -Name 'PowerShellGet' -Force
-}
-
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '.\PowerShellGet\PowerShellGet.psd1')

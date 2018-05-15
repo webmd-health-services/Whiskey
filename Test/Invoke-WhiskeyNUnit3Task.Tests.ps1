@@ -401,10 +401,14 @@ function ThenRanOnlySpecificTest
 
 function ThenNUnitReportGenerated
 {
-    $nunitReport = Get-ChildItem -Path $outputDirectory -Filter 'nunit3-*.xml' -Recurse
+    $nunitReport = Get-ChildItem -Path $outputDirectory -Filter 'nunit3*.xml' -Recurse
 
     It 'should run NUnit tests' {
         $nunitReport | Should -Not -BeNullOrEmpty
+    }
+
+    It ('should generate reports that support running task in parallel') {
+        $nunitReport | Select-Object -ExpandProperty 'Name' | Should -Match '^nunit3\+.{8}\..{3}\.xml'
     }
 
     It 'should write results to report xml file' {

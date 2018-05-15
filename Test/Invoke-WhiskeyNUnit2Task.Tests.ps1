@@ -34,8 +34,13 @@ function Assert-NUnitTestsRun
         [string]
         $ReportPath
     )
+    $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' 
     It 'should run NUnit tests' {
-        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should not BeNullOrEmpty
+        $reports | Should -Not -BeNullOrEmpty
+    }
+
+    It ('should generate reports that support running task in parallel') {
+        $reports | Select-Object -ExpandProperty 'Name' | Should -Match '^nunit2\+.{8}\..{3}\.xml$'
     }   
 }
 
@@ -46,7 +51,7 @@ function Assert-NUnitTestsNotRun
         $ReportPath
     )
     It 'should not run NUnit tests' {
-        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
+        $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
     }
 }
 

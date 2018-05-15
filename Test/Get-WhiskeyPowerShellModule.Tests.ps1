@@ -2,8 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\PackageManagement' -Resolve)
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\PowerShellGet' -Resolve)
 
 $context = $null
 $modulePath = $null
@@ -97,7 +95,7 @@ function ThenErrorShouldBeThrown
     )
 
     It ('should throw an error that matches /{0}/' -f $Message) {
-        $Global:Error | Should -Match $Message
+        $Global:Error | Where-Object { $_ -match $Message } | Should -Not -BeNullOrEmpty
     }
 }
 Describe 'GetPowerShellModule.when given a module Name' {
