@@ -1,7 +1,7 @@
 PublishOn: 
 - master
 
-BuildTasks:
+Build:
 - TaskDefaults:
     Pester4:
         DescribeDurationReportCount: 20
@@ -83,7 +83,7 @@ BuildTasks:
             - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
             - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
 
-PublishTasks:
+Publish:
 - PublishPowerShellModule:
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/

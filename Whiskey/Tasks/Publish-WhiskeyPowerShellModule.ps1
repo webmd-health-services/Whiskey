@@ -20,7 +20,7 @@ function Publish-WhiskeyPowerShellModule
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''RepositoryName'' is mandatory. It should be the name of the PowerShell repository you want to publish to, e.g.
             
-        BuildTasks:
+        Build:
         - PublishPowerShellModule:
             Path: mymodule
             RepositoryName: PSGallery
@@ -32,7 +32,7 @@ function Publish-WhiskeyPowerShellModule
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whiskey.yml file, to the module directory of the module to publish, e.g. 
         
-        BuildTasks:
+        Build:
         - PublishPowerShellModule:
             Path: mymodule
             RepositoryName: PSGallery

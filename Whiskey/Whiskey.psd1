@@ -152,6 +152,7 @@
 * Fixed: "Pester3" and "Pester4" tasks overwrite test results when run in parallel.
 * ***Breaking Change***: "Pester4" and "Pester3" tasks XML output file names changed. They used to be named "pester-NUMBER.xml". They now use the pattern "pester+RANDOM_STRING.xml", where "RANDOM_STRING" is a random string of ASCII characters.
 * Added "Exclude" property to "Pester4" task for filtering out tests that match any wildcards in the task's "Path" property.
+* Default "BuildTasks" and "PublishTasks" pipelines have been renamed to "Build" and "Publish". Backwards compatibility with the deprecated "BuildTasks" and "PublishTasks" pipelines will be removed in the next major version of Whiskey.
 '@
         } # End of PSData hashtable
 

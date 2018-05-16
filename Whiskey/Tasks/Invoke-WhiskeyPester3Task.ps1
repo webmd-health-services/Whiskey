@@ -53,7 +53,7 @@ function Invoke-WhiskeyPester3Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
         
-        BuildTasks:
+        Build:
         - Pester3:
             Path:
             - My.Tests.ps1
