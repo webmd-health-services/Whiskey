@@ -44,7 +44,7 @@ function New-WhiskeyProGetUniversalPackage
     $description = $TaskParameter['Description']
     $exclude = $TaskParameter['Exclude']
     $thirdPartyPath = $TaskParameter['ThirdPartyPath']
-    
+
     $compressionLevel = 1
     if( $TaskParameter['CompressionLevel'] )
     {
@@ -80,7 +80,7 @@ function New-WhiskeyProGetUniversalPackage
         title = $name;
         description = $description
     } | ConvertTo-Json | Set-Content -Path $upackJsonPath
-    
+
     # Add the version.json file
     @{
         Version = $version.Version.ToString();
@@ -90,14 +90,14 @@ function New-WhiskeyProGetUniversalPackage
         BuildMetadata = $version.SemVer2.Build;
         SemVer1 = $version.SemVer1.ToString();
     } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
-    
+
     function Copy-ToPackage
     {
         param(
             [Parameter(Mandatory=$true)]
             [object[]]
             $Path,
-    
+
             [Switch]
             $AsThirdPartyItem
         )
@@ -157,9 +157,10 @@ function New-WhiskeyProGetUniversalPackage
                 {
                     $destinationDisplay = $destination -replace [regex]::Escape($tempRoot),''
                     $destinationDisplay = $destinationDisplay.Trim('\')
+                    $taskTempDirectory = $TaskContext.Temp.FullName
                     if( $AsThirdPartyItem )
                     {
-                        $robocopyExclude = @()
+                        $robocopyExclude = @( $taskTempDirectory )
                         $whitelist = @( )
                         $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
                     }
@@ -171,7 +172,12 @@ function New-WhiskeyProGetUniversalPackage
                             return
                         }
 
-                        $robocopyExclude = & { $TaskParameter['Exclude'] ; (Join-Path -Path $destination -ChildPath 'version.json') } 
+                        $robocopyExclude = & {
+                            $taskTempDirectory;
+                            (Join-Path -Path $destination -ChildPath 'version.json');
+                            $TaskParameter['Exclude'];
+                        }
+
                         $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
                         $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
                     }
@@ -179,7 +185,7 @@ function New-WhiskeyProGetUniversalPackage
                     Write-WhiskeyInfo -Context $TaskContext -Message $operationDescription
                     Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-WhiskeyVerbose -Context $TaskContext
                     # Get rid of empty directories. Robocopy doesn't sometimes.
-                    Get-ChildItem -Path $destination -Directory -Recurse | 
+                    Get-ChildItem -Path $destination -Directory -Recurse |
                         Where-Object { -not ($_ | Get-ChildItem) } |
                         Remove-Item
                 }

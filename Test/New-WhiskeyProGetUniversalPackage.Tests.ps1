@@ -43,7 +43,6 @@ function Init
     $script:buildVersion = $null
     $script:context = $null
     $script:expandPath = $null
-    Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $env:TEMP -and $ChildPath -like 'Whiskey+New-WhiskeyProGetUniversalPackage+*' } -MockWith { Join-Path -Path $TestDrive.FullName -ChildPath 'TempDir' }
 }
 
 function ThenTaskFails 
