@@ -1,0 +1,69 @@
+
+function Set-WhiskeyVariableFromXml
+{
+    [Whiskey.Task("SetVariableFromXml")]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [Whiskey.Context]
+        $TaskContext,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter
+    )
+
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    $VerbosePreference = 'Continue'
+    
+    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType File
+    if( ($path | Measure-Object).Count -ne 1 )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('resolves to multiple files. The "Path" property must only resolve to one file.')
+    }
+
+    Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
+    [xml]$xml = Get-Content -Path $path -Raw
+
+    $nsManager = New-Object -TypeName 'Xml.XmlNamespaceManager' -ArgumentList $xml.NameTable
+    $prefixes = $TaskParameter['NamespacePrefixes'] 
+    if( $prefixes -and ($prefixes | Get-Member 'Keys') )
+    {
+        foreach( $prefix in $prefixes.Keys )
+        {
+            $nsManager.AddNamespace($prefix, $prefixes[$prefix])
+        }
+    }
+
+    $variables = $TaskParameter['Variables']
+    if( $variables -and ($variables | Get-Member 'Keys') )
+    {
+        foreach( $variableName in $variables.Keys )
+        {
+            $xpath = $variables[$variableName]
+            $value = $xml.SelectNodes($xpath, $nsManager) | ForEach-Object { 
+                if( $_ | Get-Member 'InnerText' )
+                {
+                    $_.InnerText
+                }
+                elseif( $_ | Get-Member '#text' )
+                {
+                    $_.'#text'
+                }
+            }
+            $exists = ' '
+            if( $value -eq $null )
+            {
+                $value = ''
+                $exists = '!'
+            }
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0} {1}' -f $exists,$xpath)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('        {0} = {1}' -f $variableName,($value | Select-Object -First 1))
+            $value | Select-Object -Skip 1 | ForEach-Object {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('        {0}   {1}' -f (' ' * $variableName.Length),$_)
+            }
+            Add-WhiskeyVariable -Context $TaskContext -Name $variableName -Value $value
+        }
+    }
+}
