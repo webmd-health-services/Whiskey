@@ -15,7 +15,6 @@ function Set-WhiskeyVariableFromXml
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    $VerbosePreference = 'Continue'
     
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType File
     if( ($path | Measure-Object).Count -ne 1 )
