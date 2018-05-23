@@ -13,8 +13,8 @@ DESCRIPTION
 
 PROPERTIES
     * `Path` (***mandatory***): the path to the XML file to read.
-    * `Variables` (***mandatory***): an object whose properties are the variable names. The value of each variable is the XPath expression to use to select the variable's value.
-    * `NamespacePrefixes`: sets the prefixes used in a variable's XPath expression for elements in a particular namespace. The value of this property are name/value pairs, where the names are the prefixes and the values are the namespace URIs. See "Example 3" for sample code.
+    * `Variables` (***mandatory***): name/value mappings of variables names to XPath expressions. See "Examples" below.
+    * `NamespacePrefixes`: sets the prefixes used in a variable's XPath expression for elements in a particular namespace. The value of this property are name/value mappings, where the names are the prefixes and the values are the namespace URIs. See "Example 3" for sample code.
 
 EXAMPLES
     Example 1
