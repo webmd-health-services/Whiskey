@@ -46,6 +46,8 @@ LONG DESCRIPTION
       ProGet.
     * `SetVariable`: creates a variable that you can use in your whiskey.yml
       file.
+    * `SetVariableFromXml`: creates variables that you can use in your 
+      whiskey.yml file by reading their values from an XML file.
     * `TaskDefaults`: sets default task properties.
     * `Version`: sets the version number for the current build.
 
