@@ -4,7 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$path = $null
+$failed = $false
 [Whiskey.Context]$context = $null
 
 function GivenXmlFile
@@ -15,7 +15,6 @@ function GivenXmlFile
     )
 
     $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path)
-    $script:path = $Path
 }
 
 function GivenWhiskeyYml
@@ -31,12 +30,31 @@ function Init
 {
     $script:path = $null
     $script:context = $null
+    $script:failed = $false
+}
+
+function ThenErrorMatches
+{
+    param(
+        $Regex
+    )
+
+    It ('should write an error') {
+        $Global:Error | Should -Match $Regex
+    }
 }
 
 function ThenNoErrors
 {
     It ('should not write any errors') {
         $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+function ThenTaskFailed
+{
+    It ('should fail') {
+        $failed | Should -BeTrue
     }
 }
 
@@ -55,12 +73,25 @@ function ThenVariable
 
 function WhenRunningTask
 {
+    [CmdletBinding()]
+    param(
+    )
+
     $Global:Error.Clear()
 
-    [Whiskey.Context]$context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-    $parameter = $context.Configuration['Build'] | Where-Object { $_.ContainsKey('SetVariableFromXml') } | ForEach-Object { $_['SetVariableFromXml'] }
-    Invoke-WhiskeyTask -TaskContext $context -Name 'SetVariableFromXml' -Parameter $parameter
-    $script:context = $context
+    $script:failed = $false
+    try
+    {
+        [Whiskey.Context]$context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+        $parameter = $context.Configuration['Build'] | Where-Object { $_.ContainsKey('SetVariableFromXml') } | ForEach-Object { $_['SetVariableFromXml'] }
+        Invoke-WhiskeyTask -TaskContext $context -Name 'SetVariableFromXml' -Parameter $parameter
+        $script:context = $context
+    }
+    catch
+    {
+        Write-Error -ErrorRecord $_
+        $script:failed = $true
+    }
 }
 
 Describe 'SetVariableFromXml.when reading single element' {
@@ -179,7 +210,6 @@ Build:
     ThenNoErrors
 }
 
-
 Describe 'SetVariableFromXml.when selecting values from an MSBuild .csproj file' {
     Init
     GivenXmlFile 'fubar.csproj' @'
@@ -230,3 +260,22 @@ Build:
     ThenVariable 'OutputPath' -Is 'bin\Debug\'
     ThenNoErrors
 }
+
+Describe 'SetVariableFromXml.when XML is invalid' {
+    Init
+    GivenXmlFile 'fubar.xml' @'
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" >
+'@
+    GivenWhiskeyYml @'
+Build:
+- SetVariableFromXml:
+    Path: fubar.xml
+    Variables:
+        ToolsVersion: /Project/@ToolsVersion
+'@
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorMatches 'Exception\ reading\ XML\ from\ file\ ".*fubar\.xml"'
+}
+

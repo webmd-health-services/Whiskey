@@ -23,7 +23,16 @@ function Set-WhiskeyVariableFromXml
     }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
-    [xml]$xml = Get-Content -Path $path -Raw
+    [xml]$xml = $null
+    try
+    {
+        $xml = Get-Content -Path $path -Raw
+    }
+    catch
+    {
+        $Global:Error.RemoveAt(0)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Exception reading XML from file "{0}": {1}"' -f $path,$_)
+    }
 
     $nsManager = New-Object -TypeName 'Xml.XmlNamespaceManager' -ArgumentList $xml.NameTable
     $prefixes = $TaskParameter['NamespacePrefixes'] 
