@@ -184,7 +184,7 @@ Build:
     Variables:
         Var1: /root/element/fubar
 '@
-    WhenRunningTask
+    WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailed
     ThenErrorMatches 'XPath\ expression\ "/root/element/fubar"\ matched\ no\ elements/attributes\ in\ XML\ file\ ".*fubar\.xml"'
 }
