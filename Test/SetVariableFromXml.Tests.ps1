@@ -279,3 +279,35 @@ Build:
     ThenErrorMatches 'Exception\ reading\ XML\ from\ file\ ".*fubar\.xml"'
 }
 
+Describe 'SetVariableFromXml.when there are multiple namespaces' {
+    Init
+    GivenXmlFile 'fubar.csproj' @'
+<root xmlns:h="http://www.w3.org/TR/html4/" xmlns:f="https://www.w3schools.com/furniture">
+<h:table>
+  <h:tr>
+    <h:td>Apples</h:td>
+  </h:tr>
+</h:table>
+<f:table>
+  <f:name>Coffee Table</f:name>
+  <f:width>80</f:width>
+  <f:length>120</f:length>
+</f:table>
+</root>
+'@
+    GivenWhiskeyYml @'
+Build:
+- SetVariableFromXml:
+    Path: fubar.csproj
+    NamespacePrefixes:
+        h: http://www.w3.org/TR/html4/
+        f: https://www.w3schools.com/furniture
+    Variables:
+        Fruit: /root/h:table/h:tr/h:td
+        Furniture: /root/f:table/f:name
+'@
+    WhenRunningTask
+    ThenVariable 'Fruit' -Is 'Apples'
+    ThenVariable 'Furniture' -Is 'Coffee Table'
+    ThenNoErrors
+}
