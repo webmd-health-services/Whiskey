@@ -44,6 +44,8 @@ function Set-WhiskeyVariableFromXml
         }
     }
 
+    $allowMissingNodes = $TaskParameter['AllowMissingNodes'] | ConvertFrom-WhiskeyYamlScalar
+
     $variables = $TaskParameter['Variables']
     if( $variables -and ($variables | Get-Member 'Keys') )
     {
@@ -63,6 +65,10 @@ function Set-WhiskeyVariableFromXml
             $exists = ' '
             if( $value -eq $null )
             {
+                if( -not $allowMissingNodes )
+                {
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Variable {0}: XPath expression "{1}" matched no elements/attributes in XML file "{2}".' -f $variableName,$xpath,$path)
+                }
                 $value = ''
                 $exists = '!'
             }

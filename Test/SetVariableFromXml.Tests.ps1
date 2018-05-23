@@ -185,8 +185,28 @@ Build:
         Var1: /root/element/fubar
 '@
     WhenRunningTask
-    ThenVariable 'Var1' -Is ''
+    ThenTaskFailed
+    ThenErrorMatches 'XPath\ expression\ "/root/element/fubar"\ matched\ no\ elements/attributes\ in\ XML\ file\ ".*fubar\.xml"'
+}
+
+Describe 'SetVariableFromXml.when no element and ignore empty XPath results' {
+    Init
+    GivenXmlFile 'fubar.xml' @'
+<root>
+    <element attr="one" />
+</root>
+'@
+    GivenWhiskeyYml @'
+Build:
+- SetVariableFromXml:
+    Path: fubar.xml
+    AllowMissingNodes: true
+    Variables:
+        Var1: /root/element/fubar
+'@
+    WhenRunningTask
     ThenNoErrors
+    ThenVariable 'Var1' -Is ''
 }
 
 Describe 'SetVariableFromXml.when XML has namespaces' {
