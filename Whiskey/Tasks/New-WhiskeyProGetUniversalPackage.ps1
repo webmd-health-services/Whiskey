@@ -16,34 +16,70 @@ function New-WhiskeyProGetUniversalPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    foreach( $mandatoryName in @( 'Name', 'Description' ) )
+    $manifestProperties = @{}
+    if( $TaskParameter.ContainsKey('ManifestProperties') )
     {
-        if( -not $TaskParameter.ContainsKey($mandatoryName) )
+        $manifestProperties = $TaskParameter['ManifestProperties']
+        foreach( $upackProperty in @( 'Name', 'Description', 'Version' ))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryName)
+            if( $TaskParameter[$upackProperty] -and $manifestProperties.ContainsKey($upackProperty) )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "{0}" was defined both as an explicit task property and as an item in the "ManifestProperties" task property. This property is unique and may only be specified once. Remove one of the duplicate properties from the task.' -f $upackProperty)
+            }
         }
     }
 
-    # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
-    $version = $TaskContext.Version
-    if( $TaskParameter.ContainsKey('Version') )
+    foreach( $mandatoryProperty in @( 'Name', 'Description' ) )
     {
-        if( ($TaskParameter['Version'] -notmatch '^\d+\.\d+\.\d+$') )
+        if( (-not $TaskParameter.ContainsKey($mandatoryProperty)) -and (-not $manifestProperties.ContainsKey($mandatoryProperty)))
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryProperty)
+        }
+    }
+
+    $name = $TaskParameter['Name']
+    if( -not $name )
+    {
+        $name = $manifestProperties['Name']
+    }
+
+    $validNameRegex = '^[0-9A-z\-\._]{1,50}$'
+    if ($name -notmatch $validNameRegex)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message '"Name" property is invalid. It should be a string of one to fifty characters: numbers (0-9), upper and lower-case letters (A-z), dashes (-), periods (.), and underscores (_).'
+    }
+
+    $description = $TaskParameter['Description']
+    if( -not $description )
+    {
+        $description = $manifestProperties['Description']
+    }
+
+    $version = $TaskParameter['Version']
+    if( -not $version )
+    {
+        $version = $manifestProperties['Version']
+    }
+
+    # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
+    if( $version )
+    {
+        if( ($version -notmatch '^\d+\.\d+\.\d+$') )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
         }
         [SemVersion.SemanticVersion]$semVer = $null
-        if( -not ([SemVersion.SemanticVersion]::TryParse($TaskParameter['Version'], [ref]$semVer)) )
+        if( -not ([SemVersion.SemanticVersion]::TryParse($version, [ref]$semVer)) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is not a valid semantic version.')
         }
-        $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$version.SemVer2.Prerelease,$version.SemVer2.Build
+        $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$TaskContext.Version.SemVer2.Prerelease,$TaskContext.Version.SemVer2.Build
         $version = New-WhiskeyVersionObject -SemVer $semVer
     }
-    $name = $TaskParameter['Name']
-    $description = $TaskParameter['Description']
-    $exclude = $TaskParameter['Exclude']
-    $thirdPartyPath = $TaskParameter['ThirdPartyPath']
+    else
+    {
+        $version = $TaskContext.Version
+    }
 
     $compressionLevel = 1
     if( $TaskParameter['CompressionLevel'] )
@@ -62,24 +98,33 @@ function New-WhiskeyProGetUniversalPackage
         $sourceRoot = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
         $parentPathParam['ParentPath'] = $sourceRoot
     }
-    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
-    $fixRegex = '[{0}]' -f ($badChars -join '')
-    $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
-    $outDirectory = $TaskContext.OutputDirectory
 
-    $outFile = Join-Path -Path $outDirectory -ChildPath $fileName
+    if( -not $manifestProperties.ContainsKey('Name') )
+    {
+        $manifestProperties['Name'] = $name
+    }
+
+    if( -not $manifestProperties.ContainsKey('Title') )
+    {
+        $manifestProperties['Title'] = $name
+    }
+
+    if( -not $manifestProperties.ContainsKey('Description') )
+    {
+        $manifestProperties['Description'] = $description
+    }
+
+    if( -not $manifestProperties.ContainsKey('Version') )
+    {
+        $manifestProperties['Version'] = $version.SemVer2NoBuildMetadata.ToString()
+    }
 
     $tempRoot = $TaskContext.Temp
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
     New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-Null
 
     $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-    @{
-        name = $name;
-        version = $version.SemVer2NoBuildMetadata.ToString();
-        title = $name;
-        description = $description
-    } | ConvertTo-Json | Set-Content -Path $upackJsonPath
+    $manifestProperties | ConvertTo-Json | Set-Content -Path $upackJsonPath
 
     # Add the version.json file
     @{
@@ -202,6 +247,12 @@ function New-WhiskeyProGetUniversalPackage
     {
         Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
     }
+
+    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+    $fixRegex = '[{0}]' -f ($badChars -join '')
+    $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
+
+    $outFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $fileName
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating universal package {0}' -f $outFile)
     & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
