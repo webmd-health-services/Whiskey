@@ -278,11 +278,6 @@ function New-WhiskeyProGetUniversalPackage
 
     $outFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $fileName
 
-    Write-WhiskeyVerbose -Context $TaskContext -Message $fileName
-    & tree /F $tempPackageRoot | Select-Object -Skip 3 | Foreach-Object {
-        Write-WhiskeyVerbose -Context $TaskContext -Message $_
-    }
-
     Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating universal package {0}' -f $outFile)
     & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
 
