@@ -20,46 +20,31 @@ function New-WhiskeyProGetUniversalPackage
     if( $TaskParameter.ContainsKey('ManifestProperties') )
     {
         $manifestProperties = $TaskParameter['ManifestProperties']
-        foreach( $upackProperty in @( 'Name', 'Description', 'Version' ))
+        foreach( $taskProperty in @( 'Name', 'Description', 'Version' ))
         {
-            if( $TaskParameter[$upackProperty] -and $manifestProperties.ContainsKey($upackProperty) )
+            if( $manifestProperties.ContainsKey($taskProperty) )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "{0}" was defined both as an explicit task property and as an item in the "ManifestProperties" task property. This property is unique and may only be specified once. Remove one of the duplicate properties from the task.' -f $upackProperty)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"ManifestProperties" contains key "{0}". This property cannot be manually defined in "ManifestProperties" as it is set automatically from the corresponding task property "{0}".' -f $taskProperty)
             }
         }
     }
 
     foreach( $mandatoryProperty in @( 'Name', 'Description' ) )
     {
-        if( (-not $TaskParameter.ContainsKey($mandatoryProperty)) -and (-not $manifestProperties.ContainsKey($mandatoryProperty)))
+        if( -not $TaskParameter.ContainsKey($mandatoryProperty) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryProperty)
         }
     }
 
     $name = $TaskParameter['Name']
-    if( -not $name )
-    {
-        $name = $manifestProperties['Name']
-    }
-
     $validNameRegex = '^[0-9A-z\-\._]{1,50}$'
     if ($name -notmatch $validNameRegex)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message '"Name" property is invalid. It should be a string of one to fifty characters: numbers (0-9), upper and lower-case letters (A-z), dashes (-), periods (.), and underscores (_).'
     }
 
-    $description = $TaskParameter['Description']
-    if( -not $description )
-    {
-        $description = $manifestProperties['Description']
-    }
-
     $version = $TaskParameter['Version']
-    if( -not $version )
-    {
-        $version = $manifestProperties['Version']
-    }
 
     # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
     if( $version )
@@ -111,7 +96,7 @@ function New-WhiskeyProGetUniversalPackage
 
     if( -not $manifestProperties.ContainsKey('Description') )
     {
-        $manifestProperties['Description'] = $description
+        $manifestProperties['Description'] = $TaskParameter['Description']
     }
 
     if( -not $manifestProperties.ContainsKey('Version') )
@@ -137,7 +122,7 @@ function New-WhiskeyProGetUniversalPackage
     } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Name:           {0}' -f $name)
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Description:    {0}' -f $description)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Description:    {0}' -f $TaskParameter['Description'])
 
     $separator = ' ' * 18
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path:           {0}' -f ($TaskParameter['Path'] | Select-Object -First 1))

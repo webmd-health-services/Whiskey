@@ -1214,7 +1214,7 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties' {
     ThenTaskSucceeds
 }
 
-Describe 'ProGetUniversalPackage.when given ManifestProperties that contain required Name, Description, and Version properties' {
+Describe 'ProGetUniversalPackage.when given ManifestProperties that contain Name, Description, and Version task properties' {
     Init
     GivenBuildVersion '1.2.3-rc.1+build.300'
     GivenARepositoryWithItems 'my.file'
@@ -1226,24 +1226,8 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties that contain requ
             'SomethingCustom' = 'Fancy custom metadata'
         }
     }
-    WhenPackaging -WithPackageName $null -WithDescription $null -Path 'my.file'
-    ThenPackageShouldInclude 'my.file'
-    ThenUpackMetadataIs @{
-        'Name' = 'AwesomePackageName'
-        'Description' = 'CoolDescription'
-        'Title' = 'AwesomePackageName'
-        'Version' = '0.0.0'
-        '_CustomMetadata' = @{
-            'SomethingCustom' = 'Fancy custom metadata'
-        }
-    }
-    ThenVersionIs -Version '0.0.0' `
-                  -PrereleaseMetadata 'rc.1' `
-                  -BuildMetadata 'build.300' `
-                  -SemVer2 '0.0.0-rc.1+build.300' `
-                  -SemVer1 '0.0.0-rc1' `
-                  -SemVer2NoBuildMetadata '0.0.0-rc.1'
-    ThenTaskSucceeds
+    WhenPackaging -Path 'my.file' -ErrorAction SilentlyContinue
+    ThenTaskFails 'This property cannot be manually defined in "ManifestProperties"'
 }
 
 Describe 'ProGetUniversalPackage.when missing required properties' {
@@ -1251,29 +1235,12 @@ Describe 'ProGetUniversalPackage.when missing required properties' {
     GivenBuildVersion '1.2.3-rc.1+build.300'
     GivenARepositoryWithItems 'my.file'
     GivenManifestProperties @{
-        'Name' = 'AwesomePackageName'
-        'Version' = '4.5.6'
         '_CustomMetadata' = @{
             'SomethingCustom' = 'Fancy custom metadata'
         }
     }
-    WhenPackaging -WithPackageName $null -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
+    WhenPackaging -WithPackageName 'AwesomePackageName' -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
     ThenTaskFails 'Property ''Description'' is mandatory'
-}
-
-Describe 'ProGetUniversalPackage.when ManifestProperties contain properties that were also given as task properties' {
-    Init
-    GivenBuildVersion '1.2.3-rc.1+build.300'
-    GivenARepositoryWithItems 'my.file'
-    GivenManifestProperties @{
-        'Name' = 'AwesomePackageName'
-        'Description' = 'CoolDescription'
-        '_CustomMetadata' = @{
-            'SomethingCustom' = 'Fancy custom metadata'
-        }
-    }
-    WhenPackaging -WithPackageName 'NameTaskProperty' -WithDescription 'DescriptionTaskProperty' -Path 'my.file' -ErrorAction SilentlyContinue
-    ThenTaskFails 'This property is unique and may only be specified once'
 }
 
 Describe 'ProGetUniversalPackage.when Robocopy command fails' {
