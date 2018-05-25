@@ -54,7 +54,7 @@ PROPERTIES
     * `Version`: the package version (MAJOR.MINOR.PATCH), without any prerelease or build metadata. Usually, the version for the current build is used. Prerelease and build metadata for the current build is added.
 
 EXAMPLES
-    Example 1
+    ## Example 1
 
         Build:
         - ProGetUniversalPackage:
@@ -92,7 +92,7 @@ EXAMPLES
 
     The `upack.json` file contains the universal package metadata required by ProGet.
 
-    Example 2
+    ## Example 2
 
         Build:
         - ProGetUniversalPackage
@@ -127,7 +127,7 @@ EXAMPLES
 
     Note that the `bin\SomeOtherAssembly.pdb` file is not in the package even though it matches an item in the `Include` whitelist. It is excluded because it matches an item in the `Exclude` blacklist.
 
-    Example 3
+    ## Example 3
 
         Build:
         - ProGetUniversalPackage
@@ -170,7 +170,7 @@ EXAMPLES
 
     Notice that all files/directories under `node_modules` are included because `node_modules` is in the `ThirdPartyPath` list. Directores in `ThirdPartyPath` are included in the package as-is, with no filtering.
 
-    Example 4
+    ## Example 4
 
         Build:
         - ProGetUniversalPackage
@@ -198,7 +198,7 @@ EXAMPLES
 
     Notice that the `source` directory is added to the package as `destination`. This is done by making the value of an item in the `Path` list from a string into a key/value pair (e.g. `key: value`).
 
-    Example 5
+    ## Example 5
 
         Build:
         - ProGetUniversalPackage
@@ -240,7 +240,7 @@ EXAMPLES
 
     Notice that the top-level Whiskey directory found on the file system isn't part of the package. Because it is defined as the source root, it is considered the root of the files to put in the package, so is omitted from the package.
 
-    Example 6
+    ## Example 6
 
         Build:
         - ProGetUniversalPackage:
