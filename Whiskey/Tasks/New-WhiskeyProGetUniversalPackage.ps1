@@ -240,7 +240,7 @@ function New-WhiskeyProGetUniversalPackage
                     Write-WhiskeyInfo -Context $TaskContext -Message $operationDescription
 
                     $robocopyOutputPath = Join-Path -Path $TaskContext.Temp -ChildPath ('RobocopyOutput.{0}.txt' -f [IO.Path]::GetRandomFileName())
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Out-File -FilePath $robocopyOutputPath
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude -LogPath $robocopyOutputPath | Out-Null
                     if( $LASTEXITCODE -ge 8 )
                     {
                         $robocopyOutput = Get-Content -Path $robocopyOutputPath -Raw
