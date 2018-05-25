@@ -136,6 +136,31 @@ function New-WhiskeyProGetUniversalPackage
         SemVer1 = $version.SemVer1.ToString();
     } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
 
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Name:           {0}' -f $name)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Description:    {0}' -f $description)
+
+    $separator = ' ' * 18
+    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path:           {0}' -f ($TaskParameter['Path'] | Select-Object -First 1))
+    $TaskParameter['Path'] | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $separator,$_) }
+
+    if( $TaskParameter['Include'] )
+    {
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Include:        {0}' -f ($TaskParameter['Include'] | Select-Object -First 1))
+        $TaskParameter['Include'] | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $separator,$_) }
+    }
+
+    if( $TaskParameter['Exclude'] )
+    {
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  Exclude:        {0}' -f ($TaskParameter['Exclude'] | Select-Object -First 1))
+        $TaskParameter['Exclude'] | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $separator,$_) }
+    }
+
+    if( $TaskParameter['ThirdPartyPath'] )
+    {
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('  ThirdPartyPath: {0}' -f ($TaskParameter['ThirdPartyPath'] | Select-Object -First 1))
+        $TaskParameter['ThirdPartyPath'] | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $separator,$_) }
+    }
+
     function Copy-ToPackage
     {
         param(
@@ -191,7 +216,7 @@ function New-WhiskeyProGetUniversalPackage
                 #if parent doesn't exist in the destination dir, create it
                 if( -not ( Test-Path -Path $parentDestinationPath ) )
                 {
-                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-String | Write-WhiskeyVerbose -Context $TaskContext
+                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-Null
                 }
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
@@ -228,7 +253,21 @@ function New-WhiskeyProGetUniversalPackage
                     }
 
                     Write-WhiskeyInfo -Context $TaskContext -Message $operationDescription
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Write-WhiskeyVerbose -Context $TaskContext
+
+                    $robocopyOutputPath = Join-Path -Path $TaskContext.Temp -ChildPath ('RobocopyOutput.{0}.txt' -f [IO.Path]::GetRandomFileName())
+                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude | Out-File -FilePath $robocopyOutputPath
+                    if( $LASTEXITCODE -ge 8 )
+                    {
+                        $robocopyOutput = Get-Content -Path $robocopyOutputPath -Raw
+                        if ($robocopyOutput)
+                        {
+                            $robocopyOutput = $robocopyOutput.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
+                            $robocopyOutput | Write-WhiskeyVerbose -Context $TaskContext
+                        }
+
+                        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
+                    }
+
                     # Get rid of empty directories. Robocopy doesn't sometimes.
                     Get-ChildItem -Path $destination -Directory -Recurse |
                         Where-Object { -not ($_ | Get-ChildItem) } |
@@ -253,6 +292,11 @@ function New-WhiskeyProGetUniversalPackage
     $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
 
     $outFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $fileName
+
+    Write-WhiskeyVerbose -Context $TaskContext -Message $fileName
+    & tree /F $tempPackageRoot | Select-Object -Skip 3 | Foreach-Object {
+        Write-WhiskeyVerbose -Context $TaskContext -Message $_
+    }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating universal package {0}' -f $outFile)
     & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')

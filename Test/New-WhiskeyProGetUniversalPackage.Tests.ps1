@@ -46,6 +46,11 @@ function GivenManifestProperties
     $script:manifestProperties = $Content
 }
 
+function GivenRobocopyFails
+{
+    Mock -CommandName 'Invoke-WhiskeyRobocopy' -ModuleName 'Whiskey' -MockWith { cmd /c 'exit 8'}
+}
+
 function Init
 {
     $script:threwException = $false
@@ -1269,4 +1274,13 @@ Describe 'ProGetUniversalPackage.when ManifestProperties contain properties that
     }
     WhenPackaging -WithPackageName 'NameTaskProperty' -WithDescription 'DescriptionTaskProperty' -Path 'my.file' -ErrorAction SilentlyContinue
     ThenTaskFails 'This property is unique and may only be specified once'
+}
+
+Describe 'ProGetUniversalPackage.when Robocopy command fails' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWIthItems 'dir1\subdir\file.txt'
+    GivenRobocopyFails
+    WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt" -ErrorAction SilentlyContinue
+    ThenTaskFails 'Robocopy failed with exit code'
 }
