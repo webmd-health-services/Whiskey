@@ -1,0 +1,39 @@
+TOPIC
+    about_Whiskey_NuGetPack_Task
+    
+SUMMARY
+    Creates a NuGet package.
+    
+DESCRIPTION
+    The `NuGetPack` task create a NuGet package using the `nuget.exe pack` command. Pass the path to the .nuspec or .csproj file to use to the `Path` property. The package will be saved to Whiskey's output directory. You may use wildcards and/or multiple paths. A package is created for each unique path.
+
+    To create a `Symbols` package, set the `Symbols` property to `true`. This will use the `-Symbols` switch when calling `nuget.exe`.
+
+    By default, this task downloads and uses the latest version of NuGet. To use a specific version of NuGet, set the `Version` property to the version you want to use.
+
+    The task passes the version of the current build to the nuget.exe executable's `-Version` parameter.
+
+PROPERTIES
+    * Path (***mandatory***): the path to the .nuspec or .csproj file to package. Wildcards and multiple paths supported. `nuget.exe pack` is run for each path.
+    * Symbols: whether or not to create a symbols package. If this is `true`, uses the nuget.exe executable's `-Symbols` switch.
+    * Version: the version of nuget.exe to use to publish. The default is to use the latest version of NuGet.
+
+EXAMPLES
+
+    ## Example 1
+
+      Build:
+      - NuGetPack:
+          Path: Whiskey.nuspec
+
+    Demonstrates how to build a NuGet package using a .nuspec file.
+
+
+    ## Example 2
+
+      Build:
+      - NuGetPack:
+          Path: Assembly\Whiskey\Whiskey.csproj
+          Symbols: true
+
+    Demonstrates how to create a symbols package.
