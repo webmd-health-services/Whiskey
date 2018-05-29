@@ -8,6 +8,7 @@ $defaultDescription = 'A package created to test the New-WhiskeyProGetUniversalP
 $defaultVersion = '1.2.3'
 $packageVersion = $null
 $buildVersion = $null
+$manifestProperties = $null
 
 $threwException = $false
 $context = $null
@@ -36,6 +37,20 @@ function GivenPackageVersion
     $script:packageVersion = $Version
 }
 
+function GivenManifestProperties
+{
+    param(
+        [hashtable]
+        $Content
+    )
+    $script:manifestProperties = $Content
+}
+
+function GivenRobocopyFails
+{
+    Mock -CommandName 'Invoke-WhiskeyRobocopy' -ModuleName 'Whiskey' -MockWith { cmd /c 'exit 8'}
+}
+
 function Init
 {
     $script:threwException = $false
@@ -43,10 +58,10 @@ function Init
     $script:buildVersion = $null
     $script:context = $null
     $script:expandPath = $null
-    Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $env:TEMP -and $ChildPath -like 'Whiskey+New-WhiskeyProGetUniversalPackage+*' } -MockWith { Join-Path -Path $TestDrive.FullName -ChildPath 'TempDir' }
+    $script:manifestProperties = $null
 }
 
-function ThenTaskFails 
+function ThenTaskFails
 {
     Param(
         [String]
@@ -58,7 +73,7 @@ function ThenTaskFails
     }
 }
 
-function ThenTaskSucceeds 
+function ThenTaskSucceeds
 {
     It ('should not throw an error message') {
         $Global:Error | Should BeNullOrEmpty
@@ -138,10 +153,10 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
         [string]
         $ShouldFailWithErrorMessage,
-        
+
         [Switch]
         $ShouldNotCreatePackage,
-        
+
         [Switch]
         $ShouldWriteNoErrors,
 
@@ -227,7 +242,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
     try
     {
         $At = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'ProGetUniversalPackage' |
-                Where-Object { $_ -like '*.upack' } | 
+                Where-Object { $_ -like '*.upack' } |
                 Where-Object { Test-Path -Path $_ -PathType Leaf }
     }
     catch
@@ -374,7 +389,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
             It ('should include {0} third-party root item' -f $itemName) {
                 $dirpath | Should Exist
             }
-            
+
             foreach( $fileName in $HasThirdPartyFile )
             {
                 It ('should include {0}\{1} third-party file' -f $itemName,$fileName) {
@@ -411,7 +426,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
 function Initialize-Test
 {
-    param( 
+    param(
         [string[]]
         $DirectoryName,
 
@@ -423,7 +438,7 @@ function Initialize-Test
 
         [Switch]
         $WhenUploadFails,
-        
+
         [Switch]
         $OnFeatureBranch,
 
@@ -467,7 +482,7 @@ function Initialize-Test
         New-Item -Path $SourceRoot -ItemType 'Directory'
     }
 
-    $DirectoryName | ForEach-Object { 
+    $DirectoryName | ForEach-Object {
         $dirPath = $_
         $dirPath = Join-Path -Path $SourceRoot -ChildPath $_
         if( -not (Test-Path -Path $dirPath -PathType Container) )
@@ -579,6 +594,11 @@ function WhenPackaging
         $taskParameter['Version'] = $packageVersion
     }
 
+    if( $manifestProperties )
+    {
+        $taskParameter['ManifestProperties'] = $manifestProperties
+    }
+
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForVersion $WithVersion
     if( $WithApplicationName )
     {
@@ -589,9 +609,9 @@ function WhenPackaging
     {
         $context.Version = $buildVersion
     }
-    
+
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
-    
+
     $threwException = $false
     $At = $null
 
@@ -672,28 +692,75 @@ function ThenPackageShouldNotInclude
 function ThenUpackMetadataIs
 {
     param(
-        $Name,
-        $Version,
-        $Description
+        [hashtable]
+        $ExpectedContent
     )
 
-    $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json' -Resolve
+    function Assert-HashTableEqual
+    {
+        param(
+            [hashtable]
+            $Reference,
 
-    $upackInfo = Get-Content -Raw -Path $upackJsonPath | ConvertFrom-Json
-    It 'should contain name' {
-        $upackInfo.Name | Should -Be $Name
+            [hashtable]
+            $Difference
+        )
+
+        # $DebugPreference = 'Continue'
+        foreach ($key in $Reference.Keys)
+        {
+            if ($key -notin $Difference.Keys)
+            {
+                Write-Debug -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
+                Write-Debug -Message ('Actual    {0}' -f $Difference.Keys)
+                return $false
+            }
+            elseif ($Reference[$key] | Get-Member -Name 'Keys')
+            {
+                if (-not ($Difference[$key] | Get-Member -Name 'Keys') -or (-not (Assert-HashTableEqual -Reference $Reference[$key] -Difference $Difference[$key])))
+                {
+                    Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
+                    Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                    return $false
+                }
+            }
+            elseif (Compare-Object -ReferenceObject $Reference[$key] -DifferenceObject $Difference[$key])
+            {
+                Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
+                Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                return $false
+            }
+        }
+
+        return $true
     }
 
-    It 'should contain title' {
-        $upackInfo.title | Should -Be $Name
+    function ConvertTo-Hashtable {
+        param(
+            $PSCustomObject
+        )
+
+        $result = @{}
+        foreach( $property in $PSCustomObject.psobject.properties.name )
+        {
+            $value = $PSCustomObject.$property
+            if ($value -is [System.Management.Automation.PSCustomObject])
+            {
+                $result[$property] = ConvertTo-HashTable -PSCustomObject $value
+            }
+            else
+            {
+                $result[$property] = $value
+            }
+        }
+        return $result
     }
 
-    It 'should contain version' {
-        $upackInfo.Version | Should -Be $Version
-    }
+    $upackJson = Get-Content -Raw -Path (Join-Path -Path $expandPath -ChildPath 'upack.json' -Resolve) | ConvertFrom-Json
+    $upackContent = ConvertTo-Hashtable -PSCustomObject $upackJson
 
-    It 'should contain description' {
-        $upackInfo.Description | Should -Be $Description
+    It 'should include the upack.json' {
+        Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent | Should -BeTrue
     }
 }
 
@@ -751,7 +818,7 @@ Describe 'ProGetUniversalPackage.when packaging root files' {
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $file `
                                             -WithThirdPartyRootItem $thirdPartyFile `
                                             -HasThirdPartyRootItem $thirdPartyFile `
-                                            -HasRootItems $file 
+                                            -HasRootItems $file
 }
 
 Describe 'ProGetUniversalPackage.when packaging whitelisted files in a directory' {
@@ -782,7 +849,7 @@ Describe 'ProGetUniversalPackage.when packaging multiple directories' {
                                             -NotHasFiles 'code.cs'
 }
 
-Describe 'ProGetUniversalPackage.when whitelist includes items that need to be excluded' {    
+Describe 'ProGetUniversalPackage.when whitelist includes items that need to be excluded' {
     Init
     $dirNames = @( 'dir1', 'dir1\sub' )
     $fileNames = @( 'html.html', 'html2.html' )
@@ -794,7 +861,7 @@ Describe 'ProGetUniversalPackage.when whitelist includes items that need to be e
                                             -ThatExcludes 'html2.html','sub' `
                                             -HasRootItems 'dir1' `
                                             -HasFiles 'html.html' `
-                                            -NotHasFiles 'html2.html','sub' 
+                                            -NotHasFiles 'html2.html','sub'
 }
 
 Describe 'ProGetUniversalPackage.when paths don''t exist' {
@@ -808,7 +875,7 @@ Describe 'ProGetUniversalPackage.when paths don''t exist' {
                                             -ThatIncludes '*' `
                                             -ShouldFailWithErrorMessage '(don''t|does not) exist' `
                                             -ShouldNotCreatePackage `
-                                            -ErrorAction SilentlyContinue 
+                                            -ErrorAction SilentlyContinue
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items' {
@@ -824,7 +891,7 @@ Describe 'ProGetUniversalPackage.when including third-party items' {
                                             -HasFiles 'html.html' `
                                             -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
-                                            -HasThirdPartyFile 'thirdparty.txt' 
+                                            -HasThirdPartyFile 'thirdparty.txt'
 }
 
 foreach( $parameterName in @( 'Name', 'Description' ) )
@@ -835,7 +902,7 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
                         Name = 'Name';
                         Include = 'Include';
                         Description = 'Description';
-                        Path = 'Path' 
+                        Path = 'Path'
                       }
         $parameter.Remove($parameterName)
 
@@ -902,7 +969,7 @@ Describe 'ProGetUniversalPackage.when application root isn''t the root of the re
                                             -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                                             -HasThirdPartyFile 'thirdparty.txt' `
-                                            -FromSourceRoot 'app' 
+                                            -FromSourceRoot 'app'
 }
 
 Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
@@ -914,12 +981,12 @@ Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
 
     $Global:Error.Clear()
 
-    $parameter = @{ 
-                    Name = 'fubar' ; 
-                    Description = 'fubar'; 
-                    Include = 'fubar'; 
-                    Path = '.'; 
-                    ThirdPartyPath = 'fubar' 
+    $parameter = @{
+                    Name = 'fubar' ;
+                    Description = 'fubar';
+                    Include = 'fubar';
+                    Path = '.';
+                    ThirdPartyPath = 'fubar'
                     SourceRoot = 'app';
                 }
 
@@ -932,7 +999,7 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path' {
     Init
     $file = 'project.json'
     $directory = 'relative'
-    $path = ('{0}\{1}' -f ($directory, $file))    
+    $path = ('{0}\{1}' -f ($directory, $file))
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $path -HasRootItems $path
@@ -952,8 +1019,8 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path with 
 Describe 'ProGetUniversalPackage.when including third-party items with override syntax' {
     Init
     GivenARepositoryWithItems 'dir1\thirdparty.txt', 'app\thirdparty\none of your business', 'app\fourthparty\none of your business'
-    # Ensures task handles either type of object so we can switch parsers easily. 
-    $thirdPartyDictionary = New-Object 'Collections.Generic.Dictionary[string,string]' 
+    # Ensures task handles either type of object so we can switch parsers easily.
+    $thirdPartyDictionary = New-Object 'Collections.Generic.Dictionary[string,string]'
     $thirdPartyDictionary['app\fourthparty'] = 'fourthparty'
     WhenPackaging -Paths 'dir1' -WithWhitelist @('thirdparty.txt') -WithThirdPartyPath @{ 'app\thirdparty' = 'thirdparty' },$thirdPartyDictionary
     ThenTaskSucceeds
@@ -1080,7 +1147,12 @@ Describe 'ProGetUniversalPackage.when customizing package version' {
     GivenPackageVersion '5.8.2'
     WhenPackaging -Paths 'my.file'
     ThenPackageShouldInclude 'my.file','version.json'
-    ThenUpackMetadataIs $defaultPackageName '5.8.2-rc.1' $defaultDescription
+    ThenUpackMetadataIs @{
+        'Name' = $defaultPackageName;
+        'Title' = $defaultPackageName;
+        'Description' = $defaultDescription;
+        'Version' = '5.8.2-rc.1';
+    }
     ThenVersionIs -Version '5.8.2' `
                   -PrereleaseMetadata 'rc.1' `
                   -BuildMetadata 'build.300' `
@@ -1096,7 +1168,12 @@ Describe 'ProGetUniversalPackage.when not customizing package version' {
     GivenARepositoryWithItems 'my.file'
     WhenPackaging -Paths 'my.file'
     ThenPackageShouldInclude 'my.file','version.json'
-    ThenUpackMetadataIs $defaultPackageName $context.Version.SemVer2NoBuildMetadata.ToString() $defaultDescription
+    ThenUpackMetadataIs @{
+        'Name' = $defaultPackageName;
+        'Title' = $defaultPackageName;
+        'Description' = $defaultDescription;
+        'Version' = $context.Version.SemVer2NoBuildMetadata.ToString();
+    }
     ThenVersionIs -Version '1.2.3' `
                   -PrereleaseMetadata 'rc.1' `
                   -BuildMetadata 'build.300' `
@@ -1104,4 +1181,73 @@ Describe 'ProGetUniversalPackage.when not customizing package version' {
                   -SemVer1 '1.2.3-rc1' `
                   -SemVer2NoBuildMetadata '1.2.3-rc.1'
     ThenTaskSucceeds
+}
+
+Describe 'ProGetUniversalPackage.when Name property is in invalid format' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    WhenPackaging -WithPackageName 'this@is an invalid+name!' -Path 'my.file' -ErrorAction SilentlyContinue
+    ThenTaskFails '"Name"\ property\ is invalid'
+}
+
+Describe 'ProGetUniversalPackage.when given ManifestProperties' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    GivenManifestProperties @{
+        '_CustomMetadata' = @{
+            'SomethingCustom' = 'Fancy custom metadata'
+        }
+    }
+    WhenPackaging -WithPackageName 'NameTaskProperty' -WithDescription 'DescriptionTaskProperty' -Path 'my.file'
+    ThenPackageShouldInclude 'my.file'
+    ThenUpackMetadataIs @{
+        'Name' = 'NameTaskProperty'
+        'Description' = 'DescriptionTaskProperty'
+        'Title' = 'NameTaskProperty'
+        'Version' = '1.2.3-rc.1'
+        '_CustomMetadata' = @{
+            'SomethingCustom' = 'Fancy custom metadata'
+        }
+    }
+    ThenTaskSucceeds
+}
+
+Describe 'ProGetUniversalPackage.when given ManifestProperties that contain Name, Description, and Version task properties' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    GivenManifestProperties @{
+        'Name' = 'AwesomePackageName'
+        'Description' = 'CoolDescription'
+        'Version' = '0.0.0'
+        '_CustomMetadata' = @{
+            'SomethingCustom' = 'Fancy custom metadata'
+        }
+    }
+    WhenPackaging -Path 'my.file' -ErrorAction SilentlyContinue
+    ThenTaskFails 'This property cannot be manually defined in "ManifestProperties"'
+}
+
+Describe 'ProGetUniversalPackage.when missing required properties' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWithItems 'my.file'
+    GivenManifestProperties @{
+        '_CustomMetadata' = @{
+            'SomethingCustom' = 'Fancy custom metadata'
+        }
+    }
+    WhenPackaging -WithPackageName 'AwesomePackageName' -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
+    ThenTaskFails 'Property ''Description'' is mandatory'
+}
+
+Describe 'ProGetUniversalPackage.when Robocopy command fails' {
+    Init
+    GivenBuildVersion '1.2.3-rc.1+build.300'
+    GivenARepositoryWIthItems 'dir1\subdir\file.txt'
+    GivenRobocopyFails
+    WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt" -ErrorAction SilentlyContinue
+    ThenTaskFails 'Robocopy failed with exit code'
 }

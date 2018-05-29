@@ -1,5 +1,5 @@
 
-BuildTasks:
+Build:
 - MSBuild:
     Path:
     - NUnit2FailingTest\*.sln

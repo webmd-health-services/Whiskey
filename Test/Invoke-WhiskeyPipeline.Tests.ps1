@@ -256,11 +256,11 @@ function WhenRunningPipeline
 
 Describe 'Invoke-WhiskeyPipeline.when running an unknown task' {
     GivenWhiskeyYmlBuildFile -Yaml @'
-BuildTasks:
+Build:
     - FubarSnafu:
         Path: whiskey.yml
 '@
-    WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
+    WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenThrewException 'not\ exist'
 }
@@ -269,14 +269,14 @@ Describe 'Invoke-WhiskeyPipeline.when a task fails' {
     $project = 'project.csproj'
     $assembly = 'assembly.dll'
     GivenWhiskeyYmlBuildFile -Yaml @'
-BuildTasks:
+Build:
 - PowerShell:
     Path: idonotexist.ps1
 - NUnit2:
     Path: assembly.dll
 '@
     GivenFailingMSBuildProject $project
-    WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
+    WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
     ThenPipelineFailed
     ThenDotNetProjectsCompilationFailed -ConfigurationPath $whiskeyYmlPath -ProjectName $project
     ThenNUnitTestsNotRun
@@ -284,12 +284,12 @@ BuildTasks:
 
 Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - PublishNodeModule
 - PublishNodeModule:
 "@
     Mock -CommandName 'Publish-WhiskeyNodeModule' -Verifiable -ModuleName 'Whiskey'
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     
     It 'should still call the task' {
@@ -299,11 +299,11 @@ BuildTasks:
 
 Describe 'Invoke-WhiskeyPipeline.when task has a default property' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - Exec: This is a default property
 "@
     Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'This is a default property' }
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
 
     It 'should call the task with the default property' {
@@ -313,11 +313,11 @@ BuildTasks:
 
 Describe 'Invoke-WhiskeyPipeline.when task has a default property with quoted arguments' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - Exec: robocopy.exe "C:\Source File" 'C:\Destination\File' /MIR
 "@
     Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" ''C:\Destination\File'' /MIR' }
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
 
     It 'should call the task with the default property' {
@@ -327,11 +327,11 @@ BuildTasks:
 
 Describe 'Invoke-WhiskeyPipeline.when task has a default property when entire string is quoted' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - Exec: 'robocopy.exe "C:\Source File" C:\Destination\File /MIR'
 "@
     Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" C:\Destination\File /MIR' }
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
 
     It 'should call the task with the default property' {
@@ -342,46 +342,46 @@ BuildTasks:
 Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
     GivenWhiskeyYmlBuildFile @"
 "@
-    WhenRunningPipeline 'BuildTasks' -ErrorAction SilentlyContinue
+    WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
     ThenPipelineFailed
-    ThenThrewException 'Pipeline\ ''BuildTasks''\ does\ not\ exist'
+    ThenThrewException 'Pipeline\ ''Build''\ does\ not\ exist'
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and not a YAML object' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks
+Build
 "@
-    WhenRunningPipeline 'BuildTasks' 
+    WhenRunningPipeline 'Build' 
     ThenPipelineSucceeded
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
 
 Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and is a YAML object' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 "@
-    WhenRunningPipeline 'BuildTasks' 
+    WhenRunningPipeline 'Build' 
     ThenPipelineSucceeded
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - PowerShell:
     Path: somefile.ps1
 "@
     GivenPlugins
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
 
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
     GivenWhiskeyYmlBuildFile @"
-BuildTasks:
+Build:
 - PowerShell:
     Path: somefile.ps1
 - MSBuild:
@@ -391,7 +391,7 @@ BuildTasks:
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
 
-    WhenRunningPipeline 'BuildTasks'
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
     ThenPluginsRan -ForTaskNamed 'MSBuild' -Times 0
@@ -432,7 +432,7 @@ foreach( $task in $tasks )
 
         Mock -CommandName $functionName -ModuleName 'Whiskey'
 
-        $pipelineName = 'BuildTasks'
+        $pipelineName = 'Build'
         $whiskeyYml = (@'
 {0}:
 - {1}:

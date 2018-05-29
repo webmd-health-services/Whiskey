@@ -6,20 +6,7 @@ function Invoke-PowershellInstall
     param(
         $ForModule,
         $Version,
-        $ActualVersion,
-
-        [Parameter(Mandatory=$true,ParameterSetName='ForRealsies')]
-        [Switch]
-        # Really do the install. Don't fake it out.
-        $ForRealsies,
-
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell5')]
-        [Switch]
-        $LikePowerShell5,
-
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
-        [Switch]
-        $LikePowerShell4
+        $ActualVersion
     )
 
     if( -not $ActualVersion )
@@ -27,80 +14,9 @@ function Invoke-PowershellInstall
         $ActualVersion = $Version
     }
 
-    if( -not ($PSCmdlet.ParameterSetName -eq 'ForRealsies') )
-    {
-        $ForRealsies = $false
-    }
-
-    if( -not $ForRealsies )
-    {
-        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell5' )
-        {
-            $LikePowerShell4 = $false
-        }
-        if( $PSCmdlet.ParameterSetName -eq 'LikePowerShell4' )
-        {
-            $LikePowerShell5 = $false
-        }
-
-        Mock -CommandName 'Find-Module' -ModuleName 'Whiskey' -MockWith {
-            return $module = @(
-                                 [pscustomobject]@{
-                                                Version = [Version]$Version
-                                                Repository = 'Repository'
-                                            }
-                                 [pscustomobject]@{
-                                                Version = '0.1.1'
-                                                Repository = 'Repository'
-                                            }
-                              )
-        }
-
-        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey' -MockWith {
-            $moduleRoot = Join-Path -Path (Get-Item -Path 'TestDrive:').FullName -ChildPath 'Modules'
-            if( $LikePowerShell4 )
-            {
-                $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $ForModule
-            }
-            elseif( $LikePowerShell5 )
-            {
-                $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $ForModule
-                $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $ActualVersion
-            }
-            New-Item -Path $moduleRoot -ItemType 'Directory' | Out-Null
-            $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $ForModule)
-            New-ModuleManifest -Path $moduleManifestPath -ModuleVersion $ActualVersion
-        }.GetNewClosure()
-    }
-
     $optionalParams = @{ }
     $Global:Error.Clear()
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
-
-    if( -not $ForRealsies )
-    {
-        It 'should download the module' {
-            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-                #$DebugPreference = 'Continue';
-                Write-Debug -Message ('Name             expected  {0}' -f $ForModule)
-                Write-Debug -Message ('                 actual    {0}' -f $Name)
-                Write-Debug -Message ('RequiredVersion  expected  {0}' -f $ActualVersion)
-                Write-Debug -Message ('                 actual    {0}' -f $RequiredVersion)
-                Write-Debug -Message ('Repository       expected  {0}' -f 'Repository')
-                Write-Debug -Message ('                 actual    {0}' -f $Repository)
-                $Name -eq $ForModule -and `
-                $RequiredVersion -eq $ActualVersion -and `
-                $Repository -eq 'Repository'
-            }
-        }
-
-        It 'should put the modules in $DownloadRoot\Modules' {
-            Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -ParameterFilter {
-                $Path -eq (Join-Path -Path $TestDrive.FullName -ChildPath 'Modules')
-            }
-        }
-        return
-    }
 
     Context 'the module' {
         It 'should exist' {
@@ -109,7 +25,9 @@ function Invoke-PowershellInstall
 
         It 'should be importable' {
             $errors = @()
-            Import-Module -Name $result -PassThru -ErrorVariable 'errors' | Remove-Module
+            Start-Job {
+                Import-Module -Name $using:result
+            } | Wait-Job | Receive-Job -ErrorVariable 'errors'
             $errors | Should BeNullOrEmpty
         }
 
@@ -185,43 +103,39 @@ Describe 'Install-WhiskeyTool.when installing an already installed NuGet package
 }
 
 Describe 'Install-WhiskeyTool.when run by developer/build server' {
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
 }
 
-Describe 'Install-WhiskeyTool.when installing an already installed module' {
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and it''s already installed' {
     $Global:Error.Clear()
 
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15.0' -ForRealsies
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
 
     it 'should not write any errors' {
         $Global:Error | Should BeNullOrEmpty
     }
 }
 
-Describe 'Install-WhiskeyTool.when omitting BUILD number' {
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.15' -ActualVersion '0.15.0' -ForRealsies
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and omitting BUILD number' {
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.1'
 }
 
-Describe 'Install-WhiskeyTool.when omitting Version' {
-    $bladeModule = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Blade'
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '' -ActualVersion $bladeModule.Version -ForRealsies
+Describe 'Install-WhiskeyTool.when installing a PowerShell module omitting Version' {
+    $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Whiskey'
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '' -ActualVersion $module.Version
 }
 
-Describe 'Install-WhiskeyTool.when using wildcard version' {
-    $bladeModule = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Blade'
-    Invoke-PowershellInstall -ForModule 'Blade' -Version '0.*' -ActualVersion $bladeModule.Version -ForRealsies
+Describe 'Install-WhiskeyTool.when installing a PowerShell module using wildcard version' {
+    $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Whiskey'
+    Invoke-PowershellInstall -ForModule 'whiskey' -Version '0.*' -ActualVersion $module.Version
 }
 
-Describe 'Install-WhiskeyTool.when installing a module under PowerShell 4' {
-    Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell4
+Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
 }
 
-Describe 'Install-WhiskeyTool.when installing a module under PowerShell 5' {
-    Invoke-PowershellInstall -ForModule 'Fubar' -Version '1.3.3' -LikePowerShell5
-}
-
-Describe 'Install-WhiskeyTool.when version of module doesn''t exist' {
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and the version doesn''t exist' {
     $Global:Error.Clear()
 
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
@@ -236,7 +150,7 @@ Describe 'Install-WhiskeyTool.when version of module doesn''t exist' {
     }
 }
 
-Describe 'Install-WhiskeyTool.for non-existent module when version parameter is empty' {
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and version parameter is empty' {
     $Global:Error.Clear()
 
     $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue

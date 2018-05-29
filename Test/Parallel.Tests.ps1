@@ -283,7 +283,7 @@ if( $cred.GetNetworkCredential().Password -ne 'cred' )
 exit 0
 '@
     $yaml = @'
-BuildTasks:
+Build:
 - TaskDefaults:
     PowerShell:
         Path: one.ps1

@@ -132,7 +132,7 @@ function Invoke-WhiskeyNUnit3Task
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
 
-            BuildTasks:
+            Build:
             - NUnit3:
                 Path:
                 - Assembly.dll

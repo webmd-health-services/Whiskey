@@ -23,14 +23,14 @@ function Invoke-WhiskeyNpmPrune
 
     ## Example 1
         
-        BuildTasks:
+        Build:
         - NpmPrune
     
     This example demonstrates running `npm prune` from the same directory as the build's `whiskey.yml` file. The node module's `package.json` file exists in the same directory as the `whiskey.yml` file.
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NpmPrune:
             WorkingDirectory: src\node-module-root
 

@@ -27,7 +27,7 @@ function Publish-WhiskeyBuildMasterPackage
 
     ### Example 1
 
-        PublishTasks:
+        Publish:
         - PublishBuildMasterPackage:
             ApplicationName: TestApplication
             ReleaseName: ProdRelease
@@ -38,7 +38,7 @@ function Publish-WhiskeyBuildMasterPackage
 
     ### Example 2
 
-        PublishTasks:
+        Publish:
         - PublishBuildMasterPackage:
             ApplicationName: TestApplication
             ReleaseName: ProdRelease
@@ -51,7 +51,7 @@ function Publish-WhiskeyBuildMasterPackage
 
     ### Example 3
 
-        PublishTasks:
+        Publish:
         - PublishBuildMasterPackage:
             ApplicationName: TestApplication
             ReleaseName: ProdRelease
