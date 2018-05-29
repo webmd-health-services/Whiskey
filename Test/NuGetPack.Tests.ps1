@@ -223,7 +223,7 @@ function ThenPackageNotCreated
     }
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package with an invalid project' {
+Describe 'NuGetPack.when creating a NuGet package with an invalid project' {
     InitTest
     GivenABuiltLibrary
     GivenPath -Path 'I\do\not\exist.csproj'
@@ -232,7 +232,7 @@ Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package with an invalid 
     ThenTaskThrowsAnException 'does not exist'
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package' {
+Describe 'NuGetPack.when creating a NuGet package' {
     InitTest
     GivenABuiltLibrary
     WhenRunningNuGetPackTask
@@ -240,7 +240,7 @@ Describe 'New-WhiskeyNuGetPackage.when creating a NuGet package' {
     ThenPackageCreated
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating a symbols NuGet package' {
+Describe 'NuGetPack.when creating a symbols NuGet package' {
     InitTest
     GivenABuiltLibrary
     WhenRunningNuGetPackTask -Symbols
@@ -248,7 +248,7 @@ Describe 'New-WhiskeyNuGetPackage.when creating a symbols NuGet package' {
     ThenPackageCreated -Symbols
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating a package built in release mode' {
+Describe 'NuGetPack.when creating a package built in release mode' {
     InitTest
     GivenABuiltLibrary -InReleaseMode
     GivenRunByBuildServer
@@ -257,7 +257,7 @@ Describe 'New-WhiskeyNuGetPackage.when creating a package built in release mode'
     ThenPackageCreated
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating multiple packages for publishing' {
+Describe 'NuGetPack.when creating multiple packages for publishing' {
     InitTest
     GivenABuiltLibrary
     GivenPath @( $projectName, $projectName )
@@ -266,7 +266,7 @@ Describe 'New-WhiskeyNuGetPackage.when creating multiple packages for publishing
     ThenTaskSucceeds
 }
 
-Describe 'New-WhiskeyNuGetPackage.when creating a package using a specifc version of NuGet' {
+Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
     InitTest
     GivenABuiltLibrary
     GivenVersion '3.5.0'
