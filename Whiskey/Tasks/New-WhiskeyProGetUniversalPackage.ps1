@@ -222,7 +222,7 @@ function New-WhiskeyProGetUniversalPackage
                         if ($robocopyOutput)
                         {
                             $robocopyOutput = $robocopyOutput.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
-                            $robocopyOutput | Write-WhiskeyVerbose -Context $TaskContext
+                            $robocopyOutput | Write-WhiskeyInfo -Context $TaskContext
                         }
 
                         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
