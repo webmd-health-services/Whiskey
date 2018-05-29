@@ -154,6 +154,7 @@
 * Added "Exclude" property to "Pester4" task for filtering out tests that match any wildcards in the task's "Path" property.
 * Default "BuildTasks" and "PublishTasks" pipelines have been renamed to "Build" and "Publish". Backwards compatibility with the deprecated "BuildTasks" and "PublishTasks" pipelines will be removed in the next major version of Whiskey.
 * Added "SetVariableFromXML" task that creates Whiskey variables from values in XML files.
+* Added "ManifestProperties" property to "ProGetUniversalPackageTask" for setting custom upack.json metadata.
 '@
         } # End of PSData hashtable
 
