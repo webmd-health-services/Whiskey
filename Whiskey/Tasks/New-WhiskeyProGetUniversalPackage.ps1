@@ -218,7 +218,7 @@ function New-WhiskeyProGetUniversalPackage
                     Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude -LogPath $robocopyOutputPath | Out-Null
                     if( $LASTEXITCODE -ge 8 )
                     {
-                        $robocopyOutput = Get-Content -Path $robocopyOutputPath -Raw
+                        $robocopyOutput = Get-Content -Path $robocopyOutputPath -Raw -ErrorAction Ignore
                         if ($robocopyOutput)
                         {
                             $robocopyOutput = $robocopyOutput.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
