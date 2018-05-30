@@ -228,6 +228,8 @@ function New-WhiskeyProGetUniversalPackage
                         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
                     }
 
+                    Remove-Item -Path $robocopyOutputPath -Force
+
                     # Get rid of empty directories. Robocopy doesn't sometimes.
                     Get-ChildItem -Path $destination -Directory -Recurse |
                         Where-Object { -not ($_ | Get-ChildItem) } |
