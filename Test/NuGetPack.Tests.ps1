@@ -69,6 +69,16 @@ function GivenABuiltLibrary
     #Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
 }
 
+function GivenFile
+{
+    param(
+        $Name,
+        $Content
+    )
+
+    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Name) 
+}
+
 function GivenRunByBuildServer
 {
     $script:byBuildServer = $true
@@ -103,7 +113,9 @@ function WhenRunningNuGetPackTask
     [CmdletBinding()]
     param(
         [Switch]
-        $Symbols
+        $Symbols,
+
+        $Property
     )
 
     $byItDepends = @{}
@@ -137,6 +149,11 @@ function WhenRunningNuGetPackTask
         $taskParameter['Version'] = $version
     }
 
+    if( $Property )
+    {
+        $taskParameter['Properties'] = $Property
+    }
+
     $optionalParams = @{ }
     $script:threwException = $false
     try
@@ -148,6 +165,25 @@ function WhenRunningNuGetPackTask
     {
         $script:threwException = $true
         Write-Error $_
+    }
+}
+
+function ThenFile
+{
+    param(
+        $InPackage,
+        $FileName,
+        $Is
+    )
+
+    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $packagePath = Join-Path -Path $packagePath -ChildPath $InPackage
+
+    $extractDir = Join-Path -Path $TestDrive.FullName -ChildPath '.output\extracted'
+    [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractDir)
+
+    It ('should have a "{0}" file' -f $FileName) {
+        Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
     }
 }
 
@@ -188,12 +224,14 @@ function ThenTaskSucceeds
 function ThenPackageCreated
 {
     param(
+        $Name = 'NUnit2PassingTest',
+
         [Switch]
         $Symbols
     )
 
-    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.symbols.nupkg' -f $Context.Version.SemVer1)
-    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('NUnit2PassingTest.{0}.nupkg' -f $Context.Version.SemVer1)
+    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Context.Version.SemVer1)
+    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Context.Version.SemVer1)
     if( $Symbols )
     {
         It ('should create NuGet symbols package') {
@@ -274,4 +312,54 @@ Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
     ThenSpecificNuGetVersionInstalled
     ThenTaskSucceeds
     ThenPackageCreated
+}
+
+Describe 'NuGetPack.when creating package from .nuspec file' {
+    InitTest
+    GivenFile 'package.nuspec' @'
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>package</id>
+    <version>$Version$</version>
+    <authors>$Authors$</authors>
+    <description>$Description$</description>
+  </metadata>
+</package>
+'@
+    GivenPath 'package.nuspec'
+    WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
+    ThenPackageCreated 'package'
+    ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>package</id>
+    <version>1.2.3</version>
+    <authors>Fizz Author</authors>
+    <owners>Fizz Author</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Buzz Desc</description>
+  </metadata>
+</package>
+"@
+}
+
+Describe 'NuGetPack.when Properties property is invalid' {
+    InitTest
+    GivenFile 'package.nuspec' @'
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>package</id>
+    <version>$Version$</version>
+    <authors>$Authors$</authors>
+    <description>$Description$</description>
+  </metadata>
+</package>
+'@
+    GivenPath 'package.nuspec'
+    WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
+    ThenPackageNotCreated
+    ThenTaskThrowsAnException 'Properties:\ Property\ is\ invalid'
 }

@@ -13,10 +13,13 @@ DESCRIPTION
 
     The task passes the version of the current build to the nuget.exe executable's `-Version` parameter.
 
+    Nuspec files allow token replacements in nodes under its `metadata` element. Tokens follow the pattern `$TOKEN_NAME$`. If elements under the `metadata` element in your .nuspec file contains tokens, you pass the value of those tokens to the `Properties` property.
+
 PROPERTIES
     * Path (***mandatory***): the path to the .nuspec or .csproj file to package. Wildcards and multiple paths supported. `nuget.exe pack` is run for each path.
     * Symbols: whether or not to create a symbols package. If this is `true`, uses the nuget.exe executable's `-Symbols` switch.
     * Version: the version of nuget.exe to use to publish. The default is to use the latest version of NuGet.
+    * Properties: name/value pairs to pass to the pack command's `-Properties` parameter. Each name/value pair is passed as a separate parameter.
 
 EXAMPLES
 
@@ -37,3 +40,15 @@ EXAMPLES
           Symbols: true
 
     Demonstrates how to create a symbols package.
+
+
+    ## Example 3
+
+      Build:
+      - NuGetPack:
+          Path: Assembly\Whiskey\Whiskey.nuspec
+          Properties:
+            ReleaseNotes: Release notes.
+            Tags: "tag1 tag2 tag3"
+
+    Demonstrates how to pass properties to the pack command's `-Properties` parameter. Any $-delimited tokens in element in a .nupsec file under the `metadata` element would get replaced with the values passed here. In this case, token `$ReleaseNotes$` would get replaced with `Release notes.` and token `$Tags$` would get replaced with `tag1 tag2 tag3`.
