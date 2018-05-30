@@ -1,5 +1,5 @@
 TOPIC
-    about_Whiskey_about_Whiskey_SetVariableFromPowerShellDataFile_Task
+    about_Whiskey_SetVariableFromPowerShellDataFile_Task
 
 DESCRIPTION
     The `SetVariableFromPowerShellDataFile` task creates variables from data in a PowerShell data file (e.g. a .psd1 file, a module manifest, etc.). It uses the `Import-PowerShellDataFile` cmdlet, which was introduced in PowerShell 5. Set the `Path` property to the path to the PowerShell data file/manifest to read. 
