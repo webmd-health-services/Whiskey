@@ -15,11 +15,17 @@ DESCRIPTION
 
     Nuspec files allow token replacements in nodes under its `metadata` element. Tokens follow the pattern `$TOKEN_NAME$`. If elements under the `metadata` element in your .nuspec file contains tokens, you pass the value of those tokens to the `Properties` property.
 
+    Since nuget.exe doesn't return any exit codes that denote success or failure, the task fails if an expected .nupkg was not created in the output directory. It looks for a filename with the same base name as the source file, plus the version, plus a "-symbols" switch (if the "Symbols" property is "true"). If your package's ID doesn't match the source file name (without extension), set the "PackageID" property to your package's ID.
+
+    Use the "PackageVersion" property to customize the version of your package. The default is the `WHISKEY_SEMVER1_VERSION` variable.
+
 PROPERTIES
     * Path (***mandatory***): the path to the .nuspec or .csproj file to package. Wildcards and multiple paths supported. `nuget.exe pack` is run for each path.
     * Symbols: whether or not to create a symbols package. If this is `true`, uses the nuget.exe executable's `-Symbols` switch.
     * Version: the version of nuget.exe to use to publish. The default is to use the latest version of NuGet.
     * Properties: name/value pairs to pass to the pack command's `-Properties` parameter. Each name/value pair is passed as a separate parameter.
+    * PackageID: the package ID. The default is the Path property's file name, without its extension. This property is used to check that the .nupkg file was created by nuget.exe.
+    * PackageVersion: the version of the package to use. The defalt is the value of the `WHISKEY_SEMVER1_VERSION` variable.
 
 EXAMPLES
 

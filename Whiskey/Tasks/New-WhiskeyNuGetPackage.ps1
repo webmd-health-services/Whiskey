@@ -64,8 +64,16 @@ function New-WhiskeyNuGetPackage
 
     foreach ($path in $paths)
     {
-        $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
-        $packageVersion = $TaskContext.Version.SemVer1
+        $projectName = $TaskParameter['PackageID']
+        if( -not $projectName )
+        {
+            $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
+        }
+        $packageVersion = $TaskParameter['PackageVersion']
+        if( -not $packageVersion )
+        {
+            $packageVersion = $TaskContext.Version.SemVer1
+        }
                     
         # Create NuGet package
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext

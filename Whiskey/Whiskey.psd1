@@ -150,6 +150,8 @@
 # 0.35.0
 
 * Added "Properties" property to "NuGetPack" task so that tokens inside .nuspec files can be replaced. The "Properties" property should be a name/value mapping. Each name/value is passed to nuget.exe pack command's "-Properties" parameter.
+* Added "PackageID" property to "NuGetPack" task to handle situations where a package's ID doesn't match the source .nuspec/.csproj file.
+* Added "PackageVersion" property to "NuGetPack" task to allow customizing the package's version number.
 '@
         } # End of PSData hashtable
 

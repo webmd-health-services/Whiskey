@@ -115,7 +115,11 @@ function WhenRunningNuGetPackTask
         [Switch]
         $Symbols,
 
-        $Property
+        $Property,
+
+        $ID,
+
+        $PackageVersion
     )
 
     $byItDepends = @{}
@@ -152,6 +156,16 @@ function WhenRunningNuGetPackTask
     if( $Property )
     {
         $taskParameter['Properties'] = $Property
+    }
+
+    if( $PackageVersion )
+    {
+        $taskParameter['PackageVersion'] = $PackageVersion
+    }
+
+    if( $ID )
+    {
+        $taskParameter['PackageID'] = $ID
     }
 
     $optionalParams = @{ }
@@ -226,12 +240,14 @@ function ThenPackageCreated
     param(
         $Name = 'NUnit2PassingTest',
 
+        $Version = $context.Version.SemVer1,
+
         [Switch]
         $Symbols
     )
 
-    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Context.Version.SemVer1)
-    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Context.Version.SemVer1)
+    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Version)
+    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Version)
     if( $Symbols )
     {
         It ('should create NuGet symbols package') {
@@ -340,6 +356,70 @@ Describe 'NuGetPack.when creating package from .nuspec file' {
     <owners>Fizz Author</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Buzz Desc</description>
+  </metadata>
+</package>
+"@
+}
+
+Describe 'NuGetPack.when package ID is different than path' {
+    InitTest
+    GivenFile 'FileName.nuspec' @'
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>ID</id>
+    <title>Title</title>
+    <version>9.9.9</version>
+    <authors>Somebody</authors>
+    <description>Description</description>
+  </metadata>
+</package>
+'@
+    GivenPath 'FileName.nuspec'
+    WhenRunningNuGetPackTask -ID 'ID'
+    ThenPackageCreated 'ID'
+    ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>ID</id>
+    <version>1.2.3</version>
+    <title>Title</title>
+    <authors>Somebody</authors>
+    <owners>Somebody</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Description</description>
+  </metadata>
+</package>
+"@
+}
+
+Describe 'NuGetPack.when customizing version' {
+    InitTest
+    GivenFile 'package.nuspec' @'
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>package</id>
+    <version>9.9.9</version>
+    <authors>Somebody</authors>
+    <description>Description</description>
+  </metadata>
+</package>
+'@
+    GivenPath 'package.nuspec'
+    WhenRunningNuGetPackTask -PackageVersion '2.2.2'
+    ThenPackageCreated 'package' -Version '2.2.2'
+    ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>package</id>
+    <version>2.2.2</version>
+    <authors>Somebody</authors>
+    <owners>Somebody</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Description</description>
   </metadata>
 </package>
 "@
