@@ -937,7 +937,7 @@ Describe 'ProGetUniversalPackage.when path to package doesn''t exist' {
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* Path`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* Path`[0`] "{0}*" does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 Describe 'ProGetUniversalPackage.when path to third-party item doesn''t exist' {
@@ -951,7 +951,7 @@ Describe 'ProGetUniversalPackage.when path to third-party item doesn''t exist' {
     }
 
     It 'should mention path in error message' {
-        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] ''{0}*'' does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should BeLike ('* ThirdPartyPath`[0`] "{0}*" does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
     }
 }
 
