@@ -147,6 +147,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* Created "SetVariableFromPowerShellDataFile" task for creating variables from values in PowerShell data files (e.g. .psd1 files, module manifests, etc.).
 * Added `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
 '@
         } # End of PSData hashtable
