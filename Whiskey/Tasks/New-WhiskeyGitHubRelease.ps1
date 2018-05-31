@@ -1,18 +1,6 @@
 
 function New-WhiskeyGitHubRelease
 {
-    <#
-    .SYNOPSIS
-    
-
-    .DESCRIPTION
-    
-
-    .EXAMPLE
-    
-
-    
-    #>
     [CmdletBinding()]
     [Whiskey.Task('GitHubRelease')]
     param(
@@ -145,7 +133,7 @@ function New-WhiskeyGitHubRelease
         $releaseData['body'] = $TaskParameter['Description']
     }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release "{1}" "{2}" at commit "{3}".' -f $actionDescription,$TaskParameter['Name'],$TaskParameter['Tag'],$TaskContext.BuildMetadata.ScmCommitID)
+    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release "{1}" "{2}" at commit "{3}".' -f $actionDescription,$TaskParameter['Name'],$tag,$TaskContext.BuildMetadata.ScmCommitID)
     $release = Invoke-GitHubApi -Uri $createOrEditUri -Parameter $releaseData -Method $createOrEditMethod
     $release
 
@@ -188,7 +176,7 @@ function New-WhiskeyGitHubRelease
                 $contentType = $asset['ContentType']
                 if( -not $contentType )
                 {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $basePropertyName -Message ('Property "ContentType" is mandatory. It must be the media type of the asset/file to upload. For a list of acceptable types, see https://www.iana.org/assignments/media-types/media-types.xhtml.')
+                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $basePropertyName -Message ('Property "ContentType" is mandatory. It must be the "{0}" file''s media type. For a list of acceptable types, see https://www.iana.org/assignments/media-types/media-types.xhtml.' -f $assetPath)
                     continue
                 }
                 Invoke-GitHubApi -Method Post -Uri $uri -ContentType $asset['ContentType'] -InFile $assetPath
