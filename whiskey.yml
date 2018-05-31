@@ -9,6 +9,11 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
+- Pester4:
+    OnlyBy: Developer
+    Path: 
+    - Test\about_Whiskey_Tasks.Tests.ps1
+
 - Parallel:
     OnlyBy: BuildServer
     Queues:
