@@ -124,20 +124,35 @@ function New-WhiskeyGitHubRelease
     $release = Invoke-GitHubApi -Uri ('{0}/releases' -f $baseUri) -Parameter $releaseData -Method $createOrEditMethod
     $release
 
-    $assetIdx = 0
-    foreach( $asset in $TaskParameter['Assets'] )
+    if( $TaskParameter['Assets'] )
     {
-        $assetPath = $asset['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName ('Assets[{0}].Path' -f $assetIdx++) -PathType File
-        if( -not $assetPath )
+        $existingAssets = Invoke-GitHubApi -Uri $release.assets_url -Method Get
+
+        $assetIdx = 0
+        foreach( $asset in $TaskParameter['Assets'] )
         {
-            continue
+            $assetPath = $asset['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName ('Assets[{0}].Path' -f $assetIdx++) -PathType File
+            if( -not $assetPath )
+            {
+                continue
+            }
+
+            $assetName = $assetPath | Split-Path -Leaf
+            $assetLabel = $asset['Name']
+
+            $existingAsset = $existingAssets | Where-Object { $_ -and $_.name -eq $assetName }
+            if( $existingAsset )
+            {
+                Write-WhiskeyInfo -Context $TaskContext -Message ('Updating file "{0}".' -f $assetName)
+                Invoke-GitHubApi -Method Patch -Uri $existingAsset.url -Parameter @{ name = $assetName; label = $assetLabel }
+            }
+            else
+            {
+                $uri = $release.upload_url -replace '{[^}]+}$'
+                $uri = '{0}?name={1}&label={2}' -f $uri,[uri]::EscapeDataString($assetName),[uri]::EscapeDataString($assetLabel)
+                Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading file "{0}".' -f $assetPath)
+                Invoke-GitHubApi -Method Post -Uri $uri -ContentType $asset['ContentType'] -InFile $assetPath
+            }
         }
-
-        $assetName = $assetPath | Split-Path -Leaf
-
-        $uri = $release.upload_url -replace '{[^}]+}$'
-        $uri = '{0}?name={1}&label={2}' -f $uri,[uri]::EscapeDataString($assetName),[uri]::EscapeDataString($asset['Name'])
-        Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading file "{0}".' -f $assetPath)
-        Invoke-GitHubApi -Method Post -Uri $uri -ContentType $asset['ContentType'] -InFile $assetPath
     }
 }

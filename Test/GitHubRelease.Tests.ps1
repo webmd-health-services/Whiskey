@@ -16,9 +16,37 @@ function GivenApiKey
     $apiKeys[$Name] = $Value
 }
 
+function GivenAssets
+{
+    param(
+        $Asset
+    )
+
+    $assetJson = ConvertTo-Json -InputObject $Asset
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter { $Uri -like '*/releases/*/assets' } `
+         -MockWith ([scriptblock]::Create("'$assetJson' | ConvertFrom-Json"))
+}
+
+function GivenAssetUpdated
+{
+    param(
+        [Parameter(Mandatory=$true)]
+        $To
+    )
+
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
+}
+
 function GivenAssetUploaded
 {
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { $Uri -like '*/assets?*' }
+    param(
+        [Parameter(Mandatory=$true)]
+        $To
+    )
+
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
 }
 
 function GivenFile
@@ -217,10 +245,12 @@ Build:
     GivenReleaseDoesNotExist '0.0.0-rc.1'
     GivenReleaseCreated '
 {
-    "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}"
+    "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
+    "assets_url": "https://example.com/releases/0/assets"
 }
 '
-    GivenAssetUploaded
+    GivenAssets @( )
+    GivenAssetUploaded -To 'https://example.com/releases/0/assets'
     WhenRunningTask -OnCommit 'deadbee'
     ThenSecurityProtocol -HasFlag ([System.Net.SecurityProtocolType]::Tls12)
     ThenRequest -Should 'create release' `
@@ -242,8 +272,7 @@ Build:
                 -WithFile 'Whiskey.zip'
 }
 
-
-Describe 'GitHubRelease.when the release exists' {
+Describe 'GitHubRelease.when the release and asset already exist' {
     Init
     GivenApiKey 'github.com' 'fubarsnafu'
     GivenWhiskeyYml @'
@@ -260,10 +289,18 @@ Build:
     GivenFile 'Whiskey.zip'
     GivenReleaseExists '0.0.0-rc.1' '
 {
-    "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}"
+    "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
+    "assets_url": "https://example.com/releases/0/assets"
 }
 '
-    GivenAssetUploaded
+    GivenAssetUploaded -To 'https://example.com/releases/0/assets'
+    GivenAssets @(
+                    [pscustomobject]@{
+                        url = 'https://example.com/asset/9'
+                        name = 'Whiskey.zip'
+                    }
+                )
+    GivenAssetUpdated -To 'https://example.com/asset/9'
     WhenRunningTask -OnCommit 'deadbee'
     ThenSecurityProtocol -HasFlag ([System.Net.SecurityProtocolType]::Tls12)
     ThenRequest -Should 'edit release' `
@@ -276,9 +313,13 @@ Build:
     "target_commitish":  "deadbee"
 }
 '@
-    ThenRequest -Should 'upload asset' `
-                -ToUri 'https://api.github.com/webmd-health-services/Whiskey/releases/0/assets?name=Whiskey.zip&label=ZIP' `
-                -UsedMethod Post `
-                -AsContentType 'fubar/snafu' `
-                -WithFile 'Whiskey.zip'
+    ThenRequest -Should 'edit asset' `
+                -ToUri 'https://example.com/asset/9' `
+                -UsedMethod Patch `
+                -WithBody @'
+{
+    "name":  "Whiskey.zip",
+    "label":  "ZIP"
+}
+'@
 }
