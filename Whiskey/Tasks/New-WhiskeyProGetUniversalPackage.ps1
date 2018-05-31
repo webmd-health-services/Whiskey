@@ -104,7 +104,9 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties['version'] = $version.SemVer2NoBuildMetadata.ToString()
     }
 
-    $tempRoot = $TaskContext.Temp
+    $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath ('Temp.{0}.upack' -f $name)
+    New-Item -Path $tempRoot -ItemType 'Directory' | Out-Null
+
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
     New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-Null
 
@@ -227,8 +229,6 @@ function New-WhiskeyProGetUniversalPackage
 
                         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
                     }
-
-                    Remove-Item -Path $robocopyOutputPath -Force
 
                     # Get rid of empty directories. Robocopy doesn't sometimes.
                     Get-ChildItem -Path $destination -Directory -Recurse |
