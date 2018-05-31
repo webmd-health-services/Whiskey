@@ -94,14 +94,18 @@ function New-WhiskeyGitHubRelease
             $optionalParams['InFile'] = $InFile
         }
 
-	    try
-	    {
-		    Invoke-RestMethod -Uri $Uri -Method $Method -Headers $headers -ContentType $ContentType @optionalParams
-	    }
-	    catch
-	    {
+        try
+        {
+	        Invoke-RestMethod -Uri $Uri -Method $Method -Headers $headers -ContentType $ContentType @optionalParams
+        }
+        catch
+        {
+            if( $ErrorActionPreference -eq 'Ignore' )
+            {
+                $Global:Error.RemoveAt(0)
+            }
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('GitHub API call to "{0}" failed: {1}' -f $uri,$_)
-	    }
+        }
     }
 
     $tag = $TaskParameter['Tag']
@@ -110,14 +114,16 @@ function New-WhiskeyGitHubRelease
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Tag" is mandatory. It should be the tag to create in your repository for this release. This is usually a version number. We recommend using the `$(WHISKEY_SEMVER2_NO_BUILD_METADATA)` variable to use the version number of the current build.')
         return
     }
-    $release = Invoke-GitHubApi -Uri ('{0}/releases/tags/{1}' -f $baseUri,[uri]::EscapeUriString($tag)) -Method Get
+    $release = Invoke-GitHubApi -Uri ('{0}/releases/tags/{1}' -f $baseUri,[uri]::EscapeUriString($tag)) -Method Get -ErrorAction Ignore
 
     $createOrEditMethod = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
     $actionDescription = 'Creating'
+    $createOrEditUri = '{0}/releases' -f $baseUri
     if( $release )
     {
         $createOrEditMethod = [Microsoft.PowerShell.Commands.WebRequestMethod]::Patch
         $actionDescription = 'Updating'
+        $createOrEditUri = $release.url
     }
 
 	$releaseData = @{
@@ -140,7 +146,7 @@ function New-WhiskeyGitHubRelease
     }
 
     Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release "{1}" "{2}" at commit "{3}".' -f $actionDescription,$TaskParameter['Name'],$TaskParameter['Tag'],$TaskContext.BuildMetadata.ScmCommitID)
-    $release = Invoke-GitHubApi -Uri ('{0}/releases' -f $baseUri) -Parameter $releaseData -Method $createOrEditMethod
+    $release = Invoke-GitHubApi -Uri $createOrEditUri -Parameter $releaseData -Method $createOrEditMethod
     $release
 
     if( $TaskParameter['Assets'] )

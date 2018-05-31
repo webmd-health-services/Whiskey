@@ -77,7 +77,7 @@ function GivenReleaseDoesNotExist
         $Tag
     )
 
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'"))
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'")) -MockWith { throw 'Not Found!' }
 }
 
 function GivenReleaseExists
@@ -92,7 +92,7 @@ function GivenReleaseExists
          -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'")) `
          -MockWith ([scriptblock]::Create("'$Release' | ConvertFrom-Json"))
     Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' `
-         -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/releases' -and `$Method -eq 'Patch'")) `
+         -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/releases*' -and `$Method -eq 'Patch'")) `
          -MockWith ([scriptblock]::create("'$Release' | ConvertFrom-Json"))
 }
 
@@ -294,6 +294,7 @@ Build:
     GivenReleaseDoesNotExist '0.0.0-rc.1'
     GivenReleaseCreated '
 {
+    "url": "https://example.com/releases/0",
     "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
     "assets_url": "https://example.com/releases/0/assets"
 }
@@ -346,6 +347,7 @@ Build:
     GivenFile 'Whiskey2.zip'
     GivenReleaseExists '0.0.0-rc.1' '
 {
+    "url": "https://example.com/releases/0",
     "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
     "assets_url": "https://example.com/releases/0/assets"
 }
@@ -365,7 +367,7 @@ Build:
     WhenRunningTask -OnCommit 'deadbee'
     ThenSecurityProtocol -HasFlag ([System.Net.SecurityProtocolType]::Tls12)
     ThenRequest -Should 'edit release' `
-                -ToUri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' `
+                -ToUri 'https://example.com/releases/0' `
                 -UsedMethod Patch `
                 -AsContentType 'application/json' `
                 -WithBody @'
@@ -407,6 +409,7 @@ Build:
     GivenReleaseDoesNotExist '0.0.0-rc.1'
     GivenReleaseCreated '
 {
+    "url": "https://example.com/releases/0",
     "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
     "assets_url": "https://example.com/releases/0/assets"
 }
@@ -509,6 +512,7 @@ Build:
     GivenReleaseDoesNotExist '0.0.0-rc.1'
     GivenReleaseCreated '
 {
+    "url": "https://example.com/releases/0",
     "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
     "assets_url": "https://example.com/releases/0/assets"
 }
@@ -546,6 +550,7 @@ Build:
     GivenReleaseDoesNotExist '0.0.0-rc.1'
     GivenReleaseCreated '
 {
+    "url": "https://example.com/releases/0",
     "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}",
     "assets_url": "https://example.com/releases/0/assets"
 }
