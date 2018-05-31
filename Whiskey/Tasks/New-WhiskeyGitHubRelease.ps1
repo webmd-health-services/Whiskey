@@ -98,18 +98,29 @@ function New-WhiskeyGitHubRelease
     $release = Invoke-GitHubApi -Uri ('{0}/releases/tags/{1}' -f $baseUri,[uri]::EscapeUriString($tag)) -Method Get
 
     $createOrEditMethod = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
+    $actionDescription = 'Creating'
     if( $release )
     {
         $createOrEditMethod = [Microsoft.PowerShell.Commands.WebRequestMethod]::Patch
+        $actionDescription = 'Updating'
     }
 
 	$releaseData = @{
 			            tag_name         = $TaskParameter['Tag']
 			            target_commitish = $TaskContext.BuildMetadata.ScmCommitID
-			            name             = $TaskParameter['ReleaseName']
-			            body             = $TaskParameter['ReleaseNotes']
 		            }
 
+    if( $TaskParameter['Name'] )
+    {
+	    $releaseData['name'] = $TaskParameter['Name']
+    }
+
+    if( $TaskParameter['Description'] )
+    {
+        $releaseData['body'] = $TaskParameter['Description']
+    }
+
+    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release "{1}" "{2}" at commit "{3}".' -f $actionDescription,$TaskParameter['Name'],$TaskParameter['Tag'],$TaskContext.BuildMetadata.ScmCommitID)
     $release = Invoke-GitHubApi -Uri ('{0}/releases' -f $baseUri) -Parameter $releaseData -Method $createOrEditMethod
     $release
 
@@ -126,6 +137,7 @@ function New-WhiskeyGitHubRelease
 
         $uri = $release.upload_url -replace '{[^}]+}$'
         $uri = '{0}?name={1}&label={2}' -f $uri,[uri]::EscapeDataString($assetName),[uri]::EscapeDataString($asset['Name'])
+        Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading file "{0}".' -f $assetPath)
         Invoke-GitHubApi -Method Post -Uri $uri -ContentType $asset['ContentType'] -InFile $assetPath
     }
 }

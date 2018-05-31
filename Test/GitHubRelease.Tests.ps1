@@ -31,15 +31,6 @@ function GivenFile
     $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path)
 }
 
-function GivenReleaseDoesNotExist
-{
-    param(
-        $Tag
-    )
-
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'"))
-}
-
 function GivenReleaseCreated
 {
     param(
@@ -49,6 +40,31 @@ function GivenReleaseCreated
     Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' `
          -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/releases' -and `$Method -eq 'POST'")) `
          -MockWith ([scriptblock]::create("'$ExpectedContent' | ConvertFrom-Json"))
+}
+
+function GivenReleaseDoesNotExist
+{
+    param(
+        $Tag
+    )
+
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'"))
+}
+
+function GivenReleaseExists
+{
+    param(
+        $Tag,
+        $Release
+    )
+
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'")) `
+         -MockWith ([scriptblock]::Create("'$Release' | ConvertFrom-Json"))
+    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' `
+         -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/releases' -and `$Method -eq 'Patch'")) `
+         -MockWith ([scriptblock]::create("'$Release' | ConvertFrom-Json"))
 }
 
 function GivenWhiskeyYml
@@ -190,8 +206,8 @@ Build:
     ApiKeyID: github.com
     RepositoryName: webmd-health-services/Whiskey
     Tag: 0.0.0-rc.1
-    ReleaseName: My Release
-    ReleaseNotes: Release Notes
+    Name: My Release
+    Description: Release Notes
     Assets:
     - Path: Whiskey.zip
       ContentType: fubar/snafu
@@ -217,6 +233,47 @@ Build:
     "body":  "Release Notes",
     "tag_name":  "0.0.0-rc.1",
     "name":  "My Release"
+}
+'@
+    ThenRequest -Should 'upload asset' `
+                -ToUri 'https://api.github.com/webmd-health-services/Whiskey/releases/0/assets?name=Whiskey.zip&label=ZIP' `
+                -UsedMethod Post `
+                -AsContentType 'fubar/snafu' `
+                -WithFile 'Whiskey.zip'
+}
+
+
+Describe 'GitHubRelease.when the release exists' {
+    Init
+    GivenApiKey 'github.com' 'fubarsnafu'
+    GivenWhiskeyYml @'
+Build:
+- GitHubRelease:
+    ApiKeyID: github.com
+    RepositoryName: webmd-health-services/Whiskey
+    Tag: 0.0.0-rc.1
+    Assets:
+    - Path: Whiskey.zip
+      ContentType: fubar/snafu
+      Name: ZIP
+'@
+    GivenFile 'Whiskey.zip'
+    GivenReleaseExists '0.0.0-rc.1' '
+{
+    "upload_url": "https://api.github.com/webmd-health-services/Whiskey/releases/0/assets{?name,label}"
+}
+'
+    GivenAssetUploaded
+    WhenRunningTask -OnCommit 'deadbee'
+    ThenSecurityProtocol -HasFlag ([System.Net.SecurityProtocolType]::Tls12)
+    ThenRequest -Should 'edit release' `
+                -ToUri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' `
+                -UsedMethod Patch `
+                -AsContentType 'application/json' `
+                -WithBody @'
+{
+    "tag_name":  "0.0.0-rc.1",
+    "target_commitish":  "deadbee"
 }
 '@
     ThenRequest -Should 'upload asset' `
