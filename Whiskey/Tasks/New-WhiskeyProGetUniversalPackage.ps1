@@ -104,7 +104,7 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties['version'] = $version.SemVer2NoBuildMetadata.ToString()
     }
 
-    $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath ('Temp.{0}.upack' -f $name)
+    $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath 'upack'
     New-Item -Path $tempRoot -ItemType 'Directory' | Out-Null
 
     $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
