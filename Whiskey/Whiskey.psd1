@@ -150,6 +150,8 @@
 # 0.35.0
 
 * Created "SetVariableFromPowerShellDataFile" task for creating variables from values in PowerShell data files (e.g. .psd1 files, module manifests, etc.).
+* Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
+* Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
 '@
         } # End of PSData hashtable
 
