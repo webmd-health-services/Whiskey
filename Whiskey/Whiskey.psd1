@@ -149,6 +149,9 @@
             ReleaseNotes = @'
 # 0.35.0
 
+* Added "Properties" property to "NuGetPack" task so that tokens inside .nuspec files can be replaced. The "Properties" property should be a name/value mapping. Each name/value is passed to nuget.exe pack command's "-Properties" parameter.
+* Added "PackageID" property to "NuGetPack" task to handle situations where a package's ID doesn't match the source .nuspec/.csproj file.
+* Added "PackageVersion" property to "NuGetPack" task to allow customizing the package's version number.
 * Created "SetVariableFromPowerShellDataFile" task for creating variables from values in PowerShell data files (e.g. .psd1 files, module manifests, etc.).
 * Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
 * Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
