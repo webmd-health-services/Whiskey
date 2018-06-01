@@ -107,8 +107,7 @@ function GivenWhiskeyYml
 
 function Init
 {
-    $apiKeys = @{ }
-    $commit = $null
+    $script:apiKeys = @{ }
 }
 
 function ThenAssetNotUploadedTo
@@ -224,14 +223,14 @@ function ThenSecurityProtocol
     )
 
     It ('should enable Tls12'){
-        [System.Net.ServicePointManager]::SecurityProtocol.HasFlag($HasFlag) | Should -Be $true
+        [System.Net.ServicePointManager]::SecurityProtocol.HasFlag($HasFlag) | Should -BeTrue
     }
 }
 
 function ThenTaskFailed
 {
     It ('should fail') {
-        $failed | Should -Be $true
+        $failed | Should -BeTrue
     }
 }
 
@@ -258,7 +257,6 @@ function WhenRunningTask
             $parameter['Commitish'] = $OnCommit
         }
         Invoke-WhiskeyTask -TaskContext $context -Name 'GitHubRelease' -Parameter $parameter
-        $script:context = $context
 
         It ('should check if release exists') {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { $Uri -like ('*/releases/tags/{0}' -f $parameter['Tag']) }
