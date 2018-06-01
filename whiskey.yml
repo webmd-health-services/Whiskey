@@ -38,7 +38,7 @@ Build:
             - "*\\Test\\Invoke-WhiskeyPester4Task.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyPowerShell.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
-            - "*\\Test\\New-WhiskeyNuGetPackage.Tests.ps1"
+            - "*\\Test\\NuGetPack.Tests.ps1"
             - "*\\Test\\Parallel.Tests.ps1"
             - "*\\Test\\Publish-WhiskeyNodeModule.Tests.ps1"
             - "*\\Test\\Publish-WhiskeyNuGetPackage.Tests.ps1"
@@ -55,7 +55,7 @@ Build:
             - Test\Invoke-WhiskeyNpmInstall.Tests.ps1
             - Test\Invoke-WhiskeyPowerShell.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
-            - Test\New-WhiskeyNuGetPackage.Tests.ps1
+            - Test\NuGetPack.Tests.ps1
             - Test\Parallel.Tests.ps1
             - Test\Publish-WhiskeyNodeModule.Tests.ps1
             - Test\Publish-WhiskeyNuGetPackage.Tests.ps1
