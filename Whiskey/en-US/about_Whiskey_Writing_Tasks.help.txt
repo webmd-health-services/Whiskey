@@ -61,6 +61,8 @@ LONG DESCRIPTION
     * OnlyBy
     * ExceptBy
     * WorkingDirectory
+    * IfExists
+    * UnlessExists
 
     In other words, your task isn't allowed to have these properties.
 

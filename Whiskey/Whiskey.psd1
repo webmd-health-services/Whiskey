@@ -147,6 +147,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* Added "AllowMissingPackage" property to "PublishProGetUniversalPackage" task. Set this property to "true" to not fail a build if there are no universal packages to publish.
+* Added global "IfExists" and "UnlessExists" task properties for controlling if a task runs based on the existence of an item. You can use any PowerShell-supported path, e.g. env:ENV_NAME for environment variables, hklm:\path\to\key for registry keys, and path\to\file for files/directories. Relative paths are file system paths and are resolved from the directory of the build's whiskey.yml file or the task's working directory (given by its WorkingDirecotry property). Uses PowerShell's `Test-Path` cmdlet to determine if the path exists. Wildcards are supported.
 * Added `Properties` property to `NuGetPack` task so that tokens inside .nuspec files can be replaced. The `Properties` property should be a name/value mapping. Each name/value is passed to nuget.exe pack command's `-Properties` parameter.
 * Added `PackageID` property to `NuGetPack` task to handle situations where a package's ID doesn't match the source .nuspec/.csproj file.
 * Added `PackageVersion` property to `NuGetPack` task to allow customizing the package's version number.

@@ -75,3 +75,11 @@ LONG DESCRIPTION
       property will never run by a developer. Wildcards are supported.
     * `WorkingDirectory`: the directory in which the task should run. By 
       default, this is the directory of the whiskey.yml file.
+    * `IfExists`/`UnlessExists`: controls if a task runs if/unless an item 
+      exists. You can use any PowerShell-supported path, e.g. env:ENV_NAME
+      for environment variables, hklm:\path\to\key for registry keys, and
+      path\to\file for files/directories. Relative paths are file system paths
+      and are resolved from the directory of the build's whiskey.yml file or
+      the task's working directory (given by its WorkingDirecotry property).
+      Uses PowerShell's `Test-Path` cmdlet to determine if the path exists.
+      Wildcards are supported.

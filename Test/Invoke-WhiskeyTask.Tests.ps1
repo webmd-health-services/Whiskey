@@ -75,6 +75,24 @@ function GivenFailingMSBuildProject
     New-MSBuildProject -FileName $project -ThatFails
 }
 
+function GivenEnvironmentVariable
+{
+    param(
+        $Name
+    )
+
+    Set-Item -Path ('env:{0}' -f $Name) -Value 'somevalue'
+}
+
+function GivenFile
+{
+    param(
+        $Name
+    )
+
+    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Name) -ItemType 'File'
+}
+
 function GivenMockTask
 {
     param(
@@ -1025,6 +1043,88 @@ Describe 'Invoke-WhiskeyTask.when given ExceptDuring parameter' {
     {
         RemoveMockTask
     }
+}
+
+Describe 'Invoke-WhiskeyTask.when given IfExists parameter and environment variable exists' {
+    Init
+    GivenMockTask
+    GivenEnvironmentVariable 'fubar'
+    try
+    {
+        $TaskParameter = @{ 'IfExists' = 'env:fubar' }
+        WhenRunningTask 'MockTask' -Parameter $TaskParameter
+        ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+    }
+    finally
+    {
+        Remove-Item -Path 'env:fubar'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when given IfExists parameter and environment variable exists does not exist' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'IfExists' = 'env:snafu' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskNotRun 'MockTask'
+}
+
+Describe 'Invoke-WhiskeyTask.when given IfExists parameter and file exists' {
+    Init
+    GivenMockTask
+    GivenFile 'fubar'
+    $TaskParameter = @{ 'IfExists' = 'fubar' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+}
+
+Describe 'Invoke-WhiskeyTask.when given IfExists parameter and file does not exist' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'IfExists' = 'fubar' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskNotRun 'MockTask'
+}
+
+Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and environment variable exists' {
+    Init
+    GivenMockTask
+    GivenEnvironmentVariable 'fubar'
+    try
+    {
+        $TaskParameter = @{ 'UnlessExists' = 'env:fubar' }
+        WhenRunningTask 'MockTask' -Parameter $TaskParameter
+        ThenTaskNotRun 'MockTask'
+    }
+    finally
+    {
+        Remove-Item -Path 'env:fubar'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and environment variable exists does not exist' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'UnlessExists' = 'env:snafu' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+}
+
+Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and file exists' {
+    Init
+    GivenMockTask
+    GivenFile 'fubar'
+    $TaskParameter = @{ 'UnlessExists' = 'fubar' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskNotRun 'MockTask'
+}
+
+Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and file does not exist' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'UnlessExists' = 'fubar' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter
+    ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
 }
 
 Describe 'Invoke-WhiskeyTask.when given both OnlyDuring and ExceptDuring' {
