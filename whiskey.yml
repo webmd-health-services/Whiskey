@@ -9,6 +9,11 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
+- Pester4:
+    OnlyBy: Developer
+    Path: 
+    - Test\about_Whiskey_Tasks.Tests.ps1
+
 - Parallel:
     OnlyBy: BuildServer
     Queues:
@@ -82,6 +87,7 @@ Build:
             - Test\Invoke-WhiskeyMSBuild.Tests.ps1
             - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
             - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
+- Exec: Whiskey\bin\7-Zip\7z.exe a $(WHISKEY_OUTPUT_DIRECTORY)\Whiskey.zip .\Whiskey '-xr!*.pdb'
 
 Publish:
 - PublishPowerShellModule:
@@ -89,3 +95,20 @@ Publish:
     RepositoryUri: https://powershellgallery.com/
     Path: Whiskey
     ApiKeyID: PowerShellGallery
+- SetVariableFromPowerShellDataFile:
+    Path: Whiskey\Whiskey.psd1
+    Variables:
+        PrivateData:
+            PSData:
+                ReleaseNotes: RELEASE_NOTES
+- GitHubRelease:
+    RepositoryName: webmd-health-services/Whiskey
+    ApiKeyID: github.com
+    Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
+    Commitish: $(WHISKEY_SCM_COMMIT_ID)
+    Name: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
+    Description: $(RELEASE_NOTES)
+    Assets:
+    - Path: .output\Whiskey.zip
+      ContentType: application/zip
+      Name: Whiskey-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
