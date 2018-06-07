@@ -3,6 +3,13 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\Modules'
+if( -not (Test-Path -Path $testModulesRoot) )
+{
+    New-Item -Path $testModulesRoot -ItemType 'Directory'
+}
+Save-Module -Name 'Pester' -Path $testModulesRoot
+
 $context = $null
 $pesterPath = $null
 $version = $null
@@ -66,10 +73,22 @@ function New-WhiskeyPesterTestContext
         {
             New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
         }
-        $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
-        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
+        $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
+        Get-ChildItem -Path $sourceRoot |
+            ForEach-Object { robocopy $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) /MIR } | 
+            Out-Null
+        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
         return $context
     }
+}
+
+function GivenExclude
+{
+    param(
+        $Exclude
+    )
+
+    $taskParameter['Exclude'] = $Exclude
 }
 
 function GivenVersion
@@ -222,8 +241,7 @@ function ThenPesterShouldBeUninstalled
     {
         $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
         $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
-        $version = $latestPester.Version 
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
+        $script:Taskparameter['Version'] = $latestPester.Version 
     }
     else
     {
@@ -257,7 +275,8 @@ function ThenPesterShouldHaveRun
         $PassingCount
     )
     $reportsIn =  $script:context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
+    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
+                        Where-Object { $_.Name -match '^pester\+.{8}\..{3}\.xml$' }
     #check to see if we were supposed to run any tests.
     if( ($FailureCount + $PassingCount) -gt 0 )
     {
@@ -336,12 +355,14 @@ function ThenNoDurationReportPresent
 function ThenTestShouldCreateMultipleReportFiles
 {
     It 'should create multiple report files' {
-        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-00.xml' | Should Exist
-        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-01.xml' | Should Exist
+        Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
+            Measure-Object |
+            Select-Object -ExpandProperty 'Count' |
+            Should -Be 2
     }
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
+Describe 'Pester4.when running passing Pester tests' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
@@ -352,47 +373,42 @@ Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests' {
     ThenNoDurationReportPresent
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when running failing Pester tests' {
+Describe 'Pester4.when running failing Pester tests' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'FailingTests'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 0
     ThenTestShouldFail -failureMessage 'Pester tests failed'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when running multiple test scripts' {
+Describe 'Pester4.when running multiple test scripts' {
     Init
     GivenTestContext
     GivenPesterPath 'FailingTests','PassingTests'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when run multiple times in the same build' {
+Describe 'Pester4.when run multiple times in the same build' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'  
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-    ThenPesterShouldBeInstalled '4.0.3'
     ThenTestShouldCreateMultipleReportFiles
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when missing Path Configuration' {
+Describe 'Pester4.when missing Path Configuration' {
     Init
     GivenTestContext
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
+    ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
+Describe 'Pester4.when missing Version configuration' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
@@ -401,7 +417,7 @@ Describe 'Invoke-WhiskeyPester4Task.when missing Version configuration' {
     ThenPesterShouldBeInstalled '4.*'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
+Describe 'Pester4.when Version property isn''t a version' {
     Init
     GivenTestContext
     GivenVersion 'fubar'
@@ -411,7 +427,7 @@ Describe 'Invoke-WhiskeyPester4Task.when Version property isn''t a version' {
     ThenTestShouldFail -failureMessage 'isn''t a valid version'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when version of tool doesn''t exist' {
+Describe 'Pester4.when version of tool doesn''t exist' {
     Init
     GivenTestContext
     GivenInvalidVersion
@@ -421,17 +437,16 @@ Describe 'Invoke-WhiskeyPester4Task.when version of tool doesn''t exist' {
     ThenTestShouldFail -failureMessage 'does not exist'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when a task path is absolute' {
+Describe 'Pester4.when a task path is absolute' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'C:\FubarSnafu'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
     ThenTestShouldFail -failureMessage 'absolute'
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {
+Describe 'Pester4.when version of tool is less than 4.*' {
     Init
     GivenTestContext
     GivenVersion '3.4.3'
@@ -441,23 +456,22 @@ Describe 'Invoke-WhiskeyPester4Task.when version of tool is less than 4.*' {
     ThenTestShouldFail -failureMessage 'the major version number must always be ''4'''
 
 }
-Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with Clean Switch' {
+Describe 'Pester4.when running passing Pester tests with Clean Switch' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
     GivenWithCleanFlag
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
     ThenPesterShouldBeUninstalled -withClean
 }
 
-Describe 'Invoke-WhiskeyPester4Task.when running passing Pester tests with initialization switch' {
+Describe 'Pester4.when running passing Pester tests with initialization switch' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
     GivenWithInitilizeFlag
+    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
     ThenPesterShouldBeInstalled '4.0.3'
@@ -472,4 +486,24 @@ Describe 'Pester4.when showing duration reports' {
     WhenPesterTaskIsInvoked 
     ThenDescribeDurationReportHasRows 1
     ThenItDurationReportHasRows 1
+}
+
+Describe 'Pester4.when excluding tests and an exclusion filter doesn''t match' {
+    Init
+    GivenTestContext
+    GivenPesterPath -pesterPath 'PassingTests','FailingTests'
+    GivenExclude '*fail*','Passing*'
+    WhenPesterTaskIsInvoked
+    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
+}
+
+Describe 'Pester4.when excluding tests and exclusion filters match all paths' {
+    Init
+    GivenTestContext
+    GivenPesterPath -pesterPath 'PassingTests','FailingTests'
+    GivenExclude '*\Fail*','*\Passing*'
+    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+    ThenNoPesterTestFileShouldExist
+    ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))
+    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
 }

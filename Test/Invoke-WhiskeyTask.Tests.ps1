@@ -908,7 +908,7 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
     GivenRunByDeveloper
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
-    ThenThrewException 'BuildTasks.+WorkingDirectory.+does not exist.'
+    ThenThrewException 'Build.+WorkingDirectory.+does not exist.'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell' 
 }
 

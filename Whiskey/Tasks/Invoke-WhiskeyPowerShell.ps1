@@ -29,7 +29,7 @@ function Invoke-WhiskeyPowerShell
 
     ### Example 1
 
-        BuildTasks:
+        Build:
         - PowerShell:
             Path: init.ps1
             Argument:
@@ -40,7 +40,7 @@ function Invoke-WhiskeyPowerShell
 
     ### Example 2
 
-        BuildTasks:
+        Build:
         - PowerShell:
             ExceptDuring: Clean
             Path: init.ps1
@@ -52,7 +52,7 @@ function Invoke-WhiskeyPowerShell
 
     ### Example 3
 
-        BuildTasks:
+        Build:
         - PowerShell:
             OnlyDuring: Clean
             Path: clean.ps1
@@ -78,7 +78,7 @@ function Invoke-WhiskeyPowerShell
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
         
-        BuildTasks:
+        Build:
         - PowerShell:
             Path:
             - myscript.ps1

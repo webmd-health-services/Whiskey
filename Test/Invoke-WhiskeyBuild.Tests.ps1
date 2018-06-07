@@ -9,7 +9,22 @@ $runByBuildServer = $false
 $publish = $false
 $publishingTasks = $null
 $buildPipelineFails = $false
+$buildPipelineName = 'Build'
 $publishPipelineFails = $false
+$publishPipelineName = 'Publish'
+
+function Init
+{
+    [Whiskey.Context]$script:context = $null
+    $script:runByDeveloper = $false
+    $script:runByBuildServer = $false
+    $script:publish = $false
+    $script:publishingTasks = $null
+    $script:buildPipelineFails = $false
+    $script:buildPipelineName = 'Build'
+    $script:publishPipelineFails = $false
+    $script:publishPipelineName = 'Publish'
+}
 
 function Assert-ContextPassedTo
 {
@@ -19,7 +34,7 @@ function Assert-ContextPassedTo
     )
 
     $expectedContext = $context
-    Assert-MockCalled -CommandName $FunctionName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
+    Assert-MockCalled -CommandName $FunctionName -ModuleName 'Whiskey' -Times $Times -ParameterFilter {
         if( $TaskContext )
         {
             $Context = $TaskContext
@@ -47,6 +62,15 @@ function GivenBuildPipelinePasses
     $script:buildPipelineFails = $false
 }
 
+function GivenBuildPipelineName
+{
+    param(
+        $Name
+    )
+
+    $script:buildPipelineName = $Name
+}
+
 function GivenPreviousBuildOutput
 {
     New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.output\file.txt') -ItemType 'File' -Force
@@ -65,6 +89,15 @@ function GivenPublishing
 function GivenPublishingPipelineFails
 {
     $script:publishPipelineFails = $true
+}
+
+function GivenPublishPipelineName
+{
+    param(
+        $Name
+    )
+
+    $script:publishPipelineName = $Name
 }
 
 function GivenPublishingPipelineSucceeds
@@ -131,7 +164,7 @@ function ThenBuildPipelineRan
         $Times = 1
     )
 
-    ThenPipelineRan 'BuildTasks' -Times $Times
+    ThenPipelineRan $buildPipelineName -Times $Times
 }
 
 function ThenBuildOutputNotRemoved
@@ -191,12 +224,12 @@ function ThenContextPassedWhenSettingBuildStatus
 
 function ThenPublishPipelineRan
 {
-    ThenPipelineRan -Name 'PublishTasks' -Times 1
+    ThenPipelineRan -Name $publishPipelineName -Times 1
 }
 
 function ThenPublishPipelineNotRun
 {
-    ThenPipelineRan -Name 'PublishTasks' -Times 0
+    ThenPipelineRan -Name $publishPipelineName -Times 0
 }
 
 function WhenRunningBuild
@@ -220,30 +253,32 @@ function WhenRunningBuild
 
         `$buildPipelineFails = `$$($buildPipelineFails)
         `$publishPipelineFails = `$$($publishPipelineFails)
-        
+
         Write-Debug ('Name  {0}' -f `$Name)
         Write-Debug `$buildPipelineFails
         Write-Debug `$publishPipelineFails
 
-        if( `$Name -eq 'BuildTasks' -and `$buildPipelineFails )
+        if( `$Name -eq "$buildPipelineName" -and `$buildPipelineFails )
         {
-            throw ('BuildTasks pipeline fails!')
+            throw ('Build pipeline fails!')
         }
 
-        if( `$Name -eq 'PublishTasks' -and `$publishPipelineFails )
+        if( `$Name -eq "$publishPipelineName" -and `$publishPipelineFails )
         {
-            throw ('PublishTasks pipeline fails!')
+            throw ('Publish pipeline fails!')
         }
 "@))
 
-    $config = @{ }
+    $config = @{
+        $buildPipelineName = @();
+    }
 
     if( $publishingTasks )
     {
-        $config['PublishTasks'] = $publishingTasks
+        $config[$publishPipelineName] = $publishingTasks
     }
 
-    $script:context = New-WhiskeyContextObject 
+    $script:context = New-WhiskeyContextObject
     $context.BuildRoot = $TestDrive.FullName;
     $context.Configuration = $config;
     $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
@@ -257,7 +292,7 @@ function WhenRunningBuild
     }
     $context.Publish = $publish;
     $context.RunMode = [Whiskey.RunMode]::build
-    
+
     $Global:Error.Clear()
     $script:threwException = $false
     try
@@ -289,11 +324,12 @@ function WhenRunningBuild
     {
         $script:threwException = $true
         Write-Error $_
-    }    
+    }
 }
 
 Describe 'Invoke-WhiskeyBuild.when build passes' {
     Context 'By Developer' {
+        Init
         GivenRunByDeveloper
         GivenBuildPipelinePasses
         GivenThereArePublishingTasks
@@ -305,6 +341,7 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         ThenBuildStatusMarkedAsCompleted
     }
     Context 'By Build Server' {
+        Init
         GivenRunByBuildServer
         GivenBuildPipelinePasses
         GivenPublishing
@@ -318,6 +355,7 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
 
 Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
     Context 'By Developer' {
+        Init
         GivenRunByDeveloper
         GivenBuildPipelineFails
         GivenPublishingPipelineSucceeds
@@ -327,8 +365,9 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
         ThenBuildStatusMarkedAsFailed
     }
     Context 'By Build Server' {
+        Init
         GivenRunByBuildServer
-        GivenBuildPipelineFails 
+        GivenBuildPipelineFails
         GivenPublishingPipelineSucceeds
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
@@ -339,7 +378,9 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
 
 Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
     Context 'By Developer' {
+        Init
         GivenRunByDeveloper
+        GivenPublishing
         GivenBuildPipelinePasses
         GivenThereArePublishingTasks
         GivenPublishingPipelineFails
@@ -349,8 +390,11 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         ThenBuildStatusMarkedAsFailed
     }
     Context 'By Build Server' {
+        Init
         GivenRunByBuildServer
-        GivenBuildPipelinePasses 
+        GivenPublishing
+        GivenBuildPipelinePasses
+        GivenThereArePublishingTasks
         GivenPublishingPipelineFails
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
@@ -360,6 +404,7 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
 }
 
 Describe 'Invoke-WhiskeyBuild.when cleaning' {
+    Init
     GivenRunByDeveloper
     GivenBuildPipelinePasses
     GivenNotPublishing
@@ -370,6 +415,7 @@ Describe 'Invoke-WhiskeyBuild.when cleaning' {
 }
 
 Describe 'Invoke-WhiskeyBuild.when initializaing' {
+    Init
     GivenRunByDeveloper
     GivenBuildPipelinePasses
     GivenNotPublishing
@@ -379,6 +425,7 @@ Describe 'Invoke-WhiskeyBuild.when initializaing' {
 }
 
 Describe 'Invoke-WhiskeyBuild.when in default run mode' {
+    Init
     GivenRunByDeveloper
     GivenBuildPipelinePasses
     GivenNotPublishing
@@ -389,6 +436,7 @@ Describe 'Invoke-WhiskeyBuild.when in default run mode' {
 }
 
 Describe 'Invoke-WhiskeyBuild.when not publishing' {
+    Init
     GivenRunByBuildServer
     GivenNotPublishing
     GivenThereArePublishingTasks
@@ -399,6 +447,7 @@ Describe 'Invoke-WhiskeyBuild.when not publishing' {
 
 
 Describe 'Invoke-WhiskeyBuild.when publishing but no tasks' {
+    Init
     GivenRunByBuildServer
     GivenPublishing
     GivenThereAreNoPublishingTasks
@@ -408,6 +457,7 @@ Describe 'Invoke-WhiskeyBuild.when publishing but no tasks' {
 }
 
 Describe 'Invoke-WhiskeyBuild.when running specific pipelines' {
+    Init
     GivenRunByBuildServer
     GivenPublishing
     WhenRunningBuild -PipelineName 'Fubar','snafu'
@@ -415,4 +465,16 @@ Describe 'Invoke-WhiskeyBuild.when running specific pipelines' {
     ThenPipelineRan 'Fubar'
     ThenPipelineRan 'Snafu'
     ThenBuildPipelineRan -Times 0
+}
+
+Describe 'Invoke-WhiskeyBuild.when running legacy pipelines' {
+    Init
+    GivenRunByBuildServer
+    GivenBuildPipelineName 'BuildTasks'
+    GivenPublishing
+    GivenThereArePublishingTasks
+    WhenRunningBuild
+    ThenBuildPipelineRan
+    ThenPublishPipelineRan
+    ThenBuildStatusMarkedAsCompleted
 }

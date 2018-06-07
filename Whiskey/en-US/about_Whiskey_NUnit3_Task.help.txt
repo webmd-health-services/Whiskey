@@ -34,7 +34,7 @@ EXAMPLES
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - RootAssembly.dll
@@ -44,7 +44,7 @@ EXAMPLES
 
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll
@@ -55,7 +55,7 @@ EXAMPLES
 
     ## Example 3
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll
@@ -69,7 +69,7 @@ EXAMPLES
 
     ## Example 4
 
-        BuildTasks:
+        Build:
         - NUnit3:
             Path:
             - Assembly.dll

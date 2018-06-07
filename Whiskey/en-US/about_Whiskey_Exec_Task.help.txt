@@ -27,7 +27,7 @@ PROPERTIES
 EXAMPLES
     Example 1
 
-        BuildTasks:
+        Build:
         - Exec:
             Path: cmd.exe
             Argument:
@@ -38,7 +38,7 @@ EXAMPLES
 
     Example 2
 
-        BuildTasks:
+        Build:
         - Exec:
             Path: robocopy.exe
             Argument:
@@ -55,14 +55,14 @@ EXAMPLES
 
     Example 3
 
-        BuildTasks:
+        Build:
         - Exec: robocopy.exe "C:\Source Folder" C:\Destination Folder '/MIR'
 
     This example demonstrates the single line syntax for defining the `Exec` task. Everything before the first delimiter is used as the executable's `Path` (robocopy.exe). 'C:\Source Folder', 'C:\Destination', 'Folder' and '/MIR' will be passed as 4 separate arguments.
 
     Example 4
 
-        BuildTasks:
+        Build:
         - Exec:
             ExceptDuring: Clean
             Path: cmd.exe
@@ -74,7 +74,7 @@ EXAMPLES
 
     Example 5
 
-        BuildTasks:
+        Build:
         - Exec:
             OnlyDuring: Clean
             Path: cmd.exe

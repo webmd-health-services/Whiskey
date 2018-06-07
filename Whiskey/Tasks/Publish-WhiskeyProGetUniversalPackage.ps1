@@ -16,7 +16,7 @@ function Publish-WhiskeyProGetUniversalPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $exampleTask = 'PublishTasks:
+    $exampleTask = 'Publish:
         - PublishProGetUniversalPackage:
             CredentialID: ProGetCredential
             Uri: https://proget.example.com

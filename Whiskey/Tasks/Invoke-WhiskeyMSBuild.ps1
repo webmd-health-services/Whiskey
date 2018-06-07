@@ -44,7 +44,7 @@ function Invoke-WhiskeyMSBuild
 
     ## Examples
 
-        BuildTasks:
+        Build:
         - MSBuild:
             Path: MySolution.sln
 
@@ -75,7 +75,7 @@ function Invoke-WhiskeyMSBuild
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whiskey.yml file, to build with MSBuild.exe, e.g. 
         
-        BuildTasks:
+        Build:
         - MSBuild:
             Path:
             - MySolution.sln

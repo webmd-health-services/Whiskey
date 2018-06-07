@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.34.0'
+    ModuleVersion = '0.35.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -71,8 +71,6 @@
     NestedModules = @(
                         'BitbucketServerAutomation',
                         'BuildMasterAutomation',
-                        'PackageManagement',
-                        'PowerShellGet',
                         'ProGetAutomation',
                         'VSSetup'
                      )
@@ -149,22 +147,15 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-# 0.34.0
-
 * Added "AllowMissingPackage" property to "PublishProGetUniversalPackage" task. Set this property to "true" to not fail a build if there are no universal packages to publish.
 * Added global "IfExists" and "UnlessExists" task properties for controlling if a task runs based on the existence of an item. You can use any PowerShell-supported path, e.g. env:ENV_NAME for environment variables, hklm:\path\to\key for registry keys, and path\to\file for files/directories. Relative paths are file system paths and are resolved from the directory of the build's whiskey.yml file or the task's working directory (given by its WorkingDirecotry property). Uses PowerShell's `Test-Path` cmdlet to determine if the path exists. Wildcards are supported.
-
-
-# 0.33.1
-
-* Fixed: show stack traces in errors.
-* Fixed: API keys, credentials, variables, and task defaults aren't available to tasks run by the Parallel task.
-* Fixed: XML reports are lost when NUnit2 and NUnit3 tasks are run by the Parallel task.
-
-
-# 0.33.0
-
-* Created `Parallel` task for running build tasks asynchronously.
+* Added `Properties` property to `NuGetPack` task so that tokens inside .nuspec files can be replaced. The `Properties` property should be a name/value mapping. Each name/value is passed to nuget.exe pack command's `-Properties` parameter.
+* Added `PackageID` property to `NuGetPack` task to handle situations where a package's ID doesn't match the source .nuspec/.csproj file.
+* Added `PackageVersion` property to `NuGetPack` task to allow customizing the package's version number.
+* Created `SetVariableFromPowerShellDataFile` task for creating variables from values in PowerShell data files (e.g. .psd1 files, module manifests, etc.).
+* Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
+* Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
+* Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
 '@
         } # End of PSData hashtable
 

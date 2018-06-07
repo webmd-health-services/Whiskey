@@ -34,7 +34,7 @@ EXAMPLES
 
     ## Example 1
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll
@@ -44,7 +44,7 @@ EXAMPLES
 
     ## Example 2
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll
@@ -56,7 +56,7 @@ EXAMPLES
 
     ## Example 3
     
-        BuildTasks:
+        Build:
         - NUnit2:
             Path:
             - UnitTests\bin\Whiskey.*.Tests.dll

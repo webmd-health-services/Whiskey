@@ -119,6 +119,9 @@ function Invoke-Publish
     {
         $publishLocation = $feedUri
     }
+
+    Mock -CommandName 'Start-Job' -ModuleName 'Whiskey' -MockWith { Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList }
+
     if( $withoutRegisteredRepo )
     {
         Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { return $false }
@@ -277,12 +280,6 @@ function Assert-ModulePublished
             $Path -eq $ExpectedPathName -and
             $Repository -eq $ExpectedRepositoryName -and
             $NuGetApiKey -eq $expectedApiKey
-        }
-    }
-
-    It ('should put the PATH environment variable back the way it was') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            $Value -eq $env:PATH
         }
     }
 }

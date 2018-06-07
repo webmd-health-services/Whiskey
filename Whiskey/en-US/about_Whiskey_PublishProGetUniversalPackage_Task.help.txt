@@ -25,7 +25,7 @@ EXAMPLES
 
     ## Example 1
 
-        PublishTasks:
+        Publish:
         - PublishProGetUniversalPackage:
             Uri: https://proget.example.com
             FeedName: Apps

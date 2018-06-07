@@ -79,10 +79,12 @@ function GivenWithCleanFlag
     $context.RunMode = 'Clean'
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
 }
+
 function GivenWithInitilizeFlag
 {
     $context.RunMode = 'initialize'
 }
+
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
@@ -175,7 +177,8 @@ function ThenPesterShouldHaveRun
         $PassingCount
     )
     $reportsIn =  $script:context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
+    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
+                        Where-Object { $_.Name -match '^pester\+.{8}\..{3}\.xml$' }
     #check to see if we were supposed to run any tests.
     if( ($FailureCount + $PassingCount) -gt 0 )
     {
@@ -246,8 +249,10 @@ function ThenNoPesterTestFileShouldExist {
 function ThenTestShouldCreateMultipleReportFiles
 {
     It 'should create multiple report files' {
-        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-00.xml' | Should Exist
-        Join-Path -Path $context.OutputDirectory -ChildPath 'pester-01.xml' | Should Exist
+        Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
+            Measure-Object |
+            Select-Object -ExpandProperty 'Count' |
+            Should -Be 2
     }
 }
 

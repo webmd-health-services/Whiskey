@@ -32,7 +32,7 @@ function Invoke-WhiskeyExec
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want the Exec task to run, e.g.
         
-            BuildTasks:
+            Build:
             - Exec:
                 Path: cmd.exe
             

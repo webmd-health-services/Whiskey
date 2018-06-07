@@ -10,7 +10,7 @@ function Invoke-WhiskeyNpmConfig
 
     Set the `Configuration` property to key/value pairs. The keys should be the name of the configuration setting; the value should be its value. For example,
 
-        BuildTasks:
+        Build:
         - NpmConfig:
             Configuration:
                 registry: https://registry.npmjs.org
@@ -26,7 +26,7 @@ function Invoke-WhiskeyNpmConfig
 
     ## Example 1
 
-        BuildTasks:
+        Build:
         - NpmConfig:
             Configuration:
                 registry: https://registry.npmjs.org
@@ -39,7 +39,7 @@ function Invoke-WhiskeyNpmConfig
         
     ## Example 2
 
-        BuildTasks:
+        Build:
         - NpmConfig:
             Configuration:
                 registry: https://registry.npmjs.org
@@ -71,7 +71,7 @@ function Invoke-WhiskeyNpmConfig
     {
         Write-Warning -Message ('Your NpmConfig task isn''t doing anything. Its Configuration property is missing. Please update the NpmConfig task in your whiskey.yml file so that it is actually setting configuration, e.g.
 
-    BuildTasks:
+    Build:
     - NpmConfig:
         Configuration:
             key1: value1
@@ -84,7 +84,7 @@ function Invoke-WhiskeyNpmConfig
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property is invalid. It must have only key/value pairs, e.g.
     
-    BuildTasks:
+    Build:
     - NpmConfig:
         Configuration:
             key1: value1

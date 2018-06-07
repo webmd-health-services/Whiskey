@@ -11,6 +11,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     $context = $null
     $path = "bad"
     $runMode = $null
+    $warningMessage = $null
 
     function Assert-Context
     {
@@ -150,7 +151,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         {
             $Configuration['PublishOn'] = $PublishingOn
         }
-    
+
         $buildInfo = New-WhiskeyBuildMetadataObject
         $buildInfo.BuildNumber = $BuildNumber
 
@@ -196,6 +197,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         $script:configurationPath = ''
         $script:context = $null
         $script:path = "bad"
+        $script:warningMessage = $null
     }
 
     function ThenSemVer1Is
@@ -278,7 +280,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $threwException = $false
             try
             {
-                $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $script:ConfigurationPath @optionalArgs
+                $script:context = New-WhiskeyContext -Environment $Environment -ConfigurationPath $script:ConfigurationPath @optionalArgs -WarningVariable newWhiskeyContextWarning
+                $script:warningMessage = $newWhiskeyContextWarning
                 if( $RunBy )
                 {
                     $script:context.RunBy = $RunBy
@@ -296,7 +299,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             catch
             {
                 $threwException = $true
-                $_ | Write-Error 
+                $_ | Write-Error
             }
 
             if( $ThenCreationFailsWithErrorMessage )
@@ -433,6 +436,17 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
     }
 
+    function ThenWarning
+    {
+        param(
+            $Message
+        )
+
+        It 'should write warning message' {
+            $script:warningMessage | Should -Match $Message
+        }
+    }
+
     Describe 'New-WhiskeyContext.when run by a developer for an application' {
         Init
         GivenConfiguration
@@ -459,8 +473,8 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when run by developer for a library' {
         Init
         GivenConfiguration
-        WhenCreatingContext 
-        ThenDeveloperContextCreated 
+        WhenCreatingContext
+        ThenDeveloperContextCreated
         ThenDoesNotPublish
     }
 
@@ -537,7 +551,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when building on hot fix branch' {
         Init
         GivenConfiguration -ForBuildServer -OnBranch 'hotfix/snafu'
-        WhenCreatingContext 
+        WhenCreatingContext
         ThenBuildServerContextCreated
         ThenDoesNotPublish
     }
@@ -560,21 +574,21 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and building on one of them' {
         Init
-        GivenConfiguration -OnBranch 'fubarsnafu' -ForBuildServer -PublishingOn @( 'feature/3.0', 'fubar*' ) 
+        GivenConfiguration -OnBranch 'fubarsnafu' -ForBuildServer -PublishingOn @( 'feature/3.0', 'fubar*' )
         WhenCreatingContext
         ThenPublishes
     }
 
     Describe 'New-WhiskeyContext.when publishing on multiple branches and not building on one of them' {
         Init
-        GivenConfiguration -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3.0', 'master' ) 
+        GivenConfiguration -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3.0', 'master' )
         WhenCreatingContext
         ThenDoesNotPublish
     }
 
     Describe 'New-WhiskeyContext.when configuration is just a property name' {
         Init
-        GivenWhiskeyYml 'BuildTasks'
+        GivenWhiskeyYml 'Build'
         WhenCreatingContext
     }
 
@@ -603,10 +617,10 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenShouldCleanIs $false
         ThenShouldInitializeIs $false
     }
-    
+
     Describe 'New-WhiskeyContext.when Version property is used' {
         Init
-        GivenConfiguration @{ 'BuildTasks' = @(@{ 'Exec' = 'cmd /C echo' }) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
+        GivenConfiguration @{ 'Build' = @(@{ 'Exec' = 'cmd /C echo' }) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
         WhenCreatingContext -RunBy 'BuildServer'
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context
@@ -631,7 +645,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         Init
         GivenConfiguration @{
                                 Version = '4.5.6';
-                                BuildTasks = @(
+                                Build = @(
                                                 @{
                                                     Version = @{
                                                                     Version = '1.2.3'
@@ -653,7 +667,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                             PrereleaseMap = @(
                                                 @{ 'develop' = 'beta' },
                                                 @{ 'feature/*' = 'alpha' }
-                                            ); 
+                                            );
                         }
         WhenCreatingContext -RunBy 'BuildServer'
         $script:context.BuildMetadata.ScmBranch = 'feature/snafu'
@@ -669,7 +683,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties' {
         Init
         GivenConfiguration -BuildNumber 50 `
-                           -Configuration @{ 'BuildTasks' = @( @{ 'Exec' = 'cmd /C echo' } ) } `
+                           -Configuration @{ 'Build' = @( @{ 'Exec' = 'cmd /C echo' } ) } `
                            -ForBuildServer
         WhenCreatingContext
         # Run a build to ensure the Version task is in the build tasks.
@@ -684,7 +698,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties and being run by a developer' {
         Init
         GivenConfiguration -BuildNumber 50 `
-                           -Configuration @{ 'BuildTasks' = @( @{ 'Exec' = 'cmd /C echo' } ) }
+                           -Configuration @{ 'Build' = @( @{ 'Exec' = 'cmd /C echo' } ) }
         WhenCreatingContext
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context
@@ -693,5 +707,48 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         ThenSemVer1Is $expectedVersion
         ThenSemVer2Is $expectedVersion
         ThenSemVer2NoBuildMetadataIs $expectedVersion
+    }
+
+    Describe 'New-WhiskeyContext.when both Build and BuildTasks pipelines exists' {
+        Init
+        GivenConfiguration @{
+            Build = @()
+            BuildTasks = @()
+        }
+        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ "Build"\ and\ the\ deprecated\ "BuildTasks"\ pipelines' -ErrorAction SilentlyContinue
+    }
+
+    Describe 'New-WhiskeyContext.when both Publish and PublishTasks pipelines exists' {
+        Init
+        GivenConfiguration @{
+            Publish = @();
+            PublishTasks = @();
+        }
+        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ "Publish"\ and\ the\ deprecated\ "PublishTasks"\ pipelines' -ErrorAction SilentlyContinue
+    }
+
+    Describe 'New-WhiskeyContext.when BuildTasks pipeline exists' {
+        Init
+        GivenConfiguration @{
+            BuildTasks = @(
+                @{ Version = '1.0.0' }
+            )
+        }
+        WhenCreatingContext
+        ThenWarning 'The\ default\ "BuildTasks"\ pipeline\ has\ been\ renamed\ to\ "Build"'
+    }
+
+    Describe 'New-WhiskeyContext.when PublishTasks pipeline exists' {
+        Init
+        GivenConfiguration @{
+            Build = @(
+                @{ Version = '1.0.0' }
+            );
+            PublishTasks = @(
+                'NuGetPush'
+            );
+        }
+        WhenCreatingContext
+        ThenWarning 'The\ default\ "PublishTasks"\ pipeline\ has\ been\ renamed\ to\ "Publish"'
     }
 }

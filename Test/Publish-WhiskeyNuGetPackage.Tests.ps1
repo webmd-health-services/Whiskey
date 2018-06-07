@@ -442,3 +442,12 @@ Describe 'NuGetPush.when skipping publish check' {
         Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 1
     }
 }
+
+Describe 'NuGetPush.when publishing multiple packages at different version numbers' {
+    InitTest
+    GivenANuGetPackage 'Fubar.1.0.0.nupkg','Snafu.2.0.0.nupkg'
+    WhenRunningNugetPackTask
+    ThenPackagePublished -Name 'Fubar' -Path 'Fubar.1.0.0.nupkg' -PackageVersion '1.0.0'
+    ThenPackagePublished -Name 'Snafu' -Path 'Snafu.2.0.0.nupkg' -PackageVersion '2.0.0'
+    ThenTaskSucceeds
+}

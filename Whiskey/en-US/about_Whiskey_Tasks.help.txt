@@ -17,6 +17,8 @@ LONG DESCRIPTION
     * `DotNetPack`: runs `dotnet pack` command.
     * `Exec`: runs an executable/program.
     * `GetPowerShellModule`: installs a PowerShell module.
+    * `GitHubRelease`: creates a release in GitHub and uploads files for that 
+      release.
     * `MSBuild`: runs MSBuild, the Microsoft build engine.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that 
       scans and reports on Node module license metadata.
@@ -46,6 +48,11 @@ LONG DESCRIPTION
       ProGet.
     * `SetVariable`: creates a variable that you can use in your whiskey.yml
       file.
+    * `SetVariableFromPowerShellDataFile`: creates variables that you can use in
+      in your whiskey.yml file by reading them from a PowerShell data file (i.e. 
+      .psd1 file or module manifest).
+    * `SetVariableFromXml`: creates variables that you can use in your 
+      whiskey.yml file by reading their values from an XML file.
     * `TaskDefaults`: sets default task properties.
     * `Version`: sets the version number for the current build.
 
