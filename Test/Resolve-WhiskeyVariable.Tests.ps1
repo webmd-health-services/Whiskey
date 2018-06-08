@@ -496,3 +496,10 @@ Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
         $Global:Error[0] | Should -Match 'Failed\ to\ call\b.*\bSubstring\b'
     }
 }
+
+Describe 'Resolve-WhiskeyVariable.when last parameter to a method call is an empty string' {
+    Init
+    GivenVariable 'Fubar' 'One Two Three'
+    WhenResolving '$(Fubar.Replace(" ", ""))' 
+    ThenValueIs 'OneTwoThree'
+}

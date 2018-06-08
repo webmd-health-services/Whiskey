@@ -204,6 +204,7 @@ function Resolve-WhiskeyVariable
                 $memberName = $Matches[2]
                 $arguments = $Matches[4]
                 $arguments = & {
+                                    #$DebugPreference = 'Continue'
                                     if( -not $arguments )
                                     {
                                         return
@@ -212,6 +213,11 @@ function Resolve-WhiskeyVariable
                                     $currentArg = New-Object 'Text.StringBuilder'
                                     $currentChar = $null
                                     $inString = $false
+                                    $forceCurrentArg = $false
+                                    $argEnded = $false
+                                    $argStarted = $false
+                                    $escapeChar = $false
+                                    Write-Debug -Message $arguments
                                     # Parse each of the arguments in the method call. Each argument is
                                     # seperated by a comma. Ignore whitespace. Commas and whitespace that
                                     # are part of an argument must be double or single quoted. To include
@@ -219,47 +225,90 @@ function Resolve-WhiskeyVariable
                                     # a single quote inside a single-quoted string, double it.
                                     for( $idx = 0; $idx -lt $arguments.Length; ++$idx )
                                     {
+                                        $isFirstchar = $idx -eq 0
+                                        $isLastChar = $idx -eq ($arguments.Length - 1)
+                                        $currentChar = $arguments[$idx]
+                                        $captureChar = $true
                                         $nextChar = ''
-                                        if( ($idx + 1) -lt $arguments.Length )
+                                        $lastChar = ''
+                                        if( -not $isLastChar )
                                         {
                                             $nextChar = $arguments[$idx + 1]
                                         }
+                                        if( -not $isFirstChar )
+                                        {
+                                            $lastChar = $arguments[$idx - 1]
+                                        }
 
-                                        $currentChar = $arguments[$idx]
-                                        if( $currentChar -eq '"' -or $currentChar -eq "'" )
+                                        Write-Debug -Message ('  [{0}]' -f $idx)
+                                        Write-Debug -Message ('    prev char     {0}' -f $lastChar)
+                                        Write-Debug -Message ('    curr char     {0}' -f $currentChar)
+                                        Write-Debug -Message ('    next char     {0}' -f $nextChar)
+                                        Write-Debug -Message ('    in string     {0}' -f $inString)
+                                        Write-Debug -Message ('    arg started   {0}' -f $argStarted)
+                                        Write-Debug -Message ('    arg ended     {0}' -f $argEnded)
+
+                                        if( $isLastChar )
+                                        {
+                                            $argEnded = $true
+                                        }
+
+                                        if( -not $escapeChar -and ($currentChar -eq '"' -or $currentChar -eq "'") )
                                         {
                                             if( $inString )
                                             {
-                                                if( $nextChar -eq $currentChar )
+                                                if( $currentChar -eq $nextChar )
                                                 {
-                                                    [void]$currentArg.Append($currentChar)
-                                                    $idx++
-                                                    continue
+                                                    $captureChar = $false
+                                                    $escapeChar = $true
+                                                }
+                                                else
+                                                {
+                                                    $inString = $false
+                                                    $captureChar = $false
+                                                    $argEnded = $true
                                                 }
                                             }
-                                            
-                                            $inString = -not $inString
-                                            continue
+                                            else
+                                            {
+                                                $inString  = $true
+                                                $captureChar = $false
+                                                $argStarted = $true
+                                                $argEnded = $false
+                                            }
                                         }
 
-                                        if( $currentChar -eq ',' -and -not $inString )
+                                        if( -not $inString )
                                         {
+                                            if( $currentchar -eq ',' )
+                                            {
+                                                $argEnded = $true
+                                                $captureChar = $false
+                                            }
+                                            elseif( [string]::IsNullOrWhiteSpace($currentChar) )
+                                            {
+                                                $captureChar = $false
+                                            }
+                                        }
+
+                                        if( $captureChar )
+                                        {
+                                            $argStarted = $true
+                                            [void]$currentArg.Append($currentChar)
+                                            Write-Debug -Message ('    ->{0}<-' -f $currentArg)
+                                            $escapeChar = $false
+                                        }
+
+                                        if( $argStarted -and $argEnded )
+                                        {
+                                            Write-Debug -Message ('^{0}^' -f $currentArg.ToString())
                                             $currentArg.ToString()
                                             [void]$currentArg.Clear()
-                                            continue
+                                            $argStarted = $false
+                                            $argEnded = $false
                                         }
-
-                                        if( $inString -or -not [string]::IsNullOrWhiteSpace($currentChar) )
-                                        {
-                                            [void]$currentArg.Append($currentChar)
-                                        }
-                                    }
-                                    if( $currentArg.Length )
-                                    {
-                                        $currentArg.ToString()
                                     }
                                }
-
             }
 
             $envVarPath = 'env:{0}' -f $variableName

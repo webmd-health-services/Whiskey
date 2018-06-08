@@ -156,6 +156,7 @@
 * Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
 * Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
 * Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
+* Fixed: calling methods on variable values fails when the last parameter to the method is an empty string.
 '@
         } # End of PSData hashtable
 
