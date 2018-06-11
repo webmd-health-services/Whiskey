@@ -126,7 +126,7 @@ function ThenTaskFailedWithError
     }
 
     It ('should write an error matching /{0}/' -f $Message) {
-        $Global:Error | Should -Match $Message
+        $Global:Error[0] | Should -Match $Message
     }
 }
 
@@ -334,7 +334,7 @@ Describe 'DotNetTest.when given additional arguments' {
 Describe 'DotNetTest.when given Filter expression' {
     Init
     GivenProject 'DotNetCoreTestProject.csproj' -WithPassingTests
-    GivenTaskProperties @{ 'Filter' = 'Test1' }
+    GivenTaskProperties @{ 'Filter' = 'NonExistentTest' }
     WhenRunningDotNetTest
     ThenOutput -Contains 'No\ test\ is\ available\ in\ .*\\DotNetCoreTestProject.dll'
     ThenTaskSuccess
