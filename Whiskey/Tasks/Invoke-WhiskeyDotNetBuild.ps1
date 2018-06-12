@@ -32,9 +32,10 @@ function Invoke-WhiskeyDotNetBuild
     }
 
     $outputDirectory = $TaskParameter['OutputDirectory']
-    if ($outputDirectory)
+    if ($outputDirectory -and ([IO.Path]::IsPathRooted($outputDirectory)))
     {
-        $outputDirectory = $outputDirectory | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Message ('"{0}" is an absolute path. The path must be a relative path to the project file location.' -f $outputDirectory)
+        return
     }
 
     $dotnetArgs = & {

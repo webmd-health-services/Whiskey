@@ -1,6 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $argument = $null
 $dotNetOutput = $null
@@ -19,8 +18,6 @@ function Init
     $script:path = $null
     $script:taskContext = $null
     $script:verbosity = $null
-
-    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -like 'env:DOTNET_*' }
 }
 
 function GivenArgument
@@ -36,12 +33,16 @@ function GivenDotNetCoreProject
 {
     param(
         [string[]]
-        $Name
+        $Path
     )
 
-    foreach ($project in $Name)
+    foreach ($project in $Path)
     {
-        $csprojPath = Join-Path -Path $TestDrive.FullName -ChildPath $project
+        $projectRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($project | Split-Path -Parent)
+        New-Item -Path $projectRoot -ItemTYpe 'Directory' -Force | Out-Null
+
+        $csprojPath = Join-Path -Path $projectRoot -ChildPath ($project | Split-Path -Leaf)
+
 @'
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
@@ -123,38 +124,19 @@ function ThenOutput
 function ThenProjectBuilt
 {
     param(
-        [string[]]
-        $Assembly,
-
-        [switch]
-        $ForBuildServer,
-
         [string]
-        $Directory
+        $AssemblyPath
     )
 
-    $outputDir = Join-Path -Path $TestDrive.FullName -ChildPath 'bin\Debug\netcoreapp2.0'
-    if ($Directory)
-    {
-        $outputDir = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
-    }
-    elseif ($ForBuildServer)
-    {
-        $outputDir = Join-Path -Path $TestDrive.FullName -ChildPath 'bin\Release\netcoreapp2.0'
+    $AssemblyPath = Join-Path -Path $TestDrive.FullName -ChildPath $AssemblyPath
+
+    It 'should build the project assembly' {
+        $AssemblyPath | Should -Exist
     }
 
-    foreach ($name in $Assembly)
-    {
-        $assemblyPath = Join-Path -Path $outputDir -ChildPath $name
-        $builtVersion = Get-Item -Path $assemblyPath | Select-Object -ExpandProperty 'VersionInfo' | Select-Object -ExpandProperty 'ProductVersion'
-
-        It 'should build the project' {
-            $assemblyPath | Should -Exist
-        }
-
-        It 'should set the correct version' {
-            $builtVersion | Should -Be $taskContext.Version.SemVer1.ToString()
-        }
+    $builtVersion = Get-Item -Path $AssemblyPath | Select-Object -ExpandProperty 'VersionInfo' | Select-Object -ExpandProperty 'ProductVersion'
+    It 'should build assembly with correct version' {
+        $builtVersion | Should -Be $taskContext.Version.SemVer1
     }
 }
 
@@ -280,7 +262,7 @@ Describe 'DotNetBuild.when not given any Paths' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForDeveloper
-        ThenProjectBuilt 'DotNetCore.dll'
+        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenVerbosityIs -Minimal
         ThenTaskSuccess
     }
@@ -289,7 +271,7 @@ Describe 'DotNetBuild.when not given any Paths' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForBuildServer
-        ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
+        ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
         ThenVerbosityIs -Detailed
         ThenTaskSuccess
     }
@@ -306,7 +288,7 @@ Describe 'DotNetBuild.when given Path to a csproj file' {
     GivenDotNetCoreProject 'DotNetCore.csproj'
     GivenPath 'DotNetCore.csproj'
     WhenRunningDotNetBuild
-    ThenProjectBuilt 'DotNetCore.dll'
+    ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
     ThenTaskSuccess
 }
 
@@ -328,10 +310,11 @@ Describe 'DotNetBuild.when dotnet build fails' {
 
 Describe 'DotNetBuild.when given multiple Paths to csproj files' {
     Init
-    GivenDotNetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
-    GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
+    GivenDotNetCoreProject 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
+    GivenPath 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
     WhenRunningDotNetBuild
-    ThenProjectBuilt 'DotNetCore.dll','DotNetCore2.dll'
+    ThenProjectBuilt 'app\bin\Debug\netcoreapp2.0\DotNetCoreApp.dll'
+    ThenProjectBuilt 'test\bin\Debug\netcoreapp2.0\DotNetCoreTest.dll'
     ThenTaskSuccess
 }
 
@@ -341,7 +324,7 @@ Describe 'DotNetBuild.when given verbosity level' {
         GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild -ForDeveloper
-        ThenProjectBuilt 'DotNetCore.dll'
+        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
     }
@@ -351,7 +334,7 @@ Describe 'DotNetBuild.when given verbosity level' {
         GivenDotNetCoreProject 'DotNetCore.csproj'
         GivenVerbosity 'diagnostic'
         WhenRunningDotNetBuild -ForBuildServer
-        ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
+        ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
     }
@@ -359,10 +342,12 @@ Describe 'DotNetBuild.when given verbosity level' {
 
 Describe 'DotNetBuild.when given output directory' {
     Init
-    GivenDotNetCoreProject 'DotNetCore.csproj'
+    GivenDotNetCoreProject 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
+    GivenPath 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
     GivenOutputDirectory 'Output Dir'
     WhenRunningDotNetBuild
-    ThenProjectBuilt 'DotNetCore.dll' -Directory 'Output Dir'
+    ThenProjectBuilt 'src\app\Output Dir\DotNetCoreApp.dll'
+    ThenProjectBuilt 'src\engine\Output Dir\DotNetCoreEngine.dll'
     ThenTaskSuccess
 }
 
@@ -373,7 +358,7 @@ Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' 
 
     GivenArgument '--no-restore','-nologo'
     WhenRunningDotNetBuild
-    ThenProjectBuilt 'DotNetCore.dll'
+    ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
     ThenOutput -DoesNotContain '\bRestore\ completed\b'
     ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
     ThenTaskSuccess

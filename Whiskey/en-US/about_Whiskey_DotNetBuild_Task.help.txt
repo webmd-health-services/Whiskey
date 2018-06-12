@@ -15,12 +15,12 @@ DESCRIPTION
 PROPERTIES
     * `Argument`: a list of additional arguments to pass to the `dotnet.exe build` command.
     * `Path`: a list of paths to .NET Core solution or project files to build. If not specified, any solution or project files in the task working directory will be built.
-    * `OutputDirectory`: the directory where assemblies should be compiled to. The default is the location specified in each project file.
+    * `OutputDirectory`: the directory where assemblies should be compiled to. The default is the location specified in each project file. If specified, the path must be relative to the project file location.
     * `SdkVersion`: the version of the .NET Core SDK to use to build the project. Supports wildcard values. If not specified, the task will look for the SDK version from the `global.json` file if it is found in the task working directory or the Whiskey build root. If no SDK version can be located, the task will default to using the SDK version that comes with the latest LTS release of the .NET Core runtime. Whiskey will *always* update the SDK version property in the `global.json` file with the SDK version that task is running with. If no `global.json` file exists, one will be created in the Whiskey build root.
     * `Verbosity`: sets the verbosity level of dotnet.exe's output. For developers, the default is dotnet.exe's default verbosity. On build servers, the default is `detailed`. Allowed values are `q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]`, and `diag[nostic]`.
 
 EXAMPLES
-    Example 1
+    ## Example 1
 
         Build:
         - DotNetBuild:
@@ -29,7 +29,7 @@ EXAMPLES
 
     Demonstrates building the DotNetCoreSolution.sln file with the `dotnet build` command.
 
-    Example 2
+    ## Example 2
 
         Build:
         - DotNetBuild:
@@ -40,7 +40,7 @@ EXAMPLES
 
     Demonstrates build a solution file with normal verbosity and compiling the assemblies to the '$(WHISKEY_BUILD_ROOT)\bin' directory.
 
-    Example 3
+    ## Example 3
 
         Build:
         - DotNetBuild:
@@ -52,7 +52,7 @@ EXAMPLES
 
     Demonstrates building multiple .NET Core csproj files with an additional argument, `--no-dependencies`, passed to the `dotnet build` command.
 
-    Example 4
+    ## Example 4
 
         Build:
         - DotNetBuild:
