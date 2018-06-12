@@ -157,6 +157,7 @@
 * Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
 * Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
 * Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
+* Created `DotNetPublish` task for running `dotnet publish` on .NET Core projects.
 '@
         } # End of PSData hashtable
 
