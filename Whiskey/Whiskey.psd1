@@ -158,6 +158,7 @@
 * Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
 * Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
 * MSBuild task no longer includes the build configuration in the build log file.
+* DotNetBuild task now writes a detailed log to the build output directory and by default shows minimal output to the console. Before, it didn't log at all and showed detailed output to the console when run by a build server.
 '@
         } # End of PSData hashtable
 
