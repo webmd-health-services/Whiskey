@@ -234,11 +234,11 @@ function ThenAssembliesAreNotVersioned
     }
 }
 
-function ThenDebugOutputLogged
+function ThenOutputLogged
 {
     $buildRoot = Get-BuildRoot
     It 'should write a debug log' {
-        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.debug.log') | should -Exist
+        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.log') | should -Exist
     }
 }
 
@@ -448,7 +448,7 @@ Describe 'MSBuild.when building real projects as a developer' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreNotVersioned
-    ThenDebugOutputLogged
+    ThenOutputLogged
 }
 
 Describe 'MSBuild.when building multiple real projects as a developer' {
@@ -467,8 +467,6 @@ Describe 'MSBuild.when building real projects as build server' {
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
-    ThenDebugOutputLogged
-
 }
 
 Describe 'MSBuild.when compilation fails' {

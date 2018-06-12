@@ -21,11 +21,11 @@ function Invoke-WhiskeyMSBuild
 
     If an AssemblyInfo.cs file already has one of these attributes, the existing attribute is replaced. Build metadata is added to the end of the version in the AssemblyInformationalVersion attribute's value.
 
-    The build fails if msbuild.exe returns a non-zero exist code.
+    The build fails if msbuild.exe returns a non-zero exit code.
 
-    The MSBuild task looks up installed versions of MSBuild in the "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSBuild\ToolsVersions' registry key. For each key it finds, it uses the "MSBuildToolsPath" property to locate that version's MSBuild.exe executable.
-    
-    Versions of MSBuild that ship with Visual Studio 2017 and later don't appear in the registry, so the MSBuild task also uses the `Get-VSSetupInstance` function in the VSSetup PowerShell module to find installed instances of Visual Studio 2017 (and later). The task looks for versions of MSBuild in the "MSBuild" directory under each Visual Studio instance's installation path. Under each version, it looks for 64-bit MSBuild.exe at "Bin\amd64\MSBuild.exe" and 32-bit MSBuild.exe at "Bin\MSBuild.exe".
+    The MSBuild task looks up installed versions of MSBuild in the "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSBuild\ToolsVersions' registry key. For each key it finds, it uses the "MSBuildToolsPath" property to locate that version's MSBuild.exe executable. Versions of MSBuild that ship with Visual Studio 2017 and later don't appear in the registry, so the MSBuild task also uses the `Get-VSSetupInstance` function in the VSSetup PowerShell module to find installed instances of Visual Studio 2017 (and later). The task looks for versions of MSBuild in the "MSBuild" directory under each Visual Studio instance's installation path. Under each version, it looks for 64-bit MSBuild.exe at "Bin\amd64\MSBuild.exe" and 32-bit MSBuild.exe at "Bin\MSBuild.exe".
+
+    A detailed log of the build is saved to the build output directory named "msbuild.FILE_NAME.log" file, where `FILE_NAME` is replaced by the name of the file being built.
 
     ## Property
 
@@ -203,7 +203,7 @@ function Invoke-WhiskeyMSBuild
         $noFileLogger = $TaskParameter['NoFileLogger'] | ConvertFrom-WhiskeyYamlScalar
 
         $projectFileName = $projectPath | Split-Path -Leaf
-        $logFilePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('msbuild.{0}.debug.log' -f $projectFileName)
+        $logFilePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('msbuild.{0}.log' -f $projectFileName)
         $msbuildArgs = Invoke-Command {
                                             ('/verbosity:{0}' -f $verbosity)
                                             $cpuArg
