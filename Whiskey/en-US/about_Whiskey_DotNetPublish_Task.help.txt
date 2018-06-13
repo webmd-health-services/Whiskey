@@ -5,7 +5,7 @@ SUMMARY
     Builds and publishes a .NET Core project and all its dependencies for deployment.
 
 DESCRIPTION
-    The `DotNetPublish` tasks runs the `dotnet publish` command which compiles the application, reads through its dependencies specified in the project file, and publishes the resulting set of files to a directory. The `DotNetPublish` task's output is ready for deployment to a hosting system. Pass a list of solutions files or .NET Core project files to the `Path` property. If no files are provided to `Path`, then the .NET Core SDK will search for any solution or project files in the working directory and build those. If the `dotnet publish` command returns a non-zero exit code (i.e. compilation error), the build will fail.
+    The `DotNetPublish` tasks runs the `dotnet publish` command which packages the application and its dependencies into a folder for deployment. Your application won't run until you've published it. Pass a list of solutions files or .NET Core project files to the `Path` property. If no files are provided to `Path`, then the .NET Core SDK will search for any solution or project files in the working directory and build those. If the `dotnet publish` command returns a non-zero exit code (i.e. compilation error), the build will fail.
 
     The task will automatically use the following options with the `dotnet publish` command and are not modifiable:
 
