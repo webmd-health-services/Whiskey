@@ -28,9 +28,9 @@ function Invoke-WhiskeyDotNetPack
     $symbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
 
     $verbosity = $TaskParameter['Verbosity']
-    if (-not $verbosity -and $TaskContext.ByBuildServer)
+    if (-not $verbosity)
     {
-        $verbosity = 'detailed'
+        $verbosity = 'minimal'
     }
 
     $dotnetArgs = & {

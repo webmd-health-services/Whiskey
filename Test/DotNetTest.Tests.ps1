@@ -256,7 +256,7 @@ Describe 'DotNetTest.when not given any Paths' {
         GivenProject 'DotNetCoreTestProject.csproj' -WithPassingTests
         WhenRunningDotNetTest -ForBuildServer
         ThenOutput -Contains 'Test\ Run\ Successful.'
-        ThenVerbosityIs -Detailed
+        ThenVerbosityIs -Minimal
         ThenTaskSuccess
     }
 }

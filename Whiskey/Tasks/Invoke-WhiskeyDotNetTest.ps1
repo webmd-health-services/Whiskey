@@ -26,9 +26,9 @@ function Invoke-WhiskeyDotNetTest
     }
 
     $verbosity = $TaskParameter['Verbosity']
-    if (-not $verbosity -and $TaskContext.ByBuildServer)
+    if (-not $verbosity)
     {
-        $verbosity = 'detailed'
+        $verbosity = 'minimal'
     }
 
     $dotnetArgs = & {

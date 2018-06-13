@@ -252,7 +252,7 @@ InModuleScope Whiskey {
 
 Describe 'DotNetPublish.when not given any Paths' {
     Context 'By Developer' {
-        Init
+        Initdetailed
         GivenDotNetCoreProject 'DotNetCore.csproj' -WithPackageReference 'Microsoft.AspNetCore.Http'
         WhenRunningDotNetPublish -ForDeveloper
         ThenPublished -ProjectAssembly 'bin\Debug\publish\DotNetCore.dll'
@@ -267,7 +267,7 @@ Describe 'DotNetPublish.when not given any Paths' {
         WhenRunningDotNetPublish -ForBuildServer
         ThenPublished -ProjectAssembly 'bin\Release\publish\DotNetCore.dll'
         ThenPublished -ThirdPartyAssembly 'bin\Release\publish\Microsoft.AspNetCore.Http.dll'
-        ThenVerbosityIs -Detailed
+        ThenVerbosityIs -Minimal
         ThenTaskSuccess
     }
 }

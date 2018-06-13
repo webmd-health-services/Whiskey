@@ -159,7 +159,7 @@
 * Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
 * MSBuild task no longer includes the build configuration in the build log file.
 * All `DotNet` tasks now write a detailed log to the build output directory. Before, they didn't log at all and showed detailed output to the console when run by a build server.
-* `DotNetBuild` task now by default shows `minimal` output to the console, instead of `detailed`, when run by a build server.
+* All `DotNet` tasks now by default show `minimal` output to the console, instead of `detailed`, when run by a build server.
 * Created `DotNetPublish` task for running `dotnet publish` on .NET Core projects.
 * Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and now allows absolute paths.
 '@
