@@ -96,6 +96,32 @@ function GivenVerbosity
     $script:verbosity = $Level
 }
 
+function ThenLogFile
+{
+    param(
+        $Name,
+        [Switch]
+        $Not,
+        [Switch]
+        $Exists
+    )
+
+    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $fullPath = Join-Path -Path $fullPath -ChildPath $Name
+    if( $Not )
+    {
+        If ('should not create build log file') {
+            $fullPath | Should -Not -Exist
+        }
+    }
+    else
+    {
+        If ('should create build log file') {
+            $fullPath | Should -Exist
+        }
+    }
+}
+
 function ThenOutput
 {
     param(
@@ -283,6 +309,7 @@ Describe 'DotNetBuild.when not given any Paths' {
         ThenProjectBuilt 'DotNetCore.dll'
         ThenVerbosityIs -Minimal
         ThenTaskSuccess
+        ThenLogFile 'dotnet.build.log' -Exists
     }
 
     Context 'By BuildServer' {
@@ -290,8 +317,9 @@ Describe 'DotNetBuild.when not given any Paths' {
         GivenDotNetCoreProject 'DotNetCore.csproj'
         WhenRunningDotNetBuild -ForBuildServer
         ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
-        ThenVerbosityIs -Detailed
+        ThenVerbosityIs -Minimal
         ThenTaskSuccess
+        ThenLogFile 'dotnet.build.log' -Exists
     }
 }
 
@@ -308,6 +336,7 @@ Describe 'DotNetBuild.when given Path to a csproj file' {
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll'
     ThenTaskSuccess
+    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
 }
 
 Describe 'DotNetBuild.when given Path to nonexistent csproj file' {
@@ -315,6 +344,7 @@ Describe 'DotNetBuild.when given Path to nonexistent csproj file' {
     GivenPath 'nonexistent.csproj'
     WhenRunningDotNetBuild -ErrorAction SilentlyContinue
     ThenTaskFailedWithError '\bdoes\ not\ exist\b'
+    ThenLogFile 'dotnet.build*.log' -Not -Exists
 }
 
 Describe 'DotNetBuild.when dotnet build fails' {
@@ -324,6 +354,8 @@ Describe 'DotNetBuild.when dotnet build fails' {
     GivenPath 'DotNetCore.csproj','FailingDotNetCore.csproj'
     WhenRunningDotNetBuild -ErrorAction SilentlyContinue
     ThenTaskFailedWithError 'failed\ with\ exit\ code'
+    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
+    ThenLogFile 'dotnet.build.FailingDotNetCore.csproj.log' -Exists
 }
 
 Describe 'DotNetBuild.when given multiple Paths to csproj files' {
@@ -333,6 +365,8 @@ Describe 'DotNetBuild.when given multiple Paths to csproj files' {
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll','DotNetCore2.dll'
     ThenTaskSuccess
+    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
+    ThenLogFile 'dotnet.build.DotNetCore2.csproj.log' -Exists
 }
 
 Describe 'DotNetBuild.when given verbosity level' {
@@ -344,6 +378,7 @@ Describe 'DotNetBuild.when given verbosity level' {
         ThenProjectBuilt 'DotNetCore.dll'
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
+        ThenLogFile 'dotnet.build.log' -Exists
     }
 
     Context 'By BuildServer' {
@@ -354,6 +389,7 @@ Describe 'DotNetBuild.when given verbosity level' {
         ThenProjectBuilt 'DotNetCore.dll' -ForBuildServer
         ThenVerbosityIs -Diagnostic
         ThenTaskSuccess
+        ThenLogFile 'dotnet.build.log' -Exists
     }
 }
 
@@ -364,6 +400,7 @@ Describe 'DotNetBuild.when given output directory' {
     WhenRunningDotNetBuild
     ThenProjectBuilt 'DotNetCore.dll' -Directory 'Output Dir'
     ThenTaskSuccess
+    ThenLogFile 'dotnet.build.log' -Exists
 }
 
 Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' {
@@ -377,4 +414,5 @@ Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' 
     ThenOutput -DoesNotContain '\bRestore\ completed\b'
     ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
     ThenTaskSuccess
+    ThenLogFile 'dotnet.build.log' -Exists
 }
