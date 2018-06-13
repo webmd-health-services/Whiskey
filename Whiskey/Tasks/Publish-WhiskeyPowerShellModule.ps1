@@ -30,7 +30,7 @@ function Publish-WhiskeyPowerShellModule
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should a path relative to your whiskey.yml file, to the module directory of the module to publish, e.g. 
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should a path relative to your whiskey.yml file, to the module directory of the module to publish, e.g. 
         
         Build:
         - PublishPowerShellModule:

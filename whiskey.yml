@@ -92,7 +92,7 @@ Build:
 Publish:
 - PublishPowerShellModule:
     RepositoryName: PSGallery
-    RepositoryUri: https://powershellgallery.com/
+    RepositoryUri: https://powershellgallery.com/api/v2/
     Path: Whiskey
     ApiKeyID: PowerShellGallery
 - SetVariableFromPowerShellDataFile:
