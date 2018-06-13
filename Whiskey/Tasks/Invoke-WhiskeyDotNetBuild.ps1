@@ -31,13 +31,6 @@ function Invoke-WhiskeyDotNetBuild
         $verbosity = 'detailed'
     }
 
-    $outputDirectory = $TaskParameter['OutputDirectory']
-    if ($outputDirectory -and ([IO.Path]::IsPathRooted($outputDirectory)))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Message ('"{0}" is an absolute path. The path must be a relative path to the project file location.' -f $outputDirectory)
-        return
-    }
-
     $dotnetArgs = & {
         '--configuration={0}' -f (Get-WhiskeyMSBuildConfiguration -Context $TaskContext)
         '-p:Version={0}'      -f $TaskContext.Version.SemVer1.ToString()
@@ -47,9 +40,9 @@ function Invoke-WhiskeyDotNetBuild
             '--verbosity={0}' -f $verbosity
         }
 
-        if ($outputDirectory)
+        if ($TaskParameter['OutputDirectory'])
         {
-            '--output={0}' -f $outputDirectory
+            '--output={0}' -f $TaskParameter['OutputDirectory']
         }
 
         if ($TaskParameter['Argument'])

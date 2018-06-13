@@ -354,14 +354,6 @@ Describe 'DotNetPublish.when given output directory' {
     ThenTaskSuccess
 }
 
-Describe 'DotNetPublish.when output directory is an absolute path' {
-    Init
-    GivenDotNetCoreProject 'DotNetCore.csproj' -WithPackageReference 'Microsoft.AspNetCore.Http'
-    GivenTaskProperties @{ 'OutputDirectory' = 'C:\bin' }
-    WhenRunningDotNetPublish -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError '\bThe\ path\ must\ be\ a\ relative\ path\ to\ the\ project\ file\b'
-}
-
 Describe 'DotNetPublish.when given additional argument -nologo' {
     Init
     GivenDotNetCoreProject 'DotNetCore.csproj' -WithPackageReference 'Microsoft.AspNetCore.Http'

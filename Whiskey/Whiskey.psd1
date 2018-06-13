@@ -158,7 +158,7 @@
 * Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
 * Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
 * Created `DotNetPublish` task for running `dotnet publish` on .NET Core projects.
-* Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and must be relative to the .NET Core project file location.
+* Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and now allows absolute paths.
 '@
         } # End of PSData hashtable
 
