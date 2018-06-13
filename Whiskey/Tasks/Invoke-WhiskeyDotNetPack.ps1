@@ -61,19 +61,6 @@ function Invoke-WhiskeyDotNetPack
 
     foreach($project in $projectPaths)
     {
-        $fullArgumentList = & {
-            'pack'
-            $dotnetArgs
-            $project
-        }
-
-        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
-
-        & $dotnetExe pack $dotnetArgs $project
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code ''{0}''' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'pack' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }

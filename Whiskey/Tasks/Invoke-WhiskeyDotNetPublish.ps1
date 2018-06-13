@@ -55,19 +55,6 @@ function Invoke-WhiskeyDotNetPublish
 
     foreach($project in $projectPaths)
     {
-        $fullArgumentList = & {
-            'publish'
-            $project
-            $dotnetArgs
-        }
-
-        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
-
-        & $dotnetExe publish $project $dotnetArgs
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code {0}' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'publish' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }

@@ -13,6 +13,8 @@ DESCRIPTION
         * `--no-build`: Skip building the project prior to testing. Use Whiskey's `DotNetBuild` task to build the test project.
         * `--results-directory=$(WHISKEY_OUTPUT_DIRECTORY)`: By default, test results are not saved to a file. Use the `Logger` property to specify the logger URI/friendly name (e.g. `trx`). The results will be saved to a file in Whiskey's ".output" directory.
 
+    The task writes a detailed build log to the build output directory. If the `Path` property has no value, the file is named `dotnet.test.log`. Otherwise, there will be a log file for each path named `dotnet.test.FILE_NAME.log`, where `FILE_NAME` is the name of the file built.
+
 PROPERTIES
     * `Argument`: a list of additional arguments to pass to the `dotnet test` command.
     * `Filter`: an expression indicating which tests to be run. See the [Filter option documentation](https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-test#filter-option-details) for info on the expression syntax.

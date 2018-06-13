@@ -55,32 +55,6 @@ function Invoke-WhiskeyDotNetBuild
 
     foreach($project in $projectPaths)
     {
-        $loggerArgs = & {
-                            '/filelogger9'
-                            $logFilePath = 'dotnet.build.log'
-                            if( $project )
-                            {
-                                $logFilePath = 'dotnet.build.{0}.log' -f ($project | Split-Path -Leaf)
-                            }
-                            $logFilePath = Join-Path -Path $TaskContext.OutputDirectory.FullName -ChildPath $logFilePath
-                            ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
-                      }
-
-
-        $fullArgumentList = & {
-            'build'
-            $dotnetArgs
-            $project
-            $loggerArgs
-        }
-
-        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
-
-        & $dotnetExe build $dotnetArgs $loggerArgs $project 
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code ''{0}''' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'build' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }

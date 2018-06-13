@@ -61,19 +61,6 @@ function Invoke-WhiskeyDotNetTest
 
     foreach($project in $projectPaths)
     {
-        $fullArgumentList = & {
-            'test'
-            $dotnetArgs
-            $project
-        }
-
-        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
-
-        & $dotnetExe test $dotnetArgs $project
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code {0}' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'test' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }

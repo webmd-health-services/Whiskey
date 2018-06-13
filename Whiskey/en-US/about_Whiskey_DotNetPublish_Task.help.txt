@@ -12,6 +12,8 @@ DESCRIPTION
         * `--configuration=(Debug|Release)`: `Debug` when build run by a developer and `Release` when build run by a build server.
         * `-p:Version=$(WHISKEY_VERSION_SEMVER1)`: the semver version 1 version for the current build. Use a `Version` task in your whiskey.yml file to set the version number.
 
+    The task writes a detailed build log to the build output directory. If the `Path` property has no value, the file is named `dotnet.publish.log`. Otherwise, there will be a log file for each path named `dotnet.publish.FILE_NAME.log`, where `FILE_NAME` is the name of the file built.
+
 PROPERTIES
     * `Argument`: a list of additional arguments to pass to the `dotnet publish` command.
     * `Path`: a list of paths to .NET Core solution or project files to build. If not specified, any solution or project files in the task working directory will be built.
@@ -20,6 +22,7 @@ PROPERTIES
     * `Verbosity`: sets the verbosity level of `dotnet` output. For developers, the default is dotnet's default verbosity. On build servers, the default is `detailed`. Allowed values are `q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]`, and `diag[nostic]`.
 
 EXAMPLES
+
     ## Example 1
 
         Build:
