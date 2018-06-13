@@ -348,8 +348,8 @@ Describe 'DotNetBuild.when given multiple Paths to csproj files' {
     ThenProjectBuilt 'app\bin\Debug\netcoreapp2.0\DotNetCoreApp.dll'
     ThenProjectBuilt 'test\bin\Debug\netcoreapp2.0\DotNetCoreTest.dll'
     ThenTaskSuccess
-    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
-    ThenLogFile 'dotnet.build.DotNetCore2.csproj.log' -Exists
+    ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
+    ThenLogFile 'dotnet.build.DotNetCoreTest.csproj.log' -Exists
 }
 
 Describe 'DotNetBuild.when given verbosity level' {
@@ -385,7 +385,8 @@ Describe 'DotNetBuild.when given output directory' {
     ThenProjectBuilt 'src\app\Output Dir\DotNetCoreApp.dll'
     ThenProjectBuilt 'src\engine\Output Dir\DotNetCoreEngine.dll'
     ThenTaskSuccess
-    ThenLogFile 'dotnet.build.log' -Exists
+    ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
+    ThenLogFile 'dotnet.build.DotNetCoreEngine.csproj.log' -Exists
 }
 
 Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' {
