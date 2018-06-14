@@ -4,7 +4,7 @@ function Invoke-WhiskeyTask
     <#
     .SYNOPSIS
     Runs a Whiskey task.
-    
+
     .DESCRIPTION
     The `Invoke-WhiskeyTask` function runs a Whiskey task.
     #>
@@ -19,10 +19,10 @@ function Invoke-WhiskeyTask
         [string]
         # The name of the task.
         $Name,
-        
+
         [Parameter(Mandatory=$true)]
         [hashtable]
-        # The parameters/configuration to use to run the task. 
+        # The parameters/configuration to use to run the task.
         $Parameter
     )
 
@@ -119,10 +119,10 @@ function Invoke-WhiskeyTask
             return
         }
 
-        $cmd.ScriptBlock.Attributes | 
+        $cmd.ScriptBlock.Attributes |
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
-    
+
     $TaskContext.TaskName = $Name
 
     if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
@@ -137,13 +137,14 @@ function Invoke-WhiskeyTask
     {
         $taskProperties.Remove($commonPropertyName)
     }
-    
+
     $workingDirectory = $TaskContext.BuildRoot
     if( $Parameter['WorkingDirectory'] )
     {
         $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
+    $taskTempDirectory = ''
     $requiredTools = Get-RequiredTool -CommandName $task.CommandName
     $startedAt = Get-Date
     $result = 'FAILED'
@@ -165,15 +166,15 @@ function Invoke-WhiskeyTask
                 return
             }
         }
-    
+
         $branch = $TaskContext.BuildMetadata.ScmBranch
         $executeTaskOnBranch = $true
-    
+
         if( $Parameter['OnlyOnBranch'] -and $Parameter['ExceptOnBranch'] )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('This task defines both OnlyOnBranch and ExceptOnBranch properties. Only one of these can be used. Please remove one or both of these properties and re-run your build.')
         }
-    
+
         if( $Parameter['OnlyOnBranch'] )
         {
             $runTask = $false
@@ -217,7 +218,7 @@ function Invoke-WhiskeyTask
                 return
             }
         }
-    
+
         $modes = @( 'Clean', 'Initialize', 'Build' )
         $onlyDuring = $Parameter['OnlyDuring']
         $exceptDuring = $Parameter['ExceptDuring']
@@ -259,7 +260,7 @@ function Invoke-WhiskeyTask
             }
             Write-WhiskeyVerbose -Context $TaskContext -Message     ('IfExists  {0}      exists' -f $Parameter['IfExists']) -Verbose
         }
-    
+
         if( $Parameter['UnlessExists'] )
         {
             $exists = Test-Path -Path $Parameter['UnlessExists']
@@ -271,7 +272,7 @@ function Invoke-WhiskeyTask
             }
             Write-WhiskeyVerbose -Context $TaskContext -Message     ('UnlessExists  {0}  not exists' -f $Parameter['UnlessExists']) -Verbose
         }
-    
+
         $inCleanMode = $TaskContext.ShouldClean
         if( $inCleanMode )
         {
@@ -304,7 +305,8 @@ function Invoke-WhiskeyTask
 
         Write-WhiskeyVerbose -Context $TaskContext -Message ''
         $startedAt = Get-Date
-        $TaskContext.Temp = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
+        $taskTempDirectory = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
+        $TaskContext.Temp = $taskTempDirectory
         if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
         {
             New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
@@ -323,9 +325,9 @@ function Invoke-WhiskeyTask
             }
         }
 
-        if( $TaskContext.Temp -and (Test-Path -Path $TaskContext.Temp -PathType Container) )
+        if( $taskTempDirectory -and (Test-Path -Path $taskTempDirectory -PathType Container) )
         {
-            Remove-Item -Path $TaskContext.Temp -Recurse -Force -ErrorAction Ignore
+            Remove-Item -Path $taskTempDirectory -Recurse -Force -ErrorAction Ignore
         }
         $endedAt = Get-Date
         $duration = $endedAt - $startedAt
