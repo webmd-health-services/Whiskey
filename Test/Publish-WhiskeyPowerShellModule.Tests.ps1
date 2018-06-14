@@ -314,7 +314,7 @@ Describe 'Publish-WhiskeyPowerShellModule.when publishing new module.'{
 Describe 'Publish-WhiskeyPowerShellModule.when publishing with no repository name'{
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -WithoutRegisteredRepo -WithNoRepositoryName -TaskContext $context -ThatFailsWith 'Property\ ''RepositoryName''\ is mandatory' -ErrorAction SilentlyContinue
+    Invoke-Publish -WithoutRegisteredRepo -WithNoRepositoryName -TaskContext $context -ThatFailsWith 'Property\ "RepositoryName"\ is mandatory' -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished
 }
 
@@ -366,7 +366,7 @@ Describe 'Publish-WhiskeyPowerShellModule.when no API key' {
 Describe 'Publish-WhiskeyPowerShellModule.when Path Parameter is not included' {
     Initialize-Test
     $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = 'Element ''Path'' is mandatory'
+    $errorMatch = 'Property "Path" is mandatory'
 
     Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
     Assert-ModuleNotPublished

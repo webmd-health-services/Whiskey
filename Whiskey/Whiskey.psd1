@@ -162,6 +162,7 @@
 * All `DotNet` tasks now by default show `minimal` output to the console, instead of `detailed`, when run by a build server.
 * Created `DotNetPublish` task for running `dotnet publish` on .NET Core projects.
 * Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and now allows absolute paths.
+* Added about help topics for every Whiskey task. Run `help about_Whiskey_Tasks` to see a list of tasks. Run `help TASK_NAME` to see help for a specific task. 
 '@
         } # End of PSData hashtable
 
