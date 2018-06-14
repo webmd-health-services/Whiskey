@@ -1,4 +1,4 @@
-PublishOn: 
+PublishOn:
 - master
 
 Build:
@@ -11,7 +11,7 @@ Build:
 
 - Pester4:
     OnlyBy: Developer
-    Path: 
+    Path:
     - Test\about_Whiskey_Tasks.Tests.ps1
 
 - Parallel:
@@ -27,7 +27,9 @@ Build:
             - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
             - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
             - "*\\Test\\DotNetBuild.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyDotNetPack.Tests.ps1"
+            - "*\\Test\\DotNetPack.Tests.ps1"
+            - "*\\Test\\DotNetPublish.Tests.ps1"
+            - "*\\Test\\DotNetTest.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNodeNspCheck.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNodeTask.Tests.ps1"
@@ -50,7 +52,9 @@ Build:
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
             - Test\DotNetBuild.Tests.ps1
-            - Test\Invoke-WhiskeyDotNetPack.Tests.ps1
+            - Test\DotNetPack.Tests.ps1
+            - Test\DotNetPublish.Tests.ps1
+            - Test\DotNetTest.Tests.ps1
             - Test\Invoke-WhiskeyNodeNspCheck.Tests.ps1
             - Test\Invoke-WhiskeyNpmInstall.Tests.ps1
             - Test\Invoke-WhiskeyPowerShell.Tests.ps1
@@ -63,7 +67,7 @@ Build:
             - Test\Uninstall-WhiskeyTool.Tests.ps1
     - Tasks:
         Pester4:
-            Path: 
+            Path:
             - Test\Install-WhiskeyTool.Tests.ps1
     - Tasks:
         Pester4:
@@ -72,16 +76,16 @@ Build:
             - Test\Invoke-WhiskeyPester3Task.Tests.ps1
     - Tasks:
         Pester4:
-            Path: 
+            Path:
             - Test\Get-WhiskeyPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
     - Tasks:
         Pester4:
-            Path: 
+            Path:
             - Test\Invoke-WhiskeyNodeTask.Tests.ps1
     - Tasks:
         Pester4:
-            Path: 
+            Path:
             # Imporant that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
             # These three tests must be in the same queue.
             - Test\MSBuild.Tests.ps1

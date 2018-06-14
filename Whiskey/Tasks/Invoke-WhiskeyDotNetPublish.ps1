@@ -1,8 +1,8 @@
 
-function Invoke-WhiskeyDotNetTest
+function Invoke-WhiskeyDotNetPublish
 {
     [CmdletBinding()]
-    [Whiskey.Task("DotNetTest")]
+    [Whiskey.Task("DotNetPublish")]
     [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory=$true)]
@@ -33,22 +33,16 @@ function Invoke-WhiskeyDotNetTest
 
     $dotnetArgs = & {
         '--configuration={0}' -f (Get-WhiskeyMSBuildConfiguration -Context $TaskContext)
-        '--no-build'
-        '--results-directory={0}' -f ($TaskContext.OutputDirectory.FullName)
-
-        if ($Taskparameter['Filter'])
-        {
-            '--filter={0}' -f $TaskParameter['Filter']
-        }
-
-        if ($TaskParameter['Logger'])
-        {
-            '--logger={0}' -f $TaskParameter['Logger']
-        }
+        '-p:Version={0}'      -f $TaskContext.Version.SemVer1.ToString()
 
         if ($verbosity)
         {
             '--verbosity={0}' -f $verbosity
+        }
+
+        if ($TaskParameter['OutputDirectory'])
+        {
+            '--output={0}' -f $TaskParameter['OutputDirectory']
         }
 
         if ($TaskParameter['Argument'])
@@ -61,6 +55,6 @@ function Invoke-WhiskeyDotNetTest
 
     foreach($project in $projectPaths)
     {
-        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'test' -ArgumentList $dotnetArgs -ProjectPath $project
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'publish' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }

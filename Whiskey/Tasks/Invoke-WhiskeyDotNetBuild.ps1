@@ -31,12 +31,6 @@ function Invoke-WhiskeyDotNetBuild
         $verbosity = 'minimal'
     }
 
-    $outputDirectory = $TaskParameter['OutputDirectory']
-    if ($outputDirectory)
-    {
-        $outputDirectory = $outputDirectory | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force
-    }
-
     $dotnetArgs = & {
         '--configuration={0}' -f (Get-WhiskeyMSBuildConfiguration -Context $TaskContext)
         '-p:Version={0}'      -f $TaskContext.Version.SemVer1.ToString()
@@ -46,9 +40,9 @@ function Invoke-WhiskeyDotNetBuild
             '--verbosity={0}' -f $verbosity
         }
 
-        if ($outputDirectory)
+        if ($TaskParameter['OutputDirectory'])
         {
-            '--output={0}' -f $outputDirectory
+            '--output={0}' -f $TaskParameter['OutputDirectory']
         }
 
         if ($TaskParameter['Argument'])
@@ -61,32 +55,6 @@ function Invoke-WhiskeyDotNetBuild
 
     foreach($project in $projectPaths)
     {
-        $loggerArgs = & {
-                            '/filelogger9'
-                            $logFilePath = 'dotnet.build.log'
-                            if( $project )
-                            {
-                                $logFilePath = 'dotnet.build.{0}.log' -f ($project | Split-Path -Leaf)
-                            }
-                            $logFilePath = Join-Path -Path $TaskContext.OutputDirectory.FullName -ChildPath $logFilePath
-                            ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
-                      }
-
-
-        $fullArgumentList = & {
-            'build'
-            $dotnetArgs
-            $project
-            $loggerArgs
-        }
-
-        Write-WhiskeyCommand -Context $TaskContext -Path $dotnetExe -ArgumentList $fullArgumentList
-
-        & $dotnetExe build $dotnetArgs $loggerArgs $project 
-
-        if ($LASTEXITCODE -ne 0)
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code ''{0}''' -f $LASTEXITCODE)
-        }
+        Invoke-WhiskeyDotNetCommand -TaskContext $TaskContext -DotNetPath $dotnetExe -Name 'build' -ArgumentList $dotnetArgs -ProjectPath $project
     }
 }
