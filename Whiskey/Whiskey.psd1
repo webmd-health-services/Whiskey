@@ -164,6 +164,7 @@
 * Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and now allows absolute paths.
 * Added about help topics for every Whiskey task. Run `help about_Whiskey_Tasks` to see a list of tasks. Run `help TASK_NAME` to see help for a specific task.
 * Fixed: When a custom written task that wraps a Whiskey task runs, the parent wrapper task's temp diretory does not get cleaned up.
+* Created `LoadTasks` function that loads custom Whiskey tasks into the current build.
 '@
         } # End of PSData hashtable
 
