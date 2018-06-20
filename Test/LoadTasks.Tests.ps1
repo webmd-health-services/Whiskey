@@ -19,6 +19,7 @@ function GivenFile
 function Init
 {
     $script:failed = $false
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 }
 
 function ThenError

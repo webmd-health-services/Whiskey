@@ -18,13 +18,16 @@ function Import-WhiskeyTask
 
     $module = Get-Module -Name 'Whiskey'
     $paths = Resolve-WhiskeyTaskPath -TaskContext $TaskContext -Path $TaskParameter['Path'] -PropertyName 'Path'
-    $newTasks = New-Object 'Collections.ArrayList'
     foreach( $path in $paths )
     {
         $knownTasks = @{}
         Get-WhiskeyTask | ForEach-Object { $knownTasks[$_.Name] = $_ }
-        . $path
-        $newTasks = Get-WhiskeyTask | Where-Object { -not $knownTasks.ContainsKey($_.Name) }
+        # We do this in a background script block to ensure the function is scoped correctly. If it isn't, it 
+        # won't be available outside the script block. If it is, it will be visible after the script block completes.
+        & {
+            . $path
+        }
+        $newTasks = Get-WhiskeyTask | Where-Object { -not $knownTasks.ContainsKey($_.Name) } 
         if( -not $newTasks )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('File "{0}" contains no Whiskey tasks. Make sure:
@@ -32,14 +35,19 @@ function Import-WhiskeyTask
 * the file contains a function
 * the function is scoped correctly (e.g. `function script:MyTask`)
 * the function has a `[Whiskey.Task("MyTask")]` attribute that declares the task''s name
+* a task with the same name hasn''t already been loaded
  
 See about_Whiskey_Writing_Tasks for more information.' -f $path)
         }
-        Write-WhiskeyInfo -Context $TaskContext -Message ($path)
-        foreach( $task in $newTasks )
+        
+        foreach( $newTask in $newTasks )
         {
-            Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
+            Write-WhiskeyInfo -Context $TaskContext -Message ($path)
+            foreach( $task in $newTasks )
+            {
+                Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
+            }
+            $TaskContext.TaskPaths.Add((Get-Item -Path $path))
         }
-        $TaskContext.TaskPaths.Add((Get-Item -Path $path))
     }
 }
