@@ -156,6 +156,7 @@
 * Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
 * Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
 * Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
+* Fixed: calling methods on variable values fails when the last parameter to the method is an empty string.
 * Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
 * MSBuild task no longer includes the build configuration in the build log file name.
 * All `DotNet` tasks now write a detailed log to the build output directory. Before, they didn't log at all and showed detailed output to the console when run by a build server.
