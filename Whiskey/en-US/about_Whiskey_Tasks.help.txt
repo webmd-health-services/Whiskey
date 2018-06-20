@@ -21,6 +21,7 @@ LONG DESCRIPTION
     * `GetPowerShellModule`: installs a PowerShell module.
     * `GitHubRelease`: creates a release in GitHub and uploads files for that
       release.
+    * `LoadTasks`: loads custom tasks so they can be used in the current build.
     * `MSBuild`: runs MSBuild, the Microsoft build engine.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that
       scans and reports on Node module license metadata.
