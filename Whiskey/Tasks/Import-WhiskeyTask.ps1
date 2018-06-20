@@ -40,14 +40,11 @@ function Import-WhiskeyTask
 See about_Whiskey_Writing_Tasks for more information.' -f $path)
         }
         
-        foreach( $newTask in $newTasks )
+        Write-WhiskeyInfo -Context $TaskContext -Message ($path)
+        foreach( $task in $newTasks )
         {
-            Write-WhiskeyInfo -Context $TaskContext -Message ($path)
-            foreach( $task in $newTasks )
-            {
-                Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
-            }
-            $TaskContext.TaskPaths.Add((Get-Item -Path $path))
+            Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
         }
+        $TaskContext.TaskPaths.Add((Get-Item -Path $path))
     }
 }
