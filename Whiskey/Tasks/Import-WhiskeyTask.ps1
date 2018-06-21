@@ -20,6 +20,12 @@ function Import-WhiskeyTask
     $paths = Resolve-WhiskeyTaskPath -TaskContext $TaskContext -Path $TaskParameter['Path'] -PropertyName 'Path'
     foreach( $path in $paths )
     {
+        if( $TaskContext.TaskPaths | Where-Object { $_.FullName -eq $path } )
+        {
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Already loaded tasks from file "{0}".' -f $path) -Verbose
+            continue
+        }
+
         $knownTasks = @{}
         Get-WhiskeyTask | ForEach-Object { $knownTasks[$_.Name] = $_ }
         # We do this in a background script block to ensure the function is scoped correctly. If it isn't, it 

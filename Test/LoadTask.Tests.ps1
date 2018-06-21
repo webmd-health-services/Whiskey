@@ -171,3 +171,32 @@ Build:
     Invoke-WhiskeyBuild -Context $context 
     ThenFile 'fubar' -Exists
 }
+
+Describe 'LoadTask.when loading the same tasks multiple times' {
+    Init
+    GivenFile task.ps1 @'
+function script:MyTask
+{
+    [Whiskey.Task('Fubar')]
+    param(
+        [Parameter(Mandatory=$true)]
+        [Whiskey.Context]
+        $TaskContext,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $TaskParameter        
+    )
+}
+'@
+    GivenFile 'whiskey.yml' @'
+Build:
+- LoadTask:
+    Path: task.ps1
+- LoadTask:
+    Path: task.ps1
+'@
+    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+    Invoke-WhiskeyBuild -Context $context 
+    ThenTask 'Fubar' -Exists
+}
