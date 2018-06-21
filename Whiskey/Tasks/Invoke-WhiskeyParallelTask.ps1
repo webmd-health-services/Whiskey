@@ -117,23 +117,37 @@ function Invoke-WhiskeyParallelTask
 
                                 Write-Debug ('Destination.{0,-20} -eq $null  ?  {1}' -f $name,($value -eq $null))
                                 Write-Debug ('           .{0,-20} is            {1}' -f $name,$value.GetType())
-                                return Get-Member -InputObject $value -Name 'Keys'
+                                return (Get-Member -InputObject $value -Name 'Keys') -or ($value -is [Collections.IList])
                             } |
                             ForEach-Object {
                                 $propertyName = $_.Name
                                 Write-Debug -Message ('{0}.{1} -> {2}.{1}' -f $Source.GetType(),$propertyName,$Destination.GetType())
-                                $keys = $source.$propertyName.Keys
-                                foreach( $key in $keys )
+                                $destinationObject = $Destination.$propertyName
+                                $sourceObject = $source.$propertyName
+                                if( (Get-Member -InputObject $destinationObject -Name 'Keys') )
                                 {
-                                    $value = $source.$propertyName[$key]
-                                    Write-Debug ('    [{0,-20}] -> {1}' -f $key,$value)
-                                    $Destination.$propertyName[$key] = $source.$propertyName[$key]
+                                    $keys = $sourceObject.Keys
+                                    foreach( $key in $keys )
+                                    {
+                                        $value = $sourceObject[$key]
+                                        Write-Debug ('    [{0,-20}] -> {1}' -f $key,$value)
+                                        $destinationObject[$key] = $sourceObject[$key]
+                                    }
+                                }
+                                elseif( $destinationObject -is [Collections.IList] )
+                                {
+                                    $idx = 0
+                                    foreach( $item in $sourceObject )
+                                    {
+                                        Write-Debug('    [{0}] {1}' -f $idx++,$item)
+                                        $destinationObject.Add($item)
+                                    }
                                 }
                             }
                     }
 
                     $VerbosePreference = $using:VerbosePreference
-                    $DebugPreferece = $using:DebugPreference
+                    $DebugPreference = $using:DebugPreference
                     $whiskeyModulePath = $using:whiskeyModulePath 
                     $originalContext = $using:TaskContext
 
@@ -161,7 +175,7 @@ function Invoke-WhiskeyParallelTask
                     $buildVersion.SemVer2 = $originalContext.Version.SemVer2.ToString()
                     $buildVersion.SemVer2NoBuildMetadata = $originalContext.Version.SemVer2NoBuildMetadata.ToString()
 
-                    $context = New-WhiskeyContextObject
+                    [Whiskey.Context]$context = New-WhiskeyContextObject
                     Sync-ObjectProperty -Source $originalContext -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version' )
 
                     $context.BuildMetadata = $buildInfo
@@ -171,6 +185,13 @@ function Invoke-WhiskeyParallelTask
                     $context.ApiKeys | ConvertTo-Json -Depth 50 | Write-Debug
                     $context.Credentials | ConvertTo-Json -Depth 50 | Write-Debug
                     $context.TaskDefaults | ConvertTo-Json -Depth 50 | Write-Debug
+
+                    # Load third-party tasks.
+                    foreach( $info in $context.TaskPaths )
+                    {
+                        Write-Verbose ('Loading tasks from "{0}".' -f $info.FullName)
+                        . $info.FullName
+                    }
 
                     $tasks = $using:queue['Tasks']
                     foreach( $task in $tasks )
