@@ -1,7 +1,7 @@
     
 function Import-WhiskeyTask
 {
-    [Whiskey.Task("LoadTasks")]
+    [Whiskey.Task("LoadTask")]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

@@ -1,5 +1,5 @@
 TOPIC
-    about_Whiskey_LoadTasks_Task
+    about_Whiskey_LoadTask_Task
 
 
 SUMMARY
@@ -7,7 +7,7 @@ SUMMARY
 
 
 DESCRIPTION
-    The `LoadTasks` task loads custom tasks into your build. Set the `Path` parameter to a list of paths to PowerShell script files that contain tasks. Wildcards are allowed.
+    The `LoadTask` task loads custom tasks into your build. Set the `Path` parameter to a list of paths to PowerShell script files that contain tasks. Wildcards are allowed.
 
     If any file contains no tasks, the build build will fail.
 
@@ -41,7 +41,7 @@ EXAMPLES
     ## Example 1
 
         Build:
-        - LoadTasks:
+        - LoadTask:
             Path: Build\Whiskey\*.ps1
 
     Demonstrates how to load tasks. In this example, all the tasks in all the `*.ps1` files the `Build\Whiskey` directory are loaded.

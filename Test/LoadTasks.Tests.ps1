@@ -48,7 +48,7 @@ function ThenFile
         $Exists
     )
 
-    It ('should load task') {
+    It ('should create file') {
         Join-Path -Path $TestDrive.FullName -ChildPath $Name | Should -Exist
     }
 }
@@ -76,8 +76,8 @@ function WhenLoading
     try
     {
         [Whiskey.Context]$context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
-        $parameter = $context.Configuration['Build'] | Where-Object { $_.ContainsKey('LoadTasks') } | ForEach-Object { $_['LoadTasks'] }
-        Invoke-WhiskeyTask -TaskContext $context -Name 'LoadTasks' -Parameter $parameter
+        $parameter = $context.Configuration['Build'] | Where-Object { $_.ContainsKey('LoadTask') } | ForEach-Object { $_['LoadTask'] }
+        Invoke-WhiskeyTask -TaskContext $context -Name 'LoadTask' -Parameter $parameter
     }
     catch
     {
@@ -86,7 +86,7 @@ function WhenLoading
     }
 }
 
-Describe 'LoadTasks' {
+Describe 'LoadTask' {
     Init
     GivenFile task.ps1 @'
 function script:MyTask
@@ -105,14 +105,14 @@ function script:MyTask
 '@
     GivenFile 'whiskey.yml' @'
 Build:
-- LoadTasks:
+- LoadTask:
     Path: task.ps1
 '@
     WhenLoading
     ThenTask 'Fubar' -Exists
 }
 
-Describe 'LoadTasks.when scoped incorrectly' {
+Describe 'LoadTask.when scoped incorrectly' {
     Init
     GivenFile task.ps1 @'
 function MyTask
@@ -131,7 +131,7 @@ function MyTask
 '@
     GivenFile 'whiskey.yml' @'
 Build:
-- LoadTasks:
+- LoadTask:
     Path: task.ps1
 '@
     WhenLoading -ErrorAction SilentlyContinue
@@ -139,7 +139,7 @@ Build:
     ThenError -Matches 'is\ scoped\ correctly'
 }
 
-Describe 'LoadTasks.when running custom tasks in the Parallel task' {
+Describe 'LoadTask.when running custom tasks in the Parallel task' {
     Init
     GivenFile task.ps1 @'
 function script:MyTask
@@ -160,7 +160,7 @@ function script:MyTask
 '@
     GivenFile 'whiskey.yml' @'
 Build:
-- LoadTasks:
+- LoadTask:
     Path: task.ps1
 - Parallel:
     Queues:
