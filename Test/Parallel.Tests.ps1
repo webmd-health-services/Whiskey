@@ -305,3 +305,25 @@ Build:
         $Global:Error | Should -BeNullOrEmpty
     }
 }
+
+Describe 'Parallel.when running pipeline task' {
+    Init
+    GivenFile 'one.ps1' '1 | sc one.txt'
+    GivenFile 'whiskey.yml' @'
+Build:
+- Parallel:
+    Queues:
+    - Tasks:
+        - Pipeline:
+            Name: PowerShell
+
+PowerShell:
+- PowerShell:
+    Path: one.ps1
+'@
+    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+    Invoke-WhiskeyBuild -Context $context
+    It ('should run each task') {
+        File 'one.txt' -ContentShouldBe   "1`r`n"
+    }
+}
