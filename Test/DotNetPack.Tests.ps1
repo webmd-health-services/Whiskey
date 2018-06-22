@@ -303,7 +303,7 @@ Describe 'DotNetPack.when not given any Paths' {
         GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
         WhenRunningDotNetPack -ForBuildServer
         ThenCreatedPackage 'DotNetCore'
-        ThenVerbosityIs -Detailed
+        ThenVerbosityIs -Minimal
         ThenTaskSuccess
     }
 }

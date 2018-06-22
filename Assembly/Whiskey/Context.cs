@@ -22,6 +22,7 @@ namespace Whiskey
             Environment = "";
             PipelineName = "";
             TaskName = "";
+            TaskPaths = new List<FileInfo>();
         }
 
         public IDictionary ApiKeys { get; private set; }
@@ -65,6 +66,8 @@ namespace Whiskey
         public int TaskIndex { get; set; }
 
         public IDictionary TaskDefaults { get; private set; }
+
+        public IList<FileInfo> TaskPaths { get; private set; }
 
         public DirectoryInfo Temp { get; set; }
 

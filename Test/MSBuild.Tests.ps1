@@ -234,11 +234,11 @@ function ThenAssembliesAreNotVersioned
     }
 }
 
-function ThenDebugOutputLogged
+function ThenOutputLogged
 {
     $buildRoot = Get-BuildRoot
     It 'should write a debug log' {
-        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.debug.log') | should -Exist
+        Join-Path -Path $buildRoot -ChildPath ('.output\msbuild.NUnit2PassingTest.sln.log') | should -Exist
     }
 }
 
@@ -441,17 +441,17 @@ function ThenWritesError
     }
 }
 
-Describe 'MSBuild Task.when building real projects as a developer' {
+Describe 'MSBuild.when building real projects as a developer' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreNotVersioned
-    ThenDebugOutputLogged
+    ThenOutputLogged
 }
 
-Describe 'MSBuild Task.when building multiple real projects as a developer' {
+Describe 'MSBuild.when building multiple real projects as a developer' {
     Init
     GivenProjectsThatCompile
     WhenRunningTask -AsDeveloper
@@ -460,18 +460,16 @@ Describe 'MSBuild Task.when building multiple real projects as a developer' {
     ThenAssembliesAreNotVersioned
 }
 
-Describe 'MSBuild Task.when building real projects as build server' {
+Describe 'MSBuild.when building real projects as build server' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
     ThenNuGetPackagesRestored
     ThenProjectsCompiled
     ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
-    ThenDebugOutputLogged
-
 }
 
-Describe 'MSBuild Task.when compilation fails' {
+Describe 'MSBuild.when compilation fails' {
     Init
     GivenAProjectThatDoesNotCompile
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
@@ -481,7 +479,7 @@ Describe 'MSBuild Task.when compilation fails' {
     ThenWritesError 'MSBuild\ exited\ with\ code\ 1'
 }
 
-Describe 'MSBuild Task.when Path parameter is empty' {
+Describe 'MSBuild.when Path parameter is empty' {
     Init
     GivenNoPathToBuild
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
@@ -491,7 +489,7 @@ Describe 'MSBuild Task.when Path parameter is empty' {
     ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
 }
 
-Describe 'MSBuild Task.when Path parameter is not provided' {
+Describe 'MSBuild.when Path parameter is not provided' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithNoPath -ErrorAction SilentlyContinue
@@ -501,7 +499,7 @@ Describe 'MSBuild Task.when Path parameter is not provided' {
     ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
 }
 
-Describe 'MSBuild Task.when Path Parameter does not exist' {
+Describe 'MSBuild.when Path Parameter does not exist' {
     Init
     GivenAProjectThatDoesNotExist
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
@@ -511,7 +509,7 @@ Describe 'MSBuild Task.when Path Parameter does not exist' {
     ThenWritesError ([regex]::Escape('does not exist.'))
 }
 
-Describe 'MSBuild Task.when cleaning build output' {
+Describe 'MSBuild.when cleaning build output' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
@@ -520,77 +518,77 @@ Describe 'MSBuild Task.when cleaning build output' {
     ThenBinsAreEmpty
 }
 
-Describe 'MSBuild Task.when customizing output level' {
+Describe 'MSBuild.when customizing output level' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
     ThenOutputIsEmpty
 }
 
-Describe 'MSBuild Task.when run by developer using default verbosity output level' {
+Describe 'MSBuild.when run by developer using default verbosity output level' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper
     ThenOutputIsMinimal
 }
 
-Describe 'MSBuild Task.when run by build server using default verbosity output level' {
+Describe 'MSBuild.when run by build server using default verbosity output level' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsBuildServer
     ThenOutputIsMinimal
 }
 
-Describe 'MSBuild Task.when passing extra build properties' {
+Describe 'MSBuild.when passing extra build properties' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
     ThenOutput -Contains 'Fubar=Snafu'
 }
 
-Describe 'MSBuild Task.when passing custom arguments' {
+Describe 'MSBuild.when passing custom arguments' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
-Describe 'MSBuild Task.when passing a single custom argument' {
+Describe 'MSBuild.when passing a single custom argument' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
     ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
 }
 
-Describe 'MSBuild Task.when run with no CPU parameter' {
+Describe 'MSBuild.when run with no CPU parameter' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
     ThenOutput -Contains '\n\ {5}\d>'
 }
 
-Describe 'MSBuild Task.when run with CPU parameter' {
+Describe 'MSBuild.when run with CPU parameter' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
     ThenOutput -DoesNotContain '^\ {5}\d>'
 }
 
-Describe 'MSBuild Task.when using custom output directory' {
+Describe 'MSBuild.when using custom output directory' {
     Init
     GivenAProjectThatCompiles
     WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
     ThenProjectsCompiled -To '.myoutput'
 }
 
-Describe 'MSBuild Task.when using custom targets' {
+Describe 'MSBuild.when using custom targets' {
     Init
     GivenCustomMSBuildScriptWithMultipleTargets
     WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
     ThenBothTargetsRun
 }
 
-Describe 'MSBuild Task.when using invalid version of MSBuild' {
+Describe 'MSBuild.when using invalid version of MSBuild' {
     Init
     GivenAProjectThatCompiles 
     GivenVersion 'some.bad.version'
@@ -599,7 +597,7 @@ Describe 'MSBuild Task.when using invalid version of MSBuild' {
     ThenWritesError -Pattern 'some\.bad\.version\b.*is\ not\ installed'
 }
 
-Describe 'MSBuild Task.when customizing version of MSBuild' {
+Describe 'MSBuild.when customizing version of MSBuild' {
     Init
     GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -617,7 +615,7 @@ Describe 'MSBuild Task.when customizing version of MSBuild' {
     ThenOutput -Contains ([regex]::Escape($expectedPath.TrimEnd('\')))
 }
 
-Describe 'MSBuild Task.when disabling multi-CPU builds' {
+Describe 'MSBuild.when disabling multi-CPU builds' {
     Init
     GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -630,7 +628,7 @@ Describe 'MSBuild Task.when disabling multi-CPU builds' {
     ThenOutput -Contains ('MSBuildNodeCount = 1')
 }
 
-Describe 'MSBuild Task.when disabling file logger' {
+Describe 'MSBuild.when disabling file logger' {
     Init
     GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -643,7 +641,7 @@ Describe 'MSBuild Task.when disabling file logger' {
     ThenOutputNotLogged
 }
 
-Describe 'MSBuild Task.when run by developer using a specific version of NuGet' {
+Describe 'MSBuild.when run by developer using a specific version of NuGet' {
     Init
     GivenProjectsThatCompile
     GivenNuGetVersion '3.5.0'
@@ -661,14 +659,14 @@ $procArchProject = @"
 </Project>
 "@
 
-Describe 'MSBuild Task.when using 32-bit MSBuild is undefined' {
+Describe 'MSBuild.when using 32-bit MSBuild is undefined' {
     Init
     GivenProject $procArchProject
     WhenRunningTask -AsDeveloper
     ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
 }
 
-Describe 'MSBuild Task.when using 32-bit MSBuild' {
+Describe 'MSBuild.when using 32-bit MSBuild' {
     Init
     GivenProject $procArchProject
     GivenUse32BitIs 'true'
@@ -676,7 +674,7 @@ Describe 'MSBuild Task.when using 32-bit MSBuild' {
     ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
 }
 
-Describe 'MSBuild Task.when explicitly not using 32-bit MSBuild' {
+Describe 'MSBuild.when explicitly not using 32-bit MSBuild' {
     Init
     GivenProject $procArchProject
     GivenUse32BitIs 'false'

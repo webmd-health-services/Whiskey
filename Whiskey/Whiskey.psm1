@@ -20,5 +20,11 @@ if( -not ($attr | Get-Member 'SupportsClean') )
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
 }
 
+$context = New-Object -TypeName 'Whiskey.Context'
+if( -not ($context | Get-Member 'TaskPaths') )
+{
+    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+}
+
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
     ForEach-Object { . $_.FullName }

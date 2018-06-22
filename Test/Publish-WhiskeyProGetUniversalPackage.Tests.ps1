@@ -14,6 +14,17 @@ $noAccessToProGet = $null
 $myTimeout = $null
 $packageExists = $false
 $overwrite = $false
+$properties = @{ }
+
+function GivenProperty
+{
+    param(
+        $Name,
+        $Is
+    )
+
+    $properties[$Name] = $Is
+}
 
 function GivenOverwrite
 {
@@ -109,6 +120,7 @@ function Init
 {
     $script:myTimeout = $null
     $script:packageExists = $false
+    $script:properties = @{ }
 }
 
 function ThenPackageOverwritten
@@ -217,6 +229,20 @@ function ThenPackagePublishedWithDefaultTimeout
     }
 }
 
+function ThenTaskCompleted
+{
+    param(
+    )
+
+    It ('the task should not throw an exception') {
+        $threwException | Should -Be $false
+    }
+
+    It ('the task should not write an error') {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
 function ThenTaskFailed
 {
     param(
@@ -240,11 +266,9 @@ function WhenPublishingPackage
 
     $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory
 
-    $parameter = @{ }
-
     if( $credentialID )
     {
-        $parameter['CredentialID'] = $credentialID
+        $properties['CredentialID'] = $credentialID
         if( $credential )
         {
             Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
@@ -253,28 +277,28 @@ function WhenPublishingPackage
 
     if( $progetUri )
     {
-        $parameter['Uri'] = $progetUri
+        $properties['Uri'] = $progetUri
     }
 
     if( $feedName )
     {
-        $parameter['FeedName'] = $feedName
+        $properties['FeedName'] = $feedName
     }
 
     if( $path )
     {
-        $parameter['Path'] = $path
+        $properties['Path'] = $path
     }
 
     if( $myTimeout )
     {
-        $parameter['Timeout'] = $myTimeout
+        $properties['Timeout'] = $myTimeout
     }
 
     if( $overwrite )
     {
         # String to ensure parsed to a boolean.
-        $parameter['Overwrite'] = 'true'
+        $properties['Overwrite'] = 'true'
     }
 
     $mock = { }
@@ -293,7 +317,7 @@ function WhenPublishingPackage
     try
     {
         $Global:Error.Clear()
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'PublishProGetUniversalPackage'
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $properties -Name 'PublishProGetUniversalPackage'
     }
     catch
     {
@@ -303,6 +327,7 @@ function WhenPublishingPackage
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default files' {
+    Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
     GivenProGetIsAt 'my uri'
@@ -318,6 +343,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default file
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish' {
+    Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
     GivenProGetIsAt 'my uri'
@@ -329,20 +355,23 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to pub
     ThenPackageNotPublished 'myfile2.upack'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when CredentialID parameter is missing' {
+Describe 'Publish-WhiskeyProGetUniversalPackage.when CredentialID property is missing' {
+    Init
     GivenNoParameters
     WhenPublishingPackage -ErrorAction SilentlyContinue
     ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when Uri parameter is missing' {
+Describe 'Publish-WhiskeyProGetUniversalPackage.when Uri property is missing' {
+    Init
     GivenNoParameters
     GivenCredential 'somecredential' -WithID 'fubar'
     WhenPublishingPackage -ErrorAction SilentlyContinue
     ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when FeedName parameter is missing' {
+Describe 'Publish-WhiskeyProGetUniversalPackage.when FeedName property is missing' {
+    Init
     GivenNoParameters
     GivenCredential 'somecredential' -WithID 'fubar'
     GivenProGetIsAt 'some uri'
@@ -350,15 +379,40 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when FeedName parameter is missi
     ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when there is no upack files' {
+Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files' {
+    Init
     GivenProGetIsAt 'my uri'
     GivenCredential 'fubatr' -WithID 'id'
     GivenUniversalFeed 'universal'
     WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed 'no packages'
+    ThenTaskFailed ([regex]::Escape('.output\*.upack" does not exist'))
+}
+
+Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
+    Init
+    GivenProGetIsAt 'my uri'
+    GivenCredential 'fubatr' -WithID 'id'
+    GivenUniversalFeed 'universal'
+    GivenProperty 'AllowMissingPackage' -Is 'true'
+    WhenPublishingPackage
+    ThenTaskCompleted
+    ThenPackageNotPublished
+}
+
+Describe 'Publish-WhiskeyProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
+    Init
+    GivenProGetIsAt 'my uri'
+    GivenCredential 'fubatr' -WithID 'id'
+    GivenUniversalFeed 'universal'
+    GivenProperty 'AllowMissingPackage' -Is 'true'
+    GivenProperty 'Path' -Is '*.fubar'
+    WhenPublishingPackage
+    ThenTaskCompleted
+    ThenPackageNotPublished
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permission' {
+    Init
     GivenProGetIsAt 'my uri'
     GivenUpackFile 'my.upack'
     GivenCredential 'fubatr' -WithID 'id'
@@ -368,6 +422,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permissi
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when uploading a large package' {
+    Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
     GivenProGetIsAt 'my uri'
@@ -379,6 +434,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when uploading a large package' 
 }
 
 Describe 'PublishProGetUniversalPackage.when package already exists' {
+    Init
     GivenUpackFile 'my.upack'
     GivenProGetIsAt 'proget.example.com'
     GivenCredential 'fubar' -WithID 'progetid'
@@ -389,6 +445,7 @@ Describe 'PublishProGetUniversalPackage.when package already exists' {
 }
 
 Describe 'PublishProGetUniversalPackage.when replacing existing package' {
+    Init
     GivenUpackFile 'my.upack'
     GivenProGetIsAt 'proget.example.com'
     GivenCredential 'fubar' -WithID 'progetid'
