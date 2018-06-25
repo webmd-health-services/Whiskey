@@ -93,14 +93,15 @@ function New-WhiskeyContext
         Write-Warning ('{0}: The default "BuildTasks" pipeline has been renamed to "Build". Backwards compatibility with "BuildTasks" will be removed in the next major version of Whiskey. Rename your "BuildTasks" pipeline to "Build".' -f $ConfigurationPath)
     }
 
+    $migrateToStopTask = 'The "Publish" pipeline has been deprecated and will be removed in the next major version of Whiskey. Move all your "Publish" tasks to the end of your "Build" pipeline with a "Stop" task just before them. The "Stop" task should have an "ExceptOnBranch" property with the list of branches copied from the "PublishOn" root whiskey.yml property. Then remove the "PublishOn" root property and "Publish" pipeline property from the whiskey.yml.'
     if( $config.ContainsKey('Publish') -and $config.ContainsKey('PublishTasks') )
     {
-        throw ('{0}: The configuration file contains both "Publish" and the deprecated "PublishTasks" pipelines. Move all your publish tasks under "Publish" and remove the "PublishTasks" pipeline.' -f $ConfigurationPath)
+        throw ('{0}: The configuration file contains both deprecated "Publish" and "PublishTasks" pipelines, only one is allowed. {1}' -f $ConfigurationPath,$migrateToStopTask)
     }
 
-    if( $config.ContainsKey('PublishTasks') )
+    if( $config.ContainsKey('Publish') -or $config.ContainsKey('PublishTasks') )
     {
-        Write-Warning ('{0}: The default "PublishTasks" pipeline has been renamed to "Publish". Backwards compatibility with "PublishTasks" will be removed in the next major version of Whiskey. Rename your "PublishTasks" pipeline to "Publish".' -f $ConfigurationPath)
+        Write-Warning ('{0}: {1}' -f $ConfigurationPath,$migrateToStopTask)
     }
 
     $buildRoot = $ConfigurationPath | Split-Path

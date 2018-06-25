@@ -176,7 +176,7 @@ function ThenPluginsRan
             It ('should run {0}' -f $pluginName) {
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
                 Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
-                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
+                Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter {
                     if( $TaskParameter.Count -ne $WithParameter.Count )
                     {
                         return $false
@@ -233,11 +233,7 @@ function WhenRunningPipeline
         $Name
     )
 
-    $environment = $PSCmdlet.ParameterSetName
-    $configuration = 'FubarSnafu'
-    $optionalParams = @{ }
-
-    [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
+    [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'
 
     $script:context = New-WhiskeyTestContext -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
     $Global:Error.Clear()
@@ -251,7 +247,7 @@ function WhenRunningPipeline
     {
         $script:threwException = $true
         Write-Error $_
-    }    
+    }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when running an unknown task' {
@@ -291,7 +287,7 @@ Build:
     Mock -CommandName 'Publish-WhiskeyNodeModule' -Verifiable -ModuleName 'Whiskey'
     WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
-    
+
     It 'should still call the task' {
         Assert-MockCalled -CommandName 'Publish-WhiskeyNodeModule' -ModuleName 'Whiskey' -Times 2
     }
@@ -351,7 +347,7 @@ Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and not a YAML object' {
     GivenWhiskeyYmlBuildFile @"
 Build
 "@
-    WhenRunningPipeline 'Build' 
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
@@ -360,7 +356,7 @@ Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and is a YAML object' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 "@
-    WhenRunningPipeline 'Build' 
+    WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
@@ -415,10 +411,10 @@ foreach( $task in $tasks )
 
             It 'should pass context to task' {
                 Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
-                    [object]::ReferenceEquals($TaskContext, $Context) 
+                    [object]::ReferenceEquals($TaskContext, $Context)
                 }
             }
-            
+
             It 'should pass task parameters' {
                 Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -ParameterFilter {
                     #$DebugPreference = 'Continue'
@@ -443,5 +439,21 @@ foreach( $task in $tasks )
         WhenRunningPipeline $pipelineName
         ThenPipelineSucceeded
         Assert-TaskCalled
+    }
+}
+
+Describe 'Invoke-WhiskeyPipeline.when pipeline has Stop task' {
+    GivenWhiskeyYmlBuildFile @"
+Build:
+- Exec: cmd /c exit 0
+- Stop
+- NuGetPush
+"@
+    Mock -CommandName 'Publish-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
+    WhenRunningPipeline 'Build'
+    ThenPipelineSucceeded
+
+    It 'should not call any tasks after the Stop task' {
+        Assert-MockCalled -CommandName 'Publish-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -Times 0
     }
 }
