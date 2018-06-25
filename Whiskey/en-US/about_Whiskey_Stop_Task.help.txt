@@ -1,0 +1,34 @@
+TOPIC
+    about_Whiskey_Stop_Task
+
+SUMMARY
+    Stops a Whiskey build.
+
+DESCRIPTION
+    The `Stop` task gracefully stops a Whiskey build from running any more tasks. Use the common task properties to control when this task runs to stop the build.
+
+PROPERTIES
+    See the "Common Task Properties" section in the "about_Whiskey_Tasks" help topic.
+
+EXAMPLES
+
+    ## Example 1
+
+        Build:
+        - Pester4:
+            Path: Test\*.ps1
+        - Stop
+        - PublishPowerShellModule
+
+    Demonstrates stopping the build before the `PublishPowerShellModule` task runs.
+
+    ## Example 2
+
+        Build:
+        - Pester4:
+            Path: Test\*.ps1
+        - Stop:
+            ExceptOnBranch: master
+        - PublishPowerShellModule
+
+    Demonstrates only running the `PublishPowerShellModule` task when the build is running on the `master` branch on a build server.

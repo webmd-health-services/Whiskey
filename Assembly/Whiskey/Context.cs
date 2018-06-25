@@ -15,6 +15,7 @@ namespace Whiskey
             Configuration = new Dictionary<object, object>();
             Credentials = new Dictionary<string, object>();
             RunMode = RunMode.Build;
+            Stop = false;
             TaskDefaults = new Dictionary<string, IDictionary>();
             TaskIndex = -1;
             Variables = new Dictionary<string, object>();
@@ -59,6 +60,8 @@ namespace Whiskey
         public bool ShouldInitialize { get { return RunMode == RunMode.Initialize; } }
 
         public DateTime StartedAt { get; set; }
+
+        public bool Stop { get; set; }
 
         public string TaskName { get; set; }
 

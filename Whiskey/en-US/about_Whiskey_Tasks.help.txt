@@ -55,6 +55,7 @@ LONG DESCRIPTION
       .psd1 file or module manifest).
     * `SetVariableFromXml`: creates variables that you can use in your
       whiskey.yml file by reading their values from an XML file.
+    * `Stop`: Gracefully stops a build.
     * `TaskDefaults`: sets default task properties.
     * `Version`: sets the version number for the current build.
 

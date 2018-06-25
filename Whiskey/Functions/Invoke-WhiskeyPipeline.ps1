@@ -11,11 +11,11 @@ function Invoke-WhiskeyPipeline
         Build:
         - TaskOne
         - TaskTwo
-        Publish:
+        Test:
         - TaskOne
         - Task
 
-    Defines two pipelines: `Build` and `Publish`.
+    Defines two pipelines: `Build` and `Test`.
 
     .EXAMPLE
     Invoke-WhiskeyPipeline -Context $context -Name 'Build'
@@ -44,11 +44,11 @@ function Invoke-WhiskeyPipeline
     if( -not $config.ContainsKey($Name) )
     {
         Stop-Whiskey -Context $Context -Message ('Pipeline ''{0}'' does not exist. Create a pipeline by defining a ''{0}'' property:
-        
+
     {0}:
     - TASK_ONE
     - TASK_TWO
-    
+
 ' -f $Name)
         return
     }
@@ -62,6 +62,11 @@ function Invoke-WhiskeyPipeline
 
     foreach( $taskItem in $config[$Name] )
     {
+        if( $Context.Stop )
+        {
+            return
+        }
+
         $taskIdx++
 
         $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $taskItem -ErrorAction Stop
