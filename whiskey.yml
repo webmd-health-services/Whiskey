@@ -1,6 +1,3 @@
-PublishOn:
-- master
-
 Build:
 - TaskDefaults:
     Pester4:
@@ -93,7 +90,9 @@ Build:
             - Test\Invoke-WhiskeyNUnit3Task.Tests.ps1
 - Exec: Whiskey\bin\7-Zip\7z.exe a $(WHISKEY_OUTPUT_DIRECTORY)\Whiskey.zip .\Whiskey '-xr!*.pdb'
 
-Publish:
+- Stop:
+    ExceptOnBranch: master
+
 - PublishPowerShellModule:
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/api/v2/
