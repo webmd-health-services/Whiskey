@@ -150,6 +150,8 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
+* Added `Stop` task for gracefully stopping a build.
+* Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
 '@
         } # End of PSData hashtable
 
