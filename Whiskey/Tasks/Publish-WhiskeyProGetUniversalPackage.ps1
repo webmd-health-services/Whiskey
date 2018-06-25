@@ -16,26 +16,26 @@ function Publish-WhiskeyProGetUniversalPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $exampleTask = 'Publish:
-        - PublishProGetUniversalPackage:
-            CredentialID: ProGetCredential
-            Uri: https://proget.example.com
-            FeedName: UniversalPackages'
-
+    $exampleTask = @'
+- PublishProGetUniversalPackage:
+    CredentialID: ProGetCredential
+    Uri: https://proget.example.com
+    FeedName: UniversalPackages'
+'@
 
     if( -not $TaskParameter['CredentialID'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet:
-        
+
         $exampleTask
-        
+
         Use the `Add-WhiskeyCredential` function to add credentials to the build."
     }
-    
+
     if( -not $TaskParameter['Uri'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "Uri is a mandatory property. It should be the URI to the ProGet instance where you want to publish your package:
-        
+
         $exampleTask
         "
     }
@@ -43,11 +43,11 @@ function Publish-WhiskeyProGetUniversalPackage
     if( -not $TaskParameter['FeedName'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "FeedName is a mandatory property. It should be the name of the universal feed in ProGet where you want to publish your package:
-        
+
         $exampleTask
         "
     }
-    
+
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
 
     $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
@@ -56,7 +56,7 @@ function Publish-WhiskeyProGetUniversalPackage
     {
         $TaskParameter['Path'] = Join-Path -Path ($TaskContext.OutputDirectory | Split-Path -Leaf) -ChildPath '*.upack'
     }
-    
+
     $errorActionParam = @{ }
     $allowMissingPackages = $false
     if( $TaskParameter.ContainsKey('AllowMissingPackage') )

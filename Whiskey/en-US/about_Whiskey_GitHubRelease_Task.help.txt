@@ -5,9 +5,9 @@ SUMMARY
     Creates a release in a GitHub repository.
 
 DESCRIPTION
-    The `GitHubRelease` task creates a release in GitHub and optionally uploads files to the release. You must set the repository's owner and name as a URI Path with the `RepositoryName` parameter (e.g. `OWNER/NAME`). You must set the tag name used to identify the release with the `Tag` property. You must set the API key ID of the GitHub access token to use with the `ApiKeyID` property. You add the access token to your build with the `Add-WhiskeyApiKey` function. The `ApiKeyID` property and the value of the `Add-WhiskeyApiKey` function's `ID` property must be the same. 
-    
-    The release is created on the head (i.e. most recent commit) on the master branch. Use the `Commitish` property to change the release's commit. We recommend using the `$(WHISKEY_SCM_COMMIT_ID)` variable, which is the commit ID currently building, but any valid Git [revision](https://git-scm.com/docs/gitrevisions) should be acceptable. 
+    The `GitHubRelease` task creates a release in GitHub and optionally uploads files to the release. You must set the repository's owner and name as a URI Path with the `RepositoryName` parameter (e.g. `OWNER/NAME`). You must set the tag name used to identify the release with the `Tag` property. You must set the API key ID of the GitHub access token to use with the `ApiKeyID` property. You add the access token to your build with the `Add-WhiskeyApiKey` function. The `ApiKeyID` property and the value of the `Add-WhiskeyApiKey` function's `ID` property must be the same.
+
+    The release is created on the head (i.e. most recent commit) on the master branch. Use the `Commitish` property to change the release's commit. We recommend using the `$(WHISKEY_SCM_COMMIT_ID)` variable, which is the commit ID currently building, but any valid Git [revision](https://git-scm.com/docs/gitrevisions) should be acceptable.
 
     GitHub uses the commit message of the release's commit as the release name. Use the `Name` property to set your own name.
 
@@ -28,13 +28,12 @@ PROPERTIES
     * `Description`: a description of the release. This is a good place to put release notes.
     * `Assets`: a list of files to upload. These files will show on the release's page in GitHub and users will be able to download them. This is a good place to upload a ZIP file of your application. Each asset is a mapping with these properties:
         * `Path` (***mandatory***): the path to the file to upload. The path must exist. The path must be relative to the whiskey.yml file.
-        * `ContentType` (***mandatory***): the file's [media type](https://www.iana.org/assignments/media-types/media-types.xhtml) (e.g. `application/json`). 
+        * `ContentType` (***mandatory***): the file's [media type](https://www.iana.org/assignments/media-types/media-types.xhtml) (e.g. `application/json`).
         * `Name`: the file's name when viewing in GitHub and downloading. The default is the file's actual name.
 
 EXAMPLES
     ## Example 1
 
-        Publish:
         - GitHubRelease:
             RepositoryName: webmd-health-services/Whiskey
             ApiKeyID: github.com
@@ -54,7 +53,7 @@ EXAMPLES
     * named `$(WHISKEY_SEMVER2_NO_BUILD_METADATA)`, which is the version of the current build.
 
     One asset is uploaded, `.output\Whiskey.zip`, as an `application/zip` file. We change the file name to `Whiskey-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip` so the version number is in the name.
-    
+
     The GitHub access token is stored as an environment variable on the build server and is added to the build like this:
 
         $apiKeys = @{
@@ -63,9 +62,9 @@ EXAMPLES
 
         $apiKeys.Keys |
             Where-Object { Test-Path -Path ('env:{0}' -f $apiKeys[$_]) } |
-            ForEach-Object { 
+            ForEach-Object {
                 $apiKeyID = $_
                 $envVarName = $apiKeys[$apiKeyID]
                 Write-Verbose ('Adding API key "{0}" with value from environment variable "{1}".' -f $apiKeyID,$envVarName)
-                Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value (Get-Item -Path ('env:{0}' -f $envVarName)).Value 
+                Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value (Get-Item -Path ('env:{0}' -f $envVarName)).Value
             }

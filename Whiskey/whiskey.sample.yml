@@ -1,15 +1,5 @@
-# The `PublishOn` property is a list of branch names. After a successful build on a 
-# branch that matches any name in this list, the `Publish` pipeline will run. With 
-# an empty `PublishOn` property, your `Publish` pipeline will never run.
-#
-# Wildcards are supported. For example, if `release/*` is in the list, the 
-# `Publish` pipeline would run on the `release/6.3` branch but not the `release`
-# branch.
-PublishOn:
- - master
- 
 # The `PublishBuildStatusTo` is a list of publishers where you wnat build status
-# information published. Status is published when a build starts, succeeds, and fails. 
+# information published. Status is published when a build starts, succeeds, and fails.
 # Build statuses are only published when running under a build server. You can only
 # report this information to Bitbucket Server.
 #
@@ -17,7 +7,7 @@ PublishOn:
 #
 # * Uri: the URI to the Bitbucket Server.
 # * CredentialID: the ID of the credential to use when connecting. Credentials are added
-#   to the context object returned by `New-WhsCITestContext`, e.g. 
+#   to the context object returned by `New-WhsCITestContext`, e.g.
 #   `$context.Credentials.Add( 'CREDENTIAL_ID', $credential )
 PublishBuildStatusTo:
 - BitbucketServer:
@@ -25,7 +15,7 @@ PublishBuildStatusTo:
     CredentialID: BBServer
 
 # An array of build tasks you want to run during a build, e.g.
-# 
+#
 #     Build:
 #     - TASK_NAME:
 #         PROPERTY_ONE: VALUE_ONE
@@ -33,12 +23,12 @@ PublishBuildStatusTo:
 #
 # See the documentation for each individual task for YML samples.
 Build:
-# The Version task sets the current build's version number. You should almost always 
+# The Version task sets the current build's version number. You should almost always
 # have one of these.
 - Version:
     Version: 0.0.0
 
-    # You can also pull the version from files that store version numbers. Whiskey 
+    # You can also pull the version from files that store version numbers. Whiskey
     # supports:
     #
     # * PowerShell module manifests (the ModuleVersion property)
@@ -51,10 +41,10 @@ Build:
     # Path property.
     # Prerelease: rc.$(WHISKEY_BUILD_NUMBER)
 
-    # You can also have different prerelease versions for different branches. Set the 
+    # You can also have different prerelease versions for different branches. Set the
     # property to a list of key/value pairs. The key should be a wildcard pattern that
     # matches a branch, the value should be the prerelease label to use.
-    # 
+    #
     # Prelease
     # - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
     # - develop: rc.$(WHISKEY_BUILD_NUMBER)
@@ -64,15 +54,23 @@ Build:
     #
     # Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID)
 
+# Use the `Stop` task to control when your build should stop. This is normally used
+# to control when tasks related to publishing are run. Use the `ExceptOnBranch`
+# property with the `Stop` task to define what branches, when run on a build server,
+# will run your publishing tasks.
+
+# Wildcards are supported. For example, if `release/*` is in the `ExceptOnBranch` list,
+# the build won't stop here on the `release/6.3` branch but will on the `release`
+# branch.
+- Stop:
+    ExceptOnBranch: master
+
 # An array of tasks you want to run when publishing, e.g.
-# 
+#
 #     Build:
+#     - Stop:
+#         ExceptOnBranch: master
 #     - TASK_NAME:
 #         PROPERTY_ONE: VALUE_ONE
 #         PROPERTY_TWO: VALUE_TWO
 #
-# Publishing happens when run under a build server and building on a publishing branch.
-# Publishing branches are configured with the `PublishOn` property.
-#
-# See the documentation for each individual task for YML samples.
-Publish:
