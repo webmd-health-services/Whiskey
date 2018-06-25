@@ -14,43 +14,36 @@ function Publish-WhiskeyNodeModule
         [hashtable]
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
         #
-        # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.                     
+        # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
         $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $workingDirectory = (Get-Location).ProviderPath
-
     $npmRegistryUri = [uri]$TaskParameter['NpmRegistryUri']
-    if (-not $npmRegistryUri) 
+    if (-not $npmRegistryUri)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory and must be a URI. It should be the URI to the registry where the module should be published. E.g.,
-        
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: https://registry.npmjs.org/
     '
     }
 
-    if (!$TaskContext.Publish)
-    {
-        return
-    }
-    
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
 
     $credentialID = $TaskParameter['CredentialID']
     if( -not $credentialID )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
-    
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: {0}
         CredentialID: NpmCredential
-    
+
     Use the `Add-WhiskeyCredential` function to add the credential to the build.
     ' -f $npmRegistryUri)
     }
@@ -60,7 +53,7 @@ function Publish-WhiskeyNodeModule
     if( -not $npmEmail )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
-    
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: {0}

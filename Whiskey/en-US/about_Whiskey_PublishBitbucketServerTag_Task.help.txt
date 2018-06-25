@@ -11,7 +11,7 @@ DESCRIPTION
 
 
 PROPERTIES
-    
+
     * `CredentialID` (**mandatory**): The credential ID of the credentials to use when connecting to Bitbucket Server. Use the `Add-WhiskeyCredential` function to add credentials to your build.
     * `Uri` (**mandatory**): the URI to your Bitbucket Serer instance, with no path or query string.
     * `ProjectKey`: the repository's project key in Bitbucket Server. If not given, it is read from the repository's URI.
@@ -22,7 +22,6 @@ EXAMPLES
 
     ## Example 1
 
-        Publish:
         - PublishBitbucketServerTag:
             CredentialID: bitbucketserver.example.com
             Uri: https://bitbucketserver.example.com

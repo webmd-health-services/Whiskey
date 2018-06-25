@@ -25,7 +25,6 @@ EXAMPLES
 
     ## Example 1
 
-        Publish:
         - PublishProGetUniversalPackage:
             Uri: https://proget.example.com
             FeedName: Apps

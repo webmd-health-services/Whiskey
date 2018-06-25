@@ -10,7 +10,6 @@ function Add-WhiskeyCredential
 
     For example, if you are publishing a ProGet universal pakcage, your `whiskey.yml` file will look something like this:
 
-        Publish:
         - PublishProGetUniversalPackage:
             Uri: https://proget.example.com
             FeedName: 'upack'
