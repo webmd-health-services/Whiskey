@@ -151,7 +151,12 @@ function Invoke-WhiskeyTask
     Push-Location -Path $workingDirectory
     try
     {
-        if( $Parameter['OnlyBy'] )
+        if( $Parameter['OnlyBy'] -and $Parameter['ExceptBy'])
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('This task defines both "OnlyBy" and "ExceptBy" properties. Only one of these can be used. Please remove one or both of these properties and re-run your build.')
+            return
+        }
+        elseif( $Parameter['OnlyBy'] )
         {
             [Whiskey.RunBy]$onlyBy = [Whiskey.RunBy]::Developer
             if( -not ([enum]::TryParse($Parameter['OnlyBy'], [ref]$onlyBy)) )
@@ -163,6 +168,21 @@ function Invoke-WhiskeyTask
             if( $onlyBy -ne $TaskContext.RunBy )
             {
                 Write-WhiskeyVerbose -Context $TaskContext -Message ('OnlyBy.{0} -ne Build.RunBy.{1}' -f $onlyBy,$TaskContext.RunBy)
+                $result = 'SKIPPED'
+                return
+            }
+        }
+        elseif( $Parameter['ExceptBy'] )
+        {
+            [Whiskey.RunBy]$exceptBy = [Whiskey.RunBy]::Developer
+            if( -not ([enum]::TryParse($Parameter['ExceptBy'], [ref]$exceptBy)) )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'ExceptBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Parameter['ExceptBy'],([enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
+            }
+
+            if( $exceptBy -eq $TaskContext.RunBy )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('ExceptBy.{0} -eq Build.RunBy.{1}' -f $exceptBy,$TaskContext.RunBy)
                 $result = 'SKIPPED'
                 return
             }
