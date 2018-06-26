@@ -262,6 +262,7 @@ function WhenPublishingPackage
 {
     [CmdletBinding()]
     param(
+        $Excluding
     )
 
     $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory
@@ -299,6 +300,11 @@ function WhenPublishingPackage
     {
         # String to ensure parsed to a boolean.
         $properties['Overwrite'] = 'true'
+    }
+
+    if( $Excluding )
+    {
+        $properties['Exclude'] = $Excluding
     }
 
     $mock = { }
@@ -342,6 +348,18 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default file
     ThenPackagePublishedWithDefaultTimeout
 }
 
+Describe 'Publish-WhiskeyProGetUniversalPackage.when user excludes files' {
+    Init
+    GivenUpackFile 'myfile1.upack'
+    GivenUpackFile 'myfile2.upack'
+    GivenProGetIsAt 'my uri'
+    GivenCredential 'fubar' -WithID 'progetid'
+    GivenUniversalFeed 'universalfeed'
+    WhenPublishingPackage -Excluding '*2.upack'
+    ThenPackagePublished 'myfile1.upack'
+    ThenPackageNotPublished 'myfile2.upack'
+}
+
 Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish' {
     Init
     GivenUpackFile 'myfile1.upack'
@@ -353,6 +371,19 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to pub
     WhenPublishingPackage
     ThenPackagePublished 'myfile1.upack'
     ThenPackageNotPublished 'myfile2.upack'
+}
+
+Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish and excluding some' {
+    Init
+    GivenUpackFile 'myfile1.upack'
+    GivenUpackFile 'myfile2.upack'
+    GivenProGetIsAt 'my uri'
+    GivenCredential 'fubar' -WithID 'progetid'
+    GivenUniversalFeed 'universalfeed'
+    GivenPath '.output\*.upack'
+    WhenPublishingPackage -Excluding '*1.upack'
+    ThenPackageNotPublished 'myfile1.upack'
+    ThenPackagePublished 'myfile2.upack'
 }
 
 Describe 'Publish-WhiskeyProGetUniversalPackage.when CredentialID property is missing' {
