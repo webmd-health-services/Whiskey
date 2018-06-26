@@ -25,7 +25,7 @@ function Get-WhiskeyMSBuildConfiguration
 
     Set-StrictMode -Version 'Latest'
 
-    if( -not $Context.Configuration )
+    if( -not $Context.MSBuildConfiguration )
     {
         $configuration = 'Debug'
         if( $Context.ByBuildServer )
