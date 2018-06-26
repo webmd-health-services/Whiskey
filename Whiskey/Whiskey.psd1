@@ -152,6 +152,7 @@
 * Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
 * Added `Stop` task for gracefully stopping a build.
 * Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
+* Fixed: `ExceptBy` common task property was documented but never implemented.
 '@
         } # End of PSData hashtable
 
