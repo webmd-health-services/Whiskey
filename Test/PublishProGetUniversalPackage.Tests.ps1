@@ -332,7 +332,7 @@ function WhenPublishingPackage
     }
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default files' {
+Describe 'PublishProGetUniversalPackage.when user publishes default files' {
     Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
@@ -348,7 +348,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user publishes default file
     ThenPackagePublishedWithDefaultTimeout
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when user excludes files' {
+Describe 'PublishProGetUniversalPackage.when user excludes files' {
     Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
@@ -360,7 +360,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user excludes files' {
     ThenPackageNotPublished 'myfile2.upack'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish' {
+Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
     Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
@@ -373,7 +373,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to pub
     ThenPackageNotPublished 'myfile2.upack'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to publish and excluding some' {
+Describe 'PublishProGetUniversalPackage.when user specifies files to publish and excluding some' {
     Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
@@ -386,14 +386,14 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user specifies files to pub
     ThenPackagePublished 'myfile2.upack'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when CredentialID property is missing' {
+Describe 'PublishProGetUniversalPackage.when CredentialID property is missing' {
     Init
     GivenNoParameters
     WhenPublishingPackage -ErrorAction SilentlyContinue
     ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when Uri property is missing' {
+Describe 'PublishProGetUniversalPackage.when Uri property is missing' {
     Init
     GivenNoParameters
     GivenCredential 'somecredential' -WithID 'fubar'
@@ -401,7 +401,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when Uri property is missing' {
     ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when FeedName property is missing' {
+Describe 'PublishProGetUniversalPackage.when FeedName property is missing' {
     Init
     GivenNoParameters
     GivenCredential 'somecredential' -WithID 'fubar'
@@ -410,7 +410,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when FeedName property is missin
     ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files' {
+Describe 'PublishProGetUniversalPackage.when there are no upack files' {
     Init
     GivenProGetIsAt 'my uri'
     GivenCredential 'fubatr' -WithID 'id'
@@ -419,7 +419,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files' {
     ThenTaskFailed ([regex]::Escape('.output\*.upack" does not exist'))
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
+Describe 'PublishProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
     Init
     GivenProGetIsAt 'my uri'
     GivenCredential 'fubatr' -WithID 'id'
@@ -430,7 +430,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when there are no upack files in
     ThenPackageNotPublished
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
+Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
     Init
     GivenProGetIsAt 'my uri'
     GivenCredential 'fubatr' -WithID 'id'
@@ -442,7 +442,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when Path doesn''t resolve to an
     ThenPackageNotPublished
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permission' {
+Describe 'PublishProGetUniversalPackage.when user does not have permission' {
     Init
     GivenProGetIsAt 'my uri'
     GivenUpackFile 'my.upack'
@@ -452,7 +452,7 @@ Describe 'Publish-WhiskeyProGetUniversalPackage.when user does not have permissi
     ThenTaskFAiled 'Failed to upload'
 }
 
-Describe 'Publish-WhiskeyProGetUniversalPackage.when uploading a large package' {
+Describe 'PublishProGetUniversalPackage.when uploading a large package' {
     Init
     GivenUpackFile 'myfile1.upack'
     GivenUpackFile 'myfile2.upack'
