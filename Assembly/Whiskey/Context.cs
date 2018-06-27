@@ -23,6 +23,7 @@ namespace Whiskey
             PipelineName = "";
             TaskName = "";
             TaskPaths = new List<FileInfo>();
+            MSBuildConfiguration = "";
         }
 
         public IDictionary ApiKeys { get; private set; }
@@ -44,6 +45,8 @@ namespace Whiskey
         public DirectoryInfo DownloadRoot { get; set; }
 
         public string Environment { get; set; }
+
+        public string MSBuildConfiguration { get; set; }
 
         public DirectoryInfo OutputDirectory { get; set; }
 
