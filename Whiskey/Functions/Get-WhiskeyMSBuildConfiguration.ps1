@@ -24,6 +24,7 @@ function Get-WhiskeyMSBuildConfiguration
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     if( -not $Context.MSBuildConfiguration )
     {
