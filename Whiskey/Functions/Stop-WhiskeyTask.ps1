@@ -21,7 +21,9 @@ function Stop-WhiskeyTask
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
+    $TaskContext.BuildStatus = [Whiskey.BuildStatus]::Failed
+
     if( -not ($PropertyDescription) )
     {
         $PropertyDescription = 'Build[{0}]: {1}' -f $TaskContext.TaskIndex,$TaskContext.TaskName

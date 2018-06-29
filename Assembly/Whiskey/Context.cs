@@ -11,6 +11,7 @@ namespace Whiskey
         {
             ApiKeys = new Dictionary<string, string>();
             BuildMetadata = new BuildInfo();
+            BuildStatus = BuildStatus.NotStarted;
             RunBy = RunBy.Developer;
             Configuration = new Dictionary<object, object>();
             Credentials = new Dictionary<string, object>();
@@ -36,6 +37,8 @@ namespace Whiskey
         public bool ByDeveloper { get { return this.RunBy == RunBy.Developer; } }
 
         public BuildInfo BuildMetadata { get; set; }
+
+        public BuildStatus BuildStatus { get; set; }
 
         public IDictionary Configuration { get; set; }
 

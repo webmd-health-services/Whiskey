@@ -204,26 +204,38 @@ function ThenBuildRunInMode
 function ThenBuildStatusSetTo
 {
     param(
-        [string]
+        [Whiskey.BuildStatus]
         $ExpectedStatus
     )
 
-    It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
-        Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Status -eq $ExpectedStatus }
+    It 'should set commmit build status' {
+        Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1
         Assert-ContextPassedTo 'Set-WhiskeyBuildStatus'
     }
 }
 
 function ThenBuildStatusMarkedAsCompleted
 {
-    ThenBuildStatusSetTo 'Started'
-    ThenBuildStatusSetTo 'Completed'
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Started)
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Succeeded)
 }
 
 function ThenBuildStatusMarkedAsFailed
 {
-    ThenBuildStatusSetTo 'Started'
-    ThenBuildStatusSetTo 'Failed'
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Started)
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Failed)
+}
+
+function ThenContextBuildStatus
+{
+    param(
+        [Whiskey.BuildStatus]
+        $ExpectedBuildStatus
+    )
+
+    It ('should set the Context.BuildStatus to {0}' -f $ExpectedBuildStatus) {
+        $context.BuildStatus | Should -Be $ExpectedBuildStatus
+    }
 }
 
 function ThenContextPassedWhenSettingBuildStatus
@@ -502,6 +514,7 @@ Describe 'Invoke-WhiskeyBuild.when running OnBuildStart and OnBuildEnd pipelines
     ThenBuildPipelineRan
     ThenPipelineRan 'OnBuildStart'
     ThenPipelineRan 'OnBuildEnd'
+    ThenContextBuildStatus ([Whiskey.BuildStatus]::Succeeded)
 }
 
 Describe 'Invoke-WhiskeyBuild.when an OnBuildStart pipeline exists and running a specific pipeline' {
@@ -516,6 +529,7 @@ Describe 'Invoke-WhiskeyBuild.when an OnBuildStart pipeline exists and running a
     ThenPipelineRan 'CustomPipeline'
     ThenPipelineRan 'Build' -Times 0
     ThenPipelineRan 'OnBuildEnd'
+    ThenContextBuildStatus ([Whiskey.BuildStatus]::Succeeded)
 }
 
 Describe 'Invoke-WhiskeyBuild.when running OnBuildEnd pipeline after Build fails' {
@@ -527,4 +541,5 @@ Describe 'Invoke-WhiskeyBuild.when running OnBuildEnd pipeline after Build fails
     ThenBuildPipelineRan
     ThenPipelineRan 'OnBuildEnd'
     ThenBuildStatusMarkedAsFailed
+    ThenContextBuildStatus ([Whiskey.BuildStatus]::Failed)
 }

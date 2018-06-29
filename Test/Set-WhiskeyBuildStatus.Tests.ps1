@@ -104,7 +104,7 @@ function WhenReportingBuildStatus
     [CmdletBinding()]
     param(
         [Parameter(Position=0)]
-        [ValidateSet('Started','Completed','Failed')]
+        [Whiskey.BuildStatus]
         $Status
     )
 
@@ -117,7 +117,8 @@ function WhenReportingBuildStatus
     $Global:Error.Clear()
     try
     {
-        Set-WhiskeyBuildStatus -Context $context -Status $Status
+        $context.BuildStatus = $Status
+        Set-WhiskeyBuildStatus -Context $context
         $script:failed = $false
     }
     catch
@@ -144,14 +145,14 @@ Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
     Context 'by build server' {
         GivenRunByBuildServer
         GivenNoReporters
-        WhenReportingBuildStatus Started
+        WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started)
         ThenNoBuildStatusReported
     }
 
     Context 'by developer' {
         GivenRunByDeveloper
         GivenNoReporters
-        WhenReportingBuildStatus Started
+        WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started)
         ThenNoBuildStatusReported
     }
 }
@@ -162,14 +163,14 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Serve
         GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
         $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
         GivenCredential 'BBServer1' $credential
-        WhenReportingBuildStatus Started
+        WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started)
         ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
     }
 
     Context 'by developer' {
         GivenRunByDeveloper
         GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'Credential' = 'BBServer' } }
-        WhenReportingBuildStatus Started
+        WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started)
         ThenNoBuildStatusReported
     }
 }
@@ -179,7 +180,7 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
     GivenCredential 'BBServer1' $credential
-    WhenReportingBuildStatus Failed
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Failed)
     ThenBuildStatusReportedToBitbucketServer Failed -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
@@ -188,14 +189,14 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Ser
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
     GivenCredential 'BBServer1' $credential
-    WhenReportingBuildStatus Completed
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Succeeded)
     ThenBuildStatusReportedToBitbucketServer Successful -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
     GivenRunByBuildServer
     GivenReporter  @{ 'Nonsense' = @{ } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started) -ErrorAction SilentlyContinue
     ThenReportingFailed 'unknown\ build\ status\ reporter'
 }
 
@@ -203,21 +204,21 @@ Describe 'Set-WhiskeyBuildStatus.when missing credential' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenNoCredentials
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started) -ErrorAction SilentlyContinue
     ThenReportingFailed 'credential\ ''BBServer1''\ does\ not\ exist'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started) -ErrorAction SilentlyContinue
     ThenReportingFailed 'Property\ ''CredentialID''\ does\ not\ exist'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing URI' {
     GivenRunByBuildServer
     GivenReporter @{ 'BitbucketServer' = @{ 'CredentialID' = 'fubar' ; } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+    WhenReportingBuildStatus ([Whiskey.BuildStatus]::Started) -ErrorAction SilentlyContinue
     ThenReportingFailed 'Property\ ''Uri''\ does\ not\ exist'
 }
 

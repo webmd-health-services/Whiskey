@@ -21,7 +21,7 @@ if( -not ($attr | Get-Member 'SupportsClean') )
 }
 
 $context = New-Object -TypeName 'Whiskey.Context'
-$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration' )
+$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration', 'BuildStatus' )
 foreach( $propertyToCheck in $propertiesToCheck )
 {
     if( -not ($context | Get-Member $propertyToCheck) )

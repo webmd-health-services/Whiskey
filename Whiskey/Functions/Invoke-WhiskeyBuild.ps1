@@ -81,9 +81,9 @@ function Invoke-WhiskeyBuild
 
     $Context.StartedAt = $script:buildStartedAt = Get-Date
 
-    Set-WhiskeyBuildStatus -Context $Context -Status Started
+    $Context.BuildStatus = [Whiskey.BuildStatus]::Started
+    Set-WhiskeyBuildStatus -Context $Context
 
-    $succeeded = $false
     Push-Location -Path $Context.BuildRoot
     try
     {
@@ -126,7 +126,7 @@ function Invoke-WhiskeyBuild
             }
         }
 
-        $succeeded = $true
+        $Context.BuildStatus = [Whiskey.BuildStatus]::Succeeded
     }
     finally
     {
@@ -145,11 +145,7 @@ function Invoke-WhiskeyBuild
             }
             Pop-Location
 
-            $status = 'Failed'
-            if( $succeeded )
-            {
-                $status = 'Completed'
-            }
-            Set-WhiskeyBuildStatus -Context $Context -Status $status
+            Set-WhiskeyBuildStatus -Context $Context
         }
+    }
 }

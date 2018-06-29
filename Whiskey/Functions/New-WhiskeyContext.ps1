@@ -19,6 +19,7 @@ function New-WhiskeyContext
 
     * `BuildMetadata`: a `Whiskey.BuildInfo` object representing build metadata provided by the build server.
     * `BuildRoot`: a `System.IO.DirectoryInfo` object representing the directory the YAML configuration file is in.
+    * `BuildStatus`: a `Whiskey.BuildStatus` object representing the current run status of the build.
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
     * `Environment`: the environment the build is running in.
