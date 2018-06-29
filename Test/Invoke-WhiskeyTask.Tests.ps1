@@ -606,7 +606,13 @@ function WhenRunningTask
         $Parameter,
 
         [string]
-        $InRunMode
+        $InRunMode,
+
+        [switch]
+        $AfterBuildSucceeded,
+
+        [switch]
+        $AfterBuildFailed
     )
 
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
@@ -635,6 +641,15 @@ function WhenRunningTask
     if( $scmBranch )
     {
         $context.BuildMetadata.ScmBranch = $scmBranch
+    }
+
+    if( $AfterBuildSucceeded )
+    {
+        $context.BuildStatus = [Whiskey.BuildStatus]::Succeeded
+    }
+    elseif( $AfterBuildFailed )
+    {
+        $context.BuildStatus = [Whiskey.BuildStatus]::Failed
     }
 
     Mock -CommandName 'New-Item' -ModuleName 'Whiskey' -MockWith { [IO.Directory]::CreateDirectory($Path) }
@@ -1158,6 +1173,38 @@ Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and file does not
     ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
 }
 
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Succeeded property and build succeeded' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildSucceeded
+    ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+}
+
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Succeeded property and build failed' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
+    ThenTaskNotRun 'MockTask'
+}
+
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Failed property and build failed' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'OnlyIfBuild' = 'Failed' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
+    ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
+}
+
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Failed property and build succeeded' {
+    Init
+    GivenMockTask
+    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
+    ThenTaskNotRun
+}
+
 Describe 'Invoke-WhiskeyTask.when given both OnlyDuring and ExceptDuring' {
     try
     {
@@ -1197,7 +1244,7 @@ Describe 'Invoke-WhiskeyTask.when OnlyDuring or ExceptDuring contains invalid va
     }
 }
 
-foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring' ) )
+foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring', 'OnlyIfBuild' ) )
 {
     Describe ('Invoke-WhiskeyTask.when {0} property has variable for a value' -f $commonPropertyName) {
         Init

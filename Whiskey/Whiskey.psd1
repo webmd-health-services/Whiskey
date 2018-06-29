@@ -154,6 +154,7 @@
 * Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
 * Fixed: `ExceptBy` common task property was documented but never implemented.
 * Added `OnBuildStart` and `OnBuildEnd` built-in pipelines. See the `about_Whiskey` help topic for further info.
+* Added `OnlyIfBuild` common task property for controlling if tasks in the built-in `OnBuildEnd` pipeline should run. Valid values are `Succeeded` and `Failed`.
 '@
         } # End of PSData hashtable
 

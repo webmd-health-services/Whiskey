@@ -133,7 +133,7 @@ function Invoke-WhiskeyTask
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
     $taskProperties = $Parameter.Clone()
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists' ) )
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyIfBuild' ) )
     {
         $taskProperties.Remove($commonPropertyName)
     }
@@ -297,6 +297,23 @@ function Invoke-WhiskeyTask
                 return
             }
             Write-WhiskeyVerbose -Context $TaskContext -Message     ('UnlessExists  {0}  not exists' -f $Parameter['UnlessExists']) -Verbose
+        }
+
+        if( $Parameter['OnlyIfBuild'] )
+        {
+            [Whiskey.BuildStatus]$buildStatus = [Whiskey.BuildStatus]::Succeeded
+            if( -not ([enum]::TryParse($Parameter['OnlyIfBuild'], [ref]$buildStatus)) )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'OnlyIfBuild' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Parameter['OnlyIfBuild'],([enum]::GetValues([Whiskey.BuildStatus]) -join ''', '''))
+                return
+            }
+
+            if( $buildStatus -ne $TaskContext.BuildStatus )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('OnlyIfBuild.{0} -ne Build.BuildStatus.{1}' -f $buildStatus,$TaskContext.BuildStatus)
+                $result = 'SKIPPED'
+                return
+            }
         }
 
         $inCleanMode = $TaskContext.ShouldClean
