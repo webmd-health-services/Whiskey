@@ -7,7 +7,7 @@ function New-WhiskeyNuGetPackage
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
         $TaskContext,
-    
+
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
@@ -18,14 +18,15 @@ function New-WhiskeyNuGetPackage
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to .csproj or .nuspec files to pack, e.g. 
-            
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to .csproj or .nuspec files to pack, e.g.
+
     Build:
     - PublishNuGetPackage:
         Path:
         - MyProject.csproj
         - MyNuspec.nuspec
     ')
+        return
     }
 
     $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -38,7 +39,7 @@ function New-WhiskeyNuGetPackage
         $symbolsArg = '-Symbols'
         $symbolsFileNameSuffix = '.symbols'
     }
-       
+
     $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
     if( -not $nugetPath )
     {
@@ -55,7 +56,7 @@ function New-WhiskeyNuGetPackage
             return
         }
 
-        $propertiesArgs = $properties.Keys | 
+        $propertiesArgs = $properties.Keys |
                                 ForEach-Object {
                                     '-Properties'
                                     '{0}={1}' -f $_,$properties[$_]
@@ -74,7 +75,7 @@ function New-WhiskeyNuGetPackage
         {
             $packageVersion = $TaskContext.Version.SemVer1
         }
-                    
+
         # Create NuGet package
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
 
@@ -87,6 +88,7 @@ function New-WhiskeyNuGetPackage
         if( -not (Test-Path -Path $packagePath -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' but the expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
+            return
         }
     }
 }

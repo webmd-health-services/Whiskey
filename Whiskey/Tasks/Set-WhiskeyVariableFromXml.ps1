@@ -15,11 +15,12 @@ function Set-WhiskeyVariableFromXml
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType File
     if( ($path | Measure-Object).Count -ne 1 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('resolves to multiple files. The "Path" property must only resolve to one file.')
+        return
     }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
@@ -32,10 +33,11 @@ function Set-WhiskeyVariableFromXml
     {
         $Global:Error.RemoveAt(0)
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Exception reading XML from file "{0}": {1}"' -f $path,$_)
+        return
     }
 
     $nsManager = New-Object -TypeName 'Xml.XmlNamespaceManager' -ArgumentList $xml.NameTable
-    $prefixes = $TaskParameter['NamespacePrefixes'] 
+    $prefixes = $TaskParameter['NamespacePrefixes']
     if( $prefixes -and ($prefixes | Get-Member 'Keys') )
     {
         foreach( $prefix in $prefixes.Keys )
@@ -52,7 +54,7 @@ function Set-WhiskeyVariableFromXml
         foreach( $variableName in $variables.Keys )
         {
             $xpath = $variables[$variableName]
-            $value = $xml.SelectNodes($xpath, $nsManager) | ForEach-Object { 
+            $value = $xml.SelectNodes($xpath, $nsManager) | ForEach-Object {
                 if( $_ | Get-Member 'InnerText' )
                 {
                     $_.InnerText
@@ -68,6 +70,7 @@ function Set-WhiskeyVariableFromXml
                 if( -not $allowMissingNodes )
                 {
                     Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Variable {0}: XPath expression "{1}" matched no elements/attributes in XML file "{2}".' -f $variableName,$xpath,$path)
+                    return
                 }
                 $value = ''
                 $exists = '!'

@@ -73,6 +73,7 @@
             if( -not $rawVersion )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $path)
+                return
             }
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from PowerShell module manifest ''{1}''.' -f $rawVersion,$path)
             $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $path)
@@ -86,10 +87,12 @@
             catch
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node package.json file ''{0}'' contains invalid JSON.' -f $path)
+                return
             }
             if( -not $rawVersion )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $path)
+                return
             }
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from Node package.json ''{1}''.' -f $rawVersion,$path)
             $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $path)
@@ -104,16 +107,19 @@
             catch
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .cspoj file ''{0}'' contains invalid XMl.' -f $path)
+                return
             }
 
             if( $csprojXml.DocumentElement.Attributes['xmlns'] )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .csproj file ''{0}'' has an "xmlns" attribute. .NET Core/Standard .csproj files should not have a default namespace anymore (see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" attribute from the root "Project" document element. If this is a .NET framework .csproj, it doesn''t support versioning. Use the Whiskey Version task''s Version property to version your assemblies.' -f $path)
+                return
             }
             $csprojVersionNode = $csprojXml.SelectSingleNode('/Project/PropertyGroup/Version')
             if( -not $csprojVersionNode )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $path)
+                return
             }
             $rawVersion = $csprojVersionNode.InnerText
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$path)
@@ -169,6 +175,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
         - develop: beta.$(WHISKEY_BUILD_NUMBER)
     ' -f $map,$map.GetType().FullName)
+                    return
                 }
                 foreach( $wildcardPattern in $map.Keys )
                 {
@@ -205,6 +212,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('''{0}'' is not a valid prerelease version. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $prerelease)
+            return
         }
     }
 
@@ -222,6 +230,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message ('''{0}'' is not valid build metadata. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $build)
+            return
         }
     }
 

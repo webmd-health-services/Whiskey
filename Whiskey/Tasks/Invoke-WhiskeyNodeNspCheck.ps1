@@ -50,11 +50,13 @@ function Invoke-WhiskeyNodeNspCheck
     catch
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, did not run successfully as it did not return valid JSON (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$output)
+        return
     }
 
     if ($Global:LASTEXITCODE -ne 0)
     {
         $summary = $results | Format-List | Out-String
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
+        return
     }
 }
