@@ -153,6 +153,7 @@
 * Added `Stop` task for gracefully stopping a build.
 * Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
 * Fixed: `ExceptBy` common task property was documented but never implemented.
+* Added `OnBuildStart` and `OnBuildEnd` built-in pipelines. See the `about_Whiskey` help topic for further info.
 '@
         } # End of PSData hashtable
 

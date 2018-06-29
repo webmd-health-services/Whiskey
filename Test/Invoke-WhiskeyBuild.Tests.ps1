@@ -10,6 +10,7 @@ $publish = $false
 $publishingTasks = $null
 $buildPipelineFails = $false
 $buildPipelineName = 'Build'
+$pipelines = @();
 $publishPipelineFails = $false
 $publishPipelineName = 'Publish'
 
@@ -22,6 +23,7 @@ function Init
     $script:publishingTasks = $null
     $script:buildPipelineFails = $false
     $script:buildPipelineName = 'Build'
+    $script:pipelines = @();
     $script:publishPipelineFails = $false
     $script:publishPipelineName = 'Publish'
 }
@@ -69,6 +71,14 @@ function GivenBuildPipelineName
     )
 
     $script:buildPipelineName = $Name
+}
+
+function GivenAdditionalPipeline
+{
+    param(
+        $Name
+    )
+    $script:pipelines += $Name
 }
 
 function GivenPreviousBuildOutput
@@ -138,7 +148,7 @@ function ThenBuildOutputRemoved
 function ThenPipelineRan
 {
     param(
-        $Name,
+        $ExpectedPipeline,
         $Times = 1
     )
 
@@ -148,9 +158,8 @@ function ThenPipelineRan
         $qualifier = 'not '
     }
 
-    It ('should {0}run the {1} pipeline' -f $qualifier,$Name) {
-        $expectedPipelineName = $Name
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $Name -eq $expectedPipelineName }
+    It ('should {0}run the {1} pipeline' -f $qualifier,$ExpectedPipeline) {
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $Name -eq $ExpectedPipeline }
         if( $Times )
         {
             Assert-ContextPassedTo 'Invoke-WhiskeyPipeline' -Times $Times
@@ -224,12 +233,12 @@ function ThenContextPassedWhenSettingBuildStatus
 
 function ThenPublishPipelineRan
 {
-    ThenPipelineRan -Name $publishPipelineName -Times 1
+    ThenPipelineRan -ExpectedPipeline $publishPipelineName -Times 1
 }
 
 function ThenPublishPipelineNotRun
 {
-    ThenPipelineRan -Name $publishPipelineName -Times 0
+    ThenPipelineRan -ExpectedPipeline $publishPipelineName -Times 0
 }
 
 function WhenRunningBuild
@@ -260,12 +269,12 @@ function WhenRunningBuild
 
         if( `$Name -eq "$buildPipelineName" -and `$buildPipelineFails )
         {
-            throw ('Build pipeline fails!')
+            Stop-WhiskeyTask -TaskContext `$Context -Message ('Build pipeline fails!')
         }
 
         if( `$Name -eq "$publishPipelineName" -and `$publishPipelineFails )
         {
-            throw ('Publish pipeline fails!')
+            Stop-WhiskeyTask -TaskContext `$Context -Message ('Publish pipeline fails!')
         }
 "@))
 
@@ -276,6 +285,11 @@ function WhenRunningBuild
     if( $publishingTasks )
     {
         $config[$publishPipelineName] = $publishingTasks
+    }
+
+    foreach( $pipeline in $pipelines )
+    {
+        $config[$pipeline] = @();
     }
 
     $script:context = New-WhiskeyContextObject
@@ -307,7 +321,6 @@ function WhenRunningBuild
             $optionalParams['Initialize'] = $true
         }
 
-        $pipelineNameParam = @{ }
         if( $PipelineName )
         {
             $optionalParams['PipelineName'] = $PipelineName
@@ -477,4 +490,41 @@ Describe 'Invoke-WhiskeyBuild.when running legacy pipelines' {
     ThenBuildPipelineRan
     ThenPublishPipelineRan
     ThenBuildStatusMarkedAsCompleted
+}
+
+Describe 'Invoke-WhiskeyBuild.when running OnBuildStart and OnBuildEnd pipelines' {
+    Init
+    GivenRunByBuildServer
+    GivenBuildPipelineName 'Build'
+    GivenAdditionalPipeline 'OnBuildStart'
+    GivenAdditionalPipeline 'OnBuildEnd'
+    WhenRunningBuild
+    ThenBuildPipelineRan
+    ThenPipelineRan 'OnBuildStart'
+    ThenPipelineRan 'OnBuildEnd'
+}
+
+Describe 'Invoke-WhiskeyBuild.when an OnBuildStart pipeline exists and running a specific pipeline' {
+    Init
+    GivenRunByBuildServer
+    GivenBuildPipelineName 'Build'
+    GivenAdditionalPipeline 'OnBuildStart'
+    GivenAdditionalPipeline 'CustomPipeline'
+    GivenAdditionalPipeline 'OnBuildEnd'
+    WhenRunningBuild -PipelineName 'CustomPipeline'
+    ThenPipelineRan 'OnBuildStart'
+    ThenPipelineRan 'CustomPipeline'
+    ThenPipelineRan 'Build' -Times 0
+    ThenPipelineRan 'OnBuildEnd'
+}
+
+Describe 'Invoke-WhiskeyBuild.when running OnBuildEnd pipeline after Build fails' {
+    Init
+    GivenRunByBuildServer
+    GivenAdditionalPipeline 'OnBuildEnd'
+    GivenBuildPipelineFails
+    WhenRunningBuild -ErrorAction SilentlyContinue
+    ThenBuildPipelineRan
+    ThenPipelineRan 'OnBuildEnd'
+    ThenBuildStatusMarkedAsFailed
 }

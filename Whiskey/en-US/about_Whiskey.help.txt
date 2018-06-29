@@ -68,6 +68,16 @@ LONG DESCRIPTION
 
     ### Building
 
+    There are three default built-in pipelines with special behavior:
+
+    #### OnBuildStart
+
+    If defined, the "OnBuildStart" pipeline will always run a single time before
+    the default "Build" pipeline or any pipeline that was specifically invoked
+    when starting the build.
+
+    #### Build
+
     Under the "Build" pipeline in your whiskey.yml file, add tasks you
     want to run when building. For example, Whiskey's build process looks
     like this:
@@ -79,6 +89,13 @@ LONG DESCRIPTION
     In this example, Whiskey will run the "Pester4" task, which in this
     example, will run all the Pester tests that match the "Test\*.Tests.ps1"
     wildcard path.
+
+    #### OnBuildEnd
+
+    If defined, the "OnBuildEnd" pipeline will always run at the end of the
+    build, regardless if the build succeeded or failed. This pipeline is useful
+    for tasks that should ways run regardless of build outcome, such as cleanup
+    or notification tasks.
 
     ### Stopping the build
 

@@ -89,6 +89,12 @@ function Invoke-WhiskeyBuild
     {
         $Context.RunMode = $PSCmdlet.ParameterSetName
 
+        $config = $Context.Configuration
+        if( $config.ContainsKey('OnBuildStart') )
+        {
+            Invoke-WhiskeyPipeline -Context $Context -Name 'OnBuildStart'
+        }
+
         if( $PipelineName )
         {
             foreach( $name in $PipelineName )
@@ -98,8 +104,6 @@ function Invoke-WhiskeyBuild
         }
         else
         {
-            $config = $Context.Configuration
-
             $buildPipelineName = 'Build'
             if( $config.ContainsKey('BuildTasks') )
             {
@@ -126,18 +130,26 @@ function Invoke-WhiskeyBuild
     }
     finally
     {
-        if( $Clean )
+        try
         {
-            Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
+            if( $config.ContainsKey('OnBuildEnd') )
+            {
+                Invoke-WhiskeyPipeline -Context $Context -Name 'OnBuildEnd'
+            }
         }
-        Pop-Location
+        finally
+        {
+            if( $Clean )
+            {
+                Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
+            }
+            Pop-Location
 
-        $status = 'Failed'
-        if( $succeeded )
-        {
-            $status = 'Completed'
+            $status = 'Failed'
+            if( $succeeded )
+            {
+                $status = 'Completed'
+            }
+            Set-WhiskeyBuildStatus -Context $Context -Status $status
         }
-        Set-WhiskeyBuildStatus -Context $Context -Status $status
-    }
 }
-
