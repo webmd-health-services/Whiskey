@@ -7,28 +7,30 @@ function Invoke-WhiskeyPester4Task
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
         $TaskContext,
-    
+
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     if( $TaskParameter.ContainsKey('Version') )
     {
         $version = $TaskParameter['Version'] | ConvertTo-WhiskeySemanticVersion
         if( -not $version )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -message ('Property ''Version'' isn''t a valid version number. It must be a version number of the form MAJOR.MINOR.PATCH.')
+            return
         }
 
         if( $version.Major -ne 4)
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Version property''s value ''{0}'' is invalid. It must start with ''4.'' (i.e. the major version number must always be ''4'')."' -f $version)
+            return
         }
-        
+
         $version = [version]('{0}.{1}.{2}' -f $version.Major,$version.Minor,$version.Patch)
     }
     else
@@ -41,9 +43,9 @@ function Invoke-WhiskeyPester4Task
         Uninstall-WhiskeyTool -ModuleName 'Pester' -BuildRoot $TaskContext.BuildRoot -Version $version
         return
     }
-    
+
     $pesterModulePath = Install-WhiskeyTool -DownloadRoot $TaskContext.BuildRoot -ModuleName 'Pester' -Version $version
-    
+
     if( $TaskContext.ShouldInitialize )
     {
         return
@@ -51,13 +53,14 @@ function Invoke-WhiskeyPester4Task
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
-        
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g.
+
         Build:
         - Pester4:
             Path:
             - My.Tests.ps1
             - Tests')
+        return
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -83,12 +86,14 @@ function Invoke-WhiskeyPester4Task
         if( -not $path )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run. Property "Exclude" matched all paths in the "Path" property. Please update your exclusion rules to include at least one test. View verbose output to see what exclusion filters excluded what test files.')
+            return
         }
     }
-    
+
     if( -not $pesterModulePath )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to download or install Pester {0}, most likely because version {0} does not exist. Available version numbers can be found at https://www.powershellgallery.com/packages/Pester' -f $version)
+        return
     }
 
     [int]$describeDurationCount = 0
@@ -117,7 +122,7 @@ function Invoke-WhiskeyPester4Task
 
         $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
 
-        $result.TestResult | 
+        $result.TestResult |
             Group-Object 'Describe' |
             ForEach-Object {
                 $totalTime = [TimeSpan]::Zero
@@ -129,13 +134,13 @@ function Invoke-WhiskeyPester4Task
             } | Sort-Object -Property 'Duration' -Descending |
             Select-Object -First $describeCount |
             Format-Table -AutoSize
-        
+
         $result.TestResult |
             Sort-Object -Property 'Time' -Descending |
             Select-Object -First $itCount |
             Format-Table -AutoSize -Property 'Describe','Name','Time'
-    } 
-    
+    }
+
     do
     {
         $job | Receive-Job

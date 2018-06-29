@@ -6,32 +6,33 @@ function Invoke-WhiskeyMSBuild
         [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         $TaskContext,
-        
+
         [hashtable]
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
-        # 
+        #
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whiskey.yml file they were taken from.
         $TaskParameter
     )
 
-    Set-StrictMode -version 'Latest'  
+    Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     #setup
     $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']
-    
+
     # Make sure the Taskpath contains a Path parameter.
     if( -not ($TaskParameter.ContainsKey('Path')) -or -not $TaskParameter['Path'] )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whiskey.yml file, to build with MSBuild.exe, e.g. 
-        
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whiskey.yml file, to build with MSBuild.exe, e.g.
+
         Build:
         - MSBuild:
             Path:
             - MySolution.sln
             - MyCsproj.csproj')
+        return
     }
-    
+
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     $msbuildInfos = Get-MSBuild | Sort-Object -Descending 'Version'
@@ -49,6 +50,7 @@ function Invoke-WhiskeyMSBuild
     {
         $msbuildVersionNumbers = $msbuildInfos | Select-Object -ExpandProperty 'Name'
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild {0} is not installed. Installed versions are: {1}' -f $version,($msbuildVersionNumbers -join ', '))
+        return
     }
 
     $msbuildExePath = $msbuildInfo.Path
@@ -58,10 +60,11 @@ function Invoke-WhiskeyMSBuild
         if( -not $msbuildExePath )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('A 32-bit version of MSBuild {0} does not exist.' -f $version)
+            return
         }
     }
     Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}' -f $msbuildExePath)
-    
+
     $target = @( 'build' )
     if( $TaskContext.ShouldClean )
     {
@@ -99,9 +102,9 @@ function Invoke-WhiskeyMSBuild
 
         if( $TaskContext.ByBuildServer )
         {
-            $projectPath | 
-                Split-Path | 
-                Get-ChildItem -Filter 'AssemblyInfo.cs' -Recurse | 
+            $projectPath |
+                Split-Path |
+                Get-ChildItem -Filter 'AssemblyInfo.cs' -Recurse |
                 ForEach-Object {
                     $assemblyInfo = $_
                     $assemblyInfoPath = $assemblyInfo.FullName
@@ -169,7 +172,7 @@ function Invoke-WhiskeyMSBuild
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  Property    {0}' -f ($property -join $separator))
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  Argument    {0}' -f ($msbuildArgs -join $separator))
 
-        $propertyArgs = $property | ForEach-Object { 
+        $propertyArgs = $property | ForEach-Object {
             $item = $_
             $name,$value = $item -split '=',2
             $value = $value.Trim('"')
@@ -187,6 +190,7 @@ function Invoke-WhiskeyMSBuild
         if( $LASTEXITCODE -ne 0 )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('MSBuild exited with code {0}.' -f $LASTEXITCODE)
+            return
         }
     }
 }

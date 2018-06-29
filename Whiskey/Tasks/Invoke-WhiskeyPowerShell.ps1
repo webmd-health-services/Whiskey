@@ -12,22 +12,23 @@ function Invoke-WhiskeyPowerShell
         [hashtable]
         $TaskParameter
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     if( -not ($TaskParameter.ContainsKey('Path')) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g. 
-        
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g.
+
         Build:
         - PowerShell:
             Path:
             - myscript.ps1
             - myotherscript.ps1
             WorkingDirectory: bin')
+        return
     }
-    
+
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     $workingDirectory = (Get-Location).ProviderPath
@@ -59,8 +60,8 @@ function Invoke-WhiskeyPowerShell
 
         if( (Get-Member -InputObject $argument -Name 'Keys') )
         {
-            $scriptCommand.Parameters.Values | 
-                Where-Object { $_.ParameterType -eq [switch] } | 
+            $scriptCommand.Parameters.Values |
+                Where-Object { $_.ParameterType -eq [switch] } |
                 Where-Object { $argument.ContainsKey($_.Name) } |
                 ForEach-Object { $argument[$_.Name] = $argument[$_.Name] | ConvertFrom-WhiskeyYamlScalar }
         }
@@ -75,7 +76,7 @@ function Invoke-WhiskeyPowerShell
             $resultPath = $using:resultPath
             $passTaskContext = $using:passTaskContext
 
-            Invoke-Command -ScriptBlock { 
+            Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
                                             & (Join-Path -Path $moduleRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
                                         }
@@ -116,15 +117,18 @@ function Invoke-WhiskeyPowerShell
         else
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
+            return
         }
 
         if( $runResult.ExitCode -ne 0 )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
+            return
         }
         elseif( $runResult.Successful -eq $false )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
+            return
         }
 
     }

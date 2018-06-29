@@ -1,9 +1,9 @@
-function Get-WhiskeyPowerShellModule 
+function Get-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
     Downloads a PowerShell module.
-    
+
     .DESCRIPTION
     The `GetPowerShellModule` task downloads a PowerShell module  and saves it into a `Modules` directory in the build root. Use the `Name` property to specify the name of the module to download. By default, it downloads the most recent version of the module. Use the `Version` property to download a specific version.
 
@@ -34,7 +34,7 @@ function Get-WhiskeyPowerShellModule
     This example demonstrates how to pin to a specific version of a module. In this case, the latest `0.14.x` version will be downloaded. When version 0.15.0 comes out, you'll still download the latest `0.14.x` version.
 
     #>
-    
+
     [CmdletBinding()]
     [Whiskey.Task("GetPowerShellModule",SupportsClean=$true, SupportsInitialize=$true)]
     param(
@@ -53,6 +53,7 @@ function Get-WhiskeyPowerShellModule
     if( -not $TaskParameter['Name'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "Please Add a Name Property for which PowerShell Module you would like to get."
+        return
     }
     $TaskParameter['Path'] = $TaskContext.BuildRoot
 

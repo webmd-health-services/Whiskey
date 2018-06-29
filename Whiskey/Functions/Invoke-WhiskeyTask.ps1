@@ -162,6 +162,7 @@ function Invoke-WhiskeyTask
             if( -not ([enum]::TryParse($Parameter['OnlyBy'], [ref]$onlyBy)) )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'OnlyBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Parameter['OnlyBy'],([enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
+                return
             }
 
             if( $onlyBy -ne $TaskContext.RunBy )
@@ -177,6 +178,7 @@ function Invoke-WhiskeyTask
             if( -not ([enum]::TryParse($Parameter['ExceptBy'], [ref]$exceptBy)) )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'ExceptBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Parameter['ExceptBy'],([enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
+                return
             }
 
             if( $exceptBy -eq $TaskContext.RunBy )
@@ -193,6 +195,7 @@ function Invoke-WhiskeyTask
         if( $Parameter['OnlyOnBranch'] -and $Parameter['ExceptOnBranch'] )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('This task defines both OnlyOnBranch and ExceptOnBranch properties. Only one of these can be used. Please remove one or both of these properties and re-run your build.')
+            return
         }
 
         if( $Parameter['OnlyOnBranch'] )
@@ -246,14 +249,17 @@ function Invoke-WhiskeyTask
         if ($onlyDuring -and $exceptDuring)
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive, i.e. you may only specify one or the other.'
+            return
         }
         elseif ($onlyDuring -and ($onlyDuring -notin $modes))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''OnlyDuring'' has an invalid value: ''{0}''. Valid values are: ''{1}''.' -f $onlyDuring,($modes -join "', '"))
+            return
         }
         elseif ($exceptDuring -and ($exceptDuring -notin $modes))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ExceptDuring'' has an invalid value: ''{0}''. Valid values are: ''{1}''.' -f $exceptDuring,($modes -join "', '"))
+            return
         }
 
         if ($onlyDuring -and ($TaskContext.RunMode -ne $onlyDuring))

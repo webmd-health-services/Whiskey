@@ -30,6 +30,7 @@ function Publish-WhiskeyBBServerTag
 
         Use the `Add-WhiskeyCredential` function to add credentials to the build.
         "
+        return
     }
 
     if( -not $TaskParameter['Uri'] )
@@ -38,12 +39,14 @@ function Publish-WhiskeyBBServerTag
 
         $exampleTask
         "
+        return
     }
 
     $commitHash = $TaskContext.BuildMetadata.ScmCommitID
     if( -not $commitHash )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('Unable to identify a valid commit to tag. Are you sure you''re running under a build server?')
+        return
     }
 
     if( $TaskParameter['ProjectKey'] -and $TaskParameter['RepositoryKey'] )
@@ -67,6 +70,7 @@ function Publish-WhiskeyBBServerTag
             ProjectKey: PROJECT_KEY
             RepositoryKey: REPOSITORY_KEY
        ")
+        return
     }
 
     $credentialID = $TaskParameter['CredentialID']

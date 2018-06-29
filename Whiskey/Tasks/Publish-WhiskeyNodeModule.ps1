@@ -30,6 +30,7 @@ function Publish-WhiskeyNodeModule
     - PublishNodeModule:
         NpmRegistryUri: https://registry.npmjs.org/
     '
+        return
     }
 
     $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
@@ -46,6 +47,7 @@ function Publish-WhiskeyNodeModule
 
     Use the `Add-WhiskeyCredential` function to add the credential to the build.
     ' -f $npmRegistryUri)
+        return
     }
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
@@ -60,6 +62,7 @@ function Publish-WhiskeyNodeModule
         CredentialID: {1}
         EmailAddress: somebody@example.com
     ' -f $npmRegistryUri,$credentialID)
+        return
     }
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)

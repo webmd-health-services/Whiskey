@@ -7,12 +7,12 @@ function Invoke-WhiskeyNUnit3Task
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
         $TaskContext,
-    
+
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
@@ -25,6 +25,7 @@ function Invoke-WhiskeyNUnit3Task
         if( $nunitVersion -notlike '3.*' )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 3.x version of NUnit.' -f $TaskParameter['Version'])
+            return
         }
     }
 
@@ -55,18 +56,21 @@ function Invoke-WhiskeyNUnit3Task
     if (-not $nunitPath)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package ''{0}'' failed to install.' -f $nunitPackage)
+        return
     }
 
     $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionParam
     if (-not $openCoverPath)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''OpenCover'' failed to install.'
+        return
     }
 
     $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
     if (-not $reportGeneratorPath)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package ''ReportGenerator'' failed to install.'
+        return
     }
 
     if( $TaskContext.ShouldInitialize )
@@ -79,7 +83,7 @@ function Invoke-WhiskeyNUnit3Task
     {
         $openCoverArgument = $TaskParameter['OpenCoverArgument']
     }
-    
+
     $reportGeneratorArgument = @()
     if ($TaskParameter['ReportGeneratorArgument'])
     {
@@ -125,6 +129,7 @@ function Invoke-WhiskeyNUnit3Task
         if (-not(Test-Path -Path $consolePath -PathType Leaf))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package ''{0}'' was installed, but could not locate ''{1}'' at {2}''.'-f ($consolePath | Split-Path | Split-Path -Leaf), ($consolePath | Split-Path -Leaf), $consolePath)
+            return
         }
     }
 
@@ -139,6 +144,7 @@ function Invoke-WhiskeyNUnit3Task
                 - OtherAssembly.dll
 
         ')
+        return
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -146,13 +152,14 @@ function Invoke-WhiskeyNUnit3Task
         if (-not (Test-Path -Path $_ -PathType Leaf))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''Path'' item ''{0}'' does not exist.' -f $_)
+            return
         }
     }
 
     $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
     New-Item -Path $coverageReportDir -ItemType 'Directory' -Force | Out-Null
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
-    
+
     $separator = '{0}VERBOSE:                       ' -f [Environment]::NewLine
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path -join $separator))
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $framework)
@@ -164,7 +171,7 @@ function Invoke-WhiskeyNUnit3Task
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  DisableCodeCoverage {0}' -f $disableCodeCoverage)
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  OpenCoverArgs       {0}' -f ($openCoverArgument -join ' '))
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  ReportGeneratorArgs {0}' -f ($reportGeneratorArgument -join ' '))
-    
+
     $nunitExitCode = 0
     $reportGeneratorExitCode = 0
     $openCoverExitCode = 0
@@ -209,7 +216,7 @@ function Invoke-WhiskeyNUnit3Task
         & $reportGeneratorConsolePath "-reports:$openCoverReport" "-targetdir:$coverageReportDir" $reportGeneratorArgument
         $reportGeneratorExitCode = $LASTEXITCODE
     }
-    else 
+    else
     {
         & $nunitConsolePath $path $frameworkParam $testFilterParam $nunitReportParam $nunitExtraArgument
         $nunitExitCode = $LASTEXITCODE
@@ -219,20 +226,24 @@ function Invoke-WhiskeyNUnit3Task
     if ($reportGeneratorExitCode -ne 0)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ReportGenerator didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $reportGeneratorConsolePath,$reportGeneratorExitCode)
+        return
     }
     elseif ($openCoverExitCode -ne 0)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('OpenCover didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $openCoverConsolePath, $openCoverExitCode)
+        return
     }
     elseif ($nunitExitCode -ne 0)
     {
         if (-not (Test-Path -Path $nunitReport -PathType Leaf))
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit3 didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $nunitConsolePath,$nunitExitCode)
+            return
         }
         else
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit3 tests failed. ''{0}'' returned exit code ''{1}''.' -f $nunitConsolePath,$nunitExitCode)
+            return
         }
     }
 }

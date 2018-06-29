@@ -33,13 +33,14 @@ function Invoke-WhiskeyNpmConfig
     if( -not ($configuration | Get-Member -Name 'Keys') )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Configuration property is invalid. It must have only key/value pairs, e.g.
-    
+
     Build:
     - NpmConfig:
         Configuration:
             key1: value1
             key2: value2
      ')
+        return
     }
 
     $scope = $TaskParameter['Scope']
@@ -48,6 +49,7 @@ function Invoke-WhiskeyNpmConfig
         if( @('Project', 'User', 'Global') -notcontains $scope )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Scope property ''{0}'' is invalid. Allowed values are `Project`, `User`, `Global` to set configuration at the project, user, or global level. You may also remove the `Scope` property to set configuration at the project level (i.e. in the current directory).' -f $scope)
+            return
         }
     }
 
@@ -73,5 +75,5 @@ function Invoke-WhiskeyNpmConfig
 
         Invoke-WhiskeyNpmCommand -Name 'config' -ArgumentList $argumentList -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper
     }
-    
+
 }

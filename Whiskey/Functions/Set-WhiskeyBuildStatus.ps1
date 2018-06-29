@@ -45,6 +45,7 @@ Property 'Uri' does not exist or does not have a value. Set this property to the
         CredentialID: CREDENTIAL_ID
 
 '@ -f $uri)
+                    return
                 }
                 $credID = $reporterConfig['CredentialID']
                 if( -not $credID )
@@ -59,6 +60,7 @@ Property 'CredentialID' does not exist or does not have a value. Set this proper
 
 Use the `Add-WhiskeyCredential` function to add the credential to the build.`
 '@ -f $uri)
+                    return
                 }
                 $credential = Get-WhiskeyCredential -Context $Context -ID $credID -PropertyName 'CredentialID' -PropertyDescription $propertyDescription
                 $conn = New-BBServerConnection -Credential $credential -Uri $uri
@@ -75,6 +77,7 @@ Use the `Add-WhiskeyCredential` function to add the credential to the build.`
             default
             {
                 Stop-WhiskeyTask -TaskContext $Context -PropertyDescription $propertyDescription -Message ('Unknown build status reporter ''{0}''. Supported reporters are ''BitbucketServer''.' -f $reporterName)
+                return
             }
         }
     }
