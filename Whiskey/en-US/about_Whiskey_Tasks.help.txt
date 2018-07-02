@@ -43,6 +43,7 @@ LONG DESCRIPTION
     * `ProGetUniversalPackage`: creates a universal ProGet package.
     * `PublishBitbucketServerTag`: tags a repository in Bitbucket Server.
     * `PublishBuildMasterPackage`: creates and deploys a package in BuildMaster.
+    * `PublishBuildStatusToBitbucket`: publishes build status information to Bitbucket Server.
     * `PublishNodeModule`: publishes a Node module (i.e. runs the `npm publish`
       command).
     * `PublishPowerShellModule`: publishes a PowerShell module.
