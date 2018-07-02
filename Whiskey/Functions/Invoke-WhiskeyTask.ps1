@@ -115,8 +115,6 @@ function Invoke-WhiskeyTask
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
 
-    $errorPrefix = '{0}: {1}[{2}]: {3}: ' -f $TaskContext.ConfigurationPath,$TaskContext.PipelineName,$TaskContext.TaskIndex,$Name
-
     if( -not $task )
     {
         $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object
