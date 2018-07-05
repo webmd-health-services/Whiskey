@@ -48,7 +48,7 @@ function CreatePackageJson
     "devDependencies": {
         $($script:devDependency -join ',')
     }
-} 
+}
 "@ | Set-Content -Path $packageJsonPath -Force
 
     @"
@@ -59,7 +59,7 @@ function CreatePackageJson
     "requires": true,
     "dependencies": {
     }
-} 
+}
 "@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
 }
 
@@ -80,20 +80,20 @@ function MockNsp
     }
 }
 
-function GivenDependency 
+function GivenDependency
 {
     param(
         [object[]]
-        $Dependency 
+        $Dependency
     )
     $script:dependency = $Dependency
 }
 
-function GivenDevDependency 
+function GivenDevDependency
 {
     param(
         [object[]]
-        $DevDependency 
+        $DevDependency
     )
     $script:devDependency = $DevDependency
 }
@@ -116,7 +116,7 @@ function WhenRunningTask
     $Global:Error.Clear()
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName
-    
+
     $taskParameter = @{ }
 
     if ($version)
@@ -151,7 +151,7 @@ function ThenNspInstalled
     if( $WithVersion )
     {
         It ('should install NSP version ''{0}''' -f $WithVersion) {
-            Get-Content -Path (Join-Path -Path $nspRoot -ChildPath 'package.json') -Raw | 
+            Get-Content -Path (Join-Path -Path $nspRoot -ChildPath 'package.json') -Raw |
                 ConvertFrom-Json |
                 Select-Object -ExpandProperty 'Version' |
                 Should -Be $WithVersion
@@ -212,12 +212,17 @@ function ThenTaskSucceeded
 {
     for( $i = $Global:Error.Count - 1; $i -ge 0; $i-- )
     {
-        if( $Global:Error[$i] -match 'npm notice created a lockfile as package-lock.json. You should commit this file.' )
+        $errorMessage = $Global:Error[$i]
+        if( $errorMessage -match 'npm notice created a lockfile as package-lock.json. You should commit this file.' )
+        {
+            $Global:Error.RemoveAt($i)
+        }
+        elseif( $errorMessage -match ([regex]::Escape('The Node Security Platform service is shutting down 9/30')) )
         {
             $Global:Error.RemoveAt($i)
         }
     }
-    
+
     It 'should not write any errors' {
         $Global:Error | Should -BeNullOrEmpty
     }
