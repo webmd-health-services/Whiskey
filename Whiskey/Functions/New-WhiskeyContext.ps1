@@ -234,6 +234,74 @@ Whiskey also no longer automatically adds build metadata to your version number.
         }
     }
 
+    if( $config.ContainsKey('PublishBuildStatusTo') )
+    {
+        Write-Warning -Message ('{0}: The "PublishBuildStatusTo" property is deprecated and will be removed in Whiskey 1.0. Please migrate to using the "PublishBuildStatusToBitbucket" task in the built-in "OnBuildStart" and "OnBuildEnd" pipelines in your whiskey.yml. Move the "Uri" and "CredentialID" properties to the new "PublishBuildStatusToBitbucket" task and then remove the deprecated "PublishBuildStatusTo" property from your whiskey.yml file.
+
+If you have a "PublishBuildStatusTo" property that looks like this:
+
+    PublishBuildStatusTo:
+    - BitbucketServer:
+        Uri: BITBUCKET_SERVER_URI
+        CredentialID: CREDENTIAL_ID
+
+Migrate to the "PublishBuildStatusToBitbucket" task like this:
+
+    OnBuildStart:
+    - TaskDefaults:
+        PublishBuildStatusToBitbucket:
+            Uri: BITBUCKET_SERVER_URI
+            CredentialID: CREDENTIAL_ID
+
+    - PublishBuildStatusToBitbucket
+
+    Build:
+    # ... SNIP ...
+
+    OnBuildEnd:
+    - PublishBuildStatusToBitbucket
+
+        ' -f $ConfigurationPath)
+
+        $publishToBitbucketTask = & {
+            $bitbucketPublishers =  $config['PublishBuildStatusTo'] |
+                                    Where-Object { $_.ContainsKey('BitbucketServer') } |
+                                    ForEach-Object { $_['BitbucketServer'] }
+
+            foreach( $publisher in $bitbucketPublishers )
+            {
+                @{
+                    'PublishBuildStatusToBitbucket' = @{
+                        'Uri' = $publisher['Uri'];
+                        'CredentialID' = $publisher['CredentialID']
+                    }
+                }
+            }
+        }
+
+        if( -not $config['OnBuildStart'] )
+        {
+            $config['OnBuildStart'] = @()
+        }
+
+        $config['OnBuildStart'] = & {
+            $publishToBitbucketTask
+            $config['OnBuildStart']
+        }
+
+        if( -not $config['OnBuildEnd'] )
+        {
+            $config['OnBuildEnd'] = @()
+        }
+
+        $config['OnBuildEnd'] = & {
+            $config['OnBuildEnd']
+            $publishToBitbucketTask
+        }
+
+        $config.Remove('PublishBuildStatusTo') | Out-Null
+    }
+
     $outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
     if( -not (Test-Path -Path $outputDirectory -PathType Container) )
     {

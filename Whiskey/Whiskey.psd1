@@ -105,7 +105,6 @@
                             'Resolve-WhiskeyPowerShellModule',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
-                            'Set-WhiskeyBuildStatus',
                             'Set-WhiskeyMSBuildConfiguration',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
@@ -155,6 +154,7 @@
 * Fixed: `ExceptBy` common task property was documented but never implemented.
 * Added `OnBuildStart` and `OnBuildEnd` built-in pipelines. See the `about_Whiskey` help topic for further info.
 * Added `OnlyIfBuild` common task property for controlling if tasks in the built-in `OnBuildEnd` pipeline should run. Valid values are `Succeeded` and `Failed`.
+* Deprecated the `PublishBuildStatusTo" root whiskey Whiskey property. Please migrate to using the `PublishBuildStatusToBitbucket` task in the `OnBuildStart` and `OnBuildEnd` built-in pipelines.
 '@
         } # End of PSData hashtable
 
