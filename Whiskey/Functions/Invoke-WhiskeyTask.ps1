@@ -132,7 +132,7 @@ function Invoke-WhiskeyTask
 
     $taskProperties = $Parameter.Clone()
     $commonProperties = @{}
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyIfBuild' ) )
+    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyIfBuildStatusIs' ) )
     {
         if ($taskProperties.ContainsKey($commonPropertyName))
         {

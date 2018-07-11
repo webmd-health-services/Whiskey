@@ -74,7 +74,7 @@ LONG DESCRIPTION
       the task actually does work in the chosen mode. Some tasks don't have
       anything to clean or initialize, in which case these properties would
       have no affect.
-    * `OnlyIfBuild`: controls if tasks in the `OnBuildEnd` pipeline should run
+    * `OnlyIfBuildStatusIs`: controls if tasks in the `OnBuildEnd` pipeline should run
       depending on the resulting status of the main build. Valid values are
       `Succeeded` and `Failed`.
     * `OnlyOnBranch`/`ExceptOnBranch`: controls what branch a task should run

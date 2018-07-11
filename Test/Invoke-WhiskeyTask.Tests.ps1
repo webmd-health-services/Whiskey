@@ -1173,34 +1173,34 @@ Describe 'Invoke-WhiskeyTask.when given UnlessExists parameter and file does not
     ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
 }
 
-Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Succeeded property and build succeeded' {
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuildStatusIs:Succeeded property and build succeeded' {
     Init
     GivenMockTask
-    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    $TaskParameter = @{ 'OnlyIfBuildStatusIs' = 'Succeeded' }
     WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildSucceeded
     ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
 }
 
-Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Succeeded property and build failed' {
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuildStatusIs:Succeeded property and build failed' {
     Init
     GivenMockTask
-    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    $TaskParameter = @{ 'OnlyIfBuildStatusIs' = 'Succeeded' }
     WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
     ThenTaskNotRun 'MockTask'
 }
 
-Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Failed property and build failed' {
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuildStatusIs:Failed property and build failed' {
     Init
     GivenMockTask
-    $TaskParameter = @{ 'OnlyIfBuild' = 'Failed' }
+    $TaskParameter = @{ 'OnlyIfBuildStatusIs' = 'Failed' }
     WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
     ThenTaskRanWithParameter 'MockTask' @{ } -Times 1
 }
 
-Describe 'Invoke-WhiskeyTask.when given OnlyIfBuild:Failed property and build succeeded' {
+Describe 'Invoke-WhiskeyTask.when given OnlyIfBuildStatusIs:Failed property and build succeeded' {
     Init
     GivenMockTask
-    $TaskParameter = @{ 'OnlyIfBuild' = 'Succeeded' }
+    $TaskParameter = @{ 'OnlyIfBuildStatusIs' = 'Succeeded' }
     WhenRunningTask 'MockTask' -Parameter $TaskParameter -AfterBuildFailed
     ThenTaskNotRun
 }
@@ -1244,7 +1244,7 @@ Describe 'Invoke-WhiskeyTask.when OnlyDuring or ExceptDuring contains invalid va
     }
 }
 
-foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring', 'OnlyIfBuild' ) )
+foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring', 'OnlyIfBuildStatusIs' ) )
 {
     Describe ('Invoke-WhiskeyTask.when {0} property has variable for a value' -f $commonPropertyName) {
         Init
