@@ -163,7 +163,12 @@ function Test-WhiskeyTaskSkip
         Write-WhiskeyVerbose -Context $Context -Message     ('UnlessExists  {0}  not exists' -f $Properties['UnlessExists']) -Verbose
     }
 
-    if( $Properties['OnlyIfBuildStatusIs'] )
+    if( $Properties['OnlyIfBuildStatusIs'] -and $Properties['ExceptIfBuildStatusIs'] )
+    {
+        Stop-WhiskeyTask -TaskContext $Context -Message ('Both "OnlyIfBuildStatusIs" and "ExceptIfBuildStatusIs" properties are used but only one may be specified at a time. Please remove one or both of these properties and re-run your build.')
+        return
+    }
+    elseif( $Properties['OnlyIfBuildStatusIs'] )
     {
         [Whiskey.BuildStatus]$buildStatus = [Whiskey.BuildStatus]::Succeeded
         if( -not ([enum]::TryParse($Properties['OnlyIfBuildStatusIs'], [ref]$buildStatus)) )
@@ -175,6 +180,21 @@ function Test-WhiskeyTaskSkip
         if( $buildStatus -ne $Context.BuildStatus )
         {
             Write-WhiskeyVerbose -Context $Context -Message ('OnlyIfBuildStatusIs.{0} -ne Build.BuildStatus.{1}' -f $buildStatus,$Context.BuildStatus)
+            return $true
+        }
+    }
+    elseif( $Properties['ExceptIfBuildStatusIs'] )
+    {
+        [Whiskey.BuildStatus]$buildStatus = [Whiskey.BuildStatus]::Succeeded
+        if( -not ([enum]::TryParse($Properties['ExceptIfBuildStatusIs'], [ref]$buildStatus)) )
+        {
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptIfBuildStatusIs' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['ExceptIfBuildStatusIs'],([enum]::GetValues([Whiskey.BuildStatus]) -join ''', '''))
+            return
+        }
+
+        if( $buildStatus -eq $Context.BuildStatus )
+        {
+            Write-WhiskeyVerbose -Context $Context -Message ('ExceptIfBuildStatusIs.{0} -ne Build.BuildStatus.{1}' -f $buildStatus,$Context.BuildStatus)
             return $true
         }
     }
