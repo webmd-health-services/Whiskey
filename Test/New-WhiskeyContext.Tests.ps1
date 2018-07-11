@@ -775,12 +775,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
                         'Uri' = 'https://bitbucket.example.com';
                         'CredentialID' = 'BitbucketCredential'
                     }
-                },
-                @{
-                    'BitbucketServer' = @{
-                        'Uri' = 'https://another.bitbucket.com';
-                        'CredentialID' = 'AnotherBitbucketCredential'
-                    }
                 }
             );
             Build = @(
@@ -789,41 +783,5 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         }
         WhenCreatingContext
         ThenWarning ([regex]::Escape('The "PublishBuildStatusTo" property is deprecated and will be removed in Whiskey 1.0'))
-
-        Mock -CommandName 'Set-WhiskeyBitbucketBuildStatus' -ModuleName 'Whiskey'
-        Invoke-WhiskeyBuild -Context $script:context
-        It 'should convert the "PublishBuildStatusTo" property to the "PublishBuildStatusToBitBucket" task in both "OnBuildStart" and "OnBuildEnd" pipelines' {
-            Assert-MockCalled -CommandName 'Set-WhiskeyBitbucketBuildStatus' -ModuleName 'Whiskey' -Times 4
-        }
-
-        It 'should convert to "PublishBuildStatusToBitbucket" task with correct properties' {
-            Assert-MockCalled -CommandName 'Set-WhiskeyBitbucketBuildStatus' -ModuleName 'Whiskey' -Times 2 -ParameterFilter {
-                $expectedUri = 'https://bitbucket.example.com'
-                $expectedCredentialID = 'BitbucketCredential'
-
-                # $DebugPreference = 'Continue'
-                Write-Debug -Message ('Uri          EXPECTED {0}' -f $expectedUri)
-                Write-Debug -Message ('Uri          ACTUAL   {0}' -f $TaskParameter['Uri'])
-                Write-Debug -Message ('CredentialID EXPECTED {0}' -f $expectedCredentialID)
-                Write-Debug -Message ('CredentialID ACTUAL   {0}' -f $TaskParameter['CredentialID'])
-
-                $TaskParameter['Uri'] -eq $expectedUri -and
-                $TaskParameter['CredentialID'] -eq $expectedCredentialID
-            }
-
-            Assert-MockCalled -CommandName 'Set-WhiskeyBitbucketBuildStatus' -ModuleName 'Whiskey' -Times 2 -ParameterFilter {
-                $expectedUri = 'https://another.bitbucket.com'
-                $expectedCredentialID = 'AnotherBitbucketCredential'
-
-                # $DebugPreference = 'Continue'
-                Write-Debug -Message ('Uri          EXPECTED {0}' -f $expectedUri)
-                Write-Debug -Message ('Uri          ACTUAL   {0}' -f $TaskParameter['Uri'])
-                Write-Debug -Message ('CredentialID EXPECTED {0}' -f $expectedCredentialID)
-                Write-Debug -Message ('CredentialID ACTUAL   {0}' -f $TaskParameter['CredentialID'])
-
-                $TaskParameter['Uri'] -eq $expectedUri -and
-                $TaskParameter['CredentialID'] -eq $expectedCredentialID
-            }
-        }
     }
 }

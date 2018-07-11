@@ -82,6 +82,7 @@ function Invoke-WhiskeyBuild
     $Context.StartedAt = $script:buildStartedAt = Get-Date
 
     $Context.BuildStatus = [Whiskey.BuildStatus]::Started
+    Set-WhiskeyBuildStatus -Context $Context
 
     Push-Location -Path $Context.BuildRoot
     try
@@ -143,6 +144,8 @@ function Invoke-WhiskeyBuild
                 Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
             }
             Pop-Location
+
+            Set-WhiskeyBuildStatus -Context $Context
         }
     }
 }

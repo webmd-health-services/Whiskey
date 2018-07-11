@@ -105,6 +105,7 @@
                             'Resolve-WhiskeyPowerShellModule',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
+                            'Set-WhiskeyBuildStatus',
                             'Set-WhiskeyMSBuildConfiguration',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',

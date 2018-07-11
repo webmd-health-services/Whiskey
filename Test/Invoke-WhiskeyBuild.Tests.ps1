@@ -201,6 +201,31 @@ function ThenBuildRunInMode
     }
 }
 
+function ThenBuildStatusSetTo
+{
+    param(
+        [Whiskey.BuildStatus]
+        $ExpectedStatus
+    )
+
+    It 'should set commmit build status' {
+        Assert-MockCalled -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey' -Times 1
+        Assert-ContextPassedTo 'Set-WhiskeyBuildStatus'
+    }
+}
+
+function ThenBuildStatusMarkedAsCompleted
+{
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Started)
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Succeeded)
+}
+
+function ThenBuildStatusMarkedAsFailed
+{
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Started)
+    ThenBuildStatusSetTo ([Whiskey.BuildStatus]::Failed)
+}
+
 function ThenContextBuildStatus
 {
     param(
@@ -211,6 +236,11 @@ function ThenContextBuildStatus
     It ('should set the Context.BuildStatus to {0}' -f $ExpectedBuildStatus) {
         $context.BuildStatus | Should -Be $ExpectedBuildStatus
     }
+}
+
+function ThenContextPassedWhenSettingBuildStatus
+{
+    ThenMockCalled 'Set-WhiskeyBuildStatus' -Times 2
 }
 
 function ThenPublishPipelineRan
@@ -236,6 +266,8 @@ function WhenRunningBuild
         [Switch]
         $WithInitializeSwitch
     )
+
+    Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
 
     Mock -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
         #`$DebugPreference = 'Continue'
@@ -331,6 +363,7 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         WhenRunningBuild
         ThenBuildPipelineRan
         ThenPublishPipelineRan
+        ThenBuildStatusMarkedAsCompleted
     }
     Context 'By Build Server' {
         Init
@@ -341,6 +374,7 @@ Describe 'Invoke-WhiskeyBuild.when build passes' {
         WhenRunningBuild
         ThenBuildPipelineRan
         ThenPublishPipelineRan
+        ThenBuildStatusMarkedAsCompleted
     }
 }
 
@@ -353,6 +387,7 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
+        ThenBuildStatusMarkedAsFailed
     }
     Context 'By Build Server' {
         Init
@@ -362,6 +397,7 @@ Describe 'Invoke-WhiskeyBuild.when build pipeline fails' {
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineNotRun
+        ThenBuildStatusMarkedAsFailed
     }
 }
 
@@ -376,6 +412,7 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineRan
+        ThenBuildStatusMarkedAsFailed
     }
     Context 'By Build Server' {
         Init
@@ -387,6 +424,7 @@ Describe 'Invoke-WhiskeyBuild.when publishing pipeline fails' {
         WhenRunningBuild -ErrorAction SilentlyContinue
         ThenBuildPipelineRan
         ThenPublishPipelineRan
+        ThenBuildStatusMarkedAsFailed
     }
 }
 
@@ -463,6 +501,7 @@ Describe 'Invoke-WhiskeyBuild.when running legacy pipelines' {
     WhenRunningBuild
     ThenBuildPipelineRan
     ThenPublishPipelineRan
+    ThenBuildStatusMarkedAsCompleted
 }
 
 Describe 'Invoke-WhiskeyBuild.when running OnBuildStart and OnBuildEnd pipelines' {
@@ -501,5 +540,6 @@ Describe 'Invoke-WhiskeyBuild.when running OnBuildEnd pipeline after Build fails
     WhenRunningBuild -ErrorAction SilentlyContinue
     ThenBuildPipelineRan
     ThenPipelineRan 'OnBuildEnd'
+    ThenBuildStatusMarkedAsFailed
     ThenContextBuildStatus ([Whiskey.BuildStatus]::Failed)
 }

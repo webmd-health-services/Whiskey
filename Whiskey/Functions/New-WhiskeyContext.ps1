@@ -262,44 +262,6 @@ Migrate to the "PublishBuildStatusToBitbucket" task like this:
     - PublishBuildStatusToBitbucket
 
         ' -f $ConfigurationPath)
-
-        $publishToBitbucketTask = & {
-            $bitbucketPublishers =  $config['PublishBuildStatusTo'] |
-                                    Where-Object { $_.ContainsKey('BitbucketServer') } |
-                                    ForEach-Object { $_['BitbucketServer'] }
-
-            foreach( $publisher in $bitbucketPublishers )
-            {
-                @{
-                    'PublishBuildStatusToBitbucket' = @{
-                        'Uri' = $publisher['Uri'];
-                        'CredentialID' = $publisher['CredentialID']
-                    }
-                }
-            }
-        }
-
-        if( -not $config['OnBuildStart'] )
-        {
-            $config['OnBuildStart'] = @()
-        }
-
-        $config['OnBuildStart'] = & {
-            $publishToBitbucketTask
-            $config['OnBuildStart']
-        }
-
-        if( -not $config['OnBuildEnd'] )
-        {
-            $config['OnBuildEnd'] = @()
-        }
-
-        $config['OnBuildEnd'] = & {
-            $config['OnBuildEnd']
-            $publishToBitbucketTask
-        }
-
-        $config.Remove('PublishBuildStatusTo') | Out-Null
     }
 
     $outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
