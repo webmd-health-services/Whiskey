@@ -1,12 +1,12 @@
 
-function Assert-WhiskeyTaskSkip
+function Test-WhiskeyTaskSkip
 {
     <#
     .SYNOPSIS
     Determines if the current Whiskey task should be skipped.
 
     .DESCRIPTION
-    The `Assert-WhiskeyTaskSkip` function returns `$true` or `$false` indicating whether the current Whiskey task should be skipped. It determines if the task should be skipped by comparing values in the Whiskey context and common task properties.
+    The `Test-WhiskeyTaskSkip` function returns `$true` or `$false` indicating whether the current Whiskey task should be skipped. It determines if the task should be skipped by comparing values in the Whiskey context and common task properties.
     #>
     [CmdletBinding()]
     param(

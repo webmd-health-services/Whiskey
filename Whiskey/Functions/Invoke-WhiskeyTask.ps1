@@ -154,7 +154,7 @@ function Invoke-WhiskeyTask
     Push-Location -Path $workingDirectory
     try
     {
-        if( Assert-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
+        if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
         {
             $result = 'SKIPPED'
             return
