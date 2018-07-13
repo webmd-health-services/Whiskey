@@ -28,6 +28,7 @@ function Set-WhiskeyBitbucketBuildStatus
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Uri' -Message @'
 Property "Uri" does not exist or does not have a value. Set this property to the Bitbucket Server URI where you want build statuses reported to, e.g.,
 
+    OnBuildStart:
     - PublishBuildStatusToBitbucket:
         Uri: BITBUCKET_SERVER_URI
         CredentialID: CREDENTIAL_ID
@@ -42,6 +43,7 @@ Property "Uri" does not exist or does not have a value. Set this property to the
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'CredentialID' -Message (@'
 Property "CredentialID" does not exist or does not have a value. Set this property to the ID of the credential to use when connecting to the Bitbucket Server at "{0}", e.g.,
 
+    OnBuildStart:
     - PublishBuildStatusToBitbucket:
         Uri: {0}
         CredentialID: CREDENTIAL_ID

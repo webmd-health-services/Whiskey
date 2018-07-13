@@ -17,6 +17,7 @@ function Publish-WhiskeyBBServerTag
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $exampleTask = @'
+Build:
 - PublishBitbucketServerTag:
     CredentialID: BitbucketServerCredential
     Uri: https://bitbucketserver.example.com'

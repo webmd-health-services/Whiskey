@@ -29,6 +29,7 @@ EXAMPLES
 
     ## Example 1
 
+        Build:
         - PublishPowerShellModule:
             RepositoryName: PSGallery
             RepositoryUri: https://powershellgallery.com/api/v2/

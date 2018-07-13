@@ -17,6 +17,7 @@ function Publish-WhiskeyProGetUniversalPackage
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $exampleTask = @'
+Build:
 - PublishProGetUniversalPackage:
     CredentialID: ProGetCredential
     Uri: https://proget.example.com

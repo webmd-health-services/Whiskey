@@ -25,6 +25,7 @@ EXAMPLES
 
     ## Example 1
 
+        Build:
         - PublishProGetUniversalPackage:
             Uri: https://proget.example.com
             FeedName: Apps
@@ -33,6 +34,7 @@ EXAMPLES
 
     ## Example 2
 
+        Build:
         - PublishProGetUniversalPackage:
             Uri: https://proget.example.com
             FeedName: Apps
