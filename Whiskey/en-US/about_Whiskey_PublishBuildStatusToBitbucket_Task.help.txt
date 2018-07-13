@@ -2,9 +2,11 @@ TOPIC
     about_Whiskey_PublishBuildStatusToBitbucket_Task
 
 DESCRIPTION
-    The `PublishBuildStatusToBitbucket` task publishes build status information to Bitbucket for a commit building on a build server. The build information that is published includes the build state, commit hash for the commit being built, name of the build, and the URL to the build. This task only publishes the build status when the build is being run by a build server.
+    The `PublishBuildStatusToBitbucket` task publishes build status information to Bitbucket for a commit building on a build server. The build information that is published includes the build state, commit hash for the commit being built, name of the build, and the URL to the build.
 
     Set the `URI` property to the Bitbucket Server URI where you want build statuses reported to. Set the `CredentialID` property to the ID of the credential in the Whiskey credential store to use when connecting to the Bitbucket Server. Use the `Add-WhiskeyCredential` function to add the credential to the build.
+
+    This task only runs when the build is being run by a build server.
 
 PROPERTIES
 
