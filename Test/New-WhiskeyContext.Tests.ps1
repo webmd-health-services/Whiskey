@@ -782,6 +782,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             );
         }
         WhenCreatingContext
-        ThenWarning ([regex]::Escape('The "PublishBuildStatusTo" property is deprecated and will be removed in Whiskey 1.0'))
+        ThenWarning ([regex]::Escape('The "PublishBuildStatusTo" property is deprecated and will be removed in a future version of Whiskey.'))
     }
 }
