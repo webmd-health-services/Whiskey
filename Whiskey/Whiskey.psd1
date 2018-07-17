@@ -150,6 +150,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
+* `PublishProGetUniversalPackage` task can now exclude items from being published. Set the `Exclude` property to a list of path wildcards. Any path from the `Path` property that match any wildcards will not be published.
 '@
         } # End of PSData hashtable
 
