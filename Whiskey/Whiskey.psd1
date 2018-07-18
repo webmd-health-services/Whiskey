@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.35.0'
+    ModuleVersion = '0.37.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -88,6 +88,7 @@
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
+                            'Get-WhiskeyMSBuildConfiguration',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
                             'Invoke-WhiskeyNpmCommand',
@@ -105,6 +106,7 @@
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
+                            'Set-WhiskeyMSBuildConfiguration',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
                             'Unregister-WhiskeyEvent'
@@ -147,25 +149,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added "AllowMissingPackage" property to "PublishProGetUniversalPackage" task. Set this property to "true" to not fail a build if there are no universal packages to publish.
-* Added global "IfExists" and "UnlessExists" task properties for controlling if a task runs based on the existence of an item. You can use any PowerShell-supported path, e.g. env:ENV_NAME for environment variables, hklm:\path\to\key for registry keys, and path\to\file for files/directories. Relative paths are file system paths and are resolved from the directory of the build's whiskey.yml file or the task's working directory (given by its WorkingDirecotry property). Uses PowerShell's `Test-Path` cmdlet to determine if the path exists. Wildcards are supported.
-* Added `Properties` property to `NuGetPack` task so that tokens inside .nuspec files can be replaced. The `Properties` property should be a name/value mapping. Each name/value is passed to nuget.exe pack command's `-Properties` parameter.
-* Added `PackageID` property to `NuGetPack` task to handle situations where a package's ID doesn't match the source .nuspec/.csproj file.
-* Added `PackageVersion` property to `NuGetPack` task to allow customizing the package's version number.
-* Created `SetVariableFromPowerShellDataFile` task for creating variables from values in PowerShell data files (e.g. .psd1 files, module manifests, etc.).
-* Fixed: `ProGetUniversalPackage` task no longer includes robocopy output text files in your package.
-* Fixed: `ProGetUniversalPackage` task was creating upack.json property keys with uppercase letters when they are required to be lowercase.
-* Created `GitHubRelease` task for creating a release in GitHub. The task supports uploading files into the release.
-* Fixed: calling methods on variable values fails when the last parameter to the method is an empty string.
-* Created `DotNetTest` task for running `dotnet test` on .NET Core test projects.
-* MSBuild task no longer includes the build configuration in the build log file name.
-* All `DotNet` tasks now write a detailed log to the build output directory. Before, they didn't log at all and showed detailed output to the console when run by a build server.
-* All `DotNet` tasks now by default show `minimal` output to the console, instead of `detailed`, when run by a build server.
-* Created `DotNetPublish` task for running `dotnet publish` on .NET Core projects.
-* Fixed: `DotNetBuild` task no longer sets the `OutputDirectory` property relative to the whiskey.yml. The property is passed as-is to the `dotnet build` command and now allows absolute paths.
-* Added about help topics for every Whiskey task. Run `help about_Whiskey_Tasks` to see a list of tasks. Run `help TASK_NAME` to see help for a specific task.
-* Fixed: When a custom written task that wraps a Whiskey task runs, the parent wrapper task's temp diretory does not get cleaned up.
-* Created `LoadTask` function that loads custom Whiskey tasks into the current build.
+* Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
+* `PublishProGetUniversalPackage` task can now exclude items from being published. Set the `Exclude` property to a list of path wildcards. Any path from the `Path` property that match any wildcards will not be published.
+* Fixed: `MSBuild` task fails when given `Version` property and multiple installs of that version of MSBuild exist on the system.
 '@
         } # End of PSData hashtable
 
