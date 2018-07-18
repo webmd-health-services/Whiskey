@@ -60,7 +60,7 @@ function GivenProject
 function GivenAProjectThatDoesNotCompile
 {
     GivenAProjectThatCompiles
-    Get-ChildItem -Path (Get-BuildRoot) -Filter 'AssemblyInfo.cs' -Recurse | 
+    Get-ChildItem -Path (Get-BuildRoot) -Filter 'AssemblyInfo.cs' -Recurse |
         ForEach-Object { Add-Content -Path $_.FullName -Value '>' }
 }
 
@@ -143,14 +143,14 @@ function WhenRunningTask
 
         [Switch]
         $WithNoPath
-    ) 
+    )
 
     $optionalParams = @{ }
     if( $AsDeveloper )
     {
         $optionalParams['ForDeveloper'] = $true
     }
-    
+
     if( $AsBuildServer )
     {
         $optionalParams['ForBuildServer'] = $true
@@ -179,7 +179,7 @@ function WhenRunningTask
     {
         $WithParameter['Version'] = $version
     }
-    
+
     if( $nuGetVersion )
     {
         $WithParameter['NuGetVersion'] = $nuGetVersion
@@ -189,7 +189,7 @@ function WhenRunningTask
     {
         $WithParameter['Use32Bit'] = $use32Bit
     }
-    
+
     $Global:Error.Clear()
     try
     {
@@ -215,7 +215,7 @@ function ThenAssembliesAreVersioned
     It 'should version the assemblies' {
         Get-ChildItem -Path (Get-BuildRoot) -Filter $assembly -File -Recurse |
             Select-Object -ExpandProperty 'VersionInfo' |
-            ForEach-Object { 
+            ForEach-Object {
                 $_.ProductVersion | Should -Be $ProductVersion
                 $_.FileVersion | Should -Be $FileVersion
             }
@@ -227,7 +227,7 @@ function ThenAssembliesAreNotVersioned
     It 'should not version the assemblies' {
         Get-ChildItem -Path (Get-BuildRoot) -Include $assembly -File -Recurse |
             Select-Object -ExpandProperty 'VersionInfo' |
-            ForEach-Object { 
+            ForEach-Object {
                 $_.ProductVersion | Should -Be '0.0.0.0'
                 $_.FileVersion | Should -Be '0.0.0.0'
             }
@@ -251,7 +251,7 @@ function ThenBinsAreEmpty
         foreach ($project in $path) {
             $projectPath = Join-Path -Path (Get-BuildRoot) -ChildPath ($project | Split-Path)
             Get-ChildItem -Path $projectPath -Include 'packages' -Directory | Should -BeNullOrEmpty
-        } 
+        }
     }
 }
 
@@ -279,7 +279,7 @@ function ThenNuGetPackagesRestored
 function ThenNuGetPackagesNotRestored
 {
     It 'should not restore NuGet packages' {
-        Get-ChildItem -Path (Get-BuildRoot) -Filter 'packages' -Recurse | 
+        Get-ChildItem -Path (Get-BuildRoot) -Filter 'packages' -Recurse |
             ForEach-Object { Get-ChildItem -Path $_.FullName -Exclude 'NuGet.CommandLine.*' } | Should -BeNullOrEmpty
     }
 }
@@ -307,7 +307,7 @@ function ThenProjectsCompiled
             {
                 (Join-Path -Path $outputRoot -ChildPath $item) | Should -Exist
             }
-            Get-ChildItem -Path (Get-BuildRoot) -Include 'bin' -Directory -Recurse | 
+            Get-ChildItem -Path (Get-BuildRoot) -Include 'bin' -Directory -Recurse |
                 Get-ChildItem -Include $assembly -File -Recurse |
                 Should -BeNullOrEmpty
         }
@@ -414,7 +414,7 @@ function ThenOutputIsDebug
 function ThenSpecificNuGetVersionInstalled
 {
     $nuGetPackageVersion = 'NuGet.CommandLine.{0}' -f $nuGetVersion
-    
+
     It ('should install ''{0}''' -f $nugetPackageVersion) {
         Join-Path -Path (Get-BuildRoot) -ChildPath ('packages\{0}' -f $nugetPackageVersion) | Should -Exist
     }
@@ -590,7 +590,7 @@ Describe 'MSBuild.when using custom targets' {
 
 Describe 'MSBuild.when using invalid version of MSBuild' {
     Init
-    GivenAProjectThatCompiles 
+    GivenAProjectThatCompiles
     GivenVersion 'some.bad.version'
     WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
     ThenTaskFailed
@@ -606,13 +606,42 @@ Describe 'MSBuild.when customizing version of MSBuild' {
         <Message Importance="High" Text="`$(MSBuildBinPath)" />
     </Target>
 </Project>
-"@ 
+"@
     $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
     $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
     $expectedPath = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
     GivenVersion $version
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; } 
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
     ThenOutput -Contains ([regex]::Escape($expectedPath.TrimEnd('\')))
+}
+
+Describe 'MSBuild.when customizing version of MSBuild and multiple installs for a version exist' {
+    Init
+    GivenProject @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="Build">
+        <Message Importance="High" Text="`$(MSBuildBinPath)" />
+    </Target>
+</Project>
+"@
+    $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
+    $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+    $msbuildRoot = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
+    $msbuildPath = Join-Path -Path $msbuildRoot -ChildPath 'MSBuild.exe' -Resolve
+    Mock -CommandName 'Get-MSBuild' -ModuleName 'Whiskey' -MockWith {
+        1..2 | ForEach-Object {
+            [pscustomobject]@{
+                                Name =  $version;
+                                Version = [version]$version;
+                                Path = $msbuildPath;
+                                Path32 = $msbuildPath;
+                            }
+        }
+    }.GetNewClosure()
+    GivenVersion $version
+    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
+    ThenOutput -Contains ([regex]::Escape($msbuildRoot.TrimEnd('\')))
 }
 
 Describe 'MSBuild.when disabling multi-CPU builds' {
@@ -623,7 +652,7 @@ Describe 'MSBuild.when disabling multi-CPU builds' {
     <Target Name="Build">
     </Target>
 </Project>
-"@ 
+"@
     WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true; Verbosity = 'diag' }
     ThenOutput -Contains ('MSBuildNodeCount = 1')
 }
@@ -636,7 +665,7 @@ Describe 'MSBuild.when disabling file logger' {
     <Target Name="Build">
     </Target>
 </Project>
-"@ 
+"@
     WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
     ThenOutputNotLogged
 }
