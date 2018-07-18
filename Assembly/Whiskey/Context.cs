@@ -11,10 +11,12 @@ namespace Whiskey
         {
             ApiKeys = new Dictionary<string, string>();
             BuildMetadata = new BuildInfo();
+            BuildStatus = BuildStatus.NotStarted;
             RunBy = RunBy.Developer;
             Configuration = new Dictionary<object, object>();
             Credentials = new Dictionary<string, object>();
             RunMode = RunMode.Build;
+            Stop = false;
             TaskDefaults = new Dictionary<string, IDictionary>();
             TaskIndex = -1;
             Variables = new Dictionary<string, object>();
@@ -35,6 +37,8 @@ namespace Whiskey
         public bool ByDeveloper { get { return this.RunBy == RunBy.Developer; } }
 
         public BuildInfo BuildMetadata { get; set; }
+
+        public BuildStatus BuildStatus { get; set; }
 
         public IDictionary Configuration { get; set; }
 
@@ -63,6 +67,8 @@ namespace Whiskey
         public bool ShouldInitialize { get { return RunMode == RunMode.Initialize; } }
 
         public DateTime StartedAt { get; set; }
+
+        public bool Stop { get; set; }
 
         public string TaskName { get; set; }
 

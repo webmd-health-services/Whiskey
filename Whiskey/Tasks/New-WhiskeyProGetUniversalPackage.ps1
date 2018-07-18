@@ -25,6 +25,7 @@ function New-WhiskeyProGetUniversalPackage
             if( $manifestProperties.ContainsKey($taskProperty) )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"ManifestProperties" contains key "{0}". This property cannot be manually defined in "ManifestProperties" as it is set automatically from the corresponding task property "{0}".' -f $taskProperty)
+                return
             }
         }
     }
@@ -34,6 +35,7 @@ function New-WhiskeyProGetUniversalPackage
         if( -not $TaskParameter.ContainsKey($mandatoryProperty) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryProperty)
+            return
         }
     }
 
@@ -42,6 +44,7 @@ function New-WhiskeyProGetUniversalPackage
     if ($name -notmatch $validNameRegex)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message '"Name" property is invalid. It should be a string of one to fifty characters: numbers (0-9), upper and lower-case letters (A-z), dashes (-), periods (.), and underscores (_).'
+        return
     }
 
     $version = $TaskParameter['Version']
@@ -52,11 +55,13 @@ function New-WhiskeyProGetUniversalPackage
         if( ($version -notmatch '^\d+\.\d+\.\d+$') )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
+            return
         }
         [SemVersion.SemanticVersion]$semVer = $null
         if( -not ([SemVersion.SemanticVersion]::TryParse($version, [ref]$semVer)) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is not a valid semantic version.')
+            return
         }
         $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$TaskContext.Version.SemVer2.Prerelease,$TaskContext.Version.SemVer2.Build
         $version = New-WhiskeyVersionObject -SemVer $semVer
@@ -73,6 +78,7 @@ function New-WhiskeyProGetUniversalPackage
         if( $compressionLevel -eq $null )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CompressionLevel'': ''{0}'' is not a valid compression level. It must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
+            return
         }
     }
 
@@ -228,6 +234,7 @@ function New-WhiskeyProGetUniversalPackage
                         }
 
                         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
+                        return
                     }
 
                     # Get rid of empty directories. Robocopy doesn't sometimes.

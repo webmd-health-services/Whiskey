@@ -29,6 +29,7 @@ function Invoke-WhiskeyNpmRunScript
             - test
 
         '
+        return
     }
 
     foreach ($script in $npmScripts)

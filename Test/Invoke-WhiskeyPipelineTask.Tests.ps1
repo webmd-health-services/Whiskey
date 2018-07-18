@@ -88,16 +88,38 @@ function ThenPipelineFailed
     }
 }
 
-function ThenPipelineRun
+function ThenPipeline
 {
+    [CmdletBinding(DefaultParameterSetName='Run')]
     param(
-        $Name,
+        [Parameter(Mandatory=$true,ParameterSetName='Run')]
         [string]
-        $BecauseFileExists
+        $Run,
+
+        [Parameter(Mandatory=$true,ParameterSetName='NotRun')]
+        [string]
+        $NotRun,
+
+        [Parameter(Mandatory=$true,ParameterSetName='Run')]
+        [string]
+        $BecauseFileExists,
+
+        [Parameter(Mandatory=$true,ParameterSetName='NotRun')]
+        [string]
+        $BecauseFileDoesNotExist
     )
 
-    It ('should run pipeline ''{0}''' -f $Name) {
-        Join-Path -Path $TestDrive.FullName -ChildPath $BecauseFileExists | Should -Exist
+    if ($Run)
+    {
+        It ('should run pipeline ''{0}''' -f $Run) {
+            Join-Path -Path $TestDrive.FullName -ChildPath $BecauseFileExists | Should -Exist
+        }
+    }
+    else
+    {
+        It ('should not run pipeline ''{0}''' -f $NotRun) {
+            Join-Path -Path $TestDrive.FullName -ChildPath $BecauseFileDoesNotExist | Should -Not -Exist
+        }
     }
 }
 
@@ -110,7 +132,7 @@ function WhenRunningTask
     $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
     foreach( $pipeline in $pipelines )
     {
-        $pipeline | Add-Content -Path $whiskeyYmlPath 
+        $pipeline | Add-Content -Path $whiskeyYmlPath
     }
 
     $context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $whiskeyYmlPath
@@ -152,8 +174,8 @@ Describe 'Pipeline.when running another pipeline' {
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
     WhenRunningTask
-    ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
-    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+    ThenPipeline -Run 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
+    ThenPipeline -Run 'Build' -BecauseFileExists 'Build\whiskey.yml'
 }
 
 Describe 'Pipeline.when running multiple pipelines' {
@@ -171,7 +193,7 @@ Describe 'Pipeline.when running multiple pipelines' {
 
     GivenPipeline 'Build' @'
 - Pipeline:
-    Name: 
+    Name:
     - Fubar
     - Snafu
 - CopyFile:
@@ -179,9 +201,9 @@ Describe 'Pipeline.when running multiple pipelines' {
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
     WhenRunningTask
-    ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
-    ThenPipelineRun 'Snafu' -BecauseFileExists 'Snafu\whiskey.yml'
-    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+    ThenPipeline -Run 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
+    ThenPipeline -Run 'Snafu' -BecauseFileExists 'Snafu\whiskey.yml'
+    ThenPipeline -Run 'Build' -BecauseFileExists 'Build\whiskey.yml'
 }
 
 Describe 'Pipeline.when Name property is missing' {
@@ -197,7 +219,7 @@ Describe 'Pipeline.when Name property doesn''t have a value' {
     Init
     GivenPipeline 'Build' @'
 - Pipeline:
-    Name: 
+    Name:
 '@
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenPipelineFailed 'is missing or doesn''t have a value'
@@ -233,4 +255,39 @@ Describe 'Pipeline.when running in Initialize mode' {
 '@
     WhenRunningTask
     ThenPowershellModule 'Whiskey' -Installed
+}
+
+Describe 'Pipeline.when pipeline contains Stop task' {
+    Init
+    GivenPipeline 'Fubar' @'
+- CopyFile:
+    Path: whiskey.yml
+    DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
+'@
+    GivenPipeline 'StopPipeline' @'
+- Stop
+'@
+    GivenPipeline 'Snafu' @'
+- CopyFile:
+    Path: whiskey.yml
+    DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
+'@
+
+    GivenPipeline 'Build' @'
+- Pipeline:
+    Name:
+    - Fubar
+    - StopPipeline
+    - Snafu
+- CopyFile:
+    Path: whiskey.yml
+    DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
+'@
+    WhenRunningTask
+    ThenPipeline -Run 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
+    ThenPipeline -NotRun 'Snafu' -BecauseFileDoesNotExist 'Snafu\whiskey.yml'
+
+    It 'should stop the main "Build" pipeline' {
+        Join-Path -Path $TestDrive.FullName -ChildPath 'Build\whiskey.yml' | Should -Not -Exist
+    }
 }

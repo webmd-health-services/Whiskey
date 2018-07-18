@@ -10,7 +10,7 @@ function Add-WhiskeyApiKey
 
     For example, if you are publishing a PowerShell module, your `whiskey.yml` file will look something like this:
 
-        Publish:
+        Build:
         - PublishPowerShellModule:
             RepositoryName: PSGallery
             Path: Whiskey

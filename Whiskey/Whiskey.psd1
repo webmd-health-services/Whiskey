@@ -152,6 +152,12 @@
 * Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
 * `PublishProGetUniversalPackage` task can now exclude items from being published. Set the `Exclude` property to a list of path wildcards. Any path from the `Path` property that match any wildcards will not be published.
 * Fixed: `MSBuild` task fails when given `Version` property and multiple installs of that version of MSBuild exist on the system.
+* Added `Stop` task for gracefully stopping a build.
+* Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
+* Fixed: `ExceptBy` common task property was documented but never implemented.
+* Added `OnBuildStart` and `OnBuildEnd` built-in pipelines. See the `about_Whiskey` help topic for further info.
+* Added `OnlyIfBuildStatusIs` common task property for controlling if tasks in the built-in `OnBuildEnd` pipeline should run. Valid values are `Succeeded` and `Failed`.
+* Deprecated the `PublishBuildStatusTo" root whiskey Whiskey property. Please migrate to using the `PublishBuildStatusToBitbucket` task in the `OnBuildStart` and `OnBuildEnd` built-in pipelines.
 '@
         } # End of PSData hashtable
 

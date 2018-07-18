@@ -19,6 +19,7 @@ function New-WhiskeyContext
 
     * `BuildMetadata`: a `Whiskey.BuildInfo` object representing build metadata provided by the build server.
     * `BuildRoot`: a `System.IO.DirectoryInfo` object representing the directory the YAML configuration file is in.
+    * `BuildStatus`: a `Whiskey.BuildStatus` object representing the current run status of the build.
     * `ByBuildServer`: a flag indicating if the build is being run by a build server.
     * `ByDeveloper`: a flag indicating if the build is being run by a developer.
     * `Environment`: the environment the build is running in.
@@ -90,17 +91,18 @@ function New-WhiskeyContext
     if( $config.ContainsKey('BuildTasks') )
     {
         $buildPipelineName = 'BuildTasks'
-        Write-Warning ('{0}: The default "BuildTasks" pipeline has been renamed to "Build". Backwards compatibility with "BuildTasks" will be removed in the next major version of Whiskey. Rename your "BuildTasks" pipeline to "Build".' -f $ConfigurationPath)
+        Write-Warning ('{0}: The default "BuildTasks" pipeline has been renamed to "Build". Backwards compatibility with "BuildTasks" will be removed in a future version of Whiskey. Rename your "BuildTasks" pipeline to "Build".' -f $ConfigurationPath)
     }
 
+    $migrateToStopTask = 'The "Publish" pipeline has been deprecated and will be removed in a future version of Whiskey. Move all your "Publish" tasks to the end of your "Build" pipeline with a "Stop" task just before them. The "Stop" task should have an "ExceptOnBranch" property with the list of branches copied from the "PublishOn" root whiskey.yml property. Then remove the "PublishOn" root property and "Publish" pipeline property from the whiskey.yml.'
     if( $config.ContainsKey('Publish') -and $config.ContainsKey('PublishTasks') )
     {
-        throw ('{0}: The configuration file contains both "Publish" and the deprecated "PublishTasks" pipelines. Move all your publish tasks under "Publish" and remove the "PublishTasks" pipeline.' -f $ConfigurationPath)
+        throw ('{0}: The configuration file contains both deprecated "Publish" and "PublishTasks" pipelines, only one is allowed. {1}' -f $ConfigurationPath,$migrateToStopTask)
     }
 
-    if( $config.ContainsKey('PublishTasks') )
+    if( $config.ContainsKey('Publish') -or $config.ContainsKey('PublishTasks') )
     {
-        Write-Warning ('{0}: The default "PublishTasks" pipeline has been renamed to "Publish". Backwards compatibility with "PublishTasks" will be removed in the next major version of Whiskey. Rename your "PublishTasks" pipeline to "Publish".' -f $ConfigurationPath)
+        Write-Warning ('{0}: {1}' -f $ConfigurationPath,$migrateToStopTask)
     }
 
     $buildRoot = $ConfigurationPath | Split-Path
@@ -141,7 +143,7 @@ function New-WhiskeyContext
                             Where-Object { $_.Keys | Where-Object { $_ -eq 'Version' } }
     if( -not $versionTaskExists -and ($config.ContainsKey('PrereleaseMap') -or $config.ContainsKey('Version') -or $config.ContainsKey('VersionFrom')) )
     {
-        Write-Warning ('{0}: The ''PrereleaseMap'', ''Version'', and ''VersionFrom'' properties are obsolete and will be removed in Whiskey 1.0. They were replaced with the ''Version'' task. Add a ''Version'' task as the first task in your build pipeline. If your current whiskey.yml file looks like this:
+        Write-Warning ('{0}: The ''PrereleaseMap'', ''Version'', and ''VersionFrom'' properties are obsolete and will be removed in a future version of Whiskey. They were replaced with the ''Version'' task. Add a ''Version'' task as the first task in your build pipeline. If your current whiskey.yml file looks like this:
 
     Version: 1.2.3
 
@@ -232,6 +234,36 @@ Whiskey also no longer automatically adds build metadata to your version number.
         }
     }
 
+    if( $config.ContainsKey('PublishBuildStatusTo') )
+    {
+        Write-Warning -Message ('{0}: The "PublishBuildStatusTo" property is deprecated and will be removed in a future version of Whiskey. Please migrate to using the "PublishBuildStatusToBitbucket" task in the built-in "OnBuildStart" and "OnBuildEnd" pipelines in your whiskey.yml. Move the "Uri" and "CredentialID" properties to the new "PublishBuildStatusToBitbucket" task and then remove the deprecated "PublishBuildStatusTo" property from your whiskey.yml file.
+
+If you have a "PublishBuildStatusTo" property that looks like this:
+
+    PublishBuildStatusTo:
+    - BitbucketServer:
+        Uri: BITBUCKET_SERVER_URI
+        CredentialID: CREDENTIAL_ID
+
+Migrate to the "PublishBuildStatusToBitbucket" task like this:
+
+    OnBuildStart:
+    - TaskDefaults:
+        PublishBuildStatusToBitbucket:
+            Uri: BITBUCKET_SERVER_URI
+            CredentialID: CREDENTIAL_ID
+
+    - PublishBuildStatusToBitbucket
+
+    Build:
+    # ... SNIP ...
+
+    OnBuildEnd:
+    - PublishBuildStatusToBitbucket
+
+        ' -f $ConfigurationPath)
+    }
+
     $outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
     if( -not (Test-Path -Path $outputDirectory -PathType Container) )
     {
@@ -266,7 +298,7 @@ Whiskey also no longer automatically adds build metadata to your version number.
     }
     else
     {
-        Write-Warning ('Whiskey''s default, date-base default version number is OBSOLETE. Beginning with Whiskey 1.0, the default Whiskey version number will be 0.0.0. Use the Version task to set your own custom version. For example, this Version task preserves the existing behavior:
+        Write-Warning ('Whiskey''s default, date-base default version number is OBSOLETE. In a future version of Whiskey, the default Whiskey version number will be 0.0.0. Use the Version task to set your own custom version. For example, this Version task preserves the existing behavior:
 
     Build
     - Version:

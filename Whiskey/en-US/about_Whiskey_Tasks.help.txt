@@ -43,6 +43,7 @@ LONG DESCRIPTION
     * `ProGetUniversalPackage`: creates a universal ProGet package.
     * `PublishBitbucketServerTag`: tags a repository in Bitbucket Server.
     * `PublishBuildMasterPackage`: creates and deploys a package in BuildMaster.
+    * `PublishBuildStatusToBitbucket`: publishes build status information to Bitbucket Server.
     * `PublishNodeModule`: publishes a Node module (i.e. runs the `npm publish`
       command).
     * `PublishPowerShellModule`: publishes a PowerShell module.
@@ -56,6 +57,7 @@ LONG DESCRIPTION
       .psd1 file or module manifest).
     * `SetVariableFromXml`: creates variables that you can use in your
       whiskey.yml file by reading their values from an XML file.
+    * `Stop`: Gracefully stops a build.
     * `TaskDefaults`: sets default task properties.
     * `Version`: sets the version number for the current build.
 
@@ -72,6 +74,9 @@ LONG DESCRIPTION
       the task actually does work in the chosen mode. Some tasks don't have
       anything to clean or initialize, in which case these properties would
       have no affect.
+    * `OnlyIfBuildStatusIs`/`ExceptIfBuildStatusIs`: controls if tasks in the
+      `OnBuildEnd` pipeline should run depending on the resulting status of the
+      main build. Valid values are `Succeeded` and `Failed`.
     * `OnlyOnBranch`/`ExceptOnBranch`: controls what branch a task should run
       on. By default, a task runs on every branch. When a build is run by a
       developer, there is no branch information, so tasks that have this

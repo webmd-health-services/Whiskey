@@ -724,7 +724,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             Publish = @();
             PublishTasks = @();
         }
-        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ "Publish"\ and\ the\ deprecated\ "PublishTasks"\ pipelines' -ErrorAction SilentlyContinue
+        WhenCreatingContext -ThenCreationFailsWithErrorMessage 'contains\ both\ deprecated\ "Publish"\ and\ "PublishTasks"\ pipelines, only one is allowed.' -ErrorAction SilentlyContinue
     }
 
     Describe 'New-WhiskeyContext.when BuildTasks pipeline exists' {
@@ -749,6 +749,39 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             );
         }
         WhenCreatingContext
-        ThenWarning 'The\ default\ "PublishTasks"\ pipeline\ has\ been\ renamed\ to\ "Publish"'
+        ThenWarning ([regex]::Escape('Move all your "Publish" tasks to the end of your "Build" pipeline with a "Stop" task just before them.'))
+    }
+
+    Describe 'New-WhiskeyContext.when Publish pipeline exists' {
+        Init
+        GivenConfiguration @{
+            Build = @(
+                @{ Version = '1.0.0' }
+            );
+            Publish = @(
+                'NuGetPush'
+            );
+        }
+        WhenCreatingContext
+        ThenWarning ([regex]::Escape('Move all your "Publish" tasks to the end of your "Build" pipeline with a "Stop" task just before them.'))
+    }
+
+    Describe 'New-WhiskeyContext.when PublishBuildStatusTo property exists' {
+        Init
+        GivenConfiguration @{
+            PublishBuildStatusTo = @(
+                @{
+                    'BitbucketServer' = @{
+                        'Uri' = 'https://bitbucket.example.com';
+                        'CredentialID' = 'BitbucketCredential'
+                    }
+                }
+            );
+            Build = @(
+                @{ 'Version' = '1.0.0' }
+            );
+        }
+        WhenCreatingContext
+        ThenWarning ([regex]::Escape('The "PublishBuildStatusTo" property is deprecated and will be removed in a future version of Whiskey.'))
     }
 }

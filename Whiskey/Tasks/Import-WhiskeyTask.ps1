@@ -1,4 +1,4 @@
-    
+
 function Import-WhiskeyTask
 {
     [Whiskey.Task("LoadTask")]
@@ -28,24 +28,25 @@ function Import-WhiskeyTask
 
         $knownTasks = @{}
         Get-WhiskeyTask | ForEach-Object { $knownTasks[$_.Name] = $_ }
-        # We do this in a background script block to ensure the function is scoped correctly. If it isn't, it 
+        # We do this in a background script block to ensure the function is scoped correctly. If it isn't, it
         # won't be available outside the script block. If it is, it will be visible after the script block completes.
         & {
             . $path
         }
-        $newTasks = Get-WhiskeyTask | Where-Object { -not $knownTasks.ContainsKey($_.Name) } 
+        $newTasks = Get-WhiskeyTask | Where-Object { -not $knownTasks.ContainsKey($_.Name) }
         if( -not $newTasks )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('File "{0}" contains no Whiskey tasks. Make sure:
- 
+
 * the file contains a function
 * the function is scoped correctly (e.g. `function script:MyTask`)
 * the function has a `[Whiskey.Task("MyTask")]` attribute that declares the task''s name
 * a task with the same name hasn''t already been loaded
- 
+
 See about_Whiskey_Writing_Tasks for more information.' -f $path)
+            return
         }
-        
+
         Write-WhiskeyInfo -Context $TaskContext -Message ($path)
         foreach( $task in $newTasks )
         {
