@@ -20,6 +20,7 @@ PROPERTIES
     * `Timeout`: the timeout, in seconds, to use when uploading the file. If the upload request takes longer than this, it will be cancelled and the build will fail.
     * `Overwrite`: replace/overwrite the package if it already exists in ProGet. The default behavior is to fail/stop if the package exists.
     * `AllowMissingPackage`: by default, if the paths in the `Path` property don't exist, the build will fail. To not fail the build when there are missing packages, set this property to `true`.
+    * `Exclude`: Any paths to exclude from publishing. Wildcards are required. The exclusion is matched against the full path of each item from the `Path` property. If you don't care about the directory structure, each item should look like `*\filename.upack`.
 
 EXAMPLES
 
@@ -44,3 +45,15 @@ EXAMPLES
             Timeout: 600
 
     Demonstrates the full configuration available to upload a packae. In this example, only the `App-*.upack` file(s) will be uploaded to `http://proget.example.com/upack/Apps` using the credential with the `proget.example.com` ID. The upload will be allowed to take ten minutes, then will be cancelled.
+
+    ## Example 3
+
+        - PublishProGetUniversalPackage:
+            Uri: https://proget.example.com
+            FeedName: Apps
+            Path:
+            - .output\App-*.upack
+            Exclude:
+            - "*\App-Bad.upack"
+
+    Demonstrates how to exclude a package from being published. In this case, any path that ends with "App-Bad.upack" will not be published. Exclusion items are matched against the full path of items from the `Path` property.

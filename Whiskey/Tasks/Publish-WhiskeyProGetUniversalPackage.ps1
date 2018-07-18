@@ -72,7 +72,25 @@ Build:
     {
         $errorActionParam['ErrorAction'] = 'Ignore'
     }
-    $packages = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @errorActionParam
+    $packages = $TaskParameter['Path'] | 
+                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @errorActionParam |
+                    Where-Object {
+                        if( -not $TaskParameter.ContainsKey('Exclude') )
+                        {
+                            return $true
+                        }
+
+                        foreach( $exclusion in $TaskParameter['Exclude'] )
+                        {
+                            if( $_ -like $exclusion )
+                            {
+                                return $false
+                            }
+                        }
+
+                        return $true
+                    }
+
 
     if( $allowMissingPackages -and -not $packages )
     {

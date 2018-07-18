@@ -42,7 +42,7 @@ $assemblyVersion = @"
 [assembly: System.Reflection.AssemblyVersion("$version")]
 [assembly: System.Reflection.AssemblyFileVersion("$version")]
 [assembly: System.Reflection.AssemblyInformationalVersion("$version$buildInfo")]
-"@ 
+"@
 
 $assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
 if( -not (Test-Path -Path $assemblyVersionPath -PathType Leaf) )
@@ -61,7 +61,7 @@ Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\VSSetup')
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Use-CallerPreference.ps1')
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
 
-$msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' }
+$msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' } | Select-Object -First 1
 if( -not $msbuild )
 {
     Write-Error ('Unable to find MSBuild 15.0.')
@@ -100,10 +100,10 @@ $ErrorActionPreference = 'Continue'
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
-Get-ChildItem 'env:' | 
+Get-ChildItem 'env:' |
     Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
     Format-Table |
-    Out-String | 
+    Out-String |
     Write-Verbose
 
 $optionalArgs = @{ }
@@ -130,10 +130,10 @@ $apiKeys = @{
 
 $apiKeys.Keys |
     Where-Object { Test-Path -Path ('env:{0}' -f $apiKeys[$_]) } |
-    ForEach-Object { 
+    ForEach-Object {
         $apiKeyID = $_
         $envVarName = $apiKeys[$apiKeyID]
         Write-Verbose ('Adding API key "{0}" with value from environment variable "{1}".' -f $apiKeyID,$envVarName)
-        Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value (Get-Item -Path ('env:{0}' -f $envVarName)).Value 
+        Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value (Get-Item -Path ('env:{0}' -f $envVarName)).Value
     }
 Invoke-WhiskeyBuild -Context $context @optionalArgs

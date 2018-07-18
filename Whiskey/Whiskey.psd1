@@ -150,6 +150,8 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
+* `PublishProGetUniversalPackage` task can now exclude items from being published. Set the `Exclude` property to a list of path wildcards. Any path from the `Path` property that match any wildcards will not be published.
+* Fixed: `MSBuild` task fails when given `Version` property and multiple installs of that version of MSBuild exist on the system.
 * Added `Stop` task for gracefully stopping a build.
 * Deprecated the `Publish` pipeline and the `PublishOn` root Whiskey property.
 * Fixed: `ExceptBy` common task property was documented but never implemented.

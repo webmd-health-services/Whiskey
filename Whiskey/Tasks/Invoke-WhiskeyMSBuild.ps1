@@ -39,7 +39,7 @@ function Invoke-WhiskeyMSBuild
     $version = $TaskParameter['Version']
     if( $version )
     {
-        $msbuildInfo = $msbuildInfos | Where-Object { $_.Name -eq $version }
+        $msbuildInfo = $msbuildInfos | Where-Object { $_.Name -eq $version } | Select-Object -First 1
     }
     else
     {
