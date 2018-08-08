@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.37.0'
+    ModuleVersion = '0.38.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -149,9 +149,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Created `Get-WhiskeyMSBuildConfiguration` and `Set-WhiskeyMSBuildConfiguration` functions to allow for customizing the configuration to use when running MSBuild tasks/tools.
-* `PublishProGetUniversalPackage` task can now exclude items from being published. Set the `Exclude` property to a list of path wildcards. Any path from the `Path` property that match any wildcards will not be published.
-* Fixed: `MSBuild` task fails when given `Version` property and multiple installs of that version of MSBuild exist on the system.
+* `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
 '@
         } # End of PSData hashtable
 
