@@ -149,6 +149,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
 * Created `NpmAudit` task for running NPM's new audit command. This task replaces the NodeNsp task, which will stop working the end of September 2018.
 * The `NodeNspCheck` task is obsolete. Migrate to the `NpmAudit` task.
 '@
