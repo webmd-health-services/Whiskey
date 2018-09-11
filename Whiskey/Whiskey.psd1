@@ -150,6 +150,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Created `NpmAudit` task for running NPM's new audit command. This task replaces the NodeNsp task, which will stop working the end of September 2018.
+* The `NodeNspCheck` task is obsolete. Migrate to the `NpmAudit` task.
 '@
         } # End of PSData hashtable
 

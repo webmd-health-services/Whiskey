@@ -9,7 +9,7 @@ Describe 'about_Whiskey_Tasks' {
 
     $missingTasks = Get-WhiskeyTask |
                         Select-Object -ExpandProperty 'Name' |
-                        Where-Object { @( 'Node', 'PublishNuGetPackage', 'PublishNuGetLibrary' ) -notcontains $_ } |
+                        Where-Object { @( 'Node', 'NodeNspCheck', 'PublishNuGetPackage', 'PublishNuGetLibrary' ) -notcontains $_ } |
                         Where-Object { $helpTopic -notmatch [regex]::Escape('`{0}`' -f $_) }
 
     It ('should include all known tasks') {
