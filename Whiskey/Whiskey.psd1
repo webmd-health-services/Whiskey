@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.37.1'
+    ModuleVersion = '0.38.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -149,7 +149,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Detecting versions of installed MSBuild fails if expected registry keys exist but expected values don't exist.
+* Created `NpmAudit` task for running NPM's new audit command. This task replaces the NodeNsp task, which will stop working the end of September 2018.
 '@
         } # End of PSData hashtable
 

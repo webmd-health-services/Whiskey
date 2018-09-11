@@ -1,0 +1,39 @@
+TOPIC
+    about_Whiskey_NpmAudit_Task
+
+
+SUMMARY
+    Installs Node.js packages.
+
+
+DESCRIPTION
+    The `NpmAudit` task will use NPM's `audit` command to check all dependencies in your package.json file for known security vulnerabilities and will fail a build if any are found.
+    
+    This task will install the latest LTS version of Node into a `.node` directory (in the same directory as your whiskey.yml file). To use a specific version, set the task's `NodeVersion` property to version to use or set the `engines.node` property in your package.json file to the version you want. (See https://docs.npmjs.com/files/package.json#engines for more information.)
+
+    This task requires NPM version 6 or higher. Use the tasks' `NpmVersion` property to control what version of NPM to install and use. You can also set the `engines.npm` property in your package.json file. By default, the task will use the version of NPM that ships with the version of Node you're using.
+
+
+PROPERTIES
+
+    * `WorkingDirectory`: the directory where the `package.json` exists. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
+    * `NodeVersion`: the version of Node to use. By default, the version in the `engines.node` property of your package.json file is used. If that is missing, the latest LTS version of Node is used. By default, the version of NPM that shipped with that version of Node is used. You can customize what version of NPM to use by setting the `engines.npm` property in your package.json file to the version you want.
+    * `NpmVersion`: the version of NPM to use. By default, the version that ships with the version of Node you're using is used. The `npm audit` command is available in NPM version 6 and later. A Node semver expression is allowed, e.g. use `>=6' to use the most recent version of NPM after and including version 6.
+
+
+EXAMPLES
+
+    ## Example 1
+
+        Build:
+        - NpmAudit
+
+    This example will check all dependencies in your package.json file for known security vulnerabilities and fail the build if any are found.
+
+    ## Example 2
+
+        Build:
+        - NpmAudit:
+            NpmVersion: >=6
+
+    Demonstrates how to use the latest version of NPM after and including all versions in major version 6.

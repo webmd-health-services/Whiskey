@@ -26,6 +26,7 @@ LONG DESCRIPTION
     * `NodeLicenseChecker`: runs license checker, a Node module/command that
       scans and reports on Node module license metadata.
     * `NodeNspCheck`: runs NSP, a vulnerability scanner for Node projects.
+    * `NpmAudit`: runs the Node `npm audit` command.
     * `NpmConfig`: runs the Node `npm config` command.
     * `NpmInstall`: runs the Node `npm install` command.
     * `NpmPrune`: runs the Node `npm prune` command.
