@@ -25,6 +25,7 @@ LONG DESCRIPTION
     * `MSBuild`: runs MSBuild, the Microsoft build engine.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that
       scans and reports on Node module license metadata.
+    * `Npm`: runs NPM commands.
     * `NpmAudit`: runs the Node `npm audit` command.
     * `NpmConfig`: runs the Node `npm config` command.
     * `NpmInstall`: runs the Node `npm install` command.

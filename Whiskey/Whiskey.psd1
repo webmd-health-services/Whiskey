@@ -24,7 +24,7 @@
     CompanyName = 'WebMD Health Services'
 
     # Copyright statement for this module
-    Copyright = '(c) 2016 WebMD Health Services. All rights reserved.'
+    Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Continuous Integration/Continuous Delivery module.'
@@ -151,6 +151,7 @@
             ReleaseNotes = @'
 * `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
 * Created `NpmAudit` task for running NPM's new audit command. This task replaces the NodeNsp task, which will stop working the end of September 2018.
+* Created `Npm` task for running NPM commands.
 * The `NodeNspCheck` task is obsolete. Migrate to the `NpmAudit` task.
 '@
         } # End of PSData hashtable
