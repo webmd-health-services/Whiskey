@@ -31,8 +31,6 @@ Build:
             - "*\\Test\\DotNetPublish.Tests.ps1"
             - "*\\Test\\DotNetTest.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNodeNspCheck.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNodeTask.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNpmInstall.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNUnit2Task.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNUnit3Task.Tests.ps1"
