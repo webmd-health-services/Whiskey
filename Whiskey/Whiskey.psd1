@@ -153,6 +153,7 @@
 * Created `Npm` task for running NPM commands.
 * Deprecated the `NpmConfig`, `NpmInstall`, `NpmPrune`, and `NpmRunScript` tasks. These tasks will be removed in a future version of Whiskey. Use the new `Npm` command instead.
 * The `NodeNspCheck` task is obsolete. Migrate to the `NpmAudit` task.
+* Created `DotNet` task for running dotnet.exe commands.
 '@
         } # End of PSData hashtable
 
