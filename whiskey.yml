@@ -31,7 +31,7 @@ Build:
             - "*\\Test\\DotNetPublish.Tests.ps1"
             - "*\\Test\\DotNetTest.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyNpmInstall.Tests.ps1"
+            - "*\\Test\\Npm.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNUnit2Task.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNUnit3Task.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyPester3Task.Tests.ps1"
@@ -53,9 +53,9 @@ Build:
             - Test\DotNetPack.Tests.ps1
             - Test\DotNetPublish.Tests.ps1
             - Test\DotNetTest.Tests.ps1
-            - Test\Invoke-WhiskeyNpmInstall.Tests.ps1
             - Test\Invoke-WhiskeyPowerShell.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
+            - Test\Npm.Tests.ps1
             - Test\NuGetPack.Tests.ps1
             - Test\Parallel.Tests.ps1
             - Test\Publish-WhiskeyNodeModule.Tests.ps1
@@ -79,7 +79,7 @@ Build:
     - Tasks:
         Pester4:
             Path:
-            # Imporant that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
+            # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
             # These three tests must be in the same queue.
             - Test\MSBuild.Tests.ps1
             - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
