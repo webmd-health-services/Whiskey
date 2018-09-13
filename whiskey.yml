@@ -47,9 +47,13 @@ Build:
     - Tasks:
         Pester4:
             Path:
+            # Takes almost 20 minutes!
+            - Test\DotNetBuild.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path:
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
-            - Test\DotNetBuild.Tests.ps1
             - Test\DotNetPack.Tests.ps1
             - Test\DotNetPublish.Tests.ps1
             - Test\DotNetTest.Tests.ps1

@@ -1,4 +1,4 @@
-
+    
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $argument = $null
@@ -271,9 +271,11 @@ function WhenRunningDotNetBuild
         $taskParameter['Verbosity'] = $verbosity
     }
 
+    $dotnetSkipFirstTime = $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE
     try
     {
         $Global:Error.Clear()
+        Set-Item -Path 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true'
         $script:dotNetOutput = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'DotNetBuild'
     }
     catch
@@ -281,27 +283,52 @@ function WhenRunningDotNetBuild
         $script:failed = $true
         Write-Error -ErrorRecord $_
     }
+    finally
+    {
+        if( $dotnetSkipFirstTime )
+        {
+            $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = $dotnetSkipFirstTime
+        }
+        else
+        {
+            Remove-Item -Path 'env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE'
+        }
+    }
 }
 
 Describe 'DotNetBuild.when not given any Paths' {
     Context 'By Developer' {
-        Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
-        WhenRunningDotNetBuild -ForDeveloper
-        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
-        ThenVerbosityIs -Minimal
-        ThenTaskSuccess
-        ThenLogFile 'dotnet.build.log' -Exists
+        try
+        {
+            Init
+            GivenDotNetCoreProject 'DotNetCore.csproj'
+            WhenRunningDotNetBuild -ForDeveloper
+            ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
+            ThenVerbosityIs -Minimal
+            ThenTaskSuccess
+            ThenLogFile 'dotnet.build.log' -Exists
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 
     Context 'By BuildServer' {
-        Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
-        WhenRunningDotNetBuild -ForBuildServer
-        ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
-        ThenVerbosityIs -Minimal
-        ThenTaskSuccess
-        ThenLogFile 'dotnet.build.log' -Exists
+        try
+        {
+            Init
+            GivenDotNetCoreProject 'DotNetCore.csproj'
+            WhenRunningDotNetBuild -ForBuildServer
+            ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
+            ThenVerbosityIs -Minimal
+            ThenTaskSuccess
+            ThenLogFile 'dotnet.build.log' -Exists
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 }
 
@@ -312,93 +339,149 @@ Describe 'DotNetBuild.when not given any Paths and no csproj or solution exists'
 }
 
 Describe 'DotNetBuild.when given Path to a csproj file' {
-    Init
-    GivenDotNetCoreProject 'DotNetCore.csproj'
-    GivenPath 'DotNetCore.csproj'
-    WhenRunningDotNetBuild
-    ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
-    ThenTaskSuccess
-    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
+    try
+    {
+        Init
+        GivenDotNetCoreProject 'DotNetCore.csproj'
+        GivenPath 'DotNetCore.csproj'
+        WhenRunningDotNetBuild
+        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
+        ThenTaskSuccess
+        ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetBuild.when given Path to nonexistent csproj file' {
-    Init
-    GivenPath 'nonexistent.csproj'
-    WhenRunningDotNetBuild -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError '\bdoes\ not\ exist\b'
-    ThenLogFile 'dotnet.build*.log' -Not -Exists
+    try
+    {
+        Init
+        GivenPath 'nonexistent.csproj'
+        WhenRunningDotNetBuild -ErrorAction SilentlyContinue
+        ThenTaskFailedWithError '\bdoes\ not\ exist\b'
+        ThenLogFile 'dotnet.build*.log' -Not -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetBuild.when dotnet build fails' {
-    Init
-    GivenDotNetCoreProject 'DotNetCore.csproj'
-    GivenFailingDotNetCoreProject 'FailingDotNetCore.csproj'
-    GivenPath 'DotNetCore.csproj','FailingDotNetCore.csproj'
-    WhenRunningDotNetBuild -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError 'failed\ with\ exit\ code'
-    ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
-    ThenLogFile 'dotnet.build.FailingDotNetCore.csproj.log' -Exists
+    try
+    {
+        Init
+        GivenDotNetCoreProject 'DotNetCore.csproj'
+        GivenFailingDotNetCoreProject 'FailingDotNetCore.csproj'
+        GivenPath 'DotNetCore.csproj','FailingDotNetCore.csproj'
+        WhenRunningDotNetBuild -ErrorAction SilentlyContinue
+        ThenTaskFailedWithError 'failed\ with\ exit\ code'
+        ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
+        ThenLogFile 'dotnet.build.FailingDotNetCore.csproj.log' -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetBuild.when given multiple Paths to csproj files' {
-    Init
-    GivenDotNetCoreProject 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
-    GivenPath 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
-    WhenRunningDotNetBuild
-    ThenProjectBuilt 'app\bin\Debug\netcoreapp2.0\DotNetCoreApp.dll'
-    ThenProjectBuilt 'test\bin\Debug\netcoreapp2.0\DotNetCoreTest.dll'
-    ThenTaskSuccess
-    ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
-    ThenLogFile 'dotnet.build.DotNetCoreTest.csproj.log' -Exists
+    try
+    {
+        Init
+        GivenDotNetCoreProject 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
+        GivenPath 'app\DotNetCoreApp.csproj', 'test\DotNetCoreTest.csproj'
+        WhenRunningDotNetBuild
+        ThenProjectBuilt 'app\bin\Debug\netcoreapp2.0\DotNetCoreApp.dll'
+        ThenProjectBuilt 'test\bin\Debug\netcoreapp2.0\DotNetCoreTest.dll'
+        ThenTaskSuccess
+        ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
+        ThenLogFile 'dotnet.build.DotNetCoreTest.csproj.log' -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetBuild.when given verbosity level' {
     Context 'By Developer' {
-        Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
-        GivenVerbosity 'diagnostic'
-        WhenRunningDotNetBuild -ForDeveloper
-        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
-        ThenVerbosityIs -Diagnostic
-        ThenTaskSuccess
-        ThenLogFile 'dotnet.build.log' -Exists
+        try
+        {
+            Init
+            GivenDotNetCoreProject 'DotNetCore.csproj'
+            GivenVerbosity 'diagnostic'
+            WhenRunningDotNetBuild -ForDeveloper
+            ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
+            ThenVerbosityIs -Diagnostic
+            ThenTaskSuccess
+            ThenLogFile 'dotnet.build.log' -Exists
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 
     Context 'By BuildServer' {
-        Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
-        GivenVerbosity 'diagnostic'
-        WhenRunningDotNetBuild -ForBuildServer
-        ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
-        ThenVerbosityIs -Diagnostic
-        ThenTaskSuccess
-        ThenLogFile 'dotnet.build.log' -Exists
+        try
+        {
+            Init
+            GivenDotNetCoreProject 'DotNetCore.csproj'
+            GivenVerbosity 'diagnostic'
+            WhenRunningDotNetBuild -ForBuildServer
+            ThenProjectBuilt 'bin\Release\netcoreapp2.0\DotNetCore.dll'
+            ThenVerbosityIs -Diagnostic
+            ThenTaskSuccess
+            ThenLogFile 'dotnet.build.log' -Exists
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 }
 
 Describe 'DotNetBuild.when given output directory' {
-    Init
-    GivenDotNetCoreProject 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
-    GivenPath 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
-    GivenOutputDirectory 'Output Dir'
-    WhenRunningDotNetBuild
-    ThenProjectBuilt 'src\app\Output Dir\DotNetCoreApp.dll'
-    ThenProjectBuilt 'src\engine\Output Dir\DotNetCoreEngine.dll'
-    ThenTaskSuccess
-    ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
-    ThenLogFile 'dotnet.build.DotNetCoreEngine.csproj.log' -Exists
+    try
+    {
+        Init
+        GivenDotNetCoreProject 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
+        GivenPath 'src\app\DotNetCoreApp.csproj', 'src\engine\DotNetCoreEngine.csproj'
+        GivenOutputDirectory 'Output Dir'
+        WhenRunningDotNetBuild
+        ThenProjectBuilt 'src\app\Output Dir\DotNetCoreApp.dll'
+        ThenProjectBuilt 'src\engine\Output Dir\DotNetCoreEngine.dll'
+        ThenTaskSuccess
+        ThenLogFile 'dotnet.build.DotNetCoreApp.csproj.log' -Exists
+        ThenLogFile 'dotnet.build.DotNetCoreEngine.csproj.log' -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' {
-    Init
-    GivenDotNetCoreProject 'DotNetCore.csproj'
-    WhenRunningDotNetBuild
+    try
+    {
+        Init
+        GivenDotNetCoreProject 'DotNetCore.csproj'
+        WhenRunningDotNetBuild
 
-    GivenArgument '--no-restore','-nologo'
-    WhenRunningDotNetBuild
-    ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
-    ThenOutput -DoesNotContain '\bRestore\ completed\b'
-    ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
-    ThenTaskSuccess
-    ThenLogFile 'dotnet.build.log' -Exists
+        GivenArgument '--no-restore','-nologo'
+        WhenRunningDotNetBuild
+        ThenProjectBuilt 'bin\Debug\netcoreapp2.0\DotNetCore.dll'
+        ThenOutput -DoesNotContain '\bRestore\ completed\b'
+        ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
+        ThenTaskSuccess
+        ThenLogFile 'dotnet.build.log' -Exists
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }

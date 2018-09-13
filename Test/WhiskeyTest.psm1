@@ -366,6 +366,15 @@ function Remove-Node
     Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules')
 }
 
+function Remove-DotNet
+{
+    Get-CimInstance win32_process -filter 'name = "dotnet.exe"' | 
+        Where-Object { $_.ExecutablePath -like ('{0}\*\.dotnet\dotnet.exe' -f $env:TEMP) } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+
+    Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
+}
+
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
