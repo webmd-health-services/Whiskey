@@ -1,6 +1,8 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+Set-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true' -ForProcess
+
 $dotNetOutput = $null
 $failed = $false
 $taskContext = $null
@@ -364,3 +366,5 @@ Describe 'DotNetPublish.when given additional argument -nologo' {
     ThenPublished -ThirdPartyAssembly 'bin\Microsoft.AspNetCore.Http.dll'
     ThenTaskSuccess
 }
+
+Remove-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -ForProcess

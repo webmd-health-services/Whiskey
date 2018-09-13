@@ -1,6 +1,8 @@
     
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+Set-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true' -ForProcess
+
 $argument = $null
 $dotNetOutput = $null
 $failed = $false
@@ -485,3 +487,5 @@ Describe 'DotNetBuild.when given additional arguments --no-restore and -nologo' 
         Remove-DotNet
     }
 }
+
+Remove-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -ForProcess

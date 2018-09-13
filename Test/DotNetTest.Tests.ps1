@@ -1,6 +1,8 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+Set-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true' -ForProcess
+
 $dotNetOutput = $null
 $failed = $false
 $taskProperties = @{ }
@@ -349,3 +351,5 @@ Describe 'DotNetTest.when given Logger' {
     ThenFileExists '.output\testresultsfile.trx'
     ThenTaskSuccess
 }
+
+Remove-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -ForProcess

@@ -2,6 +2,8 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
+Set-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true' -ForProcess
+
 $argument = $null
 $dotNetOutput = $null
 $failed = $false
@@ -290,99 +292,178 @@ function WhenRunningDotNetPack
 
 Describe 'DotNetPack.when not given any Paths' {
     Context 'By Developer' {
-        Init
-        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
-        WhenRunningDotNetPack -ForDeveloper
-        ThenCreatedPackage 'DotNetCore'
-        ThenVerbosityIs -Minimal
-        ThenTaskSuccess
+        try
+        {
+            Init
+            GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
+            WhenRunningDotNetPack -ForDeveloper
+            ThenCreatedPackage 'DotNetCore'
+            ThenVerbosityIs -Minimal
+            ThenTaskSuccess
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 
     Context 'By BuildServer' {
-        Init
-        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
-        WhenRunningDotNetPack -ForBuildServer
-        ThenCreatedPackage 'DotNetCore'
-        ThenVerbosityIs -Minimal
-        ThenTaskSuccess
+        try
+        {
+            Init
+            GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
+            WhenRunningDotNetPack -ForBuildServer
+            ThenCreatedPackage 'DotNetCore'
+            ThenVerbosityIs -Minimal
+            ThenTaskSuccess
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 }
 
 Describe 'DotNetPack.when not given any Paths and no csproj or solution exists' {
-    Init
-    WhenRunningDotNetPack -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError 'failed\ with\ exit\ code'
+    try
+    {
+        Init
+        WhenRunningDotNetPack -ErrorAction SilentlyContinue
+        ThenTaskFailedWithError 'failed\ with\ exit\ code'
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when given Path to a csproj file' {
-    Init
-    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
-    GivenPath 'DotNetCore.csproj'
-    WhenRunningDotNetPack
-    ThenCreatedPackage 'DotNetCore'
-    ThenTaskSuccess
+    try
+    {
+        Init
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
+        GivenPath 'DotNetCore.csproj'
+        WhenRunningDotNetPack
+        ThenCreatedPackage 'DotNetCore'
+        ThenTaskSuccess
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when given Path to nonexistent csproj file' {
-    Init
-    GivenPath 'nonexistent.csproj'
-    WhenRunningDotNetPack -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError '\bdoes\ not\ exist\b'
+    try
+    {
+        Init
+        GivenPath 'nonexistent.csproj'
+        WhenRunningDotNetPack -ErrorAction SilentlyContinue
+        ThenTaskFailedWithError '\bdoes\ not\ exist\b'
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when dotnet pack fails' {
-    Init
-    GivenFailingDotNetCoreProject 'FailingDotNetCore.csproj'
-    GivenPath 'FailingDotNetCore.csproj'
-    WhenRunningDotNetPack -ErrorAction SilentlyContinue
-    ThenTaskFailedWithError 'failed\ with\ exit\ code'
+    try
+    {
+        Init
+        GivenFailingDotNetCoreProject 'FailingDotNetCore.csproj'
+        GivenPath 'FailingDotNetCore.csproj'
+        WhenRunningDotNetPack -ErrorAction SilentlyContinue
+        ThenTaskFailedWithError 'failed\ with\ exit\ code'
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when given multiple Paths to csproj files' {
-    Init
-    GivenBuiltDotNetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
-    GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
-    WhenRunningDotNetPack
-    ThenTaskSuccess
+    try
+    {
+        Init
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj', 'DotNetCore2.csproj'
+        GivenPath 'DotNetCore.csproj', 'DotNetCore2.csproj'
+        WhenRunningDotNetPack
+        ThenTaskSuccess
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when given verbosity level' {
     Context 'By Developer' {
-        Init
-        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
-        GivenVerbosity 'diagnostic'
-        WhenRunningDotNetPack -ForDeveloper
-        ThenCreatedPackage 'DotNetCore'
-        ThenVerbosityIs -Diagnostic
-        ThenTaskSuccess
+        try
+        {
+            Init
+            GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForDeveloper
+            GivenVerbosity 'diagnostic'
+            WhenRunningDotNetPack -ForDeveloper
+            ThenCreatedPackage 'DotNetCore'
+            ThenVerbosityIs -Diagnostic
+            ThenTaskSuccess
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 
     Context 'By BuildServer' {
-        Init
-        GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
-        GivenVerbosity 'diagnostic'
-        WhenRunningDotNetPack -ForBuildServer
-        ThenCreatedPackage 'DotNetCore'
-        ThenVerbosityIs -Diagnostic
-        ThenTaskSuccess
+        try
+        {
+            Init
+            GivenBuiltDotNetCoreProject 'DotNetCore.csproj' -ForBuildServer
+            GivenVerbosity 'diagnostic'
+            WhenRunningDotNetPack -ForBuildServer
+            ThenCreatedPackage 'DotNetCore'
+            ThenVerbosityIs -Diagnostic
+            ThenTaskSuccess
+        }
+        finally
+        {
+            Remove-DotNet
+        }
     }
 }
 
 Describe 'DotNetPack.when given including symbols' {
-    Init
-    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
-    GivenSymbols 'true'
-    WhenRunningDotNetPack
-    ThenCreatedPackage 'DotNetCore' -WithSymbols
-    ThenTaskSuccess
+    try
+    {
+        Init
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
+        GivenSymbols 'true'
+        WhenRunningDotNetPack
+        ThenCreatedPackage 'DotNetCore' -WithSymbols
+        ThenTaskSuccess
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
 
 Describe 'DotNetPack.when given additional argument ''-nologo''' {
-    Init
-    GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
-    GivenArgument '-nologo'
-    WhenRunningDotNetPack
-    ThenCreatedPackage 'DotNetCore'
-    ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
-    ThenTaskSuccess
+    try
+    {
+        Init
+        GivenBuiltDotNetCoreProject 'DotNetCore.csproj'
+        GivenArgument '-nologo'
+        WhenRunningDotNetPack
+        ThenCreatedPackage 'DotNetCore'
+        ThenOutput -DoesNotContain '\bCopyright\ \(C\)\ Microsoft\ Corporation\b'
+        ThenTaskSuccess
+    }
+    finally
+    {
+        Remove-DotNet
+    }
 }
+
+Remove-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -ForProcess
