@@ -9,6 +9,9 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
 
+- GetPowerShellModule:
+    Name: Carbon
+
 - Pester4:
     OnlyBy: Developer
     Path:
