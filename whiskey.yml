@@ -79,6 +79,11 @@ Build:
             - Publish-WhiskeyNuGetPackage.Tests.ps1
             - Uninstall-WhiskeyTool.Tests.ps1
 
+- PowerShell:
+    Path: Format-PesterResult.ps1
+    Argument:
+        Path: .output\pester*.xml
+
 - Exec: Whiskey\bin\7-Zip\7z.exe a $(WHISKEY_OUTPUT_DIRECTORY)\Whiskey.zip .\Whiskey '-xr!*.pdb'
 
 Publish:
