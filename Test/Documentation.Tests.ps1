@@ -7,7 +7,7 @@ Set-StrictMode -Version 'Latest'
 Describe ('Documentation') {
     $tasksMissingDocs = Get-WhiskeyTask |
                             Select-Object -ExpandProperty 'Name'|
-                            Where-Object { $_ -notin @( 'NodeNspCheck', 'Node', 'NpmConfig', 'NpmInstall', 'NpmPrune', 'NpmRunScript', 'PublishNuGetLibrary', 'PublishNuGetPackage' ) } |
+                            Where-Object { $_ -notin @( 'DotNetBuild', 'DotNetPack', 'DotNetPublish', 'DotNetTest', 'NodeNspCheck', 'Node', 'NpmConfig', 'NpmInstall', 'NpmPrune', 'NpmRunScript', 'PublishNuGetLibrary', 'PublishNuGetPackage' ) } |
                             Where-Object { 
                                 -not (Get-Help -Name ('about_Whiskey_{0}_Task' -f $_))
                             } 

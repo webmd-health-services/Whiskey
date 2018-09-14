@@ -29,10 +29,7 @@ Build:
             - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
             - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
             - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
-            - "*\\Test\\DotNetBuild.Tests.ps1"
-            - "*\\Test\\DotNetPack.Tests.ps1"
-            - "*\\Test\\DotNetPublish.Tests.ps1"
-            - "*\\Test\\DotNetTest.Tests.ps1"
+            - "*\\Test\\DotNet.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
             - "*\\Test\\Npm.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNUnit2Task.Tests.ps1"
@@ -50,16 +47,12 @@ Build:
     - Tasks:
         Pester4:
             Path:
-            # Takes almost 20 minutes!
-            - Test\DotNetBuild.Tests.ps1
+            - Test\DotNet.Tests.ps1
     - Tasks:
         Pester4:
             Path:
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
-            - Test\DotNetPack.Tests.ps1
-            - Test\DotNetPublish.Tests.ps1
-            - Test\DotNetTest.Tests.ps1
             - Test\Invoke-WhiskeyPowerShell.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
             - Test\Npm.Tests.ps1

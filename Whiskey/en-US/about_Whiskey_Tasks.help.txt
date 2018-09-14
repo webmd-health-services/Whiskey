@@ -13,10 +13,7 @@ LONG DESCRIPTION
 
     * `CopyFile`: copies files.
     * `Delete`: deletes files.
-    * `DotNetBuild`: runs the `dotnet build` command.
-    * `DotNetPack`: runs the `dotnet pack` command.
-    * `DotNetPublish`: runs the `dotnet publish` command.
-    * `DotNetTest`: runs the `dotnet test` command.
+    * `DotNet`: runs `dotnet` commands.
     * `Exec`: runs an executable/program.
     * `GetPowerShellModule`: installs a PowerShell module.
     * `GitHubRelease`: creates a release in GitHub and uploads files for that

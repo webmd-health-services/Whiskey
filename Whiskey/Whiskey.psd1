@@ -151,9 +151,10 @@
             ReleaseNotes = @'
 * `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
 * Created `Npm` task for running NPM commands.
-* Deprecated the `NpmConfig`, `NpmInstall`, `NpmPrune`, and `NpmRunScript` tasks. These tasks will be removed in a future version of Whiskey. Use the new `Npm` command instead.
+* Deprecated the `NpmConfig`, `NpmInstall`, `NpmPrune`, and `NpmRunScript` tasks. They will be removed in a future version of Whiskey. Use the new `Npm` task instead.
 * The `NodeNspCheck` task is obsolete. Migrate to the `NpmAudit` task.
 * Created `DotNet` task for running dotnet.exe commands.
+* Deprecated the `DotNetBuild`, `DotNetPack`, `DotNetPublish`, and `DotNetTest` tasks. They will be removed in a future version of Whiskey. Use the new `DotNet` task instead.
 '@
         } # End of PSData hashtable
 
