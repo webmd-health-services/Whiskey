@@ -69,7 +69,7 @@ Build:
             - Test\Invoke-WhiskeyPester3Task.Tests.ps1
             - Test\NuGetPack.Tests.ps1
     - Tasks:
-        Pester3:
+        Pester4:
             Path:
             - Documentation.Tests.ps1
             - DotNet.Tests.ps1
