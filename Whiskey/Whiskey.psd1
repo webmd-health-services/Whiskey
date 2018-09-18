@@ -89,6 +89,7 @@
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
                             'Get-WhiskeyMSBuildConfiguration',
+                            'Import-WhiskeyPowerShellModule',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
                             'Invoke-WhiskeyNpmCommand',
