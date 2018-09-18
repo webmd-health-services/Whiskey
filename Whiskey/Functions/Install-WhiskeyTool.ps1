@@ -201,6 +201,11 @@ function Install-WhiskeyTool
                                                             -ErrorAction Stop
                     $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
                 }
+                'PowerShellModule'
+                {
+                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name -Version $version -ErrorAction Stop
+                    $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
+                }
                 default
                 {
                     switch( $name )

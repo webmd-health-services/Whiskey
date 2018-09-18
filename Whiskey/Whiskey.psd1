@@ -151,6 +151,8 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: Detecting versions of installed MSBuild fails if expected registry keys exist but expected values don't exist.
+* Created `Import-WhiskeyPowerShellModule` function for importing a PowerShell module installed by Whiskey into the global scope.
+* Added support for PowerShell modules to the RequiresTool attribute.
 '@
         } # End of PSData hashtable
 
