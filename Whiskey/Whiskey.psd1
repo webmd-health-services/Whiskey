@@ -150,6 +150,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
+* Fixed: Pester output is duplicated.
 '@
         } # End of PSData hashtable
 
