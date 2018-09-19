@@ -145,12 +145,19 @@ function WhenTaggingACommit
     $script:threwException = $false
     try
     {
-        Publish-WhiskeyBBServerTag -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $context -Name 'PublishBitbucketServerTag' -Parameter $taskParameter
     }
     catch
     {
         $script:threwException = $true
         Write-Error -ErrorRecord $_
+    }
+    finally
+    {
+        # Remove so Pester can delete the test drive
+        Remove-Module -Name 'BitbucketServerAutomation' -Force
+        # Re-import so Pester can verify mocks.
+        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
     }
 }
 
