@@ -9,6 +9,8 @@ $powerShellModulesDirectoryName = 'PSModules'
 
 $buildStartedAt = [DateTime]::MinValue
 
+$PSModuleAutoLoadingPreference = 'None'
+
 $supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
 
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.

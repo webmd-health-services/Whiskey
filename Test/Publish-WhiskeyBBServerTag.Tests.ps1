@@ -2,6 +2,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
 
 $context = $null
 $threwException = $false

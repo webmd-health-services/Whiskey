@@ -20,10 +20,13 @@ function Import-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
+    & {
+        $VerbosePreference = 'SilentlyContinue'
+        Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
+    }
 
     $searchPaths = & {
-                        Join-Path -Path (Get-Location).Provider -ChildPath $powerShellModulesDirectoryName
+                        Join-Path -Path (Get-Location).ProviderPath -ChildPath $powerShellModulesDirectoryName
                         Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
                    }
 
@@ -35,13 +38,17 @@ function Import-WhiskeyPowerShellModule
             if( (Test-Path -Path $moduleDir -PathType Container) )
             {
                 Write-Debug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-                Import-Module -Name $moduleDir -Global -Force
+                Write-Verbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
+                & {
+                    $VerbosePreference = 'SilentlyContinue'
+                    Import-Module -Name $moduleDir -Global -Force
+                }
             }
         }
 
         if( -not (Get-Module -Name $moduleName) )
         {
-            Write-Error -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.')
+            Write-Error -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName)
         }
     }
 }

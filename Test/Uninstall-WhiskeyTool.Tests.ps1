@@ -1,39 +1,7 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function GivenAnInstalledPowerShellModule
-{
-    [CmdLetBinding()]
-    param(
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell5')]
-        [Switch]
-        $LikePowerShell5,
-
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
-        [Switch]
-        $LikePowerShell4,
-
-        [String]
-        $WithVersion = '4.0.3',
-
-        [String]
-        $WithName = 'Pester'
-    )
-
-    $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-    $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
-    if( $LikePowerShell4 )
-    {
-        $Name = '{0}' -f $WithName
-    }
-    elseif( $LikePowerShell5 )
-    {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion
-    }
-    $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $Name
-
-    New-Item -Name $WithName -Path $moduleRoot -ItemType 'Directory' | Out-Null
-}
+$powerShellModulesDirectoryName = 'PSModules'
 
 function GivenAnInstalledNuGetPackage
 {
@@ -56,21 +24,6 @@ function GivenAnInstalledNuGetPackage
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
 }
 
-function WhenUninstallingPowerShellModule
-{
-    [CmdletBinding()]
-    param(
-        [String]
-        $WithVersion = '4.0.3',
-
-        [String]
-        $WithName = 'Pester'
-    )
-
-    $Global:Error.Clear()
-    Uninstall-WhiskeyTool -ModuleName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
-}
-
 function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
@@ -84,47 +37,6 @@ function WhenUninstallingNuGetPackage
 
     $Global:Error.Clear()
     Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
-}
-
-function ThenPowerShellModuleUninstalled
-{
-    [CmdLetBinding()]
-    param(
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell5')]
-        [Switch]
-        $LikePowerShell5,
-
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
-        [Switch]
-        $LikePowerShell4,
-
-        [String]
-        $WithVersion = '4.0.3',
-
-        [String]
-        $WithName = 'Pester'
-    )
-
-    $WithVersion = Resolve-WhiskeyPowerShellModule -Name $WithName -Version $WithVersion | Select-Object -ExpandProperty 'Version'
-    if( $LikePowerShell4 )
-    {
-        $Name = '{0}' -f $WithName
-    }
-    elseif( $LikePowerShell5 )
-    {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion
-    }
-
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'Modules'
-    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
-
-    It 'should successfully uninstall the PowerShell Module' {
-        $uninstalledPath | Should not Exist
-    }
-
-    It 'Should not write any errors' {
-        $Global:Error | Should beNullOrEmpty
-    }
 }
 
 function ThenNuGetPackageUninstalled
@@ -197,18 +109,6 @@ Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
     ThenNuGetPackageUnInstalled
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 4' {
-    GivenAnInstalledPowerShellModule -LikePowerShell4
-    WhenUninstallingPowerShellModule
-    ThenPowerShellModuleUninstalled -LikePowerShell4
-}
-
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5' {
-    GivenAnInstalledPowerShellModule -LikePowerShell5
-    WhenUninstallingPowerShellModule
-    ThenPowerShellModuleUninstalled -LikePowerShell5
-}
-
 Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
     GivenAnInstalledNuGetPackage -WithVersion ''
     WhenUninstallingNuGetPackage -WithVersion ''
@@ -221,24 +121,21 @@ Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Vers
     ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn an empty Version' {
-    GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion ''
-    WhenUninstallingPowerShellModule -WithVersion ''
-    ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion ''
-}
-
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn a wildcard Version' {
-    GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '4.*'
-    WhenUninstallingPowerShellModule -WithVersion '4.*'
-    ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '4.*'
-}
-
 $toolsInstallRoot = $null
 
 function Init
 {
     $Global:Error.Clear()
     $script:toolsInstallRoot = $TestDrive.FullName
+}
+
+function GivenFile
+{
+    param(
+        $Path
+    )
+
+    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path) -ItemType 'File' -Force
 }
 
 function GivenToolInstalled
@@ -248,6 +145,30 @@ function GivenToolInstalled
     )
 
     New-Item -Path (Join-Path -Path $toolsInstallRoot -ChildPath ('.{0}\{0}.exe' -f $Name)) -ItemType File -Force | Out-Null
+}
+
+function ThenFile
+{
+    param(
+        $Path,
+        [Switch]
+        $Not,
+        [Switch]
+        $Exists
+    )
+
+    if( $Not )
+    {
+        It ('should not uninstall tool') {
+            Join-Path -Path $TestDrive.FullName -ChildPath $Path | Should -Not -Exist
+        }
+    }
+    else
+    {
+        It ('should uninstall tool') {
+            Join-Path -Path $TestDrive.FullName -ChildPath $Path | Should -Exist
+        }
+    }
 }
 
 function ThenNoErrors
@@ -277,7 +198,15 @@ function WhenUninstallingTool
         $Name
     )
 
-    Uninstall-WhiskeyTool -Name $Name -InstallRoot $toolsInstallRoot
+    Push-Location $TestDrive.FullName
+    try
+    {
+        Uninstall-WhiskeyTool -Name $Name -InstallRoot $toolsInstallRoot
+    }
+    finally
+    {
+        Pop-Location
+    }
 }
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
@@ -318,4 +247,13 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
     It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
+}
+
+Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
+    $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $powerShellModulesDirectoryName
+    Init
+    GivenFile $mockModulePath
+    WhenUninstallingTool 'PowerShellModule::Whiskey'
+    ThenFile $mockModulePath -Not -Exists
+    ThenNoErrors
 }

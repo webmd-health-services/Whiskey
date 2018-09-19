@@ -68,12 +68,7 @@
                         )
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
-    NestedModules = @(
-                        'BitbucketServerAutomation',
-                        'BuildMasterAutomation',
-                        'ProGetAutomation',
-                        'VSSetup'
-                     )
+    NestedModules = @( )
 
     # Functions to export from this module
     FunctionsToExport = @(
@@ -103,7 +98,6 @@
                             'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNuGetPackageVersion',
-                            'Resolve-WhiskeyPowerShellModule',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
@@ -153,6 +147,7 @@
 * Fixed: Detecting versions of installed MSBuild fails if expected registry keys exist but expected values don't exist.
 * Created `Import-WhiskeyPowerShellModule` function for importing a PowerShell module installed by Whiskey into the global scope.
 * Added support for PowerShell modules to the RequiresTool attribute.
+* Whiskey tasks that use PowerShell modules now use Whiskey's auto-download feature to download required modules during the build.
 '@
         } # End of PSData hashtable
 

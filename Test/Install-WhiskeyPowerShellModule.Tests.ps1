@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 $powerShellModulesDirectoryName = 'PSModules'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyPowerShellModule.ps1' -Resolve)
 
 
@@ -51,7 +52,7 @@ function Invoke-PowershellInstall
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and it''s already installed' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and it''s already installed' {
     $Global:Error.Clear()
 
     Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
@@ -62,25 +63,25 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and it''s alre
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and omitting BUILD number' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and omitting BUILD number' {
     Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.1'
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module omitting Version' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module omitting Version' {
     $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Whiskey'
     Invoke-PowershellInstall -ForModule 'Whiskey' -Version '' -ActualVersion $module.Version
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module using wildcard version' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module using wildcard version' {
     $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Whiskey'
     Invoke-PowershellInstall -ForModule 'whiskey' -Version '0.*' -ActualVersion $module.Version
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module' {
     Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and the version doesn''t exist' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and the version doesn''t exist' {
     $Global:Error.Clear()
 
     $result = Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
@@ -95,7 +96,7 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and the versio
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and version parameter is empty' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and version parameter is empty' {
     $Global:Error.Clear()
 
     $result = Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
@@ -110,7 +111,7 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and version pa
     }
 }
 
-Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
+Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is already installed' {
     Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Pester' -Version '4.0.6'
     $info = Get-ChildItem -Path $TestDrive.FullName -Filter 'Pester.psd1' -Recurse
     $manifest = Test-ModuleManifest -Path $info.FullName
