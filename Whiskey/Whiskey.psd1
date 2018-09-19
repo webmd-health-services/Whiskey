@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.37.1'
+    ModuleVersion = '0.38.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -148,6 +148,7 @@
 * Created `Import-WhiskeyPowerShellModule` function for importing a PowerShell module installed by Whiskey into the global scope.
 * Added support for PowerShell modules to the RequiresTool attribute.
 * Whiskey tasks that use PowerShell modules now use Whiskey's auto-download feature to download required modules during the build.
+* Fixed: publishing to the PowerShell Gallery released in September 2018 is failing. Updating to PowerShellGet 2.0.0 and PackageManagement 1.1.7.2.
 '@
         } # End of PSData hashtable
 

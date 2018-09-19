@@ -120,7 +120,8 @@ function Invoke-Publish
         $publishLocation = $feedUri
     }
 
-    Mock -CommandName 'Start-Job' -ModuleName 'Whiskey' -MockWith { Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList }
+    #Mock -CommandName 'Start-Job' -ModuleName 'Whiskey' -MockWith { Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList }
+    Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
     if( $withoutRegisteredRepo )
     {
@@ -133,7 +134,6 @@ function Invoke-Publish
 
     Add-Type -AssemblyName System.Net.Http
     Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith { return }
-    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq 'env:PATH' }
     Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey' -MockWith { return }
     
     $Global:Error.Clear()
@@ -185,9 +185,6 @@ function Assert-ModuleNotPublished
         Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
     }    
-    It 'should not add NuGet.exe to path' {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 0
-    }
     It 'should not attempt to publish the module'{
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
     }
@@ -258,10 +255,9 @@ function Assert-ModulePublished
     )
     
     $WhiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin' -Resolve
-    It ('should add nuget.exe to path so Publish-Module works') {
-        Assert-MockCalled -CommandName 'Set-Item' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            $Value -eq ('{0};{1}' -f $WhiskeyBinPath,$env:Path)
-        }
+    It ('should bootstrap NuGet provider') {
+        Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'NuGet' }
+        Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $ForceBootstrap }
     }
     
     It ('should publish the Module')  {
