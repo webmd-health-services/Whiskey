@@ -144,6 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+* `Version` task now supports pulling a version number from a Chef Cookbook `metadata.rb` file.
 * Fixed: Detecting versions of installed MSBuild fails if expected registry keys exist but expected values don't exist.
 * Created `Import-WhiskeyPowerShellModule` function for importing a PowerShell module installed by Whiskey into the global scope.
 * Added support for PowerShell modules to the RequiresTool attribute.
