@@ -23,7 +23,7 @@ function GivenModule
     )
     $script:taskParameter['Name'] = $Module
 
-    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath 'Modules'
+    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath 'PSModules'
     $script:modulePath = Join-path -Path $modulePath -ChildPath $taskParameter['Name']
 }
 
@@ -146,12 +146,12 @@ Describe 'GetPowerShellModule.when given an invalid Version' {
 Describe 'GetPowerShellModule.when missing Name property' {
     Init
     WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
-    ThenErrorShouldBeThrown "Please Add a Name Property for which PowerShell Module you would like to get."
+    ThenErrorShouldBeThrown 'Property\ "Name"\ is mandatory'
 }
 
 Describe 'GetPowerShellModule.when called with clean mode' {
     Init
-    GivenModule 'Pester'
+    GivenModule 'Rivet'
     GivenCleanMode
     WhenPowershellModuleIsRan
     ThenModuleShouldNotExist

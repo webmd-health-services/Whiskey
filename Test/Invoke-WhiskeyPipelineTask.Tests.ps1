@@ -12,13 +12,13 @@ $threwException = $false
 function GivenCleanMode
 {
     $script:clean = $true
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
+    Mock -CommandName 'Uninstall-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
 }
 
 function GivenInitializeMode
 {
     $script:initialize = $true
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+    Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
 }
 
 function GivenPipeline
@@ -58,16 +58,17 @@ function ThenPowershellModule
         $Installed
     )
 
+    $expectedName = $Name
     if ($Cleaned)
     {
         It 'should run Pipeline tasks when in Clean mode' {
-            Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName $Name -ParameterFilter { $ModuleName -eq 'Whiskey' }
+            Assert-MockCalled -CommandName 'Uninstall-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $expectedName }
         }
     }
     elseif ($Installed)
     {
         It 'should run Pipeline tasks when in Initialize mode' {
-            Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName $Name -ParameterFilter { $ModuleName -eq 'Whiskey' }
+            Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $expectedName }
         }
     }
 }
@@ -208,15 +209,15 @@ Describe 'Pipeline.when running in Clean mode' {
     GivenCleanMode
     GivenPipeline 'Fubar' @'
 - GetPowerShellModule:
-    Name: Whiskey
-    Version: 0.18.0
+    Name: Rivet
+    Version: 0.8.1
 '@
     GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@
     WhenRunningTask
-    ThenPowershellModule 'Whiskey' -Cleaned
+    ThenPowershellModule 'Rivet' -Cleaned
 }
 
 Describe 'Pipeline.when running in Initialize mode' {
@@ -224,13 +225,13 @@ Describe 'Pipeline.when running in Initialize mode' {
     GivenInitializeMode
     GivenPipeline 'Fubar' @'
 - GetPowerShellModule:
-    Name: Whiskey
-    Version: 0.18.0
+    Name: Rivet
+    Version: 0.8.1
 '@
     GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@
     WhenRunningTask
-    ThenPowershellModule 'Whiskey' -Installed
+    ThenPowershellModule 'Rivet' -Installed
 }
