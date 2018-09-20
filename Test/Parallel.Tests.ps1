@@ -184,7 +184,7 @@ Queues:
 
 Describe 'Parallel.when second queue finishes before first queue' {
     Init
-    GivenFile 'one.ps1' 'Start-Sleep -Second 3 ; 1'
+    GivenFile 'one.ps1' 'Start-Sleep -Second 6 ; 1'
     GivenFile 'two.ps1' '2'
     $task = Import-WhiskeyYaml -Yaml @'
 Queues:
