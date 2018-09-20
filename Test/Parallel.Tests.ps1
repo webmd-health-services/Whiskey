@@ -184,8 +184,8 @@ Queues:
 
 Describe 'Parallel.when second queue finishes before first queue' {
     Init
-    GivenFile 'one.ps1' 'Start-Sleep -Second 6 ; 1'
-    GivenFile 'two.ps1' '2'
+    GivenFile 'one.ps1' 'Write-Host ("1" * 80) ; Write-Host (Get-Date) ; Start-Sleep -Seconds 6 ; 1 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
+    GivenFile 'two.ps1' 'Write-Host ("2" * 80) ; Write-Host (Get-Date) ; 2 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
     $task = Import-WhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
