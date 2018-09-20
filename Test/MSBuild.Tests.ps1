@@ -3,6 +3,11 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+# Load this module here so that it's assemblies get loaded into memory. Otherwise, the test will load
+# the module from the test drive, and Pester will complain that it can't delete the test drive.
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\VSSetup' -Resolve) -Force
+Remove-Module -Name 'VSSetup' -Force
+
 $output = $null
 $path = $null
 $threwException = $null
@@ -199,6 +204,7 @@ function WhenRunningTask
     {
         Write-Error $_
         $script:threwException = $true
+        $Error | Format-List -Force * | Out-String | Write-Verbose -Verbose
     }
 }
 

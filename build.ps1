@@ -57,8 +57,14 @@ if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
     $assemblyVersion | Set-Content -Path $assemblyVersionPath
 }
 
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\VSSetup')
+$powershellModulesDirectoryName = 'PSModules'
+$PSModuleAutoLoadingPreference = 'None'
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Use-CallerPreference.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Import-WhiskeyPowerShellModule.ps1')
+. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Install-WhiskeyPowerShellModule.ps1')
+Install-WhiskeyPowerShellModule -Name 'VSSetup' -Version '2.*'
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ('{0}\VSSetup' -f $powershellModulesDirectoryName))
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
 
 $msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' } | Select-Object -First 1

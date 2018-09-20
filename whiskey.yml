@@ -12,6 +12,22 @@ Build:
 - GetPowerShellModule:
     Name: Carbon
 
+- GetPowerShellModule:
+    Name: BuildMasterAutomation
+    Version: 0.5.*
+
+- GetPowerShellModule:
+    Name: ProGetAutomation
+    Version: 0.4.*
+
+- GetPowerShellModule:
+    Name: BitbucketServerAutomation
+    Version: 0.3.*
+
+- GetPowerShellModule:
+    Name: VSSetup
+    Version: 2.*
+
 - Pester4:
     OnlyBy: Developer
     Path:

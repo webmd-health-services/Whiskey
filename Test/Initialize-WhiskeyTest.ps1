@@ -1,8 +1,9 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Import-Whiskey.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\BuildMasterAutomation\Import-BuildMasterAutomation.ps1' -Resolve)
-& (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\ProGetAutomation\Import-ProGetAutomation.ps1' -Resolve)
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Modules\Carbon' -Resolve) -Force
+
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BuildMasterAutomation' -Resolve) -Force
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve) -Force
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Carbon' -Resolve) -Force
 
 foreach( $name in @( 'PackageManagement', 'PowerShellGet' ) )
 {

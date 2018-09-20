@@ -5,6 +5,8 @@ Set-StrictMode -Version 'Latest'
 
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Publish-WhiskeyPesterTestResult.ps1' -Resolve)
 
+$modulesDirectoryName = 'PSModules'
+
 $context = $null
 $pesterPath = $null
 $version = $null
@@ -20,10 +22,10 @@ function GivenTestContext
     $Global:Error.Clear()
     $script:context = New-WhiskeyPesterTestContext
 
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     if(Test-Path $pesterPAth)
@@ -116,10 +118,10 @@ function ThenPesterShouldBeInstalled
         $ExpectedVersion
     )
 
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $ExpectedVersion
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$ExpectedVersion
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
@@ -150,10 +152,10 @@ function ThenPesterShouldBeUninstalled {
         $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
         $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
     }
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     It 'should pass' {
@@ -307,34 +309,6 @@ Describe 'Invoke-WhiskeyPester3Task.when missing Version configuration' {
     WhenPesterTaskIsInvoked
     ThenPesterShouldHaveRun -PassingCount 4 -FailureCount 0
     ThenPesterShouldBeInstalled '3.4.6'
-}
-
-Describe 'Invoke-WhiskeyPester3Task.when Version property isn''t a version' {
-    GivenTestContext
-    GivenVersion 'fubar'
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'isn''t a valid version'
-}
-
-Describe 'Invoke-WhiskeyPester3Task.when version of tool doesn''t exist' {
-    GivenTestContext
-    GivenInvalidVersion
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'does not exist'
-}
-
-Describe 'Invoke-WhiskeyPester3Task.when major version of tool is not 3.*' {
-    GivenTestContext
-    GivenVersion '4.0.1'
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'the major version number must always be ''3'''
-
 }
 
 Describe 'Invoke-WhiskeyPester3Task.when a task path is absolute' {
