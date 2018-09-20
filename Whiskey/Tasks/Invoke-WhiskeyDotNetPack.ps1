@@ -19,7 +19,7 @@ function Invoke-WhiskeyDotNetPack
 
     Write-Warning -Message ('The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')
 
-    $dotnetExe = $TaskParameter['DotNetPack']
+    $dotnetExe = $TaskParameter['DotNetPath']
 
     $projectPaths = ''
     if ($TaskParameter['Path'])
