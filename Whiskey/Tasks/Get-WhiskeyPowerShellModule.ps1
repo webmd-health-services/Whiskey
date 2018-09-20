@@ -34,7 +34,6 @@ function Get-WhiskeyPowerShellModule
     This example demonstrates how to pin to a specific version of a module. In this case, the latest `0.14.x` version will be downloaded. When version 0.15.0 comes out, you'll still download the latest `0.14.x` version.
 
     #>
-    
     [CmdletBinding()]
     [Whiskey.Task("GetPowerShellModule",SupportsClean=$true, SupportsInitialize=$true)]
     param(
@@ -61,7 +60,13 @@ function Get-WhiskeyPowerShellModule
         return
     }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}.' -f $TaskParameter['Name'],$TaskParameter['Version'])
-    $moduleRoot = Install-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -Version $TaskParameter['Version'] -ErrorAction Stop
+    $module = Resolve-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -Version $TaskParameter['Version'] -ErrorAction Stop
+    if( -not $module )
+    {
+        return
+    }
+
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}.' -f $TaskParameter['Name'],$module.Version)
+    $moduleRoot = Install-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -Version $module.Version -ErrorAction Stop
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $moduleRoot)
 }
