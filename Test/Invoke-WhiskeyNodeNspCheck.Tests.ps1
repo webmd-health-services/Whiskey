@@ -210,23 +210,6 @@ function ThenTaskFailedWithMessage
 
 function ThenTaskSucceeded
 {
-    for( $i = $Global:Error.Count - 1; $i -ge 0; $i-- )
-    {
-        $errorMessage = $Global:Error[$i]
-        if( $errorMessage -match 'npm notice created a lockfile as package-lock.json. You should commit this file.' )
-        {
-            $Global:Error.RemoveAt($i)
-        }
-        elseif( $errorMessage -match ([regex]::Escape('The Node Security Platform service is shutting down 9/30')) )
-        {
-            $Global:Error.RemoveAt($i)
-        }
-    }
-
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
-
     It 'should not fail' {
         $failed | Should -Be $false
     }

@@ -1,13 +1,11 @@
 **/.output/**
-Carbon/**
-Pester/**
 Test/Assemblies/**/obj/**
 Test/Assemblies/**/bin/**
 Test/Assemblies/**/packages/**
 Test/Pester/whiskey.yml
 Test/Assemblies/**/whiskey.yml
 Test/packages
-Modules
+PSModules
 .whsgallerykey
 *.orig
 packages

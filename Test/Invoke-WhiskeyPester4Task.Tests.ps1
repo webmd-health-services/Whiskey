@@ -3,7 +3,9 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester\Modules'
+$modulesDirectoryName = 'PSModules'
+
+$testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('Pester\{0}' -f $modulesDirectoryName)
 if( -not (Test-Path -Path $testModulesRoot) )
 {
     New-Item -Path $testModulesRoot -ItemType 'Directory'
@@ -46,10 +48,10 @@ function GivenTestContext
     $Global:Error.Clear()
     $script:context = New-WhiskeyPesterTestContext
 
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     if(Test-Path $pesterPAth)
@@ -213,10 +215,10 @@ function ThenPesterShouldBeInstalled
         $ExpectedVersion
     )
 
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $ExpectedVersion
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$ExpectedVersion
     }
 
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
@@ -248,10 +250,10 @@ function ThenPesterShouldBeUninstalled
         $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
         $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
     }
-    $pesterDirectoryName = 'Modules\Pester'
+    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
     {
-        $pesterDirectoryName = 'Modules\Pester\{0}' -f $Version
+        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     It 'should pass' {
@@ -408,35 +410,6 @@ Describe 'Pester4.when missing Path Configuration' {
     ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
 }
 
-Describe 'Pester4.when missing Version configuration' {
-    Init
-    GivenTestContext
-    GivenPesterPath -pesterPath 'PassingTests'
-    WhenPesterTaskIsInvoked
-    ThenPesterShouldHaveRun -PassingCount 4 -FailureCount 0
-    ThenPesterShouldBeInstalled '4.*'
-}
-
-Describe 'Pester4.when Version property isn''t a version' {
-    Init
-    GivenTestContext
-    GivenVersion 'fubar'
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'isn''t a valid version'
-}
-
-Describe 'Pester4.when version of tool doesn''t exist' {
-    Init
-    GivenTestContext
-    GivenInvalidVersion
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'does not exist'
-}
-
 Describe 'Pester4.when a task path is absolute' {
     Init
     GivenTestContext
@@ -446,16 +419,6 @@ Describe 'Pester4.when a task path is absolute' {
     ThenTestShouldFail -failureMessage 'absolute'
 }
 
-Describe 'Pester4.when version of tool is less than 4.*' {
-    Init
-    GivenTestContext
-    GivenVersion '3.4.3'
-    GivenPesterPath -pesterPath 'PassingTests' 
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'the major version number must always be ''4'''
-
-}
 Describe 'Pester4.when running passing Pester tests with Clean Switch' {
     Init
     GivenTestContext
