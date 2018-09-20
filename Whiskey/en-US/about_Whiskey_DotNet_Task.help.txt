@@ -11,7 +11,7 @@ DESCRIPTION
 
     Pass any command arguments with the `Argument` property.
 
-    The task writes a detailed build log to the build output directory. If the `Path` property has no value, the file is named `dotnet.COMMAND.log`. Otherwise, there will be a log file for each path named `dotnet.build.FILE_NAME.log`, where `FILE_NAME` is the name poertion of the path.
+    The task writes a detailed build log to the build output directory. If the `Path` property has no value, the file is named `dotnet.COMMAND.log`. Otherwise, there will be a log file for each path named `dotnet.COMMAND.FILE_NAME.log`, where `FILE_NAME` is the name portion of the path.
 
     If a command returns a non-zero exit code, the build will fail.
 
