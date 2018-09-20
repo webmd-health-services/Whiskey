@@ -26,7 +26,7 @@ PROPERTIES
     * `PackageName`: the name of the package that will be created in BuildMaster. By default, the package will be named "MajorVersion.MinorVersion.PatchVersion"
     * `StartAtStage`: the stage of the release pipeline where the package should start its deployment. By default, the package will be released to the first stage of the pipeline.
     * `SkipDeploy`: the release package should be created, but not automatically deployed. By default, the package deployment will be started.
-    * `BuildMasterAutomationVersion`: the version of the BuildMasterAutomation PowerShell module to use. The default is the latest 0.5.* version. Be careful about changing this version. The task may not support newer/olders versions.
+    * `BuildMasterAutomationVersion`: the version of the BuildMasterAutomation PowerShell module to use. The default is the latest 0.5.* version. Be careful about changing the version. The task may not support newer/olders versions.
     
 
 EXAMPLES

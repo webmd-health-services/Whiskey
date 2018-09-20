@@ -95,11 +95,11 @@ function ThenPowerShellModuleUninstalled
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
     It 'should successfully uninstall the PowerShell Module' {
-        $uninstalledPath | Should not Exist
+        $uninstalledPath | Should -Not -Exist
     }
 
     It 'Should not write any errors' {
-        $Global:Error | Should beNullOrEmpty
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 

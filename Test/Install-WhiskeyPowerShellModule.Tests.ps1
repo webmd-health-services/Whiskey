@@ -36,18 +36,20 @@ function Invoke-PowershellInstall
     }
 
     Context 'the module' {
+        $moduleRootPath = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\{0}' -f $ForModule)
         It 'should exist' {
             $result | Should -Not -BeNullOrEmpty
             $result | Should -Exist
-            $result | Should -Be (Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\{0}' -f $ForModule))
+            $result | Should -Be $moduleRootPath
         }
 
-        It 'should be importable' {
+        It 'should be importable and the expected version' {
             $errors = @()
-            Start-Job {
-                Import-Module -Name $using:result
+            $module = Start-Job {
+                Import-Module -Name $using:result -PassThru
             } | Wait-Job | Receive-Job -ErrorVariable 'errors'
             $errors | Should -BeNullOrEmpty
+            $module.Version | Should -Be $ActualVersion
         }
     }
 }
@@ -59,12 +61,12 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
 
     it 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 
-Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and omitting BUILD number' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.1'
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and omitting patch number' {
+    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.0'
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module omitting Version' {
@@ -87,12 +89,12 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     $result = Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
 
     It 'shouldn''t return anything' {
-        $result | Should BeNullOrEmpty
+        $result | Should -BeNullOrEmpty
     }
 
     It 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'failed to find module'
+        $Global:Error.Count | Should -Be 1
+        $Global:Error[0] | Should -Match 'failed to find module'
     }
 }
 
@@ -102,12 +104,12 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     $result = Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
 
     It 'shouldn''t return anything' {
-        $result | Should BeNullOrEmpty
+        $result | Should -BeNullOrEmpty
     }
 
     It 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'Failed to find module'
+        $Global:Error.Count | Should -Be 1
+        $Global:Error[0] | Should -Match 'Failed to find module'
     }
 }
 

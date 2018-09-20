@@ -27,7 +27,7 @@ DESCRIPTION
 
     A detailed log of the build is saved to the build output directory named "msbuild.FILE_NAME.log" file, where `FILE_NAME` is replaced by the name of the file being built.
 
-    This task downloads and uses the [VSSetup PowerShell module from the PowerShell Gallery]() to detect find versions of MSBuild that ship with Visual Studio 2017 (and later).
+    This task downloads and uses the [VSSetup PowerShell module from the PowerShell Gallery](https://www.powershellgallery.com/packages/VSSetup) to detect find versions of MSBuild that ship with Visual Studio 2017 (and later).
 
 PROPERTY
 
@@ -43,7 +43,7 @@ PROPERTY
     * `Version`: The version of MSBuild to use. By default, uses the most recent/latest version of MSBuild installed. You usually will want to pin this to a specific version. Valid values are 15.0 (Visual Studio 2017), 14.0 (Visual Studio 2015) 12.0 (Visual Studio 2013), 4.0, 3.5, or 2.0.
     * `NuGetVersion`: The version of NuGet to use to restore packages. The default is to use the latest version.
     * `Use32Bit`: Set to `true` to use a 32-bit version of MSBuild.exe. The default is to use a version that matches the processor architecture of the current computer.
-    * `VSSetupVersion`: the version of the `VSSetup` PowerShell module to download and use. The default is the latest 2.* version. This module is used to find versions of MSBuild that ship with Visual Studio 2017 (and later).  Be careful about changing this version. Whiskey may not work with the version you choose.
+    * `VSSetupVersion`: the version of the `VSSetup` PowerShell module to download and use. The default is the latest 2.* version. This module is used to find versions of MSBuild that ship with Visual Studio 2017 (and later). Be careful about changing the version. The task may not support newer/olders versions.
 
 EXAMPLES
 

@@ -22,7 +22,7 @@ PROPERTIES
     * `Uri` (Mandatory): The uri to the ProGet instance.
     * `AssetPath` (Mandatory): The desired Paths to the location you wish the file to be uploaded to in ProGet. The last item in the path is the asset name. The number of names provided must equal the number of file paths.
     * `AssetDirectory` (Mandatory): The root asset Directory you wish to upload the asset to.
-    * `ProGetAutomationVersion`: the version of the ProGetAutomation PowerShell module to download and use. The default is the latest 0.4.* version. Be careful about changing this version. Whiskey may not work with the version you choose.
+    * `ProGetAutomationVersion`: the version of the ProGetAutomation PowerShell module to download and use. The default is the latest 0.4.* version. Be careful about changing the version. The task may not support newer/olders versions.
 
 
 EXAMPLES

@@ -120,7 +120,6 @@ function Invoke-Publish
         $publishLocation = $feedUri
     }
 
-    #Mock -CommandName 'Start-Job' -ModuleName 'Whiskey' -MockWith { Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList }
     Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
     if( $withoutRegisteredRepo )

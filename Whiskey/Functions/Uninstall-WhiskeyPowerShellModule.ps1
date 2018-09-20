@@ -3,7 +3,7 @@ function Uninstall-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
-    Cleans downloaded PowerShell modules.
+    Removes downloaded PowerShell modules.
     
     .DESCRIPTION
     The `Uninstall-WhiskeyPowerShellModule` function deletes downloaded PowerShell modules from Whiskey's local "PSModules" directory.
@@ -23,13 +23,13 @@ function Uninstall-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory=$true)]
         [string]
-        # The name of the module to install.
+        # The name of the module to uninstall.
         $Name,
 
         [string]
         $Version = '*.*.*',
 
-        # The path where the PSModules directory where the modules are installed is located. The default is the current directory.
+        # Modules are saved into a PSModules directory. The "Path" parameter is the path where this PSModules directory should be, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
         $Path = (Get-Location).ProviderPath
     )
 
@@ -46,7 +46,7 @@ function Uninstall-WhiskeyPowerShellModule
         $removeModule = (Join-Path -Path $modulesRoot -ChildPath $item )
         if( Test-Path -Path $removeModule -PathType Container )
         {
-            Remove-Item $removeModule -Recurse -Force
+            Remove-Item -Path $removeModule -Recurse -Force
             return
         }
     }

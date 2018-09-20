@@ -17,7 +17,7 @@ PROPERTIES
     * `Uri` (**mandatory**): the URI to your Bitbucket Serer instance, with no path or query string.
     * `ProjectKey`: the repository's project key in Bitbucket Server. If not given, it is read from the repository's URI.
     * `RepositoryKey`: the repository's key in Bitbucket Server. If not given, it is read from the repository's URI.
-    * `BitbucketServerAutomationVersion`: the version of the BitbucketServerAutomation PowerShell module to download and use. The default is latest 0.3.* version. Be careful changing this. Some versions may not work/be supported by this task.
+    * `BitbucketServerAutomationVersion`: the version of the BitbucketServerAutomation PowerShell module to download and use. The default is latest 0.3.* version. Be careful about changing the version. The task may not support newer/olders versions.
 
 
 EXAMPLES

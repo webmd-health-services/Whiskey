@@ -3,10 +3,10 @@ function Install-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
-    Installs PowerShell modules.
+    Installs a PowerShell module.
     
     .DESCRIPTION
-    The `Install-WhiskeyPowerShellModule` function installs PowerShell modules into a "PSModules" directory in the directory of the current build (i.e. where the whiskey.yml file is located).
+    The `Install-WhiskeyPowerShellModule` function installs a PowerShell module into a "PSModules" directory in the current working directory. It returns the path to the module.
 
     .EXAMPLE
     Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.3.0'
@@ -36,7 +36,7 @@ function Install-WhiskeyPowerShellModule
         $Version,
 
         [string]
-        # The path where the PSModules directory where the modules are installed is located. The default is the current directory.
+        # Modules are saved into a PSModules directory. The "Path" parameter is the path where this PSModules directory should be, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
         $Path = (Get-Location).ProviderPath
     )
 

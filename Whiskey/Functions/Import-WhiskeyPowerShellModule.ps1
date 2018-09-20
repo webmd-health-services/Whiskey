@@ -6,14 +6,27 @@ function Import-WhiskeyPowerShellModule
     Imports a PowerShell module.
 
     .DESCRIPTION
-    The `Import-WhiskeyPowerShellModule` function imports a module into the global scope. The module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory.
+    The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task. Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If a module with the same name is currently loaded, it is removed and re-imported.
+    
+    The module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory or the `GetPowerShellModule` task to install a module in the appropriate place.
 
-    Pass the name of the module to the `Name` parameter. If any module with that name is already imported, it is removed, and the module in the current build's PowerShell module's directory is imported.
+    Pass the name of the modules to the `Name` parameter.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion'
+
+    Demonstrates how to use this method to import a single module.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion','ProGetAutomation'
+
+    Demonstrates how to use this method to import multiple modules.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [string[]]
+        # The module names to import.
         $Name
     )
 
@@ -43,6 +56,7 @@ function Import-WhiskeyPowerShellModule
                     $VerbosePreference = 'SilentlyContinue'
                     Import-Module -Name $moduleDir -Global -Force
                 }
+                break
             }
         }
 
