@@ -24,7 +24,7 @@
     CompanyName = 'WebMD Health Services'
 
     # Copyright statement for this module
-    Copyright = '(c) 2016 WebMD Health Services. All rights reserved.'
+    Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Continuous Integration/Continuous Delivery module.'
@@ -150,6 +150,11 @@
 * Added support for PowerShell modules to the RequiresTool attribute.
 * Whiskey tasks that use PowerShell modules now use Whiskey's auto-download feature to download required modules during the build.
 * Fixed: publishing to the PowerShell Gallery released in September 2018 is failing. Updating to PowerShellGet 2.0.0 and PackageManagement 1.1.7.2.
+* Created `Npm` task for running NPM commands.
+* Deprecated the `NpmConfig`, `NpmInstall`, `NpmPrune`, and `NpmRunScript` tasks. They will be removed in a future version of Whiskey. Use the new `Npm` task instead.
+* The `NodeNspCheck` task is obsolete (and will actually stop working when the NSP project shuts down on 30 September 2018). Migrate to the `Npm` task and use it to run the `npm audit` command.
+* Created `DotNet` task for running dotnet.exe commands.
+* Deprecated the `DotNetBuild`, `DotNetPack`, `DotNetPublish`, and `DotNetTest` tasks. They will be removed in a future version of Whiskey. Use the new `DotNet` task instead.
 '@
         } # End of PSData hashtable
 
