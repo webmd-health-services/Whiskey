@@ -26,7 +26,9 @@ function GivenDotNetCoreProject
 {
     param(
         [string[]]
-        $Path
+        $Path,
+
+        $Targeting
     )
 
     foreach ($project in $Path)
@@ -36,13 +38,13 @@ function GivenDotNetCoreProject
 
         $csprojPath = Join-Path -Path $projectRoot -ChildPath ($project | Split-Path -Leaf)
 
-@'
+(@'
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>netcoreapp2.0</TargetFramework>
+        <TargetFramework>{0}</TargetFramework>
     </PropertyGroup>
 </Project>
-'@ | Set-Content -Path $csprojPath
+'@ -f $Targeting) | Set-Content -Path $csprojPath
     }
 }
 
@@ -164,7 +166,7 @@ Describe 'DotNetBuild.when command succeeds' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.*'
         ThenProjectBuilt 'bin\DotNetCore.dll'
         ThenLogFile 'dotnet.build.log' -Exists
@@ -176,12 +178,12 @@ Describe 'DotNetBuild.when command succeeds' {
     }
 }
 
-Describe 'DotNetBuild.when when command fails' {
+Describe 'DotNetBuild.when command fails' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore.csproj'
-        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -ErrorAction SilentlyContinue
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
+        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '1.1.*' -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'dotnet\.exe\ failed\ with\ exit\ code'
     }
     finally
@@ -194,8 +196,8 @@ Describe 'DotNetBuild.when passing paths to the command' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj'
-        GivenDotNetCoreProject 'DotNetCore2\DotNetCore2.csproj'
+        GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
+        GivenDotNetCoreProject 'DotNetCore2\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
         WhenRunningDotNet 'build' -WithPath 'DotNetCore*\*.csproj' -WithSdkVersion '2.*'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenProjectBuilt 'DotNetCore2\bin\Debug\netcoreapp2.0\DotNetCore2.dll'
@@ -214,7 +216,7 @@ Describe 'DotNetBuild.when command is missing' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj'
+        GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         WhenRunningDotNet -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'is\ required'
     }

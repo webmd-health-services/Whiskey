@@ -1,5 +1,5 @@
 
-#Requirs -Version 5.1
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -22,7 +22,7 @@ function ThenFile
 
     It ('should run command') {
         $path | Should -Exist
-        $path | Should -FileContentMatchMultiline
+        $path | Should -FileContentMatchMultiline $Is
     }
 }
 
@@ -73,6 +73,7 @@ function WhenRunningCommand
 
     try
     {
+        $Global:Error.Clear()
         Invoke-WhiskeyTask -TaskContext $context -Name 'Npm' -Parameter $parameters
     }
     catch
@@ -88,7 +89,7 @@ Describe 'Npm.when command succeeds' {
         Init
         WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','.npmrc'
         ThenFile '.npmrc' -Is @'
-fubar = snafu
+fubar=snafu
 '@
     }
     finally
