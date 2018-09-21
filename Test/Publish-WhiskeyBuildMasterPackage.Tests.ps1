@@ -185,7 +185,7 @@ function WhenCreatingPackage
     try
     {
         $Global:Error.Clear()
-        Publish-WhiskeyBuildMasterPackage -TaskContext $context -TaskParameter $taskParameter
+        Invoke-WhiskeyTask -TaskContext $context -Name 'PublishBuildMasterPackage' -Parameter $taskParameter
     }
     catch
     {

@@ -184,8 +184,8 @@ Queues:
 
 Describe 'Parallel.when second queue finishes before first queue' {
     Init
-    GivenFile 'one.ps1' 'Start-Sleep -Second 3 ; 1'
-    GivenFile 'two.ps1' '2'
+    GivenFile 'one.ps1' 'Write-Host ("1" * 80) ; Write-Host (Get-Date) ; Start-Sleep -Seconds 12 ; 1 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
+    GivenFile 'two.ps1' 'Write-Host ("2" * 80) ; Write-Host (Get-Date) ; 2 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
     $task = Import-WhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
@@ -195,9 +195,9 @@ Queues:
     - PowerShell:
         Path: two.ps1
 '@
-    [object[]]$output = WhenRunningTask $task -ErrorAction SilentlyContinue
+    [object[]]$output = WhenRunningTask $task #-ErrorAction SilentlyContinue
     ThenCompleted
-    It ('should finish tasks as the complete') {
+    It ('should finish tasks as they complete') {
         $output.Count | Should -Be 2
         $output[0] | Should -Be 2
         $output[1] | Should -Be 1

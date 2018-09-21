@@ -1,6 +1,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1' -Resolve)
 
 $moduleName = $null
 $moduleVersion = $null
@@ -167,3 +168,5 @@ Describe 'Resolve-WhiskeyPowerShellModule.when Find-Module returns module from t
     ThenReturnedModule 'Pester'
     ThenNoErrors
 }
+
+Remove-Item -Path 'function:Resolve-WhiskeyPowerShellModule'

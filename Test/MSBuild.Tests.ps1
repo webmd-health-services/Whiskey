@@ -3,6 +3,11 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+# Load this module here so that it's assemblies get loaded into memory. Otherwise, the test will load
+# the module from the test drive, and Pester will complain that it can't delete the test drive.
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\VSSetup' -Resolve) -Force
+Remove-Module -Name 'VSSetup' -Force
+
 $output = $null
 $path = $null
 $threwException = $null
@@ -120,6 +125,11 @@ function Init
     $script:use32Bit = $false
 }
 
+function Reset
+{
+    Remove-Module -Force 'VSSetup'
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -199,6 +209,7 @@ function WhenRunningTask
     {
         Write-Error $_
         $script:threwException = $true
+        $Error | Format-List -Force * | Out-String | Write-Verbose -Verbose
     }
 }
 
@@ -442,164 +453,299 @@ function ThenWritesError
 }
 
 Describe 'MSBuild.when building real projects as a developer' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper
-    ThenNuGetPackagesRestored
-    ThenProjectsCompiled
-    ThenAssembliesAreNotVersioned
-    ThenOutputLogged
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper
+        ThenNuGetPackagesRestored
+        ThenProjectsCompiled
+        ThenAssembliesAreNotVersioned
+        ThenOutputLogged
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when building multiple real projects as a developer' {
-    Init
-    GivenProjectsThatCompile
-    WhenRunningTask -AsDeveloper
-    ThenNuGetPackagesRestored
-    ThenProjectsCompiled
-    ThenAssembliesAreNotVersioned
+    try
+    {
+        Init
+        GivenProjectsThatCompile
+        WhenRunningTask -AsDeveloper
+        ThenNuGetPackagesRestored
+        ThenProjectsCompiled
+        ThenAssembliesAreNotVersioned
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when building real projects as build server' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
-    ThenNuGetPackagesRestored
-    ThenProjectsCompiled
-    ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
+        ThenNuGetPackagesRestored
+        ThenProjectsCompiled
+        ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when compilation fails' {
-    Init
-    GivenAProjectThatDoesNotCompile
-    WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
-    ThenNuGetPackagesRestored
-    ThenProjectsNotCompiled
-    ThenTaskFailed
-    ThenWritesError 'MSBuild\ exited\ with\ code\ 1'
+    try
+    {
+        Init
+        GivenAProjectThatDoesNotCompile
+        WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+        ThenNuGetPackagesRestored
+        ThenProjectsNotCompiled
+        ThenTaskFailed
+        ThenWritesError 'MSBuild\ exited\ with\ code\ 1'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when Path parameter is empty' {
-    Init
-    GivenNoPathToBuild
-    WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
-    ThenProjectsNotCompiled
-    ThenNuGetPackagesNotRestored
-    ThenTaskFailed
-    ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+    try
+    {
+        Init
+        GivenNoPathToBuild
+        WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+        ThenProjectsNotCompiled
+        ThenNuGetPackagesNotRestored
+        ThenTaskFailed
+        ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when Path parameter is not provided' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithNoPath -ErrorAction SilentlyContinue
-    ThenProjectsNotCompiled
-    ThenNuGetPackagesNotRestored
-    ThenTaskFailed
-    ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithNoPath -ErrorAction SilentlyContinue
+        ThenProjectsNotCompiled
+        ThenNuGetPackagesNotRestored
+        ThenTaskFailed
+        ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when Path Parameter does not exist' {
-    Init
-    GivenAProjectThatDoesNotExist
-    WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
-    ThenProjectsNotCompiled
-    ThenNuGetPackagesnoTRestored
-    ThenTaskFailed
-    ThenWritesError ([regex]::Escape('does not exist.'))
+    try
+    {
+        Init
+        GivenAProjectThatDoesNotExist
+        WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+        ThenProjectsNotCompiled
+        ThenNuGetPackagesnoTRestored
+        ThenTaskFailed
+        ThenWritesError ([regex]::Escape('does not exist.'))
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when cleaning build output' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper
-    ThenProjectsCompiled
-    WhenRunningTask -InCleanMode -AsDeveloper
-    ThenBinsAreEmpty
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper
+        ThenProjectsCompiled
+        WhenRunningTask -InCleanMode -AsDeveloper
+        ThenBinsAreEmpty
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when customizing output level' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
-    ThenOutputIsEmpty
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
+        ThenOutputIsEmpty
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when run by developer using default verbosity output level' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper
-    ThenOutputIsMinimal
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper
+        ThenOutputIsMinimal
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when run by build server using default verbosity output level' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsBuildServer
-    ThenOutputIsMinimal
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsBuildServer
+        ThenOutputIsMinimal
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when passing extra build properties' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
-    ThenOutput -Contains 'Fubar=Snafu'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
+        ThenOutput -Contains 'Fubar=Snafu'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when passing custom arguments' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
-    ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
+        ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when passing a single custom argument' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
-    ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
+        ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when run with no CPU parameter' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
-    ThenOutput -Contains '\n\ {5}\d>'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
+        ThenOutput -Contains '\n\ {5}\d>'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when run with CPU parameter' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
-    ThenOutput -DoesNotContain '^\ {5}\d>'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
+        ThenOutput -DoesNotContain '^\ {5}\d>'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when using custom output directory' {
-    Init
-    GivenAProjectThatCompiles
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
-    ThenProjectsCompiled -To '.myoutput'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
+        ThenProjectsCompiled -To '.myoutput'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when using custom targets' {
-    Init
-    GivenCustomMSBuildScriptWithMultipleTargets
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
-    ThenBothTargetsRun
+    try
+    {
+        Init
+        GivenCustomMSBuildScriptWithMultipleTargets
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
+        ThenBothTargetsRun
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when using invalid version of MSBuild' {
-    Init
-    GivenAProjectThatCompiles
-    GivenVersion 'some.bad.version'
-    WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
-    ThenTaskFailed
-    ThenWritesError -Pattern 'some\.bad\.version\b.*is\ not\ installed'
+    try
+    {
+        Init
+        GivenAProjectThatCompiles
+        GivenVersion 'some.bad.version'
+        WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+        ThenTaskFailed
+        ThenWritesError -Pattern 'some\.bad\.version\b.*is\ not\ installed'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when customizing version of MSBuild' {
-    Init
-    GivenProject @"
+    try
+    {
+        Init
+        GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Target Name="Build">
@@ -607,17 +753,24 @@ Describe 'MSBuild.when customizing version of MSBuild' {
     </Target>
 </Project>
 "@
-    $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-    $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
-    $expectedPath = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
-    GivenVersion $version
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
-    ThenOutput -Contains ([regex]::Escape($expectedPath.TrimEnd('\')))
+        $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
+        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+        $expectedPath = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
+        GivenVersion $version
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
+        ThenOutput -Contains ([regex]::Escape($expectedPath.TrimEnd('\')))
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when customizing version of MSBuild and multiple installs for a version exist' {
-    Init
-    GivenProject @"
+    try
+    {
+        Init
+        GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Target Name="Build">
@@ -625,58 +778,84 @@ Describe 'MSBuild.when customizing version of MSBuild and multiple installs for 
     </Target>
 </Project>
 "@
-    $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-    $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
-    $msbuildRoot = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
-    $msbuildPath = Join-Path -Path $msbuildRoot -ChildPath 'MSBuild.exe' -Resolve
-    Mock -CommandName 'Get-MSBuild' -ModuleName 'Whiskey' -MockWith {
-        1..2 | ForEach-Object {
-            [pscustomobject]@{
-                                Name =  $version;
-                                Version = [version]$version;
-                                Path = $msbuildPath;
-                                Path32 = $msbuildPath;
-                            }
-        }
-    }.GetNewClosure()
-    GivenVersion $version
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
-    ThenOutput -Contains ([regex]::Escape($msbuildRoot.TrimEnd('\')))
+        $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
+        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+        $msbuildRoot = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
+        $msbuildPath = Join-Path -Path $msbuildRoot -ChildPath 'MSBuild.exe' -Resolve
+        Mock -CommandName 'Get-MSBuild' -ModuleName 'Whiskey' -MockWith {
+            1..2 | ForEach-Object {
+                [pscustomobject]@{
+                                    Name =  $version;
+                                    Version = [version]$version;
+                                    Path = $msbuildPath;
+                                    Path32 = $msbuildPath;
+                                }
+            }
+        }.GetNewClosure()
+        GivenVersion $version
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
+        ThenOutput -Contains ([regex]::Escape($msbuildRoot.TrimEnd('\')))
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when disabling multi-CPU builds' {
-    Init
-    GivenProject @"
+    try
+    {
+        Init
+        GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Target Name="Build">
     </Target>
 </Project>
 "@
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true; Verbosity = 'diag' }
-    ThenOutput -Contains ('MSBuildNodeCount = 1')
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true; Verbosity = 'diag' }
+        ThenOutput -Contains ('MSBuildNodeCount = 1')
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when disabling file logger' {
-    Init
-    GivenProject @"
+    try
+    {
+        Init
+        GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <Target Name="Build">
     </Target>
 </Project>
 "@
-    WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
-    ThenOutputNotLogged
+        WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
+        ThenOutputNotLogged
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when run by developer using a specific version of NuGet' {
-    Init
-    GivenProjectsThatCompile
-    GivenNuGetVersion '3.5.0'
-    WhenRunningTask -AsDeveloper
-    ThenSpecificNuGetVersionInstalled
-    ThenNuGetPackagesRestored
+    try
+    {
+        Init
+        GivenProjectsThatCompile
+        GivenNuGetVersion '3.5.0'
+        WhenRunningTask -AsDeveloper
+        ThenSpecificNuGetVersionInstalled
+        ThenNuGetPackagesRestored
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 $procArchProject = @"
@@ -689,24 +868,45 @@ $procArchProject = @"
 "@
 
 Describe 'MSBuild.when using 32-bit MSBuild is undefined' {
-    Init
-    GivenProject $procArchProject
-    WhenRunningTask -AsDeveloper
-    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
+    try
+    {
+        Init
+        GivenProject $procArchProject
+        WhenRunningTask -AsDeveloper
+        ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when using 32-bit MSBuild' {
-    Init
-    GivenProject $procArchProject
-    GivenUse32BitIs 'true'
-    WhenRunningTask -AsDeveloper
-    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
+    try
+    {
+        Init
+        GivenProject $procArchProject
+        GivenUse32BitIs 'true'
+        WhenRunningTask -AsDeveloper
+        ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
+    }
+    finally
+    {
+        Reset
+    }
 }
 
 Describe 'MSBuild.when explicitly not using 32-bit MSBuild' {
-    Init
-    GivenProject $procArchProject
-    GivenUse32BitIs 'false'
-    WhenRunningTask -AsDeveloper
-    ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
+    try
+    {
+        Init
+        GivenProject $procArchProject
+        GivenUse32BitIs 'false'
+        WhenRunningTask -AsDeveloper
+        ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
+    }
+    finally
+    {
+        Reset
+    }
 }

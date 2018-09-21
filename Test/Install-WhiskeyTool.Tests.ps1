@@ -1,43 +1,6 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function Invoke-PowershellInstall
-{
-    param(
-        $ForModule,
-        $Version,
-        $ActualVersion
-    )
-
-    if( -not $ActualVersion )
-    {
-        $ActualVersion = $Version
-    }
-
-    $optionalParams = @{ }
-    $Global:Error.Clear()
-    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName $ForModule -Version $Version
-
-    Context 'the module' {
-        It 'should exist' {
-            $result | Should Exist
-        }
-
-        It 'should be importable' {
-            $errors = @()
-            Start-Job {
-                Import-Module -Name $using:result
-            } | Wait-Job | Receive-Job -ErrorVariable 'errors'
-            $errors | Should BeNullOrEmpty
-        }
-
-        It 'should put it in the right place' {
-            $expectedRegex = 'Modules\\{0}$' -f [regex]::Escape($ForModule)
-            $result | Should Match $expectedRegex
-        }
-    }
-}
-
 function Invoke-NuGetInstall
 {
     [CmdletBinding()]
@@ -102,88 +65,12 @@ Describe 'Install-WhiskeyTool.when installing an already installed NuGet package
     }
 }
 
-Describe 'Install-WhiskeyTool.when run by developer/build server' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and it''s already installed' {
-    $Global:Error.Clear()
-
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
-
-    it 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
-    }
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and omitting BUILD number' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.1'
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module omitting Version' {
-    $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Whiskey'
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '' -ActualVersion $module.Version
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module using wildcard version' {
-    $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Whiskey'
-    Invoke-PowershellInstall -ForModule 'whiskey' -Version '0.*' -ActualVersion $module.Version
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and the version doesn''t exist' {
-    $Global:Error.Clear()
-
-    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
-
-    It 'shouldn''t return anything' {
-        $result | Should BeNullOrEmpty
-    }
-
-    It 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'failed to find module'
-    }
-}
-
-Describe 'Install-WhiskeyTool.when installing a PowerShell module and version parameter is empty' {
-    $Global:Error.Clear()
-
-    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Fubar' -Version '' -ErrorAction SilentlyContinue
-
-    It 'shouldn''t return anything' {
-        $result | Should BeNullOrEmpty
-    }
-
-    It 'should write an error' {
-        $Global:Error.Count | Should Be 1
-        $Global:Error[0] | Should Match 'Failed to find module'
-    }
-}
-
 Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
     Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
     Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
     It 'should enable NuGet package restore' {
         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
         Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
-    }
-}
-
-Describe 'Install-WhiskeyTool.when PowerShell module is already installed' {
-    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '4.0.6'
-    $info = Get-ChildItem -Path $TestDrive.FullName -Filter 'Pester.psd1' -Recurse
-    $manifest = Test-ModuleManifest -Path $info.FullName
-    Start-Sleep -Milliseconds 333
-    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -ModuleName 'Pester' -Version '4.0.7'
-    $newInfo = Get-ChildItem -Path $TestDrive.FullName -Filter 'Pester.psd1' -Recurse
-    $newManifest = Test-ModuleManifest -Path $newInfo.FullName
-    It 'should not redownload module' {
-        $newManifest.Version | Should -Be $manifest.Version
     }
 }
 
@@ -679,4 +566,48 @@ Describe 'Install-WhiskeyTool.when .NET Core SDK fails to install' {
     GivenVersionParameterName 'SdkVersion'
     WhenInstallingTool 'DotNet' @{ 'SdkVersion' = '2.1.4' } -ErrorAction SilentlyContinue
     ThenThrewException 'Failed\ to\ install\ .NET\ Core\ SDK'
+}
+
+function ThenDirectory
+{
+    param(
+        $Path,
+        [Switch]
+        $Not,
+        [Switch]
+        $Exists
+    )
+
+    if( $Not )
+    {
+        It ('should not install') {
+            Join-Path -Path $TestDRive.FullName -ChildPath $Path | Should -Not -Exist
+        }
+    }
+    else
+    {
+        It ('should install') {
+            Join-Path -Path $TestDRive.FullName -ChildPath $Path | Should -Exist
+        }
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
+    Init
+    GivenVersionParameterName 'Version'
+    WhenInstallingTool 'PowerShellModule::Whiskey' -Parameter @{ 'Version' = '0.37.1' }
+    ThenDirectory 'PSModules\Whiskey' -Exists
+    $job = Start-Job { Import-Module -Name (Join-Path -Path $using:TestDrive.FullName -ChildPath 'PSModules\Whiskey') -PassThru }
+    $moduleInfo = $job | Wait-Job | Receive-Job
+    It ('should install requested version') {
+        $moduleInfo.Version | Should -Be '0.37.1'
+    }
+}
+
+Describe 'Install-WhiskeyTool.when failing to install a PowerShell module' {
+    Init
+    GivenVersionParameterName 'Version'
+    WhenInstallingTool 'PowerShellModule::jfklfjsiomklmslkfs' -ErrorAction SilentlyContinue
+    ThenDirectory 'PSModules\Whiskey' -Not -Exists
+    ThenThrewException -Regex 'Failed\ to\ find'
 }

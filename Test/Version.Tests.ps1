@@ -184,7 +184,7 @@ Describe 'Version.when Version is invalid' {
 Describe 'Version.when Version has no metadata' {
     Init
     GivenProperty @{ 'Version' = '4.5.6' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenSemVer2Is '4.5.6'
     ThenSemVer1Is '4.5.6'
     ThenVersionIs '4.5.6'
@@ -193,7 +193,7 @@ Describe 'Version.when Version has no metadata' {
 Describe 'Version.when Version has no build metadata' {
     Init
     GivenProperty @{ 'Version' = '4.5.6-rc.5' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenSemVer2Is '4.5.6-rc.5'
     ThenSemVer1Is '4.5.6-rc5'
     ThenVersionIs '4.5.6'
@@ -202,7 +202,7 @@ Describe 'Version.when Version has no build metadata' {
 Describe 'Version.when Version has no prerelease version' {
     Init
     GivenProperty @{ 'Version' = '4.5.6+branch.commit' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenSemVer2Is '4.5.6+branch.commit'
     ThenSemVer1Is '4.5.6'
     ThenVersionIs '4.5.6'
@@ -211,7 +211,7 @@ Describe 'Version.when Version has no prerelease version' {
 Describe 'Version.when using Prerelease property to set prerelease version' {
     Init
     GivenProperty @{ 'Version' = '4.5.6-rc.1' ; 'Prerelease' = 'rc.2' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenSemVer2Is '4.5.6-rc.2'
     ThenSemVer1Is '4.5.6-rc2'
     ThenVersionIs '4.5.6'
@@ -228,7 +228,7 @@ Describe 'Version.when Prerelease property is not a valid prerelease version' {
 Describe 'Version.when using Build property to set build metadata' {
     Init
     GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = 'branch2.commit2' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenSemVer2Is '4.5.6+branch2.commit2'
     ThenSemVer1Is '4.5.6'
     ThenVersionIs '4.5.6'
@@ -237,7 +237,7 @@ Describe 'Version.when using Build property to set build metadata' {
 Describe 'Version.when Build property is not a valid build metadata' {
     Init
     GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = 'feature/fubar-snafu.deadbee' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenVersionIs '4.5.6'
     ThenSemVer1Is '4.5.6'
     ThenSemVer2Is '4.5.6+feature-fubar-snafu.deadbee'
@@ -247,7 +247,7 @@ Describe 'Version.when pulling version from PowerShell module manifest' {
     Init
     GivenFile 'manifest.psd1' '@{ ModuleVersion = ''4.2.3'' }'
     GivenProperty @{ Path = 'manifest.psd1' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenVersionIs '4.2.3'
     ThenSemVer1Is '4.2.3'
     ThenSemVer2Is '4.2.3'
@@ -319,7 +319,7 @@ Describe 'Version.when reading version from .csproj file' {
 </Project>
 '@
     GivenProperty @{ Path = 'lib.csproj' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenVersionIs '0.0.2'
     ThenSemVer1Is '0.0.2'
     ThenSemVer2Is '0.0.2'
@@ -387,7 +387,7 @@ Describe 'Version.when file and whiskey.yml both contain build and prerelease me
     Init
     GivenFile 'package.json' '{ "Version": "4.2.3-rc.1+fubar.snafu" }'
     GivenProperty @{ Path = 'package.json' ; Prerelease = 'rc.5' ; Build = 'fizz.buzz' }
-    WhenRunningTask 
+    WhenRunningTask
     ThenVersionIs '4.2.3'
     ThenSemVer1Is '4.2.3-rc5'
     ThenSemVer2Is '4.2.3-rc.5+fizz.buzz'
@@ -443,7 +443,7 @@ Describe 'Version.when Prerelease branch map isn''t a map' {
 }
 
 Describe 'Version.when setting just prerelease' {
-    Init 
+    Init
     GivenCurrentVersion '0.0.0-prerelease+build'
     GivenProperty @{ 'Prerelease' = 'alpha' }
     WhenRunningTask
@@ -481,4 +481,33 @@ Describe 'Version.when setting just version from path' {
     ThenVersionIs '1.1.1'
     ThenSemVer1Is '1.1.1'
     ThenSemVer2Is '1.1.1'
+}
+
+Describe 'Version.when getting version from Chef cookbook metadata.rb file' {
+    Init
+    GivenFile 'metadata.rb' @'
+name 'cookbook_name'
+description 'Installs/Configures cookbook_name'
+# This is a comment with a similar version '2.2.2' string that shouldn't be matched
+# version '9.9.9'
+version '0.1.0'
+chef_version '>= 12.14' if respond_to?(:chef_version)
+'@
+    GivenProperty @{ Path = 'metadata.rb' }
+    WhenRunningTask
+    ThenVersionIs '0.1.0'
+    ThenSemVer1Is '0.1.0'
+    ThenSemVer2Is '0.1.0'
+}
+
+Describe 'Version.when Chef cookbook metadata.rb doesn''t contain a "version" property' {
+    Init
+    GivenFile 'metadata.rb' @'
+name 'cookbook_name'
+description 'Installs/Configures cookbook_name'
+'@
+    GivenProperty @{ Path = 'metadata.rb' }
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenTaskFailed
+    ThenErrorIs ([Regex]::Escape('Unable to locate property "version ''x.x.x''" in metadata.rb file'))
 }
