@@ -46,13 +46,21 @@ function Invoke-WhiskeyPester3Task
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     } 
     
+    # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+    # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
+    $informationActionParameter = @{ }
+    if( (Get-Command -Name 'Receive-Job' -ParameterName 'InformationAction') )
+    {
+        $informationActionParameter['InformationAction'] = 'SilentlyContinue'
+    }
+
     do
     {
-        $job | Receive-Job
+        $job | Receive-Job @informationActionParameter
     }
     while( -not ($job | Wait-Job -Timeout 1) )
 
-    $job | Receive-Job
+    $job | Receive-Job @informationActionParameter
 
     Publish-WhiskeyPesterTestResult -Path $outputFile
 

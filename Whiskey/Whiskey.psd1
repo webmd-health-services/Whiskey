@@ -155,6 +155,7 @@
 * The `NodeNspCheck` task is obsolete (and will actually stop working when the NSP project shuts down on 30 September 2018). Migrate to the `Npm` task and use it to run the `npm audit` command.
 * Created `DotNet` task for running dotnet.exe commands.
 * Deprecated the `DotNetBuild`, `DotNetPack`, `DotNetPublish`, and `DotNetTest` tasks. They will be removed in a future version of Whiskey. Use the new `DotNet` task instead.
+* Fixed: Pester output is duplicated.
 '@
         } # End of PSData hashtable
 
