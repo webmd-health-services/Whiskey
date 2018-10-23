@@ -68,7 +68,7 @@ function Get-NunitXmlElement
 
     Get-ChildItem -Path $outputDirectory -Filter 'nunit3*.xml' |
         Get-Content -Raw |
-        ForEach-Object { 
+        ForEach-Object {
             $testResult = [xml]$_
             $testResult.SelectNodes(('//{0}' -f $Element))
         }
@@ -266,11 +266,11 @@ function WhenRunningTask
                     Select-Object -ExpandProperty 'FullName'
     }
 
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' 
+    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
 
     Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
 
-    try 
+    try
     {
         $script:output = Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NUnit3'
     }
@@ -289,11 +289,11 @@ function ThenPackageInstalled
     )
 
     It ('should install package ''{0}''' -f $PackageName) {
-        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
-            $DebugPreference = 'Continue'
-            Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $NuGetPackageName)
-            Write-Debug -Message ('                  actual    {0}' -f $PackageName)
-            $NuGetPackageName -eq $PackageName 
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
+            # $DebugPreference = 'Continue'
+            Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $PackageName)
+            Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
+            $NuGetPackageName -eq $PackageName
         }
         if( $Version )
         {
@@ -521,7 +521,7 @@ Describe 'NUnit3.when running in Initialize mode' {
 Describe 'NUnit3.when missing Path parameter' {
     Init
     WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run' 
+    ThenTaskFailedWithMessage 'Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run'
 }
 
 Describe 'NUnit3.when given bad Path' {
@@ -531,36 +531,26 @@ Describe 'NUnit3.when given bad Path' {
     ThenTaskFailedWithMessage 'does not exist.'
 }
 
-Describe 'NUnit3.when NUnit fails to install' {
-    Init
-    GivenPassingPath
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'NUnit.ConsoleRunner' }
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'failed to install.'
+foreach ($package in @('NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
+{
+    Describe ('NUnit3.when "{0}" fails to install' -f $package) {
+        Init
+        GivenPassingPath
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $package }
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage ('"{0}" failed to install.' -f $package)
+    }
 }
 
-Describe 'NUnit3.when nunit3-console.exe cannot be located' {
-    Init
-    GivenPassingPath
-    Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -ParameterFilter { $ChildPath -match 'nunit3-console.exe' } -MockWith { 'C:\some\nonexistent\path\nunit3-console.exe' }
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'could not locate ''nunit3-console.exe'''
-}
-
-Describe 'NUnit3.when OpenCover fails to install' {
-    Init
-    GivenPassingPath
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'OpenCover'}
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'failed to install.'
-}
-
-Describe 'NUnit3.when ReportGenerator fails to install' {
-    Init
-    GivenPassingPath
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -match 'ReportGenerator'}
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenTaskFailedWithMessage 'failed to install.'
+foreach ($executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe'))
+{
+    Describe ('NUnit3.when "{0}" cannot be located' -f $executable) {
+        Init
+        GivenPassingPath
+        Mock -CommandName 'Get-ChildItem' -ModuleName 'Whiskey' -ParameterFilter { $Filter -eq $executable }
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage ('Unable to find "{0}"' -f $executable)
+    }
 }
 
 Describe 'NUnit3.when running NUnit tests with disabled code coverage' {
