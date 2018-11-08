@@ -4,7 +4,7 @@ function Install-WhiskeyPowerShellModule
     <#
     .SYNOPSIS
     Installs a PowerShell module.
-    
+
     .DESCRIPTION
     The `Install-WhiskeyPowerShellModule` function installs a PowerShell module into a "PSModules" directory in the current working directory. It returns the path to the module.
 
@@ -12,18 +12,18 @@ function Install-WhiskeyPowerShellModule
     Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.3.0'
 
     This example will install the PowerShell module `Pester` at version `4.3.0` version in the `PSModules` directory.
-    
+
     .EXAMPLE
-    Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.*' 
+    Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.*'
 
     Demonstrates that you can use wildcards to choose the latest minor version of a module.
-    
+
     .EXAMPLE
     Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.3.0' -ErrorAction Stop
 
     Demonstrates how to fail a build if installing the module fails by setting the `ErrorAction` parameter to `Stop`.
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -45,6 +45,8 @@ function Install-WhiskeyPowerShellModule
 
     Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
+    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
+
     $modulesRoot = Join-Path -Path $Path -ChildPath $powerShellModulesDirectoryName
     if( -not (Test-Path -Path $modulesRoot -PathType Container) )
     {
@@ -64,7 +66,7 @@ function Install-WhiskeyPowerShellModule
     {
         return
     }
-                
+
     Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
 
     if( -not (Test-Path -Path $expectedPath -PathType Container) )
