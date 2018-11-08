@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `Install-WhiskeyPowerShellModule` function fails when NuGet package provider is not initialized.
+* Fixed: `Install-WhiskeyPowerShellModule` and `Resolve-WhiskeyPowerShellModule` functions may when NuGet package provider is not initialized.
 '@
         } # End of PSData hashtable
 
