@@ -50,7 +50,7 @@ function ThenNuGetPackageUninstalled
         $WithName = 'NUnit.Runners'
     )
 
-    $Name = '{0}.{1}' -f $WithName, $Version
+    $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
@@ -80,7 +80,7 @@ function ThenNuGetPackageNotUninstalled
         $WithError
     )
 
-    $Name = '{0}.{1}' -f $WithName, $Version
+    $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
