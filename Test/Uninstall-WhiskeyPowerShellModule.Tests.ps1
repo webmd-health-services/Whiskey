@@ -1,7 +1,9 @@
 
 $powerShellModulesDirectoryName = 'PSModules'
+$PSModuleAutoLoadingPreference = 'None'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyPowerShellModule.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Uninstall-WhiskeyPowerShellModule.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1' -Resolve)
 
@@ -103,25 +105,25 @@ function ThenPowerShellModuleUninstalled
     }
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 4' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 4' {
     GivenAnInstalledPowerShellModule -LikePowerShell4
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell4
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5' {
     GivenAnInstalledPowerShellModule -LikePowerShell5
     WhenUninstallingPowerShellModule
     ThenPowerShellModuleUninstalled -LikePowerShell5
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn an empty Version' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5 with an empty Version' {
     GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion ''
     WhenUninstallingPowerShellModule -WithVersion ''
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion ''
 }
 
-Describe 'Uninstall-WhiskeyTool.when given a PowerShell Module under PowerShell 5 witn a wildcard Version' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5 with a wildcard Version' {
     GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '0.37.*'
     WhenUninstallingPowerShellModule -WithVersion '4.*'
     ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '0.37.*'
