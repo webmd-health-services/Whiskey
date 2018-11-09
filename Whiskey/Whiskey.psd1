@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.38.1'
+    ModuleVersion = '0.38.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `NUnit3` task fails to find `ReportGenerator` executable when using `ReportGenerator-4.0.0`.
+* Fixed: `Install-WhiskeyPowerShellModule` and `Resolve-WhiskeyPowerShellModule` functions may fail when NuGet package provider is not initialized.
 '@
         } # End of PSData hashtable
 
