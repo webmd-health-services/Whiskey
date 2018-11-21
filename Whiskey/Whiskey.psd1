@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.38.2'
+    ModuleVersion = '0.39.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -22,6 +22,8 @@
 
     # Company or vendor of this module
     CompanyName = 'WebMD Health Services'
+
+    CompatiblePSEditions = @( 'Desktop', 'Core' )
 
     # Copyright statement for this module
     Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
@@ -144,7 +146,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `Install-WhiskeyPowerShellModule` and `Resolve-WhiskeyPowerShellModule` functions may fail when NuGet package provider is not initialized.
+* Whiskey can now run under PowerShell Core.
 '@
         } # End of PSData hashtable
 
