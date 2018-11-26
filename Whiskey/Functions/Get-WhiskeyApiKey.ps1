@@ -42,7 +42,8 @@ function Get-WhiskeyApiKey
         Stop-WhiskeyTask -TaskContext $Context `
                          -Message ('API key ''{0}'' does not exist in Whiskey''s API key store. Use the `Add-WhiskeyApiKey` function to add this API key, e.g. `Add-WhiskeyApiKey -Context $context -ID ''{0}'' -Value $apikey`.' -f $ID) `
                          -PropertyName $PropertyName
+        return
     }
-    
+
     return $Context.ApiKeys[$ID]
 }

@@ -31,19 +31,20 @@ function Invoke-WhiskeyExec
     if ( -not $path )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be the Path to the executable you want the Exec task to run, e.g.
-        
+
             Build:
             - Exec:
                 Path: cmd.exe
-            
+
         ')
+        return
     }
 
     if ( -not [IO.Path]::IsPathRooted($path) )
     {
         $path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
     }
-    
+
     if ( (Test-Path -Path $path -PathType Leaf) )
     {
         $path = $path | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
@@ -54,6 +55,7 @@ function Invoke-WhiskeyExec
         if( -not (Get-Command -Name $path -CommandType Application -ErrorAction Ignore) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Executable ''{0}'' does not exist. We checked if the executable is at that path on the file system and if it is in your PATH environment variable.' -f $path)
+            return
         }
     }
 
@@ -62,7 +64,7 @@ function Invoke-WhiskeyExec
     # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately terminates the build. Full stop.
     & $path $TaskParameter['Argument']
     $exitCode = $LASTEXITCODE
-    
+
     $successExitCodes = $TaskParameter['SuccessExitCode']
     if( -not $successExitCodes )
     {
@@ -79,7 +81,7 @@ function Invoke-WhiskeyExec
                 return
             }
         }
-        
+
         if( $successExitCode -match '^(<|<=|>=|>)\s*(\d+)$' )
         {
             $operator = $Matches[1]
@@ -120,7 +122,7 @@ function Invoke-WhiskeyExec
                 }
             }
         }
-        
+
         if( $successExitCode -match '^(\d+)\.\.(\d+)$' )
         {
             if( $exitCode -ge [int]$Matches[1] -and $exitCode -le [int]$Matches[2] )
@@ -130,6 +132,6 @@ function Invoke-WhiskeyExec
             }
         }
     }
-    
+
     Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}'' returned with an exit code of ''{1}''. View the build output to see why the executable''s process failed.' -F $TaskParameter['Path'],$exitCode)
 }

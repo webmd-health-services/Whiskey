@@ -1,4 +1,4 @@
- function Invoke-WhiskeyPipelineTask 
+ function Invoke-WhiskeyPipelineTask
 {
     [CmdletBinding()]
     [Whiskey.Task("Pipeline", SupportsClean=$true, SupportsInitialize=$true)]
@@ -18,20 +18,21 @@
     if( -not $TaskParameter['Name'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Name is a mandatory property, but is missing or doesn''t have a value. It should be set to a list of pipeline names you want to run as part of another pipeline, e.g.
-        
+
     Build:
     - Pipeline:
         Name:
         - One
         - Two
-        
+
     One:
     - TASK
-    
+
     Two:
     - TASK
- 
+
 ')
+    return
     }
 
     $currentPipeline = $TaskContext.PipelineName
