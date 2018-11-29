@@ -145,6 +145,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: `ExceptBy` common task property was documented but never implemented.
+* Updated 7-Zip binaries to 18.05 (from 16.04) to resolve vulnerability CVE-2018-10115.
 '@
         } # End of PSData hashtable
 
