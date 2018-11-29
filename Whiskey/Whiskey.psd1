@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.38.2'
+    ModuleVersion = '0.38.3'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,7 +144,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `Install-WhiskeyPowerShellModule` and `Resolve-WhiskeyPowerShellModule` functions may fail when NuGet package provider is not initialized.
+* Fixed: `ExceptBy` common task property was documented but never implemented.
+* Updated 7-Zip binaries to 18.05 (from 16.04) to resolve vulnerability CVE-2018-10115.
 '@
         } # End of PSData hashtable
 

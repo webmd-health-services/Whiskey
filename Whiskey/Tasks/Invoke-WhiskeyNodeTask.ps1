@@ -86,7 +86,7 @@ Build:
 - Node:
   NpmScript:
   - build
-  - test           
+  - test
 '@)
         }
 
@@ -109,6 +109,7 @@ Build:
         {
             $summary = $results | Format-List | Out-String
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NSP, the Node Security Platform, found the following security vulnerabilities in your dependencies (exit code: {0}):{1}{2}' -f $LASTEXITCODE,[Environment]::NewLine,$summary)
+            return
         }
 
         Update-Progress -Status ('license-checker') -Step ($stepNum++)
@@ -122,14 +123,15 @@ Build:
         if( -not $report )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('License Checker failed to output a valid JSON report.')
+            return
         }
 
         Write-WhiskeyTiming -Message ('Converting license report.')
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
-        [object[]]$newReport = $report | 
-                                    Get-Member -MemberType NoteProperty | 
-                                    Select-Object -ExpandProperty 'Name' | 
+        [object[]]$newReport = $report |
+                                    Get-Member -MemberType NoteProperty |
+                                    Select-Object -ExpandProperty 'Name' |
                                     ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
         # show the report

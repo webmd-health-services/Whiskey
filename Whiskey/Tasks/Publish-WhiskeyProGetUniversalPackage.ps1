@@ -33,6 +33,7 @@ function Publish-WhiskeyProGetUniversalPackage
         $exampleTask
         
         Use the `Add-WhiskeyCredential` function to add credentials to the build."
+        return
     }
     
     if( -not $TaskParameter['Uri'] )
@@ -41,6 +42,7 @@ function Publish-WhiskeyProGetUniversalPackage
         
         $exampleTask
         "
+        return
     }
 
     if( -not $TaskParameter['FeedName'] )
@@ -49,6 +51,7 @@ function Publish-WhiskeyProGetUniversalPackage
         
         $exampleTask
         "
+        return
     }
     
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
@@ -100,6 +103,7 @@ function Publish-WhiskeyProGetUniversalPackage
     if( -not $packages )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('Found no packages to publish. By default, the PublishProGetUniversalPackage task publishes all files with a .upack extension in the output directory. Check your whiskey.yml file to make sure you''re running the `ProGetUniversalPackage` task before this task (or some other task that creates universal ProGet packages). To publish other .upack files, set this task''s `Path` property to the path to those files. If you don''t want your build to fail when there are missing packages, then set this task''s `AllowMissingPackage` property to `true`.' -f $TaskContext.OutputDirectory)
+        return
     }
 
     $feedName = $TaskParameter['FeedName']

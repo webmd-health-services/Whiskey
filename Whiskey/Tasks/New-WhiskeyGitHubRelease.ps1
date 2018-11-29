@@ -93,6 +93,7 @@ function New-WhiskeyGitHubRelease
                 $Global:Error.RemoveAt(0)
             }
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('GitHub API call to "{0}" failed: {1}' -f $uri,$_)
+            return
         }
     }
 
