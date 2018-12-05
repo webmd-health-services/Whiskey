@@ -144,8 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Updating to YAML.NET 5.2.1 (from 4.2.2) because of security vulnerabilities in the old version.
-* Switched to .NET Core version of YAML.NET. Whiskey now requires .NET Framework 4.6.
+* Fixed: `GetPowerShellModule` task assumes that a module is already installed if an empty directory for that module exists in the `PSModules` directory.
 '@
         } # End of PSData hashtable
 
