@@ -48,12 +48,13 @@ function ConvertTo-Yaml
         }
 
         $options = 0
-        if ($JsonCompatible) {
-            # No indent options :~(
-            $options = [YamlDotNet.Serialization.SerializationOptions]::JsonCompatible
-        }
         try {
-            $serializer = New-Object "YamlDotNet.Serialization.Serializer" $options
+            $builder = New-Object 'YamlDotNet.Serialization.SerializerBuilder'
+            if ($JsonCompatible) {
+                # No indent options :~(
+                $builder.JsonCompatible()
+            }
+            $serializer = $builder.Build()
             $serializer.Serialize($wrt, $d)
         } finally {
             $wrt.Close()
