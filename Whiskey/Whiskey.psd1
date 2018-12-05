@@ -145,6 +145,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: `GetPowerShellModule` task assumes that a module is already installed if an empty directory for that module exists in the `PSModules` directory.
+* Fixed: `PSModules` directory isn't removed removed during `Clean` mode after all contained modules have been deleted.
 '@
         } # End of PSData hashtable
 
