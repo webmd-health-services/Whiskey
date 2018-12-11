@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.38.4'
+    ModuleVersion = '0.38.5'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -144,8 +144,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Updating to YAML.NET 5.2.1 (from 4.2.2) because of security vulnerabilities in the old version.
-* Switched to .NET Core version of YAML.NET. Whiskey now requires .NET Framework 4.6.
+* Fixed: `GetPowerShellModule` task assumes that a module is already installed if an empty directory for that module exists in the `PSModules` directory.
+* Fixed: `PSModules` directory isn't removed removed during `Clean` mode after all contained modules have been deleted.
 '@
         } # End of PSData hashtable
 
