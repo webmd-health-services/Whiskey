@@ -45,9 +45,10 @@ function ConvertTo-WhiskeyTask
         return
     }
 
-    $options = [YamlDotNet.Serialization.SerializationOptions]::None
+    # Convert back to YAML to display its invalidness to the user.
+    $builder = New-Object 'YamlDotNet.Serialization.SerializerBuilder'
     $yamlWriter = New-Object "System.IO.StringWriter"
-    $serializer = New-Object "YamlDotNet.Serialization.Serializer" $options
+    $serializer = $builder.Build()
     $serializer.Serialize($yamlWriter, $InputObject)
     $yaml = $yamlWriter.ToString()
     $yaml = $yaml -split [regex]::Escape([Environment]::NewLine) |

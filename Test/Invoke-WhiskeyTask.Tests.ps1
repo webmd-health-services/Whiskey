@@ -774,12 +774,43 @@ Describe 'Invoke-WhiskeyTask.when task should only be run by build server and be
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
 }
 
-Describe 'Invoke-WhiskeyTask.when OnlyBy has an invalid value' {
+foreach ($property in @('OnlyBy', 'ExceptBy'))
+{
+    Describe ('Invoke-WhiskeyTask.when {0} has an invalid value' -f $property) {
+        Init
+        GivenRunByDeveloper
+        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+        WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; $property = 'Somebody' } -ErrorAction SilentlyContinue
+        ThenThrewException 'invalid value'
+        ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when task should run except by build server and being run by build server' {
+    Init
+    GivenRunByBuildServer
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptBy' = 'BuildServer' }
+    ThenPipelineSucceeded
+    ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
+}
+
+Describe 'Invoke-WhiskeyTask.when task should run except by build server and being run by developer' {
     Init
     GivenRunByDeveloper
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Somebody' } -ErrorAction SilentlyContinue
-    ThenThrewException 'invalid value'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptBy' = 'BuildServer' }
+    ThenPipelineSucceeded
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = 'somefile.ps1' }
+}
+
+Describe 'Invoke-WhiskeyTask.when OnlyBy and ExceptBy properties are both defined' {
+    Init
+    GivenRunByDeveloper
+    GivenScmBranch 'develop'
+    Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer'; 'ExceptBy' = 'Developer' } -ErrorAction SilentlyContinue
+    ThenThrewException 'This\ task\ defines\ both\ "OnlyBy"\ and\ "ExceptBy"\ properties'
     ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
 }
 
@@ -1166,7 +1197,7 @@ Describe 'Invoke-WhiskeyTask.when OnlyDuring or ExceptDuring contains invalid va
     }
 }
 
-foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring' ) )
 {
     Describe ('Invoke-WhiskeyTask.when {0} property has variable for a value' -f $commonPropertyName) {
         Init
@@ -1206,7 +1237,7 @@ Describe ('Invoke-WhiskeyTask.when WorkingDirectory property has a variable for 
     ThenTaskRanInWorkingDirectory 'Snafu'
 }
 
-foreach( $commonPropertyName in @( 'OnlyBy', 'OnlyDuring', 'ExceptDuring' ) )
+foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring' ) )
 {
     Describe ('Invoke-WhiskeyTask.when {0} property comes from defaults' -f $commonPropertyName) {
         Init

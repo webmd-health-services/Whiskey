@@ -8,28 +8,29 @@ function Invoke-WhiskeyPester3Task
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
         $TaskContext,
-    
+
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g. 
-        
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g.
+
         Build:
         - Pester3:
             Path:
             - My.Tests.ps1
             - Tests')
+        return
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    
+
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
     $outputFile = [IO.Path]::GetFullPath($outputFile)
 
@@ -45,8 +46,8 @@ function Invoke-WhiskeyPester3Task
                                     }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
-    } 
-    
+    }
+
     # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
     # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
     $informationActionParameter = @{ }

@@ -8,24 +8,25 @@ function Invoke-WhiskeyPester4Task
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
         $TaskContext,
-    
+
         [Parameter(Mandatory=$true)]
         [hashtable]
         $TaskParameter
     )
-    
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     if( -not ($TaskParameter.ContainsKey('Path')))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g. 
-        
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g.
+
         Build:
         - Pester4:
             Path:
             - My.Tests.ps1
             - Tests')
+        return
     }
 
     $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
@@ -51,9 +52,10 @@ function Invoke-WhiskeyPester4Task
         if( -not $path )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run. Property "Exclude" matched all paths in the "Path" property. Please update your exclusion rules to include at least one test. View verbose output to see what exclusion filters excluded what test files.')
+            return
         }
     }
-    
+
     [int]$describeDurationCount = 0
     $describeDurationCount = $TaskParameter['DescribeDurationReportCount']
     [int]$itDurationCount = 0
@@ -80,7 +82,7 @@ function Invoke-WhiskeyPester4Task
 
         $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
 
-        $result.TestResult | 
+        $result.TestResult |
             Group-Object 'Describe' |
             ForEach-Object {
                 $totalTime = [TimeSpan]::Zero
@@ -92,13 +94,13 @@ function Invoke-WhiskeyPester4Task
             } | Sort-Object -Property 'Duration' -Descending |
             Select-Object -First $describeCount |
             Format-Table -AutoSize
-        
+
         $result.TestResult |
             Sort-Object -Property 'Time' -Descending |
             Select-Object -First $itCount |
             Format-Table -AutoSize -Property 'Describe','Name','Time'
-    } 
-    
+    }
+
     # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
     # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
     $informationActionParameter = @{ }

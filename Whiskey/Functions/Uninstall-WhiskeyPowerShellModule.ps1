@@ -4,7 +4,7 @@ function Uninstall-WhiskeyPowerShellModule
     <#
     .SYNOPSIS
     Removes downloaded PowerShell modules.
-    
+
     .DESCRIPTION
     The `Uninstall-WhiskeyPowerShellModule` function deletes downloaded PowerShell modules from Whiskey's local "PSModules" directory.
 
@@ -12,13 +12,12 @@ function Uninstall-WhiskeyPowerShellModule
     Uninstall-WhiskeyPowerShellModule -Name 'Pester'
 
     This example will uninstall the PowerShell module `Pester` from Whiskey's local `PSModules` directory.
-    
+
     .EXAMPLE
     Uninstall-WhiskeyPowerShellModule -Name 'Pester' -ErrorAction Stop
 
     Demonstrates how to fail a build if uninstalling the module fails by setting the `ErrorAction` parameter to `Stop`.
     #>
-    
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -47,7 +46,13 @@ function Uninstall-WhiskeyPowerShellModule
         if( Test-Path -Path $removeModule -PathType Container )
         {
             Remove-Item -Path $removeModule -Recurse -Force
-            return
+            break
         }
+    }
+
+    $psmodulesDirEmpty = $null -eq (Get-ChildItem -Path $modulesRoot -File -Recurse)
+    if( $psmodulesDirEmpty )
+    {
+        Remove-Item -Path $modulesRoot -Recurse -Force
     }
 }

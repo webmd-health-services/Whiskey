@@ -1526,7 +1526,7 @@
         <member name="M:YamlDotNet.Core.Scanner.UnrollIndent(System.Int32)">
             <summary>
             Pop indentation levels from the indents stack until the current level
-            becomes less or equal to the column.  For each intendation level, append
+            becomes less or equal to the column.  For each indentation level, append
             the BLOCK-END token.
             </summary>
         </member>
@@ -1625,8 +1625,8 @@
         </member>
         <member name="M:YamlDotNet.Core.Scanner.ScanBlockScalarBreaks(System.Int32,System.Text.StringBuilder,YamlDotNet.Core.Mark,YamlDotNet.Core.Mark@)">
             <summary>
-            Scan intendation spaces and line breaks for a block scalar.  Determine the
-            intendation level if needed.
+            Scan indentation spaces and line breaks for a block scalar.  Determine the
+            indentation level if needed.
             </summary>
         </member>
         <member name="M:YamlDotNet.Core.Scanner.FetchFlowScalar(System.Boolean)">
@@ -2414,16 +2414,6 @@
             <summary>
             Adapts an <see cref="T:System.Collections.Generic.IDictionary`2" /> to <see cref="T:System.Collections.IDictionary" />
             because not all generic dictionaries implement <see cref="T:System.Collections.IDictionary" />.
-            </summary>
-        </member>
-        <member name="T:YamlDotNet.UTF7Encoding">
-            <summary>
-            Mock UTF7Encoding to avoid having to add #if all over the place
-            </summary>
-        </member>
-        <member name="T:YamlDotNet.SerializableAttribute">
-            <summary>
-            Mock SerializableAttribute to avoid having to add #if all over the place
             </summary>
         </member>
         <member name="M:YamlDotNet.ReflectionExtensions.HasDefaultConstructor(System.Type)">
@@ -3576,6 +3566,14 @@
             Converter for System.Guid.
             </summary>
         </member>
+        <member name="T:YamlDotNet.Serialization.Converters.SystemTypeConverter">
+            <summary>
+            Converter for System.Type.
+            </summary>
+            <remarks>
+            Converts <see cref="T:System.Type" /> to a scalar containing the assembly qualified name of the type.
+            </remarks>
+        </member>
         <member name="T:YamlDotNet.Serialization.Deserializer">
             <summary>
             Deserializes objects from the YAML format.
@@ -3752,6 +3750,14 @@
             decorator for another IEventEmitter.
             </summary>
         </member>
+        <member name="M:YamlDotNet.Serialization.IDeserializer.Deserialize(YamlDotNet.Core.IParser,System.Type)">
+            <summary>
+            Deserializes an object of the specified type.
+            </summary>
+            <param name="parser">The <see cref="T:YamlDotNet.Core.IParser" /> from where to deserialize the object.</param>
+            <param name="type">The static type of the object to deserialize.</param>
+            <returns>Returns the deserialized object.</returns>
+        </member>
         <member name="T:YamlDotNet.Serialization.INamingConvention">
             <summary>
             Translates property names according to a specific convention.
@@ -3921,6 +3927,42 @@
             <summary>
             Registers the component in place of the already registered component of type <typeparamref name="TRegistrationType" />.
             </summary>
+        </member>
+        <member name="M:YamlDotNet.Serialization.ISerializer.Serialize(System.IO.TextWriter,System.Object)">
+            <summary>
+            Serializes the specified object.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter" /> where to serialize the object.</param>
+            <param name="graph">The object to serialize.</param>
+        </member>
+        <member name="M:YamlDotNet.Serialization.ISerializer.Serialize(System.Object)">
+            <summary>
+            Serializes the specified object into a string.
+            </summary>
+            <param name="graph">The object to serialize.</param>
+        </member>
+        <member name="M:YamlDotNet.Serialization.ISerializer.Serialize(System.IO.TextWriter,System.Object,System.Type)">
+            <summary>
+            Serializes the specified object.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter" /> where to serialize the object.</param>
+            <param name="graph">The object to serialize.</param>
+            <param name="type">The static type of the object to serialize.</param>
+        </member>
+        <member name="M:YamlDotNet.Serialization.ISerializer.Serialize(YamlDotNet.Core.IEmitter,System.Object)">
+            <summary>
+            Serializes the specified object.
+            </summary>
+            <param name="emitter">The <see cref="T:YamlDotNet.Core.IEmitter" /> where to serialize the object.</param>
+            <param name="graph">The object to serialize.</param>
+        </member>
+        <member name="M:YamlDotNet.Serialization.ISerializer.Serialize(YamlDotNet.Core.IEmitter,System.Object,System.Type)">
+            <summary>
+            Serializes the specified object.
+            </summary>
+            <param name="emitter">The <see cref="T:YamlDotNet.Core.IEmitter" /> where to serialize the object.</param>
+            <param name="graph">The object to serialize.</param>
+            <param name="type">The static type of the object to serialize.</param>
         </member>
         <member name="T:YamlDotNet.Serialization.ITypeInspector">
             <summary>
@@ -4132,25 +4174,12 @@
             Use the static type of values instead of their actual type.
             </summary>
         </member>
-        <member name="M:YamlDotNet.Serialization.Serializer.#ctor(YamlDotNet.Serialization.SerializationOptions,YamlDotNet.Serialization.INamingConvention,YamlDotNet.Serialization.YamlAttributeOverrides)">
-            <summary>
-            
-            </summary>
-            <param name="options">Options that control how the serialization is to be performed.</param>
-            <param name="namingConvention">Naming strategy to use for serialized property names</param>
-            <param name="overrides">Yaml attribute overrides</param>
-        </member>
-        <member name="M:YamlDotNet.Serialization.Serializer.RegisterTypeConverter(YamlDotNet.Serialization.IYamlTypeConverter)">
-            <summary>
-            Registers a type converter to be used to serialize and deserialize specific types.
-            </summary>
-        </member>
         <member name="M:YamlDotNet.Serialization.Serializer.#ctor">
             <summary>
             Initializes a new instance of <see cref="T:YamlDotNet.Serialization.Serializer" /> using the default configuration.
             </summary>
             <remarks>
-            To customize the bahavior of the serializer, use <see cref="T:YamlDotNet.Serialization.SerializerBuilder" />.
+            To customize the behavior of the serializer, use <see cref="T:YamlDotNet.Serialization.SerializerBuilder" />.
             </remarks>
         </member>
         <member name="M:YamlDotNet.Serialization.Serializer.#ctor(YamlDotNet.Serialization.IValueSerializer)">
@@ -4210,6 +4239,7 @@
             with the desired customizations.
             </summary>
         </member>
+        <!-- Badly formed XML comment ignored for member "M:YamlDotNet.Serialization.SerializerBuilder.WithMaximumRecursion(System.Int32)" -->
         <member name="M:YamlDotNet.Serialization.SerializerBuilder.WithEventEmitter``1(System.Func{YamlDotNet.Serialization.IEventEmitter,``0})">
             <summary>
             Registers an additional <see cref="T:YamlDotNet.Serialization.IEventEmitter" /> to be used by the serializer.
