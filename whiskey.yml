@@ -10,9 +10,6 @@ Build:
     Path: Whiskey\Whiskey.psd1
 
 - GetPowerShellModule:
-    Name: Carbon
-
-- GetPowerShellModule:
     Name: BuildMasterAutomation
     Version: 0.5.*
 
