@@ -317,8 +317,18 @@ function ThenPesterShouldHaveRun
     foreach( $reportPath in $testReports )
     {
         It ('should publish {0} test results' -f $reportPath) {
-            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
+            Write-Debug ('ReportsIn:  {0}' -f $ReportsIn)
+            Write-Debug ('reportPath: {0}' -f $reportPath)
+            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
+            Write-Debug ('reportPath: {0}' -f $reportPath)
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
+                              -ModuleName 'Whiskey' `
+                              -ParameterFilter { 
+                                    Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
+                                    $result = $Path -eq $reportPath 
+                                    Write-Debug ('  {0}' -f $result) 
+                                    return $result
+                                }
         }
     }
 }
