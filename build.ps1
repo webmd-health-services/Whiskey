@@ -55,7 +55,7 @@ try
                             '-p:VersionPrefix={0}' -f $version
                             if( $buildInfo )
                             {
-                                '-p:VersionSuffix:{0}' -f $buildInfo
+                                '-p:VersionSuffix={0}' -f $buildInfo
                             }
                     }
     dotnet build --configuration=$MSBuildConfiguration $versionParams
