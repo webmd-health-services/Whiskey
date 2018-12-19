@@ -46,12 +46,12 @@ Build:
             - "*\\Test\\NUnit3.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNodeLicenseChecker.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyPester3Task.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyPester4Task.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyPowerShell.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
             - "*\\Test\\NuGetPack.Tests.ps1"
             - "*\\Test\\Parallel.Tests.ps1"
+            - "*\\Test\\Pester4.Tests.ps1"
             - "*\\Test\\Publish-WhiskeyNuGetPackage.Tests.ps1"
             - "*\\Test\\Uninstall-WhiskeyTool.Tests.ps1"
     - Tasks:
@@ -61,7 +61,7 @@ Build:
     - Tasks:
         Pester4:
             Path:
-            - Test\Invoke-WhiskeyPester4Task.Tests.ps1
+            - Test\Pester4.Tests.ps1
     - Tasks:
         Pester4:
             Path:
