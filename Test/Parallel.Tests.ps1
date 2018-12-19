@@ -92,9 +92,9 @@ function ThenNoErrors
 
 Describe 'Parallel.when running multiple queues' {
     Init
-    GivenFile 'one.ps1' '1 | sc one.txt'
-    GivenFile 'two.ps1' '2 | sc two.txt'
-    GivenFile 'three.ps1' '3 | sc three.txt'
+    GivenFile 'one.ps1' '1 | Set-Content one.txt'
+    GivenFile 'two.ps1' '2 | Set-Content two.txt'
+    GivenFile 'three.ps1' '3 | Set-Content three.txt'
     $task = Import-WhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
@@ -163,8 +163,8 @@ Queues:
 
 Describe 'Parallel.when one queue writes an error' {
     Init
-    GivenFile 'one.ps1' 'Write-Error "fubar!" ; 1 | sc "one.txt"'
-    GivenFile 'two.ps1' '2 | sc "two.txt"'
+    GivenFile 'one.ps1' 'Write-Error "fubar!" ; 1 | Set-Content "one.txt"'
+    GivenFile 'two.ps1' '2 | Set-Content "two.txt"'
     $task = Import-WhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
@@ -308,7 +308,7 @@ Build:
 
 Describe 'Parallel.when running pipeline task' {
     Init
-    GivenFile 'one.ps1' '1 | sc one.txt'
+    GivenFile 'one.ps1' '1 | Set-Content one.txt'
     GivenFile 'whiskey.yml' @'
 Build:
 - Parallel:
