@@ -127,7 +127,10 @@ function Init
 
 function Reset
 {
-    Remove-Module -Force 'VSSetup'
+    if( (Get-Module -Name 'VSSetup') )
+    {
+        Remove-Module -Force 'VSSetup'
+    }
 }
 
 function WhenRunningTask
