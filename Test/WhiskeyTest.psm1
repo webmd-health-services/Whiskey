@@ -1,5 +1,20 @@
-$numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
-$numRobocopyThreads *= 2
+$numRobocopyThreads = 1
+if( (Get-Command 'Get-CimInstance' -ErrorAction Ignore) )
+{
+    Write-Debug 'Get-CimInstance exists.'
+    $numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | 
+        Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | 
+        Measure-Object -Sum | 
+        Select-Object -ExpandProperty 'Sum'
+    $numRobocopyThreads *= 2
+}
+else
+{
+    if( [Environment]::ProcessorCount )
+    {
+        $numRobocopyThreads = [Environment]::ProcessorCount * 2
+    }
+}
 
 $downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath '.downloadcache'
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
@@ -370,7 +385,7 @@ function Remove-Node
 function Remove-DotNet
 {
     Get-CimInstance win32_process -filter 'name = "dotnet.exe"' | 
-        Where-Object { $_.ExecutablePath -like ('{0}\*\.dotnet\dotnet.exe' -f $env:TEMP) } |
+        Where-Object { $_.ExecutablePath -like ('{0}\*\.dotnet\dotnet.exe' -f ([IO.Path]::GetTempPath())) } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
     Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
