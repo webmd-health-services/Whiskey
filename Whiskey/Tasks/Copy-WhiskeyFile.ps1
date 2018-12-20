@@ -83,7 +83,7 @@ Build:
                                 $path = Resolve-Path -Path $path -ErrorAction Ignore | Select-Object -ExpandProperty 'ProviderPath'
                                 if( -not $path )
                                 {
-                                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('DestinationDirectory[{0}]:  Wildcard pattern "{1}" doesn"t point to an existing directory.' -f $idx, $_)
+                                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('DestinationDirectory[{0}]:  Wildcard pattern "{1}" doesn''t point to an existing directory.' -f $idx, $_)
                                     return
                                 }
                                 $path

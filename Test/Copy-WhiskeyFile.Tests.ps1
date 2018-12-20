@@ -238,7 +238,7 @@ Describe 'CopyFile Task.when destination directory contains wildcards' {
 Describe 'CopyFile Task.when destination directory contains wildcards and doesn''t exist' {
     GivenFiles 'file1.txt'
     WhenCopyingFiles 'file1.txt' -To '..\Dest*'
-    ThenTaskFails -WithErrorMessage 'Wildcard pattern ''\.\.\\Dest\*'' doesn''t'
+    ThenTaskFails -WithErrorMessage 'Wildcard\ pattern\ "\.\.\\Dest\*"\ doesn''t'
 }
 
 Describe 'CopyFile Task.when destination directory is an absolute path' {
