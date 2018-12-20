@@ -69,8 +69,10 @@ function Install-WhiskeyTool
     }
     # Back slashes in mutex names are reserved.
     $mutexName = $mutexName -replace '\\','/'
+    $mutexName = $mutexName -replace '/','-'
     $startedWaitingAt = Get-Date
     $startedUsingAt = Get-Date
+    Write-Debug -Message ('Creating mutex "{0}".' -f $mutexName)
     $installLock = New-Object 'Threading.Mutex' $false,$mutexName
     #$DebugPreference = 'Continue'
     Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)

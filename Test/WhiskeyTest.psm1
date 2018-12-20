@@ -384,8 +384,8 @@ function Remove-Node
 
 function Remove-DotNet
 {
-    Get-CimInstance win32_process -filter 'name = "dotnet.exe"' | 
-        Where-Object { $_.ExecutablePath -like ('{0}\*\.dotnet\dotnet.exe' -f ([IO.Path]::GetTempPath())) } |
+    Get-Process -Name 'dotnet' -ErrorAction Ignore |
+        Where-Object { $_.Path -like ('{0}\*\.dotnet\dotnet' -f ([IO.Path]::GetTempPath())) } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
     Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
