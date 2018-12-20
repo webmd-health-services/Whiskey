@@ -153,13 +153,13 @@ Describe 'Resolve-WhiskeyVariable.when passed a string with no variable' {
 Describe 'Resolve-WhiskeyVariable.when passed a string with an environment variable' {
     Init
     WhenResolving '$(COMPUTERNAME)'
-    ThenValueIs $env:COMPUTERNAME
+    ThenValueIs [Environment]::MachineName
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a string with multiple variables' {
     Init
     WhenResolving '$(USERNAME)$(COMPUTERNAME)'
-    ThenValueIs ('{0}{1}' -F $env:USERNAME,$env:COMPUTERNAME)
+    ThenValueIs ('{0}{1}' -F [Environment]::UserName,[Environment]::MachineName)
 }
     
 Describe 'Resolve-WhiskeyVariable.when passed a non-string' {
@@ -171,25 +171,25 @@ Describe 'Resolve-WhiskeyVariable.when passed a non-string' {
 Describe 'Resolve-WhiskeyVariable.when passed an array' {
     Init
     WhenResolving @( '$(COMPUTERNAME)', 'no variable', '4' )
-    ThenValueIs @( $env:COMPUTERNAME, 'no variable', '4' )
+    ThenValueIs @( [Environment]::MachineName, 'no variable', '4' )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a hashtable' {
     Init
     WhenResolving @{ 'Key1' = '$(COMPUTERNAME)'; 'Key2' = 'no variable'; 'Key3' = '4' }
-    ThenValueIs @{ 'Key1' = $env:COMPUTERNAME; 'Key2' = 'no variable'; 'Key3' = '4' }
+    ThenValueIs @{ 'Key1' = [Environment]::MachineName; 'Key2' = 'no variable'; 'Key3' = '4' }
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a hashtable with an array and hashtable in it' {
     Init
     WhenResolving @{ 'Key1' = @{ 'SubKey1' = '$(COMPUTERNAME)'; }; 'Key2' = @( '$(USERNAME)', '4' ) }
-    ThenValueIs @{ 'Key1' = @{ 'SubKey1' = $env:COMPUTERNAME; }; 'Key2' = @( $env:USERNAME, '4' ) }
+    ThenValueIs @{ 'Key1' = @{ 'SubKey1' = [Environment]::MachineName; }; 'Key2' = @( [Environment]::UserName, '4' ) }
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed an array with an array and hashtable in it' {
     Init
     WhenResolving @( @{ 'SubKey1' = '$(COMPUTERNAME)'; }, @( '$(USERNAME)', '4' ) )
-    ThenValueIs @( @{ 'SubKey1' = $env:COMPUTERNAME; }, @( $env:USERNAME, '4' ) )
+    ThenValueIs @( @{ 'SubKey1' = [Environment]::MachineName; }, @( [Environment]::UserName, '4' ) )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a List object' {
@@ -199,7 +199,7 @@ Describe 'Resolve-WhiskeyVariable.when passed a List object' {
     $list.Add( 'fubar' )
     $list.Add( 'snafu' )
     WhenResolving @( $list )
-    ThenValueIs @( @( $env:COMPUTERNAME, 'fubar', 'snafu' ) )
+    ThenValueIs @( @( [Environment]::MachineName, 'fubar', 'snafu' ) )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a Dictionary' {
@@ -209,7 +209,7 @@ Describe 'Resolve-WhiskeyVariable.when passed a Dictionary' {
     $dictionary.Add( 'Key2', 'fubar' )
     $dictionary.Add( 'Key3', 'snafu' )
     WhenResolving @( $dictionary, '4' )
-    ThenValueIs @( @{ 'Key1' =  $env:COMPUTERNAME; 'Key2' = 'fubar'; 'Key3' = 'snafu' }, '4' )
+    ThenValueIs @( @{ 'Key1' =  [Environment]::MachineName; 'Key2' = 'fubar'; 'Key3' = 'snafu' }, '4' )
 }
 
 Describe 'Resolve-WhiskeyVariable.when using a custom variable' {
@@ -266,14 +266,14 @@ Describe 'Resolve-WhiskeyVariable.when escaping variable' {
 Describe 'Resolve-WhiskeyVariable.when escaping variable' {
     Init
     WhenResolving '$$(COMPUTERNAME) $(COMPUTERNAME)'
-    ThenValueIs ('$(COMPUTERNAME) {0}' -f $env:COMPUTERNAME)
+    ThenValueIs ('$(COMPUTERNAME) {0}' -f [Environment]::MachineName)
 }
 
 Describe 'Resolve-WhiskeyVariable.when nested variable' {
     Init
     GivenVariable 'FUBAR' '$(COMPUTERNAME)'
     WhenResolving '$(FUBAR) $$(COMPUTERNAME)'
-    ThenValueIs ('{0} $(COMPUTERNAME)' -f $env:COMPUTERNAME)
+    ThenValueIs ('{0} $(COMPUTERNAME)' -f [Environment]::MachineName)
 }
 
 Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
@@ -286,7 +286,7 @@ Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
 Describe 'Resolve-WhiskeyVariable.when property name is variable' {
     Init
     WhenResolving @{ '$(COMPUTERNAME)' = 'fubarsnafu' }
-    ThenValueIs @{ $env:COMPUTERNAME = 'fubarsnafu' }
+    ThenValueIs @{ [Environment]::MachineName = 'fubarsnafu' }
 }
 
 Describe 'Resolve-WhiskeyVariable.when value is empty' {

@@ -751,7 +751,7 @@ Describe 'Invoke-WhiskeyTask.when task has property variables' {
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
     WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
     ThenPipelineSucceeded
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = $env:COMPUTERNAME; }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = [Environment]::MachineName; }
     ThenNoOutput
 }
 
