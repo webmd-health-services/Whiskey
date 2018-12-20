@@ -27,7 +27,7 @@ function GivenGlobalDotNet
     $dotNetSdkPath = Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
     New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
 
-    $env:Path += (';{0}' -f $globalDotNetDirectory)
+    $env:Path += ('{0}{1}' -f [IO.Path]::PathSeparator,$globalDotNetDirectory)
 }
 
 function GivenDotNetSuccessfullyInstalls
