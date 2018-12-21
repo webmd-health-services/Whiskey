@@ -37,7 +37,7 @@ function New-WhiskeyProGetUniversalPackage
     {
         if( -not $TaskParameter.ContainsKey($mandatoryProperty) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''{0}'' is mandatory.' -f $mandatoryProperty)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "{0}" is mandatory.' -f $mandatoryProperty)
             return
         }
     }
@@ -57,13 +57,13 @@ function New-WhiskeyProGetUniversalPackage
     {
         if( ($version -notmatch '^\d+\.\d+\.\d+$') )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Version" is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
             return
         }
         [SemVersion.SemanticVersion]$semVer = $null
         if( -not ([SemVersion.SemanticVersion]::TryParse($version, [ref]$semVer)) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Version'' is not a valid semantic version.')
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Version" is not a valid semantic version.')
             return
         }
         $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$TaskContext.Version.SemVer2.Prerelease,$TaskContext.Version.SemVer2.Build
@@ -74,18 +74,29 @@ function New-WhiskeyProGetUniversalPackage
         $version = $TaskContext.Version
     }
 
-    $compressionLevel = [IO.Compression.CompressionLevel]::Fastest
+    $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
     if( $TaskParameter['CompressionLevel'] )
     {
-        $compressionLevel = $TaskParameter['CompressionLevel'] | ConvertFrom-WhiskeyYamlScalar -ErrorAction Ignore
-        if( $compressionLevel -eq $null )
+        $expectedValues = [enum]::GetValues([IO.Compression.CompressionLevel])
+        $compressionLevel = $TaskParameter['CompressionLevel']
+        if( $compressionLevel -notin $expectedValues )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CompressionLevel'': ''{0}'' is not a valid compression level. It must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
-            return
-        }
-        if( $compressionLevel -ge 5 )
-        {
-            $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
+            [int]$intCompressionLevel = 0
+            if( -not [int]::TryParse($TaskParameter['CompressionLevel'],[ref]$intCompressionLevel) )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "CompressionLevel": "{0}" is not a valid compression level. It must be one of: {1}' -f $TaskParameter['CompressionLevel'],($expectedValues -join ', '));
+                return
+            }
+            $compressionLevel = $intCompressionLevel
+            if( $compressionLevel -ge 5 )
+            {
+                $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
+            }
+            else
+            {
+                $compressionLevel = [IO.Compression.CompressionLevel]::Fastest
+            }
+            Write-Warning -Message ('The ProGetUniversalPackage task no longer supports integer-style compression levels. Please update your task in your whiskey.yml file to use one of the new values: {0}. We''re converting the number you provided, "{1}", to "{2}".' -f ($expectedValues -join ', '),$TaskParameter['CompressionLevel'],$compressionLevel)
         }
     }
 
@@ -160,7 +171,7 @@ function New-WhiskeyProGetUniversalPackage
             foreach( $sourcePath in $sourcePaths )
             {
                 $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
-                $relativePath = $relativePath.Trim("\")
+                $relativePath = $relativePath.Trim('\')
 
                 $addParams = @{ BasePath = $sourceRoot }
                 $overrideInfo = ''
@@ -188,7 +199,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( -not $TaskParameter['Include'] )
                 {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Include" is mandatory because "{0}" is in your "Path" property and it is a directory. The "Include" property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the "Include" list will be added to your package.' -f $sourcePath)
                     return
                 }
 

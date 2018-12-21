@@ -48,7 +48,7 @@ PROPERTIES
     * `ManifestProperties`: name/value mappings to be set in the package's upack.json file. Mandatory upack.json properties are automatically added if they are not specified (e.g. `Name` and `Description`). This property gets converted to JSON and is added to the upack.json as-is. See the upack.json [Manifest Specification](https://inedo.com/support/documentation/upack/universal-packages/metacontent-guidance/manifest-specification) for required properties and format.
     * `ThirdPartyPath`: a list of directores and files that should be included in the package unfiltered. These are paths that are copied without using the Include or Exclude elements. This is useful to include items you depend on but have no control over, like Node.js applications' node_modules directory.
     * `SourceRoot`: this changes the root path used to resolve the relative paths in the Path property. Use this element when your application's root directory isn't the same directory your whiskey.yml file is in. This path should be relative to the whiskey.yml file.
-    * `CompressionLevel`: the compression level to use when creating the package. Can be a value from 1 (fastest but largest file) to 9 (slowest but smallest file). The default is `1`.
+    * `CompressionLevel`: the compression level to use when creating the package. The default is `Optimal`. Valid values are `Optimal` (smaller package but created slower), `Fastest` (larger package but created faster), and `NoCompression` (largest file, created fastest, no compression).
     * `Version`: the package version (MAJOR.MINOR.PATCH), without any prerelease or build metadata. Usually, the version for the current build is used. Prerelease and build metadata for the current build is added.
 
 EXAMPLES

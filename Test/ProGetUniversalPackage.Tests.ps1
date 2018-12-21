@@ -86,7 +86,7 @@ function ThenTaskFails
         $error
     )
 
-    It ('should fail with error message that matches ''{0}''' -f $error) {
+    It ('should fail with error message that matches "{0}"' -f $error) {
         $Global:Error | Should match $error
     }
 }
@@ -580,7 +580,6 @@ function WhenPackaging
         $WithApplicationName,
         
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
         $CompressionLevel,
         
         [Parameter(ParameterSetName='WithTaskParameter')]
@@ -963,7 +962,7 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
 
         It 'should fail' {
             $threwException | Should Be $true
-            $Global:Error | Should -Match ('\bProperty\ ''{0}''\ is\ mandatory\b' -f $parameterName)
+            $Global:Error | Should -Match ('\bProperty\ "{0}"\ is\ mandatory\b' -f $parameterName)
         }
     }
 }
@@ -1130,18 +1129,31 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space and tra
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
-Describe 'ProGetUniversalPackage.when compression level is 9' {
-    Init
-    GivenARepositoryWIthItems 'one.ps1'
-    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
-    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
+foreach( $compressionLevel in @( 9, 'Optimal' ) )
+{
+    Describe ('ProGetUniversalPackage.when compression level is {0}' -f $compressionLevel) {
+        Init
+        GivenARepositoryWIthItems 'one.ps1'
+        WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
+        ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
+    }
+}
+
+foreach( $compressionLevel in @( 1, 'Fastest' ) )
+{
+    Describe ('ProGetUniversalPackage.when compression level is {0}' -f $compressionLevel) {
+        Init
+        GivenARepositoryWIthItems 'one.ps1'
+        WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
+        ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8000
+    }
 }
 
 Describe 'ProGetUniversalPackage.when compression level is not included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8000
+    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
 }
 
 Describe 'ProGetUniversalPackage.when a bad compression level is included' {
@@ -1149,13 +1161,6 @@ Describe 'ProGetUniversalPackage.when a bad compression level is included' {
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
     ThenTaskFails 'not a valid compression level'
-}
-
-Describe 'ProGetUniversalPackage.when compression level is a string' {
-    Init
-    GivenARepositoryWIthItems 'one.ps1'
-    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
-    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
@@ -1186,14 +1191,14 @@ Describe 'ProGetUniversalPackage.when package includes a directory but whitelist
     Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
     WhenPackaging -Paths 'dir' -WithWhitelist @() -ErrorAction SilentlyContinue
-    ThenTaskFails 'Property\ ''Include''\ is\ mandatory\ because'
+    ThenTaskFails 'Property\ "Include"\ is\ mandatory\ because'
 }
 
 Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is missing' {
     Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
     WhenPackaging -Paths 'dir' -ErrorAction SilentlyContinue
-    ThenTaskFails 'Property\ ''Include''\ is\ mandatory\ because'
+    ThenTaskFails 'Property\ "Include"\ is\ mandatory\ because'
 }
 
 Describe 'ProGetUniversalPackage.when package includes a file and there''s no whitelist' {
@@ -1305,5 +1310,5 @@ Describe 'ProGetUniversalPackage.when missing required properties' {
         }
     }
     WhenPackaging -WithPackageName 'AwesomePackageName' -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
-    ThenTaskFails 'Property ''Description'' is mandatory'
+    ThenTaskFails 'Property "Description" is mandatory'
 }
