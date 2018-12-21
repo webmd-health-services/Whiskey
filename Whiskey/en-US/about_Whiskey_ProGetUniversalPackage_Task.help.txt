@@ -5,11 +5,9 @@ SUMMARY
     Creates a ProGet universal package.
 
 DESCRIPTION
-    The `ProGetUniversalPackage` task creates a universal ProGet package of your application.
+    The `ProGetUniversalPackage` task creates a universal ProGet package (i.e. a .upack file). You must specify a package name and description with the Name and Description properties, respectively.
 
-    You must specify a package name and description with the Name and Description properties, respecitvely.
-
-    Specify the directories and files you want in the package with the `Path` property. The paths should be relative to the whiskey.yml file. Each item is added to your package at the same relative path. The contents directories are filtered by the `Include` property, which is a list of filenames and/or wildcard patterns. Only files that match at least one item in this list will be included in your package.  We use whitelists so we know what files are getting packaged and deployed. Without a whitelist, any file put into a directory that gets packaged would be included. This is a security risk. We can audit whitelists. Using whitelists also helps keep the size of our packages to a minimum.
+    Specify the directories and files you want in the package with the `Path` property. The paths should be relative to the whiskey.yml file. Each item is added to the package using its path relative to the whiskey.yml file. Directories are filtered by the `Include` property, which is a list of filenames and/or wildcard patterns. Only files that match at least one item in this list will be included in your package.
 
     This PowerShell command will create a YAML whitelist for all files under a path:
 
@@ -19,7 +17,7 @@ DESCRIPTION
             Sort-Object |
             ForEach-Object { '- "*{0}"' -f $_ }
 
-    The package is saved to the output directory as `$Name.upack` where `$Name is replaced with the name of your package.
+    The package is saved to the output directory as `$Name.upack` where `$Name` is replaced with the name of your package.
 
     A version.json file is put into the root of your package. It contains the version information for the current build. It looks like this:
 

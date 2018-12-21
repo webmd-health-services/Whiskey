@@ -14,6 +14,27 @@ $threwException = $false
 $context = $null
 $expandPath = $null
 
+function Install-ProGetAutomation
+{
+    param(
+        $BuildRoot
+    )
+
+    # Copy ProGetAutomation in place otherwise every test downloads it from the gallery
+    $psModulesRoot = Join-Path -Path $BuildRoot -ChildPath 'PSModules'
+    if( -not (Test-Path -Path $psModulesRoot -PathType Container) )
+    {
+        New-Item -Path $psModulesRoot -ItemType 'Directory'
+    }
+
+    if( -not (Test-Path -Path (Join-Path -Path $psModulesRoot -ChildPath 'ProGetAutomation') -PathType Container ) )
+    {
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation') `
+                  -Destination $psModulesRoot `
+                  -Recurse
+    }
+}
+
 function GivenBuildVersion
 {
     param(
@@ -46,11 +67,6 @@ function GivenManifestProperties
     $script:manifestProperties = $Content
 }
 
-function GivenRobocopyFails
-{
-    Mock -CommandName 'Invoke-WhiskeyRobocopy' -ModuleName 'Whiskey' -MockWith { cmd /c 'exit 8'}
-}
-
 function Init
 {
     $script:threwException = $false
@@ -59,6 +75,8 @@ function Init
     $script:context = $null
     $script:expandPath = $null
     $script:manifestProperties = $null
+
+    Remove-Module -Force -Name ProGetAutomation -ErrorAction Ignore
 }
 
 function ThenTaskFails
@@ -155,9 +173,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $ShouldFailWithErrorMessage,
 
         [Switch]
-        $ShouldNotCreatePackage,
-
-        [Switch]
         $ShouldWriteNoErrors,
 
         [Switch]
@@ -216,6 +231,9 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $byWhoArg = @{ $PSCmdlet.ParameterSetName = $true }
 
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
+    
+    Install-ProGetAutomation -BuildRoot $context.BuildRoot
+
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
     $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
@@ -291,21 +309,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $outputRoot = $taskContext.OutputDirectory
     $packagePath = Join-Path -Path $outputRoot -ChildPath $packageName
 
-    if( $ShouldNotCreatePackage )
-    {
-        It 'should not create a package' {
-            $packagePath | Should Not Exist
-        }
-        return
-    }
-    else
-    {
-        It 'should create a package' {
-            $packagePath | Should Exist
-        }
+    It 'should create a package' {
+        $packagePath | Should Exist
     }
 
-    & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\7-Zip\7z.exe') x $packagePath ('-o{0}' -f $expandPath)
+    Expand-ZipArchive -Path $packagePath -DestinationPath $expandPath
 
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
@@ -529,88 +537,121 @@ function GivenARepositoryWithItems
             New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
         }
 
-        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType $ItemType
+        $destinationPath = Join-Path -Path $buildRoot -ChildPath $item
+        Copy-Item -Path $PSCommandPath -Destination $destinationPath
     }
+
+    Install-ProGetAutomation -BuildRoot $buildRoot
 }
 
 function WhenPackaging
 {
     [CmdletBinding()]
     param(
+        [Parameter(ParameterSetName='WithTaskParameter')]
         $WithPackageName = $defaultPackageName,
+
+        [Parameter(ParameterSetName='WithTaskParameter')]
         $WithDescription = $defaultDescription,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $Paths,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $WithWhitelist,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $ThatExcludes,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         $FromSourceRoot,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $WithThirdPartyPath,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         $WithVersion = $defaultVersion,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         $WithApplicationName,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $CompressionLevel,
+        
+        [Parameter(ParameterSetName='WithTaskParameter')]
         [Switch]
-        $SkipExpand
+        $SkipExpand,
+
+        [Parameter(Mandatory,ParameterSetName='WithYaml')]
+        $WithYaml
     )
-    $taskParameter = @{ }
-    if( $WithPackageName )
-    {
-        $taskParameter['Name'] = $WithPackageName
-    }
-    if( $WithDescription )
-    {
-        $taskParameter['Description'] = $WithDescription
-    }
-    if( $Paths )
-    {
-        $taskParameter['Path'] = $Paths
-    }
-    if( $WithWhitelist )
-    {
-        $taskParameter['Include'] = $WithWhitelist
-    }
-    if( $ThatExcludes )
-    {
-        $taskParameter['Exclude'] = $ThatExcludes
-    }
-    if( $WithThirdPartyPath )
-    {
-        $taskParameter['ThirdPartyPath'] = $WithThirdPartyPath
-    }
-    if( $FromSourceRoot )
-    {
-        $taskParameter['SourceRoot'] = $FromSourceRoot
-    }
-    if( $CompressionLevel )
-    {
-        $taskParameter['CompressionLevel'] = $CompressionLevel
-    }
 
-    if( $packageVersion )
+    if( $PSCmdlet.ParameterSetName -eq 'WithYaml' )
     {
-        $taskParameter['Version'] = $packageVersion
+        $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForYaml $WithYaml
+        $taskParameter = $context.Configuration['Build'][0]['ProGetUniversalPackage']
     }
-
-    if( $manifestProperties )
+    else
     {
-        $taskParameter['ManifestProperties'] = $manifestProperties
-    }
+        $taskParameter = @{ }
+        if( $WithPackageName )
+        {
+            $taskParameter['Name'] = $WithPackageName
+        }
+        if( $WithDescription )
+        {
+            $taskParameter['Description'] = $WithDescription
+        }
+        if( $Paths )
+        {
+            $taskParameter['Path'] = $Paths
+        }
+        if( $WithWhitelist )
+        {
+            $taskParameter['Include'] = $WithWhitelist
+        }
+        if( $ThatExcludes )
+        {
+            $taskParameter['Exclude'] = $ThatExcludes
+        }
+        if( $WithThirdPartyPath )
+        {
+            $taskParameter['ThirdPartyPath'] = $WithThirdPartyPath
+        }
+        if( $FromSourceRoot )
+        {
+            $taskParameter['SourceRoot'] = $FromSourceRoot
+        }
+        if( $CompressionLevel )
+        {
+            $taskParameter['CompressionLevel'] = $CompressionLevel
+        }
 
-    $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForVersion $WithVersion
-    if( $WithApplicationName )
-    {
-        $taskContext.ApplicationName = $WithApplicationName
-    }
+        if( $packageVersion )
+        {
+            $taskParameter['Version'] = $packageVersion
+        }
 
-    if( $buildVersion )
-    {
-        $context.Version = $buildVersion
-    }
+        if( $manifestProperties )
+        {
+            $taskParameter['ManifestProperties'] = $manifestProperties
+        }
 
-    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey'
+        $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForVersion $WithVersion
+        if( $WithApplicationName )
+        {
+            $taskContext.ApplicationName = $WithApplicationName
+        }
+        if( $buildVersion )
+        {
+            $context.Version = $buildVersion
+        }
+    }
 
     $threwException = $false
     $At = $null
@@ -764,7 +805,7 @@ function ThenUpackMetadataIs
     }
 }
 
-function ThenPackageShouldbeBeCompressed
+function ThenPackageShouldBeCompressed
 {
     param(
         $PackageName = $defaultPackageName,
@@ -781,6 +822,7 @@ function ThenPackageShouldbeBeCompressed
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
+    Write-Debug -Message ('Package size: {0}' -f $packageSize)
     if( $GreaterThan )
     {
         It ('should have a compressed package size greater than {0}' -f $GreaterThan) {
@@ -874,7 +916,6 @@ Describe 'ProGetUniversalPackage.when paths don''t exist' {
     Assert-NewWhiskeyProGetUniversalPackage -ForPath 'dir1','dir2' `
                                             -ThatIncludes '*' `
                                             -ShouldFailWithErrorMessage '(don''t|does not) exist' `
-                                            -ShouldNotCreatePackage `
                                             -ErrorAction SilentlyContinue
 }
 
@@ -907,6 +948,7 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
         $parameter.Remove($parameterName)
 
         $context = New-WhiskeyTestContext -ForDeveloper
+        Install-ProGetAutomation -BuildRoot $context.BuildRoot
         $Global:Error.Clear()
         $threwException = $false
         try
@@ -929,7 +971,7 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
 Describe 'ProGetUniversalPackage.when path to package doesn''t exist' {
     Init
     $context = New-WhiskeyTestContext -ForDeveloper
-
+    Install-ProGetAutomation -BuildRoot $context.BuildRoot
     $Global:Error.Clear()
 
     It 'should throw an exception' {
@@ -943,6 +985,7 @@ Describe 'ProGetUniversalPackage.when path to package doesn''t exist' {
 Describe 'ProGetUniversalPackage.when path to third-party item doesn''t exist' {
     Init
     $context = New-WhiskeyTestContext -ForDeveloper
+    Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
     $Global:Error.Clear()
 
@@ -978,7 +1021,8 @@ Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
     $context = New-WhiskeyTestContext -ForDeveloper
-
+    
+    Install-ProGetAutomation -BuildRoot $context.BuildRoot
     $Global:Error.Clear()
 
     $parameter = @{
@@ -1005,7 +1049,7 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path' {
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $path -HasRootItems $path
 }
 
-Describe 'ProGetUniversalPackage.when packaging given a full relative path with override syntax' {
+Describe 'ProGetUniversalPackage.when packaging given a full relative path to a file with override syntax' {
     Init
     $file = 'project.json'
     $directory = 'relative'
@@ -1014,6 +1058,26 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path with 
 
     $outputFilePath = Initialize-Test -DirectoryName $directory -FileName $file
     Assert-NewWhiskeyProGetUniversalPackage -ForPath $forPath -HasRootItems $file
+}
+
+Describe 'ProGetUniversalPackage.when packaging a directory with custom destination name' {
+    Init
+    GivenARepositoryWithItems 'dir1\some_file.txt','dir2\dir3\another_file.txt','dir4\dir5\last_file.txt'
+    WhenPackaging -WithYaml @'
+Build:
+- ProGetUniversalPackage:
+    Name: Package
+    Version: 1.2.3
+    Description: Test package
+    Path:
+    - dir1: dirA
+    - dir2\dir3: dir2\dirC
+    - dir4\dir5: dirD\dir5
+    Include:
+    - "*.txt"
+'@
+    ThenTaskSucceeds
+    ThenPackageShouldInclude 'dirA\some_file.txt','dir2\dirC\another_file.txt','dirD\dir5\last_file.txt'
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items with override syntax' {
@@ -1066,32 +1130,32 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space and tra
     ThenPackageShouldNotInclude ('dir 1\{0}' -f $defaultPackageName)
 }
 
-Describe 'ProGetUniversalPackage.when compressionLevel of 9 is included' {
+Describe 'ProGetUniversalPackage.when compression level is 9' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
-    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
+    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
 }
 
-Describe 'ProGetUniversalPackage.when compressionLevel is not included' {
+Describe 'ProGetUniversalPackage.when compression level is not included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 800
+    ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8000
 }
 
-Describe 'ProGetUniversalPackage.when a bad compressionLevel is included' {
+Describe 'ProGetUniversalPackage.when a bad compression level is included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
     ThenTaskFails 'not a valid compression level'
 }
 
-Describe 'ProGetUniversalPackage.when compressionLevel of 7 is included as a string' {
+Describe 'ProGetUniversalPackage.when compression level is a string' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
+    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
@@ -1119,8 +1183,9 @@ Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-par
 }
 
 Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is empty' {
+    Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
-    WhenPackaging -Paths 'dir' -ErrorAction SilentlyContinue -WithWhitelist @()
+    WhenPackaging -Paths 'dir' -WithWhitelist @() -ErrorAction SilentlyContinue
     ThenTaskFails 'Property\ ''Include''\ is\ mandatory\ because'
 }
 
@@ -1241,13 +1306,4 @@ Describe 'ProGetUniversalPackage.when missing required properties' {
     }
     WhenPackaging -WithPackageName 'AwesomePackageName' -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
     ThenTaskFails 'Property ''Description'' is mandatory'
-}
-
-Describe 'ProGetUniversalPackage.when Robocopy command fails' {
-    Init
-    GivenBuildVersion '1.2.3-rc.1+build.300'
-    GivenARepositoryWIthItems 'dir1\subdir\file.txt'
-    GivenRobocopyFails
-    WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt" -ErrorAction SilentlyContinue
-    ThenTaskFails 'Robocopy failed with exit code'
 }

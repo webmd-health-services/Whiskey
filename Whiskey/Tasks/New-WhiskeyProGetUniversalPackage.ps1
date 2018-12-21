@@ -3,6 +3,7 @@ function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task("ProGetUniversalPackage")]
+    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.7.*',VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
@@ -15,6 +16,8 @@ function New-WhiskeyProGetUniversalPackage
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    Import-WhiskeyPowerShellModule -Name 'ProGetAutomation'
 
     $manifestProperties = @{}
     if( $TaskParameter.ContainsKey('ManifestProperties') )
@@ -71,7 +74,7 @@ function New-WhiskeyProGetUniversalPackage
         $version = $TaskContext.Version
     }
 
-    $compressionLevel = 1
+    $compressionLevel = [IO.Compression.CompressionLevel]::Fastest
     if( $TaskParameter['CompressionLevel'] )
     {
         $compressionLevel = $TaskParameter['CompressionLevel'] | ConvertFrom-WhiskeyYamlScalar -ErrorAction Ignore
@@ -79,6 +82,10 @@ function New-WhiskeyProGetUniversalPackage
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CompressionLevel'': ''{0}'' is not a valid compression level. It must be an integer between 0-9.' -f $TaskParameter['CompressionLevel']);
             return
+        }
+        if( $compressionLevel -ge 5 )
+        {
+            $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
         }
     }
 
@@ -88,26 +95,6 @@ function New-WhiskeyProGetUniversalPackage
     {
         $sourceRoot = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
         $parentPathParam['ParentPath'] = $sourceRoot
-    }
-
-    if( -not $manifestProperties.ContainsKey('name') )
-    {
-        $manifestProperties['name'] = $name
-    }
-
-    if( -not $manifestProperties.ContainsKey('title') )
-    {
-        $manifestProperties['title'] = $name
-    }
-
-    if( -not $manifestProperties.ContainsKey('description') )
-    {
-        $manifestProperties['description'] = $TaskParameter['Description']
-    }
-
-    if( -not $manifestProperties.ContainsKey('version') )
-    {
-        $manifestProperties['version'] = $version.SemVer2NoBuildMetadata.ToString()
     }
 
     $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath 'upack'
@@ -120,6 +107,7 @@ function New-WhiskeyProGetUniversalPackage
     $manifestProperties | ConvertTo-Json | Set-Content -Path $upackJsonPath
 
     # Add the version.json file
+    $versionJsonPath = Join-Path -Path $tempPackageRoot -ChildPath 'version.json'
     @{
         Version = $version.Version.ToString();
         SemVer2 = $version.SemVer2.ToString();
@@ -127,7 +115,7 @@ function New-WhiskeyProGetUniversalPackage
         PrereleaseMetadata = $version.SemVer2.Prerelease;
         BuildMetadata = $version.SemVer2.Build;
         SemVer1 = $version.SemVer1.ToString();
-    } | ConvertTo-Json -Depth 1 | Set-Content -Path (Join-Path -Path $tempPackageRoot -ChildPath 'version.json')
+    } | ConvertTo-Json -Depth 1 | Set-Content -Path $versionJsonPath
 
     function Copy-ToPackage
     {
@@ -173,78 +161,105 @@ function New-WhiskeyProGetUniversalPackage
             {
                 $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
                 $relativePath = $relativePath.Trim("\")
-                if( -not $override )
+
+                $addParams = @{ BasePath = $sourceRoot }
+                $overrideInfo = ''
+                if( $override )
                 {
-                    $destinationItemName = $relativePath
+                    $addParams = @{ PackageItemName = $destinationItemName }
+                    $overrideInfo = ' -> {0}' -f $destinationItemName
                 }
+                $addParams['CompressionLevel'] = $compressionLevel
 
-                $destination = Join-Path -Path $tempPackageRoot -ChildPath $destinationItemName
-                $parentDestinationPath = ( Split-Path -Path $destination -Parent)
-
-                #if parent doesn't exist in the destination dir, create it
-                if( -not ( Test-Path -Path $parentDestinationPath ) )
+                if( $AsThirdPartyItem )
                 {
-                    New-Item -Path $parentDestinationPath -ItemType 'Directory' -Force | Out-Null
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('packaging unfiltered item    {0}{1}' -f $relativePath,$overrideInfo)
+                    Get-Item -Path $sourcePath |
+                        Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
+                    continue
                 }
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
                 {
-                    Copy-Item -Path $sourcePath -Destination $destination
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('packaging file               {0}{1}' -f $relativePath,$overrideInfo)
+                    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams
+                    continue
                 }
-                else
+
+                if( -not $TaskParameter['Include'] )
                 {
-                    $destinationDisplay = $destination -replace [regex]::Escape($tempRoot),''
-                    $destinationDisplay = $destinationDisplay.Trim('\')
-                    $taskTempDirectory = $TaskContext.Temp.FullName
-                    if( $AsThirdPartyItem )
-                    {
-                        $robocopyExclude = @( $taskTempDirectory )
-                        $whitelist = @( )
-                        $operationDescription = 'packaging third-party {0} -> {1}' -f $sourcePath,$destinationDisplay
-                    }
-                    else
-                    {
-                        if( -not $TaskParameter['Include'] )
-                        {
-                            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
-                            return
-                        }
-
-                        $robocopyExclude = & {
-                            $taskTempDirectory;
-                            (Join-Path -Path $destination -ChildPath 'version.json');
-                            $TaskParameter['Exclude'];
-                        }
-
-                        $operationDescription = 'packaging {0} -> {1}' -f $sourcePath,$destinationDisplay
-                        $whitelist = & { 'upack.json' ; $TaskParameter['Include'] }
-                    }
-
-                    Write-WhiskeyInfo -Context $TaskContext -Message $operationDescription
-
-                    $robocopyOutputPath = Join-Path -Path $TaskContext.Temp -ChildPath ('RobocopyOutput.{0}.txt' -f [IO.Path]::GetRandomFileName())
-                    Invoke-WhiskeyRobocopy -Source $sourcePath.trim("\") -Destination $destination.trim("\") -WhiteList $whitelist -Exclude $robocopyExclude -LogPath $robocopyOutputPath | Out-Null
-                    if( $LASTEXITCODE -ge 8 )
-                    {
-                        $robocopyOutput = Get-Content -Path $robocopyOutputPath -Raw -ErrorAction Ignore
-                        if ($robocopyOutput)
-                        {
-                            $robocopyOutput = $robocopyOutput.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
-                            $robocopyOutput | Write-WhiskeyInfo -Context $TaskContext
-                        }
-
-                        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Robocopy failed with exit code {0}' -f $LASTEXITCODE)
-                        return
-                    }
-
-                    # Get rid of empty directories. Robocopy doesn't sometimes.
-                    Get-ChildItem -Path $destination -Directory -Recurse |
-                        Where-Object { -not ($_ | Get-ChildItem) } |
-                        Remove-Item
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Include'' is mandatory because ''{0}'' is in your ''Path'' property and it is a directory. The ''Include'' property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the ''Include'' list will be added to your package.' -f $sourcePath)
+                    return
                 }
+
+                function Find-Item
+                {
+                    param(
+                        [Parameter(Mandatory)]
+                        $Path
+                    )
+
+                    if( (Test-Path -Path $Path -PathType Leaf) )
+                    {
+                        return Get-Item -Path $Path
+                    }
+
+                    $Path = Join-Path -Path $Path -ChildPath '*'
+                    & {
+                            Get-ChildItem -Path $Path -Include $TaskParameter['Include'] -Exclude $TaskParameter['Exclude'] -File
+                            Get-Item -Path $Path -Exclude $TaskParameter['Exclude'] |
+                                Where-Object { $_.PSIsContainer }
+                        }  |
+                        ForEach-Object {
+                            if( $_.PSIsContainer )
+                            {
+                                Find-Item -Path $_.FullName
+                            }
+                            else
+                            {
+                                $_
+                            }
+                        }
+                }
+
+                if( $override )
+                {
+                    $addParams['BasePath'] = $sourcePath
+                    $addParams['PackageParentPath'] = $destinationItemName
+                    $addParams.Remove('PackageItemName')
+                    $overrideInfo = ' -> {0}' -f $destinationItemName
+                }
+
+                Write-WhiskeyInfo -Context $TaskContext -Message ('packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)
+                Find-Item -Path $sourcePath |
+                    Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
             }
         }
     }
+
+    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
+    $fixRegex = '[{0}]' -f ($badChars -join '')
+    $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
+
+    $outFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $fileName
+
+    if( (Test-Path -Path $outFile -PathType Leaf) )
+    {
+        Remove-Item -Path $outFile -Force
+    }
+
+    if( -not $manifestProperties.ContainsKey('title') )
+    {
+        $manifestProperties['title'] = $TaskParameter['Name']
+    }
+
+    New-ProGetUniversalPackage -OutFile $outFile `
+                               -Version $version.SemVer2NoBuildMetadata.ToString() `
+                               -Name $TaskParameter['Name'] `
+                               -Description $TaskParameter['Description'] `
+                               -AdditionalMetadata $manifestProperties
+
+    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $versionJsonPath
 
     if( $TaskParameter['Path'] )
     {
@@ -255,16 +270,4 @@ function New-WhiskeyProGetUniversalPackage
     {
         Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
     }
-
-    $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
-    $fixRegex = '[{0}]' -f ($badChars -join '')
-    $fileName = '{0}.{1}.upack' -f $name,($version.SemVer2NoBuildMetadata -replace $fixRegex,'-')
-
-    $outFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $fileName
-
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating universal package {0}' -f $outFile)
-    & $7z 'a' '-tzip' ('-mx{0}' -f $compressionLevel) $outFile (Join-Path -Path $tempRoot -ChildPath '*')
-
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('returning package path ''{0}''' -f $outFile)
-    $outFile
 }

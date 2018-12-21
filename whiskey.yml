@@ -18,7 +18,7 @@ Build:
 
 - GetPowerShellModule:
     Name: ProGetAutomation
-    Version: 0.4.*
+    Version: 0.7.*
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
