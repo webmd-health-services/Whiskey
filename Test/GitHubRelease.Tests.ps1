@@ -194,11 +194,12 @@ function ThenRequest
                 $bodyEqual = $Body -eq $WithBody 
                 $WithBody = $WithBody | ConvertFrom-Json
                 $expectedProps = $WithBody | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
+                $actualProps = @()
                 if( $Body )
                 {
                     $Body = $Body | ConvertFrom-Json
+                    $actualProps = $Body | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
                 }
-                $actualProps = $Body | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
                 $bodyPropsEqual = ($expectedProps -join '|') -eq ($actualProps -join '|')
                 Write-Debug ('                {0}' -f $bodyPropsEqual)
                 
