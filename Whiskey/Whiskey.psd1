@@ -144,7 +144,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Updated to ProGet tasks to depend on ProGetAutomation 0.7.*.
+* Updated to ProGet tasks to depend on ProGetAutomation 0.8.*.
 * Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
 * `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
 '@
