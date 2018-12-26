@@ -78,7 +78,13 @@ function Install-WhiskeyDotNetSdk
             $Verbose
         )
 
-        & $dotnetInstall -NoPath -InstallDir $InstallDir -Version $VersionNumber @Verbose
+        $errCount = $Global:Error.Count
+        & $dotnetInstall -NoPath -InstallDir $InstallDir -Version $VersionNumber @Verbose -ErrorAction Stop
+        $newErrCount = $Global:Error.Count
+        for( $count = 0; $count -lt $newErrCount; ++$count )
+        {
+            $Global:Error.RemoveAt(0)
+        }
     }
 
     $dotnetPath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe' -Resolve -ErrorAction Ignore

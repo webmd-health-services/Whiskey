@@ -529,7 +529,12 @@ function GivenARepositoryWithItems
             New-Item -Path (Join-Path -Path $buildRoot -ChildPath $parent) -ItemType 'Directory' -Force -ErrorAction Ignore
         }
 
-        New-Item -Path (Join-Path -Path $buildRoot -ChildPath $item) -ItemType $ItemType
+        $filePath = Join-Path -Path $buildRoot -ChildPath $item
+        New-Item -Path $filePath -ItemType $ItemType
+        if( $ItemType -eq 'File' )
+        {
+            1..1000 | ForEach-Object { [Guid]::NewGuid().ToString() } | Set-Content -Path $filePath
+        }
     }
 }
 
@@ -781,6 +786,8 @@ function ThenPackageShouldbeBeCompressed
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
+    $DebugPreference = 'Continue'
+    Write-Debug -Message ('Package Size: {0}' -f $packageSize)
     if( $GreaterThan )
     {
         It ('should have a compressed package size greater than {0}' -f $GreaterThan) {
@@ -1070,14 +1077,14 @@ Describe 'ProGetUniversalPackage.when compressionLevel of 9 is included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel 9
-    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
+    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 22000
 }
 
 Describe 'ProGetUniversalPackage.when compressionLevel is not included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 800
+    ThenPackageShouldbeBeCompressed 'one.ps1' -GreaterThan 22000
 }
 
 Describe 'ProGetUniversalPackage.when a bad compressionLevel is included' {
@@ -1091,7 +1098,7 @@ Describe 'ProGetUniversalPackage.when compressionLevel of 7 is included as a str
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
-    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 800
+    ThenPackageShouldbeBeCompressed 'one.ps1' -LessThanOrEqualTo 22000
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
