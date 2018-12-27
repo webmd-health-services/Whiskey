@@ -28,6 +28,10 @@ Build:
     Name: VSSetup
     Version: 2.*
 
+- GetPowerShellModule:
+    Name: Zip
+    Version: 0.2.*
+
 - Pester4:
     OnlyBy: Developer
     Path:
