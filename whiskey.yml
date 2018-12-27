@@ -104,7 +104,13 @@ Build:
     Argument:
         Path: .output\pester*.xml
 
-- Exec: Whiskey\bin\7-Zip\7z.exe a $(WHISKEY_OUTPUT_DIRECTORY)\Whiskey.zip .\Whiskey '-xr!*.pdb'
+- Zip:
+    ArchivePath: .output\Whiskey.zip
+    Path: 
+    - Whiskey
+    Exclude:
+    - "*.pdb"
+    - "*.orig"
 
 Publish:
 - PublishPowerShellModule:
