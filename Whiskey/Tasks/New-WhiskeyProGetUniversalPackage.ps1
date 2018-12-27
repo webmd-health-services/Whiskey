@@ -184,7 +184,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( $AsThirdPartyItem )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('packaging unfiltered item    {0}{1}' -f $relativePath,$overrideInfo)
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging unfiltered item    {0}{1}' -f $relativePath,$overrideInfo)
                     Get-Item -Path $sourcePath |
                         Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
                     continue
@@ -192,7 +192,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('packaging file               {0}{1}' -f $relativePath,$overrideInfo)
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging file               {0}{1}' -f $relativePath,$overrideInfo)
                     Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams
                     continue
                 }
@@ -241,7 +241,7 @@ function New-WhiskeyProGetUniversalPackage
                     $overrideInfo = ' -> {0}' -f $destinationItemName
                 }
 
-                Write-WhiskeyInfo -Context $TaskContext -Message ('packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)
+                Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)
                 Find-Item -Path $sourcePath |
                     Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
             }
@@ -264,6 +264,7 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties['title'] = $TaskParameter['Name']
     }
 
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFile)
     New-ProGetUniversalPackage -OutFile $outFile `
                                -Version $version.SemVer2NoBuildMetadata.ToString() `
                                -Name $TaskParameter['Name'] `
