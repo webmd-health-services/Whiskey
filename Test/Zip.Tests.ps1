@@ -160,7 +160,10 @@ function WhenPackaging
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        $WithYaml
+        $WithYaml,
+
+        [string]
+        $ToFile
     )
 
     # Make sure the build root exists.
@@ -185,11 +188,14 @@ function WhenPackaging
         return
     }
     
-    $archivePath = $context.Configuration['Build'][0]['Zip']['ArchivePath']
-    $archivePath = Join-Path -Path (Get-BuildRoot) -ChildPath $archivePath
-    if( (Test-Path -Path $archivePath -PathType Leaf) )
+    if( -not $ToFile )
     {
-        Expand-Archive -Path $archivePath -DestinationPath $expandPath -Force
+        $ToFile = $context.Configuration['Build'][0]['Zip']['ArchivePath']
+        $ToFile = Join-Path -Path (Get-BuildRoot) -ChildPath $ToFile
+    }
+    if( (Test-Path -Path $ToFile -PathType Leaf) )
+    {
+        Expand-Archive -Path $ToFile -DestinationPath $expandPath -Force
     }
 }
 
@@ -315,7 +321,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2300
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2600
 }
 
 Describe ('Zip.when compression level is Fastest') {
@@ -329,7 +335,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 2300
+    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 2600
 }
 
 Describe ('Zip.when compression level is NoCompression') {
@@ -356,7 +362,7 @@ Build:
     Path:
     - "*.ps1"
 "@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2300
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2600
 }
 
 Describe 'Zip.when a bad compression level is included' {
@@ -486,3 +492,80 @@ Build:
         ThenTaskFails '65535'
     }
 }
+
+Describe 'Zip.when changing archive''s source root' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: Zip.zip
+    SourceRoot: dir
+    Path:
+    - "*.json"
+'@
+    ThenArchiveShouldInclude 'my.json','yours.json'
+}
+
+Describe 'Zip.when given full path to output file' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: $(WHISKEY_OUTPUT_DIRECTORY)\Zip.zip
+    Path: dir
+    Include: "*.json"
+'@ -ToFile (Join-Path -Path (Get-BuildRoot) -ChildPath '.output\Zip.zip')
+    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+}
+
+Describe 'Zip.when path to archive root outside repository' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: C:\Windows\system32\Zip.zip
+    Path: dir
+    Include: "*.json"
+'@ -ErrorAction SilentlyContinue
+    ThenTaskFails 'outside the build root'
+}
+
+Describe 'Zip.when path to archive is in directory that doesn''t exist' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: some\custom\directory\Zip.zip
+    Path: dir
+    Include: "*.json"
+'@ -ToFile (Join-Path -Path (Get-BuildRoot) -ChildPath 'some\custom\directory\Zip.zip')
+    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+}
+
+Describe 'Zip.when Path property is missing' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: Zip.zip
+'@ -ErrorAction SilentlyContinue
+    ThenTaskFails 'is required'
+}
+
+Describe 'Zip.when ZIP archive already exists' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json', 'Zip.zip'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: Zip.zip
+    Path: dir
+'@
+    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+}
+

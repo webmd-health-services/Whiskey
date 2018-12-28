@@ -20,7 +20,19 @@ function New-WhiskeyZipArchive
     Import-WhiskeyPowerShellModule -Name 'Zip'
 
     $archivePath = $TaskParameter['ArchivePath']
-    $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
+    if( [IO.Path]::IsPathRooted($archivePath) )
+    {
+        $buildRootRegex = '^{0}(\\|/)' -f [regex]::Escape($TaskContext.BuildRoot)
+        if( $archivePath -notmatch $buildRootRegex )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ArchivePath: path to ZIP archive "{0}" is outside the build root directory. Please change this path so it is under the "{1}" directory. We recommend using a relative path, as that will always be resolved relative to the build root directory.' -f $archivePath,$TaskContext.BuildRoot)
+            return
+        }
+    }
+    else
+    {
+        $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
+    }
 
     $behaviorParams = @{ }
     if( $TaskParameter['CompressionLevel'] )
@@ -78,7 +90,19 @@ function New-WhiskeyZipArchive
     $sourceRootRegex = '^{0}' -f ([regex]::Escape($sourceRoot))
 
     Write-WhiskeyInfo -Context $TaskContext -Message ('Creating ZIP archive "{0}".' -f ($archivePath -replace $sourceRootRegex,'').Trim('\','/'))
-    New-ZipArchive -Path $archivePath @behaviorParams
+    $archiveDirectory = $archivePath | Split-Path -Parent
+    if( -not (Test-Path -Path $archiveDirectory -PathType Container) )
+    {
+        New-Item -Path $archiveDirectory -ItemType 'Directory' -Force | Out-Null
+    }
+
+    if( -not $TaskParameter['Path'] )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is required. It must be a list of paths, relative to your whiskey.yml file, of files or directories to include in the ZIP archive.')
+        return
+    }
+
+    New-ZipArchive -Path $archivePath @behaviorParams -Force
 
     foreach( $item in $TaskParameter['Path'] )
     {
