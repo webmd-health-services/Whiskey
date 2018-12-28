@@ -171,7 +171,7 @@ function New-WhiskeyProGetUniversalPackage
             foreach( $sourcePath in $sourcePaths )
             {
                 $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
-                $relativePath = $relativePath.Trim('\')
+                $relativePath = $relativePath.Trim([IO.Path]::DirectorySeparatorChar)
 
                 $addParams = @{ BasePath = $sourceRoot }
                 $overrideInfo = ''
@@ -265,7 +265,7 @@ function New-WhiskeyProGetUniversalPackage
     }
 
     $outFileDisplay = $outFile -replace ('^{0}' -f [regex]::Escape($TaskContext.BuildRoot)),''
-    $outFileDisplay = $outFileDisplay.Trim('\','/')
+    $outFileDisplay = $outFileDisplay.Trim([IO.Path]::DirectorySeparatorChar)
     Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFileDisplay)
     New-ProGetUniversalPackage -OutFile $outFile `
                                -Version $version.SemVer2NoBuildMetadata.ToString() `
