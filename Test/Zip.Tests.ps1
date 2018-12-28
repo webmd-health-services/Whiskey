@@ -321,7 +321,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2600
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2800
 }
 
 Describe ('Zip.when compression level is Fastest') {
@@ -335,7 +335,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 2600
+    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 2800
 }
 
 Describe ('Zip.when compression level is NoCompression') {
@@ -362,7 +362,7 @@ Build:
     Path:
     - "*.ps1"
 "@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2600
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2800
 }
 
 Describe 'Zip.when a bad compression level is included' {
