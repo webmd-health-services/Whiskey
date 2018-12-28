@@ -253,8 +253,22 @@ function Install-WhiskeyTool
 
                             if( -not (Test-Path -Path $nodePath -PathType Leaf) )
                             {
-                                Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
-                                & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y'
+                                if( $IsWindows )
+                                {
+                                    # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
+                                    $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
+                                    $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
+                                    Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
+                                    & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y'
+                                }
+                                else
+                                {
+                                    if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+                                    {
+                                        New-Item -Path $nodeRoot -ItemType 'Directory'
+                                    }
+                                    [IO.Compression.ZipFile]::ExtractToDirectory($nodeZipFile,$nodeRoot)
+                                }
 
                                 Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
                                     Get-ChildItem |

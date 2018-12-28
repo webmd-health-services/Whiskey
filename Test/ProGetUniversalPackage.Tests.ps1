@@ -676,7 +676,12 @@ function WhenPackaging
     if( -not $SkipExpand -and $packageInfo )
     {
         $script:expandPath = Join-Path -Path $taskContext.OutputDirectory -ChildPath 'extracted'
-        & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\7-Zip\7z.exe') x $packageInfo.FullName ('-o{0}' -f $expandPath)
+        $expandParent = $expandPath | Split-Path -Parent
+        if( -not (Test-Path -Path $expandParent -PathType Container) )
+        {
+            New-item -Path $expandParent -ItemType 'Directory' | Out-Null
+        }
+        [IO.Compression.ZipFile]::ExtractToDirectory($packageInfo.FullName,$expandPath)
     }
 }
 
