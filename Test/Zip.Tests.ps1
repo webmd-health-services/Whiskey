@@ -30,7 +30,7 @@ function Install-Zip
         $BuildRoot
     )
 
-    # Copy ProGetAutomation in place otherwise every test downloads it from the gallery
+    # Copy ZIP in place otherwise every test downloads it from the gallery
     $psModulesRoot = Join-Path -Path $BuildRoot -ChildPath 'PSModules'
     if( -not (Test-Path -Path $psModulesRoot -PathType Container) )
     {
@@ -65,7 +65,14 @@ function GivenARepositoryWithItems
         }
 
         $destinationPath = Join-Path -Path $buildRoot -ChildPath $item
-        Copy-Item -Path $PSCommandPath -Destination $destinationPath
+        if( $ItemType -eq 'File' )
+        {
+            Copy-Item -Path $PSCommandPath -Destination $destinationPath
+        }
+        else
+        {
+            New-Item -Path $destinationPath -ItemType 'Directory'
+        }
     }
 
     Install-Zip -BuildRoot $buildRoot
@@ -80,6 +87,14 @@ function ThenArchiveShouldInclude
         [string[]]
         $Path
     )
+
+    if( -not $Path )
+    {
+        It ('should include nothing') {
+            Get-ChildItem -Path $expandPath | Should -BeNullOrEmpty
+        }
+        return
+    }
 
     foreach( $item in $Path )
     {
@@ -102,20 +117,21 @@ function ThenArchiveShouldBeCompressed
         $LessThanOrEqualTo
     )
 
-    $packagePath = Join-Path -Path (Get-BuildRoot) -ChildPath $Path
-    $packageSize = (Get-Item $packagePath).Length
-    Write-Debug -Message ('Package size: {0}' -f $packageSize)
+    $archivePath = Join-Path -Path (Get-BuildRoot) -ChildPath $Path
+    $archiveSize = (Get-Item $archivePath).Length
+    $DebugPreference = 'Continue'
+    Write-Debug -Message ('Archive size: {0}' -f $archiveSize)
     if( $GreaterThan )
     {
         It ('should have a compressed archive size greater than {0}' -f $GreaterThan) {
-            $packageSize | Should -BeGreaterThan $GreaterThan
+            $archiveSize | Should -BeGreaterThan $GreaterThan
         }
     }
 
     if( $LessThanOrEqualTo )
     {
         It ('should have a compressed archive size less than or equal to {0}' -f $LessThanOrEqualTo) {
-            $packageSize | Should -Not -BeGreaterThan $LessThanOrEqualTo
+            $archiveSize | Should -Not -BeGreaterThan $LessThanOrEqualTo
         }
     }
 
@@ -130,7 +146,7 @@ function ThenArchiveShouldNotInclude
 
     foreach( $item in $Path )
     {
-        It ('package should not include {0}' -f $item) {
+        It ('archive should not include {0}' -f $item) {
             (Join-Path -Path $expandPath -ChildPath $item) | Should -Not -Exist
         }
     }
@@ -143,15 +159,19 @@ function ThenTaskFails
         $error
     )
 
-    It ('should fail with error message that matches "{0}"' -f $error) {
-        $Global:Error | Should match $error
+    It ('should fail') {
+        $threwException | Should -BeTrue
+    }
+
+    It ('should write error message' -f $error) {
+        $Global:Error | Should -Match $error
     }
 }
 
 function ThenTaskSucceeds
 {
     It ('should not throw an error message') {
-        $Global:Error | Should BeNullOrEmpty
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 
@@ -172,7 +192,6 @@ function WhenPackaging
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer -ForYaml $WithYaml
     $taskParameter = $context.Configuration['Build'][0]['Zip']
 
-    $threwException = $false
     $At = $null
     
     $Global:Error.Clear()
@@ -183,7 +202,7 @@ function WhenPackaging
     }
     catch
     {
-        $threwException = $true
+        $script:threwException = $true
         Write-Error -ErrorRecord $_
         return
     }
@@ -217,7 +236,7 @@ Build:
     ThenArchiveShouldInclude 'dirA\some_file.txt','dir2\dirC\another_file.txt','dirD\dir5\last_file.txt'
 }
 
-Describe 'Zip.when package is empty' {
+Describe 'Zip.when archive is empty' {
     Init
     GivenARepositoryWIthItems 'file.txt'
     WhenPackaging @'
@@ -321,7 +340,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2800
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 3100
 }
 
 Describe ('Zip.when compression level is Fastest') {
@@ -335,7 +354,7 @@ Build:
     Path:
     - "*.ps1"
 '@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 2800
+    ThenArchiveShouldBeCompressed 'Zip.zip' -GreaterThan 3100
 }
 
 Describe ('Zip.when compression level is NoCompression') {
@@ -362,7 +381,7 @@ Build:
     Path:
     - "*.ps1"
 "@
-    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 2800
+    ThenArchiveShouldBeCompressed 'Zip.zip' -LessThanOrEqualTo 3100
 }
 
 Describe 'Zip.when a bad compression level is included' {
@@ -379,7 +398,7 @@ Build:
     ThenTaskFails 'is an invalid compression level'
 }
 
-Describe 'Zip.when package has empty directories' {
+Describe 'Zip.when archive and source have empty directories' {
     Init
     GivenARepositoryWithItems 'root.ps1','dir1\one.ps1','dir1\emptyDir2\text.txt'
     GivenARepositoryWithItems 'dir1\emptyDir1' -ItemType 'Directory'
@@ -398,7 +417,7 @@ Build:
     ThenArchiveShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
 }
 
-Describe 'Zip.when package has JSON files' {
+Describe 'Zip.when archive has JSON files' {
     Init
     GivenARepositoryWIthItems 'my.json'
     WhenPackaging @'
@@ -415,7 +434,7 @@ Build:
     ThenArchiveShouldInclude 'my.json'
 }
 
-Describe 'Zip.when package includes a directory but whitelist is empty' {
+Describe 'Zip.when archive includes a directory but whitelist is empty' {
     Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
     WhenPackaging @'
@@ -520,13 +539,26 @@ Build:
     ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
 }
 
-Describe 'Zip.when path to archive root outside repository' {
+Describe 'Zip.when absolute path to archive root outside repository' {
     Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
     WhenPackaging @'
 Build:
 - Zip:
     ArchivePath: C:\Windows\system32\Zip.zip
+    Path: dir
+    Include: "*.json"
+'@ -ErrorAction SilentlyContinue
+    ThenTaskFails 'outside the build root'
+}
+
+Describe 'Zip.when relative path to archive root outside repository' {
+    Init
+    GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
+    WhenPackaging @'
+Build:
+- Zip:
+    ArchivePath: ..\..\..\Zip.zip
     Path: dir
     Include: "*.json"
 '@ -ErrorAction SilentlyContinue

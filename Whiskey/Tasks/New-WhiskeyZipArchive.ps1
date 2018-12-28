@@ -20,18 +20,16 @@ function New-WhiskeyZipArchive
     Import-WhiskeyPowerShellModule -Name 'Zip'
 
     $archivePath = $TaskParameter['ArchivePath']
-    if( [IO.Path]::IsPathRooted($archivePath) )
-    {
-        $buildRootRegex = '^{0}(\\|/)' -f [regex]::Escape($TaskContext.BuildRoot)
-        if( $archivePath -notmatch $buildRootRegex )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ArchivePath: path to ZIP archive "{0}" is outside the build root directory. Please change this path so it is under the "{1}" directory. We recommend using a relative path, as that will always be resolved relative to the build root directory.' -f $archivePath,$TaskContext.BuildRoot)
-            return
-        }
-    }
-    else
+    if( -not [IO.Path]::IsPathRooted($archivePath) )
     {
         $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
+    }
+    $archivePath = [IO.Path]::GetFullPath($archivePath)
+    $buildRootRegex = '^{0}(\\|/)' -f [regex]::Escape($TaskContext.BuildRoot)
+    if( $archivePath -notmatch $buildRootRegex )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ArchivePath: path to ZIP archive "{0}" is outside the build root directory. Please change this path so it is under the "{1}" directory. We recommend using a relative path, as that it will always be resolved relative to the build root directory.' -f $archivePath,$TaskContext.BuildRoot)
+        return
     }
 
     $behaviorParams = @{ }
@@ -121,7 +119,6 @@ function New-WhiskeyZipArchive
         {
             $sourcePath = $item
         }
-        $pathparam = 'Path'
 
         $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
         if( -not $sourcePaths )
