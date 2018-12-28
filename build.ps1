@@ -11,7 +11,10 @@ param(
     $Initialize,
 
     [string]
-    $PipelineName
+    $PipelineName,
+
+    [string]
+    $MSBuildConfiguration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,54 +39,46 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $branch = $branch -replace '[^A-Za-z0-9-]','-'
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+    $MSBuildConfiguration = 'Release'
 }
 
-$assemblyVersion = @"
-[assembly: System.Reflection.AssemblyVersion("$version")]
-[assembly: System.Reflection.AssemblyFileVersion("$version")]
-[assembly: System.Reflection.AssemblyInformationalVersion("$version$buildInfo")]
-"@
-
-$assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
-if( -not (Test-Path -Path $assemblyVersionPath -PathType Leaf) )
+if( -not (Get-Command -Name 'dotnet') )
 {
-    '' | Set-Content -Path $assemblyVersionPath
+    exit
 }
 
-$currentAssemblyVersion = Get-Content -Path $assemblyVersionPath -Raw
-if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
+Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
+try
 {
-    Write-Verbose -Message ('Assembly version has changed.')
-    $assemblyVersion | Set-Content -Path $assemblyVersionPath
+    $versionParams = & {
+                            '-p:Version={0}{1}' -f $version,$buildInfo
+                            '-p:VersionPrefix={0}' -f $version
+                            if( $buildInfo )
+                            {
+                                '-p:VersionSuffix={0}' -f $buildInfo
+                            }
+                    }
+    dotnet build --configuration=$MSBuildConfiguration $versionParams
+
+    $outputDirectory = Join-Path -Path $PSScriptRoot -ChildPath '.output'
+    if( -not (Test-Path -Path $outputDirectory -PathType Container) )
+    {
+        New-Item -Path $outputDirectory -ItemType 'Directory'
+    }
+
+    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    if( $LASTEXITCODE )
+    {
+        Write-Error -Message ('Unit tests failed.')
+    }
 }
-
-$powershellModulesDirectoryName = 'PSModules'
-$PSModuleAutoLoadingPreference = 'None'
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Use-CallerPreference.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Import-WhiskeyPowerShellModule.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Install-WhiskeyPowerShellModule.ps1')
-Install-WhiskeyPowerShellModule -Name 'VSSetup' -Version '2.*'
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ('{0}\VSSetup' -f $powershellModulesDirectoryName))
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
-
-$msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' } | Select-Object -First 1
-if( -not $msbuild )
+finally
 {
-    Write-Error ('Unable to find MSBuild 15.0.')
-}
-
-$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe'
-& $nugetPath restore (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey.sln')
-
-& $msbuild.Path /target:build ('/property:Version={0}' -f $version) '/property:Configuration=Release' 'Assembly\Whiskey.sln' '/v:m'
-if( $LASTEXITCODE )
-{
-    exit 1
+    Pop-Location
 }
 
 $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
-$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\bin\Release'
+$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
 foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 {
     $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name

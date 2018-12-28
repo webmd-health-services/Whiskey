@@ -126,4 +126,19 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is already inst
     }
 }
 
+Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exists but is empty' {
+    $moduleRootDir = Join-Path -Path $TestDrive.FullName -ChildPath ('{0}\Pester' -f $powerShellModulesDirectoryName)
+    New-Item -Path $moduleRootDir -ItemType Directory | Write-Debug
+
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is missing files' {
+    Install-WhiskeyPowerShellModule -Path $TestDrive.FullName -Name 'Pester' -Version '4.4.0'
+    $moduleManifest = Join-Path -Path $TestDrive.FullName -ChildPath ('{0}\Pester\4.4.0\Pester.psd1' -f $powerShellModulesDirectoryName) -Resolve
+    Remove-Item -Path $moduleManifest -Force
+
+    Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
+}
+
 Remove-Item -Path 'function:Install-WhiskeyPowerShellModule'

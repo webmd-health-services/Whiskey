@@ -264,7 +264,9 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties['title'] = $TaskParameter['Name']
     }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFile)
+    $outFileDisplay = $outFile -replace ('^{0}' -f [regex]::Escape($TaskContext.BuildRoot)),''
+    $outFileDisplay = $outFileDisplay.Trim('\','/')
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFileDisplay)
     New-ProGetUniversalPackage -OutFile $outFile `
                                -Version $version.SemVer2NoBuildMetadata.ToString() `
                                -Name $TaskParameter['Name'] `

@@ -313,7 +313,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
         $packagePath | Should Exist
     }
 
-    Expand-ZipArchive -Path $packagePath -DestinationPath $expandPath
+    if( -not (Test-Path -Path $expandPath -PathType Container) )
+    {
+        New-Item -Path $expandPath -ItemType 'Directory' | Out-Null
+    }
+    [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $expandPath)
 
     $upackJsonPath = Join-Path -Path $expandPath -ChildPath 'upack.json'
 
@@ -821,6 +825,7 @@ function ThenPackageShouldBeCompressed
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
+    $DebugPreference = 'Continue'
     Write-Debug -Message ('Package size: {0}' -f $packageSize)
     if( $GreaterThan )
     {
@@ -1135,7 +1140,7 @@ foreach( $compressionLevel in @( 9, 'Optimal' ) )
         Init
         GivenARepositoryWIthItems 'one.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
-        ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
+        ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8500
     }
 }
 
@@ -1145,7 +1150,7 @@ foreach( $compressionLevel in @( 1, 'Fastest' ) )
         Init
         GivenARepositoryWIthItems 'one.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
-        ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8000
+        ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8500
     }
 }
 
@@ -1153,7 +1158,7 @@ Describe 'ProGetUniversalPackage.when compression level is not included' {
     Init
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
-    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8000
+    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8500
 }
 
 Describe 'ProGetUniversalPackage.when a bad compression level is included' {
@@ -1161,6 +1166,13 @@ Describe 'ProGetUniversalPackage.when a bad compression level is included' {
     GivenARepositoryWIthItems 'one.ps1'
     WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "this is no good" -ErrorAction SilentlyContinue
     ThenTaskFails 'not a valid compression level'
+}
+
+Describe 'ProGetUniversalPackage.when compressionLevel of 7 is included as a string' {
+    Init
+    GivenARepositoryWIthItems 'one.ps1'
+    WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel "7"
+    ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8500
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
