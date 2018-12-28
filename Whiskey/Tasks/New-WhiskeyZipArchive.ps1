@@ -17,6 +17,8 @@ function New-WhiskeyZipArchive
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    Import-WhiskeyPowerShellModule -Name 'Zip'
+
     $archivePath = $TaskParameter['ArchivePath']
     $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
 

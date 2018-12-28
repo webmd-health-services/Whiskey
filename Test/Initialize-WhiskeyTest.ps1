@@ -5,7 +5,7 @@ Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Buil
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve) -Force
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Carbon' -Resolve) -Force
 
-foreach( $name in @( 'PackageManagement', 'PowerShellGet', 'Zip' ) )
+foreach( $name in @( 'PackageManagement', 'PowerShellGet' ) )
 {
     if( (Get-Module -Name $name) )
     {
