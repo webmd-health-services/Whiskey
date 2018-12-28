@@ -10,9 +10,10 @@ function GivenContext
 {
     $script:taskParameter = @{ }
     $script:taskParameter['uri'] = 'TestURI'
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
     $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
     $Global:globalTestSession = $session
-    $Script:Context = New-WhiskeyTestContext -ForBuildServer -forTaskname 'PublishProGetAsset'
+    $Script:Context = New-WhiskeyTestContext -ForBuildServer -forTaskname 'PublishProGetAsset' -IncludePSModules
     Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
     Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
 }
@@ -78,6 +79,11 @@ function GivenAssetThatDoesntExist
     $script:taskParameter['Path'] = $TestDrive.FullName,$FilePath -join '\'
 }
 
+function Init
+{
+    Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
+}
+
 function WhenAssetIsUploaded
 {
     $Global:Error.Clear()
@@ -137,7 +143,8 @@ function ThenTaskSucceeds
     }
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly'{
+Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly' {
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
@@ -147,6 +154,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly'{
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded to a subdirectory correctly'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -Name 'boo/foo.txt' -directory 'bar' -FilePath 'foo.txt'
@@ -156,6 +164,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded to a subdirectory co
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -Name 'foo.txt','bar.txt' -directory 'bar' -FilePath 'foo.txt','bar.txt'
@@ -165,6 +174,7 @@ Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -Directory 'bar' -FilePath 'fooboo.txt'
@@ -174,6 +184,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
@@ -183,6 +194,7 @@ Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
@@ -192,6 +204,7 @@ Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
+    Init
     GivenContext
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
     WhenAssetIsUploaded
@@ -200,6 +213,7 @@ Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
 }
 
 Describe 'Publish-WhiskeyProGetAsset.when Asset already exists'{
+    Init
     GivenContext
     GivenCredentials
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'
