@@ -15,7 +15,7 @@ Build:
 
 - GetPowerShellModule:
     Name: ProGetAutomation
-    Version: 0.4.*
+    Version: 0.8.*
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
@@ -24,6 +24,10 @@ Build:
 - GetPowerShellModule:
     Name: VSSetup
     Version: 2.*
+
+- GetPowerShellModule:
+    Name: Zip
+    Version: 0.2.*
 
 - Pester4:
     OnlyBy: Developer
@@ -97,7 +101,13 @@ Build:
     Argument:
         Path: .output\pester*.xml
 
-- Exec: Whiskey\bin\7-Zip\7z.exe a $(WHISKEY_OUTPUT_DIRECTORY)\Whiskey.zip .\Whiskey '-xr!*.pdb'
+- Zip:
+    ArchivePath: .output\Whiskey.zip
+    Path: 
+    - Whiskey
+    Exclude:
+    - "*.pdb"
+    - "*.orig"
 
 Publish:
 - PublishPowerShellModule:

@@ -17,3 +17,4 @@ Assembly/**/bin/**
 **/.vs/**
 Assembly/Whiskey/Properties/AssemblyVersion.cs
 *.user
+/.vscode/**

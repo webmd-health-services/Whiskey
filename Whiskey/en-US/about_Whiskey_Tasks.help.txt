@@ -51,6 +51,7 @@ LONG DESCRIPTION
       whiskey.yml file by reading their values from an XML file.
     * `TaskDefaults`: sets default task properties.
     * `Version`: sets the version number for the current build.
+    * `Zip`: creates ZIP archives.
 
     ## Common Task Properties
 
