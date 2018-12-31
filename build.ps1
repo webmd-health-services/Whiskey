@@ -42,8 +42,20 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $MSBuildConfiguration = 'Release'
 }
 
-if( -not (Get-Command -Name 'dotnet') )
+if( -not (Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue) )
 {
+    if( (Get-Variable -Name 'IsLinux') )
+    {
+        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
+        sudo apt install curl
+        bash $dotnetInstallPath
+    }
+    else
+    {
+        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+        & $dotnetInstallPath
+    }
+    Write-Warning -Message ('We just installed .NET Core. Please restart your shell so that the dotnet command shows up in your PATH. If dotnet doesn''t show in your path after installation, you''ll need to manually update your PATH environment variable to include the directory where .NET Core was installed.')
     exit
 }
 
