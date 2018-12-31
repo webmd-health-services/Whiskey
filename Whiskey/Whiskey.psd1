@@ -32,7 +32,7 @@
     Description = 'Continuous Integration/Continuous Delivery module.'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    # PowerShellVersion = ''
+    PowerShellVersion = '5.1'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -56,7 +56,7 @@
     RequiredAssemblies = @( 'bin\SemanticVersion.dll', 'bin\Whiskey.dll', 'bin\YamlDotNet.dll' )
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-    #ScriptsToProcess = @()
+    # ScriptsToProcess = @()
 
     # Type files (.ps1xml) to be loaded when importing this module
     # TypesToProcess = @()
@@ -147,6 +147,11 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Whiskey can now run under PowerShell Core.
+* Updated ProGet tasks to depend on ProGetAutomation 0.8.*.
+* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
+* `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
+* Created new `Zip` task for creating ZIP archives.
+* Whiskey no longer ships with a copy of 7-Zip. Instead, if 7-Zip is needed to install a local version of Node (only applicable on Windows due to path length restrictions), 7-Zip is downloaded from nuget.org. If you were using the version of 7-Zip in Whiskey to create ZIP archives during your build, please use the new `Zip` task instead.
 '@
         } # End of PSData hashtable
 

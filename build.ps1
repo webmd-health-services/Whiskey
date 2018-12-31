@@ -50,21 +50,28 @@ if( -not (Get-Command -Name 'dotnet') )
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
 try
 {
-    $versionParams = & {
-                            '-p:Version={0}{1}' -f $version,$buildInfo
-                            '-p:VersionPrefix={0}' -f $version
-                            if( $buildInfo )
-                            {
-                                '-p:VersionSuffix={0}' -f $buildInfo
-                            }
-                    }
-    dotnet build --configuration=$MSBuildConfiguration $versionParams
-
     $outputDirectory = Join-Path -Path $PSScriptRoot -ChildPath '.output'
     if( -not (Test-Path -Path $outputDirectory -PathType Container) )
     {
         New-Item -Path $outputDirectory -ItemType 'Directory'
     }
+
+    $params = & {
+                            '/p:Version={0}{1}' -f $version,$buildInfo
+                            '/p:VersionPrefix={0}' -f $version
+                            if( $buildInfo )
+                            {
+                                '/p:VersionSuffix={0}' -f $buildInfo
+                            }
+                            if( $VerbosePreference -eq 'Continue' )
+                            {
+                                '--verbosity=n'
+                            }
+                            '/filelogger9'
+                            ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+                    }
+    Write-Verbose ('dotnet build --configuration={0} {1}' -f $MSBuildConfiguration,($params -join ' '))
+    dotnet build --configuration=$MSBuildConfiguration $params
 
     dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
     if( $LASTEXITCODE )

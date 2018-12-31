@@ -276,7 +276,10 @@ function New-WhiskeyTestContext
         $InCleanMode,
 
         [Switch]
-        $InInitMode
+        $InInitMode,
+
+        [Switch]
+        $IncludePSModules
     )
 
     Set-StrictMode -Version 'Latest'
@@ -373,6 +376,13 @@ function New-WhiskeyTestContext
         Remove-Item -Path $context.OutputDirectory -Recurse -Force
     }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+
+    if( $IncludePSModules )
+    {
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) `
+                  -Destination (Join-Path -Path $context.BuildRoot -ChildPath 'PSModules') `
+                  -Recurse
+    }
 
     return $context
 }

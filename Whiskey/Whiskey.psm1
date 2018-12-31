@@ -19,8 +19,6 @@ else
 
 $events = @{ }
 
-$7z = Join-Path -Path $PSScriptRoot -ChildPath 'bin\7-Zip\7z.exe' -Resolve
-
 $powerShellModulesDirectoryName = 'PSModules'
 
 $buildStartedAt = [DateTime]::MinValue
@@ -48,6 +46,14 @@ foreach( $propertyToCheck in $propertiesToCheck )
     {
         Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
     }
+}
+
+# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
+if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
 }
 
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
