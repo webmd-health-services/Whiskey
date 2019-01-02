@@ -6,7 +6,7 @@ function Remove-WhiskeyFileSystemItem
     Deletes a file or directory.
 
     .DESCRIPTION
-    The `Remove-WhiskeyFileSystemItem` deletes files and directories. Directories are deleted recursively. This function can delete directories that contain paths longer than the maximum allowed by Windows (260 characters). It uses Robocopy to mirror an empty directory structure onto the directory then deletes the now-empty directory.
+    The `Remove-WhiskeyFileSystemItem` deletes files and directories. Directories are deleted recursively. On Windows, this function uses robocopy to delete directories, since it can handle files/directories whose paths are longer than the maximum 260 characters.
 
     If the file or directory doesn't exist, nothing happens.
 
@@ -45,21 +45,28 @@ function Remove-WhiskeyFileSystemItem
     }
     elseif( (Test-Path -Path $Path -PathType Container) )
     {
-        $emptyDir = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
-        New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
-        try
+        if( $IsWindows )
         {
-            Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $Path | Write-Verbose
-            if( $LASTEXITCODE -ge 8 )
+            $emptyDir = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
+            New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
+            try
             {
-                Write-Error -Message ('Failed to remove directory ''{0}''.' -f $Path)
-                return
+                Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $Path | Write-Verbose
+                if( $LASTEXITCODE -ge 8 )
+                {
+                    Write-Error -Message ('Failed to remove directory "{0}".' -f $Path)
+                    return
+                }
+                Remove-Item -Path $Path -Recurse -Force
             }
-            Remove-Item -Path $Path -Recurse -Force
+            finally
+            {
+                Remove-Item -Path $emptyDir -Recurse -Force
+            }
         }
-        finally
+        else
         {
-            Remove-Item -Path $emptyDir -Recurse -Force
+            Remove-Item -Path $Path -Recurse -Force
         }
     }
 }

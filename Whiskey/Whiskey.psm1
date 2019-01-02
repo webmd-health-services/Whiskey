@@ -1,21 +1,3 @@
-$numRobocopyThreads = 1
-if( (Get-Command 'Get-CimInstance' -ErrorAction Ignore) )
-{
-    Write-Debug 'Get-CimInstance exists.'
-    $numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | 
-        Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | 
-        Measure-Object -Sum | 
-        Select-Object -ExpandProperty 'Sum'
-    $numRobocopyThreads *= 2
-}
-else
-{
-    if( [Environment]::ProcessorCount )
-    {
-        $numRobocopyThreads = [Environment]::ProcessorCount * 2
-    }
-}
-
 
 $events = @{ }
 

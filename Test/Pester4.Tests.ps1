@@ -77,7 +77,7 @@ function New-WhiskeyPesterTestContext
         }
         $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
         Get-ChildItem -Path $sourceRoot |
-            ForEach-Object { robocopy $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) /MIR } | 
+            ForEach-Object { Copy-Item -Path $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) -Recurse } | 
             Out-Null
         $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
         return $context
