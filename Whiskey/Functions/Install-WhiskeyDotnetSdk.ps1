@@ -73,7 +73,7 @@ function Install-WhiskeyDotNetSdk
     $errorActionParam = @{ ErrorAction = 'Stop' }
     $installingWithShell = $false
     $executableName = 'dotnet.exe'
-    if( ((Get-Variable 'IsLinux') -and $IsLinux -eq $true) -or ((Get-Variable 'IsMacOS') -and $IsMacOS -eq $true)  )
+    if( $IsLinux -or $IsMacOS )
     {
         $dotnetInstallScript = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\dotnet-install.sh' -Resolve
         $errorActionParam = @{ }
@@ -89,10 +89,28 @@ function Install-WhiskeyDotNetSdk
         )
 
         $errCount = $Global:Error.Count
-        & $dotnetInstall -NoPath -InstallDir $InstallDir -Version $VersionNumber @Verbose @errorActionParam | Write-Verbose -Verbose
+        & {
+            $args = @(
+                        '-NoPath',
+                        '-InstallDir',
+                        $InstallDir,
+                        '-Version'
+                        $VersionNumber
+            )
+            if( $installingWithShell )
+            {
+                Write-Verbose ('bash {0} {1}' -f $dotnetInstall,($args -join ' ')) -Verbose
+                bash $dotnetInstall $args
+            }
+            else 
+            {
+                Write-Verbose ('{0} {1}' -f $dotnetInstall,($args -join ' '))
+                & $dotnetInstall $args @Verbose @errorActionParam
+            }
+        } | Write-Verbose -Verbose
         if( $installingWithShell -and $LASTEXITCODE )
         {
-            Write-Error -Message ('dotnet-install.sh exited with code "{0}". Failed to install .NET Core.' -f $LASTEXITCODE) -ErrorAction Stop
+            Write-Error -Message ('{0} exited with code "{1}". Failed to install .NET Core.' -f $dotnetInstall,$LASTEXITCODE) -ErrorAction Stop
             return
         }
         $newErrCount = $Global:Error.Count
