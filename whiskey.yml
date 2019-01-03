@@ -76,7 +76,7 @@ Build:
             # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
             # These three tests must be in the same queue.
             - Test\MSBuild.Tests.ps1
-            - Test\Invoke-WhiskeyNUnit2Task.Tests.ps1
+            - Test\NUnit2.Tests.ps1
             - Test\NUnit3.Tests.ps1
     - Tasks:
         Pester4:
