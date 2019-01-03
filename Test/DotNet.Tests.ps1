@@ -162,7 +162,7 @@ function WhenRunningDotNet
     }
 }
 
-Describe 'DotNetBuild.when command succeeds' {
+Describe 'DotNet.when command succeeds' {
     try
     {
         Init
@@ -178,12 +178,12 @@ Describe 'DotNetBuild.when command succeeds' {
     }
 }
 
-Describe 'DotNetBuild.when command fails' {
+Describe 'DotNet.when command fails' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '1.1.*' -ErrorAction SilentlyContinue
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.1'
+        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.0.*' -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'dotnet\.exe\ failed\ with\ exit\ code'
     }
     finally
@@ -192,7 +192,7 @@ Describe 'DotNetBuild.when command fails' {
     }
 }
 
-Describe 'DotNetBuild.when passing paths to the command' {
+Describe 'DotNet.when passing paths to the command' {
     try
     {
         Init
@@ -212,7 +212,7 @@ Describe 'DotNetBuild.when passing paths to the command' {
 }
 
 
-Describe 'DotNetBuild.when command is missing' {
+Describe 'DotNet.when command is missing' {
     try
     {
         Init
