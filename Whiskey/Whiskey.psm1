@@ -1,5 +1,3 @@
-$numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
-$numRobocopyThreads *= 2
 
 $events = @{ }
 

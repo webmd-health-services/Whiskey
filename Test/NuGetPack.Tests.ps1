@@ -42,7 +42,7 @@ function GivenABuiltLibrary
     )
 
     $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest'
-    robocopy $projectRoot $TestDrive.FullName '/MIR' '/R:0' '/MT'
+    Copy-Item -Path (Join-Path -Path $projectRoot -ChildPath '*') -Destination $TestDrive.FullName -Recurse
 
     # Make sure output directory gets created by the task
     $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
