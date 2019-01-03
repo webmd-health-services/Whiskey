@@ -98,19 +98,19 @@ function Install-Node
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
         ForEach-Object {
-            $destinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
-            $destinationDir = Join-Path -Path $destinationDir -ChildPath $_.Name
-            if( -not (Test-Path -Path $destinationDir -PathType Container) )
+            $moduleDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
+            $moduleDestinationDir = Join-Path -Path $moduleDestinationDir -ChildPath $_.Name
+            if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
             {
-                New-Item -Path $destinationDir -ItemType 'Directory' | Out-Null
+                New-Item -Path $moduleDestinationDir -ItemType 'Directory' | Out-Null
             }
             if( $IsWindows )
             {
-                Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $destinationDir
+                Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $moduleDestinationDir
             }
             else
             {
-                Copy-Item -Path $_.FullName -Destination $destinationDir -Recurse
+                Copy-Item -Path $_.FullName -Destination $moduleDestinationDir -Recurse
             }
         }
 
