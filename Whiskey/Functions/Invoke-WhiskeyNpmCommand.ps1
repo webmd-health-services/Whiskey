@@ -78,7 +78,7 @@ function Invoke-WhiskeyNpmCommand
     $npmCommandString = ('npm {0} {1}' -f $commandName,($commandArgs -join ' '))
 
     $originalPath = $env:PATH
-    Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f $nodeRoot,[IO.Path]::PathSeparator,$env:Path)
+    Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f $nodeRoot,[IO.Path]::PathSeparator,$env:PATH)
     try
     {
         Write-Progress -Activity $npmCommandString

@@ -64,7 +64,7 @@ function Invoke-WhiskeyNodeTask
         $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
         $nodeRoot = $nodePath | Split-Path
 
-        Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f $nodeRoot,[IO.Path]::PathSeparator,$env:Path)
+        Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f $nodeRoot,[IO.Path]::PathSeparator,$env:PATH)
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('npm install')

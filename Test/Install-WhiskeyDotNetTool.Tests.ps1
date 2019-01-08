@@ -7,7 +7,7 @@
 
 $dotnetPath = $null
 $globalDotNetDirectory = $null
-$originalPath = $env:Path
+$originalPath = $env:PATH
 $version = $null
 $workingDirectory = $null
 
@@ -33,7 +33,7 @@ function GivenGlobalDotNetInstalled
 
     New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath 'dotnet.exe') -ItemType File -Force | Out-Null
     New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)) -ItemType File -Force | Out-Null
-    $env:Path += ('{0}{1}' -f [IO.Path]::PathSeparator,$globalDotNetDirectory)
+    $env:PATH += ('{0}{1}' -f [IO.Path]::PathSeparator,$globalDotNetDirectory)
 }
 
 function GivenBadGlobalJson
@@ -97,13 +97,13 @@ function GivenDotNetNotInstalled
     {
         $dotNetDirectory = [regex]::Escape(($path | Split-Path -Parent))
         $dotNetDirectory = ('{0}\\?' -f $dotNetDirectory)
-        $env:Path = $env:Path -replace $dotNetDirectory,''
+        $env:PATH = $env:PATH -replace $dotNetDirectory,''
     }
 }
 
 function ThenRestoreOriginalPathEnvironment
 {
-    $env:Path = $originalPath
+    $env:PATH = $originalPath
 }
 
 function ThenDotNetLocallyInstalled
