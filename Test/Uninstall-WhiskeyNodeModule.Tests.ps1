@@ -79,7 +79,7 @@ function GivenInstalledModule
     Push-Location $TestDrive.FullName
     try
     {
-        Install-WhiskeyNodeModule -Name $Name -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe') | Out-Null
+        Install-WhiskeyNodeModule -Name $Name -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName) | Out-Null
     }
     finally
     {
@@ -95,7 +95,7 @@ function WhenUninstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        Uninstall-WhiskeyNodeModule -Name $name -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe') -Force:$force
+        Uninstall-WhiskeyNodeModule -Name $name -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName) -Force:$force
     }
     finally
     {

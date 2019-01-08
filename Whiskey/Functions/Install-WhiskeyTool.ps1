@@ -120,9 +120,6 @@ function Install-WhiskeyTool
                 $provider = ''
             }
 
-            $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
-            $nodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
-
             $version = $TaskParameter[$ToolInfo.VersionParameterName]
             if( -not $version )
             {
@@ -133,7 +130,12 @@ function Install-WhiskeyTool
             {
                 'NodeModule'
                 {
-
+                    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
+                    if( -not $nodePath )
+                    {
+                        Write-Error -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
+                        return
+                    }
                     $moduleRoot = Install-WhiskeyNodeModule -Name $name `
                                                             -NodePath $nodePath `
                                                             -Version $version `
@@ -153,9 +155,11 @@ function Install-WhiskeyTool
                     {
                         'Node'
                         {
+                            $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Ignore
+
                             if( $InCleanMode )
                             {
-                                if( (Test-Path -Path $nodepath -PathType Leaf) )
+                                if( $nodePath )
                                 {
                                     $TaskParameter[$ToolInfo.PathParameterName] = $nodePath
                                 }
@@ -215,15 +219,22 @@ function Install-WhiskeyTool
                                 $npmVersionToInstall = $nodeVersionToInstall.npm
                             }
 
-                            if( (Test-Path -Path $nodePath -PathType Leaf) )
+                            $installNode = $false
+                            if( $nodePath )
                             {
                                 $currentNodeVersion = & $nodePath '--version'
                                 if( $currentNodeVersion -ne $nodeVersionToInstall.version )
                                 {
                                     Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
+                                    $installNode = $true
                                 }
                             }
+                            else
+                            {
+                                $installNode = $true
+                            }
 
+                            $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
                             if( -not (Test-Path -Path $nodeRoot -PathType Container) )
                             {
                                 New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
@@ -251,7 +262,7 @@ function Install-WhiskeyTool
                                 }
                             }
 
-                            if( -not (Test-Path -Path $nodePath -PathType Leaf) )
+                            if( $installNode )
                             {
                                 if( $IsWindows )
                                 {
@@ -273,6 +284,8 @@ function Install-WhiskeyTool
                                 Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
                                     Get-ChildItem |
                                     Move-Item -Destination $nodeRoot
+
+                                $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Stop
                             }
 
                             $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'

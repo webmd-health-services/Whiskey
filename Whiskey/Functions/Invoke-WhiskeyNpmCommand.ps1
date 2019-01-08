@@ -6,7 +6,7 @@ function Invoke-WhiskeyNpmCommand
     Runs `npm` with given command and argument.
     
     .DESCRIPTION
-    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`) to the `NodePath` parameter. The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
+    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`, `node`) to the `NodePath` parameter. You can use Whiskey's `Resolve-WhiskeyNodePath` function to get the path to the Node executable.s The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
 
     Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with the `ArgumentList`.
 

@@ -82,7 +82,7 @@ function WhenInstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName)
     }
     finally
     {

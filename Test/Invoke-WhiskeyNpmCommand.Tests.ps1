@@ -82,7 +82,7 @@ function WhenRunningNpmCommand
     param()
 
     CreatePackageJson
-    $nodePath = Join-Path -Path $TestDrive.Fullname -ChildPath '.node\node.exe'
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName
     Push-Location $TestDrive.FullName
     try
     {

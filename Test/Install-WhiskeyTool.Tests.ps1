@@ -137,7 +137,7 @@ function ThenNodeInstalled
         $AtLatestVersion
     )
 
-    $nodePath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe'
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName
     if( $AtLatestVersion )
     {
         $expectedVersion = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
@@ -506,7 +506,7 @@ Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t instal
     {
         Init
         WhenInstallingTool 'NodeModule::license-checker' -ErrorAction SilentlyContinue
-        ThenThrewException 'Whiskey\ maybe\ failed\ to\ install\ Node\ correctly'
+        ThenThrewException 'Node\ isn''t\ installed\ in\ your\ repository'
         ThenNodeModuleNotInstalled 'license-checker'
     }
     finally
