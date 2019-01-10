@@ -157,8 +157,8 @@ function ThenNodeInstalled
         & $nodePath $npmPath '--version' | Should -Be $NpmVersion
     }
 
-    It ('should set path to node.exe') {
-        $taskParameter[$pathParameterName] | Should -Be (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+    It ('should set path to node executable') {
+        $taskParameter[$pathParameterName] | Should -Be (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName)
     }
 }
 
