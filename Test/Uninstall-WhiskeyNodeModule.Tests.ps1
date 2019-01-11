@@ -95,7 +95,7 @@ function WhenUninstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        Uninstall-WhiskeyNodeModule -Name $name -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName) -Force:$force
+        Uninstall-WhiskeyNodeModule -Name $name -BuildRootPath $TestDrive.FullName -Force:$force
     }
     finally
     {
@@ -215,7 +215,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module'
         GivenName 'wrappy'
         GivenFailingNpmUninstall
         WhenUninstallingNodeModule -ErrorAction SilentlyContinue
-        ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+        ThenErrorMessage 'Failed to remove Node module "wrappy"'
     }
     finally
     {
@@ -233,7 +233,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails'
         GivenFailingNpmUninstall
         GivenFailingRemoveItem
         WhenUninstallingNodeModule -ErrorAction SilentlyContinue
-        ThenErrorMessage 'Failed to remove Node module ''wrappy'''
+        ThenErrorMessage 'Failed to remove Node module "wrappy"'
     }
     finally
     {
