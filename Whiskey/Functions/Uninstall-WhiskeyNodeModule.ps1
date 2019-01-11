@@ -77,7 +77,7 @@ function Uninstall-WhiskeyNodeModule
         }
     }
 
-    if( Test-Path -Path $modulePath -PathType Container )
+    if( $modulePath -and (Test-Path -Path $modulePath -PathType Container) )
     {
         Write-Error -Message ('Failed to remove Node module "{0}" from "{1}" using both "npm prune" and manual removal. See previous errors for more details.' -f $Name,$modulePath)
         return
