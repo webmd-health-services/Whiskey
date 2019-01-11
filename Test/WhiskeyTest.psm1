@@ -78,6 +78,10 @@ function Install-Node
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
     $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+    if( -not $IsWindows )
+    {
+        $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
+    }
     foreach( $name in $WithModule )
     {
         if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )

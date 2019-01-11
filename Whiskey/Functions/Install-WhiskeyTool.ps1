@@ -123,7 +123,12 @@ function Install-WhiskeyTool
             }
 
             $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
-            $nodePath = Join-Path -Path $nodeRoot -ChildPath 'node.exe'
+            $nodeExeRoot = $nodeRoot
+            if( $nodeDirName )
+            {
+                $nodeExeRoot = Join-Path -Path $nodeRoot -ChildPath $nodeDirName
+            }
+            $nodePath = Join-Path -Path $nodeExeRoot -ChildPath $nodeExeName
 
             $version = $TaskParameter[$ToolInfo.VersionParameterName]
             if( -not $version )
@@ -185,7 +190,7 @@ function Install-WhiskeyTool
 
                                 if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
                                 {
-                                    Write-Verbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
+                                    Write-Verbose -Message ('Reading "{0}" to determine Node and NPM versions to use.' -f $packageJsonPath)
                                     $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
                                     if( $packageJson -and ($packageJson | Get-Member 'engines') )
                                     {
@@ -231,8 +236,21 @@ function Install-WhiskeyTool
                                 New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
                             }
 
-                            $extractedDirName = 'node-{0}-win-x64' -f $nodeVersionToInstall.version
-                            $filename = '{0}.zip' -f $extractedDirName
+                            $platform = 'win'
+                            $packageExtension = 'zip'
+                            if( $IsLinux )
+                            {
+                                $platform = 'linux'
+                                $packageExtension = 'tar.xz'
+                            }
+                            elseif( $IsMacOS )
+                            {
+                                $platform = 'darwin'
+                                $packageExtension = 'tar.gz'
+                            }
+
+                            $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
+                            $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
                             $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
                             if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
                             {
@@ -269,7 +287,7 @@ function Install-WhiskeyTool
                                     {
                                         New-Item -Path $nodeRoot -ItemType 'Directory'
                                     }
-                                    [IO.Compression.ZipFile]::ExtractToDirectory($nodeZipFile,$nodeRoot)
+                                    tar -xJvf $nodeZipFile -C $nodeRoot
                                 }
 
                                 Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
@@ -278,6 +296,10 @@ function Install-WhiskeyTool
                             }
 
                             $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+                            if( -not $IsWindows )
+                            {
+                                $npmPath = Join-Path -Path $nodeRoot -ChildPath 'lib\node_modules\npm\bin\npm-cli.js'
+                            }
                             $npmVersion = & $nodePath $npmPath '--version'
                             if( $npmVersion -ne $npmVersionToInstall )
                             {
@@ -299,7 +321,7 @@ function Install-WhiskeyTool
                         }
                         default
                         {
-                            throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $name)
+                            throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                         }
                     }
                 }

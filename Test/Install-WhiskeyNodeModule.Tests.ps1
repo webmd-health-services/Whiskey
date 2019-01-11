@@ -20,7 +20,14 @@ function Init
 
 function GivenNpmSucceedsButModuleNotInstalled
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
+    if( $IsWindows )
+    {
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { 'exit 0' | bash }
+    }
 }
 
 function GivenName
@@ -82,7 +89,7 @@ function WhenInstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node.exe')
+        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -NodePath (Join-Path -Path $TestDrive.FullName -ChildPath ('.node\{0}' -f $nodeExeName))
     }
     finally
     {
@@ -114,7 +121,7 @@ function ThenModule
 
     if ($Exists)
     {
-        It ('should install module ''{0}''' -f $Name) {
+        It ('should install module "{0}"' -f $Name) {
             $modulePath | Should -Exist
         }
 
@@ -128,7 +135,7 @@ function ThenModule
     }
     else
     {
-        It ('should not install module ''{0}''' -f $Name) {
+        It ('should not install module "{0}"' -f $Name) {
             $modulePath | Should -Not -Exist
         }
     }
@@ -231,7 +238,7 @@ Describe 'Install-WhiskeyNodeModule.when NPM executes successfully but module is
         GivenNpmSucceedsButModuleNotInstalled
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
-        ThenErrorMessage 'NPM executed successfully when attempting to install ''wrappy'' but the module was not found'
+        ThenErrorMessage 'NPM executed successfully when attempting to install "wrappy" but the module was not found'
     }
     finally
     {
