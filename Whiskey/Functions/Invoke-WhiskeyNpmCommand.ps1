@@ -6,7 +6,7 @@ function Invoke-WhiskeyNpmCommand
     Runs `npm` with given command and argument.
     
     .DESCRIPTION
-    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`) to the `NodePath` parameter. The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
+    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`, `node`) to the `NodePath` parameter. You can use Whiskey's `Resolve-WhiskeyNodePath` function to get the path to the Node executable.s The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
 
     Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with the `ArgumentList`.
 
@@ -38,7 +38,7 @@ function Invoke-WhiskeyNpmCommand
 
         [Parameter(Mandatory=$true)]
         [string]
-        $NodePath,
+        $BuildRootPath,
 
         [switch]
         # NPM commands are being run on a developer computer.
@@ -48,15 +48,14 @@ function Invoke-WhiskeyNpmCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $NodePath = Assert-WhiskeyNodePath -Path $NodePath
-    if( -not $NodePath )
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $BuildRootPath -ErrorAction Stop
+    if( -not $nodePath )
     {
         return
     }
 
-    $nodeRoot = $NodePath | Split-Path
-        
-    $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $BuildRootPath -Global -ErrorAction Stop
+    $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
 
     if( -not $npmPath -or -not (Test-Path -Path $npmPath -PathType Leaf) )
     {
@@ -92,7 +91,7 @@ function Invoke-WhiskeyNpmCommand
             }
             try
             {
-                Write-Verbose ('{0} {1} {2} {3}' -f $NodePath,$npmPath,$commandName,($commandArgs -join ' '))
+                Write-Verbose ('{0} {1} {2} {3}' -f $nodePath,$npmPath,$commandName,($commandArgs -join ' '))
                 & $nodePath $npmPath $commandName $commandArgs
             }
             finally

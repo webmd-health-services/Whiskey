@@ -29,7 +29,7 @@ function Invoke-WhiskeyNodeTask
     if( $TaskContext.ShouldClean )
     {
         Write-WhiskeyTiming -Message 'Cleaning'
-        $nodeModulesPath = Join-Path -path $TaskContext.BuildRoot -ChildPath 'node_modules'
+        $nodeModulesPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath 'node_modules'
         Remove-WhiskeyFileSystemItem -Path $nodeModulesPath
         Write-WhiskeyTiming -Message 'COMPLETE'
         return
@@ -61,14 +61,13 @@ function Invoke-WhiskeyNodeTask
 
     try
     {
-        $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
-        $nodeRoot = $nodePath | Split-Path
-
-        Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f $nodeRoot,[IO.Path]::PathSeparator,$env:PATH)
+	$nodePath = Resolve-WhiskeyNodePath -BuildRoot $TaskContext.BuildRoot
+	
+        Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f ($nodePath | Split-Path),[IO.Path]::PathSeparator,$env:PATH)
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('npm install')
-        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-WhiskeyTiming -Message ('COMPLETE')
 
         if( $TaskContext.ShouldInitialize )
@@ -94,9 +93,11 @@ Build:
         {
             Update-Progress -Status ('npm run {0}' -f $script) -Step ($stepNum++)
             Write-WhiskeyTiming -Message ('Running script ''{0}''.' -f $script)
-            Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $nodePath -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+            Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
             Write-WhiskeyTiming -Message ('COMPLETE')
         }
+
+        $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $TaskContext.BuildRoot
 
         Update-Progress -Status ('nsp check') -Step ($stepNum++)
         Write-WhiskeyTiming -Message ('Running NSP security check.')
