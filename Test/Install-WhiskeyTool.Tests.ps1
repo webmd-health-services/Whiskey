@@ -188,8 +188,8 @@ function ThenNodeModuleNotInstalled
     )
 
     It ('should not install the node module') {
-        $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Naem $Name -BuildRootPath $TestDrive.FullName -Global -ErrorAction Ignore | Should -BeNullOrEmpty
-        $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Naem $Name -BuildRootPath $TestDrive.FullName -ErrorAction Ignore | Should -BeNullOrEmpty
+        $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $TestDrive.FullName -Global -ErrorAction Ignore | Should -BeNullOrEmpty
+        $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $TestDrive.FullName -ErrorAction Ignore | Should -BeNullOrEmpty
         $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
     }
 }
