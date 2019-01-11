@@ -231,7 +231,7 @@ Describe 'Install-WhiskeyNodeModule.when NPM executes successfully but module is
         GivenNpmSucceedsButModuleNotInstalled
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
-        ThenErrorMessage 'NPM executed successfully when attempting to install ''wrappy'' but the module was not found'
+        ThenErrorMessage 'NPM executed successfully when attempting to install "wrappy" but the module was not found'
     }
     finally
     {
