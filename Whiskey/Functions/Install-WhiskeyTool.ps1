@@ -137,7 +137,7 @@ function Install-WhiskeyTool
                         return
                     }
                     $moduleRoot = Install-WhiskeyNodeModule -Name $name `
-                                                            -NodePath $nodePath `
+                                                            -BuildRootPath $InstallRoot `
                                                             -Version $version `
                                                             -Global `
                                                             -InCleanMode:$InCleanMode `

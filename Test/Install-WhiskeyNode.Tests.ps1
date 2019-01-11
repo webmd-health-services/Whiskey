@@ -72,8 +72,8 @@ function ThenNodeInstalled
         & $nodePath '--version' | Should -Be $NodeVersion
     }
 
-
-    $npmPath = Join-Path -Path $TestDRive.FullName -ChildPath '.node\node_modules\npm\bin\npm-cli.js'
+    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TestDrive.FullName -Global
+    $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
     It ('should install NPM') {
         $npmPath | Should -Exist
         & $nodePath $npmPath '--version' | Should -Be $NpmVersion
@@ -88,15 +88,7 @@ function ThenNodeNotInstalled
 {
     It ('should not install Node') {
         Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName -ErrorAction Ignore | Should -BeNullOrEmpty
-    }
-
-    $npmPath = Join-Path -Path $TestDRive.FullName -ChildPath '.node\node_modules\npm\bin\npm-cli.js'
-    It ('should not install NPM') {
-        $npmPath | Should -Not -Exist
-    }
-
-    It ('should not set path to node') {
-        $nodePath | Should -BeNullOrEmpty
+        Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TestDrive.FullName -Global -ErrorAction Ignore | Should -BeNullOrEmpty
     }
 }
 

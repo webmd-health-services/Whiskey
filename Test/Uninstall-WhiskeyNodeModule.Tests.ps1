@@ -79,7 +79,7 @@ function GivenInstalledModule
     Push-Location $TestDrive.FullName
     try
     {
-        Install-WhiskeyNodeModule -Name $Name -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName) | Out-Null
+        Install-WhiskeyNodeModule -Name $Name -BuildRootPath $TestDrive.FullName | Out-Null
     }
     finally
     {
@@ -119,19 +119,19 @@ function ThenModule
         $DoesNotExist
     )
 
-    $modulePath = Join-Path -Path $script:applicationRoot -ChildPath ('node_modules\{0}' -f $Name)
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:applicationRoot -ErrorAction Ignore
 
     if ($Exists)
     {
-        It ('should not remove module ''{0}''' -f $Name) {
-            $modulePath | Should -Exist
+        It ('should not remove module "{0}"' -f $Name) {
+            $modulePath | Should -Not -BeNullOrEmpty
         }
 
     }
     else
     {
-        It ('should remove module ''{0}''' -f $Name) {
-            $modulePath | Should -Not -Exist
+        It ('should remove module "{0}"' -f $Name) {
+            $modulePath | Should -BeNullOrEmpty
         }
     }
 }

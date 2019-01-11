@@ -144,7 +144,7 @@ LONG DESCRIPTION
 
     would cause Whiskey to install the NSP module and send the path to its directory in the `NspPath` key of the `TaskParameter` hashtable when calling your task. The path will always be to the Node module's directory in the `node_modules` directory.
 
-    Whiskey does not install these Node modules in your project's node_modules directory. It installs them to `.node\node_modules`, your project's dedicated "global" Node environment.
+    Whiskey does not install these Node modules in your project's node_modules directory. It installs them to the "node_modules" directory in your project's dedicated "global" Node environment.
 
     ## .NET Core SDK
 

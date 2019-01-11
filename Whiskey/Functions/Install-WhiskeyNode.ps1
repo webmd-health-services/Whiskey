@@ -166,7 +166,8 @@ function Install-WhiskeyNode
         $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Stop
     }
 
-    $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -NodeRootPath $nodeRoot -ErrorAction Stop
+    $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
     $npmVersion = & $nodePath $npmPath '--version'
     if( $npmVersion -ne $npmVersionToInstall )
     {

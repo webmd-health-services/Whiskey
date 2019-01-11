@@ -82,7 +82,7 @@ function WhenInstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -NodePath (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName)
+        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -BuildRootPath $TestDrive.FullName
     }
     finally
     {
@@ -110,7 +110,7 @@ function ThenModule
         $DoesNotExist
     )
 
-    $modulePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $Name)
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $TestDrive.FullName
 
     if ($Exists)
     {
@@ -158,7 +158,7 @@ function ThenReturnedPathForModule
         $Module
     )
 
-    $modulePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $Module)
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Module -BuildRootPath $TestDrive.FullName
     
     It 'should return the path to the module' {
         $output | Should -Be $modulePath
