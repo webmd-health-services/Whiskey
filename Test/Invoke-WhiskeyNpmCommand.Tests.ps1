@@ -129,18 +129,19 @@ function ThenPackage
         $DoesNotExist
     )
 
-    $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $TestDrive.FullName
+    $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $TestDrive.FullName -ErrorAction Ignore
 
     If ($Exists)
     {
         It ('should install package "{0}"' -f $PackageName) {
+            $packagePath | Should -Not -BeNullOrEmpty
             $packagePath | Should -Exist
         }
     }
     else
     {
         It ('should not install package "{0}"' -f $PackageName) {
-            $packagePath | Should -Not -Exist
+            $packagePath | Should -BeNullOrEmpty
         }
     }
 }

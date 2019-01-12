@@ -93,7 +93,7 @@ function Install-Node
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir -ErrorAction Ignore
 
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
