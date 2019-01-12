@@ -1,6 +1,25 @@
 
+$exportPlatformVars = $false
+if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+    $exportPlatformVars = $true
+}
 
-$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath '.downloadcache'
+$platform = 'win'
+if( $IsLinux )
+{
+    $platform = 'linux'
+}
+elseif( $IsMacOS )
+{
+    $platform = 'macos'
+}
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $platform)
+$WhiskeyTestDownloadCachePath = $downloadCachePath
+
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
     New-Item -Path $downloadCachePath -ItemType 'Directory'
@@ -78,6 +97,10 @@ function Install-Node
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
     $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+    if( -not $IsWindows )
+    {
+        $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
+    }
     foreach( $name in $WithModule )
     {
         if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )
@@ -94,7 +117,8 @@ function Install-Node
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir
+    Write-Debug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*' -Destination $destinationDir -Recurse
 
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
@@ -115,7 +139,7 @@ function Install-Node
             }
         }
 
-    Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |
+    Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include '*.zip','*.tar.*' |
         ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
         Where-Object { -not (Test-Path -Path $_ -PathType Leaf) } |
         ForEach-Object { New-Item -Path $_ -ItemType 'File' }
@@ -403,16 +427,14 @@ function Remove-DotNet
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
-# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
-$variablesToExport = @( 'WhiskeyTestDownloadCachePath' )
-if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
-{
-    $IsLinux = $false
-    $IsMacOS = $false
-    $IsWindows = $true
-    $variablesToExport += @( 'IsLinux','IsMacOS','IsWindows' )
+$variablesToExport = & {
+    'WhiskeyTestDownloadCachePath'
+    if( $exportPlatformVars )
+    {
+        'IsLinux'
+        'IsMacOS'
+        'IsWindows'
+    }
 }
-
-$WhiskeyTestDownloadCachePath = $downloadCachePath
-
+# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 Export-ModuleMember -Function '*' -Variable $variablesToExport

@@ -130,7 +130,9 @@ function WhenInstallingTool
     [CmdletBinding()]
     param(
         $Name,
+
         $Version,
+
         [Switch]
         $InCleanMode
     )
@@ -143,15 +145,10 @@ function WhenInstallingTool
         $optionalParams['Version'] = $Version
     }
 
-    if( $InCleanMode )
-    {
-        $optionalParams['InCleanMode'] = $InCleanMode
-    }
-
     Push-Location -path $taskWorkingDirectory
     try
     {
-        $script:nodePath = Install-WhiskeyNode -InstallRoot $TestDrive.FullName @optionalParams
+        $script:nodePath = Install-WhiskeyNode -InstallRoot $TestDrive.FullName -InCleanMode:$InCleanMode @optionalParams
     }
     catch
     {

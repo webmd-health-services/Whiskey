@@ -20,7 +20,14 @@ function Init
 
 function GivenNpmSucceedsButModuleNotInstalled
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
+    if( $IsWindows )
+    {
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { 'exit 0' | bash }
+    }
 }
 
 function GivenName
@@ -114,7 +121,7 @@ function ThenModule
 
     if ($Exists)
     {
-        It ('should install module ''{0}''' -f $Name) {
+        It ('should install module "{0}"' -f $Name) {
             $modulePath | Should -Exist
         }
 
@@ -128,7 +135,7 @@ function ThenModule
     }
     else
     {
-        It ('should not install module ''{0}''' -f $Name) {
+        It ('should not install module "{0}"' -f $Name) {
             $modulePath | Should -Not -Exist
         }
     }

@@ -38,5 +38,15 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $IsWindows = $true
 }
 
+$dotNetExeName = 'dotnet'
+$nodeExeName = 'node'
+$nodeDirName = 'bin'
+if( $IsWindows )
+{
+    $dotNetExeName = '{0}.exe' -f $dotNetExeName
+    $nodeExeName = '{0}.exe' -f $nodeExeName
+    $nodeDirName = ''
+}
+
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
     ForEach-Object { . $_.FullName }

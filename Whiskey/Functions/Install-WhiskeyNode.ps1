@@ -1,18 +1,6 @@
 
 function Install-WhiskeyNode
 {
-    <#
-    .SYNOPSIS
-    
-
-    .DESCRIPTION
-    
-
-    .EXAMPLE
-    
-
-    
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -118,8 +106,21 @@ function Install-WhiskeyNode
         New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
     }
 
-    $extractedDirName = 'node-{0}-win-x64' -f $nodeVersionToInstall.version
-    $filename = '{0}.zip' -f $extractedDirName
+    $platform = 'win'
+    $packageExtension = 'zip'
+    if( $IsLinux )
+    {
+        $platform = 'linux'
+        $packageExtension = 'tar.xz'
+    }
+    elseif( $IsMacOS )
+    {
+        $platform = 'darwin'
+        $packageExtension = 'tar.gz'
+    }
+
+    $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
+    $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
     $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
     if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
     {

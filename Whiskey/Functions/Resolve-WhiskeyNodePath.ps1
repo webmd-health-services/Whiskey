@@ -47,6 +47,10 @@ function Resolve-WhiskeyNodePath
                         Join-Path -Path $NodeRootPath -ChildPath 'bin/node'
                         Join-Path -Path $NodeRootPath -ChildPath 'node.exe'
                 } |
+                ForEach-Object {
+                    Write-Debug -Message ('Looking for Node executable at "{0}".' -f $_)
+                    $_
+                } |
                 Where-Object { Test-Path -Path $_ -PathType Leaf } |
                 Select-Object -First 1 |
                 Resolve-Path |
@@ -58,5 +62,6 @@ function Resolve-WhiskeyNodePath
         return
     }
 
+    Write-Debug -Message ('Found Node executable at "{0}".' -f $nodePath)
     return $nodePath
 }
