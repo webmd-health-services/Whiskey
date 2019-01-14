@@ -75,7 +75,7 @@ function Invoke-WhiskeyNpmConfig
                                 }
                         }
 
-        Invoke-WhiskeyNpmCommand -Name 'config' -ArgumentList $argumentList -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper
+        Invoke-WhiskeyNpmCommand -Name 'config' -ArgumentList $argumentList -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper
     }
 
 }

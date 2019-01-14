@@ -93,7 +93,7 @@ function Install-Node
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir -ErrorAction Ignore
 
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
@@ -403,13 +403,15 @@ function Remove-DotNet
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
 # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
+$variablesToExport = @( 'WhiskeyTestDownloadCachePath' )
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
     $IsLinux = $false
     $IsMacOS = $false
     $IsWindows = $true
+    $variablesToExport += @( 'IsLinux','IsMacOS','IsWindows' )
 }
 
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
-Export-ModuleMember -Function '*' -Variable 'WhiskeyTestDownloadCachePath'
+Export-ModuleMember -Function '*' -Variable $variablesToExport

@@ -36,10 +36,10 @@ function Install-WhiskeyNodeModule
         # Node modules are being installed on a developer computer.
         $ForDeveloper,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [string]
-        # The path to the node executable.
-        $NodePath,
+        # The path to the build root.
+        $BuildRootPath,
 
         [Switch]
         # Whether or not to install the module globally.
@@ -68,14 +68,8 @@ function Install-WhiskeyNodeModule
                         }
                     }
 
-    $nodeRoot = (Get-Location).ProviderPath
-    if( $Global )
-    {
-        $nodeRoot = $NodePath | Split-Path
-    }
-
-    $modulePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $Name)
-    if( (Test-Path -Path $modulePath -PathType Container) )
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
+    if( $modulePath )
     {
         return $modulePath
     }
@@ -84,15 +78,16 @@ function Install-WhiskeyNodeModule
         return
     }
 
-    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -NodePath $NodePath -ForDeveloper:$ForDeveloper | Write-Verbose
+    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -BuildRootPath $BuildRootPath -ForDeveloper:$ForDeveloper | Write-Verbose
     if( $LASTEXITCODE )
     {
         return
     }
 
-    if( -not (Test-Path -Path $modulePath -PathType Container))
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
+    if( -not $modulePath )
     {
-        Write-Error -Message ('NPM executed successfully when attempting to install ''{0}'' but the module was not found at ''{1}''' -f ($npmArgument -join ' '),$modulePath)
+        Write-Error -Message ('NPM executed successfully when attempting to install "{0}" but the module was not found anywhere in the build root "{1}"' -f ($npmArgument -join ' '),$BuildRootPath)
         return
     }
 

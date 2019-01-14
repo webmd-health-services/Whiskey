@@ -73,7 +73,7 @@ function GivenNpmCommand
 
 function GivenMissingGlobalNPM
 {
-    Mock -CommandName 'Join-Path' -ParameterFilter { $ChildPath -eq 'node_modules\npm\bin\npm-cli.js' }
+    Mock -CommandName 'Join-Path' -ParameterFilter { $ChildPath -eq 'bin\npm-cli.js' }
 }
 
 function WhenRunningNpmCommand
@@ -82,11 +82,10 @@ function WhenRunningNpmCommand
     param()
 
     CreatePackageJson
-    $nodePath = Join-Path -Path $TestDrive.Fullname -ChildPath '.node\node.exe'
     Push-Location $TestDrive.FullName
     try
     {
-        Invoke-WhiskeyNpmCommand -Name $npmCommand @argument -NodePath $nodePath 
+        Invoke-WhiskeyNpmCommand -Name $npmCommand @argument -BuildRootPath $TestDrive.FullName
     }
     finally
     {
@@ -130,18 +129,19 @@ function ThenPackage
         $DoesNotExist
     )
 
-    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath ('node_modules\{0}' -f $PackageName)
+    $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $TestDrive.FullName -ErrorAction Ignore
 
     If ($Exists)
     {
-        It ('should install package ''{0}''' -f $PackageName) {
+        It ('should install package "{0}"' -f $PackageName) {
+            $packagePath | Should -Not -BeNullOrEmpty
             $packagePath | Should -Exist
         }
     }
     else
     {
-        It ('should not install package ''{0}''' -f $PackageName) {
-            $packagePath | Should -Not -Exist
+        It ('should not install package "{0}"' -f $PackageName) {
+            $packagePath | Should -BeNullOrEmpty
         }
     }
 }
@@ -152,7 +152,7 @@ function ThenExitCode
         $ExitCode
     )
 
-    It ('should return exit code ''{0}''' -f $ExitCode) {
+    It ('should return exit code "{0}"' -f $ExitCode) {
         $Global:LASTEXITCODE | Should -Be $ExitCode
     }
 }
