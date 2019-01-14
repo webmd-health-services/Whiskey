@@ -118,7 +118,7 @@ function Install-Node
     }
 
     Write-Debug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*' -Destination $destinationDir -Recurse
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir -Recurse -ErrorAction Ignore
 
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
