@@ -114,7 +114,14 @@ foreach( $nestedModuleName in $nestedModules.Keys )
     $moduleRoot = Join-Path -Path $whiskeyRoot -ChildPath $nestedModuleName
     if( -not (Test-Path -Path $moduleRoot -PathType Container) )
     {
-        Save-Module -Name $nestedModuleName -RequiredVersion $nestedModules[$nestedModuleName] -Path $whiskeyRoot
+        $nestedModuleVersion = $nestedModules[$nestedModuleName]
+        # Run in a background job otherwise the default global 
+        # PackageManagement module assembly remains loaded.
+        Start-Job -ScriptBlock {
+            Save-Module -Name $using:nestedModuleName `
+                        -RequiredVersion $using:nestedModuleVersion `
+                        -Path $using:whiskeyRoot
+        } | Wait-Job | Receive-Job | Remove-Job
     }
 }
 
