@@ -37,7 +37,7 @@ function Invoke-WhiskeyNpmRunScript
     foreach ($script in $npmScripts)
     {
         Write-WhiskeyTiming -Message ('Running script ''{0}''.' -f $script)
-        Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -NodePath $TaskParameter['NodePath'] -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         Write-WhiskeyTiming -Message ('COMPLETE')
     }
 }

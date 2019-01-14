@@ -30,8 +30,8 @@ function Uninstall-WhiskeyNodeModule
 
         [Parameter(Mandatory=$true)]
         [string]
-        # The path to the Node executable
-        $NodePath,
+        # The path to the build root directory.
+        $BuildRootPath,
 
         [switch]
         # Node modules are being uninstalled on a developer computer.
@@ -58,23 +58,13 @@ function Uninstall-WhiskeyNodeModule
                     }
 
     Invoke-WhiskeyNpmCommand -Name 'uninstall' `
+                             -BuildRootPath $BuildRootPath `
                              -ArgumentList $argumentList `
-                             -NodePath $NodePath `
                              -ForDeveloper:$ForDeveloper
     
-    $nodeRoot = (Get-Location).ProviderPath
-    if( $Global )
-    {
-        $NodePath = Assert-WhiskeyNodePath -Path $NodePath
-        if( -not $NodePath )
-        {
-            return
-        }
-        $nodeRoot = $NodePath | Split-Path
-    }
-    $modulePath = Join-Path -Path $nodeRoot -ChildPath ('node_modules\{0}' -f $Name)
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
 
-    if( Test-Path -Path $modulePath -PathType Container )
+    if( $modulePath )
     {
         if( $Force )
         {
@@ -82,14 +72,14 @@ function Uninstall-WhiskeyNodeModule
         }
         else
         {
-            Write-Error -Message ('Failed to remove Node module ''{0}'' from ''{1}''. See previous errors for more details.' -f $Name,$modulePath)
+            Write-Error -Message ('Failed to remove Node module "{0}" from "{1}". See previous errors for more details.' -f $Name,$modulePath)
             return
         }
     }
 
-    if( Test-Path -Path $modulePath -PathType Container )
+    if( $modulePath -and (Test-Path -Path $modulePath -PathType Container) )
     {
-        Write-Error -Message ('Failed to remove Node module ''{0}'' from ''{1}'' using both ''npm prune'' and manual removal. See previous errors for more details.' -f $Name,$modulePath)
+        Write-Error -Message ('Failed to remove Node module "{0}" from "{1}" using both "npm prune" and manual removal. See previous errors for more details.' -f $Name,$modulePath)
         return
     }
 }
