@@ -18,3 +18,5 @@ Assembly/**/bin/**
 Assembly/Whiskey/Properties/AssemblyVersion.cs
 *.user
 /.vscode/**
+/Whiskey/PackageManagement/**
+/Whiskey/PowerShellGet/**
