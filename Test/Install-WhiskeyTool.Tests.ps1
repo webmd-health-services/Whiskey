@@ -28,10 +28,10 @@ function Invoke-NuGetInstall
     {
         Context 'the Invalid NuGet Package' {
             It 'should NOT exist' {
-                $result | Should Not Exist
+                $result | Should -Not -Exist
             }
             it 'should write errors' {
-                $Global:Error | Should NOT BeNullOrEmpty
+                $Global:Error[0] | Should -Not -BeNullOrEmpty
             }
         }
     }
