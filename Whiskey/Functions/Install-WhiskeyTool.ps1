@@ -96,6 +96,11 @@ function Install-WhiskeyTool
 
         if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
         {
+            if( -not $IsWindows )
+            {
+                Write-Error -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
+                return
+            }
             $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
             $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
             $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath

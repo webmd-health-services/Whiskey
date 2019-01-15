@@ -8,11 +8,21 @@ function Invoke-NuGetInstall
         $Package,
         $Version,
 
-        [switch]
-        $invalidPackage
+        [Switch]
+        $InvalidPackage,
+
+        [string]
+        $ExpectedError
     )
 
-    $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
+    try
+    {
+        $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
+    }
+    catch
+    {
+    }
+
     if( -not $invalidPackage)
     {
         Context 'the NuGet Package' {
@@ -26,51 +36,67 @@ function Invoke-NuGetInstall
     }
     else
     {
-        Context 'the Invalid NuGet Package' {
-            It 'should NOT exist' {
-                $result | Should Not Exist
+        Context 'the invalid NuGet package' {
+            if( $result )
+            {
+                It 'should NOT exist' {
+                    $result | Should -Not -Exist
+                }
             }
             it 'should write errors' {
-                $Global:Error | Should NOT BeNullOrEmpty
+                $Global:Error | Should -Not -BeNullOrEmpty
+                if( $ExpectedError )
+                {
+                    $Global:Error[0] | Should -Match $ExpectedError
+                }
             }
         }
     }
 }
 
-Describe 'Install-WhiskeyTool.when given a NuGet Package' {
-    Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
-}
+if( $IsWindows )
+{
+    Describe 'Install-WhiskeyTool.when given a NuGet Package' {
+        Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
+    }
 
-Describe 'Install-WhiskeyTool.when NuGet Pack is bad' {
-    Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction silentlyContinue
-}
+    Describe 'Install-WhiskeyTool.when NuGet Pack is bad' {
+        Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction silentlyContinue
+    }
 
-Describe 'Install-WhiskeyTool.when NuGet pack Version is bad' {
-    Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
-}
+    Describe 'Install-WhiskeyTool.when NuGet pack Version is bad' {
+        Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
+    }
 
-Describe 'Install-WhiskeyTool.when given a NuGet Package with an empty version string' {
-    Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
-}
+    Describe 'Install-WhiskeyTool.when given a NuGet Package with an empty version string' {
+        Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
+    }
 
-Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
+    Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
 
-    $Global:Error.Clear()
+        $Global:Error.Clear()
 
-    Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
-    Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
+        Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
+        Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
 
-    it 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
+        it 'should not write any errors' {
+            $Global:Error | Should BeNullOrEmpty
+        }
+    }
+
+    Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
+        Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
+        Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+        It 'should enable NuGet package restore' {
+            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
+            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
+        }
     }
 }
-
-Describe 'Install-WhiskeyTool.when set EnableNuGetPackageRestore' {
-    Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
-    Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-    It 'should enable NuGet package restore' {
-        Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
-        Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
+else
+{
+    Describe 'Install-WhiskeyTool.when run on non-Windows OS' {
+        Invoke-NuGetInstall -Package 'NUnit.Runners' -Version '2.6.4' -InvalidPackage -ExpectedError 'Only\ supported\ on\ Windows'
     }
 }
 
@@ -109,8 +135,8 @@ function Init
 
 function ThenDotNetPathAddedToTaskParameter
 {
-    It ('should set path to the dotnet.exe') {
-        $taskParameter[$pathParameterName] | Should -BeLike '*\dotnet.exe'
+    It ('should set path to the dotnet executable') {
+        $taskParameter[$pathParameterName] | Should -Match '[\\/]dotnet(\.exe)$'
     }
 }
 
@@ -141,8 +167,8 @@ function ThenNodeInstalled
         }
     }
 
-    It ('should download Node ZIP file') {
-        Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-win-x64.zip' -f $NodeVersion) | Should -Exist
+    It ('should download Node package') {
+        Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-*-x64.*' -f $NodeVersion) | Should -Exist
     }
 
     It ('should install Node') {

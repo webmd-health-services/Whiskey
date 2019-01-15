@@ -150,19 +150,21 @@ function Install-WhiskeyNode
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
             Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
             & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-Verbose
+
+            Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
+                Get-ChildItem |
+                Move-Item -Destination $nodeRoot
         }
         else
         {
-            if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+            Write-Verbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
+            tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-Verbose
+            if( $LASTEXITCODE )
             {
-                New-Item -Path $nodeRoot -ItemType 'Directory' | Out-Null
+                Write-Error -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFile,$nodeRoot)
+                return
             }
-            [IO.Compression.ZipFile]::ExtractToDirectory($nodeZipFile,$nodeRoot)
         }
-
-        Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
-            Get-ChildItem |
-            Move-Item -Destination $nodeRoot
 
         $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Stop
     }
