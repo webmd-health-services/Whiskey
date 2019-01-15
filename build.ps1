@@ -42,8 +42,41 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $MSBuildConfiguration = 'Release'
 }
 
-if( -not (Get-Command -Name 'dotnet') )
+$minDotNetVersion = [version]'2.1.503'
+$dotnetVersion = $null
+$dotnetInstallDir = $null
+
+if( (Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue) )
 {
+    $dotnetVersion = dotnet --version | ForEach-Object { [version]$_ }
+    $dotnetInstallDir = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
+    Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
+}
+
+if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
+{
+    $dotnetInstallParams = @{
+                                Version = $minDotNetVersion.ToString()
+                            }
+    if( $dotnetInstallDir )
+    {
+        $dotnetInstallParams['InstallDir'] = $dotnetInstallDir
+    }
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,($dotnetInstallParams.Keys | ForEach-Object { ' -{0} {1}' -f $_,$dotnetInstallParams[$_] }))
+    & $dotnetInstallPath @dotnetInstallParams
+    $dotnetPath = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
+    $currentPaths = [Environment]::GetEnvironmentVariable('PATH',[EnvironmentVariableTarget]::User) | 
+                        ForEach-Object { $_ -split [IO.Path]::PathSeparator } |
+                        ForEach-Object { $_.TrimEnd( [IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar ) } |
+                        Select-Object -Unique
+
+    if( $currentPaths -notcontains $dotnetPath )
+    {
+        Write-Verbose -Message ('Adding "{0}" to your PATH.' -f $dotnetPath)
+        [Environment]::SetEnvironmentVariable('PATH', ('{0}{1}{2}' -f $dotnetPath,[IO.Path]::PathSeparator,$env:PATH), [EnvironmentVariableTarget]::User)
+    }
+    Write-Warning -Message ('We just installed .NET Core {0}. Please restart your shell so that the dotnet command shows up in your PATH. If dotnet doesn''t show in your path after installation, you''ll need to manually update your PATH environment variable to include the directory where .NET Core was installed.' -f $minDotNetVersion)
     exit
 }
 
