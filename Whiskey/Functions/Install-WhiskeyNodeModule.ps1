@@ -68,8 +68,6 @@ function Install-WhiskeyNodeModule
                         }
                     }
 
-    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $BuildRootPath
-
     $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
     if( $modulePath )
     {

@@ -30,7 +30,7 @@ function Uninstall-WhiskeyNodeModule
 
         [Parameter(Mandatory=$true)]
         [string]
-        # The path to the buitld root directory.
+        # The path to the build root directory.
         $BuildRootPath,
 
         [switch]
