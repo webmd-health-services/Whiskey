@@ -40,16 +40,18 @@ if( Test-Path -Path ('env:APPVEYOR') )
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
     $MSBuildConfiguration = 'Release'
+
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
 $minDotNetVersion = [version]'2.1.503'
 $dotnetVersion = $null
-$dotnetInstallDir = $null
+$dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
+$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath 'dotnet.exe'
 
-if( (Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue) )
+if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
-    $dotnetVersion = dotnet --version | ForEach-Object { [version]$_ }
-    $dotnetInstallDir = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
     Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
 }
 
@@ -57,27 +59,19 @@ if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
 {
     $dotnetInstallParams = @{
                                 Version = $minDotNetVersion.ToString()
+                                InstallDir = $dotnetInstallDir
+                                NoPath = $true
                             }
-    if( $dotnetInstallDir )
-    {
-        $dotnetInstallParams['InstallDir'] = $dotnetInstallDir
-    }
     $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
-    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,($dotnetInstallParams.Keys | ForEach-Object { ' -{0} {1}' -f $_,$dotnetInstallParams[$_] }))
+    $paramMessage = $dotnetInstallParams.Keys | ForEach-Object { '-{0} {1}' -f $_,$dotnetInstallParams[$_] }
+    $paramMessage = $paramMessage -join ' '
+    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,$paramMessage)
     & $dotnetInstallPath @dotnetInstallParams
-    $dotnetPath = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
-    $currentPaths = [Environment]::GetEnvironmentVariable('PATH',[EnvironmentVariableTarget]::User) | 
-                        ForEach-Object { $_ -split [IO.Path]::PathSeparator } |
-                        ForEach-Object { $_.TrimEnd( [IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar ) } |
-                        Select-Object -Unique
-
-    if( $currentPaths -notcontains $dotnetPath )
+    if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
     {
-        Write-Verbose -Message ('Adding "{0}" to your PATH.' -f $dotnetPath)
-        [Environment]::SetEnvironmentVariable('PATH', ('{0}{1}{2}' -f $dotnetPath,[IO.Path]::PathSeparator,$env:PATH), [EnvironmentVariableTarget]::User)
+        Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
+        exit 1
     }
-    Write-Warning -Message ('We just installed .NET Core {0}. Please restart your shell so that the dotnet command shows up in your PATH. If dotnet doesn''t show in your path after installation, you''ll need to manually update your PATH environment variable to include the directory where .NET Core was installed.' -f $minDotNetVersion)
-    exit
 }
 
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -103,10 +97,10 @@ try
                             '/filelogger9'
                             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
                     }
-    Write-Verbose ('dotnet build --configuration={0} {1}' -f $MSBuildConfiguration,($params -join ' '))
-    dotnet build --configuration=$MSBuildConfiguration $params
+    Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
+    & $dotnetPath build --configuration=$MSBuildConfiguration $params
 
-    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
