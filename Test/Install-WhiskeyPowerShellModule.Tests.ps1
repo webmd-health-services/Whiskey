@@ -57,8 +57,8 @@ function Invoke-PowershellInstall
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and it''s already installed' {
     $Global:Error.Clear()
 
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
 
     it 'should not write any errors' {
         $Global:Error | Should -BeNullOrEmpty
@@ -66,21 +66,21 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and omitting patch number' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33' -ActualVersion '0.33.0'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2' -ActualVersion '0.2.0'
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module omitting Version' {
-    $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Whiskey'
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '' -ActualVersion $module.Version
+    $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Zip'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '' -ActualVersion $module.Version
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module using wildcard version' {
-    $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Whiskey'
-    Invoke-PowershellInstall -ForModule 'whiskey' -Version '0.*' -ActualVersion $module.Version
+    $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Zip'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '0.*' -ActualVersion $module.Version
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module' {
-    Invoke-PowershellInstall -ForModule 'Whiskey' -Version '0.33.1'
+    Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and the version doesn''t exist' {

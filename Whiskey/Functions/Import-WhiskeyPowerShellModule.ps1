@@ -52,9 +52,17 @@ function Import-WhiskeyPowerShellModule
             {
                 Write-Debug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
                 Write-Verbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
+                $numErrorsBefore = $Global:Error.Count
                 & {
                     $VerbosePreference = 'SilentlyContinue'
-                    Import-Module -Name $moduleDir -Global -Force
+                    Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop
+                }
+                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our tests
+                # to fail. I know this is a little extreme.
+                $numErrorsAfter = $Global:Error.Count - $numErrorsBefore
+                for( $idx = 0; $idx -lt $numErrorsAfter; ++$idx )
+                {
+                    $Global:Error.RemoveAt(0)
                 }
                 break
             }
@@ -62,7 +70,7 @@ function Import-WhiskeyPowerShellModule
 
         if( -not (Get-Module -Name $moduleName) )
         {
-            Write-Error -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName)
+            Write-Error -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName) -ErrorAction Stop
         }
     }
 }
