@@ -40,11 +40,38 @@ if( Test-Path -Path ('env:APPVEYOR') )
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
     $MSBuildConfiguration = 'Release'
+
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-if( -not (Get-Command -Name 'dotnet') )
+$minDotNetVersion = [version]'2.1.503'
+$dotnetVersion = $null
+$dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
+$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath 'dotnet.exe'
+
+if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
-    exit
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
+    Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
+}
+
+if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
+{
+    $dotnetInstallParams = @{
+                                Version = $minDotNetVersion.ToString()
+                                InstallDir = $dotnetInstallDir
+                                NoPath = $true
+                            }
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+    $paramMessage = $dotnetInstallParams.Keys | ForEach-Object { '-{0} {1}' -f $_,$dotnetInstallParams[$_] }
+    $paramMessage = $paramMessage -join ' '
+    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,$paramMessage)
+    & $dotnetInstallPath @dotnetInstallParams
+    if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
+    {
+        Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
+        exit 1
+    }
 }
 
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -70,10 +97,10 @@ try
                             '/filelogger9'
                             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
                     }
-    Write-Verbose ('dotnet build --configuration={0} {1}' -f $MSBuildConfiguration,($params -join ' '))
-    dotnet build --configuration=$MSBuildConfiguration $params
+    Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
+    & $dotnetPath build --configuration=$MSBuildConfiguration $params
 
-    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
