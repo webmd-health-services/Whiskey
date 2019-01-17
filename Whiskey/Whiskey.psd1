@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.38.5'
+    ModuleVersion = '0.39.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -23,6 +23,8 @@
     # Company or vendor of this module
     CompanyName = 'WebMD Health Services'
 
+    CompatiblePSEditions = @( 'Desktop', 'Core' )
+
     # Copyright statement for this module
     Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
 
@@ -30,7 +32,7 @@
     Description = 'Continuous Integration/Continuous Delivery module.'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    # PowerShellVersion = ''
+    PowerShellVersion = '5.1'
 
     # Name of the Windows PowerShell host required by this module
     # PowerShellHostName = ''
@@ -54,7 +56,7 @@
     RequiredAssemblies = @( 'bin\SemanticVersion.dll', 'bin\Whiskey.dll', 'bin\YamlDotNet.dll' )
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-    #ScriptsToProcess = @()
+    # ScriptsToProcess = @()
 
     # Type files (.ps1xml) to be loaded when importing this module
     # TypesToProcess = @()
@@ -97,6 +99,8 @@
                             'Publish-WhiskeyProGetUniversalPackage',
                             'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
+                            'Resolve-WhiskeyNodePath',
+                            'Resolve-WhiskeyNodeModulePath',
                             'Resolve-WhiskeyNuGetPackageVersion',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
@@ -144,8 +148,16 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `GetPowerShellModule` task assumes that a module is already installed if an empty directory for that module exists in the `PSModules` directory.
-* Fixed: `PSModules` directory isn't removed removed during `Clean` mode after all contained modules have been deleted.
+* Whiskey can now run under PowerShell Core.
+* Updated ProGet tasks to depend on ProGetAutomation 0.8.*.
+* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
+* `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
+* Created new `Zip` task for creating ZIP archives.
+* Whiskey no longer ships with a copy of 7-Zip. Instead, if 7-Zip is needed to install a local version of Node (only applicable on Windows due to path length restrictions), 7-Zip is downloaded from nuget.org. If you were using the version of 7-Zip in Whiskey to create ZIP archives during your build, please use the new `Zip` task instead.
+* Now uses robocopy.exe only on Windows to delete some files/directories. Robocopy is used to work-around Windows path restrictions when deleting items with long paths. Other platforms don't have that restriction.
+* Created `Resolve-WhiskeyNodePath` function to resolve/get the path to the Node executable in a cross-platform manner.
+* Created `Resolve-WhiskeyNodeModulePath` function to resolve/get the path to a Node module's directory in a cross-platform manner.
+* Fixed: Whiskey variables fail to be resolved when specified in the key portion of a key:value property in whiskey.yml.
 '@
         } # End of PSData hashtable
 

@@ -77,7 +77,7 @@ function New-WhiskeyPesterTestContext
         }
         $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
         Get-ChildItem -Path $sourceRoot |
-            ForEach-Object { robocopy $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) /MIR } | 
+            ForEach-Object { Copy-Item -Path $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) -Recurse } | 
             Out-Null
         $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
         return $context
@@ -317,8 +317,18 @@ function ThenPesterShouldHaveRun
     foreach( $reportPath in $testReports )
     {
         It ('should publish {0} test results' -f $reportPath) {
-            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) ; $Path -eq $reportPath }
+            Write-Debug ('ReportsIn:  {0}' -f $ReportsIn)
+            Write-Debug ('reportPath: {0}' -f $reportPath)
+            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
+            Write-Debug ('reportPath: {0}' -f $reportPath)
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
+                              -ModuleName 'Whiskey' `
+                              -ParameterFilter { 
+                                    Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
+                                    $result = $Path -eq $reportPath 
+                                    Write-Debug ('  {0}' -f $result) 
+                                    return $result
+                                }
         }
     }
 }

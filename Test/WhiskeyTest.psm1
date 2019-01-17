@@ -1,5 +1,3 @@
-$numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
-$numRobocopyThreads *= 2
 
 $downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath '.downloadcache'
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
@@ -95,17 +93,26 @@ function Install-Node
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    $exclude = & {
-                        '/XF'
-                        '*.zip'
-                        Get-ChildItem -Path $modulesRoot |
-                            Where-Object { $_.Name -ne 'npm' -and $WithModule -notcontains $_.Name } |
-                            ForEach-Object {
-                                '/XD'
-                                $_.FullName
-                            }
-                }
-    robocopy (Join-Path -Path $downloadCachePath -ChildPath '.node') $destinationDir /COPY:D /E /NP /NFL /NDL /NJH /NJS /R:0 ('/MT:{0}' -f $numRobocopyThreads) $exclude
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir -ErrorAction Ignore
+
+    Get-ChildItem -Path $modulesRoot |
+        Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
+        ForEach-Object {
+            $moduleDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
+            $moduleDestinationDir = Join-Path -Path $moduleDestinationDir -ChildPath $_.Name
+            if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
+            {
+                New-Item -Path $moduleDestinationDir -ItemType 'Directory' | Out-Null
+            }
+            if( $IsWindows )
+            {
+                Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $moduleDestinationDir
+            }
+            else
+            {
+                Copy-Item -Path $_.FullName -Destination $moduleDestinationDir -Recurse
+            }
+        }
 
     Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |
         ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
@@ -261,7 +268,10 @@ function New-WhiskeyTestContext
         $InCleanMode,
 
         [Switch]
-        $InInitMode
+        $InInitMode,
+
+        [Switch]
+        $IncludePSModules
     )
 
     Set-StrictMode -Version 'Latest'
@@ -359,6 +369,13 @@ function New-WhiskeyTestContext
     }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
 
+    if( $IncludePSModules )
+    {
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) `
+                  -Destination (Join-Path -Path $context.BuildRoot -ChildPath 'PSModules') `
+                  -Recurse
+    }
+
     return $context
 }
 
@@ -385,7 +402,16 @@ function Remove-DotNet
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
-Export-ModuleMember -Function '*'
+# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
+$variablesToExport = @( 'WhiskeyTestDownloadCachePath' )
+if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+    $variablesToExport += @( 'IsLinux','IsMacOS','IsWindows' )
+}
 
+$WhiskeyTestDownloadCachePath = $downloadCachePath
 
-
+Export-ModuleMember -Function '*' -Variable $variablesToExport

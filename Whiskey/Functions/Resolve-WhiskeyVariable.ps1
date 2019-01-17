@@ -136,7 +136,7 @@ function Resolve-WhiskeyVariable
             {
                 $InputObject[$key] = $newValues[$key]
             }
-            $toRemove | ForEach-Object { $InputObject.Remove($_) }
+            $toRemove | ForEach-Object { $InputObject.Remove($_) } | Out-Null
             return $InputObject
         }
 

@@ -39,7 +39,7 @@ function Uninstall-WhiskeyTool
     .EXAMPLE
     Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -InstallRoot $TaskContext.BuildRoot
 
-    Demonstrates how to uninstall the `rimraf` Node module from the `.node\node_modules` directory in your build root.
+    Demonstrates how to uninstall the `rimraf` Node module from the `node_modules` directory in the Node directory in your build root.
 
     .EXAMPLE
     Uninstall-WhiskeyTool -Name 'DotNet' -InstallRoot $TaskContext.BuildRoot

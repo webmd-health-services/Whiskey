@@ -25,6 +25,6 @@ function Invoke-WhiskeyNpm
         return
     }
 
-    Invoke-WhiskeyNpmCommand -Name $commandName -NodePath $TaskParameter['NodePath'] -ArgumentList $TaskParameter['Argument'] -ErrorAction Stop
+    Invoke-WhiskeyNpmCommand -Name $commandName -BuildRootPath $TaskContext.BuildRoot -ArgumentList $TaskParameter['Argument'] -ErrorAction Stop
 
 }

@@ -26,7 +26,14 @@ function GivenAssets
     $assetJson = ConvertTo-Json -InputObject $Asset
     Mock -CommandName 'Invoke-RestMethod' `
          -ModuleName 'Whiskey' `
-         -ParameterFilter { $Uri -like '*/releases/*/assets' } `
+         -ParameterFilter { 
+             #$DebugPreference = 'Continue'
+             Write-Debug ('Uri  {0}' -f $Uri)
+             Write-Debug ('     */releases/*/assets')
+             $result = $Uri -like '*/releases/*/assets' 
+             Write-Debug ('     {0}' -f $result)
+             return $result
+            } `
          -MockWith ([scriptblock]::Create("'$assetJson' | ConvertFrom-Json"))
 }
 
@@ -37,7 +44,9 @@ function GivenAssetUpdated
         $To
     )
 
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
 }
 
 function GivenAssetUploaded
@@ -47,7 +56,9 @@ function GivenAssetUploaded
         $To
     )
 
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter ([scriptblock]::Create("`$Uri -like '$To'"))
 }
 
 function GivenFile
@@ -66,7 +77,8 @@ function GivenReleaseCreated
         $ExpectedContent
     )
 
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' `
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/releases' -and `$Method -eq 'POST'")) `
          -MockWith ([scriptblock]::create("'$ExpectedContent' | ConvertFrom-Json"))
 }
@@ -77,7 +89,10 @@ function GivenReleaseDoesNotExist
         $Tag
     )
 
-    Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'")) -MockWith { throw 'Not Found!' }
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter ([scriptblock]::create("`$Uri -like '*/releases/tags/$Tag'")) `
+         -MockWith { throw 'Not Found!' }
 }
 
 function GivenReleaseExists
@@ -169,11 +184,31 @@ function ThenRequest
         {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
+                Write-Debug ('')
                 Write-Debug ('Uri   expected  {0}' -f $ToUri)
                 Write-Debug ('      actual    {0}' -f $Uri)
+                $uriEqual = $Uri -eq [uri]$ToUri
+                Write-Debug ('                {0}' -f $uriEqual)
                 Write-Debug ('Body  expected  {0}' -f $WithBody)
                 Write-Debug ('      actual    {0}' -f $Body)
-                $Uri -eq [uri]$ToUri -and $Body -eq $WithBody 
+                $bodyEqual = $Body -eq $WithBody 
+                $WithBody = $WithBody | ConvertFrom-Json
+                $expectedProps = $WithBody | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
+                $actualProps = @()
+                if( $Body )
+                {
+                    $Body = $Body | ConvertFrom-Json
+                    $actualProps = $Body | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
+                }
+                $bodyPropsEqual = ($expectedProps -join '|') -eq ($actualProps -join '|')
+                Write-Debug ('                {0}' -f $bodyPropsEqual)
+                
+                $expectedValues = $expectedProps | ForEach-Object { $WithBody.$_ }
+                $actualValues = $actualProps | ForEach-Object { $Body.$_ }
+                $bodyValuesEqual = ($expectedValues -join '|') -eq ($actualValues -join '|')
+                Write-Debug ('                {0}' -f $bodyValuesEqual)
+                Write-Debug ('')
+                $uriEqual -and $bodyPropsEqual -and $bodyValuesEqual
             }
         }
 

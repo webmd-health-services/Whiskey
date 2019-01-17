@@ -97,17 +97,29 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
             Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
             $packageExists = $true
         }
-        catch [Net.WebException]
+        catch
         {
-            $response = [Net.HttpWebResponse]([Net.WebException]$_.Exception).Response
+            # Invoke-WebRequest throws differnt types of errors in Windows PowerShell and PowerShell Core. Handle the case where a non-HTTP exception occurs.
+            if( -not ($_.Exception | Get-Member 'Response') )
+            {
+                Write-Error -ErrorRecord $_
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unknown failure checking if {0} {1} package already exists at {2}. {3}' -f  $packageName,$packageVersion,$packageUri,$_)
+                return
+            }
+
+            $response = $_.Exception.Response
             if( $response.StatusCode -ne [Net.HttpStatusCode]::NotFound )
             {
-                $content = $response.GetResponseStream()
-                $content.Position = 0
-                $reader = New-Object 'IO.StreamReader' $content
-                $error = $reader.ReadToEnd() -replace '<[^>]+?>',''
-                $reader.Close()
-                $response.Close()
+                $error = ''
+                if( $response | Get-Member 'GetResponseStream' )
+                {
+                    $content = $response.GetResponseStream()
+                    $content.Position = 0
+                    $reader = New-Object 'IO.StreamReader' $content
+                    $error = $reader.ReadToEnd() -replace '<[^>]+?>',''
+                    $reader.Close()
+                    $response.Close()
+                }
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failure checking if {0} {1} package already exists at {2}. The web request returned a {3} ({4}) status code:{5} {5}{6}' -f $packageName,$packageVersion,$packageUri,$response.StatusCode,[int]$response.StatusCode,[Environment]::NewLine,$error)
                 return
             }
@@ -133,8 +145,16 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
             {
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
             }
-            catch [Net.WebException]
+            catch
             {
+                # Invoke-WebRequest throws differnt types of errors in Windows PowerShell and PowerShell Core. Handle the case where a non-HTTP exception occurs.
+                if( -not ($_.Exception | Get-Member 'Response') )
+                {
+                    Write-Error -ErrorRecord $_
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unknown failure checking if {0} {1} package was published to {2}. {3}' -f  $packageName,$packageVersion,$packageUri,$_)
+                    return
+                }
+
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to publish NuGet package {0} {1} to {2}. When we checked if that package existed, we got a {3} HTTP status code. Please see build output for more information.' -f $packageName,$packageVersion,$packageUri,$_.Exception.Response.StatusCode)
                 return
             }

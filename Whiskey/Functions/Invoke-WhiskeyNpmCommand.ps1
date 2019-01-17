@@ -6,7 +6,7 @@ function Invoke-WhiskeyNpmCommand
     Runs `npm` with given command and argument.
     
     .DESCRIPTION
-    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the node executable (e.g. `node.exe`) to the `NodePath` parameter. The path to NPM is assumed to be at `node_modules\npm\bin\npm-cli.js`, starting in the Node executable's directory.
+    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the build root to the `BuildRootPath` parameter. The function will use the copy of Node and NPM installed in the `.node`  directory in the build root.
 
     Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with the `ArgumentList`.
 
@@ -21,7 +21,7 @@ function Invoke-WhiskeyNpmCommand
         }
 
     .EXAMPLE
-    Invoke-WhiskeyNpmCommand -Name 'install' -NodePath $TaskParameter['NodePath'] -ForDeveloper:$Context.ByDeveloper
+    Invoke-WhiskeyNpmCommand -Name 'install' -BuildRootPath $TaskParameter.BuildRoot -ForDeveloper:$Context.ByDeveloper
 
     Demonstrates how to run the `npm install` command from a task. 
     #>
@@ -38,7 +38,7 @@ function Invoke-WhiskeyNpmCommand
 
         [Parameter(Mandatory=$true)]
         [string]
-        $NodePath,
+        $BuildRootPath,
 
         [switch]
         # NPM commands are being run on a developer computer.
@@ -48,15 +48,14 @@ function Invoke-WhiskeyNpmCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $NodePath = Assert-WhiskeyNodePath -Path $NodePath
-    if( -not $NodePath )
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $BuildRootPath -ErrorAction Stop
+    if( -not $nodePath )
     {
         return
     }
 
-    $nodeRoot = $NodePath | Split-Path
-        
-    $npmPath = Join-Path -Path $nodeRoot -ChildPath 'node_modules\npm\bin\npm-cli.js'
+    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $BuildRootPath -Global -ErrorAction Stop
+    $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
 
     if( -not $npmPath -or -not (Test-Path -Path $npmPath -PathType Leaf) )
     {
@@ -78,7 +77,7 @@ function Invoke-WhiskeyNpmCommand
     $npmCommandString = ('npm {0} {1}' -f $commandName,($commandArgs -join ' '))
 
     $originalPath = $env:PATH
-    Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f $nodeRoot,$env:Path)
+    Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f ($nodePath | Split-Path -Parent),$env:PATH)
     try
     {
         Write-Progress -Activity $npmCommandString
@@ -92,7 +91,7 @@ function Invoke-WhiskeyNpmCommand
             }
             try
             {
-                Write-Verbose ('{0} {1} {2} {3}' -f $NodePath,$npmPath,$commandName,($commandArgs -join ' '))
+                Write-Verbose ('{0} {1} {2} {3}' -f $nodePath,$npmPath,$commandName,($commandArgs -join ' '))
                 & $nodePath $npmPath $commandName $commandArgs
             }
             finally

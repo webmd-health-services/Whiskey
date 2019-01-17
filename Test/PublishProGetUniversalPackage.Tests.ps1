@@ -121,6 +121,7 @@ function Init
     $script:myTimeout = $null
     $script:packageExists = $false
     $script:properties = @{ }
+    Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
 }
 
 function ThenPackageOverwritten
@@ -265,7 +266,7 @@ function WhenPublishingPackage
         $Excluding
     )
 
-    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory
+    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory -IncludePSModules
 
     if( $credentialID )
     {
@@ -317,6 +318,7 @@ function WhenPublishingPackage
         $mock = { if( -not $Force ) { Write-Error -Message ('Package already exists!') } }
     }
 
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
 
     $script:threwException = $false

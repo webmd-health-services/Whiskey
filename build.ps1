@@ -11,7 +11,10 @@ param(
     $Initialize,
 
     [string]
-    $PipelineName
+    $PipelineName,
+
+    [string]
+    $MSBuildConfiguration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,54 +39,80 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $branch = $branch -replace '[^A-Za-z0-9-]','-'
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+    $MSBuildConfiguration = 'Release'
+
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-$assemblyVersion = @"
-[assembly: System.Reflection.AssemblyVersion("$version")]
-[assembly: System.Reflection.AssemblyFileVersion("$version")]
-[assembly: System.Reflection.AssemblyInformationalVersion("$version$buildInfo")]
-"@
+$minDotNetVersion = [version]'2.1.503'
+$dotnetVersion = $null
+$dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
+$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath 'dotnet.exe'
 
-$assemblyVersionPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Properties\AssemblyVersion.cs'
-if( -not (Test-Path -Path $assemblyVersionPath -PathType Leaf) )
+if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
-    '' | Set-Content -Path $assemblyVersionPath
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
+    Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
 }
 
-$currentAssemblyVersion = Get-Content -Path $assemblyVersionPath -Raw
-if( $assemblyVersion -ne $currentAssemblyVersion.Trim() )
+if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
 {
-    Write-Verbose -Message ('Assembly version has changed.')
-    $assemblyVersion | Set-Content -Path $assemblyVersionPath
+    $dotnetInstallParams = @{
+                                Version = $minDotNetVersion.ToString()
+                                InstallDir = $dotnetInstallDir
+                                NoPath = $true
+                            }
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+    $paramMessage = $dotnetInstallParams.Keys | ForEach-Object { '-{0} {1}' -f $_,$dotnetInstallParams[$_] }
+    $paramMessage = $paramMessage -join ' '
+    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,$paramMessage)
+    & $dotnetInstallPath @dotnetInstallParams
+    if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
+    {
+        Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
+        exit 1
+    }
 }
 
-$powershellModulesDirectoryName = 'PSModules'
-$PSModuleAutoLoadingPreference = 'None'
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Use-CallerPreference.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Import-WhiskeyPowerShellModule.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Install-WhiskeyPowerShellModule.ps1')
-Install-WhiskeyPowerShellModule -Name 'VSSetup' -Version '2.*'
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath ('{0}\VSSetup' -f $powershellModulesDirectoryName))
-. (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Functions\Get-MSBuild.ps1')
-
-$msbuild = Get-MSBuild -ErrorAction Ignore | Where-Object { $_.Name -eq '15.0' } | Select-Object -First 1
-if( -not $msbuild )
+Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
+try
 {
-    Write-Error ('Unable to find MSBuild 15.0.')
+    $outputDirectory = Join-Path -Path $PSScriptRoot -ChildPath '.output'
+    if( -not (Test-Path -Path $outputDirectory -PathType Container) )
+    {
+        New-Item -Path $outputDirectory -ItemType 'Directory'
+    }
+
+    $params = & {
+                            '/p:Version={0}{1}' -f $version,$buildInfo
+                            '/p:VersionPrefix={0}' -f $version
+                            if( $buildInfo )
+                            {
+                                '/p:VersionSuffix={0}' -f $buildInfo
+                            }
+                            if( $VerbosePreference -eq 'Continue' )
+                            {
+                                '--verbosity=n'
+                            }
+                            '/filelogger9'
+                            ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+                    }
+    Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
+    & $dotnetPath build --configuration=$MSBuildConfiguration $params
+
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    if( $LASTEXITCODE )
+    {
+        Write-Error -Message ('Unit tests failed.')
+    }
 }
-
-$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\NuGet.exe'
-& $nugetPath restore (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey.sln')
-
-& $msbuild.Path /target:build ('/property:Version={0}' -f $version) '/property:Configuration=Release' 'Assembly\Whiskey.sln' '/v:m'
-if( $LASTEXITCODE )
+finally
 {
-    exit 1
+    Pop-Location
 }
 
 $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
-$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\bin\Release'
+$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
 foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 {
     $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name
@@ -98,6 +127,29 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
     }
 
     Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
+}
+
+# TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
+# fixed, change version numbers to wildcards on the patch version.
+$nestedModules = @{
+                        'PackageManagement' = '1.2.4';
+                        'PowerShellGet' = '2.0.3';
+                 }
+$whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey'
+foreach( $nestedModuleName in $nestedModules.Keys )
+{
+    $moduleRoot = Join-Path -Path $whiskeyRoot -ChildPath $nestedModuleName
+    if( -not (Test-Path -Path $moduleRoot -PathType Container) )
+    {
+        $nestedModuleVersion = $nestedModules[$nestedModuleName]
+        # Run in a background job otherwise the default global 
+        # PackageManagement module assembly remains loaded.
+        Start-Job -ScriptBlock {
+            Save-Module -Name $using:nestedModuleName `
+                        -RequiredVersion $using:nestedModuleVersion `
+                        -Path $using:whiskeyRoot
+        } | Wait-Job | Receive-Job | Remove-Job
+    }
 }
 
 $ErrorActionPreference = 'Continue'

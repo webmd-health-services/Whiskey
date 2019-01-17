@@ -1,7 +1,7 @@
     
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-Set-EnvironmentVariable -Name 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE' -Value 'true' -ForProcess
+[Environment]::SetEnvironmentVariable( 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE', 'true', [EnvironmentVariableTarget]::Process ) 
 
 $argument = $null
 $dotNetOutput = $null
@@ -182,8 +182,8 @@ Describe 'DotNetBuild.when command fails' {
     try
     {
         Init
-        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '1.1.*' -ErrorAction SilentlyContinue
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.1'
+        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.0.*' #-ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'dotnet\.exe\ failed\ with\ exit\ code'
     }
     finally

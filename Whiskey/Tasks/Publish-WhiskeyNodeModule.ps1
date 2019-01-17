@@ -2,7 +2,7 @@
 function Publish-WhiskeyNodeModule
 {
     [Whiskey.Task("PublishNodeModule")]
-    [Whiskey.RequiresTool("Node", "NodePath",VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -93,8 +93,8 @@ function Publish-WhiskeyNodeModule
             } |
             Write-WhiskeyVerbose -Context $TaskContext
 
-        Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
-        Invoke-WhiskeyNpmCommand -Name 'publish' -NodePath $TaskParameter['NodePath'] -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
+        Invoke-WhiskeyNpmCommand -Name 'publish' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
     }
     finally
     {

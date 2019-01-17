@@ -314,28 +314,28 @@ Build:
 Describe 'Invoke-WhiskeyPipeline.when task has a default property with quoted arguments' {
     GivenWhiskeyYmlBuildFile @"
 Build:
-- Exec: robocopy.exe "C:\Source File" 'C:\Destination\File' /MIR
+- Exec: someexec somearg
 "@
-    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" ''C:\Destination\File'' /MIR' }
+    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec somearg' }
     WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
 
     It 'should call the task with the default property' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" ''C:\Destination\File'' /MIR' }
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec somearg' }
     }
 }
 
 Describe 'Invoke-WhiskeyPipeline.when task has a default property when entire string is quoted' {
     GivenWhiskeyYmlBuildFile @"
 Build:
-- Exec: 'robocopy.exe "C:\Source File" C:\Destination\File /MIR'
+- Exec: 'someexec "some arg"'
 "@
-    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" C:\Destination\File /MIR' }
+    Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec "some arg"' }
     WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
 
     It 'should call the task with the default property' {
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'robocopy.exe "C:\Source File" C:\Destination\File /MIR' }
+        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec "some arg"' }
     }
 }
 
