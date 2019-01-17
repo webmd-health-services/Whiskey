@@ -61,7 +61,7 @@ Describe 'Install-WhiskeyTool.when installing an already installed NuGet package
     Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
 
     it 'should not write any errors' {
-        $Global:Error | Should BeNullOrEmpty
+        $Global:Error[0] | Should -BeNullOrEmpty
     }
 }
 

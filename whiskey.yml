@@ -4,6 +4,7 @@ PublishOn:
 Build:
 - TaskDefaults:
     Pester4:
+        Version: 4.4.*
         DescribeDurationReportCount: 20
 
 - Version:
