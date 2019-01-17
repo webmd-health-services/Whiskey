@@ -157,6 +157,7 @@
 * Now uses robocopy.exe only on Windows to delete some files/directories. Robocopy is used to work-around Windows path restrictions when deleting items with long paths. Other platforms don't have that restriction.
 * Created `Resolve-WhiskeyNodePath` function to resolve/get the path to the Node executable in a cross-platform manner.
 * Created `Resolve-WhiskeyNodeModulePath` function to resolve/get the path to a Node module's directory in a cross-platform manner.
+* Fixed: Whiskey variables fail to be resolved when specified in the key portion of a key:value property in whiskey.yml.
 '@
         } # End of PSData hashtable
 
