@@ -96,10 +96,13 @@ function Install-Node
     Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
+    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
     $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+    $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
     if( -not $IsWindows )
     {
         $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
+        $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'lib/node_modules'
     }
     foreach( $name in $WithModule )
     {
@@ -111,7 +114,6 @@ function Install-Node
         Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name),('{0}Path' -f $name)) -InstallRoot $downloadCachePath -TaskParameter @{ }
     }
 
-    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
     if( -not (Test-Path -Path $destinationDir -PathType Container) )
     {
         New-Item -Path $destinationDir -ItemType 'Directory'
@@ -123,14 +125,13 @@ function Install-Node
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
         ForEach-Object {
-            $moduleDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
-            $moduleDestinationDir = Join-Path -Path $moduleDestinationDir -ChildPath $_.Name
-            if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
-            {
-                New-Item -Path $moduleDestinationDir -ItemType 'Directory' | Out-Null
-            }
+            $moduleDestinationDir = Join-Path -Path $modulesDestinationDir -ChildPath $_.Name
             if( $IsWindows )
             {
+                if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
+                {
+                    New-Item -Path $moduleDestinationDir -ItemType 'Directory' -Force | Out-Null
+                }
                 Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $moduleDestinationDir
             }
             else

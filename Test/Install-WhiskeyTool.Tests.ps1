@@ -15,6 +15,7 @@ function Invoke-NuGetInstall
         $ExpectedError
     )
 
+    $result = $null
     try
     {
         $result = Install-WhiskeyTool -DownloadRoot $TestDrive.FullName -NugetPackageName $Package -Version $Version
@@ -395,12 +396,12 @@ function ThenDirectory
 Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
     Init
     GivenVersionParameterName 'Version'
-    WhenInstallingTool 'PowerShellModule::Whiskey' -Parameter @{ 'Version' = '0.37.1' }
-    ThenDirectory 'PSModules\Whiskey' -Exists
-    $job = Start-Job { Import-Module -Name (Join-Path -Path $using:TestDrive.FullName -ChildPath 'PSModules\Whiskey') -PassThru }
+    WhenInstallingTool 'PowerShellModule::Zip' -Parameter @{ 'Version' = '0.2.0' }
+    ThenDirectory 'PSModules\Zip' -Exists
+    $job = Start-Job { Import-Module -Name (Join-Path -Path $using:TestDrive.FullName -ChildPath 'PSModules\Zip') -PassThru }
     $moduleInfo = $job | Wait-Job | Receive-Job
     It ('should install requested version') {
-        $moduleInfo.Version | Should -Be '0.37.1'
+        $moduleInfo.Version | Should -Be '0.2.0'
     }
 }
 
