@@ -40,23 +40,60 @@ if( Test-Path -Path ('env:APPVEYOR') )
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
     $MSBuildConfiguration = 'Release'
+
+    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-if( -not (Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue) )
+$minDotNetVersion = [version]'2.1.503'
+$dotnetVersion = $null
+$dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
+$dotnetExeName = 'dotnet.exe'
+if( -not (Get-Variable 'IsLinux' -ErrorAction SilentlyContinue) ) 
 {
-    if( (Get-Variable -Name 'IsLinux') )
-    {
-        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
-        sudo apt install curl
-        bash $dotnetInstallPath
-    }
-    else
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+}
+if( -not $IsWindows )
+{
+    $dotnetExeName = 'dotnet'
+}
+$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath $dotnetExeName
+
+if( (Test-Path -Path $dotnetPath -PathType Leaf) )
+{
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
+    Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
+}
+
+if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
+{
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
+    if( $IsWindows )
     {
         $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
-        & $dotnetInstallPath
     }
-    Write-Warning -Message ('We just installed .NET Core. Please restart your shell so that the dotnet command shows up in your PATH. If dotnet doesn''t show in your path after installation, you''ll need to manually update your PATH environment variable to include the directory where .NET Core was installed.')
-    exit
+
+    Write-Verbose -Message ('{0} -Version {1} -InstallDir "{2}" -NoPath' -f $dotnetInstallPath,$minDotNetVersion,$dotnetInstallDir)
+    if( $IsWindows )
+    {
+        & $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
+    }
+    else 
+    {
+        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
+        {
+            Write-Error -Message ('Curl is required to install .NET Core. Please install it this platform''s (or your) preferred package manager.')
+            exit 1
+        }
+        bash $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
+    }
+
+    if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
+    {
+        Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
+        exit 1
+    }
 }
 
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -82,10 +119,10 @@ try
                             '/filelogger9'
                             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
                     }
-    Write-Verbose ('dotnet build --configuration={0} {1}' -f $MSBuildConfiguration,($params -join ' '))
-    dotnet build --configuration=$MSBuildConfiguration $params
+    Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
+    & $dotnetPath build --configuration=$MSBuildConfiguration $params
 
-    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
