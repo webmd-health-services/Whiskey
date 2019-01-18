@@ -14,6 +14,10 @@ $taskContext = $null
 
 function Init
 {
+    param(
+        [Switch]
+        $SkipDotNetMock
+    )
     $script:argumentList = $null
     $script:commandName = $null
     $script:dotNetPath = $null
@@ -21,7 +25,10 @@ function Init
     $script:projectPath = $null
     $script:taskContext = $null
 
-    Mock -CommandName 'Invoke-Command' -MockWith { cmd /c exit 0 }
+    if( -not $SkipDotNetMock )
+    {
+        Mock -CommandName 'Invoke-Command' -MockWith $SuccessCommandScriptBlock
+    }
     Mock -CommandName 'Write-WhiskeyCommand'
 }
 
@@ -262,7 +269,25 @@ Describe 'Invoke-WhiskeyDotNetCommand.when dotnet command exits with non-zero ex
     Init
     GivenDotNetPath 'C:\dotnet\dotnet.exe'
     GivenCommandName 'build'
-    Mock -CommandName 'Invoke-Command' -MockWith { & cmd /c exit 1 }
+    Mock -CommandName 'Invoke-Command' -MockWith $FailureCommandScriptBlock
     WhenRunningDotNetCommand -ErrorAction SilentlyContinue
-    ThenErrorMessage 'dotnet\.exe\ failed\ with\ exit\ code\ \d+'
+    ThenErrorMessage 'dotnet\.exe"\ failed\ with\ exit\ code\ \d+'
+}
+
+$realDotNetPath = Get-Command -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\.dotnet\dotnet') |
+                    Select-Object -ExpandProperty Source
+Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable' {
+    Init -SkipDotNetMock
+    GivenDotNetPath $realDotNetPath
+    GivenCommandName '--version'
+    WhenRunningDotNetCommand 
+    ThenNoErrors
+}
+
+Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable with failing command' {
+    Init -SkipDotNetMock
+    GivenDotNetPath $realDotNetPath
+    GivenCommandName 'nfzhhih3sov'
+    WhenRunningDotNetCommand  -ErrorAction SilentlyContinue
+    ThenErrorMessage ('failed\ with\ exit\ code')
 }

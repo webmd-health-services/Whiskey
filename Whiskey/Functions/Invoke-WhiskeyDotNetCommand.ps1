@@ -24,7 +24,7 @@ function Invoke-WhiskeyDotNetCommand
 
         [Parameter(Mandatory=$true)]
         [string]
-        # The path to the `dotnet.exe` executable to run the SDK command with.
+        # The path to the `dotnet` executable to run the SDK command with.
         $DotNetPath,
 
         [Parameter(Mandatory=$true)]
@@ -86,7 +86,7 @@ function Invoke-WhiskeyDotNetCommand
 
     if ($LASTEXITCODE -ne 0)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('dotnet.exe failed with exit code {0}' -f $LASTEXITCODE)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"{0}" failed with exit code {1}' -f $DotNetExe,$LASTEXITCODE)
         return
     }
 }

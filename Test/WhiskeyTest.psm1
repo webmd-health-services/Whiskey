@@ -428,8 +428,19 @@ function Remove-DotNet
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
+
+$SuccessCommandScriptBlock = { 'exit 0' | sh }
+$FailureCommandScriptBlock = { 'exit 1' | sh }
+if( $IsWindows )
+{
+    $SuccessCommandScriptBlock = { cmd /c exit 0 }
+    $FailureCommandScriptBlock = { cmd /c exit 1 }
+}
+
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
+    'SuccessCommandScriptBlock'
+    'FailureCommandScriptBlock'
     if( $exportPlatformVars )
     {
         'IsLinux'

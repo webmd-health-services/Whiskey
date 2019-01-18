@@ -20,14 +20,7 @@ function Init
 
 function GivenNpmSucceedsButModuleNotInstalled
 {
-    if( $IsWindows )
-    {
-        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { cmd.exe /C exit 0 }
-    }
-    else
-    {
-        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith { 'exit 0' | bash }
-    }
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith $SuccessCommandScriptBlock
 }
 
 function GivenName
