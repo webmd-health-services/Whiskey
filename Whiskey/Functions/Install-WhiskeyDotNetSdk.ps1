@@ -90,22 +90,15 @@ function Install-WhiskeyDotNetSdk
 
         $errCount = $Global:Error.Count
         & {
-            $args = @(
-                        '-NoPath',
-                        '-InstallDir',
-                        $InstallDir,
-                        '-Version'
-                        $VersionNumber
-            )
             if( $installingWithShell )
             {
-                Write-Verbose ('bash {0} {1}' -f $dotnetInstall,($args -join ' ')) -Verbose
-                bash $dotnetInstall $args
+                Write-Verbose ('bash {0} -InstallDir "{1}" -Version "{2}" -NoPath' -f $dotnetInstall,$InstallDir,$VersionNumber)
+                bash $dotnetInstall -InstallDir $InstallDir -Version $VersionNumber -NoPath
             }
             else 
             {
-                Write-Verbose ('{0} {1}' -f $dotnetInstall,($args -join ' '))
-                & $dotnetInstall $args @Verbose @errorActionParam
+                Write-Verbose ('{0} -InstallDir "{1}" -Version "{2}" -NoPath' -f $dotnetInstall,$InstallDir,$VersionNumber)
+                & $dotnetInstall -InstallDir $InstallDir -Version $VersionNumber -NoPath @Verbose @errorActionParam
             }
         } | Write-Verbose -Verbose
         if( $installingWithShell -and $LASTEXITCODE )
