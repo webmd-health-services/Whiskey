@@ -212,6 +212,15 @@ Describe 'Resolve-WhiskeyVariable.when passed a Dictionary' {
     ThenValueIs @( @{ 'Key1' =  [Environment]::MachineName; 'Key2' = 'fubar'; 'Key3' = 'snafu' }, '4' )
 }
 
+Describe 'Resolve-WhiskeyVariable.when passed a Dictionary with variable in a key' {
+    Init
+    GivenVariable 'fubar' 'cat'
+    $dictionary = New-Object 'Collections.Generic.Dictionary[string,string]'
+    $dictionary.Add( '$(fubar)', 'in the hat' )
+    WhenResolving @( $dictionary )
+    ThenValueIs @{ 'cat' = 'in the hat' }
+}
+
 Describe 'Resolve-WhiskeyVariable.when using a custom variable' {
     Init
     GivenVariable 'fubar' 'snafu'

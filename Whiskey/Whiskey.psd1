@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.39.0'
+    ModuleVersion = '0.40.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -148,15 +148,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Whiskey can now run under PowerShell Core.
-* Updated ProGet tasks to depend on ProGetAutomation 0.8.*.
-* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
-* `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
-* Created new `Zip` task for creating ZIP archives.
-* Whiskey no longer ships with a copy of 7-Zip. Instead, if 7-Zip is needed to install a local version of Node (only applicable on Windows due to path length restrictions), 7-Zip is downloaded from nuget.org. If you were using the version of 7-Zip in Whiskey to create ZIP archives during your build, please use the new `Zip` task instead.
-* Now uses robocopy.exe only on Windows to delete some files/directories. Robocopy is used to work-around Windows path restrictions when deleting items with long paths. Other platforms don't have that restriction.
-* Created `Resolve-WhiskeyNodePath` function to resolve/get the path to the Node executable in a cross-platform manner.
-* Created `Resolve-WhiskeyNodeModulePath` function to resolve/get the path to a Node module's directory in a cross-platform manner.
+* Adding Linux support.
 '@
         } # End of PSData hashtable
 
