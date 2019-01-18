@@ -6,6 +6,8 @@
 # Generated on: 12/8/2016
 #
 
+# Small change to test Github CODEOWNERS functionality
+
 @{
 
     # Script module or binary module file associated with this manifest.
@@ -150,7 +152,7 @@
             ReleaseNotes = @'
 * Whiskey can now run under PowerShell Core.
 * Updated ProGet tasks to depend on ProGetAutomation 0.8.*.
-* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
+* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip.
 * `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
 * Created new `Zip` task for creating ZIP archives.
 * Whiskey no longer ships with a copy of 7-Zip. Instead, if 7-Zip is needed to install a local version of Node (only applicable on Windows due to path length restrictions), 7-Zip is downloaded from nuget.org. If you were using the version of 7-Zip in Whiskey to create ZIP archives during your build, please use the new `Zip` task instead.
