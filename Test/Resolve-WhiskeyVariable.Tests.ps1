@@ -7,6 +7,18 @@ Set-StrictMode -Version 'Latest'
 $result = $null
 [Whiskey.Context]$context = $null
 
+function GivenEnvironmentVariable
+{
+    param(
+        [string]
+        [ValidatePattern('^ResolveWhiskey')]
+        $Named,
+        $WithValue
+    )
+
+    [Environment]::SetEnvironmentVariable($Named,$WithValue,[EnvironmentVariableTarget]::Process)
+}
+
 function GivenVariable
 {
     param(
@@ -152,14 +164,17 @@ Describe 'Resolve-WhiskeyVariable.when passed a string with no variable' {
 
 Describe 'Resolve-WhiskeyVariable.when passed a string with an environment variable' {
     Init
-    WhenResolving '$(COMPUTERNAME)'
-    ThenValueIs $env:COMPUTERNAME
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '001'
+    WhenResolving '$(ResolveWhiskeyVariable)'
+    ThenValueIs '001'
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a string with multiple variables' {
     Init
-    WhenResolving '$(USERNAME)$(COMPUTERNAME)'
-    ThenValueIs ('{0}{1}' -F $env:USERNAME,$env:COMPUTERNAME)
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable1' -WithValue '002'
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable2' -WithValue '003'
+    WhenResolving '$(ResolveWhiskeyVariable1)$(ResolveWhiskeyVariable2)'
+    ThenValueIs ('002003')
 }
     
 Describe 'Resolve-WhiskeyVariable.when passed a non-string' {
@@ -170,46 +185,54 @@ Describe 'Resolve-WhiskeyVariable.when passed a non-string' {
 
 Describe 'Resolve-WhiskeyVariable.when passed an array' {
     Init
-    WhenResolving @( '$(COMPUTERNAME)', 'no variable', '4' )
-    ThenValueIs @( $env:COMPUTERNAME, 'no variable', '4' )
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '004'
+    WhenResolving @( '$(ResolveWhiskeyVariable)', 'no variable', '4' )
+    ThenValueIs @( '004', 'no variable', '4' )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a hashtable' {
     Init
-    WhenResolving @{ 'Key1' = '$(COMPUTERNAME)'; 'Key2' = 'no variable'; 'Key3' = '4' }
-    ThenValueIs @{ 'Key1' = $env:COMPUTERNAME; 'Key2' = 'no variable'; 'Key3' = '4' }
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '005'
+    WhenResolving @{ 'Key1' = '$(ResolveWhiskeyVariable)'; 'Key2' = 'no variable'; 'Key3' = '4' }
+    ThenValueIs @{ 'Key1' = '005'; 'Key2' = 'no variable'; 'Key3' = '4' }
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a hashtable with an array and hashtable in it' {
     Init
-    WhenResolving @{ 'Key1' = @{ 'SubKey1' = '$(COMPUTERNAME)'; }; 'Key2' = @( '$(USERNAME)', '4' ) }
-    ThenValueIs @{ 'Key1' = @{ 'SubKey1' = $env:COMPUTERNAME; }; 'Key2' = @( $env:USERNAME, '4' ) }
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable1' -WithValue '006'
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable2' -WithValue '007'
+    WhenResolving @{ 'Key1' = @{ 'SubKey1' = '$(ResolveWhiskeyVariable1)'; }; 'Key2' = @( '$(ResolveWhiskeyVariable2)', '4' ) }
+    ThenValueIs @{ 'Key1' = @{ 'SubKey1' = '006'; }; 'Key2' = @( '007', '4' ) }
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed an array with an array and hashtable in it' {
     Init
-    WhenResolving @( @{ 'SubKey1' = '$(COMPUTERNAME)'; }, @( '$(USERNAME)', '4' ) )
-    ThenValueIs @( @{ 'SubKey1' = $env:COMPUTERNAME; }, @( $env:USERNAME, '4' ) )
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable1' -WithValue '008'
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable2' -WithValue '009'
+    WhenResolving @( @{ 'SubKey1' = '$(ResolveWhiskeyVariable1)'; }, @( '$(ResolveWhiskeyVariable2)', '4' ) )
+    ThenValueIs @( @{ 'SubKey1' = '008'; }, @( '009', '4' ) )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a List object' {
     Init
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '010'
     $list = New-Object 'Collections.Generic.List[string]'
-    $list.Add( '$(COMPUTERNAME)' )
+    $list.Add( '$(ResolveWhiskeyVariable)' )
     $list.Add( 'fubar' )
     $list.Add( 'snafu' )
     WhenResolving @( $list )
-    ThenValueIs @( @( $env:COMPUTERNAME, 'fubar', 'snafu' ) )
+    ThenValueIs @( @( '010', 'fubar', 'snafu' ) )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a Dictionary' {
     Init
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '011'
     $dictionary = New-Object 'Collections.Generic.Dictionary[string,string]'
-    $dictionary.Add( 'Key1', '$(COMPUTERNAME)' )
+    $dictionary.Add( 'Key1', '$(ResolveWhiskeyVariable)' )
     $dictionary.Add( 'Key2', 'fubar' )
     $dictionary.Add( 'Key3', 'snafu' )
     WhenResolving @( $dictionary, '4' )
-    ThenValueIs @( @{ 'Key1' =  $env:COMPUTERNAME; 'Key2' = 'fubar'; 'Key3' = 'snafu' }, '4' )
+    ThenValueIs @( @{ 'Key1' = '011'; 'Key2' = 'fubar'; 'Key3' = 'snafu' }, '4' )
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a Dictionary with variable in a key' {
@@ -230,8 +253,9 @@ Describe 'Resolve-WhiskeyVariable.when using a custom variable' {
 
 Describe 'Resolve-WhiskeyVariable.when using a variable with the same name as an environment variable' {
     Init
-    GivenVariable 'COMPUTERNAME' 'snafu'
-    WhenResolving '$(COMPUTERNAME)'
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '012'
+    GivenVariable 'ResolveWhiskeyVariable' 'snafu'
+    WhenResolving '$(ResolveWhiskeyVariable)'
     ThenValueIs 'snafu'
 }
 
@@ -268,21 +292,24 @@ Describe 'Resolve-WhiskeyVariable.when hashtable key value is empty' {
 
 Describe 'Resolve-WhiskeyVariable.when escaping variable' {
     Init
-    WhenResolving '$$(COMPUTERNAME)'
-    ThenValueIs '$(COMPUTERNAME)'
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '013'
+    WhenResolving '$$(ResolveWhiskeyVariable)'
+    ThenValueIs '$(ResolveWhiskeyVariable)'
 }
 
 Describe 'Resolve-WhiskeyVariable.when escaping variable' {
     Init
-    WhenResolving '$$(COMPUTERNAME) $(COMPUTERNAME)'
-    ThenValueIs ('$(COMPUTERNAME) {0}' -f $env:COMPUTERNAME)
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '014'
+    WhenResolving '$$(ResolveWhiskeyVariable) $(ResolveWhiskeyVariable)'
+    ThenValueIs ('$(ResolveWhiskeyVariable) 014')
 }
 
 Describe 'Resolve-WhiskeyVariable.when nested variable' {
     Init
-    GivenVariable 'FUBAR' '$(COMPUTERNAME)'
-    WhenResolving '$(FUBAR) $$(COMPUTERNAME)'
-    ThenValueIs ('{0} $(COMPUTERNAME)' -f $env:COMPUTERNAME)
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '015'
+    GivenVariable 'FUBAR' '$(ResolveWhiskeyVariable)'
+    WhenResolving '$(FUBAR) $$(ResolveWhiskeyVariable)'
+    ThenValueIs ('015 $(ResolveWhiskeyVariable)')
 }
 
 Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
@@ -294,8 +321,9 @@ Describe 'Resolve-WhiskeyVariable.when variable has a value of ''0''' {
 
 Describe 'Resolve-WhiskeyVariable.when property name is variable' {
     Init
-    WhenResolving @{ '$(COMPUTERNAME)' = 'fubarsnafu' }
-    ThenValueIs @{ $env:COMPUTERNAME = 'fubarsnafu' }
+    GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '016'
+    WhenResolving @{ '$(ResolveWhiskeyVariable)' = 'fubarsnafu' }
+    ThenValueIs @{ '016' = 'fubarsnafu' }
 }
 
 Describe 'Resolve-WhiskeyVariable.when value is empty' {
@@ -505,3 +533,5 @@ Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
         $Global:Error[0] | Should -Match 'Failed\ to\ call\b.*\bSubstring\b'
     }
 }
+
+Remove-Item 'env:ResolveWhiskey*'
