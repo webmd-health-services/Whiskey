@@ -104,6 +104,8 @@ function Resolve-WhiskeyVariable
                                     'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
                                     'WHISKEY_SEMVER2_VERSION' = $sem2Version;
                                     'WHISKEY_TASK_NAME' = $Context.TaskName;
+                                    'WHISKEY_TEMP_DIRECTORY' = (Get-Item -Path ([IO.Path]::GetTempPath()));
+                                    'WHISKEY_TASK_TEMP_DIRECTORY' = $Context.Temp;
                                     'WHISKEY_VERSION' = $version.Version;
                                 }
     }

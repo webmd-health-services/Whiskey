@@ -91,6 +91,11 @@ LONG DESCRIPTION
      * [string] WHISKEY_SEMVER2_VERSION: the MAJOR.MINOR.PATCH portion of the 
        semver version 2 compatible version for the current build.
      * [string] WHISKEY_TASK_NAME: the name of the currently executing task.
+     * [IO.DirectoryInfo] WHISKEY_TASK_TEMP_DIRECTORY: the path to the 
+       temporary directory created for the currently executing task.
+     * [IO.DirectoryInfo] WHISKEY_TEMP_DIRECTORY: the path to the 
+       global/system temporary directory. Uses `System.IO.Path.GetTempPath()` 
+       to get the temporary directory path.
      * [string] WHISKEY_VERSION: a `System.Version` compatible version for 
        the current build (i.e. a semantic version without any prerelease or 
        build metadata).

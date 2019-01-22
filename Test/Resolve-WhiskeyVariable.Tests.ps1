@@ -33,6 +33,7 @@ function Init
 {
     $script:result = $null
     $script:context = New-WhiskeyTestContext -ForDeveloper
+    $context.Temp = $TestDrive
 }
 
 function ThenErrorIs
@@ -563,6 +564,31 @@ Describe 'Resolve-WhiskeyVariable.when using an Environment property name with t
     {
         Remove-Item -Path 'CommandLine' -Force -ErrorAction Ignore
     }
+}
+
+Describe 'Resolve-WhiskeyVariable.exposes temp directory as Whiskey variable' {
+    Init
+    WhenResolving '$(WHISKEY_TEMP_DIRECTORY)'
+    ThenValueIs ([IO.Path]::GetTempPath())
+}
+
+Describe 'Resolve-WhiskeyVariable.exposes temp directory as a DirectoryInfo object' {
+    Init
+    WhenResolving '$(WHISKEY_TEMP_DIRECTORY.Name)'
+    ThenValueIs (Split-Path -Path ([IO.Path]::GetTempPath()) -Leaf)
+}
+
+
+Describe 'Resolve-WhiskeyVariable.exposes current task''s temp directory as Whiskey variable' {
+    Init
+    WhenResolving '$(WHISKEY_TASK_TEMP_DIRECTORY)'
+    ThenValueIs $TestDrive.FullName
+}
+
+Describe 'Resolve-WhiskeyVariable.exposes current task''s temp directory as a DirectoryInfo object' {
+    Init
+    WhenResolving '$(WHISKEY_TASK_TEMP_DIRECTORY.Name)'
+    ThenValueIs $TestDrive.Name
 }
 
 Remove-Item 'env:ResolveWhiskey*'
