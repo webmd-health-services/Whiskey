@@ -553,7 +553,7 @@ function ThenToolInstalled
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Toolinfo.Name -eq $ToolName }
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
-            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd('\')
+            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd([IO.Path]::DirectorySeparatorChar)
             Write-Debug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
             Write-Debug -Message ('             actual    {0}' -f $InstallRoot)
             $InstallRoot -eq $expectedInstallRoot
@@ -749,7 +749,7 @@ Describe 'Invoke-WhiskeyTask.when task has property variables' {
     Init
     GivenRunByDeveloper
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(MachineName)'; }
     ThenPipelineSucceeded
     ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = [Environment]::MachineName; }
     ThenNoOutput
