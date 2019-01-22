@@ -271,6 +271,10 @@ function Resolve-WhiskeyVariable
             {
                 $value = $wellKnownVariables[$variableName]
             }
+            elseif( [Environment] | Get-Member -Static -Name $variableName )
+            {
+                $value = [Environment]::$variableName
+            }
             elseif( (Test-Path -Path $envVarPath) )
             {
                 $value = (Get-Item -Path $envVarPath).Value

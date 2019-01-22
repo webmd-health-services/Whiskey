@@ -534,4 +534,35 @@ Describe 'Resolve-WhiskeyVariable.when method call is invalid' {
     }
 }
 
+Describe ('Resolve-WhiskeyVariable.when resolving variables for Environment static properties') {
+    foreach( $dotNetEnvironmentPropertyName in ([Environment] | Get-Member -Static -MemberType Property | Select-Object -ExpandProperty 'Name') )
+    {
+        # These variables don't test very well.
+        if( $dotNetEnvironmentPropertyName -in @( 'StackTrace' ) )
+        {
+            continue
+        }
+
+        Context $dotNetEnvironmentPropertyName {
+            Init
+            WhenResolving ('$({0})' -f $dotNetEnvironmentPropertyName)
+            ThenValueIs ([Environment]::$dotNetEnvironmentPropertyName).ToString()
+        }
+    }
+}
+
+Describe 'Resolve-WhiskeyVariable.when using an Environment property name with the same name as an environment variable' {
+    try
+    {
+        Set-Item -Path 'env:CommandLine' -Value '557'
+        Init
+        WhenResolving '$(CommandLine)'
+        ThenValueIs ([Environment]::CommandLine)
+    }
+    finally
+    {
+        Remove-Item -Path 'CommandLine' -Force -ErrorAction Ignore
+    }
+}
+
 Remove-Item 'env:ResolveWhiskey*'
