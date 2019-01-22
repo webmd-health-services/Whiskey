@@ -184,7 +184,7 @@ Describe 'DotNet.when command fails' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.1'
         WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.0.*' -ErrorAction SilentlyContinue
-        ThenTaskFailedWithError 'dotnet\.exe\ failed\ with\ exit\ code'
+        ThenTaskFailedWithError 'dotnet(\.exe)?"\ failed\ with\ exit\ code'
     }
     finally
     {
