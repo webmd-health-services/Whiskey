@@ -80,7 +80,9 @@
                             'Add-WhiskeyVariable',
                             'Assert-WhiskeyNodePath',
                             'Assert-WhiskeyNodeModulePath',
+                            'ConvertFrom-WhiskeyContext'
                             'ConvertFrom-WhiskeyYamlScalar',
+                            'ConvertTo-WhiskeyContext',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
@@ -152,6 +154,7 @@
 * You can now use the [Environment class's static properties](https://docs.microsoft.com/en-us/dotnet/api/system.environment#properties) as Whiskey variables. Using these variables are now recommended over environment variables, since the existence of some environment variables varies between operating systems.
 * Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
 * Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
+* Created `ConvertFrom-WhiskeyContext` and `ConvertTo-WhiskeyContext` functions for securely serializing/deserializing Whiskey's context object into background jobs. PowerShell on Linux/MacOS can't serialize `SecureString` objects. Created these functions to work around that limitation. Used by Whiskey's `Parallel` and `PowerShell` tasks.
 '@
         } # End of PSData hashtable
 
