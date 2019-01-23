@@ -231,7 +231,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $byWhoArg = @{ $PSCmdlet.ParameterSetName = $true }
 
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot 'Repo' -ForBuildServer
-    
+
     Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
     $semVer2 = [SemVersion.SemanticVersion]$Version
@@ -557,35 +557,35 @@ function WhenPackaging
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithDescription = $defaultDescription,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $Paths,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $WithWhitelist,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $ThatExcludes,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         $FromSourceRoot,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         [object[]]
         $WithThirdPartyPath,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithVersion = $defaultVersion,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithApplicationName,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         $CompressionLevel,
-        
+
         [Parameter(ParameterSetName='WithTaskParameter')]
         [Switch]
         $SkipExpand,
@@ -1030,7 +1030,7 @@ Describe 'ProGetUniversalPackage.when custom application root doesn''t exist' {
     $fileNames = @( 'html.html', 'thirdparty.txt' )
     $outputFilePath = Initialize-Test -DirectoryName $dirNames -FileName $fileNames
     $context = New-WhiskeyTestContext -ForDeveloper
-    
+
     Install-ProGetAutomation -BuildRoot $context.BuildRoot
     $Global:Error.Clear()
 
@@ -1328,4 +1328,13 @@ Describe 'ProGetUniversalPackage.when missing required properties' {
     }
     WhenPackaging -WithPackageName 'AwesomePackageName' -WithDescription $null -Path 'my.file' -ErrorAction SilentlyContinue
     ThenTaskFails 'Property "Description" is mandatory'
+}
+
+Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error when packaging a file' {
+    Init
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation')
+    Mock -CommandName 'Add-ProGetUniversalPackageFile' -ModuleName 'Whiskey' -MockWith { Write-Error -Message 'Failed to add file to package' }
+    GivenARepositoryWithItems 'my.file'
+    WhenPackaging -Paths 'my.file' -ErrorAction SilentlyContinue
+    ThenTaskFails 'Failed\ to\ add\ file\ to\ package'
 }

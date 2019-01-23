@@ -151,6 +151,7 @@
 * You can now use the [Environment class's static properties](https://docs.microsoft.com/en-us/dotnet/api/system.environment#properties) as Whiskey variables. Using these variables are now recommended over environment variables, since the existence of some environment variables varies between operating systems.
 * Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
 * Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
+* Fixed: `ProGetUniversalPackage` task doesn''t fail the build if there were errors when adding files to the package.
 '@
         } # End of PSData hashtable
 
