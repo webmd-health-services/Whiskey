@@ -418,7 +418,7 @@ Describe 'PublishProGetUniversalPackage.when there are no upack files' {
     GivenCredential 'fubatr' -WithID 'id'
     GivenUniversalFeed 'universal'
     WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed ([regex]::Escape('.output\*.upack" does not exist'))
+    ThenTaskFailed ([regex]::Escape(('.output{0}*.upack" does not exist' -f [IO.Path]::DirectorySeparatorChar)))
 }
 
 Describe 'PublishProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
