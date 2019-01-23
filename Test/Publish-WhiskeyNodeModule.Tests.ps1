@@ -137,12 +137,7 @@ function ThenNpmrcCreated
     $npmrcFileLine3 = ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
     $npmrcFileLine4 = ('{0}email={1}' -f $npmConfigPrefix, $email)
     $npmrcFileLine5 = ('registry={0}' -f $npmRegistryUri)
-    $npmrcFileContents = @"
-$npmrcFileLine2
-$npmrcFileLine3
-$npmrcFileLine4
-$npmrcFileLine5
-"@
+    $npmrcFileContents = "$npmrcFileLine2{0}$npmrcFileLine3{0}$npmrcFileLine4{0}$npmrcFileLine5{0}" -f [Environment]::NewLine
 
     It ('.npmrc file should be{0}{1}' -f [Environment]::newLine,$npmrcFileLine2){
         # should populate the .npmrc file with the appropriate configuration values' {
