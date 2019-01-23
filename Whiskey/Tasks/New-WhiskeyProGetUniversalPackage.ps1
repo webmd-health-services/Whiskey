@@ -25,7 +25,7 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties = $TaskParameter['ManifestProperties']
         foreach( $taskProperty in @( 'Name', 'Description', 'Version' ))
         {
-            if( $manifestProperties.ContainsKey($taskProperty) )
+            if( $manifestProperties.Keys -contains $taskProperty )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"ManifestProperties" contains key "{0}". This property cannot be manually defined in "ManifestProperties" as it is set automatically from the corresponding task property "{0}".' -f $taskProperty)
                 return
