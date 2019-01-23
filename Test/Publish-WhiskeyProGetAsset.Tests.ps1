@@ -9,7 +9,7 @@ $script:credentialID = 'TestCredential'
 function GivenContext
 {
     $script:taskParameter = @{ }
-    $script:taskParameter['uri'] = 'TestURI'
+    $script:taskParameter['Uri'] = 'TestURI'
     Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
     $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
     $Global:globalTestSession = $session
