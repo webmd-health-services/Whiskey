@@ -8,7 +8,16 @@ $failed = $false
 
 function Init
 {
+    param(
+        [Switch]
+        $SkipInstall
+    )
+
     $script:failed = $false
+    if( -not $SkipInstall )
+    {
+        Install-Node
+    }
 }
 
 function ThenFile
@@ -86,7 +95,7 @@ function WhenRunningCommand
 Describe 'Npm.when command succeeds' {
     try
     {
-        Init
+        Init -SkipInstall
         WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','.npmrc'
         ThenFile '.npmrc' -Is @'
 fubar=snafu
@@ -102,7 +111,10 @@ Describe 'Npm.when command fails' {
     try
     {
         Init
-        WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','\\server\share\does\not\exist' -ErrorAction SilentlyContinue
+        $configPath = (Get-Item -Path $PSScriptRoot).PSDrive.Root
+        $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
+        $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
+        WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig',$configPath -ErrorAction SilentlyContinue
         ThenTaskFails -WithError 'NPM\ command\ ''npm config\b.*\ failed\ with\ exit\ code\ '
     }
     finally

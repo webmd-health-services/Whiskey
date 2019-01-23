@@ -96,6 +96,7 @@ function Invoke-WhiskeyNpmCommand
             }
             finally
             {
+                Write-Verbose -Message ($LASTEXITCODE)
                 $ErrorActionPreference = $originalEap
             }
         }
