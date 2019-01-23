@@ -109,9 +109,9 @@ Queues:
 '@
     WhenRunningTask $task
     It ('should run each task') {
-        File 'one.txt' -ContentShouldBe   "1`r`n"
-        File 'two.txt' -ContentShouldBe   "2`r`n"
-        File 'three.txt' -ContentShouldBe "3`r`n"
+        File 'one.txt' -ContentShouldBe   ('1{0}' -f [Environment]::NewLine)
+        File 'two.txt' -ContentShouldBe   ('2{0}' -f [Environment]::NewLine)
+        File 'three.txt' -ContentShouldBe ('3{0}' -f [Environment]::NewLine)
     }
 }
 
@@ -177,8 +177,8 @@ Queues:
     WhenRunningTask $task -ErrorAction SilentlyContinue
     ThenCompleted
     It ('should run both tasks') {
-        File 'one.txt' -ContentShouldBe "1`r`n"
-        File 'two.txt' -ContentShouldBe "2`r`n"
+        File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
+        File 'two.txt' -ContentShouldBe ('2{0}' -f [Environment]::NewLine)
     }
 }
 
@@ -324,6 +324,6 @@ PowerShell:
     $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
     Invoke-WhiskeyBuild -Context $context
     It ('should run each task') {
-        File 'one.txt' -ContentShouldBe   "1`r`n"
+        File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
     }
 }
