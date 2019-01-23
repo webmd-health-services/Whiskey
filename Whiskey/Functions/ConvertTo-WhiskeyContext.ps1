@@ -151,7 +151,7 @@ function ConvertTo-WhiskeyContext
             $buildVersion.SemVer2NoBuildMetadata = $InputObject.Version.SemVer2NoBuildMetadata.ToString()
 
             [Whiskey.Context]$context = New-WhiskeyContextObject
-            Sync-ObjectProperty -Source $InputObject -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version', 'Credentials' )
+            Sync-ObjectProperty -Source $InputObject -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version', 'Credentials', 'TaskPaths' )
             $context.Configuration = Import-WhiskeyYaml -Path $context.ConfigurationPath
 
             $context.BuildMetadata = $buildInfo
@@ -166,6 +166,11 @@ function ConvertTo-WhiskeyContext
                 Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
             }
 
+            foreach( $path in $InputObject.TaskPaths )
+            {
+                $context.TaskPaths.Add((New-Object -TypeName 'IO.FileInfo' -ArgumentList $path))
+            }
+
             Write-Debug 'Variables'
             $context.Variables | ConvertTo-Json -Depth 50 | Write-Debug
             Write-Debug 'ApiKeys'
@@ -174,6 +179,8 @@ function ConvertTo-WhiskeyContext
             $context.Credentials | ConvertTo-Json -Depth 50 | Write-Debug
             Write-Debug 'TaskDefaults'
             $context.TaskDefaults | ConvertTo-Json -Depth 50 | Write-Debug
+            Write-Debug 'TaskPaths'
+            $context.TaskPaths | ConvertTo-Json | Write-Debug
 
             return $context
         }
