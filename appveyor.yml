@@ -14,6 +14,7 @@ environment:
 build_script:
 - pwsh: >-
     # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    
     .\build.ps1 -Verbose
 test: off
 artifacts:
