@@ -2,7 +2,7 @@
 function Restore-WhiskeyNuGetPackage
 {
     [CmdletBinding()]
-    [Whiskey.TaskAttribute("NuGetRestore")]
+    [Whiskey.TaskAttribute("NuGetRestore",Platform=[Whiskey.Platform]::Windows)]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

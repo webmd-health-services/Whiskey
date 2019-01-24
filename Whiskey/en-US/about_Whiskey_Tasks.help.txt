@@ -19,17 +19,22 @@ LONG DESCRIPTION
     * `GitHubRelease`: creates a release in GitHub and uploads files for that
       release.
     * `LoadTask`: loads custom tasks so they can be used in the current build.
-    * `MSBuild`: runs MSBuild, the Microsoft build engine.
+    * `MSBuild`: runs MSBuild, the Microsoft build engine. Only supported on 
+      Windows.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that
       scans and reports on Node module license metadata.
     * `Npm`: runs NPM commands.
-    * `NuGetPack`: runs the `nuget.exe pack` command.
-    * `NuGetPush`: runs the `nuget.exe push` command.
-    * `NuGetRestore`: runs the `nuget.exe restore` command.
-    * `NUnit2`: tests .NET assemblies with NUnit 2.
-    * `NUnit3`: tests .NET assemblies with NUnit 3.
+    * `NuGetPack`: runs the `nuget.exe pack` command. Only supported on
+      Windows.
+    * `NuGetPush`: runs the `nuget.exe push` command. Only supported on
+      Windows.
+    * `NuGetRestore`: runs the `nuget.exe restore` command. Only supported on
+      Windows.
+    * `NUnit2`: tests .NET assemblies with NUnit 2. Only supported on Windows.
+      Windows.
+    * `NUnit3`: tests .NET assemblies with NUnit 3. Only supported on Windows.
     * `Parallel`: runs queues of tasks in parallel/asynchronously.
-    * `Pester3`: runs PowerShell tests wth Pester 3.
+    * `Pester3`: runs PowerShell tests wth Pester 3. Only supported on Windows.
     * `Pester4`: runs PowerShell tests with Pester 4.
     * `Pipeline`: runs pipelines defined in the current whiskey.yml file.
     * `PowerShell`: executes a PowerShell script.

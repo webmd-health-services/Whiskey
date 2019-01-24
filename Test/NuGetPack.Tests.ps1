@@ -277,6 +277,16 @@ function ThenPackageNotCreated
     }
 }
 
+if( -not $IsWindows )
+{
+    Describe 'NuGetPack.when run on non-Windows platform' {
+        InitTest
+        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+        ThenTaskThrowsAnException 'Windows\ platform'
+    }
+    return
+}
+
 Describe 'NuGetPack.when creating a NuGet package with an invalid project' {
     InitTest
     GivenABuiltLibrary

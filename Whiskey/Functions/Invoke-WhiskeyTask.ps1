@@ -123,6 +123,12 @@ function Invoke-WhiskeyTask
 
     $TaskContext.TaskName = $Name
 
+    if( -not $task.Platform.HasFlag($CurrentPlatform) )
+    {
+        Write-Error -Message ('Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f $task.Name,$task.Platform,$CurrentPlatform) -ErrorAction Stop
+        return
+    }
+
     if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
     {
         Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter

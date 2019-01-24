@@ -1380,4 +1380,123 @@ Describe 'Invoke-WhiskeyTask.when a task runs another task' {
     }
 }
 
+function Global::ToolTaskWindows
+{
+    [Whiskey.Task("ToolTaskWindows",Platform=[Whiskey.Platform]::Windows)]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+        $TaskParameter
+    )
+
+    $script:taskProperties = $TaskParameter
+    $script:taskRun = $true
+}
+
+function Global::ToolTaskLinux
+{
+    [Whiskey.Task("ToolTaskLinux",Platform=[Whiskey.Platform]::Linux)]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+        $TaskParameter
+    )
+
+    $script:taskProperties = $TaskParameter
+    $script:taskRun = $true
+}
+
+function Global::ToolTaskMacOS
+{
+    [Whiskey.Task("ToolTaskMacOS",Platform=[Whiskey.Platform]::MacOS)]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+        $TaskParameter
+    )
+
+    $script:taskProperties = $TaskParameter
+    $script:taskRun = $true
+}
+
+function Global::ToolTaskWindowsAndLinux
+{
+    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform=([Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux))]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+        $TaskParameter
+    )
+
+    $script:taskProperties = $TaskParameter
+    $script:taskRun = $true
+}
+
+$currentPlatform = 'Windows'
+if( $IsLinux )
+{
+    $currentPlatform = 'Linux'
+}
+elseif( $IsMacOS )
+{
+    $currentPlatform = 'MacOS'
+}
+
+Describe ('Invoke-WhiskeyTask.when running Windows-only task on {0} platform' -f $currentPlatform) {
+    Init
+    WhenRunningTask 'ToolTaskWindows' -Parameter @{} -ErrorAction SilentlyContinue
+    if( $IsWindows )
+    {
+        ThenTaskRanWithParameter -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun 
+        ThenThrewException -Pattern 'only\ supported\ on\ the\ Windows\ platform'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $currentPlatform) {
+    Init
+    WhenRunningTask 'ToolTaskLinux' -Parameter @{} -ErrorAction SilentlyContinue
+    if( $IsLinux )
+    {
+        ThenTaskRanWithParameter -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun 
+        ThenThrewException -Pattern 'only\ supported\ on\ the\ Linux\ platform'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when running MacOS-only task on {0} platform' -f $currentPlatform) {
+    Init
+    WhenRunningTask 'ToolTaskMacOS' -Parameter @{} -ErrorAction SilentlyContinue
+    if( $IsMacOS )
+    {
+        ThenTaskRanWithParameter -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun 
+        ThenThrewException -Pattern 'only\ supported\ on\ the\ MacOS\ platform'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} platform' -f $currentPlatform) {
+    Init
+    WhenRunningTask 'ToolTaskWindowsAndLinux' -Parameter @{} -ErrorAction SilentlyContinue
+    if( $IsMacOS )
+    {
+        ThenTaskNotRun 
+        ThenThrewException -Pattern 'only\ supported\ on\ the\ MacOS\ platform'
+    }
+    else
+    {
+        ThenTaskRanWithParameter -ExpectedParameter @{}
+    }
+}
+
+
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore
