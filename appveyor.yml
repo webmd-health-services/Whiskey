@@ -1,0 +1,32 @@
+version: 0.0.0+{build}
+skip_tags: true
+image:
+- Ubuntu1804
+- Visual Studio 2017
+matrix:
+  fast_finish: true
+environment:
+  NVM_HOME: C:\Users\appveyor\AppData\Roaming\nvm
+  POWERSHELL_GALLERY_API_KEY:
+    secure: Y7B8n8Ott858qlg1xt1Kz7VnvR59aO963p5dquIEQsMUZpvK/Ip5Rmj7G/jBKM6r
+  GITHUB_ACCESS_TOKEN:
+    secure: cEpuAn4TbJ17Y4WMMsHj46T4DLFMGE4n7xafkbiVQL4jueqc9TGG7NHWg4qbwmt7
+build_script:
+- pwsh: >-
+    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    .\build.ps1 -Verbose
+test: off
+artifacts:
+- path: .output\pester*.xml
+  name: TestResults
+- path: .output\*.zip
+  name: Packages
+- path: .output\msbuild.*.log
+notifications:
+- provider: Email
+  to:
+  - aaron@splatteredbits.com
+  - ajensen@webmd.net
+  on_build_success: false
+  on_build_failure: false
+  on_build_status_changed: false
