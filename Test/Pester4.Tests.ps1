@@ -378,10 +378,10 @@ Describe 'Pester4.when running passing Pester tests' {
     Init
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
+    GivenVersion '4.6.0'
     WhenPesterTaskIsInvoked 
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-    ThenPesterShouldBeInstalled '4.0.3'
+    ThenPesterShouldBeInstalled '4.6.0'
     ThenNoDurationReportPresent
 }
 
