@@ -1,7 +1,7 @@
 version: 0.0.0+{build}
 skip_tags: true
 image:
-- ubuntu
+- Ubuntu1804
 - Visual Studio 2017
 matrix:
   fast_finish: true

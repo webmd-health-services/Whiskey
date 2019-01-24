@@ -11,7 +11,7 @@ Build:
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
-    Version: 0.5.*
+    Version: 0.6.*
 
 - GetPowerShellModule:
     Name: ProGetAutomation
@@ -19,7 +19,7 @@ Build:
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
-    Version: 0.3.*
+    Version: 0.9.*
 
 - GetPowerShellModule:
     Name: VSSetup
