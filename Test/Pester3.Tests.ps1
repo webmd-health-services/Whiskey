@@ -262,7 +262,20 @@ function ThenTestShouldCreateMultipleReportFiles
     }
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests' {
+if( -not $IsWindows )
+{
+    Describe 'Pester3.when running on non-Windows platform' {
+        GivenTestContext
+        GivenPesterPath -pesterPath 'PassingTests'
+        GivenVersion '3.4.3'
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        ThenTestShouldFail -failureMessage 'Windows\ platform'
+    }
+
+    return
+}
+
+Describe 'Pester3.when running passing Pester tests' {
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '3.4.3'
@@ -271,7 +284,7 @@ Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests' {
     ThenPesterShouldBeInstalled '3.4.3'
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when running failing Pester tests' {
+Describe 'Pester3.when running failing Pester tests' {
     GivenTestContext
     GivenPesterPath -pesterPath 'FailingTests'
     GivenVersion '3.4.3'
@@ -280,7 +293,7 @@ Describe 'Invoke-WhiskeyPester3Task.when running failing Pester tests' {
     ThenTestShouldFail -failureMessage 'Pester tests failed'
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when running multiple test scripts' {
+Describe 'Pester3.when running multiple test scripts' {
     GivenTestContext
     GivenPesterPath 'FailingTests','PassingTests'
     GivenVersion '3.4.3'
@@ -288,7 +301,7 @@ Describe 'Invoke-WhiskeyPester3Task.when running multiple test scripts' {
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when run multiple times in the same build' {
+Describe 'Pester3.when run multiple times in the same build' {
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'  
     GivenVersion '3.4.3'
@@ -299,7 +312,7 @@ Describe 'Invoke-WhiskeyPester3Task.when run multiple times in the same build' {
     ThenTestShouldCreateMultipleReportFiles
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when missing Path Configuration' {
+Describe 'Pester3.when missing Path Configuration' {
     GivenTestContext
     GivenVersion '3.4.3'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
@@ -307,7 +320,7 @@ Describe 'Invoke-WhiskeyPester3Task.when missing Path Configuration' {
     ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when missing Version configuration' {
+Describe 'Pester3.when missing Version configuration' {
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     WhenPesterTaskIsInvoked
@@ -315,7 +328,7 @@ Describe 'Invoke-WhiskeyPester3Task.when missing Version configuration' {
     ThenPesterShouldBeInstalled '3.4.6'
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when a task path is absolute' {
+Describe 'Pester3.when a task path is absolute' {
     GivenTestContext
     GivenPesterPath -pesterPath 'C:\FubarSnafu'
     GivenVersion '3.4.3'
@@ -324,7 +337,7 @@ Describe 'Invoke-WhiskeyPester3Task.when a task path is absolute' {
     ThenTestShouldFail -failureMessage 'absolute'
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with Clean Switch the tests dont run' {
+Describe 'Pester3.when running passing Pester tests with Clean Switch the tests dont run' {
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '3.4.3'
@@ -334,7 +347,7 @@ Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with Clean
     ThenPesterShouldBeUninstalled
 }
 
-Describe 'Invoke-WhiskeyPester3Task.when running passing Pester tests with initialization switch the tests dont run' {
+Describe 'Pester3.when running passing Pester tests with initialization switch the tests dont run' {
     GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenVersion '3.4.3'

@@ -312,6 +312,18 @@ function ThenPackageNotPublished
     }
 }
 
+if( -not $IsWindows )
+{
+    Describe 'NuGetPush.when run on non-Windows platform' {
+        InitTest
+        GivenPackageVersion '1.2.3'
+        GivenANuGetPackage 'Fubar.1.2.3.nupkg'
+        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+        ThenTaskThrowsAnException 'Windows\ platform'
+    }
+    return
+}
+
 Describe 'NuGetPush.when publishing a NuGet package' {
     InitTest
     GivenPackageVersion '1.2.3'

@@ -67,6 +67,16 @@ LONG DESCRIPTION
 
     In other words, your task isn't allowed to have these properties.
 
+    # Platform
+
+    If your task should only run on certain platforms/operating systems, set the `Platform` property on your task's `TaskAttribute` to the platform(s) it is restricted to. If the task runs on an unsupported platform, the build will fail. By default, tasks can run on all platforms. Supported platforms are `Windows`, `Linux`, and `MacOS`. For example, a task with this task attribute will only run on Windows:
+
+        [Whiskey.Task('TASK_NAME',Platform=[Whiskey.Platform]::Windows)]
+
+    To run on multiple platforms, use PowerShell's `-bor` operator: 
+
+        [Whiskey.Task('TASK_NAME',Platform=[Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux)]
+
     # Tools
 
     Whiskey can automatically install some tools for your task. The path to that tool is passed to your task in the `TaskParameter` parameter.
