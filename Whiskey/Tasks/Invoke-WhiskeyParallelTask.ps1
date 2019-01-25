@@ -36,6 +36,7 @@ function Invoke-WhiskeyParallelTask
 
     try
     {
+
         $jobs = New-Object 'Collections.ArrayList'
         $queueIdx = -1
 
@@ -63,132 +64,20 @@ function Invoke-WhiskeyParallelTask
 
             Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}]  Starting background queue.' -f $queueIdx)
 
+            $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
+
             $job = Start-Job -Name $queueIdx -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
-
-                    function Sync-ObjectProperty
-                    {
-                        param(
-                            [Parameter(Mandatory=$true)]
-                            [object]
-                            $Source,
-
-                            [Parameter(Mandatory=$true)]
-                            [object]
-                            $Destination,
-
-                            [string[]]
-                            $ExcludeProperty
-                        )
-
-                        $Destination.GetType().DeclaredProperties |
-                            Where-Object { $ExcludeProperty -notcontains $_.Name } |
-                            Where-Object { $_.GetSetMethod($false) } |
-                            Select-Object -ExpandProperty 'Name' |
-                            ForEach-Object { Write-Debug ('{0}  {1} -> {2}' -f $_,$Destination.$_,$Source.$_) ; $Destination.$_ = $Source.$_ }
-
-                        Write-Debug ('Source      -eq $null  ?  {0}' -f ($Source -eq $null))
-                        if( $Source -ne $null )
-                        {
-                            Write-Debug -Message 'Source'
-                            Get-Member -InputObject $Source | Out-String | Write-Debug
-                        }
-
-                        Write-Debug ('Destination -eq $null  ?  {0}' -f ($Destination -eq $null))
-                        if( $Destination -ne $null )
-                        {
-                            Write-Debug -Message 'Destination'
-                            Get-Member -InputObject $Destination | Out-String | Write-Debug
-                        }
-
-                        Get-Member -InputObject $Destination -MemberType Property |
-                            Where-Object { $ExcludeProperty -notcontains $_.Name } |
-                            Where-Object {
-                                $name = $_.Name
-                                if( -not $name )
-                                {
-                                    return
-                                }
-
-                                $value = $Destination.$name
-                                if( $value -eq $null )
-                                {
-                                    return
-                                }
-
-                                Write-Debug ('Destination.{0,-20} -eq $null  ?  {1}' -f $name,($value -eq $null))
-                                Write-Debug ('           .{0,-20} is            {1}' -f $name,$value.GetType())
-                                return (Get-Member -InputObject $value -Name 'Keys') -or ($value -is [Collections.IList])
-                            } |
-                            ForEach-Object {
-                                $propertyName = $_.Name
-                                Write-Debug -Message ('{0}.{1} -> {2}.{1}' -f $Source.GetType(),$propertyName,$Destination.GetType())
-                                $destinationObject = $Destination.$propertyName
-                                $sourceObject = $source.$propertyName
-                                if( (Get-Member -InputObject $destinationObject -Name 'Keys') )
-                                {
-                                    $keys = $sourceObject.Keys
-                                    foreach( $key in $keys )
-                                    {
-                                        $value = $sourceObject[$key]
-                                        Write-Debug ('    [{0,-20}] -> {1}' -f $key,$value)
-                                        $destinationObject[$key] = $sourceObject[$key]
-                                    }
-                                }
-                                elseif( $destinationObject -is [Collections.IList] )
-                                {
-                                    $idx = 0
-                                    foreach( $item in $sourceObject )
-                                    {
-                                        Write-Debug('    [{0}] {1}' -f $idx++,$item)
-                                        $destinationObject.Add($item)
-                                    }
-                                }
-                            }
-                    }
-
+                    
                     $VerbosePreference = $using:VerbosePreference
                     $DebugPreference = $using:DebugPreference
                     $whiskeyModulePath = $using:whiskeyModulePath
-                    $originalContext = $using:TaskContext
+                    $serializedContext = $using:serializableContext
 
                     Import-Module -Name $whiskeyModulePath
-                    $moduleRoot = $whiskeyModulePath | Split-Path
 
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\Use-CallerPreference.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyContextObject.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\New-WhiskeyVersionObject.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\ConvertTo-WhiskeyTask.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\Import-WhiskeyYaml.ps1' -Resolve)
-
-                    # The task context gets serialized/deserialized into this new job process. We need to
-                    # correctly deserialize it back to an actual `Whiskey.Context` object.
-                    $buildInfo = New-WhiskeyBuildMetadataObject
-                    Sync-ObjectProperty -Source $originalContext.BuildMetadata -Destination $buildInfo -Exclude @( 'BuildServer' )
-                    if( $originalContext.BuildMetadata.BuildServer )
-                    {
-                        $buildInfo.BuildServer = $originalContext.BuildMetadata.BuildServer
-                    }
-
-                    $buildVersion = New-WhiskeyVersionObject
-                    Sync-ObjectProperty -Source $originalContext.Version -Destination $buildVersion -ExcludeProperty @( 'SemVer1', 'SemVer2', 'SemVer2NoBuildMetadata' )
-                    $buildVersion.SemVer1 = $originalContext.Version.SemVer1.ToString()
-                    $buildVersion.SemVer2 = $originalContext.Version.SemVer2.ToString()
-                    $buildVersion.SemVer2NoBuildMetadata = $originalContext.Version.SemVer2NoBuildMetadata.ToString()
-
-                    [Whiskey.Context]$context = New-WhiskeyContextObject
-                    Sync-ObjectProperty -Source $originalContext -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version' )
-                    $context.Configuration = Import-WhiskeyYaml -Path $context.ConfigurationPath
-
-                    $context.BuildMetadata = $buildInfo
-                    $context.Version = $buildVersion
-
-                    $context.Variables | ConvertTo-Json -Depth 50 | Write-Debug
-                    $context.ApiKeys | ConvertTo-Json -Depth 50 | Write-Debug
-                    $context.Credentials | ConvertTo-Json -Depth 50 | Write-Debug
-                    $context.TaskDefaults | ConvertTo-Json -Depth 50 | Write-Debug
+                    [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
 
                     # Load third-party tasks.
                     foreach( $info in $context.TaskPaths )
@@ -197,13 +86,20 @@ function Invoke-WhiskeyParallelTask
                         . $info.FullName
                     }
 
+                    $moduleRoot = $whiskeyModulePath | Split-Path
+                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\Use-CallerPreference.ps1' -Resolve)
+                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\ConvertTo-WhiskeyTask.ps1' -Resolve)
+
                     $tasks = $using:queue['Tasks']
                     foreach( $task in $tasks )
                     {
                         $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $task -ErrorAction Stop
+                        Write-Debug -Message ($taskName)
+                        $taskParameter | ConvertTo-Json -Depth 50 | Write-Debug
                         Invoke-WhiskeyTask -TaskContext $context -Name $taskName -Parameter $taskParameter
                     }
                 }
+
                 $job |
                     Add-Member -MemberType NoteProperty -Name 'QueueIndex' -Value $queueIdx -PassThru |
                     Add-Member -MemberType NoteProperty -Name 'Completed' -Value $false
