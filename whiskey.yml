@@ -27,7 +27,7 @@ Build:
 
 - GetPowerShellModule:
     Name: Zip
-    Version: 0.2.*
+    Version: 0.3.*
 
 - Pester4:
     OnlyBy: Developer

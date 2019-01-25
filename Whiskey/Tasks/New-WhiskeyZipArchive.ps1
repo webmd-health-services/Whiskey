@@ -2,7 +2,7 @@
 function New-WhiskeyZipArchive
 {
     [Whiskey.Task("Zip")]
-    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.2.*',VersionParameterName='ZipVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.3.*',VersionParameterName='ZipVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
