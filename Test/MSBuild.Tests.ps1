@@ -212,7 +212,7 @@ function WhenRunningTask
     {
         Write-Error $_
         $script:threwException = $true
-        $Error | Format-List -Force * | Out-String | Write-Verbose -Verbose
+        $Error | Format-List -Force * | Out-String | Write-Verbose
     }
 }
 
@@ -453,6 +453,26 @@ function ThenWritesError
     It 'should write an error' {
         $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
     }
+}
+
+if( -not $IsWindows )
+{
+    Describe 'MSBuild.when run on non-Windows platform' {
+        try
+        {
+            Init
+            GivenAProjectThatCompiles
+            WhenRunningTask -AsDeveloper -ErrorAction SilentlyContinue
+            ThenTaskFailed
+            ThenWritesError 'Windows\ platform'
+        }
+        finally
+        {
+            Reset
+        }
+    }
+
+    return
 }
 
 Describe 'MSBuild.when building real projects as a developer' {
