@@ -1,6 +1,14 @@
+
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
+if( -not $IsWindows )
+{
+    return
+}
 
 $NuGetPackageName = $null
 $output = $null
