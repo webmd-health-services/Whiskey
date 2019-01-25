@@ -8,16 +8,16 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $exportPlatformVars = $true
 }
 
-$platform = 'win'
+$WhiskeyPlatform = [Whiskey.Platform]::Windows
 if( $IsLinux )
 {
-    $platform = 'linux'
+    $WhiskeyPlatform = [Whiskey.Platform]::Linux
 }
 elseif( $IsMacOS )
 {
-    $platform = 'macos'
+    $WhiskeyPlatform = [Whiskey.Platform]::MacOS
 }
-$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $platform)
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $WhiskeyPlatform)
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
@@ -441,6 +441,7 @@ $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
     'SuccessCommandScriptBlock'
     'FailureCommandScriptBlock'
+    'WhiskeyPlatform'
     if( $exportPlatformVars )
     {
         'IsLinux'

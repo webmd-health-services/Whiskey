@@ -421,9 +421,14 @@ Describe 'Pester4.when missing Path Configuration' {
 }
 
 Describe 'Pester4.when a task path is absolute' {
+    $pesterPath = 'C:\FubarSnafu'
+    if( -not $IsWindows )
+    {
+        $pesterPath = '/FubarSnafu'
+    }
     Init
     GivenTestContext
-    GivenPesterPath -pesterPath 'C:\FubarSnafu'
+    GivenPesterPath -pesterPath $pesterPath
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
     ThenTestShouldFail -failureMessage 'absolute'
