@@ -1,5 +1,5 @@
 
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -9,7 +9,12 @@ $Script:taskException = $null
 
 function Get-BuildRoot
 {
-    Join-Path -Path $TestDrive.FullName -ChildPath 'Source'
+    $buildRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Source'
+    if( -not (Test-Path -Path $buildRoot -PathType Container) )
+    {
+        New-Item -Path $buildRoot -ItemType 'Directory' | Out-Null
+    }
+    return $buildRoot
 }
 
 function Get-DestinationRoot
@@ -180,31 +185,31 @@ function ThenTaskFails
 
 }
 
-Describe 'CopyFile Task.when copying a single file' {
+Describe 'CopyFile.when copying a single file' {
     GivenFiles 'one.txt'
     WhenCopyingFiles 'one.txt' -To 'Destination'
     ThenFilesCopied 'one.txt' -To 'Destination'
 }
 
-Describe 'CopyFile Task.when copying multiple files to a single destination' {
+Describe 'CopyFile.when copying multiple files to a single destination' {
     GivenFiles 'one.txt','two.txt'
     WhenCopyingFiles 'one.txt','two.txt' -To 'Destination'
     ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
 }
 
-Describe 'CopyFile Task.when copying files from different directories' {
+Describe 'CopyFile.when copying files from different directories' {
     GivenFiles 'dir1\one.txt','dir2\two.txt'
     WhenCopyingFiles 'dir1\one.txt','dir2\two.txt' -To 'Destination'
     ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
 }
 
-Describe 'CopyFile Task.when copying to multiple destinations' {
+Describe 'CopyFile.when copying to multiple destinations' {
     GivenFiles 'one.txt'
     WhenCopyingFiles 'one.txt' -To 'dir1','dir2'
     ThenFilesCopied 'one.txt' -To 'dir1','dir2'
 }
 
-Describe 'CopyFile Task.when copying files and user can''t create one of the destination directories' {
+Describe 'CopyFile.when copying files and user can''t create one of the destination directories' {
     GivenFiles 'one.txt'
     GivenUserCannotCreateDestination 'dir2'
     WhenCopyingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
@@ -212,21 +217,21 @@ Describe 'CopyFile Task.when copying files and user can''t create one of the des
     ThenNothingCopied -To 'dir1','dir2'
 }
 
-Describe 'CopyFile Task.when copying nothing' {
+Describe 'CopyFile.when copying nothing' {
     GivenNoFilesToCopy
     WhenCopyingFiles -ErrorAction SilentlyContinue
     ThenTaskFails -WithErrorMessage '''Path'' property is missing'
     ThenNothingCopied
 }
 
-Describe 'CopyFile Task.when copying a directory' {
+Describe 'CopyFile.when copying a directory' {
     GivenFiles 'dir1\file1.txt'
     WhenCopyingFiles 'dir1' -ErrorAction SilentlyContinue
     ThenTaskFails 'only copies files'
     ThenNothingCopied
 }
 
-Describe 'CopyFile Task.when destination directory contains wildcards' {
+Describe 'CopyFile.when destination directory contains wildcards' {
     GivenFiles 'file1.txt'
     GivenDirectories 'Destination','OtherDestination','Destination2'
     WhenCopyingFiles 'file1.txt' -To '..\Dest*'
@@ -235,13 +240,13 @@ Describe 'CopyFile Task.when destination directory contains wildcards' {
     ThenNothingCopied -To '..\OtherDestination'
 }
 
-Describe 'CopyFile Task.when destination directory contains wildcards and doesn''t exist' {
+Describe 'CopyFile.when destination directory contains wildcards and doesn''t exist' {
     GivenFiles 'file1.txt'
     WhenCopyingFiles 'file1.txt' -To '..\Dest*'
     ThenTaskFails -WithErrorMessage 'Wildcard\ pattern\ "\.\.\\Dest\*"\ doesn''t'
 }
 
-Describe 'CopyFile Task.when destination directory is an absolute path' {
+Describe 'CopyFile.when destination directory is an absolute path' {
     GivenFiles 'file1.txt'
     $destination = Join-Path -Path $TestDrive.FullName -ChildPath 'Absolute'
     GivenDirectories $destination
