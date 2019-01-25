@@ -1491,7 +1491,7 @@ Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} pla
     if( $IsMacOS )
     {
         ThenTaskNotRun 
-        ThenThrewException -Pattern 'only\ supported\ on\ the\ MacOS\ platform'
+        ThenThrewException -Pattern 'only\ supported\ on\ the\ Windows, Linux\ platform'
     }
     else
     {
