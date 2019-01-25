@@ -75,6 +75,10 @@ LONG DESCRIPTION
       on. By default, a task runs on every branch. When a build is run by a
       developer, there is no branch information, so tasks that have this
       property will never run by a developer. Wildcards are supported.
+    * `OnlyOnPlatform`/`ExceptOnPlatform`: controls the platforms on which the
+      task will run. By default, a task runs on all platforms. Supported
+      platforms are `Windows`, `Linux`, and `MacOS`. These properties may be 
+      set to a list of multiple platforms.
     * `WorkingDirectory`: the directory in which the task should run. By
       default, this is the directory of the whiskey.yml file.
     * `IfExists`/`UnlessExists`: controls if a task runs if/unless an item

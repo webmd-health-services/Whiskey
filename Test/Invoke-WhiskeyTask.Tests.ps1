@@ -1,4 +1,5 @@
-#Requires -Version 4
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -1498,5 +1499,132 @@ Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} pla
     }
 }
 
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'Windows' }
+    if( $IsWindows )
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Linux' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'Linux' }
+    if( $IsLinux )
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is MacOS' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'MacOS' }
+    if( $IsMacOS )
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows,MacOS' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = @( 'Windows','MacOS' ) }
+    if( $IsLinux )
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+    else
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when OnlyOnPlatform is invalid') {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'Blarg' } -ErrorAction SilentlyContinue
+    ThenTaskNotRun -CommandName 'MockTask'
+    ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'Windows' }
+    if( $IsWindows )
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+    else
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Linux' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'Linux' }
+    if( $IsLinux )
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+    else
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is MacOS' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'MacOS' }
+    if( $IsMacOS )
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+    else
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows,MacOS' -f $currentPlatform) {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = @( 'Windows','MacOS' ) }
+    if( $IsLinux )
+    {
+        ThenTaskRanWithParameter 'MockTask' -ExpectedParameter @{}
+    }
+    else
+    {
+        ThenTaskNotRun -CommandName 'MockTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when ExceptOnPlatform is invalid') {
+    Init
+    GivenMockTask
+    WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'Blarg' } -ErrorAction SilentlyContinue
+    ThenTaskNotRun -CommandName 'MockTask'
+    ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
+}
 
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore

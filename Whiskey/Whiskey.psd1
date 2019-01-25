@@ -152,6 +152,7 @@
 * Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
 * Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
 * Adding support for tasks to define what platform/operating system they can run on with a new `Platform` property on the task attribute. If a task can only run on a specific platform, set the `Platform` property to the platform is supports, e.g. `[Whiskey.TaskAttribute('SomeTask',Platform=([Whiskey.Platform]::Windows))]`. Valid platforms are `Windows`, `Linux`, and `MacOS`. The default platform is `All`.
+* Added `OnlyOnPlatform` and `ExceptOnPlatform` common task properties that control the platforms on which a task will/will not be run. Valid platforms are `Windows`, `Linux`, and `MacOS`.
 '@
         } # End of PSData hashtable
 
