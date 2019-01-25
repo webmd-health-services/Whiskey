@@ -15,7 +15,7 @@ Build:
 
 - GetPowerShellModule:
     Name: ProGetAutomation
-    Version: 0.8.*
+    Version: 0.9.*
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
@@ -105,7 +105,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Whiskey.zip
-    Path: 
+    Path:
     - Whiskey
     Exclude:
     - "*.pdb"

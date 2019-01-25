@@ -3,7 +3,7 @@ function Publish-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task("PublishProGetUniversalPackage")]
-    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.8.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
@@ -29,17 +29,17 @@ function Publish-WhiskeyProGetUniversalPackage
     if( -not $TaskParameter['CredentialID'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet:
-        
+
         $exampleTask
-        
+
         Use the `Add-WhiskeyCredential` function to add credentials to the build."
         return
     }
-    
+
     if( -not $TaskParameter['Uri'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "Uri is a mandatory property. It should be the URI to the ProGet instance where you want to publish your package:
-        
+
         $exampleTask
         "
         return
@@ -48,12 +48,12 @@ function Publish-WhiskeyProGetUniversalPackage
     if( -not $TaskParameter['FeedName'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "FeedName is a mandatory property. It should be the name of the universal feed in ProGet where you want to publish your package:
-        
+
         $exampleTask
         "
         return
     }
-    
+
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
 
     $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
@@ -62,7 +62,7 @@ function Publish-WhiskeyProGetUniversalPackage
     {
         $TaskParameter['Path'] = Join-Path -Path ($TaskContext.OutputDirectory | Split-Path -Leaf) -ChildPath '*.upack'
     }
-    
+
     $errorActionParam = @{ }
     $allowMissingPackages = $false
     if( $TaskParameter.ContainsKey('AllowMissingPackage') )
@@ -74,7 +74,7 @@ function Publish-WhiskeyProGetUniversalPackage
     {
         $errorActionParam['ErrorAction'] = 'Ignore'
     }
-    $packages = $TaskParameter['Path'] | 
+    $packages = $TaskParameter['Path'] |
                     Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @errorActionParam |
                     Where-Object {
                         if( -not $TaskParameter.ContainsKey('Exclude') )
