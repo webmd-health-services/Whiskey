@@ -114,8 +114,8 @@ Describe 'Npm.when command fails' {
         $configPath = (Get-Item -Path $PSScriptRoot).PSDrive.Root
         $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
         $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
-        WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig',$configPath -ErrorAction SilentlyContinue
-        ThenTaskFails -WithError 'NPM\ command\ ''npm config\b.*\ failed\ with\ exit\ code\ '
+        WhenRunningCommand 'k4bphelohjx' -ErrorAction SilentlyContinue
+        ThenTaskFails -WithError 'NPM\ command\ "npm\ k4bphelohjx.*"\ failed\ with\ exit\ code\ '
     }
     finally
     {
@@ -127,7 +127,7 @@ Describe 'Npm.when command not given' {
     try
     {
         Init
-        WhenRunningCommand
+        WhenRunningCommand -ErrorAction SilentlyContinue
         ThenTaskFails -WithError 'Property\ "Command\" is required'
     }
     finally

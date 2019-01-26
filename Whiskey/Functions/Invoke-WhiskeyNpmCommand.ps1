@@ -102,7 +102,7 @@ function Invoke-WhiskeyNpmCommand
         }
         if( $LASTEXITCODE -ne 0 )
         {
-            Write-Error -Message ('NPM command ''{0}'' failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
+            Write-Error -Message ('NPM command "{0}" failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
         }
     }
     finally

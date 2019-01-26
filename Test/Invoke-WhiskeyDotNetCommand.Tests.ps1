@@ -84,7 +84,7 @@ function ThenErrorMessage
     )
 
     It ('should write an error matching /{0}/' -f $ExpectedError) {
-        $Global:Error | Should -Match $ExpectedError
+        $Global:Error[0] | Should -Match $ExpectedError
     }
 }
 

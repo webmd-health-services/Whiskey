@@ -1447,7 +1447,7 @@ Describe ('Invoke-WhiskeyTask.when running Windows-only task on {0} platform' -f
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $currentWhiskeyPlatform) {
+Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $WhiskeyPlatform) {
     Init
     WhenRunningTask 'ToolTaskLinux' -Parameter @{} -ErrorAction SilentlyContinue
     if( $IsLinux )
