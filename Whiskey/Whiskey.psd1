@@ -156,6 +156,8 @@
 * Created `ConvertFrom-WhiskeyContext` and `ConvertTo-WhiskeyContext` functions for securely serializing/deserializing Whiskey's context object into background jobs. PowerShell on Linux/MacOS can't serialize `SecureString` objects. Created these functions to work around that limitation. Used by Whiskey's `Parallel` and `PowerShell` tasks.
 * Added support for tasks to define what platform/operating system they can run on with a new `Platform` property on the task attribute. If a task can only run on a specific platform, set the `Platform` property to the platform is supports, e.g. `[Whiskey.TaskAttribute('SomeTask',Platform=([Whiskey.Platform]::Windows))]`. Valid platforms are `Windows`, `Linux`, and `MacOS`. The default platform is `All`.
 * Added `OnlyOnPlatform` and `ExceptOnPlatform` common task properties that control the platforms on which a task will or will not be run. Valid platforms are `Windows`, `Linux`, and `MacOS`.
+* Fixed: `ProGetUniversalPackage` task doesn''t fail the build if there were errors when adding files to the package.
+* Updated all tasks that use the ProGetAutomation module to default to using version 0.9.* (from 0.8.*).
 '@
         } # End of PSData hashtable
 

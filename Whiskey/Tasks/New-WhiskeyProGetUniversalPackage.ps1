@@ -3,7 +3,7 @@ function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task("ProGetUniversalPackage")]
-    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.8.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]
@@ -186,14 +186,14 @@ function New-WhiskeyProGetUniversalPackage
                 {
                     Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging unfiltered item    {0}{1}' -f $relativePath,$overrideInfo)
                     Get-Item -Path $sourcePath |
-                        Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
+                        Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
                     continue
                 }
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
                 {
                     Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging file               {0}{1}' -f $relativePath,$overrideInfo)
-                    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams
+                    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams -ErrorAction Stop
                     continue
                 }
 
@@ -243,7 +243,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)
                 Find-Item -Path $sourcePath |
-                    Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams
+                    Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
             }
         }
     }
@@ -273,7 +273,7 @@ function New-WhiskeyProGetUniversalPackage
                                -Description $TaskParameter['Description'] `
                                -AdditionalMetadata $manifestProperties
 
-    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $versionJsonPath
+    Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $versionJsonPath -ErrorAction Stop
 
     if( $TaskParameter['Path'] )
     {
