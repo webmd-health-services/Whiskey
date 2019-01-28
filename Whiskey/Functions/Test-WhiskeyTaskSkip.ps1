@@ -179,5 +179,60 @@ function Test-WhiskeyTaskSkip
         }
     }
 
+    if( $Properties['OnlyOnPlatform'] )
+    {
+        $shouldSkip = $true
+        [Whiskey.Platform]$platform = [Whiskey.Platform]::Unknown
+        foreach( $item in $Properties['OnlyOnPlatform'] )
+        {
+            if( -not [enum]::TryParse($item,[ref]$platform) )
+            {
+                $validValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
+                Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyOnPlatform' -Message ('Invalid platform "{0}". Valid values are "{1}".' -f $item,($validValues -join '", "'))
+                return
+            }
+            $platform = [Whiskey.Platform]$item
+            if( $CurrentPlatform.HasFlag($platform) )
+            {
+                Write-WhiskeyVerbose -Context $Context -Message ('OnlyOnPlatform    {0} -eq {1}' -f $platform,$CurrentPlatform)
+                $shouldSkip = $false
+                break
+            }
+            else
+            {
+                Write-WhiskeyVerbose -Context $Context -Message ('OnlyOnPlatform  ! {0} -ne {1}' -f $platform,$CurrentPlatform)
+            }
+        }
+        return $shouldSkip
+    }
+
+
+    if( $Properties['ExceptOnPlatform'] )
+    {
+        $shouldSkip = $false
+        [Whiskey.Platform]$platform = [Whiskey.Platform]::Unknown
+        foreach( $item in $Properties['ExceptOnPlatform'] )
+        {
+            if( -not [enum]::TryParse($item,[ref]$platform) )
+            {
+                $validValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
+                Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptOnPlatform' -Message ('Invalid platform "{0}". Valid values are "{1}".' -f $item,($validValues -join '", "'))
+                return
+            }
+            $platform = [Whiskey.Platform]$item
+            if( $CurrentPlatform.HasFlag($platform) )
+            {
+                Write-WhiskeyVerbose -Context $Context -Message ('ExceptOnPlatform  ! {0} -eq {1}' -f $platform,$CurrentPlatform)
+                $shouldSkip = $true
+                break
+            }
+            else
+            {
+                Write-WhiskeyVerbose -Context $Context -Message ('ExceptOnPlatform    {0} -ne {1}' -f $platform,$CurrentPlatform)
+            }
+        }
+        return $shouldSkip
+    }
+
     return $false
 }

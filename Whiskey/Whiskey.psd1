@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.39.0'
+    ModuleVersion = '0.40.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -80,7 +80,9 @@
                             'Add-WhiskeyVariable',
                             'Assert-WhiskeyNodePath',
                             'Assert-WhiskeyNodeModulePath',
+                            'ConvertFrom-WhiskeyContext'
                             'ConvertFrom-WhiskeyYamlScalar',
+                            'ConvertTo-WhiskeyContext',
                             'ConvertTo-WhiskeySemanticVersion',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
@@ -148,16 +150,14 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Whiskey can now run under PowerShell Core.
-* Updated ProGet tasks to depend on ProGetAutomation 0.8.*.
-* Switched `ProGetUniversalPackage` task to use native .NET compression libraries instead of 7-Zip. 
-* `ProGetUniversalPackage` task should now be faster. It no longer copies files into a temporary directory before creating its package. It now adds files to the package in-place.
-* Created new `Zip` task for creating ZIP archives.
-* Whiskey no longer ships with a copy of 7-Zip. Instead, if 7-Zip is needed to install a local version of Node (only applicable on Windows due to path length restrictions), 7-Zip is downloaded from nuget.org. If you were using the version of 7-Zip in Whiskey to create ZIP archives during your build, please use the new `Zip` task instead.
-* Now uses robocopy.exe only on Windows to delete some files/directories. Robocopy is used to work-around Windows path restrictions when deleting items with long paths. Other platforms don't have that restriction.
-* Created `Resolve-WhiskeyNodePath` function to resolve/get the path to the Node executable in a cross-platform manner.
-* Created `Resolve-WhiskeyNodeModulePath` function to resolve/get the path to a Node module's directory in a cross-platform manner.
-* Fixed: Whiskey variables fail to be resolved when specified in the key portion of a key:value property in whiskey.yml.
+* You can now use the [Environment class's static properties](https://docs.microsoft.com/en-us/dotnet/api/system.environment#properties) as Whiskey variables. Using these variables are now recommended over environment variables, since the existence of some environment variables varies between operating systems.
+* Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
+* Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
+* Created `ConvertFrom-WhiskeyContext` and `ConvertTo-WhiskeyContext` functions for securely serializing/deserializing Whiskey's context object into background jobs. PowerShell on Linux/MacOS can't serialize `SecureString` objects. Created these functions to work around that limitation. Used by Whiskey's `Parallel` and `PowerShell` tasks.
+* Added support for tasks to define what platform/operating system they can run on with a new `Platform` property on the task attribute. If a task can only run on a specific platform, set the `Platform` property to the platform is supports, e.g. `[Whiskey.TaskAttribute('SomeTask',Platform=([Whiskey.Platform]::Windows))]`. Valid platforms are `Windows`, `Linux`, and `MacOS`. The default platform is `All`.
+* Added `OnlyOnPlatform` and `ExceptOnPlatform` common task properties that control the platforms on which a task will or will not be run. Valid platforms are `Windows`, `Linux`, and `MacOS`.
+* Fixed: `ProGetUniversalPackage` task doesn''t fail the build if there were errors when adding files to the package.
+* Updated all tasks that use the ProGetAutomation module to default to using version 0.9.* (from 0.8.*).
 '@
         } # End of PSData hashtable
 

@@ -4,16 +4,8 @@ Set-StrictMode -Version 'Latest'
 
 # Build the assemblies that use NUnit3. Only do this once.
 $latestNUnit3Version = '3.7.0'
-$taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit3.yml')
-Invoke-WhiskeyBuild -Context $taskContext
-
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
-Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
-& $nugetPath install OpenCover -OutputDirectory $packagesRoot
-& $nugetPath install ReportGenerator -OutputDirectory $packagesRoot
-& $nugetPath install NUnit.Runners -Version $latestNUnit3Version -OutputDirectory $packagesRoot
-
 $argument = $null
 $clean = $false
 $coverageFilter = $null
@@ -492,6 +484,24 @@ function ThenRanWithCoverageFilter
         $failingTestResult | Should -Not -Exist
     }
 }
+
+if( -not $IsWindows )
+{
+    Describe 'NUnit3.when run on non-Windows platform' {
+        Init
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'Windows\ platform'
+    }
+    return
+}
+
+$taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit3.yml')
+Invoke-WhiskeyBuild -Context $taskContext
+
+Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
+& $nugetPath install OpenCover -OutputDirectory $packagesRoot
+& $nugetPath install ReportGenerator -OutputDirectory $packagesRoot
+& $nugetPath install NUnit.Runners -Version $latestNUnit3Version -OutputDirectory $packagesRoot
 
 Describe 'NUnit3.when running in Clean mode' {
     Init

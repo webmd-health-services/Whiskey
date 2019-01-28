@@ -7,6 +7,7 @@ Set-StrictMode -Version 'Latest'
 $packagesConfigPath = $null
 $version = $null
 $argument = $null
+$failed = $false
 
 function GivenArgument
 {
@@ -62,6 +63,7 @@ function Init
     $script:packagesConfigPath = $null
     $script:version = $null
     $script:argument = $null
+    $script:failed = $false
 }
 
 function ThenPackageInstalled
@@ -108,6 +110,7 @@ function ThenPackageNotInstalled
 
 function WhenRestoringPackages
 {
+    [CmdletBinding()]
     param(
     )
 
@@ -128,10 +131,31 @@ function WhenRestoringPackages
         $parameter['Argument'] = $argument
     }
 
-    Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'NuGetRestore'
+    try
+    {
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'NuGetRestore'
+    }
+    catch
+    {
+        $script:failed = $true
+        Write-Error -ErrorRecord $_
+    }
 }
 
-Describe 'NuGetRestore Task.when restoring packages' {
+if( -not $IsWindows )
+{
+    Describe 'NuGetRestore.when run on non-Windows platform' {
+        Init
+        WhenRestoringPackages -ErrorAction SilentlyContinue
+        It ('should fail') {
+            $failed | Should -BeTrue
+            $Global:Error[0] | Should -Match 'Windows\ platform'
+        }
+    }
+    return
+}
+
+Describe 'NuGetRestore.when restoring packages' {
     Init
     GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
@@ -148,7 +172,7 @@ Describe 'NuGetRestore Task.when restoring packages' {
     ThenPackageInstalled 'NLog.4.3.10'
 }
 
-Describe 'NuGetRestore Task.when restoring solution' {
+Describe 'NuGetRestore.when restoring solution' {
     Init 
     GivenSolution 'NUnit2PassingTest'
     GivenPath 'NUnit2PassingTest.sln'
@@ -157,7 +181,7 @@ Describe 'NuGetRestore Task.when restoring solution' {
     ThenPackageInstalled 'NUnit.2.6.4'
 }
 
-Describe 'NuGetRestore Task.when restoring multiple paths' {
+Describe 'NuGetRestore.when restoring multiple paths' {
     Init
     GivenFile 'subproject\packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
@@ -176,7 +200,7 @@ Describe 'NuGetRestore Task.when restoring multiple paths' {
     ThenPackageInstalled 'NUnit.2.6.4'
 }
 
-Describe 'NuGetRestore Task.when pinning version of NuGet' {
+Describe 'NuGetRestore.when pinning version of NuGet' {
     Init
     GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>

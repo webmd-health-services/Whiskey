@@ -4,7 +4,6 @@ PublishOn:
 Build:
 - TaskDefaults:
     Pester4:
-        Version: 4.4.*
         DescribeDurationReportCount: 20
 
 - Version:
@@ -16,7 +15,7 @@ Build:
 
 - GetPowerShellModule:
     Name: ProGetAutomation
-    Version: 0.8.*
+    Version: 0.9.*
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
@@ -51,7 +50,7 @@ Build:
             - "*\\Test\\NUnit2.Tests.ps1"
             - "*\\Test\\NUnit3.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyNodeLicenseChecker.Tests.ps1"
-            - "*\\Test\\Invoke-WhiskeyPester3Task.Tests.ps1"
+            - "*\\Test\\Pester3.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyPowerShell.Tests.ps1"
             - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
             - "*\\Test\\MSBuild.Tests.ps1"
@@ -86,7 +85,7 @@ Build:
             Path:
             - Test\Get-WhiskeyPowerShellModule.Tests.ps1
             - Test\Invoke-WhiskeyNodeLicenseChecker.Tests.ps1
-            - Test\Invoke-WhiskeyPester3Task.Tests.ps1
+            - Test\Pester3.Tests.ps1
             - Test\NuGetPack.Tests.ps1
     - Tasks:
         Pester4:
@@ -106,7 +105,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Whiskey.zip
-    Path: 
+    Path:
     - Whiskey
     Exclude:
     - "*.pdb"

@@ -15,7 +15,7 @@ Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorActio
 Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
 
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
-if( -not ($attr | Get-Member 'SupportsClean') )
+if( -not ($attr | Get-Member 'Platform') )
 {
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
 }
@@ -36,6 +36,20 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $IsLinux = $false
     $IsMacOS = $false
     $IsWindows = $true
+}
+
+$CurrentPlatform = [Whiskey.Platform]::Unknown
+if( $IsLinux )
+{
+    $CurrentPlatform = [Whiskey.Platform]::Linux
+}
+elseif( $IsMacOS )
+{
+    $CurrentPlatform = [Whiskey.Platform]::MacOS
+}
+elseif( $IsWindows )
+{
+    $CurrentPlatform = [Whiskey.Platform]::Windows
 }
 
 Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Functions'),(Join-Path -Path $PSScriptRoot -ChildPath 'Tasks') -Filter '*.ps1' |
