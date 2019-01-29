@@ -113,6 +113,7 @@ Build:
 
 Publish:
 - PublishPowerShellModule:
+    OnlyOnPlatform: Windows
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/api/v2/
     Path: Whiskey
@@ -124,6 +125,7 @@ Publish:
             PSData:
                 ReleaseNotes: RELEASE_NOTES
 - GitHubRelease:
+    OnlyOnPlatform: Windows
     RepositoryName: webmd-health-services/Whiskey
     ApiKeyID: github.com
     Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
