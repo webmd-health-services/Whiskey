@@ -105,7 +105,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Whiskey.zip
-    Path:
+    Path: 
     - Whiskey
     Exclude:
     - "*.pdb"
