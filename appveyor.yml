@@ -5,7 +5,7 @@ skip_tags: true
 matrix:
   fast_finish: true
 
-  environment:
+environment:
   NVM_HOME: C:\Users\appveyor\AppData\Roaming\nvm
   POWERSHELL_GALLERY_API_KEY:
     secure: Y7B8n8Ott858qlg1xt1Kz7VnvR59aO963p5dquIEQsMUZpvK/Ip5Rmj7G/jBKM6r
@@ -16,7 +16,7 @@ matrix:
     LANG: us_US.UTF-8
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
-  build_script:
+build_script:
 - pwsh: >-
     # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
     
