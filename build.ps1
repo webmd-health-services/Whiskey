@@ -180,6 +180,8 @@ $ErrorActionPreference = 'Continue'
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
+Get-Variable | Format-Table | Out-String | Write-Verbose
+
 Get-ChildItem 'env:' |
     Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
     Format-Table |
