@@ -14,7 +14,12 @@ environment:
   matrix:
   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
     LANG: us_US.UTF-8
+    APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCnc5rdUzg/RzExbFYvmyMSoaR6GEfWdwVSC5RDcddzm1t0UZAkZzzH3j7p0vJX4nnOqAVouToQw9PFvJmndN/jU8EkeREjtB7qhTbMBUGodmXQSG0sDIsqWRq/uVdKT++qZmjtBTASO9k9BUwk+/REMok+X3Np3FmvGxEGcWQsTqbZkQH93Wd2X6LgD9bnmdvdz2x/9RYXCm6PR0tgAru5nxFhiqIYmFdr/pQ2//HLTmNb5KX0sjNI+je7sunjUNahVYOKRJueoFgSC70OaRRY9s/WBYAhQXHv/m/rMObcq6N39GZHW+cv2LqIiM2KxqPP3nlQI7058Y/UXknIaTRd ajensen@04-PC0NXXGR
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+init:
+    - sh: export APPVEYOR_SSH_BLOCK=true
+    - sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 
 build_script:
 - pwsh: >-
