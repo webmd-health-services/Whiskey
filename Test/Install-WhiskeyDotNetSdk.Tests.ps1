@@ -68,7 +68,7 @@ function GivenDotNetNotInstalled
     foreach ($path in $dotNetInstalls)
     {
         $dotNetDirectory = [regex]::Escape(($path | Split-Path -Parent))
-        $dotNetDirectory = ('{0}\\?' -f $dotNetDirectory)
+        $dotNetDirectory = ('{0}{1}?' -f $dotNetDirectory,[regex]::Escape([IO.Path]::DirectorySeparatorChar))
         $env:PATH = $env:PATH -replace $dotNetDirectory,''
     }
 }
