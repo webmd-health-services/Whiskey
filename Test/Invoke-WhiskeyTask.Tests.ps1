@@ -1422,7 +1422,7 @@ function Global::ToolTaskMacOS
 
 function Global::ToolTaskWindowsAndLinux
 {
-    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform='Windows,MacOS')]
+    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform='Windows,Linux')]
     [CmdletBinding()]
     param(
         $TaskContext,
