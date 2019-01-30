@@ -4,8 +4,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1')
 
-Write-Verbose $ProgressPreference -Verbose
-
 Describe ('Documentation') {
     $tasksMissingDocs = Get-WhiskeyTask |
                             Select-Object -ExpandProperty 'Name'|
@@ -19,5 +17,3 @@ Describe ('Documentation') {
     }
     
 }
-
-Write-Verbose $ProgressPreference -Verbose
