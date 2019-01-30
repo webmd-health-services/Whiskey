@@ -12,6 +12,21 @@ if( $IsWindows )
     $dotnetExeName = 'dotnet.exe'
 }
 
+$tempDotNetPath = $null
+if( $IsLinux )
+{
+    $sysDotNetPath = Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Source' 
+    $dotnetDir = $sysDotNetPath | Split-Path -Parent
+    $curlDir = Get-Command -Name 'curl' -Erroraction SilentlyContinue | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
+    if( $curlDir -eq $dotnetDir )
+    {
+
+        $tempDotNetPath = 'dotnet{0}' -f [IO.Path]::GetRandomFileName()
+        Rename-Item -Path $sysDotNetPath -NewName $tempDotNetPath
+        $tempDotNetPath = Join-Path -Path $dotnetDir -ChildPath $tempDotNetPath
+    }
+}
+
 function Init
 {
     $Global:Error.Clear()
@@ -235,4 +250,9 @@ try
 finally
 {
     ThenRestoreOriginalPathEnvironment
+}
+
+if( $tempDotNetPath )
+{
+    Rename-Item -Path $tempDotNetPath -NewName 'dotnet'
 }
