@@ -96,10 +96,6 @@ Build:
             - Test\Uninstall-WhiskeyTool.Tests.ps1
     - Tasks:
         Pester4:
-            # On other platforms (at least Linux), this test causes PowerShell to use 
-            # "Write-Progress" which, even if ProgressPreference is set to `SilentlyContinue`, causes
-            # such weird output, it adds 30 minutes or so to build times under AppVeyor.
-            OnlyOnPlatform: Windows
             Path:
             - Test\Documentation.Tests.ps1
     - Tasks:
