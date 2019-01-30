@@ -107,6 +107,7 @@ Build:
             Path:
             - Test\Invoke-WhiskeyPowerShell.Tests.ps1
 
+
 - PowerShell:
     Path: Format-PesterResult.ps1
     Argument:
