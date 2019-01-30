@@ -398,7 +398,10 @@ function Init
     $script:exclude = $null
     $Script:disableCodeCoverage = $null
 
-    Copy-Item -Path $packagesRoot -Destination (Join-Path -Path $TestDrive.FullName -ChildPath 'packages') -Recurse
+    if( (Test-Path -Path $packagesRoot -PathType Container) )
+    {
+        Copy-Item -Path $packagesRoot -Destination (Join-Path -Path $TestDrive.FullName -ChildPath 'packages') -Recurse
+    }
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
 
     Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
