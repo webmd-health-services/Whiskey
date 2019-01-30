@@ -1383,7 +1383,7 @@ Describe 'Invoke-WhiskeyTask.when a task runs another task' {
 
 function Global::ToolTaskWindows
 {
-    [Whiskey.Task("ToolTaskWindows",Platform=[Whiskey.Platform]::Windows)]
+    [Whiskey.Task("ToolTaskWindows",Platform='Windows')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1396,7 +1396,7 @@ function Global::ToolTaskWindows
 
 function Global::ToolTaskLinux
 {
-    [Whiskey.Task("ToolTaskLinux",Platform=[Whiskey.Platform]::Linux)]
+    [Whiskey.Task("ToolTaskLinux",Platform='Linux')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1409,7 +1409,7 @@ function Global::ToolTaskLinux
 
 function Global::ToolTaskMacOS
 {
-    [Whiskey.Task("ToolTaskMacOS",Platform=[Whiskey.Platform]::MacOS)]
+    [Whiskey.Task("ToolTaskMacOS",Platform='MacOS')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1422,7 +1422,7 @@ function Global::ToolTaskMacOS
 
 function Global::ToolTaskWindowsAndLinux
 {
-    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform=([Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux))]
+    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform='Windows,MacOS')]
     [CmdletBinding()]
     param(
         $TaskContext,
