@@ -150,9 +150,12 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Adding Linux support.
+* Adding Linux and MacOS support. Whiskey is now cross-platform!
 * Upgrading to PowerShellGet version 2.0.4.
 * Upgrading to PackageManagement version 1.3.0.
+* Updating BuildMaster tasks to use BuildMasterAutomation PowerShell module version 0.6.0 (from 0.5.0).
+* Updating Bitbucket Server tasks to use BitbucketServerAutomation PowerShell module version 0.9.0 (from 0.8.0).
+* Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
 '@
         } # End of PSData hashtable
 
