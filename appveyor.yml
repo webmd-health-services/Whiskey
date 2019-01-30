@@ -14,12 +14,9 @@ environment:
   matrix:
   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
     LANG: us_US.UTF-8
-    APPVEYOR_SSH_KEY: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC5mBnjgF/1nuWMj2pTdbk7mre5U9Q8OpCuWQAfjzx2Pf+7EskomFhleCWnATNqrmDw8Y8H9YtK8pcaLHudFbQwAxJ9WjCYsiQ2hOq22BLYVh0/e2JRiV8d6ODYBA//Q8/Gu4iz6AV+0QHSWATtuDXJisN/+ak8qF9wU8TqAro4C7tMq+bi4vR00c+vzvokXLN9RQaRKmGm9sixTQsAA9JLWiLB8Hir588Sn+9yysGwcZ/NcwX8GX6bszW4/5XP/kImMUpv5JeSkNrob/exv9zsLAVVLDviqNJCOPUu16Y9xBaGtpXbUn/wVqbON6hv74wKrEsHegvE8IYEm0HziH7Z ajensen@04-PC0NXXGR
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 build_script:
-- sh: export APPVEYOR_SSH_BLOCK=true
-- sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 - pwsh: >-
     # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
     

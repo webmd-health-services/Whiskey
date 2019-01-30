@@ -15,15 +15,18 @@ if( $IsWindows )
 $tempDotNetPath = $null
 if( $IsLinux )
 {
+    # On the build server, dotnet and curl are in the same directory. Some tests remove the path 
+    # in which dotnet is installed to test that it gets downloaded and installed. Since curl is
+    # at the same path, the download fail because dotnet-install.sh can't find curl. So, we
+    # have to set aside the global dotnet if it exists in the same directory as curl.
     $sysDotNetPath = Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Source' 
     $dotnetDir = $sysDotNetPath | Split-Path -Parent
     $curlDir = Get-Command -Name 'curl' -Erroraction SilentlyContinue | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
     if( $curlDir -eq $dotnetDir )
     {
-
-        $tempDotNetPath = 'dotnet{0}' -f [IO.Path]::GetRandomFileName()
-        Rename-Item -Path $sysDotNetPath -NewName $tempDotNetPath
-        $tempDotNetPath = Join-Path -Path $dotnetDir -ChildPath $tempDotNetPath
+        $tempDotNetName = 'dotnet{0}' -f [IO.Path]::GetRandomFileName()
+        $tempDotNetPath = Join-Path -Path $dotnetDir -ChildPath $tempDotNetName
+        sudo mv $sysDotNetPath $tempDotNetPath
     }
 }
 
@@ -254,5 +257,5 @@ finally
 
 if( $tempDotNetPath )
 {
-    Rename-Item -Path $tempDotNetPath -NewName 'dotnet'
+    sudo mv $tempDotNetPath $sysDotNetPath
 }
