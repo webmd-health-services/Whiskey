@@ -180,13 +180,25 @@ $ErrorActionPreference = 'Continue'
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
+Write-Verbose -Message '# VARIABLES'
 Get-Variable | Format-Table | Out-String | Write-Verbose
 
+Write-Verbose -Message '# ENVIRONMENT VARIABLES'
 Get-ChildItem 'env:' |
     Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
     Format-Table |
     Out-String |
     Write-Verbose
+
+Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
+[Environment] |
+    Get-Member -Static -MemberType Property |
+    Where-Object { $_.Name -ne 'StackTrace' } |
+    Select-Object -ExpandProperty 'Name' |
+    ForEach-Object { [pscustomobject]@{ Name = $_ ; Value = [Environment]::$_ } } |
+    Format-Table |
+    Out-String |
+    Write-Verbose 
 
 $optionalArgs = @{ }
 if( $Clean )
