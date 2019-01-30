@@ -90,13 +90,22 @@ Build:
     - Tasks:
         Pester4:
             Path:
-            - Test\Documentation.Tests.ps1
-            - Test\DotNet.Tests.ps1
-            - Test\Invoke-WhiskeyPowerShell.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
             - Test\Parallel.Tests.ps1
             - Test\NuGetPush.Tests.ps1
             - Test\Uninstall-WhiskeyTool.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path:
+            - Test\Documentation.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path:
+            - Test\DotNet.Tests.ps1
+    - Tasks:
+        Pester4:
+            Path:
+            - Test\Invoke-WhiskeyPowerShell.Tests.ps1
 
 - PowerShell:
     Path: Format-PesterResult.ps1
