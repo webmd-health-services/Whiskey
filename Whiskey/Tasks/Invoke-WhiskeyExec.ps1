@@ -66,6 +66,12 @@ function Invoke-WhiskeyExec
         }
     }
 
+    if( ($path | Measure-Object).Count -gt 1 )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to run executable "{0}": it contains wildcards and resolves to the following files: "{1}".' -f $TaskParameter['Path'],($path -join '","'))
+        return
+    }
+
     Write-WhiskeyCommand -Context $TaskContext -Path $path -ArgumentList $TaskParameter['Argument']
 
     # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately terminates the build. Full stop.

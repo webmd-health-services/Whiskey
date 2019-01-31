@@ -1,4 +1,3 @@
-
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
@@ -112,6 +111,7 @@ function GivenTaskDefaultProperty
 
 function WhenRunningExecutable
 {
+    [CmdletBinding()]
     param(
         [Switch]
         $InCleanMode,
@@ -149,12 +149,13 @@ function WhenRunningExecutable
 
     $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot) -InCleanMode:$InCleanMode -InInitMode:$InInitializeMode
 
-    Try 
+    try 
     {
         Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
     }
-    Catch
+    catch
     {
+        Write-Error -ErrorRecord $_
         $script:failed = $true
     }
 }
@@ -289,14 +290,14 @@ Describe 'Invoke-WhiskeyExec.when utilizing default task property to define exec
 
 Describe 'Invoke-WhiskeyExec.when missing Path parameter' {
     Init
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage '"Path" is mandatory.'
 }
 
 Describe 'Invoke-WhiskeyExec.when given bad path' {
     Init
     GivenPath 'nonexistent.exe'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'Executable "nonexistent.exe" does not exist.'
 }
 
@@ -326,7 +327,7 @@ Describe 'Invoke-WhiskeyExec.when executable exits with non-success exit code' {
     GivenPowerShellFile 'exec.ps1' '42'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '0','1','123'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed 
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -348,7 +349,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ".." and exits with code outside
     GivenPowerShellFile 'exec.ps1' '133'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '120..130'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -370,7 +371,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">=" and exits with code outside
     GivenPowerShellFile 'exec.ps1' '85'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '>=500'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -392,7 +393,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<=" and exits with code outside
     GivenPowerShellFile 'exec.ps1' '10'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '<= 9'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -414,7 +415,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">" and exits with code outside 
     GivenPowerShellFile 'exec.ps1' '90'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '>90'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -436,7 +437,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<" and exits with code outside 
     GivenPowerShellFile 'exec.ps1' '90'
     GivenPath 'exec.ps1'
     GivenSuccessExitCode '<90'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenExecutableRan
     ThenSpecifiedArgumentsWerePassed
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -460,7 +461,7 @@ Describe 'Invoke-WhiskeyExec.when given bad working directory' {
     GivenPowerShellFile 'exec.ps1' '0'
     GivenPath 'exec.ps1'
     GivenWorkingDirectory 'badworkdir'
-    WhenRunningExecutable
+    WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'Build.+WorkingDirectory.+does not exist.'    
 }
 
@@ -480,4 +481,13 @@ Describe 'Exec.when running in Initialize mode' {
     WhenRunningExecutable -InInitializeMode
     ThenTaskSuccess
     ThenExecutableRan
+}
+
+Describe 'Exec.when path has wildcards and resolves to multiple files' {
+    Init
+    GivenPowerShellFile 'exec1.ps1' '1'
+    GivenPowerShellFile 'exec2.ps1' '2'
+    GivenPath 'exec*.ps1'
+    WhenRunningExecutable -ErrorAction SilentlyContinue
+    ThenTaskFailedWithMessage ([regex]::Escape('contains wildcards and resolves to the following files'))
 }
