@@ -83,7 +83,7 @@ if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
     {
         if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
         {
-            Write-Error -Message ('Curl is required to install .NET Core. Please install it this platform''s (or your) preferred package manager.')
+            Write-Error -Message ('Curl is required to install .NET Core. Please install it with this platform''s (or your) preferred package manager.')
             exit 1
         }
         bash $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
