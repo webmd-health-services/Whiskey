@@ -48,14 +48,6 @@ function GivenADirectory
     New-Item -Path (Join-Path -Path (Get-BuildRoot) -ChildPath $DirectoryPath) -ItemType 'Directory' -Force | Out-Null
 }
 
-function GivenExecutable
-{
-    param(
-        $Path,
-        $ExitCode
-    )
-}
-
 function GivenPowerShellFile
 {
     param(
