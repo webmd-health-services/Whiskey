@@ -11,7 +11,7 @@ Build:
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
-    Version: 0.5.*
+    Version: 0.6.*
 
 - GetPowerShellModule:
     Name: ProGetAutomation
@@ -19,7 +19,7 @@ Build:
 
 - GetPowerShellModule:
     Name: BitbucketServerAutomation
-    Version: 0.3.*
+    Version: 0.9.*
 
 - GetPowerShellModule:
     Name: VSSetup
@@ -27,7 +27,7 @@ Build:
 
 - GetPowerShellModule:
     Name: Zip
-    Version: 0.2.*
+    Version: 0.3.*
 
 - Pester4:
     OnlyBy: Developer
@@ -105,7 +105,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Whiskey.zip
-    Path:
+    Path: 
     - Whiskey
     Exclude:
     - "*.pdb"
@@ -113,6 +113,7 @@ Build:
 
 Publish:
 - PublishPowerShellModule:
+    OnlyOnPlatform: Windows
     RepositoryName: PSGallery
     RepositoryUri: https://powershellgallery.com/api/v2/
     Path: Whiskey
@@ -124,6 +125,7 @@ Publish:
             PSData:
                 ReleaseNotes: RELEASE_NOTES
 - GitHubRelease:
+    OnlyOnPlatform: Windows
     RepositoryName: webmd-health-services/Whiskey
     ApiKeyID: github.com
     Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)

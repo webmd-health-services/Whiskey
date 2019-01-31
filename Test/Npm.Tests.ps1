@@ -8,7 +8,16 @@ $failed = $false
 
 function Init
 {
+    param(
+        [Switch]
+        $SkipInstall
+    )
+
     $script:failed = $false
+    if( -not $SkipInstall )
+    {
+        Install-Node
+    }
 }
 
 function ThenFile
@@ -86,7 +95,7 @@ function WhenRunningCommand
 Describe 'Npm.when command succeeds' {
     try
     {
-        Init
+        Init -SkipInstall
         WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','.npmrc'
         ThenFile '.npmrc' -Is @'
 fubar=snafu
@@ -102,8 +111,11 @@ Describe 'Npm.when command fails' {
     try
     {
         Init
-        WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','\\server\share\does\not\exist' -ErrorAction SilentlyContinue
-        ThenTaskFails -WithError 'NPM\ command\ ''npm config\b.*\ failed\ with\ exit\ code\ '
+        $configPath = (Get-Item -Path $PSScriptRoot).PSDrive.Root
+        $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
+        $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
+        WhenRunningCommand 'k4bphelohjx' -ErrorAction SilentlyContinue
+        ThenTaskFails -WithError 'NPM\ command\ "npm\ k4bphelohjx.*"\ failed\ with\ exit\ code\ '
     }
     finally
     {
@@ -115,7 +127,7 @@ Describe 'Npm.when command not given' {
     try
     {
         Init
-        WhenRunningCommand
+        WhenRunningCommand -ErrorAction SilentlyContinue
         ThenTaskFails -WithError 'Property\ "Command\" is required'
     }
     finally

@@ -7,9 +7,15 @@
 
 $dotnetPath = $null
 $globalDotNetDirectory = $null
-$originalPath = $env:Path
+$originalPath = $env:PATH
 $version = $null
 $workingDirectory = $null
+
+$dotnetExeName = 'dotnet'
+if( $IsWindows )
+{
+    $dotnetExeName = 'dotnet.exe'
+}
 
 function Init
 {
@@ -31,9 +37,9 @@ function GivenGlobalDotNetInstalled
         $Version
     )
 
-    New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath 'dotnet.exe') -ItemType File -Force | Out-Null
+    New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath $dotnetExeName) -ItemType File -Force | Out-Null
     New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)) -ItemType File -Force | Out-Null
-    $env:Path += (';{0}' -f $globalDotNetDirectory)
+    $env:PATH += ('{0}{1}' -f [IO.Path]::PathSeparator,$globalDotNetDirectory)
 }
 
 function GivenBadGlobalJson
@@ -80,7 +86,7 @@ function GivenWorkingDirectory
 function GivenDotNetSuccessfullyInstalls
 {
     Mock -CommandName 'Install-WhiskeyDotNetSdk' -MockWith {
-        $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath 'dotnet.exe'
+        $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
         New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
         $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
@@ -92,18 +98,18 @@ function GivenDotNetSuccessfullyInstalls
 
 function GivenDotNetNotInstalled
 {
-    $dotNetInstalls = Get-Command -Name 'dotnet.exe' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
+    $dotNetInstalls = Get-Command -Name $dotnetExeName -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
     foreach ($path in $dotNetInstalls)
     {
         $dotNetDirectory = [regex]::Escape(($path | Split-Path -Parent))
         $dotNetDirectory = ('{0}\\?' -f $dotNetDirectory)
-        $env:Path = $env:Path -replace $dotNetDirectory,''
+        $env:PATH = $env:PATH -replace $dotNetDirectory,''
     }
 }
 
 function ThenRestoreOriginalPathEnvironment
 {
-    $env:Path = $originalPath
+    $env:PATH = $originalPath
 }
 
 function ThenDotNetLocallyInstalled
@@ -187,7 +193,7 @@ function ThenReturnedNothing
 
 function ThenReturnedValidDotNetPath
 {
-    It 'should return valid path to dotnet.exe' {
+    It 'should return valid path to dotnet executable' {
         $dotnetPath | Should -Exist
     }
 }
@@ -289,15 +295,15 @@ try
 
     Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json exists in both install root and working directory' {
         Init
-        GivenGlobalDotNetInstalled '1.1.5'
+        GivenGlobalDotNetInstalled '1.1.11'
         GivenWorkingDirectory 'app'
         GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
         GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
-        GivenVersion '1.1.5'
+        GivenVersion '1.1.11'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
         ThenDotNetNotLocallyInstalled
-        ThenGlobalJsonVersion '1.1.5' -Directory $workingDirectory
+        ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
         ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
     }
 }

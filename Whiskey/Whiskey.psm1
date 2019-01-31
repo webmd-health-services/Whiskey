@@ -38,6 +38,16 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $IsWindows = $true
 }
 
+$dotNetExeName = 'dotnet'
+$nodeExeName = 'node'
+$nodeDirName = 'bin'
+if( $IsWindows )
+{
+    $dotNetExeName = '{0}.exe' -f $dotNetExeName
+    $nodeExeName = '{0}.exe' -f $nodeExeName
+    $nodeDirName = ''
+}
+
 $CurrentPlatform = [Whiskey.Platform]::Unknown
 if( $IsLinux )
 {

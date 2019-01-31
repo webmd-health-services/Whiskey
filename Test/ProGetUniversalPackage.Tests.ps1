@@ -758,6 +758,7 @@ function ThenUpackMetadataIs
         # $DebugPreference = 'Continue'
         foreach ($key in $Reference.Keys)
         {
+            Write-Debug $key
             if ($key -notin $Difference.Keys)
             {
                 Write-Debug -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
@@ -809,6 +810,10 @@ function ThenUpackMetadataIs
     $upackContent = ConvertTo-Hashtable -PSCustomObject $upackJson
 
     It 'should include the upack.json' {
+        Write-Debug 'Expected'
+        $ExpectedContent | ConvertTo-Json | Write-Debug
+        Write-Debug 'Actual'
+        $upackContent | ConvertTo-Json | Write-Debug
         Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent | Should -BeTrue
     }
 }
@@ -1235,10 +1240,10 @@ Describe 'ProGetUniversalPackage.when customizing package version' {
     WhenPackaging -Paths 'my.file'
     ThenPackageShouldInclude 'my.file','version.json'
     ThenUpackMetadataIs @{
-        'Name' = $defaultPackageName;
-        'Title' = $defaultPackageName;
-        'Description' = $defaultDescription;
-        'Version' = '5.8.2-rc.1';
+        'name' = $defaultPackageName;
+        'title' = $defaultPackageName;
+        'description' = $defaultDescription;
+        'version' = '5.8.2-rc.1';
     }
     ThenVersionIs -Version '5.8.2' `
                   -PrereleaseMetadata 'rc.1' `
@@ -1256,10 +1261,10 @@ Describe 'ProGetUniversalPackage.when not customizing package version' {
     WhenPackaging -Paths 'my.file'
     ThenPackageShouldInclude 'my.file','version.json'
     ThenUpackMetadataIs @{
-        'Name' = $defaultPackageName;
-        'Title' = $defaultPackageName;
-        'Description' = $defaultDescription;
-        'Version' = $context.Version.SemVer2NoBuildMetadata.ToString();
+        'name' = $defaultPackageName;
+        'title' = $defaultPackageName;
+        'description' = $defaultDescription;
+        'version' = $context.Version.SemVer2NoBuildMetadata.ToString();
     }
     ThenVersionIs -Version '1.2.3' `
                   -PrereleaseMetadata 'rc.1' `
@@ -1290,10 +1295,10 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties' {
     WhenPackaging -WithPackageName 'NameTaskProperty' -WithDescription 'DescriptionTaskProperty' -Path 'my.file'
     ThenPackageShouldInclude 'my.file'
     ThenUpackMetadataIs @{
-        'Name' = 'NameTaskProperty'
-        'Description' = 'DescriptionTaskProperty'
-        'Title' = 'NameTaskProperty'
-        'Version' = '1.2.3-rc.1'
+        'name' = 'NameTaskProperty'
+        'description' = 'DescriptionTaskProperty'
+        'title' = 'NameTaskProperty'
+        'version' = '1.2.3-rc.1'
         '_CustomMetadata' = @{
             'SomethingCustom' = 'Fancy custom metadata'
         }
@@ -1306,9 +1311,9 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties that contain Name
     GivenBuildVersion '1.2.3-rc.1+build.300'
     GivenARepositoryWithItems 'my.file'
     GivenManifestProperties @{
-        'Name' = 'AwesomePackageName'
-        'Description' = 'CoolDescription'
-        'Version' = '0.0.0'
+        'name' = 'AwesomePackageName'
+        'description' = 'CoolDescription'
+        'version' = '0.0.0'
         '_CustomMetadata' = @{
             'SomethingCustom' = 'Fancy custom metadata'
         }

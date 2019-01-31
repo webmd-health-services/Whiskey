@@ -69,8 +69,10 @@ function Install-WhiskeyTool
     }
     # Back slashes in mutex names are reserved.
     $mutexName = $mutexName -replace '\\','/'
+    $mutexName = $mutexName -replace '/','-'
     $startedWaitingAt = Get-Date
     $startedUsingAt = Get-Date
+    Write-Debug -Message ('Creating mutex "{0}".' -f $mutexName)
     $installLock = New-Object 'Threading.Mutex' $false,$mutexName
     #$DebugPreference = 'Continue'
     Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
@@ -94,6 +96,11 @@ function Install-WhiskeyTool
 
         if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
         {
+            if( -not $IsWindows )
+            {
+                Write-Error -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
+                return
+            }
             $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
             $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
             $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath

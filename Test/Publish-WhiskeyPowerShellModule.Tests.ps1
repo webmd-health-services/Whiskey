@@ -247,7 +247,7 @@ function Assert-ModulePublished
         $ExpectedRepositoryName = 'thisRepo',
 
         [String]
-        $ExpectedPathName = $TestDrive.FullName+'\MyModule',
+        $ExpectedPathName = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'),
 
         [switch]
         $WithNoRepositoryName

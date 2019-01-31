@@ -1,9 +1,9 @@
 
 function Publish-WhiskeyNuGetPackage
 {
-    [Whiskey.Task("PublishNuGetLibrary",Platform=[Whiskey.Platform]::Windows)]
-    [Whiskey.Task("PublishNuGetPackage",Platform=[Whiskey.Platform]::Windows)]
-    [Whiskey.Task("NuGetPush",Platform=[Whiskey.Platform]::Windows)]
+    [Whiskey.Task("PublishNuGetLibrary",Platform='Windows')]
+    [Whiskey.Task("PublishNuGetPackage",Platform='Windows')]
+    [Whiskey.Task("NuGetPush",Platform='Windows')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

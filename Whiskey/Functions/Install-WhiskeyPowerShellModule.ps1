@@ -67,6 +67,7 @@ function Install-WhiskeyPowerShellModule
         return
     }
 
+    Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
     Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
 
     if( -not (Test-Path -Path $expectedPath -PathType Container) )

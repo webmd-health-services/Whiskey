@@ -157,7 +157,9 @@ function Invoke-WhiskeyTask
     $requiredTools = Get-RequiredTool -CommandName $task.CommandName
     $startedAt = Get-Date
     $result = 'FAILED'
+    $currentDirectory = [IO.Directory]::GetCurrentDirectory()
     Push-Location -Path $workingDirectory
+    [IO.Directory]::SetCurrentDirectory($workingDirectory)
     try
     {
         if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
@@ -226,6 +228,7 @@ function Invoke-WhiskeyTask
         $duration = $endedAt - $startedAt
         Write-WhiskeyVerbose -Context $TaskContext -Message ('{0} in {1}' -f $result,$duration)
         Write-WhiskeyVerbose -Context $TaskContext -Message ''
+        [IO.Directory]::SetCurrentDirectory($currentDirectory)
         Pop-Location
     }
 

@@ -539,7 +539,7 @@ Describe ('Resolve-WhiskeyVariable.when resolving variables for Environment stat
     foreach( $dotNetEnvironmentPropertyName in ([Environment] | Get-Member -Static -MemberType Property | Select-Object -ExpandProperty 'Name') )
     {
         # These variables don't test very well.
-        if( $dotNetEnvironmentPropertyName -in @( 'StackTrace', 'Ticks', 'WorkingSet' ) )
+        if( $dotNetEnvironmentPropertyName -in @( 'StackTrace', 'TickCount', 'WorkingSet' ) )
         {
             continue
         }

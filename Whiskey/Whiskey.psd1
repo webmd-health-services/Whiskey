@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.40.0'
+    ModuleVersion = '0.41.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -150,14 +150,12 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* You can now use the [Environment class's static properties](https://docs.microsoft.com/en-us/dotnet/api/system.environment#properties) as Whiskey variables. Using these variables are now recommended over environment variables, since the existence of some environment variables varies between operating systems.
-* Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
-* Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
-* Created `ConvertFrom-WhiskeyContext` and `ConvertTo-WhiskeyContext` functions for securely serializing/deserializing Whiskey's context object into background jobs. PowerShell on Linux/MacOS can't serialize `SecureString` objects. Created these functions to work around that limitation. Used by Whiskey's `Parallel` and `PowerShell` tasks.
-* Added support for tasks to define what platform/operating system they can run on with a new `Platform` property on the task attribute. If a task can only run on a specific platform, set the `Platform` property to the platform is supports, e.g. `[Whiskey.TaskAttribute('SomeTask',Platform=([Whiskey.Platform]::Windows))]`. Valid platforms are `Windows`, `Linux`, and `MacOS`. The default platform is `All`.
-* Added `OnlyOnPlatform` and `ExceptOnPlatform` common task properties that control the platforms on which a task will or will not be run. Valid platforms are `Windows`, `Linux`, and `MacOS`.
-* Fixed: `ProGetUniversalPackage` task doesn''t fail the build if there were errors when adding files to the package.
-* Updated all tasks that use the ProGetAutomation module to default to using version 0.9.* (from 0.8.*).
+* Adding Linux and MacOS support. Whiskey is now cross-platform!
+* Upgrading to PowerShellGet version 2.0.4.
+* Upgrading to PackageManagement version 1.3.0.
+* Updating BuildMaster tasks to use BuildMasterAutomation PowerShell module version 0.6.0 (from 0.5.0).
+* Updating Bitbucket Server tasks to use BitbucketServerAutomation PowerShell module version 0.9.0 (from 0.8.0).
+* Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
 '@
         } # End of PSData hashtable
 

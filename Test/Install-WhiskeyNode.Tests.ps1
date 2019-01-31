@@ -64,7 +64,22 @@ function ThenNodeInstalled
     }
 
     It ('should download Node ZIP file') {
-        Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-win-x64.zip' -f $NodeVersion) | Should -Exist
+        if( $IsWindows )
+        {
+            $platformID = 'win'
+            $extension = 'zip'
+        }
+        elseif( $IsLinux )
+        {
+            $platformID = 'linux'
+            $extension = 'tar.xz'
+        }
+        elseif( $IsMacOS )
+        {
+            $platformID = 'darwin'
+            $extension = 'tar.gz'
+        }
+        Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
     }
 
     It ('should install Node') {
@@ -130,7 +145,9 @@ function WhenInstallingTool
     [CmdletBinding()]
     param(
         $Name,
+
         $Version,
+
         [Switch]
         $InCleanMode
     )
@@ -143,15 +160,10 @@ function WhenInstallingTool
         $optionalParams['Version'] = $Version
     }
 
-    if( $InCleanMode )
-    {
-        $optionalParams['InCleanMode'] = $InCleanMode
-    }
-
     Push-Location -path $taskWorkingDirectory
     try
     {
-        $script:nodePath = Install-WhiskeyNode -InstallRoot $TestDrive.FullName @optionalParams
+        $script:nodePath = Install-WhiskeyNode -InstallRoot $TestDrive.FullName -InCleanMode:$InCleanMode @optionalParams
     }
     catch
     {
@@ -180,16 +192,21 @@ Describe 'Install-WhiskeyNode.when installing' {
 Describe 'Install-WhiskeyNode.when installing old version' {
     try
     {
+        $oldVersion = '4.4.7'
+        if( -not $IsWindows )
+        {
+            $oldVersion = '0.7.9'
+        }
         Init
-        GivenPackageJson @'
+        GivenPackageJson @"
 {
     "engines": {
-        "node": "4.4.7"
+        "node": "$($oldVersion)"
     }
 }
-'@
+"@
         WhenInstallingTool 'Node' -ErrorAction SilentlyContinue
-        ThenThrewException 'Failed to download Node v4\.4\.7'
+        ThenThrewException ([regex]::Escape(('Failed to download Node v{0}' -f $oldVersion)))
         ThenNodeNotInstalled
         ThenNodePackageNotFound
     }

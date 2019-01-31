@@ -542,13 +542,18 @@ Build:
 Describe 'Zip.when absolute path to archive root outside repository' {
     Init
     GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
-    WhenPackaging @'
+    $systemRoot = 'C:\Windows\system32\'
+    if( -not $IsWindows )
+    {
+        $systemRoot = '/sbin/'
+    }
+    WhenPackaging @"
 Build:
 - Zip:
-    ArchivePath: C:\Windows\system32\Zip.zip
+    ArchivePath: $($systemRoot)Zip.zip
     Path: dir
     Include: "*.json"
-'@ -ErrorAction SilentlyContinue
+"@ -ErrorAction SilentlyContinue
     ThenTaskFails 'outside the build root'
 }
 

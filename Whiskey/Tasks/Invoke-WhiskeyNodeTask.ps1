@@ -61,6 +61,8 @@ function Invoke-WhiskeyNodeTask
 
     try
     {
+	$nodePath = Resolve-WhiskeyNodePath -BuildRoot $TaskContext.BuildRoot
+	
         Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f ($nodePath | Split-Path),[IO.Path]::PathSeparator,$env:PATH)
 
         Update-Progress -Status ('Installing NPM packages') -Step ($stepNum++)
