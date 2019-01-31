@@ -33,12 +33,3 @@ artifacts:
 - path: .output\*.zip
   name: Packages
 - path: .output\msbuild.*.log
-
-notifications:
-- provider: Email
-  to:
-  - aaron@splatteredbits.com
-  - ajensen@webmd.net
-  on_build_success: false
-  on_build_failure: false
-  on_build_status_changed: false
