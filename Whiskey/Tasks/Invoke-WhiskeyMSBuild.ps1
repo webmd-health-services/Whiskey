@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyMSBuild
 {
-    [Whiskey.Task('MSBuild',SupportsClean,Platform=[Whiskey.Platform]::Windows)]
+    [Whiskey.Task('MSBuild',SupportsClean,Platform='Windows')]
     [Whiskey.RequiresTool('PowerShellModule::VSSetup','VSSetupPath',Version='2.*',VersionParameterName='VSSetupVersion')]
     [CmdletBinding()]
     param(
