@@ -156,6 +156,7 @@
 * Updating BuildMaster tasks to use BuildMasterAutomation PowerShell module version 0.6.0 (from 0.5.0).
 * Updating Bitbucket Server tasks to use BitbucketServerAutomation PowerShell module version 0.9.0 (from 0.8.0).
 * Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
+* Fixed: PowerShell module import verbose messages appear when running the `Parallel` task.
 '@
         } # End of PSData hashtable
 
