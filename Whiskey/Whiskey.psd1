@@ -157,6 +157,7 @@
 * Updating Bitbucket Server tasks to use BitbucketServerAutomation PowerShell module version 0.9.0 (from 0.8.0).
 * Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
 * Fixed: PowerShell module import verbose messages appear when running the `Parallel` task.
+* Fixed: `ProGetUniversalPackage` places files in a `.` directory when using the `source_dir: .` syntax to specify the package root as the destination path for items in a package.
 '@
         } # End of PSData hashtable
 
