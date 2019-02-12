@@ -13,14 +13,14 @@ function Assert-NUnitTestsRun
         [string]
         $ReportPath
     )
-    $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' 
+    $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml'
     It 'should run NUnit tests' {
         $reports | Should -Not -BeNullOrEmpty
     }
 
     It ('should generate reports that support running task in parallel') {
         $reports | Select-Object -ExpandProperty 'Name' | Should -Match '^nunit2\+.{8}\..{3}\.xml$'
-    }   
+    }
 }
 
 function Assert-NUnitTestsNotRun
@@ -66,7 +66,7 @@ function Assert-OpenCoverNotRun
     }
 }
 
-function Invoke-NUnitTask 
+function Invoke-NUnitTask
 {
 
     [CmdletBinding()]
@@ -97,12 +97,6 @@ function Invoke-NUnitTask
 
         [Switch]
         $WhenRunningInitialize,
-
-        [Version]
-        $WithOpenCoverVersion = '4.6.519',
-
-        [Version]
-        $WithReportGeneratorVersion,
 
         [Switch]
         $WithDisabledCodeCoverage,
@@ -154,7 +148,7 @@ function Invoke-NUnitTask
                                             'NUnit2FailingTest.dll'
                                         )
                               }
-        }        
+        }
         else
         {
             $taskParameter = @{
@@ -175,12 +169,6 @@ function Invoke-NUnitTask
             #$optionalParams['CoverageFilter'] = $CoverageFilter
             $taskParameter.Add('CoverageFilter', $CoverageFilter)
         }
-        $taskParameter.Add('OpenCoverVersion', $WithOpenCoverVersion)
-        if( $WithReportGeneratorVersion )
-        {
-            $taskParameter.Add('ReportGeneratorVersion', $WithReportGeneratorVersion)
-        }
-
         $script:context = New-WhiskeyTestContext -ForBuildRoot $TestDrive.FullName -ForBuildServer
         if( $WhenRunningClean )
         {
@@ -221,19 +209,14 @@ function Invoke-NUnitTask
             $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
             $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
             $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
-            $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath ('OpenCover.{0}' -f $WithOpenCoverVersion)
-            if( -not $WithReportGeneratorVersion )
-            {
-                $WithReportGeneratorVersion = $latestReportGeneratorVersion
-            }
-
-            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath ('ReportGenerator.{0}' -f $WithReportGeneratorVersion)
+            $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath 'OpenCover.*'
+            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
             It 'should not throw an exception' {
                 $threwException | Should be $False
             }
             It 'should not exit with error' {
                 $Global:Error | Should beNullorEmpty
-            } 
+            }
             It 'should uninstall the expected version of Nunit.Runners' {
                 $nunitPath | should not exist
             }
@@ -249,7 +232,7 @@ function Invoke-NUnitTask
             Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
         }
         elseif( $ThatFails )
-        {            
+        {
             It 'should throw an exception'{
                 $threwException | Should Be $True
             }
@@ -289,7 +272,7 @@ function Invoke-NUnitTask
             }
         }
 
-        Remove-Item -Path $context.OutputDirectory -Recurse -Force        
+        Remove-Item -Path $context.OutputDirectory -Recurse -Force
     }
 }
 
@@ -381,7 +364,7 @@ function GivenVersion
 }
 
 function GivenCoverageFilter
-{ 
+{
     Param(
         [String]
         $Filter
@@ -486,7 +469,7 @@ function Get-TestCaseResult
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
         Get-Content -Raw |
-            ForEach-Object { 
+            ForEach-Object {
                 $testResult = [xml]$_
                 $testResult.SelectNodes(('//test-case[contains(@name,".{0}")]' -f $TestName))
             }
@@ -554,7 +537,7 @@ function ThenItShouldNotRunTests {
 
     It 'should not run NUnit tests' {
         $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should BeNullOrEmpty
-    }   
+    }
 }
 
 function ThenItInstalled {
@@ -568,11 +551,11 @@ function ThenItInstalled {
 
     $expectedVersion = $Version
     It ('should have installed {0} {1}' -f $Name,$Version) {
-        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { 
+        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $Name)
             Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
-            $NuGetPackageName -eq $Name 
+            $NuGetPackageName -eq $Name
         }
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $ExpectedVersion }
     }
@@ -582,7 +565,7 @@ function ThenItInstalledReportGenerator {
 
     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
     $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
-    
+
     It 'should have installed ReportGenerator' {
         $reportGeneratorPath | should exist
     }
@@ -653,7 +636,7 @@ Describe 'NUnit2.when the Clean Switch is active' {
     Invoke-NUnitTask -WhenRunningClean
 }
 
-Describe 'NUnit2.when running NUnit tests' { 
+Describe 'NUnit2.when running NUnit tests' {
     Context 'no code coverage' {
         Invoke-NUnitTask -WithRunningTests -WithDisabledCodeCoverage
     }
@@ -692,7 +675,7 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
     Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError -ErrorAction SilentlyContinue
 }
 
-Describe 'NUnit2.when running NUnit tests with coverage filters' { 
+Describe 'NUnit2.when running NUnit tests with coverage filters' {
     $coverageFilter = (
                     '-[NUnit2FailingTest]*',
                     '+[NUnit2PassingTest]*'
