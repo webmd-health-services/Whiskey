@@ -236,9 +236,13 @@ function New-WhiskeyProGetUniversalPackage
                 if( $override )
                 {
                     $addParams['BasePath'] = $sourcePath
-                    $addParams['PackageParentPath'] = $destinationItemName
                     $addParams.Remove('PackageItemName')
                     $overrideInfo = ' -> {0}' -f $destinationItemName
+
+                    if ($destinationItemName -ne '.')
+                    {
+                        $addParams['PackageParentPath'] = $destinationItemName
+                    }
                 }
 
                 Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)

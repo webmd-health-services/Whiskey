@@ -700,6 +700,37 @@ function Get-PackageSize
     return $packageLength
 }
 
+function ThenPackageArchive
+{
+    param(
+        [string]
+        $PackageName,
+
+        [string[]]
+        $ContainsPath
+    )
+
+    $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath '.output'
+    $packagePath = Get-ChildItem -Path $outputRoot -Filter ('{0}.*.upack' -f $PackageName) | Select-Object -ExpandProperty 'FullName'
+
+    [IO.Compression.ZipArchive]$packageArchive = [IO.Compression.ZipFile]::Open($packagePath, [IO.Compression.ZipArchiveMode]::Read)
+    try
+    {
+        foreach ($path in $ContainsPath)
+        {
+            $path = $path -replace '[\\/]', [IO.Path]::DirectorySeparatorChar
+
+            It ('package archive should contain entry path "{0}"' -f $path) {
+                $packageArchive.Entries.FullName | Should -Contain $path
+            }
+        }
+    }
+    finally
+    {
+        $packageArchive.Dispose()
+    }
+}
+
 function ThenPackageShouldInclude
 {
     param(
@@ -1342,4 +1373,22 @@ Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error 
     GivenARepositoryWithItems 'my.file'
     WhenPackaging -Paths 'my.file' -ErrorAction SilentlyContinue
     ThenTaskFails 'Failed\ to\ add\ file\ to\ package'
+}
+
+Describe 'ProGetUniversalPackage.when using the "." syntax to package a directory into the root of the package' {
+    Init
+    GivenARepositoryWithItems 'dir1\dir2\file.txt'
+    WhenPackaging -WithYaml @"
+Build:
+- ProGetUniversalPackage:
+    Name: TestPackage
+    Version: 1.2.3
+    Description: Test package
+    Path:
+    - dir1\dir2: .
+    Include:
+    - "*.txt"
+"@
+    ThenTaskSucceeds
+    ThenPackageArchive 'TestPackage' -ContainsPath 'package\file.txt'
 }

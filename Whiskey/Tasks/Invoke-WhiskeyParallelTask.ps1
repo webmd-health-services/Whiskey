@@ -69,14 +69,16 @@ function Invoke-WhiskeyParallelTask
             $job = Start-Job -Name $queueIdx -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
-                    
+
                     $VerbosePreference = $using:VerbosePreference
                     $DebugPreference = $using:DebugPreference
                     $ProgressPreference = $using:ProgressPreference
                     $whiskeyModulePath = $using:whiskeyModulePath
                     $serializedContext = $using:serializableContext
 
-                    Import-Module -Name $whiskeyModulePath
+                    & {
+                        Import-Module -Name $whiskeyModulePath
+                    } 4> $null
 
                     [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
 
