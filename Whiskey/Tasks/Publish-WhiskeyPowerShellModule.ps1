@@ -80,14 +80,30 @@ function Publish-WhiskeyPowerShellModule
     $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString
     $manifest | Set-Content $manifestPath
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
+    # If there are older versions of the PackageManagement and/or PowerShellGet
+    # modules available on this system, the modules that ship with Whiskey will use
+    # those global versions instead of the versions we load from inside Whiskey. So,
+    # we have to hide the global modules from the modules we load. See
+    # https://github.com/PowerShell/PowerShellGet/issues/446 .
+    $moduleRoot = Split-Path -Parent -Path $PSScriptRoot
+    $originalPSModulesPath = $env:PSModulePath
+    $env:PSModulePath = '{0};{1}' -f (Join-Path -Path $moduleRoot -ChildPath 'PackageManagement'),(Join-Path -Path $moduleRoot -ChildPath 'PowerShellGet')
 
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-
-    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
+    try
     {
-        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet
-    }
+        Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
-    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey
+        Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
+
+        if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
+        {
+            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet
+        }
+
+        Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey
+    }
+    finally
+    {
+        $env:PSModulePath = $originalPSModulesPath
+    }
 }

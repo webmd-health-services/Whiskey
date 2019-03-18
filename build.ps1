@@ -154,8 +154,8 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 # TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
 # fixed, change version numbers to wildcards on the patch version.
 $nestedModules = @{
-                        'PackageManagement' = '1.3.0';
-                        'PowerShellGet' = '2.0.4';
+                        'PackageManagement' = '1.3.1';
+                        'PowerShellGet' = '2.1.2';
                  }
 $whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey'
 foreach( $nestedModuleName in $nestedModules.Keys )
