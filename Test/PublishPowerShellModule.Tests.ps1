@@ -2,9 +2,11 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$feedUri = $null
 $apikey = $null
 $apikeyID = $null
+$repositoryName = $null
+$prerelease = $null
+$context = $null
 
 function GivenNoApiKey
 {
@@ -12,9 +14,22 @@ function GivenNoApiKey
     $script:apikeyID = $null
 }
 
-function GivenNoFeedUri
+function GivenPrerelease
 {
-    $script:feedUri = $null
+    param(
+        $Prerelease
+    )
+
+    $script:prerelease = $Prerelease
+}
+
+function GivenRepository
+{
+    param(
+        $Named
+    )
+
+    $script:repositoryName = $Named
 }
 
 function Initialize-Test
@@ -22,26 +37,25 @@ function Initialize-Test
     param(
     )
 
-    $script:feedUri = 'https://powershell.example.com'
     $script:apikey = 'fubar:snauf'
     $script:apikeyID = 'PowerShellExampleCom'
+    $script:repositoryName = $null
+    $script:prerelease = $null
+    $script:context = $null
 }
 
 function Invoke-Publish
 {
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
-    
         [Switch]
         $withoutRegisteredRepo,
 
         [String]
-        $ForRepositoryName,
+        $ForRepositoryNamed,
 
-        [String]
-        $ForFeedName,
+        [string]
+        $RepoAtUri,
 
         [String]
         $ForManifestPath,
@@ -65,27 +79,21 @@ function Invoke-Publish
         $WithoutPathParameter
     )
     
-    
+    $version = '1.2.3'
+    if( $prerelease )
+    {
+        $version = '1.2.3-{0}' -f $prerelease
+    }
 
-    if( -not $ForRepositoryName )
+    $script:context = New-WhiskeyTestContext -ForBuildServer -ForVersion $version
+    
+    $TaskParameter = @{ }
+
+    if( $ForRepositoryNamed )
     {
-        $ForRepositoryName = 'thisRepo'
+        $TaskParameter['RepositoryName'] = $ForRepositoryNamed;
     }
-    if ( -not $ForFeedName )
-    {
-        $ForFeedName = 'thisFeed'
-    }
-    if( $WithNoRepositoryName )
-    {
-        $TaskParameter = @{ }
-    }
-    else
-    {
-        $TaskParameter = @{
-                            RepositoryName = $ForRepositoryName;
-                            FeedName = $ForFeedName;
-        }
-    }
+
     if( $WithInvalidPath )
     {
         $TaskParameter.Add( 'Path', 'MyModule.ps1' )
@@ -122,49 +130,48 @@ function Invoke-Publish
         }
     }
 
-    if( -not $withNoProgetURI )
-    {
-        $publishLocation = $feedUri
-    }
-
     Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
-    if( $withoutRegisteredRepo )
-    {
-        Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { return $false }
-    }
-    else
-    {
-        Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { return $true }
-    }
+    $repoName = $repositoryName
+    Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { 
+        param(
+            $Name
+        )
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Name  expected  {0}' -f $repoName)
+        Write-Debug -Message ('      actual    {0}' -f $Name)
+        return ($Name -eq $repoName) 
+    }.GetNewClosure()
 
     Add-Type -AssemblyName System.Net.Http
-    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith { return }
-    Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey' -MockWith { return }
+    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' 
+    Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey'
+    Mock -CommandName 'Get-PackageSource' -ModuleName 'PowerShellGet'  # Called by a dynamic parameter set on Register-PSRepository.
     
     $Global:Error.Clear()
     $failed = $False
 
-    if( $feedUri )
+    if( $RepoAtUri )
     {
-        $TaskParameter['RepositoryUri'] = $feedUri
+        $TaskParameter['RepositoryUri'] = $RepoAtUri
     }
 
     if( $apikeyID )
     {
         $TaskParameter['ApiKeyID'] = $apikeyID
-        Add-WhiskeyApiKey -Context $TaskContext -ID $apikeyID -Value $apikey
+        Add-WhiskeyApiKey -Context $context -ID $apikeyID -Value $apikey
     }
     
     try
     {
-        Invoke-WhiskeyTask -TaskContext $TaskContext -Parameter $TaskParameter -Name 'PublishPowerShellModule'
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'PublishPowerShellModule'
     }
     catch
     {
         $failed = $True
         Write-Error -ErrorRecord $_
     }
+
     if( $ThatFailsWith )
     {
         It 'should throw an exception' {
@@ -185,6 +192,13 @@ function Invoke-Publish
     }
 }
 
+function ThenModuleNotPublished
+{    
+    It 'should not attempt to publish the module'{
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
+    }
+}
+
 function Assert-ModuleNotPublished
 {    
     It 'should not attempt to register the module'{
@@ -196,62 +210,83 @@ function Assert-ModuleNotPublished
     }
 }
 
-function Assert-ModuleRegistered
+function ThenRepositoryChecked
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
-    
-        [String]
-        $ExpectedRepositoryName,
-
-        [String]
-        $ExpectedFeedName,
-
-        [switch]
-        $WithNoRepositoryName
+        [Parameter(Mandatory)]
+        [string]
+        $Named
     )
 
-    if( -not $ExpectedRepositoryName )
-    {
-        $ExpectedRepositoryName = 'thisRepo'
+    It ('should check that repository exists') {
+        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { 
+            Write-Debug -Message ('Name  expected  {0}' -f $Named)
+            Write-Debug -Message ('      actual    {0}' -f $Name)
+            $Name -eq $Named 
+        }
     }
-    if ( -not $ExpectedFeedName )
-    {
-        $ExpectedFeedName = 'thisFeed'
+}
+
+function ThenRepositoryNotChecked
+{
+    It ('should not check that repository exists') {
+        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
     }
-    
-    It ('should register the Module')  {
+}
+
+function ThenRepositoryNotRegistered
+{
+    param(
+    )
+
+    It ('should not register repository') {
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
+    }
+}
+
+function ThenRepositoryRegistered
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]
+        $Named,
+
+        [Parameter(Mandatory)]
+        [string]
+        $AtUri
+    )
+
+    It ('should register the repository')  {
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Repository Name                 expected {0}' -f $ExpectedRepositoryName)
+            Write-Debug -Message ('Repository Name                 expected {0}' -f $Named)
             Write-Debug -Message ('                                actual   {0}' -f $Name)
-
-            Write-Debug -Message ('Source Location                 expected {0}' -f $expectedPublishLocation)
-            Write-Debug -Message ('                                actual   {0}' -f $SourceLocation)
-
-            Write-Debug -Message ('Publish Location                expected {0}' -f $expectedPublishLocation)
-            Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
-
-            $Name -eq $ExpectedRepositoryName -and
-            $SourceLocation -eq $feedUri -and
-            $PublishLocation -eq $feedUri
-
+            $Name -eq $Named
         }
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-Debug -Message ('Source Location                 expected {0}' -f $AtUri)
+            Write-Debug -Message ('                                actual   {0}' -f $SourceLocation)
+            $AtUri -eq $SourceLocation
+        }
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-Debug -Message ('Publish Location                expected {0}' -f $AtUri)
+            Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
+            $AtUri -eq $PublishLocation
+        }
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $InstallationPolicy -eq 'Trusted' }
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $PackageManagementPRovider -eq 'NuGet' }
     }
     
 }
 
-function Assert-ModulePublished
+function ThenModulePublished
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
-
-        [String]
-        $ExpectedRepositoryName = 'thisRepo',
+        [Parameter(Mandatory)]
+        [string]
+        $ToRepositoryNamed,
 
         [String]
         $ExpectedPathName = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'),
@@ -266,48 +301,52 @@ function Assert-ModulePublished
         Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $ForceBootstrap }
     }
     
-    It ('should publish the Module')  {
+    It ('should publish the module')  {
         $expectedApiKey = $apikey
         Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             #$DebugPreference = 'Continue'
             Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
             Write-Debug -Message ('                                actual   {0}' -f $Path)
-
-            Write-Debug -Message ('Repository Name                 expected {0}' -f $ExpectedRepositoryName)
+            
+            $Path -eq $ExpectedPathName
+        }
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-Debug -Message ('Repository Name                 expected {0}' -f $ToRepositoryNamed)
             Write-Debug -Message ('                                actual   {0}' -f $Repository)
-
+            $Repository -eq $ToRepositoryNamed
+        }
+        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            #$DebugPreference = 'Continue'
             Write-Debug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
             Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
-            
-            $Path -eq $ExpectedPathName -and
-            $Repository -eq $ExpectedRepositoryName -and
             $NuGetApiKey -eq $expectedApiKey
         }
     }
 }
 
-function Assert-ManifestVersion
+function ThenManifest
 {
     param(
-        [Parameter(Mandatory)]
-        [object]
-        $TaskContext,
-
         [string]
         $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1'),
+
+        [string]
+        $AtVersion,
 
         [string]
         $HasPrerelease
     )
 
-    $versionString = '{0}.{1}.{2}' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
-
-    $matches = Select-String $versionString $manifestPath
+    if( -not $AtVersion )
+    {
+        $AtVersion = '{0}.{1}.{2}' -f $context.Version.SemVer2.Major, $context.Version.SemVer2.Minor, $context.Version.SemVer2.Patch
+    }
 
     $manifest = Test-ModuleManifest -Path $manifestPath
 
     It ('should have a matching Manifest Version with the Context'){
-        $manifest.Version | Should -Be $versionString
+        $manifest.Version | Should -Be $AtVersion
         if( $HasPrerelease )
         {
             $manifest.PrivateData.PSData.Prerelease | Should -Be $HasPrerelease
@@ -319,117 +358,86 @@ function Assert-ManifestVersion
     }
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing new module.'{
+Describe 'PublishPowerShellModule.when publishing new module' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context
-    Assert-ModulePublished -TaskContext $context
+    GivenRepository 'FubarSnafu'
+    Invoke-Publish -ForRepositoryNamed 'FubarSnafu'
+    ThenRepositoryChecked 'FubarSnafu' 
+    ThenRepositoryNotRegistered
+    ThenModulePublished -ToRepositoryNamed 'FubarSnafu'
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing prerelease module' {
+Describe 'PublishPowerShellModule.when publishing prerelease module' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer -ForVersion '1.2.3-beta1'
-    Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context
-    Assert-ModulePublished -TaskContext $context
-    Assert-ManifestVersion -TaskContext $context -HasPrerelease 'beta1'
+    GivenRepository 'SomeRepo'
+    GivenPrerelease 'beta1'
+    Invoke-Publish -ForRepositoryNamed 'SomeRepo'
+    ThenRepositoryChecked 'SomeRepo'
+    ThenRepositoryNotRegistered
+    ThenModulePublished -ToRepositoryNamed 'SomeRepo'
+    ThenManifest -HasPrerelease 'beta1'
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing with no repository name'{
+Describe 'PublishPowerShellModule.when publishing with no repository name' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -WithoutRegisteredRepo -WithNoRepositoryName -TaskContext $context -ThatFailsWith 'Property\ "RepositoryName"\ is mandatory' -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    Invoke-Publish -ThatFailsWith 'Property\ "RepositoryName"\ is mandatory' -ErrorAction SilentlyContinue
+    ThenRepositoryNotChecked
+    ThenRepositoryNotRegistered
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing previously published module.'{
+Describe 'PublishPowerShellModule.when publishing to a new repository' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -TaskContext $context
-    Assert-ModulePublished -TaskContext $context
+    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
+    ThenRepositoryChecked 'ANewRepo'
+    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
+    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing new module with custom repository name.'{
-    Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $repository = 'fubarepo'
-    Invoke-Publish -WithoutRegisteredRepo -ForRepositoryName $repository -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context -ExpectedRepositoryName $repository
-    Assert-ModulePublished -TaskContext $context -ExpectedRepositoryName $repository
+Describe 'PublishPowerShellModule.when publishing to a new repository but its URI is not given' {
+    Initialize-Test 
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -ThatFailsWith 'Property\ "RepositoryUri"\ is\ mandatory' -ErrorAction SilentlyContinue
+    ThenRepositoryChecked 'Fubar'
+    ThenRepositoryNotRegistered
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when publishing new module with custom feed name.'{
-    Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $feed = 'snafeed'
-    Invoke-Publish -WithoutRegisteredRepo -ForFeedName $feed -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context -ExpectedFeedName $feed 
-    Assert-ModulePublished -TaskContext $context 
-}
-
-Describe 'Publish-WhiskeyPowerShellModule.when no feed URI' {
-    Initialize-Test
-    GivenNoFeedUri
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = '\bRepositoryUri\b.*\bmandatory\b'
-    
-    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
-}
-
-Describe 'Publish-WhiskeyPowerShellModule.when no API key' {
+Describe 'PublishPowerShellModule.when no API key' {
     Initialize-Test
     GivenNoApiKey
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = '\bApiKeyID\b.*\bmandatory\b'
-    
-    Invoke-Publish -withoutRegisteredRepo -withNoProgetURI -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    GivenRepository 'Fubar'
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -ThatFailsWith 'Property\ "ApiKeyID"\ is\ mandatory' -ErrorAction SilentlyContinue
+    ThenRepositoryNotChecked
+    ThenRepositoryNotRegistered
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when Path Parameter is not included' {
+Describe 'PublishPowerShellModule.when path parameter is not included' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = 'Property "Path" is mandatory'
-
-    Invoke-Publish -WithoutPathParameter -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    GivenRepository 'Fubar'
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ThatFailsWith 'Property "Path" is mandatory' -ErrorAction SilentlyContinue
+    ThenRepositoryNotChecked
+    ThenRepositoryNotRegistered
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when non-existent path parameter' {
+Describe 'PublishPowerShellModule.when non-existent path parameter' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = 'does not exist'
-
-    Invoke-Publish -WithNonExistentPath -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    GivenRepository 'Fubar'
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithNonExistentPath -ThatFailsWith 'does\ not\ exist' -ErrorAction SilentlyContinue
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when non-directory path parameter' {
+Describe 'PublishPowerShellModule.when non-directory path parameter' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $errorMatch = 'path to the root directory of a PowerShell module'
-
-    Invoke-Publish -WithInvalidPath -TaskContext $context -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    GivenRepository 'Fubar'
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath -ThatFailsWith 'path to the root directory of a PowerShell module' -ErrorAction SilentlyContinue
+    ThenModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when reversion manifest without custom manifestPath' {
+Describe 'PublishPowerShellModule.when invalid manifest' {
     Initialize-Test
-    [Whiskey.Context]$context = New-WhiskeyTestContext -ForBuildServer
-    Invoke-Publish -withoutRegisteredRepo -TaskContext $context
-    Assert-ModuleRegistered -TaskContext $context
-    Assert-ModulePublished -TaskContext $context
-    Assert-ManifestVersion -TaskContext $context -HasPrerelease $context.Version.SemVer2.Prerelease
-}
-
-Describe 'Publish-WhiskeyPowerShellModule.when invalid manifestPath' {
-    Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $manifestPath = 'fubar'
-    $errorMatch = 'Module Manifest Path'
-
-    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath -ThatFailsWith $errorMatch -ErrorAction SilentlyContinue
-    Assert-ModuleNotPublished
+    GivenRepository 'Fubar'
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ThatFailsWith 'path\ "fubar"\ either\ does\ not\ exist' -ErrorAction SilentlyContinue
+    ThenModuleNotPublished
 }

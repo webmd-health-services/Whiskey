@@ -163,6 +163,7 @@
 * Fixed: `ProGetUniversalPackage` places files in a `.` directory when using the `source_dir: .` syntax to specify the package root as the destination path for items in a package.
 * Fixed: Publishing a PowerShell module fails if old versions of PackageManagement and PowerShellGet are installed in a directory given by `PSModulePath`. See https://github.com/PowerShell/PowerShellGet/issues/446 .
 * The `PublishPowerShellModule` task now adds the current build's prerelease to the module manifest before publishing.
+* The `PublishPowerShellModule` task's `RepositoryUri` property is now only required if the task needs to register a new/custom repository (i.e. the repository given by the task's `RepositoryName` parameter doesn't exist).
 '@
         } # End of PSData hashtable
 

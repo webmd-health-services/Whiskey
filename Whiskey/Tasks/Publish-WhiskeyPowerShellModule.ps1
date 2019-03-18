@@ -48,17 +48,10 @@ function Publish-WhiskeyPowerShellModule
         return
     }
 
-    $publishLocation = $TaskParameter['RepositoryUri']
-    if( -not $publishLocation )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryUri" is mandatory. It must be the URI to the PowerShall repository to publish to.')
-        return
-    }
-
     $apiKeyID = $TaskParameter['ApiKeyID']
     if( -not $apiKeyID )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "ApiKeyID" is mandatory. It must be the ID of the API key to use when publishing to "{0}". Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $publishLocation)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "ApiKeyID" is mandatory. It must be the ID of the API key to use when publishing to the "{0}" repository. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $repositoryName)
         return
     }
 
@@ -71,7 +64,7 @@ function Publish-WhiskeyPowerShellModule
     }
     if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Module Manifest Path {0} is invalid, please check that the {1}.psd1 file is valid and in the correct location.' -f $manifestPath, ($path | Split-Path -Leaf))
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Module manifest path "{0}" either does not exist or is a directory.' -f $manifestPath)
         return
     }
 
@@ -99,6 +92,13 @@ function Publish-WhiskeyPowerShellModule
 
         if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
         {
+            $publishLocation = $TaskParameter['RepositoryUri']
+            if( -not $publishLocation )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
+                return
+            }
+
             Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet
         }
 
