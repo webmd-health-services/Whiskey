@@ -1,5 +1,6 @@
 PublishOn:
 - master
+- develop
 
 Build:
 - TaskDefaults:
@@ -8,6 +9,8 @@ Build:
 
 - Version:
     Path: Whiskey\Whiskey.psd1
+    Prerelease:
+    - develop: beta$(WHISKEY_BUILD_NUMBER)
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
@@ -126,6 +129,7 @@ Publish:
                 ReleaseNotes: RELEASE_NOTES
 - GitHubRelease:
     OnlyOnPlatform: Windows
+    OnlyOnBranch: master
     RepositoryName: webmd-health-services/Whiskey
     ApiKeyID: github.com
     Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
