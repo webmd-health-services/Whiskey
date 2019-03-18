@@ -148,6 +148,9 @@
             # A URL to an icon representing this module.
             # IconUri = ''
 
+            # Any prerelease to use when publishing to a repository.
+            Prerelease = ''
+
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Adding Linux and MacOS support. Whiskey is now cross-platform!
@@ -159,6 +162,7 @@
 * Fixed: PowerShell module import verbose messages appear when running the `Parallel` task.
 * Fixed: `ProGetUniversalPackage` places files in a `.` directory when using the `source_dir: .` syntax to specify the package root as the destination path for items in a package.
 * Fixed: Publishing a PowerShell module fails if old versions of PackageManagement and PowerShellGet are installed in a directory given by `PSModulePath`. See https://github.com/PowerShell/PowerShellGet/issues/446 .
+* The `PublishPowerShellModule` task now adds the current build's prerelease to the module manifest before publishing.
 '@
         } # End of PSData hashtable
 

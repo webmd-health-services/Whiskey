@@ -106,6 +106,13 @@ function Invoke-Publish
 @{
     # Version number of this module.
     ModuleVersion = '0.2.0'
+
+    PrivateData = @{
+        PSData = @{
+            Prerelease = '';
+        }
+    }
+    
 }
 "@
         }
@@ -282,19 +289,33 @@ function Assert-ModulePublished
 function Assert-ManifestVersion
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [object]
         $TaskContext,
 
-        [String]
-        $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1')
+        [string]
+        $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1'),
+
+        [string]
+        $HasPrerelease
     )
-    $versionString = "'{0}.{1}.{2}'" -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
+
+    $versionString = '{0}.{1}.{2}' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
 
     $matches = Select-String $versionString $manifestPath
 
+    $manifest = Test-ModuleManifest -Path $manifestPath
+
     It ('should have a matching Manifest Version with the Context'){
-        $matches | Should Not BeNullOrEmpty
+        $manifest.Version | Should -Be $versionString
+        if( $HasPrerelease )
+        {
+            $manifest.PrivateData.PSData.Prerelease | Should -Be $HasPrerelease
+        }
+        else
+        {
+            $manifest.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
+        }
     }
 }
 
@@ -304,6 +325,15 @@ Describe 'Publish-WhiskeyPowerShellModule.when publishing new module.'{
     Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context
     Assert-ModulePublished -TaskContext $context
+}
+
+Describe 'Publish-WhiskeyPowerShellModule.when publishing prerelease module' {
+    Initialize-Test
+    $context = New-WhiskeyTestContext -ForBuildServer -ForVersion '1.2.3-beta1'
+    Invoke-Publish -WithoutRegisteredRepo -TaskContext $context
+    Assert-ModuleRegistered -TaskContext $context
+    Assert-ModulePublished -TaskContext $context
+    Assert-ManifestVersion -TaskContext $context -HasPrerelease 'beta1'
 }
 
 Describe 'Publish-WhiskeyPowerShellModule.when publishing with no repository name'{
@@ -385,27 +415,13 @@ Describe 'Publish-WhiskeyPowerShellModule.when non-directory path parameter' {
     Assert-ModuleNotPublished
 }
 
-Describe 'Publish-WhiskeyPowerShellModule.when reversion manifest with custom manifestPath and authentic manifest file' {
-    Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
-    $existingManifestPath = (Join-Path -path (Split-Path $PSScriptRoot -Parent ) -ChildPath 'Whiskey\Whiskey.psd1')
-    New-Item -Name 'Manifest' -Path $TestDrive.FullName -ItemType 'Directory'
-    $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'Manifest\manifest.psd1')
-    Copy-Item $existingManifestPath $manifestPath
-    
-    Invoke-Publish -withoutRegisteredRepo -TaskContext $context -ForManifestPath $manifestPath
-    Assert-ModuleRegistered -TaskContext $context
-    Assert-ModulePublished -TaskContext $context
-    Assert-ManifestVersion -TaskContext $context -manifestPath $manifestPath
-}
-
 Describe 'Publish-WhiskeyPowerShellModule.when reversion manifest without custom manifestPath' {
     Initialize-Test
-    $context = New-WhiskeyTestContext -ForBuildServer
+    [Whiskey.Context]$context = New-WhiskeyTestContext -ForBuildServer
     Invoke-Publish -withoutRegisteredRepo -TaskContext $context
     Assert-ModuleRegistered -TaskContext $context
     Assert-ModulePublished -TaskContext $context
-    Assert-ManifestVersion -TaskContext $context
+    Assert-ManifestVersion -TaskContext $context -HasPrerelease $context.Version.SemVer2.Prerelease
 }
 
 Describe 'Publish-WhiskeyPowerShellModule.when invalid manifestPath' {

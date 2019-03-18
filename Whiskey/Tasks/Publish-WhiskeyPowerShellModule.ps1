@@ -67,7 +67,7 @@ function Publish-WhiskeyPowerShellModule
     $manifestPath = '{0}\{1}.psd1' -f $path,($path | Split-Path -Leaf)
     if( $TaskParameter.ContainsKey('ModuleManifestPath') )
     {
-        $manifestPath = $TaskParameter.ModuleManifestPath
+        $manifestPath = $TaskParameter['ModuleManifestPath']
     }
     if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
     {
@@ -76,8 +76,10 @@ function Publish-WhiskeyPowerShellModule
     }
 
     $manifest = Get-Content $manifestPath
-    $versionString = "ModuleVersion = '{0}.{1}.{2}'" -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
-    $manifest = $manifest -replace "ModuleVersion\s*=\s*('|"")[^'""]*('|"")", $versionString
+    $versionString = 'ModuleVersion = ''{0}.{1}.{2}''' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
+    $manifest = $manifest -replace 'ModuleVersion\s*=\s*(''|")[^''"]*(''|")', $versionString
+    $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
+    $manifest = $manifest -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifest | Set-Content $manifestPath
 
     # If there are older versions of the PackageManagement and/or PowerShellGet
