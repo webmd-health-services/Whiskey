@@ -30,6 +30,7 @@ PROPERTIES
     * `RepositoryUri`: the URI to which the module should be published. This is required if the repository named `RepositoryName` doesn't exist. This parameter is used to register a repository if one named `RepositoryName` doesn't exist.
     * `ApiKeyID` (**mandatory**): the ID of the API key to use. API keys are added to your build with the `Add-WhiskeyApiKey` function.
     * `ModuleManifestPath`: the path to the module's manifest (i.e. ".psd1" file). The default is to look for a manifest with the same name as the directory given by the `Path` property. The task updates the module manifest with the current version and prerelease metadata.
+    * `CredentialID`: the ID of the credential to use when registering the repository. Use `Add-WhiskeyCredential` in your build script to add credentials to the build. The credential is passed to the `Register-PSRepository` function's `Credential` parameter.
 
 
 EXAMPLES
