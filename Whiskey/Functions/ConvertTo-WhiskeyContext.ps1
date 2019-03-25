@@ -146,13 +146,30 @@ function ConvertTo-WhiskeyContext
 
             $buildVersion = New-WhiskeyVersionObject
             Sync-ObjectProperty -Source $InputObject.Version -Destination $buildVersion -ExcludeProperty @( 'SemVer1', 'SemVer2', 'SemVer2NoBuildMetadata' )
-            $buildVersion.SemVer1 = $InputObject.Version.SemVer1.ToString()
-            $buildVersion.SemVer2 = $InputObject.Version.SemVer2.ToString()
-            $buildVersion.SemVer2NoBuildMetadata = $InputObject.Version.SemVer2NoBuildMetadata.ToString()
+            if( $InputObject.Version )
+            {
+                if( $InputObject.Version.SemVer1 )
+                {
+                    $buildVersion.SemVer1 = $InputObject.Version.SemVer1.ToString()
+                }
+
+                if( $InputObject.Version.SemVer2 )
+                {
+                    $buildVersion.SemVer2 = $InputObject.Version.SemVer2.ToString()
+                }
+
+                if( $InputObject.Version.SemVer2NoBuildMetadata )
+                {
+                    $buildVersion.SemVer2NoBuildMetadata = $InputObject.Version.SemVer2NoBuildMetadata.ToString()
+                }
+            }
 
             [Whiskey.Context]$context = New-WhiskeyContextObject
-            Sync-ObjectProperty -Source $InputObject -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version', 'Credentials', 'TaskPaths' )
-            $context.Configuration = Import-WhiskeyYaml -Path $context.ConfigurationPath
+            Sync-ObjectProperty -Source $InputObject -Destination $context -ExcludeProperty @( 'BuildMetadata', 'Configuration', 'Version', 'Credentials', 'TaskPaths', 'ApiKeys' )
+            if( $context.ConfigurationPath )
+            {
+                $context.Configuration = Import-WhiskeyYaml -Path $context.ConfigurationPath
+            }
 
             $context.BuildMetadata = $buildInfo
             $context.Version = $buildVersion
@@ -164,6 +181,13 @@ function ConvertTo-WhiskeyContext
                 $password = ConvertTo-SecureString -String $serializedCredential.Password -Key $InputObject.CredentialKey
                 [pscredential]$credential = New-Object 'pscredential' $username,$password
                 Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
+            }
+
+            foreach( $apiKeyID in $InputObject.ApiKeys.Keys )
+            {
+                $serializedApiKey = $InputObject.ApiKeys[$apiKeyID]
+                $apiKey = ConvertTo-SecureString -String $serializedApiKey -Key $InputObject.CredentialKey
+                Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
             }
 
             foreach( $path in $InputObject.TaskPaths )

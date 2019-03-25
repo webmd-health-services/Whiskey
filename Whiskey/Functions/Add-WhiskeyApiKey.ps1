@@ -34,12 +34,16 @@ function Add-WhiskeyApiKey
         $ID,
 
         [Parameter(Mandatory=$true)]
-        [string]
-        # The value of the API key.
+        # The value of the API key. Can be a string or a SecureString.
         $Value
     )
 
     Set-StrictMode -Version 'Latest'
+
+    if( $Value -isnot [securestring] )
+    {
+        $Value = ConvertTo-SecureString -String $Value -AsPlainText -Force
+    }
 
     $Context.ApiKeys[$ID] = $Value
 }
