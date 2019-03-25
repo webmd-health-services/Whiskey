@@ -8,6 +8,9 @@ $repositoryName = $null
 $prerelease = $null
 $context = $null
 $credentials = @{ }
+$failed = $false
+$publishError = $null
+$registerError = $null
 
 function GivenCredential
 {
@@ -39,6 +42,28 @@ function GivenPrerelease
     $script:prerelease = $Prerelease
 }
 
+function GivenPublishingFails
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]
+        $WithError
+    )
+
+    $script:publishError = $WithError
+}
+
+function GivenRegisteringFails
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]
+        $WithError
+    )
+
+    $script:registerError = $WithError
+}
+
 function GivenRepository
 {
     param(
@@ -59,6 +84,9 @@ function Initialize-Test
     $script:prerelease = $null
     $script:context = $null
     $script:credentials = @{ }
+    $script:failed = $false
+    $script:publishError = $null
+    $script:registerError = $null
 }
 
 function Invoke-Publish
@@ -79,9 +107,6 @@ function Invoke-Publish
 
         [Switch]
         $WithNoRepositoryName,
-
-        [String]
-        $ThatFailsWith,
 
         [Switch]
         $withNoProgetURI,
@@ -164,8 +189,40 @@ function Invoke-Publish
     }.GetNewClosure()
 
     Add-Type -AssemblyName System.Net.Http
-    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' 
-    Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey'
+
+    $mock = { }
+    if( $publishError )
+    {
+        $message = $publishError
+        $mock = { 
+                    [CmdletBinding()]
+                    param(
+                        $NuGetApiKey,
+                        $Repository,
+                        $Path
+                    ) 
+                    Write-Error -Message $message
+                }.GetNewClosure()
+    }
+    Mock -CommandName 'Publish-Module' -ModuleName 'Whiskey' -MockWith $mock
+
+    $mock = { }
+    if( $registerError )
+    {
+        $message = $registerError
+        $mock = { 
+                    [CmdletBinding()]
+                    param(
+                        $InstallationPolicy,
+                        $SourceLocation,
+                        $PackageManagementProvider,
+                        $Name,
+                        $PublishLocation
+                    ) 
+                    Write-Error -Message $message
+                }.GetNewClosure()
+    }
+    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey'  -MockWith $mock
     Mock -CommandName 'Get-PackageSource' -ModuleName 'PowerShellGet'  # Called by a dynamic parameter set on Register-PSRepository.
     
     $Global:Error.Clear()
@@ -198,27 +255,21 @@ function Invoke-Publish
     }
     catch
     {
-        $failed = $True
+        $script:failed = $true
         Write-Error -ErrorRecord $_
     }
+}
 
-    if( $ThatFailsWith )
-    {
-        It 'should throw an exception' {
-            $failed | Should Be $True
-        }
-        It 'should exit with error' {
-            $Global:Error | Should Match $ThatFailsWith
-        }
-    }
-    else
-    {
-        It 'should not throw an exception'{
-            $failed | Should Be $False
-        }
-        It 'should exit without error'{
-            $Global:Error | Should BeNullOrEmpty
-        }
+function ThenFailed
+{
+    param(
+        [Parameter(Mandatory)]
+        $WithError
+    )
+
+    It 'should fail' {
+        $failed | Should -BeTrue
+        $Global:Error | Should -Match $WithError
     }
 }
 
@@ -397,10 +448,21 @@ function ThenManifest
     }
 }
 
+function ThenSucceeded
+{
+    It 'should succeed'{
+        $failed | Should -BeFalse
+    }
+    It 'should exit without error'{
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'PublishPowerShellModule.when publishing new module' {
     Initialize-Test
     GivenRepository 'FubarSnafu'
     Invoke-Publish -ForRepositoryNamed 'FubarSnafu'
+    ThenSucceeded
     ThenRepositoryChecked 'FubarSnafu' 
     ThenRepositoryNotRegistered
     ThenModulePublished -ToRepositoryNamed 'FubarSnafu'
@@ -411,6 +473,7 @@ Describe 'PublishPowerShellModule.when publishing prerelease module' {
     GivenRepository 'SomeRepo'
     GivenPrerelease 'beta1'
     Invoke-Publish -ForRepositoryNamed 'SomeRepo'
+    ThenSucceeded
     ThenRepositoryChecked 'SomeRepo'
     ThenRepositoryNotRegistered
     ThenModulePublished -ToRepositoryNamed 'SomeRepo'
@@ -419,15 +482,25 @@ Describe 'PublishPowerShellModule.when publishing prerelease module' {
 
 Describe 'PublishPowerShellModule.when publishing with no repository name' {
     Initialize-Test
-    Invoke-Publish -ThatFailsWith 'Property\ "RepositoryName"\ is mandatory' -ErrorAction SilentlyContinue
+    Invoke-Publish -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'Property\ "RepositoryName"\ is mandatory'
     ThenRepositoryNotChecked
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
 }
 
+Describe 'PublishPowerShellModule.when publishing fails' {
+    Initialize-Test
+    GivenRepository 'FubarSnafu'
+    GivenPublishingFails -WithError 'something went wrong!'
+    Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'something\ went\ wrong\!'
+}
+
 Describe 'PublishPowerShellModule.when publishing to a new repository' {
     Initialize-Test
     Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
+    ThenSucceeded
     ThenRepositoryChecked 'ANewRepo'
     ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
     ThenModulePublished -ToRepositoryNamed 'ANewRepo'
@@ -438,6 +511,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository that requi
     $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
     GivenCredential $cred -WithID 'somecred'
     Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
+    ThenSucceeded
     ThenRepositoryChecked 'ANewRepo'
     ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
     ThenModulePublished -ToRepositoryNamed 'ANewRepo'
@@ -445,17 +519,26 @@ Describe 'PublishPowerShellModule.when publishing to a new repository that requi
 
 Describe 'PublishPowerShellModule.when publishing to a new repository but its URI is not given' {
     Initialize-Test 
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -ThatFailsWith 'Property\ "RepositoryUri"\ is\ mandatory' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
     ThenRepositoryChecked 'Fubar'
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
+}
+
+Describe 'PublishPowerShellModule.when registering a repository fails' {
+    Initialize-Test
+    GivenRegisteringFails -WithError 'something went wrong!'
+    Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -RepoAtUri 'https://example.com' -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'something\ went\ wrong\!'
 }
 
 Describe 'PublishPowerShellModule.when no API key' {
     Initialize-Test
     GivenNoApiKey
     GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -ThatFailsWith 'Property\ "ApiKeyID"\ is\ mandatory' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar'  -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'Property\ "ApiKeyID"\ is\ mandatory'
     ThenRepositoryNotChecked
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
@@ -464,7 +547,8 @@ Describe 'PublishPowerShellModule.when no API key' {
 Describe 'PublishPowerShellModule.when path parameter is not included' {
     Initialize-Test
     GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ThatFailsWith 'Property "Path" is mandatory' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'Property "Path" is mandatory'
     ThenRepositoryNotChecked
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
@@ -473,20 +557,23 @@ Describe 'PublishPowerShellModule.when path parameter is not included' {
 Describe 'PublishPowerShellModule.when non-existent path parameter' {
     Initialize-Test
     GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithNonExistentPath -ThatFailsWith 'does\ not\ exist' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithNonExistentPath -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'does\ not\ exist'
     ThenModuleNotPublished
 }
 
 Describe 'PublishPowerShellModule.when non-directory path parameter' {
     Initialize-Test
     GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath -ThatFailsWith 'path to the root directory of a PowerShell module' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'path to the root directory of a PowerShell module'
     ThenModuleNotPublished
 }
 
 Describe 'PublishPowerShellModule.when invalid manifest' {
     Initialize-Test
     GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ThatFailsWith 'path\ "fubar"\ either\ does\ not\ exist' -ErrorAction SilentlyContinue
+    Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
+    ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
     ThenModuleNotPublished
 }
