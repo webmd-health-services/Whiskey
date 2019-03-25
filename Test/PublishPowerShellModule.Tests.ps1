@@ -7,6 +7,22 @@ $apikeyID = $null
 $repositoryName = $null
 $prerelease = $null
 $context = $null
+$credentials = @{ }
+
+function GivenCredential
+{
+    param(
+        [Parameter(Mandatory)]
+        [pscredential]
+        $Credential,
+
+        [Parameter(Mandatory)]
+        [string]
+        $WithID
+    )
+
+    $credentials[$WithID] = $Credential
+}
 
 function GivenNoApiKey
 {
@@ -42,6 +58,7 @@ function Initialize-Test
     $script:repositoryName = $null
     $script:prerelease = $null
     $script:context = $null
+    $script:credentials = @{ }
 }
 
 function Invoke-Publish
@@ -76,7 +93,10 @@ function Invoke-Publish
         $WithNonExistentPath,
 
         [Switch]
-        $WithoutPathParameter
+        $WithoutPathParameter,
+
+        [string]
+        $WithCredentialID
     )
     
     $version = '1.2.3'
@@ -156,10 +176,20 @@ function Invoke-Publish
         $TaskParameter['RepositoryUri'] = $RepoAtUri
     }
 
+    if( $WithCredentialID )
+    {
+        $TaskParameter['CredentialID'] = $WithCredentialID
+    }
+
     if( $apikeyID )
     {
         $TaskParameter['ApiKeyID'] = $apikeyID
         Add-WhiskeyApiKey -Context $context -ID $apikeyID -Value $apikey
+    }
+
+    foreach( $key in $credentials.Keys )
+    {
+        Add-WhiskeyCredential -Context $context -ID $key -Credential $credentials[$key]
     }
     
     try
@@ -253,7 +283,10 @@ function ThenRepositoryRegistered
 
         [Parameter(Mandatory)]
         [string]
-        $AtUri
+        $AtUri,
+
+        [pscredential]
+        $WithCredential
     )
 
     It ('should register the repository')  {
@@ -277,6 +310,12 @@ function ThenRepositoryRegistered
         }
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $InstallationPolicy -eq 'Trusted' }
         Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $PackageManagementPRovider -eq 'NuGet' }
+
+        if( $WithCredential )
+        {
+            Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.UserName -eq $WithCredential.UserName }
+            Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.GetNetworkCredential().Password -eq $WithCredential.GetNetworkCredential().Password }
+        }
     }
     
 }
@@ -391,6 +430,16 @@ Describe 'PublishPowerShellModule.when publishing to a new repository' {
     Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
     ThenRepositoryChecked 'ANewRepo'
     ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
+    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+}
+
+Describe 'PublishPowerShellModule.when publishing to a new repository that requires a credential' {
+    Initialize-Test
+    $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
+    GivenCredential $cred -WithID 'somecred'
+    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
+    ThenRepositoryChecked 'ANewRepo'
+    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
     ThenModulePublished -ToRepositoryNamed 'ANewRepo'
 }
 

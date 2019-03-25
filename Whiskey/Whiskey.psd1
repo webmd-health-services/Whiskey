@@ -164,6 +164,7 @@
 * Fixed: Publishing a PowerShell module fails if old versions of PackageManagement and PowerShellGet are installed in a directory given by `PSModulePath`. See https://github.com/PowerShell/PowerShellGet/issues/446 .
 * The `PublishPowerShellModule` task now adds the current build's prerelease to the module manifest before publishing.
 * The `PublishPowerShellModule` task's `RepositoryUri` property is now only required if the task needs to register a new/custom repository (i.e. the repository given by the task's `RepositoryName` parameter doesn't exist).
+* The `PublishPowerShellModule` task can now register a repository that requires a credential. Use the `CredentialID` property to set the ID of the credential in your whiskey.yml file and `Add-WhiskeyCredential` in your build script to add the credential.
 '@
         } # End of PSData hashtable
 

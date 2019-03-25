@@ -99,7 +99,13 @@ function Publish-WhiskeyPowerShellModule
                 return
             }
 
-            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet
+            $credentialParam = @{ }
+            if( $TaskParameter.ContainsKey('CredentialID') )
+            {
+                $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
+            }
+
+            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam
         }
 
         Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey
