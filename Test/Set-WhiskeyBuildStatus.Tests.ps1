@@ -205,7 +205,7 @@ Describe 'Set-WhiskeyBuildStatus.when missing credential' {
     GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
     GivenNoCredentials
     WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
-    ThenReportingFailed 'credential\ ''BBServer1''\ does\ not\ exist'
+    ThenReportingFailed 'credential\ "BBServer1"\ does\ not\ exist'
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
