@@ -259,12 +259,13 @@ if( $TaskContext.Variables['Fubar'] -ne 'Snafu' )
     throw ('Fubar variable value is not "Snafu".')
 }
 
-if( $TaskContext.ApiKeys['ApiKey'] -ne 'ApiKey' )
+$apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID 'ApiKey' -PropertyName 'ID' -ErrorAction Stop
+if( $apiKey -cne 'ApiKey' )
 {
     throw ('API key "ApiKey" doesn''t have its expected value of "ApiKey".')
 }
 
-$cred = $TaskContext.Credentials['Credential']
+$cred = Get-WhiskeyCredential -Context $TaskContext -ID 'Credential' -PropertyName 'Whatevs' -ErrorAction Stop
 if( -not $cred )
 {
     throw ('Credential "Credential" is missing.')
