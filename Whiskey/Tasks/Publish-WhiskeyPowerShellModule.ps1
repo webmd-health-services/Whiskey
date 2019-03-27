@@ -75,43 +75,27 @@ function Publish-WhiskeyPowerShellModule
     $manifest = $manifest -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifest | Set-Content $manifestPath
 
-    # If there are older versions of the PackageManagement and/or PowerShellGet
-    # modules available on this system, the modules that ship with Whiskey will use
-    # those global versions instead of the versions we load from inside Whiskey. So,
-    # we have to hide the global modules from the modules we load. See
-    # https://github.com/PowerShell/PowerShellGet/issues/446 .
-    $moduleRoot = Split-Path -Parent -Path $PSScriptRoot
-    $originalPSModulesPath = $env:PSModulePath
-    $env:PSModulePath = '{0};{1}' -f (Join-Path -Path $moduleRoot -ChildPath 'PackageManagement'),(Join-Path -Path $moduleRoot -ChildPath 'PowerShellGet')
+    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
-    try
+    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
+
+    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
     {
-        Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
-
-        Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-
-        if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
+        $publishLocation = $TaskParameter['RepositoryUri']
+        if( -not $publishLocation )
         {
-            $publishLocation = $TaskParameter['RepositoryUri']
-            if( -not $publishLocation )
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
-                return
-            }
-
-            $credentialParam = @{ }
-            if( $TaskParameter.ContainsKey('CredentialID') )
-            {
-                $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
-            }
-
-            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
+            return
         }
 
-        Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop
+        $credentialParam = @{ }
+        if( $TaskParameter.ContainsKey('CredentialID') )
+        {
+            $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
+        }
+
+        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop
     }
-    finally
-    {
-        $env:PSModulePath = $originalPSModulesPath
-    }
+
+    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop
 }
