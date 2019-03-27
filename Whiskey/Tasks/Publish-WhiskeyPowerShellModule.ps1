@@ -77,9 +77,23 @@ function Publish-WhiskeyPowerShellModule
 
     Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
+    $commonParams = @{}
+    if( $VerbosePreference -in @('Continue','Inquire') )
+    {
+        $commonParams['Verbose'] = $true
+    }
+    if( $DebugPreference -in @('Continue','Inquire') )
+    {
+        $commonParams['Debug'] = $true
+    }
+    if( (Test-Path -Path 'variable:InformationPreference') )
+    {
+        $commonParams['InformationAction'] = $InformationPreference
+    }
 
-    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore) )
+    Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
+
+    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore @commonParams) )
     {
         $publishLocation = $TaskParameter['RepositoryUri']
         if( -not $publishLocation )
@@ -94,8 +108,8 @@ function Publish-WhiskeyPowerShellModule
             $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
         }
 
-        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop
+        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
     }
 
-    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop
+    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams
 }
