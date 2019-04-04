@@ -11,7 +11,7 @@ DESCRIPTION
     
     You must supply the the path to the module's directory with the `Path` property, the name of the repository with the `RepositoryName` property, and the ID of the API key to use with the `ApiKeyID`.
 
-    If a repository named `RepositoryName` doesn't exist, you must supply the `RepositoryUri` parameter so that the task can register the repository. The `RepositoryUri` parameter is passed to the `Register-PSRepository` function's `PublishLocation` and `SourceLocation` parameters.
+    If a repository named `RepositoryName` isn't registered, you must supply the `RepositoryUri` parameter so that the task can register the repository. The `RepositoryUri` parameter is passed to the `Register-PSRepository` function's `PublishLocation` and `SourceLocation` parameters.
 
     Before publishing, the `ModuleVersion` property in the module manifest is updated to be the version of the current build, minus any prerelease or build metadata and the `Prerelease` property in the `PrivateData.PSData` section is updated to be the current prerelease metadata. Make sure you use prerelease metadata in the correct semver format for the repository to which you're publishing. The task uses regular expressions to find and replace the module version and prerelease. It looks for (excluding the comments):
 
