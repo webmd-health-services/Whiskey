@@ -154,13 +154,17 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 # TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
 # fixed, change version numbers to wildcards on the patch version.
 $nestedModules = @{
-                        'PackageManagement' = '1.3.0';
-                        'PowerShellGet' = '2.0.4';
+                        'PackageManagement' = '1.3.1';
+                        'PowerShellGet' = '2.1.2';
                  }
-$whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey'
+$privateModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Modules'
+if( -not (Test-Path -Path $privateModulesRoot -PathType 'Container') )
+{
+    New-Item -Path $privateModulesRoot -ItemType 'Directory'
+}
 foreach( $nestedModuleName in $nestedModules.Keys )
 {
-    $moduleRoot = Join-Path -Path $whiskeyRoot -ChildPath $nestedModuleName
+    $moduleRoot = Join-Path -Path $privateModulesRoot -ChildPath $nestedModuleName
     if( -not (Test-Path -Path $moduleRoot -PathType Container) )
     {
         $nestedModuleVersion = $nestedModules[$nestedModuleName]
@@ -169,7 +173,7 @@ foreach( $nestedModuleName in $nestedModules.Keys )
         Start-Job -ScriptBlock {
             Save-Module -Name $using:nestedModuleName `
                         -RequiredVersion $using:nestedModuleVersion `
-                        -Path $using:whiskeyRoot
+                        -Path $using:privateModulesRoot
         } | Wait-Job | Receive-Job | Remove-Job
     }
 }

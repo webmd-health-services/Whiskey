@@ -148,6 +148,9 @@
             # A URL to an icon representing this module.
             # IconUri = ''
 
+            # Any prerelease to use when publishing to a repository.
+            Prerelease = ''
+
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Adding Linux and MacOS support. Whiskey is now cross-platform!
@@ -158,6 +161,10 @@
 * Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
 * Fixed: PowerShell module import verbose messages appear when running the `Parallel` task.
 * Fixed: `ProGetUniversalPackage` places files in a `.` directory when using the `source_dir: .` syntax to specify the package root as the destination path for items in a package.
+* Fixed: Publishing a PowerShell module fails if old versions of PackageManagement and PowerShellGet are installed in a directory given by `PSModulePath`. See https://github.com/PowerShell/PowerShellGet/issues/446 .
+* The `PublishPowerShellModule` task now adds the current build's prerelease to the module manifest before publishing.
+* The `PublishPowerShellModule` task's `RepositoryUri` property is now only required if the task needs to register a new/custom repository (i.e. the repository given by the task's `RepositoryName` parameter doesn't exist).
+* The `PublishPowerShellModule` task can now register a repository that requires a credential. Use the `CredentialID` property to set the ID of the credential in your whiskey.yml file and `Add-WhiskeyCredential` in your build script to add the credential.
 '@
         } # End of PSData hashtable
 

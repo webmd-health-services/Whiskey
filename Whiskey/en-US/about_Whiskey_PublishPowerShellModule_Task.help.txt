@@ -9,20 +9,28 @@ SUMMARY
 DESCRIPTION
     The `PublishPowerShellModule` task publishes a PowerShell module to a NuGet-based PowerShell repository (e.g. the PowerShell Gallery, ProGet, etc.). It uses the `Publish-Module` function from the `PowerShellGet` module.
     
-    You must supply the the path to the module's directory with the `Path` property, the URI of the repository with the `RepositoryUri` property, the name of the repository with the `RepositoryName` property, and the ID of the API key to use with the `ApiKeyID`.
+    You must supply the the path to the module's directory with the `Path` property, the name of the repository with the `RepositoryName` property, and the ID of the API key to use with the `ApiKeyID`.
 
-    If a repository named `RepositoryName`, doesn't exist, one is registered and its source and publish locations are both set to `RepositoryUri` (using the `PowerShellGet` modules's `Register-PSRepository` function.
+    If a repository named `RepositoryName` isn't registered, you must supply the `RepositoryUri` parameter so that the task can register the repository. The `RepositoryUri` parameter is passed to the `Register-PSRepository` function's `PublishLocation` and `SourceLocation` parameters.
 
-    Before publishing, the `ModuleVersion` property in the module manifest is updated to be the version of the current build, minus any prerelease or build metadata.
+    Before publishing, the `ModuleVersion` property in the module manifest is updated to be the version of the current build, minus any prerelease or build metadata and the `Prerelease` property in the `PrivateData.PSData` section is updated to be the current prerelease metadata. Make sure you use prerelease metadata in the correct semver format for the repository to which you're publishing. The task uses regular expressions to find and replace the module version and prerelease. It looks for (excluding the comments):
+
+        ModuleVersion = ''  # Regex: ModuleVersion\s*=\s*('|")[^'"]*('|")
+        Prerelease = ''     # Regex:    Prerelease\s*=\s*('|")[^'"]*('|")
+
+    It doesn't matter what's between the double/single quotes. If strings that match these regular expression don't exist in your module, the version/prerelease won't get updated before publishing.
+
+    In order to publish without getting prompted, this task also forcibly bootstraps the NuGet package provider.
 
 
 PROPERTIES
 
     * `Path` (**mandatory**): the path to the module root, i.e. the directory where the module's ".psd1" file is.
     * `RepositoryName` (**mandatory**): the name of the PowerShell repository. If a repository by this name isn't currently registerd, the task will register it.
-    * `RepositoryUri` (**mandatory**): the URI to which the module should be published.
+    * `RepositoryUri`: the URI to which the module should be published. This is required if the repository named `RepositoryName` doesn't exist. This parameter is used to register a repository if one named `RepositoryName` doesn't exist.
     * `ApiKeyID` (**mandatory**): the ID of the API key to use. API keys are added to your build with the `Add-WhiskeyApiKey` function.
-    * `ModuleManifestPath`: the path to the module's manifest (i.e. ".psd1" file). The default is to look for a manifest with the same name as the directory given by the `Path` property.
+    * `ModuleManifestPath`: the path to the module's manifest (i.e. ".psd1" file). The default is to look for a manifest with the same name as the directory given by the `Path` property. The task updates the module manifest with the current version and prerelease metadata.
+    * `CredentialID`: the ID of the credential to use when registering the repository. Use `Add-WhiskeyCredential` in your build script to add credentials to the build. The credential is passed to the `Register-PSRepository` function's `Credential` parameter.
 
 
 EXAMPLES

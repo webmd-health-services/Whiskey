@@ -21,13 +21,20 @@ if( -not ($attr | Get-Member 'Platform') )
 }
 
 $context = New-Object -TypeName 'Whiskey.Context'
-$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration' )
+$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 foreach( $propertyToCheck in $propertiesToCheck )
 {
     if( -not ($context | Get-Member $propertyToCheck) )
     {
         Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
     }
+}
+
+[Type]$apiKeysType = $context.ApiKeys.GetType()
+$apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
+if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [SecureString].FullName )
+{
+    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
 }
 
 # PowerShell 5.1 doesn't have these variables so create them if they don't exist.

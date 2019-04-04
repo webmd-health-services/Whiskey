@@ -40,7 +40,7 @@ function Import-WhiskeyPowerShellModule
 
     $searchPaths = & {
                         Join-Path -Path (Get-Location).ProviderPath -ChildPath $powerShellModulesDirectoryName
-                        Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
+                        Join-Path -Path $PSScriptRoot -ChildPath '..\Modules' -Resolve
                    }
 
     foreach( $moduleName in $Name )

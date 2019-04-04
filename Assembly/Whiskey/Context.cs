@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Security;
 
 namespace Whiskey
 {
@@ -9,7 +10,7 @@ namespace Whiskey
     {
         public Context()
         {
-            ApiKeys = new Dictionary<string, string>();
+            ApiKeys = new Dictionary<string, SecureString>();
             BuildMetadata = new BuildInfo();
             RunBy = RunBy.Developer;
             Configuration = new Dictionary<object, object>();

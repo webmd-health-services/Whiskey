@@ -45,5 +45,7 @@ function Get-WhiskeyApiKey
         return
     }
 
-    return $Context.ApiKeys[$ID]
+    $secureString = $Context.ApiKeys[$ID]
+    $stringPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+    return [Runtime.InteropServices.Marshal]::PtrToStringAuto($stringPtr)
 }
