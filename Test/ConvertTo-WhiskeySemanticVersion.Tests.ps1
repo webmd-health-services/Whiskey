@@ -8,7 +8,7 @@ $branch = 'origin/feature/fubar'
 $commitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
 $appBuildMetadata = 'feature-fubar.deadbee'
 $libraryBuildMetadata = '80.feature-fubar.deadbee'
-$developerBuildMetadata = '{0}.{1}' -f $env:USERNAME,$env:COMPUTERNAME
+$developerBuildMetadata = '{0}.{1}' -f [Environment]::UserName,[Environment]::MachineName
 
 function Assert-ConvertsTo
 {

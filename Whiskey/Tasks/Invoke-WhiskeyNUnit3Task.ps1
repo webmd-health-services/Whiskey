@@ -2,7 +2,7 @@
 function Invoke-WhiskeyNUnit3Task
 {
     [CmdletBinding()]
-    [Whiskey.Task("NUnit3",SupportsClean,SupportsInitialize,Platform=[Whiskey.Platform]::Windows)]
+    [Whiskey.Task("NUnit3",SupportsClean,SupportsInitialize,Platform='Windows')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

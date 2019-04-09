@@ -554,7 +554,7 @@ function ThenToolInstalled
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Toolinfo.Name -eq $ToolName }
         Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
-            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd('\')
+            $expectedInstallRoot = (Resolve-Path -Path 'TestDrive:').ProviderPath.TrimEnd([IO.Path]::DirectorySeparatorChar)
             Write-Debug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
             Write-Debug -Message ('             actual    {0}' -f $InstallRoot)
             $InstallRoot -eq $expectedInstallRoot
@@ -750,9 +750,9 @@ Describe 'Invoke-WhiskeyTask.when task has property variables' {
     Init
     GivenRunByDeveloper
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(COMPUTERNAME)'; }
+    WhenRunningTask 'PowerShell' -Parameter @{ 'Path' = '$(MachineName)'; }
     ThenPipelineSucceeded
-    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = $env:COMPUTERNAME; }
+    ThenTaskRanWithParameter 'Invoke-WhiskeyPowerShell' @{ 'Path' = [Environment]::MachineName; }
     ThenNoOutput
 }
 
@@ -1383,7 +1383,7 @@ Describe 'Invoke-WhiskeyTask.when a task runs another task' {
 
 function Global::ToolTaskWindows
 {
-    [Whiskey.Task("ToolTaskWindows",Platform=[Whiskey.Platform]::Windows)]
+    [Whiskey.Task("ToolTaskWindows",Platform='Windows')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1396,7 +1396,7 @@ function Global::ToolTaskWindows
 
 function Global::ToolTaskLinux
 {
-    [Whiskey.Task("ToolTaskLinux",Platform=[Whiskey.Platform]::Linux)]
+    [Whiskey.Task("ToolTaskLinux",Platform='Linux')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1409,7 +1409,7 @@ function Global::ToolTaskLinux
 
 function Global::ToolTaskMacOS
 {
-    [Whiskey.Task("ToolTaskMacOS",Platform=[Whiskey.Platform]::MacOS)]
+    [Whiskey.Task("ToolTaskMacOS",Platform='MacOS')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1422,7 +1422,7 @@ function Global::ToolTaskMacOS
 
 function Global::ToolTaskWindowsAndLinux
 {
-    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform=([Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux))]
+    [Whiskey.Task("ToolTaskWindowsAndLinux",Platform='Windows,Linux')]
     [CmdletBinding()]
     param(
         $TaskContext,
@@ -1433,17 +1433,7 @@ function Global::ToolTaskWindowsAndLinux
     $script:taskRun = $true
 }
 
-$currentPlatform = 'Windows'
-if( $IsLinux )
-{
-    $currentPlatform = 'Linux'
-}
-elseif( $IsMacOS )
-{
-    $currentPlatform = 'MacOS'
-}
-
-Describe ('Invoke-WhiskeyTask.when running Windows-only task on {0} platform' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when running Windows-only task on {0} platform' -f $WhiskeyPlatform) {
     Init
     WhenRunningTask 'ToolTaskWindows' -Parameter @{} -ErrorAction SilentlyContinue
     if( $IsWindows )
@@ -1457,7 +1447,7 @@ Describe ('Invoke-WhiskeyTask.when running Windows-only task on {0} platform' -f
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $WhiskeyPlatform) {
     Init
     WhenRunningTask 'ToolTaskLinux' -Parameter @{} -ErrorAction SilentlyContinue
     if( $IsLinux )
@@ -1471,7 +1461,7 @@ Describe ('Invoke-WhiskeyTask.when running Linux-only task on {0} platform' -f $
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when running MacOS-only task on {0} platform' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when running MacOS-only task on {0} platform' -f $WhiskeyPlatform) {
     Init
     WhenRunningTask 'ToolTaskMacOS' -Parameter @{} -ErrorAction SilentlyContinue
     if( $IsMacOS )
@@ -1485,7 +1475,7 @@ Describe ('Invoke-WhiskeyTask.when running MacOS-only task on {0} platform' -f $
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} platform' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} platform' -f $WhiskeyPlatform) {
     Init
     WhenRunningTask 'ToolTaskWindowsAndLinux' -Parameter @{} -ErrorAction SilentlyContinue
     if( $IsMacOS )
@@ -1499,7 +1489,7 @@ Describe ('Invoke-WhiskeyTask.when running Windows or Linux only task on {0} pla
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'Windows' }
@@ -1513,7 +1503,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows' -f 
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Linux' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Linux' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'Linux' }
@@ -1527,7 +1517,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Linux' -f $c
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is MacOS' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is MacOS' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = 'MacOS' }
@@ -1541,7 +1531,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is MacOS' -f $c
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows,MacOS' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and OnlyOnPlatform is Windows,MacOS' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ OnlyOnPlatform = @( 'Windows','MacOS' ) }
@@ -1563,7 +1553,7 @@ Describe ('Invoke-WhiskeyTask.when OnlyOnPlatform is invalid') {
     ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'Windows' }
@@ -1577,7 +1567,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows' -
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Linux' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Linux' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'Linux' }
@@ -1591,7 +1581,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Linux' -f 
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is MacOS' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is MacOS' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = 'MacOS' }
@@ -1605,7 +1595,7 @@ Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is MacOS' -f 
     }
 }
 
-Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows,MacOS' -f $currentPlatform) {
+Describe ('Invoke-WhiskeyTask.when run on {0} and ExceptOnPlatform is Windows,MacOS' -f $WhiskeyPlatform) {
     Init
     GivenMockTask
     WhenRunningTask 'MockTask' -Parameter @{ ExceptOnPlatform = @( 'Windows','MacOS' ) }

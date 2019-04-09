@@ -315,9 +315,13 @@ function WhenRunningBuild
         $startedAt = Get-Date
         Start-Sleep -Milliseconds 1
         $context.StartedAt = [DateTime]::MinValue
+        $modulePath = $env:PSModulePath
         Invoke-WhiskeyBuild -Context $context @optionalParams
         It ('should set build start time') {
             $context.StartedAt | Should -BeGreaterThan $startedAt
+        }
+        It ('should undo PSModulePath modification') {
+            $env:PSModulePath | Should -Be $modulePath
         }
     }
     catch

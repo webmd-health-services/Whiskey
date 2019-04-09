@@ -53,16 +53,7 @@ function ConvertTo-WhiskeySemanticVersion
         }
         elseif( $InputObject -is [datetime] )
         {
-            $original = $InputObject.ToShortDateString()
-            if( $original -match ('(\d+){0}(\d+){0}(\d+)' -f ([regex]::Escape([Globalization.CultureInfo]::CurrentCulture.DateTimeFormat.DateSeparator))) )
-            {
-                $InputObject = '{0}.{1}.{2}' -f $Matches[1],$Matches[2],$Matches[3]
-            }
-            else
-            {
-                Write-Error -Message ('Unable to convert ''{0}'', a date/time, back to a version number. If this value came from a YAML file, please put quotes around it to ensure it is in a format we can parse.' -f $PSBoundParameters['InputObject']) -ErrorAction $ErrorActionPreference
-                return
-            }
+            $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$InputObject.Year
         }
         elseif( $InputObject -is [double] )
         {

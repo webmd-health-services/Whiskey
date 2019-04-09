@@ -620,7 +620,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
     Describe 'New-WhiskeyContext.when Version property is used' {
         Init
-        GivenConfiguration @{ 'Build' = @(@{ 'Exec' = 'cmd /C echo' }) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
+        GivenConfiguration @{ 'Build' = @(@{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }}) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
         WhenCreatingContext -RunBy 'BuildServer'
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context
@@ -683,7 +683,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties' {
         Init
         GivenConfiguration -BuildNumber 50 `
-                           -Configuration @{ 'Build' = @( @{ 'Exec' = 'cmd /C echo' } ) } `
+                           -Configuration @{ 'Build' = @( @{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }} ) } `
                            -ForBuildServer
         WhenCreatingContext
         # Run a build to ensure the Version task is in the build tasks.
@@ -698,7 +698,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties and being run by a developer' {
         Init
         GivenConfiguration -BuildNumber 50 `
-                           -Configuration @{ 'Build' = @( @{ 'Exec' = 'cmd /C echo' } ) }
+                           -Configuration @{ 'Build' = @( @{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }} ) }
         WhenCreatingContext
         # Run a build to ensure the Version task is in the build tasks.
         Invoke-WhiskeyBuild -Context $script:context

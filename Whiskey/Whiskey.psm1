@@ -21,7 +21,7 @@ if( -not ($attr | Get-Member 'Platform') )
 }
 
 $context = New-Object -TypeName 'Whiskey.Context'
-$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration' )
+$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 foreach( $propertyToCheck in $propertiesToCheck )
 {
     if( -not ($context | Get-Member $propertyToCheck) )
@@ -30,12 +30,29 @@ foreach( $propertyToCheck in $propertiesToCheck )
     }
 }
 
+[Type]$apiKeysType = $context.ApiKeys.GetType()
+$apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
+if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [SecureString].FullName )
+{
+    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+}
+
 # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
     $IsLinux = $false
     $IsMacOS = $false
     $IsWindows = $true
+}
+
+$dotNetExeName = 'dotnet'
+$nodeExeName = 'node'
+$nodeDirName = 'bin'
+if( $IsWindows )
+{
+    $dotNetExeName = '{0}.exe' -f $dotNetExeName
+    $nodeExeName = '{0}.exe' -f $nodeExeName
+    $nodeDirName = ''
 }
 
 $CurrentPlatform = [Whiskey.Platform]::Unknown

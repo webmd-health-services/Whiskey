@@ -3,7 +3,7 @@ function Publish-WhiskeyBBServerTag
 {
     [CmdletBinding()]
     [Whiskey.Task('PublishBitbucketServerTag')]
-    [Whiskey.RequiresTool('PowerShellModule::BitbucketServerAutomation','BitbucketServerAutomationPath',Version='0.3.*',VersionParameterName='BitbucketServerAutomationVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::BitbucketServerAutomation','BitbucketServerAutomationPath',Version='0.9.*',VersionParameterName='BitbucketServerAutomationVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

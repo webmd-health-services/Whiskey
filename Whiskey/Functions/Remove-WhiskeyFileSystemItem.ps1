@@ -47,7 +47,7 @@ function Remove-WhiskeyFileSystemItem
     {
         if( $IsWindows )
         {
-            $emptyDir = Join-Path -Path $env:TEMP -ChildPath ([IO.Path]::GetRandomFileName())
+            $emptyDir = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
             New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
             try
             {

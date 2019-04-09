@@ -1,5 +1,25 @@
 
-$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath '.downloadcache'
+$exportPlatformVars = $false
+if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+    $exportPlatformVars = $true
+}
+
+$WhiskeyPlatform = [Whiskey.Platform]::Windows
+if( $IsLinux )
+{
+    $WhiskeyPlatform = [Whiskey.Platform]::Linux
+}
+elseif( $IsMacOS )
+{
+    $WhiskeyPlatform = [Whiskey.Platform]::MacOS
+}
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $WhiskeyPlatform)
+$WhiskeyTestDownloadCachePath = $downloadCachePath
+
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
     New-Item -Path $downloadCachePath -ItemType 'Directory'
@@ -76,7 +96,14 @@ function Install-Node
     Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
+    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
     $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
+    $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
+    if( -not $IsWindows )
+    {
+        $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
+        $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'lib/node_modules'
+    }
     foreach( $name in $WithModule )
     {
         if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )
@@ -87,25 +114,24 @@ function Install-Node
         Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name),('{0}Path' -f $name)) -InstallRoot $downloadCachePath -TaskParameter @{ }
     }
 
-    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
     if( -not (Test-Path -Path $destinationDir -PathType Container) )
     {
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip' -Destination $destinationDir -ErrorAction Ignore
+    Write-Debug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
+    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*','lib','node_modules' -Destination $destinationDir -Recurse -ErrorAction Ignore
 
     Get-ChildItem -Path $modulesRoot |
         Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
         ForEach-Object {
-            $moduleDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
-            $moduleDestinationDir = Join-Path -Path $moduleDestinationDir -ChildPath $_.Name
-            if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
-            {
-                New-Item -Path $moduleDestinationDir -ItemType 'Directory' | Out-Null
-            }
+            $moduleDestinationDir = Join-Path -Path $modulesDestinationDir -ChildPath $_.Name
             if( $IsWindows )
             {
+                if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
+                {
+                    New-Item -Path $moduleDestinationDir -ItemType 'Directory' -Force | Out-Null
+                }
                 Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $moduleDestinationDir
             }
             else
@@ -114,7 +140,7 @@ function Install-Node
             }
         }
 
-    Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Filter '*.zip' |
+    Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include '*.zip','*.tar.*' |
         ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
         Where-Object { -not (Test-Path -Path $_ -PathType Leaf) } |
         ForEach-Object { New-Item -Path $_ -ItemType 'File' }
@@ -386,8 +412,8 @@ function Remove-Node
 
 function Remove-DotNet
 {
-    Get-CimInstance win32_process -filter 'name = "dotnet.exe"' | 
-        Where-Object { $_.ExecutablePath -like ('{0}\*\.dotnet\dotnet.exe' -f $env:TEMP) } |
+    Get-Process -Name 'dotnet' -ErrorAction Ignore |
+        Where-Object { $_.Path -like ('{0}\*\.dotnet\dotnet' -f ([IO.Path]::GetTempPath())) } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
     Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
@@ -402,16 +428,26 @@ function Remove-DotNet
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
 
-# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
-$variablesToExport = @( 'WhiskeyTestDownloadCachePath' )
-if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+
+$SuccessCommandScriptBlock = { 'exit 0' | sh }
+$FailureCommandScriptBlock = { 'exit 1' | sh }
+if( $IsWindows )
 {
-    $IsLinux = $false
-    $IsMacOS = $false
-    $IsWindows = $true
-    $variablesToExport += @( 'IsLinux','IsMacOS','IsWindows' )
+    $SuccessCommandScriptBlock = { cmd /c exit 0 }
+    $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
 
-$WhiskeyTestDownloadCachePath = $downloadCachePath
-
+$variablesToExport = & {
+    'WhiskeyTestDownloadCachePath'
+    'SuccessCommandScriptBlock'
+    'FailureCommandScriptBlock'
+    'WhiskeyPlatform'
+    if( $exportPlatformVars )
+    {
+        'IsLinux'
+        'IsMacOS'
+        'IsWindows'
+    }
+}
+# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 Export-ModuleMember -Function '*' -Variable $variablesToExport

@@ -1,0 +1,35 @@
+version: 0.0.0+{build}
+
+skip_tags: true
+
+matrix:
+  fast_finish: true
+
+environment:
+  NVM_HOME: C:\Users\appveyor\AppData\Roaming\nvm
+  POWERSHELL_GALLERY_API_KEY:
+    secure: Y7B8n8Ott858qlg1xt1Kz7VnvR59aO963p5dquIEQsMUZpvK/Ip5Rmj7G/jBKM6r
+  GITHUB_ACCESS_TOKEN:
+    secure: cEpuAn4TbJ17Y4WMMsHj46T4DLFMGE4n7xafkbiVQL4jueqc9TGG7NHWg4qbwmt7
+  matrix:
+  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+    LANG: us_US.UTF-8
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+build_script:
+- pwsh: >-
+    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    
+    # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
+    $ProgressPreference = 'SilentlyContinue'
+    
+    .\build.ps1 -Verbose
+
+test: off
+
+artifacts:
+- path: .output\pester*.xml
+  name: TestResults
+- path: .output\*.zip
+  name: Packages
+- path: .output\msbuild.*.log

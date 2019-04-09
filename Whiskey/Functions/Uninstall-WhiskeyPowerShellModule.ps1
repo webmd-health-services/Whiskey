@@ -50,9 +50,12 @@ function Uninstall-WhiskeyPowerShellModule
         }
     }
 
-    $psmodulesDirEmpty = $null -eq (Get-ChildItem -Path $modulesRoot -File -Recurse)
-    if( $psmodulesDirEmpty )
+    if( (Test-Path -Path $modulesRoot -PathType Container) )
     {
-        Remove-Item -Path $modulesRoot -Recurse -Force
+        $psmodulesDirEmpty = $null -eq (Get-ChildItem -Path $modulesRoot -File -Recurse)
+        if( $psmodulesDirEmpty )
+        {
+            Remove-Item -Path $modulesRoot -Recurse -Force
+        }
     }
 }

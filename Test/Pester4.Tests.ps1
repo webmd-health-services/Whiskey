@@ -39,14 +39,29 @@ function GivenItDurationReportCount
     $taskParameter['ItDurationReportCount'] = $Count
 }
 
-function GivenTestContext
+function GivenPesterNotPreInstalled
 {
+    Join-Path -Path $TestDrive.FullName -ChildPath 'PSModules' | Remove-Item -Recurse -Force
+}
+
+function Init
+{
+    $script:taskParameter = @{}
     $script:pesterPath = $null
     $script:version = $null
     $script:failed = $false
     $script:taskParameter = @{}
     $Global:Error.Clear()
-    $script:context = New-WhiskeyPesterTestContext
+    $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.\.output'
+    if( -not (Test-Path -Path $outputRoot -PathType Container) )
+    {
+        New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
+    }
+    $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
+    Get-ChildItem -Path $sourceRoot |
+        ForEach-Object { Copy-Item -Path $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) -Recurse } | 
+        Out-Null
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
 
     $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
     if( $PSVersionTable.PSVersion.Major -ge 5 )
@@ -54,15 +69,6 @@ function GivenTestContext
         $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
     }
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-    if(Test-Path $pesterPAth)
-    {
-        Remove-item $pesterPath -Recurse -Force
-    }
-}
-
-function Init
-{
-    $script:taskParameter = @{}
 }
 
 function New-WhiskeyPesterTestContext 
@@ -70,17 +76,6 @@ function New-WhiskeyPesterTestContext
     param()
     process
     {
-        $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.\.output'
-        if( -not (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
-        }
-        $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
-        Get-ChildItem -Path $sourceRoot |
-            ForEach-Object { Copy-Item -Path $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) -Recurse } | 
-            Out-Null
-        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
-        return $context
     }
 }
 
@@ -99,12 +94,12 @@ function GivenVersion
         [string]
         $Version
     )
-    $Script:taskparameter['version'] = $Version
+    $Script:taskParameter['Version'] = $Version
 }
 
 function GivenInvalidVersion
 {
-    $Script:taskparameter['version'] = '4.0.0'
+    $Script:taskParameter['Version'] = '4.0.0'
     Mock -CommandName 'Test-Path' `
         -ModuleName 'Whiskey' `
         -MockWith { return $False }`
@@ -117,7 +112,7 @@ function GivenPesterPath
         [string[]]
         $pesterPath
     )
-    $script:taskParameter['path'] = $pesterPath 
+    $script:taskParameter['Path'] = $pesterPath 
 }
 
 function GivenWithCleanFlag
@@ -376,18 +371,14 @@ function ThenTestShouldCreateMultipleReportFiles
 
 Describe 'Pester4.when running passing Pester tests' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
-    GivenVersion '4.0.3'
     WhenPesterTaskIsInvoked 
     ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-    ThenPesterShouldBeInstalled '4.0.3'
     ThenNoDurationReportPresent
 }
 
 Describe 'Pester4.when running failing Pester tests' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'FailingTests'
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 0
@@ -396,7 +387,6 @@ Describe 'Pester4.when running failing Pester tests' {
 
 Describe 'Pester4.when running multiple test scripts' {
     Init
-    GivenTestContext
     GivenPesterPath 'FailingTests','PassingTests'
     WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
@@ -404,7 +394,6 @@ Describe 'Pester4.when running multiple test scripts' {
 
 Describe 'Pester4.when run multiple times in the same build' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'  
     WhenPesterTaskIsInvoked
     WhenPesterTaskIsInvoked
@@ -414,16 +403,19 @@ Describe 'Pester4.when run multiple times in the same build' {
 
 Describe 'Pester4.when missing Path Configuration' {
     Init
-    GivenTestContext
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
     ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
 }
 
 Describe 'Pester4.when a task path is absolute' {
+    $pesterPath = 'C:\FubarSnafu'
+    if( -not $IsWindows )
+    {
+        $pesterPath = '/FubarSnafu'
+    }
     Init
-    GivenTestContext
-    GivenPesterPath -pesterPath 'C:\FubarSnafu'
+    GivenPesterPath -pesterPath $pesterPath
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
     ThenTestShouldFail -failureMessage 'absolute'
@@ -431,7 +423,6 @@ Describe 'Pester4.when a task path is absolute' {
 
 Describe 'Pester4.when running passing Pester tests with Clean Switch' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenWithCleanFlag
     WhenPesterTaskIsInvoked
@@ -441,18 +432,17 @@ Describe 'Pester4.when running passing Pester tests with Clean Switch' {
 
 Describe 'Pester4.when running passing Pester tests with initialization switch' {
     Init
-    GivenTestContext
+    GivenPesterNotPreInstalled
     GivenPesterPath -pesterPath 'PassingTests'
     GivenWithInitilizeFlag
-    GivenVersion '4.0.3'
+    GivenVersion '4.5.0'
     WhenPesterTaskIsInvoked
     ThenNoPesterTestFileShouldExist
-    ThenPesterShouldBeInstalled '4.0.3'
+    ThenPesterShouldBeInstalled '4.5.0'
 }
 
 Describe 'Pester4.when showing duration reports' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests'
     GivenDescribeDurationReportCount 1
     GivenItDurationReportCount 1
@@ -463,7 +453,6 @@ Describe 'Pester4.when showing duration reports' {
 
 Describe 'Pester4.when excluding tests and an exclusion filter doesn''t match' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests','FailingTests'
     GivenExclude '*fail*','Passing*'
     WhenPesterTaskIsInvoked
@@ -472,9 +461,8 @@ Describe 'Pester4.when excluding tests and an exclusion filter doesn''t match' {
 
 Describe 'Pester4.when excluding tests and exclusion filters match all paths' {
     Init
-    GivenTestContext
     GivenPesterPath -pesterPath 'PassingTests','FailingTests'
-    GivenExclude '*\Fail*','*\Passing*'
+    GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
     WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
     ThenNoPesterTestFileShouldExist
     ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))

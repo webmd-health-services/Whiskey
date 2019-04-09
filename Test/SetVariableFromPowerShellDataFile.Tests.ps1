@@ -99,7 +99,7 @@ Build:
         PrivateData:
             PSData:
                 ReleaseNotes: RELEASE_NOTES
-                TAGS: TAGS
+                Tags: TAGS
 '@
     WhenRunningTask
     $manifest = Test-ModuleManifest -Path $whiskeyPsd1Path

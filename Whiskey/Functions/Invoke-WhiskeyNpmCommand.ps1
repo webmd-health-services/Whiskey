@@ -77,7 +77,7 @@ function Invoke-WhiskeyNpmCommand
     $npmCommandString = ('npm {0} {1}' -f $commandName,($commandArgs -join ' '))
 
     $originalPath = $env:PATH
-    Set-Item -Path 'env:PATH' -Value ('{0};{1}' -f ($nodePath | Split-Path -Parent),$env:PATH)
+    Set-Item -Path 'env:PATH' -Value ('{0}{1}{2}' -f (Split-Path -Path $nodePath -Parent),[IO.Path]::PathSeparator,$env:PATH)
     try
     {
         Write-Progress -Activity $npmCommandString
@@ -96,12 +96,13 @@ function Invoke-WhiskeyNpmCommand
             }
             finally
             {
+                Write-Verbose -Message ($LASTEXITCODE)
                 $ErrorActionPreference = $originalEap
             }
         }
         if( $LASTEXITCODE -ne 0 )
         {
-            Write-Error -Message ('NPM command ''{0}'' failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
+            Write-Error -Message ('NPM command "{0}" failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
         }
     }
     finally

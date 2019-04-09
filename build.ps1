@@ -47,7 +47,18 @@ if( Test-Path -Path ('env:APPVEYOR') )
 $minDotNetVersion = [version]'2.1.503'
 $dotnetVersion = $null
 $dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
-$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath 'dotnet.exe'
+$dotnetExeName = 'dotnet.exe'
+if( -not (Get-Variable 'IsLinux' -ErrorAction SilentlyContinue) ) 
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+}
+if( -not $IsWindows )
+{
+    $dotnetExeName = 'dotnet'
+}
+$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath $dotnetExeName
 
 if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
@@ -57,16 +68,27 @@ if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 
 if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
 {
-    $dotnetInstallParams = @{
-                                Version = $minDotNetVersion.ToString()
-                                InstallDir = $dotnetInstallDir
-                                NoPath = $true
-                            }
-    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
-    $paramMessage = $dotnetInstallParams.Keys | ForEach-Object { '-{0} {1}' -f $_,$dotnetInstallParams[$_] }
-    $paramMessage = $paramMessage -join ' '
-    Write-Verbose -Message ('{0} {1}' -f $dotnetInstallPath,$paramMessage)
-    & $dotnetInstallPath @dotnetInstallParams
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
+    if( $IsWindows )
+    {
+        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+    }
+
+    Write-Verbose -Message ('{0} -Version {1} -InstallDir "{2}" -NoPath' -f $dotnetInstallPath,$minDotNetVersion,$dotnetInstallDir)
+    if( $IsWindows )
+    {
+        & $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
+    }
+    else 
+    {
+        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
+        {
+            Write-Error -Message ('Curl is required to install .NET Core. Please install it with this platform''s (or your) preferred package manager.')
+            exit 1
+        }
+        bash $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
+    }
+
     if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
     {
         Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
@@ -132,13 +154,17 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 # TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
 # fixed, change version numbers to wildcards on the patch version.
 $nestedModules = @{
-                        'PackageManagement' = '1.2.4';
-                        'PowerShellGet' = '2.0.3';
+                        'PackageManagement' = '1.3.1';
+                        'PowerShellGet' = '2.1.2';
                  }
-$whiskeyRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey'
+$privateModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Modules'
+if( -not (Test-Path -Path $privateModulesRoot -PathType 'Container') )
+{
+    New-Item -Path $privateModulesRoot -ItemType 'Directory'
+}
 foreach( $nestedModuleName in $nestedModules.Keys )
 {
-    $moduleRoot = Join-Path -Path $whiskeyRoot -ChildPath $nestedModuleName
+    $moduleRoot = Join-Path -Path $privateModulesRoot -ChildPath $nestedModuleName
     if( -not (Test-Path -Path $moduleRoot -PathType Container) )
     {
         $nestedModuleVersion = $nestedModules[$nestedModuleName]
@@ -147,7 +173,7 @@ foreach( $nestedModuleName in $nestedModules.Keys )
         Start-Job -ScriptBlock {
             Save-Module -Name $using:nestedModuleName `
                         -RequiredVersion $using:nestedModuleVersion `
-                        -Path $using:whiskeyRoot
+                        -Path $using:privateModulesRoot
         } | Wait-Job | Receive-Job | Remove-Job
     }
 }
@@ -158,11 +184,25 @@ $ErrorActionPreference = 'Continue'
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
+Write-Verbose -Message '# VARIABLES'
+Get-Variable | Format-Table | Out-String | Write-Verbose
+
+Write-Verbose -Message '# ENVIRONMENT VARIABLES'
 Get-ChildItem 'env:' |
     Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
     Format-Table |
     Out-String |
     Write-Verbose
+
+Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
+[Environment] |
+    Get-Member -Static -MemberType Property |
+    Where-Object { $_.Name -ne 'StackTrace' } |
+    Select-Object -ExpandProperty 'Name' |
+    ForEach-Object { [pscustomobject]@{ Name = $_ ; Value = [Environment]::$_ } } |
+    Format-Table |
+    Out-String |
+    Write-Verbose 
 
 $optionalArgs = @{ }
 if( $Clean )

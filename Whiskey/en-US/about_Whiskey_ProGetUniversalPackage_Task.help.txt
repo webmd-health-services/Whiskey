@@ -42,7 +42,7 @@ DESCRIPTION
 PROPERTIES
     * `Name` (mandatory): the package's name.
     * `Description` (mandatory): the package's description. This shows in ProGet and helps people know about your application.
-    * `Path` (mandatory): the directories and filenames to include in the package. Each path must relative to the whiskey.yml file. You can change the root path the task uses to resolve these paths with the `SourceRoot` property. Each item is added to the package at the same relative path as its source item. If you have two paths with the same name, the second item will replace the first. You can customize the path of the item in the package by converting the value into a key/value pair, e.g. `source_dir\source_file.ps1`: `destination_dir\destination_file.ps1`.
+    * `Path` (mandatory): the directories and filenames to include in the package. Each path must relative to the whiskey.yml file. You can change the root path the task uses to resolve these paths with the `SourceRoot` property. Each item is added to the package at the same relative path as its source item. If you have two paths with the same name, the second item will replace the first. You can customize the path of the item in the package by converting the value into a key/value pair, e.g. `source_dir\source_file.ps1`: `destination_dir\destination_file.ps1`. To specify the package root as the custom destination path for an item use `.`, e.g. `source_dir\sub_dir: .` would place the contents of the `source_dir\sub_dir` directory in the package root.
     * `Include` (mandatory): a whitelist of wildcards and file names. All directories in the `Path` property are filtered with this list, i.e. only items under each directory in `Path` that matches an item in `Include` will be added to your package.
     * `Exclude`: a list of wildcards, file names, and directory names to exclude from the package. Sometimes a whitelist can be a little greedy and include some files or directories you might not want. Any file or directory that matches an item in this list will be excluded from the package.
     * `ManifestProperties`: name/value mappings to be set in the package's upack.json file. Mandatory upack.json properties are automatically added if they are not specified (e.g. `Name` and `Description`). This property gets converted to JSON and is added to the upack.json as-is. See the upack.json [Manifest Specification](https://inedo.com/support/documentation/upack/universal-packages/metacontent-guidance/manifest-specification) for required properties and format.
@@ -140,7 +140,7 @@ EXAMPLES
             ThirdPartyPath:
             - node_modules
 
-    Thie example demonstrates how to use the `ThirdPartyPath` property. If the file system looks like this:
+    This example demonstrates how to use the `ThirdPartyPath` property. If the file system looks like this:
 
         dist\
             index.js
@@ -179,7 +179,7 @@ EXAMPLES
             Include:
             - "*.dll"
 
-    Thie example demonstrates how to use customize the path an item should have in the package. If this is the file system:
+    This example demonstrates how to customize the path an item should have in the package. If this is the file system:
 
         source\
             Assembly.dll
@@ -211,7 +211,7 @@ EXAMPLES
             ThirdPartyPath:
             - ProGetAutomation
 
-    Thie example demonstrates how to change the root directory the task uses to resolve the relative paths in the `Path`. If the file system is:
+    This example demonstrates how to change the root directory the task uses to resolve the relative paths in the `Path`. If the file system is:
 
         Whiskey\
             Functions\
@@ -267,3 +267,30 @@ EXAMPLES
                     "Tag2"
                 ]
     }
+
+    ## Example 7
+
+        Build:
+        - ProGetUniversalPackage:
+            Name: Example7
+            Description: This package demonstrates using the package root as a custom destination.
+            Path:
+            - .output\assembly: .
+            Include:
+            - "*.dll"
+
+    This example demonstrates how to specify the package root `.` when customizing the path an item should have in the package. If this is the file system:
+
+        .output\
+            assembly\
+                Assembly1.dll
+                Assembly2.dll
+        whiskey.yml
+
+    the package will look like this:
+
+        package\
+            Assembly1.dll
+            Assembly2.dll
+            version.json
+        upack.json

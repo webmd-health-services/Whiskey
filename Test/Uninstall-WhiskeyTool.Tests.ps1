@@ -103,22 +103,25 @@ function ThenNuGetPackageNotUninstalled
     }
 }
 
-Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
-    GivenAnInstalledNuGetPackage
-    WhenUninstallingNuGetPackage
-    ThenNuGetPackageUnInstalled
-}
-
-Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
-    GivenAnInstalledNuGetPackage -WithVersion ''
-    WhenUninstallingNuGetPackage -WithVersion ''
-    ThenNuGetPackageUnInstalled -WithVersion ''
-}
-
-Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
-    GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-    WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-    ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+if( $IsWindows )
+{
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
+        GivenAnInstalledNuGetPackage
+        WhenUninstallingNuGetPackage
+        ThenNuGetPackageUnInstalled
+    }
+    
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
+        GivenAnInstalledNuGetPackage -WithVersion ''
+        WhenUninstallingNuGetPackage -WithVersion ''
+        ThenNuGetPackageUnInstalled -WithVersion ''
+    }
+    
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
+        GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+        WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+        ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+    }    
 }
 
 $toolsInstallRoot = $null

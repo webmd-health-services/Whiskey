@@ -1,4 +1,5 @@
-#Requires -Version 4
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -7,6 +8,22 @@ Set-StrictMode -Version 'Latest'
 $whiskeyYmlPath = $null
 $context = $null
 $warnings = $null
+
+function GivenFile
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]
+        $Name,
+
+        [Parameter(Mandatory)]
+        [string]
+        $Content
+    )
+
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath $Name
+    $Content | Set-Content -Path $path
+}
 
 function Invoke-PreTaskPlugin
 {
@@ -40,24 +57,6 @@ function Invoke-PostTaskPlugin
         [hashtable]
         $TaskParameter
     )
-}
-
-function GivenFailingMSBuildProject
-{
-    param(
-        $Project
-    )
-
-    New-MSBuildProject -FileName $project -ThatFails
-}
-
-function GivenMSBuildProject
-{
-    param(
-        $Project
-    )
-
-    New-MSBuildProject -FileName $project -ThatFails
 }
 
 function GivenPlugins
@@ -94,6 +93,29 @@ function GivenWhiskeyYmlBuildFile
     return $whiskeyymlpath
 }
 
+function ThenFile
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]
+        $Named,
+
+        [Switch]
+        $Not,
+
+        [Parameter(Mandatory)]
+        [Switch]
+        $Exists,
+
+        [Parameter(Mandatory)]
+        [string]
+        $Because
+    )
+
+    It $Because {
+        Join-Path -Path $TestDrive.FullName -ChildPath $Named | Should -Not:$Not -Exist
+    }
+}
 function ThenPipelineFailed
 {
     It 'should throw exception' {
@@ -266,20 +288,19 @@ Build:
 }
 
 Describe 'Invoke-WhiskeyPipeline.when a task fails' {
-    $project = 'project.csproj'
-    $assembly = 'assembly.dll'
+    GivenFile 'ishouldnotrun.ps1' @'
+New-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'iran.txt')
+'@
     GivenWhiskeyYmlBuildFile -Yaml @'
 Build:
 - PowerShell:
     Path: idonotexist.ps1
-- NUnit2:
-    Path: assembly.dll
+- PowerShell:
+    Path: ishouldnotrun.ps1
 '@
-    GivenFailingMSBuildProject $project
     WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
     ThenPipelineFailed
-    ThenDotNetProjectsCompilationFailed -ConfigurationPath $whiskeyYmlPath -ProjectName $project
-    ThenNUnitTestsNotRun
+    ThenFile 'iran.txt' -Not -Exists -Because 'should not execute additional tasks'
 }
 
 Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
@@ -384,26 +405,26 @@ Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event h
 Build:
 - PowerShell:
     Path: somefile.ps1
-- MSBuild:
-    Path: fubar.ps1
+- Version:
+    Version: 0.0.0
 "@
     GivenPlugins -ForSpecificTask 'PowerShell'
     Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-    Mock -CommandName 'Invoke-WhiskeyMSBuild' -ModuleName 'Whiskey'
+    Mock -CommandName 'Set-WhiskeyVersion' -ModuleName 'Whiskey'
 
     WhenRunningPipeline 'Build'
     ThenPipelineSucceeded
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-    ThenPluginsRan -ForTaskNamed 'MSBuild' -Times 0
+    ThenPluginsRan -ForTaskNamed 'Version' -Times 0
 }
 
-# Tasks that should be called with the WhatIf parameter when run by developers
 $tasks = Get-WhiskeyTask
 foreach( $task in $tasks )
 {
     $taskName = $task.Name
     $functionName = $task.CommandName
 
+    # Skip tasks that can't run on this platform
     Describe ('Invoke-WhiskeyPipeline.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
@@ -440,8 +461,19 @@ foreach( $task in $tasks )
 '@ -f $pipelineName,$taskName)
 
         GivenWhiskeyYmlBuildFile $whiskeyYml
-        WhenRunningPipeline $pipelineName
-        ThenPipelineSucceeded
-        Assert-TaskCalled
+        WhenRunningPipeline $pipelineName -ErrorAction SilentlyContinue
+        if( $task.Platform.HasFlag($WhiskeyPlatform) )
+        {
+            ThenPipelineSucceeded
+            Assert-TaskCalled
+        }
+        else
+        {
+            ThenPipelineFailed
+            It ('should not run task') {
+                Assert-MockCalled -CommandName $functionName -ModuleName 'Whiskey' -Times 0
+            }
+        }
+    
     }
 }

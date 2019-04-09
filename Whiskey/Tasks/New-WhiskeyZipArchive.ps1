@@ -2,7 +2,7 @@
 function New-WhiskeyZipArchive
 {
     [Whiskey.Task("Zip")]
-    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.2.*',VersionParameterName='ZipVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.3.*',VersionParameterName='ZipVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -24,6 +24,7 @@ function New-WhiskeyZipArchive
     {
         $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
     }
+    $archivePath = Join-Path -Path $archivePath -ChildPath '.'  # Get PowerShell to convert directory separator characters.
     $archivePath = [IO.Path]::GetFullPath($archivePath)
     $buildRootRegex = '^{0}(\\|/)' -f [regex]::Escape($TaskContext.BuildRoot)
     if( $archivePath -notmatch $buildRootRegex )
@@ -129,7 +130,7 @@ function New-WhiskeyZipArchive
         foreach( $sourcePath in $sourcePaths )
         {
             $relativePath = $sourcePath -replace $sourceRootRegex,''
-            $relativePath = $relativePath.Trim('\')
+            $relativePath = $relativePath.Trim([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
 
             $addParams = @{ BasePath = $sourceRoot }
             $overrideInfo = ''

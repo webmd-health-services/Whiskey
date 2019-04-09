@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.40.0'
+    ModuleVersion = '0.41.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -148,16 +148,23 @@
             # A URL to an icon representing this module.
             # IconUri = ''
 
+            # Any prerelease to use when publishing to a repository.
+            Prerelease = ''
+
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* You can now use the [Environment class's static properties](https://docs.microsoft.com/en-us/dotnet/api/system.environment#properties) as Whiskey variables. Using these variables are now recommended over environment variables, since the existence of some environment variables varies between operating systems.
-* Added `WHISKEY_TEMP_DIRECTORY` built-in variable to get the path to the global/system temporary directory. This uses the value returned by the .NET [Path.GetTempPath()] method.
-* Added `WHISKEY_TASK_TEMP_DIRECTORY` built-in variable to get the path to the currently executing task's temporary directory, which Whiskey creates/deletes as each task runs.
-* Created `ConvertFrom-WhiskeyContext` and `ConvertTo-WhiskeyContext` functions for securely serializing/deserializing Whiskey's context object into background jobs. PowerShell on Linux/MacOS can't serialize `SecureString` objects. Created these functions to work around that limitation. Used by Whiskey's `Parallel` and `PowerShell` tasks.
-* Added support for tasks to define what platform/operating system they can run on with a new `Platform` property on the task attribute. If a task can only run on a specific platform, set the `Platform` property to the platform is supports, e.g. `[Whiskey.TaskAttribute('SomeTask',Platform=([Whiskey.Platform]::Windows))]`. Valid platforms are `Windows`, `Linux`, and `MacOS`. The default platform is `All`.
-* Added `OnlyOnPlatform` and `ExceptOnPlatform` common task properties that control the platforms on which a task will or will not be run. Valid platforms are `Windows`, `Linux`, and `MacOS`.
-* Fixed: `ProGetUniversalPackage` task doesn''t fail the build if there were errors when adding files to the package.
-* Updated all tasks that use the ProGetAutomation module to default to using version 0.9.* (from 0.8.*).
+* Adding Linux and MacOS support. Whiskey is now cross-platform!
+* Upgrading to PowerShellGet version 2.0.4.
+* Upgrading to PackageManagement version 1.3.0.
+* Updating BuildMaster tasks to use BuildMasterAutomation PowerShell module version 0.6.0 (from 0.5.0).
+* Updating Bitbucket Server tasks to use BitbucketServerAutomation PowerShell module version 0.9.0 (from 0.8.0).
+* Updating Ziptask to use Zip PowerShell module version 0.3.0 (from 0.2.0).
+* Fixed: PowerShell module import verbose messages appear when running the `Parallel` task.
+* Fixed: `ProGetUniversalPackage` places files in a `.` directory when using the `source_dir: .` syntax to specify the package root as the destination path for items in a package.
+* Fixed: Publishing a PowerShell module fails if old versions of PackageManagement and PowerShellGet are installed in a directory given by `PSModulePath`. See https://github.com/PowerShell/PowerShellGet/issues/446 .
+* The `PublishPowerShellModule` task now adds the current build's prerelease to the module manifest before publishing.
+* The `PublishPowerShellModule` task's `RepositoryUri` property is now only required if the task needs to register a new/custom repository (i.e. the repository given by the task's `RepositoryName` parameter doesn't exist).
+* The `PublishPowerShellModule` task can now register a repository that requires a credential. Use the `CredentialID` property to set the ID of the credential in your whiskey.yml file and `Add-WhiskeyCredential` in your build script to add the credential.
 '@
         } # End of PSData hashtable
 

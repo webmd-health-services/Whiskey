@@ -25,7 +25,7 @@ function New-WhiskeyProGetUniversalPackage
         $manifestProperties = $TaskParameter['ManifestProperties']
         foreach( $taskProperty in @( 'Name', 'Description', 'Version' ))
         {
-            if( $manifestProperties.ContainsKey($taskProperty) )
+            if( $manifestProperties.Keys -contains $taskProperty )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"ManifestProperties" contains key "{0}". This property cannot be manually defined in "ManifestProperties" as it is set automatically from the corresponding task property "{0}".' -f $taskProperty)
                 return
@@ -236,9 +236,13 @@ function New-WhiskeyProGetUniversalPackage
                 if( $override )
                 {
                     $addParams['BasePath'] = $sourcePath
-                    $addParams['PackageParentPath'] = $destinationItemName
                     $addParams.Remove('PackageItemName')
                     $overrideInfo = ' -> {0}' -f $destinationItemName
+
+                    if ($destinationItemName -ne '.')
+                    {
+                        $addParams['PackageParentPath'] = $destinationItemName
+                    }
                 }
 
                 Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)

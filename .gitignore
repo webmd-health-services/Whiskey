@@ -9,7 +9,7 @@ PSModules
 .whsgallerykey
 *.orig
 packages
-Test/.downloadcache
+Test/.downloadcache-*
 Whiskey/bin/Whiskey.dll
 Whiskey/bin/SemanticVersion.dll
 Assembly/**/obj/**
@@ -19,5 +19,4 @@ Assembly/Whiskey/Properties/AssemblyVersion.cs
 *.user
 /.vscode/**
 /.dotnet/**
-/Whiskey/PackageManagement/**
-/Whiskey/PowerShellGet/**
+/Whiskey/Modules/**

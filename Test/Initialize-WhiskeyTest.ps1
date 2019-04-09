@@ -17,7 +17,7 @@ foreach( $name in @( 'PackageManagement', 'PowerShellGet' ) )
         Remove-Module -Name $name -Force
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\Whiskey\{0}' -f $name) -Resolve) -Force
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\Whiskey\Modules\{0}' -f $name) -Resolve) -Force
 }
 
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force

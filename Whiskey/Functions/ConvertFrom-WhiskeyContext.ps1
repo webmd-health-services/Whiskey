@@ -39,9 +39,9 @@ function ConvertFrom-WhiskeyContext
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        $credentialKey = New-Object 'byte[]' (256/8)
+        $key = New-Object 'byte[]' (256/8)
         $rng = New-Object 'Security.Cryptography.RNGCryptoServiceProvider'
-        $rng.GetBytes($credentialKey)
+        $rng.GetBytes($key)
     }
 
     process 
@@ -50,22 +50,31 @@ function ConvertFrom-WhiskeyContext
         $serializableCredentials = @{ }
         foreach( $credentialID in $Context.Credentials.Keys )
         {
-            [pscredential]$credential = $TaskContext.Credentials[$credentialID]
+            [pscredential]$credential = $Context.Credentials[$credentialID]
             $serializableCredential = [pscustomobject]@{ 
                                                             UserName = $credential.UserName;
-                                                            Password = ConvertFrom-SecureString -SecureString $credential.Password -Key $credentialKey
+                                                            Password = ConvertFrom-SecureString -SecureString $credential.Password -Key $key
                                                         }
             $serializableCredentials[$credentialID] = $serializableCredential
         }
 
+        $serializableApiKeys = @{ }
+        foreach( $apiKeyID in $Context.ApiKeys.Keys )
+        {
+            [securestring]$apiKey = $Context.ApiKeys[$apiKeyID]
+            $serializableApiKey = ConvertFrom-SecureString -SecureString $apiKey -Key $key
+            $serializableApiKeys[$apiKeyID] = $serializableApiKey
+        }
+
         $Context | 
-            Select-Object -Property '*' -ExcludeProperty 'Credentials' | 
+            Select-Object -Property '*' -ExcludeProperty 'Credentials','ApiKeys' | 
             Add-Member -MemberType NoteProperty -Name 'Credentials' -Value $serializableCredentials -PassThru |
-            Add-Member -MemberType NoteProperty -Name 'CredentialKey' -Value $credentialKey.Clone() -PassThru
+            Add-Member -MemberType NoteProperty -Name 'ApiKeys' -Value $serializableApiKeys -PassThru |
+            Add-Member -MemberType NoteProperty -Name 'CredentialKey' -Value $key.Clone() -PassThru
     }
 
     end
     {
-        [Array]::Clear($credentialKey,0,$credentialKey.Length)
+        [Array]::Clear($key,0,$key.Length)
     }
 }

@@ -1,18 +1,6 @@
 
 function Install-WhiskeyNode
 {
-    <#
-    .SYNOPSIS
-    
-
-    .DESCRIPTION
-    
-
-    .EXAMPLE
-    
-
-    
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -118,8 +106,21 @@ function Install-WhiskeyNode
         New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
     }
 
-    $extractedDirName = 'node-{0}-win-x64' -f $nodeVersionToInstall.version
-    $filename = '{0}.zip' -f $extractedDirName
+    $platform = 'win'
+    $packageExtension = 'zip'
+    if( $IsLinux )
+    {
+        $platform = 'linux'
+        $packageExtension = 'tar.xz'
+    }
+    elseif( $IsMacOS )
+    {
+        $platform = 'darwin'
+        $packageExtension = 'tar.gz'
+    }
+
+    $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
+    $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
     $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
     if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
     {
@@ -149,19 +150,21 @@ function Install-WhiskeyNode
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
             Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
             & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-Verbose
+
+            Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
+                Get-ChildItem |
+                Move-Item -Destination $nodeRoot
         }
         else
         {
-            if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+            Write-Verbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
+            tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-Verbose
+            if( $LASTEXITCODE )
             {
-                New-Item -Path $nodeRoot -ItemType 'Directory' | Out-Null
+                Write-Error -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFile,$nodeRoot)
+                return
             }
-            [IO.Compression.ZipFile]::ExtractToDirectory($nodeZipFile,$nodeRoot)
         }
-
-        Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
-            Get-ChildItem |
-            Move-Item -Destination $nodeRoot
 
         $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Stop
     }
