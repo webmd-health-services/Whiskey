@@ -191,6 +191,16 @@ If you want certain branches to always have certain prerelease versions, set Pre
                         Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}  -notlike  {1}' -f $TaskContext.BuildMetadata.ScmBranch,$wildcardPattern)
                     }
                 }
+
+                if( $foundLabel )
+                {
+                    break
+                }
+            }
+
+            if( $foundLabel )
+            {
+                break
             }
         }
 
