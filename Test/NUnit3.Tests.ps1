@@ -12,6 +12,7 @@ $coverageFilter = $null
 $disableCodeCoverage = $false
 $failed = $false
 $framework = $null
+$targetResultFormat = $null
 $initialize = $null
 $openCoverVersion = $null
 $openCoverArgument = $null
@@ -35,6 +36,7 @@ function Init
     $script:disableCodeCoverage = $false
     $script:failed = $false
     $script:framework = $null
+    $script:targetResultFormat = $null
     $script:initialize = $null
     $script:openCoverVersion = $null
     $script:openCoverArgument = $null
@@ -44,22 +46,28 @@ function Init
     $script:reportGeneratorVersion = $null
     $script:reportGeneratorArgument = $null
     $script:nunitVersion = $null
+    $script:supportNUnit2 = $false
 
     $script:buildRoot = $TestDrive.FullName
 
     $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
 
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit3*\bin\*\*') -Destination $buildRoot
+    # Test assemblies in separate folders to avoid cross-reference of NUnit Framework assembly versions
+    @(3, 2) | ForEach-Object  {
+        New-Item (Join-Path $buildRoot "NUnit$($_)Tests") -Type Directory
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath "Assemblies\NUnit$($_)*Test\bin\*\*") `
+            -Destination (Join-Path $buildRoot "NUnit$($_)Tests")
+    }
 }
 
 function Get-NunitXmlElement
 {
     param(
+        $ReportFile,
         $Element
     )
 
-    Get-ChildItem -Path $outputDirectory -Filter 'nunit3*.xml' |
-        Get-Content -Raw |
+    Get-Content $reportFile.FullName -Raw |
         ForEach-Object {
             $testResult = [xml]$_
             $testResult.SelectNodes(('//{0}' -f $Element))
@@ -119,14 +127,40 @@ function GivenPath
 
     $script:path = $Path
 }
+
+function GivenSupportNUnit2
+{
+    param(
+        [bool]
+        $EnableSupport = $true
+    )
+
+    $script:supportNUnit2 = $EnableSupport
+}
+
+function GetPassingTestPath
+{
+    return Join-Path 'NUnit3Tests' 'NUnit3PassingTest.dll'
+}
+
+function GetPassingNUnit2TestPath
+{
+    return Join-Path 'NUnit2Tests' 'NUnit2PassingTest.dll'
+}
+
+function GetFailingTestPath
+{
+    return Join-Path 'NUnit3Tests' 'NUnit3FailingTest.dll'
+}
+
 function GivenPassingPath
 {
-    $script:path = 'NUnit3PassingTest.dll'
+    GivenPath (GetPassingTestPath)
 }
 
 function GivenFailingPath
 {
-    $script:path = 'NUnit3FailingTest.dll'
+    GivenPath (GetFailingTestPath)
 }
 
 function GivenFramework
@@ -136,6 +170,15 @@ function GivenFramework
     )
 
     $script:framework = $Version
+}
+
+function GivenResultFormat
+{
+    param(
+        $ResultFormat
+    )
+
+    $script:targetResultFormat = $ResultFormat
 }
 
 function GivenTestFilter
@@ -182,7 +225,7 @@ function WhenRunningTask
         $InCleanMode
     )
 
-    $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName -ForOutputDirectory $outputDirectory
+    $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
 
     $taskParameter = @{}
 
@@ -209,6 +252,11 @@ function WhenRunningTask
     if ($framework)
     {
         $taskParameter['Framework'] = $framework
+    }
+
+    if ($targetResultFormat)
+    {
+        $taskParameter['NUnitResultFormat'] = $targetResultFormat
     }
 
     if ($argument)
@@ -241,6 +289,11 @@ function WhenRunningTask
         $taskParameter['Version'] = $nunitVersion
     }
 
+    if ($supportNUnit2)
+    {
+        $taskParameter['SupportNUnit2'] = $supportNUnit2
+    }
+
     if ($InCleanMode)
     {
         $taskContext.RunMode = 'Clean'
@@ -260,7 +313,7 @@ function WhenRunningTask
 
     Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
 
-    Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
+    Copy-Item -Path $packagesRoot -Destination $buildRoot -Recurse -ErrorAction Ignore
 
     try
     {
@@ -336,7 +389,9 @@ function ThenRanNUnitWithNoHeaderArgument
 
 function ThenRanWithSpecifiedFramework
 {
-    $resultFramework = Get-NunitXmlElement -Element 'setting'
+    $nunitReport = GetGeneratedNUnitReport
+
+    $resultFramework = Get-NunitXmlElement -ReportFile $nunitReport -Element 'setting'
     $resultFramework = $resultFramework | Where-Object { $_.name -eq 'RuntimeFramework' } | Select-Object -ExpandProperty 'value'
 
     It 'should run with specified framework' {
@@ -377,7 +432,9 @@ function ThenRanOnlySpecificTest
         $TestName
     )
 
-    $testResults = Get-NunitXmlElement -Element 'test-case'
+    $nunitReport = GetGeneratedNUnitReport
+
+    $testResults = Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-case'
     $testResultsCount = $testResults.name | Measure-Object | Select-Object -ExpandProperty Count
 
     $testNameCount = $TestName | Measure-Object | Select-Object -ExpandProperty Count
@@ -391,29 +448,37 @@ function ThenRanOnlySpecificTest
     }
 }
 
+function GetGeneratedNUnitReport {
+    param(
+        $ResultFormat = 'nunit3'
+    )
+
+    return Get-ChildItem -Path $outputDirectory -Filter "$($ResultFormat)*.xml"
+}
+
 function ThenNUnitReportGenerated
 {
-    $nunitReport = Get-ChildItem -Path $outputDirectory -Filter 'nunit3*.xml' -Recurse
+    param(
+        $ResultFormat = 'nunit3'
+    )
 
-    It 'should run NUnit tests' {
-        $nunitReport | Should -Not -BeNullOrEmpty
+    $nunitReport = GetGeneratedNUnitReport -ResultFormat $ResultFormat
+
+    It 'should run NUnit test and generate output' {
+        $nunitReport | Should -Not -BeNullOrEmpty -Because 'test results should be saved'
     }
 
-    It ('should generate reports that support running task in parallel') {
-        $nunitReport | Select-Object -ExpandProperty 'Name' | Should -Match '^nunit3\+.{8}\..{3}\.xml'
+    It 'should generate reports that support running task in parallel' {
+        $nunitReport | Select-Object -ExpandProperty 'Name' | Should -Match "^$($ResultFormat)\+.{8}\..{3}\.xml"
     }
 
     It 'should write results to report xml file' {
-        Get-NunitXmlElement -Element 'test-case' | Should -Not -BeNullOrEmpty
-    }
-}
-
-function ThenNUnitReportDoesntExist
-{
-    $nunitReport = Get-ChildItem -Path $outputDirectory -Filter 'nunit3-*.xml' -Recurse
-
-    It 'should not create NUnit report xml' {
-        $nunitReport | Should -BeNullOrEmpty
+        if ($ResultFormat -eq 'nunit3') {
+            Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-run' | Should -Not -BeNullOrEmpty
+        } else {
+            Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-results' | Should -Not -BeNullOrEmpty
+        }
+        Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-case' | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -447,10 +512,10 @@ function ThenCodeCoverageReportNotCreated
 
 function ThenNUnitShouldNotRun
 {
-    $nunitReport = Get-ChildItem -Path $outputDirectory -Filter 'nunit3-*.xml' -Recurse
+    $nunitReport = GetGeneratedNUnitReport
 
     It 'should not run NUnit tests' {
-        $nunitReport | Should -BeNullOrEmpty
+        $nunitReport | Should -BeNullOrEmpty -Because 'test results should not be saved if NUnit does not run'
     }
 }
 
@@ -501,7 +566,8 @@ Invoke-WhiskeyBuild -Context $taskContext
 Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
 & $nugetPath install OpenCover -OutputDirectory $packagesRoot
 & $nugetPath install ReportGenerator -OutputDirectory $packagesRoot
-& $nugetPath install NUnit.Runners -Version $latestNUnit3Version -OutputDirectory $packagesRoot
+& $nugetPath install NUnit.ConsoleRunner -Version $latestNUnit3Version -OutputDirectory $packagesRoot
+& $nugetPath install NUnit.Console -Version $latestNUnit3Version -OutputDirectory $packagesRoot
 
 Describe 'NUnit3.when running in Clean mode' {
     Init
@@ -536,30 +602,45 @@ Describe 'NUnit3.when missing Path parameter' {
 
 Describe 'NUnit3.when given bad Path' {
     Init
-    GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3FailingTest.dll','nonexistentfile'
+    GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3FailingTest.dll', 'nonexistentfile'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'does not exist.'
 }
 
-foreach ($package in @('NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
-{
-    Describe ('NUnit3.when "{0}" fails to install' -f $package) {
-        Init
-        GivenPassingPath
-        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $package }
-        WhenRunningTask -ErrorAction SilentlyContinue
-        ThenTaskFailedWithMessage ('"{0}" failed to install.' -f $package)
+Describe 'NUnit3.when module fails to install' {
+    foreach ($package in @('NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
+    {
+        Context ('for missing "{0}" module' -f $package) {
+            Init
+            Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $package }
+            WhenRunningTask -ErrorAction SilentlyContinue
+            ThenTaskFailedWithMessage ('"{0}" failed to install.' -f $package)
+        }
     }
 }
 
-foreach ($executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe'))
-{
-    Describe ('NUnit3.when "{0}" cannot be located' -f $executable) {
-        Init
-        GivenPassingPath
-        Mock -CommandName 'Get-ChildItem' -ModuleName 'Whiskey' -ParameterFilter { $Filter -eq $executable }
-        WhenRunningTask -ErrorAction SilentlyContinue
-        ThenTaskFailedWithMessage ('Unable to find "{0}"' -f $executable)
+Describe 'NUnit3.when module fails to install while supporting NUnit2' {
+    foreach ($package in @('NUnit.Console') + @('NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
+    {
+        Context ('for missing "{0}" module' -f $package) {
+            Init
+            GivenSupportNUnit2
+            Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $package }
+            WhenRunningTask -ErrorAction SilentlyContinue
+            ThenTaskFailedWithMessage ('"{0}" failed to install.' -f $package)
+        }
+    }
+}
+
+Describe 'NUnit3.when module executables cannot be found' {
+    foreach ($executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe'))
+    {
+        Context ('for missing "{0}" executable' -f $executable) {
+            Init
+            Mock -CommandName 'Get-ChildItem' -ModuleName 'Whiskey' -ParameterFilter { $Filter -eq $executable }
+            WhenRunningTask -ErrorAction SilentlyContinue
+            ThenTaskFailedWithMessage ('Unable to find "{0}"' -f $executable)
+        }
     }
 }
 
@@ -575,7 +656,7 @@ Describe 'NUnit3.when running NUnit tests with disabled code coverage' {
 
 Describe 'NUnit3.when running NUnit tests with multiple paths' {
     Init
-    GivenPath 'NUnit3PassingTest.dll','NUnit3PassingTest.dll'
+    GivenPath (GetPassingTestPath), (GetPassingTestPath)
     WhenRunningTask
     ThenNUnitReportGenerated
     ThenCodeCoverageReportGenerated
@@ -584,7 +665,7 @@ Describe 'NUnit3.when running NUnit tests with multiple paths' {
 
 Describe 'NUnit3.when running failing NUnit tests' {
     Init
-    GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
+    GivenPath (GetFailingTestPath), (GetPassingTestPath)
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenNUnitReportGenerated
     ThenCodeCoverageReportGenerated
@@ -602,10 +683,31 @@ Describe 'NUnit3.when running NUnit tests with specific framework' {
     ThenTaskSucceeded
 }
 
+Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
+    Init
+    GivenSupportNUnit2
+    GivenPath (GetPassingNUnit2TestPath)
+    WhenRunningTask
+    ThenNUnitReportGenerated
+    ThenCodeCoverageReportGenerated
+    ThenTaskSucceeded
+}
+
+Describe 'NUnit3.when running NUnit2 tests generating NUnit2 output' {
+    Init
+    GivenSupportNUnit2
+    GivenPath (GetPassingNUnit2TestPath)
+    GivenResultFormat 'nunit2'
+    WhenRunningTask
+    ThenNUnitReportGenerated -ResultFormat 'nunit2'
+    ThenCodeCoverageReportGenerated
+    ThenTaskSucceeded
+}
+
 Describe 'NUnit3.when running NUnit with extra arguments' {
     Init
     GivenPassingPath
-    GivenArgument '--noheader','--dispose-runners'
+    GivenArgument '--noheader', '--dispose-runners'
     WhenRunningTask
     ThenNUnitReportGenerated
     ThenCodeCoverageReportGenerated
@@ -618,7 +720,7 @@ Describe 'NUnit3.when running NUnit with bad arguments' {
     GivenPassingPath
     GivenArgument '-badarg'
     WhenRunningTask -ErrorAction SilentlyContinue
-    ThenNUnitReportDoesntExist
+    ThenNUnitShouldNotRun
     ThenTaskFailedWithMessage 'NUnit3 didn''t run successfully'
 }
 
@@ -654,9 +756,10 @@ Describe 'NUnit3.when running NUnit tests with OpenCover argument' {
     ThenOutput -Contains '====Unvisited Classes===='
     ThenTaskSucceeded
 }
+
 Describe 'NUnit3.when running NUnit tests with OpenCover coverage filter' {
     Init
-    GivenPath 'NUnit3FailingTest.dll', 'NUnit3PassingTest.dll'
+    GivenPath (GetFailingTestPath), (GetPassingTestPath)
     GivenCoverageFilter '-[NUnit3FailingTest]*','+[NUnit3PassingTest]*'
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenNUnitReportGenerated
