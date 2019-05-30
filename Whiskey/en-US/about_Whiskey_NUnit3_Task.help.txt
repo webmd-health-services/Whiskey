@@ -29,8 +29,7 @@ PROPERTIES
     * `OpenCoverArgument`: a list of additional arguments to pass to the OpenCover console.
     * `ReportGeneratorVersion`: the version of ReportGenerator to use. Defaults to the latest version available.
     * `ReportGeneratorArgument`: a list of additional arguments to pass to the ReportGenerator console.
-    * `SupportNUnit2`: boolean indicating if NUnit2 test support should be enabled. Defaults to false and is only intended for old non-migrated NUnit2 test projects.
-    * `NUnitResultFormat`: the result format of NUnit itself. See NUnit for supported formats. Defaults to 'nunit3'.
+    * `ResultFormat`: the result format of NUnit itself. See NUnit for supported formats. Defaults to 'nunit3'.
 
 EXAMPLES
 
