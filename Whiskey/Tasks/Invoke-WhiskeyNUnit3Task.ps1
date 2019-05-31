@@ -16,9 +16,14 @@ function Invoke-WhiskeyNUnit3Task
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
+    # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
+    $nunitSupportPackage = 'NUnit.Console'
     $nunitPackage = 'NUnit.ConsoleRunner'
+
     # Due to a bug in NuGet we can't search for and install packages with wildcards (e.g. 3.*), so we're hardcoding a version for now. See Resolve-WhiskeyNuGetPackageVersion for more details.
-    $nunitVersion = '3.7.0'
+    # (This is the vesrion of NUnit.Console/NUnit.ConsoleRunner which may differ from the core NUnit library version.)
+    $nunitVersion = '3.10.0'
     if( $TaskParameter['Version'] )
     {
         $nunitVersion = $TaskParameter['Version']
@@ -29,8 +34,15 @@ function Invoke-WhiskeyNUnit3Task
         }
     }
 
-    $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit3+{0}.xml' -f [IO.Path]::GetRandomFileName())
-    $nunitReportParam = '--result={0}' -f $nunitReport
+    $reportFormat = 'nunit3';
+    if ($TaskParameter['ResultFormat'])
+    {
+        $reportFormat = $TaskParameter['ResultFormat']
+    }
+
+    # NUnit3 currently allows 'nunit2' and 'nunit3' which aligns with output filename usage
+    $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('{0}+{1}.xml' -f  $reportFormat, [IO.Path]::GetRandomFileName())
+    $nunitReportParam = '--result={0};format={1}' -f $nunitReport, $reportFormat
 
     $openCoverVersionParam = @{}
     if ($TaskParameter['OpenCoverVersion'])
@@ -46,9 +58,17 @@ function Invoke-WhiskeyNUnit3Task
 
     if( $TaskContext.ShouldClean )
     {
+        Uninstall-WhiskeyTool -NuGetPackageName $nunitSupportPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
         Uninstall-WhiskeyTool -NuGetPackageName $nunitPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
         Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionParam
         Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
+        return
+    }
+
+    $nunitSupportPath = Install-WhiskeyTool -NuGetPackageName $nunitSupportPackage -Version $nunitVersion -DownloadRoot $TaskContext.BuildRoot
+    if (-not $nunitSupportPath)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package "{0}" failed to install.' -f $nunitSupportPackage)
         return
     }
 
