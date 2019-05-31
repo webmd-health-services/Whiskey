@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.41.1'
+    ModuleVersion = '0.42.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -154,6 +154,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: `Version` task uses the last matching item in the prerelease label branch map instead of the first match.
+* NUnit3 task supports running NUnit2 tests and uses version 3.10 of ConsoleRunner.
 '@
         } # End of PSData hashtable
 
