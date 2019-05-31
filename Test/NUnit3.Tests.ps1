@@ -3,7 +3,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 # Build the assemblies that use NUnit3. Only do this once.
-$latestNUnit3Version = '3.7.0'
+$latestNUnit3Version = '3.10.0'
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 $argument = $null
