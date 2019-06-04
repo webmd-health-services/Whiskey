@@ -20,15 +20,34 @@ if( -not ($attr | Get-Member 'Platform') )
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
 }
 
-$context = New-Object -TypeName 'Whiskey.Context'
-$propertiesToCheck = @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
-foreach( $propertyToCheck in $propertiesToCheck )
+function Assert-Member
 {
-    if( -not ($context | Get-Member $propertyToCheck) )
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]
+        $Object,
+
+        [Parameter(Mandatory)]
+        [string[]]
+        $Property
+    )
+
+    foreach( $propertyToCheck in $Property )
     {
-        Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+        if( -not ($Object | Get-Member $propertyToCheck) )
+        {
+            Write-Debug -Message ('Object "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck)
+            Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+        }
     }
 }
+
+$context = New-Object -TypeName 'Whiskey.Context'
+Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
+
+$taskAttribute = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Fubar'
+Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments

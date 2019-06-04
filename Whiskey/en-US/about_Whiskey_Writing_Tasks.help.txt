@@ -77,6 +77,16 @@ LONG DESCRIPTION
 
         [Whiskey.Task('TASK_NAME',Platform=[Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux)]
 
+    # Aliases
+
+    You can define aliases for your task name. This is useful for making your tasks more discoverable or for re-naming tasks without requiring people to update their build scripts when they upgrade. Use the `Aliases` property to define a list of aliases.
+
+        [Whiskey.Task('TASK_NAME',Aliases=('OldName','AnotherOldName'))]
+
+    If you want to warn when someone uses your task using an aliased name, set the `WarnWhenUsingAlias` property to `$true`.
+
+        [Whiskey.Task('TASK_NAME',Aliases=('DeprecatedName'),WarnWhenUsingAlias=$true)]
+
     # Tools
 
     Whiskey can automatically install some tools for your task. The path to that tool is passed to your task in the `TaskParameter` parameter.

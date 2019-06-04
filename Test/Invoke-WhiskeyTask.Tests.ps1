@@ -1617,4 +1617,64 @@ Describe ('Invoke-WhiskeyTask.when ExceptOnPlatform is invalid') {
     ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
 }
 
+Describe ('Invoke-WhiskeyTask.when invoking a task using its alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName','AnotherOldName'))]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{}
+        It ('should run the task using its alias') {
+            $aliasedTaskRan | Should -BeTrue
+        }
+
+        # Now, do it with another alias.
+        $global:aliasedTaskRan = $false
+        WhenRunningTask 'AnotherOldName' -Parameter @{}
+        It ('should run the task using its alias') {
+            $aliasedTaskRan | Should -BeTrue
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when warning about using an alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{} -WarningVariable 'warnings'
+        It ('should write warnings') {
+            $warnings | Should -Not -BeNullOrEmpty
+            $warnings | Should -Match 'is\ an\ alias'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+    }
+}
+
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore

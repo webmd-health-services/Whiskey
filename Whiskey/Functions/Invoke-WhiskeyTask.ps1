@@ -117,6 +117,15 @@ function Invoke-WhiskeyTask
 
     if( -not $task )
     {
+        $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
+        if( $task -and $task.WarnWhenUsingAlias )
+        {
+            Write-Warning -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
+        }
+    }
+
+    if( -not $task )
+    {
         $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object
         throw ('{0}: {1}[{2}]: ''{3}'' task does not exist. Supported tasks are:{4} * {5}' -f $TaskContext.ConfigurationPath,$Name,$TaskContext.TaskIndex,$Name,[Environment]::NewLine,($knownTaskNames -join ('{0} * ' -f [Environment]::NewLine)))
     }
