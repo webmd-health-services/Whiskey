@@ -4,24 +4,29 @@ function Restore-WhiskeyNuGetPackage
     [CmdletBinding()]
     [Whiskey.TaskAttribute("NuGetRestore",Platform='Windows')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Tasks.ValidatePath(Mandatory)]
+        [string[]]
+        $Path,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [string[]]
+        $Argument,
+
+        [string]
+        $Version,
+
+        [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_BUILD_ROOT')]
+        [IO.DirectoryInfo]
+        $BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $BuildRoot -Version $Version
 
-    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
-
-    foreach( $item in $path )
+    foreach( $item in $Path )
     {
-        & $nuGetPath 'restore' $item $TaskParameter['Argument']
+        & $nuGetPath 'restore' $item $Argument
     }
 }
