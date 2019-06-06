@@ -40,7 +40,7 @@ Build:
 - Pester4:
     OnlyOnPlatform: Linux
     Path:
-    - "Test\*.Tests.ps1"
+    - "Test\\*.Tests.ps1"
 
 - Parallel:
     OnlyBy: BuildServer
