@@ -451,5 +451,5 @@ Describe 'NuGetPack.when Properties property is invalid' {
     GivenPath 'package.nuspec'
     WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
     ThenPackageNotCreated
-    ThenTaskThrowsAnException 'Properties:\ Property\ is\ invalid'
+    ThenTaskThrowsAnException 'Property\ is\ invalid'
 }

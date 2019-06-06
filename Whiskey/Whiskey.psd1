@@ -157,6 +157,7 @@
 * Fixed: `Version` task uses the last matching item in the prerelease label branch map instead of the first match.
 * NUnit3 task supports running NUnit2 tests and uses version 3.10 of ConsoleRunner.
 * Task authors can now define task aliases. Use the `Aliases` property on your task's `TaskAttribute` attribute. Build scripts can then use your task using its name or one of its aliases. See `about_Whiskey_Writing_Tasks` for more information.
+* Whiskey tasks can now have named parameters and Whiskey will pass task properties from the build YAML file that match a parameter on a task's function. See about_Whiskey_Writing_Tasks for more information.
 '@
         } # End of PSData hashtable
 

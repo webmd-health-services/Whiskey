@@ -4,27 +4,33 @@ function Publish-WhiskeyNuGetPackage
     [Whiskey.Task("NuGetPush",Platform='Windows',Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),WarnWhenUsingAlias=$true)]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(PathType='File')]
+        [string[]]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
-    if( -not ($TaskParameter.ContainsKey('Path')))
+    if( -not $Path )
     {
-        $TaskParameter['Path'] = '.output\*.nupkg'
+        $Path = 
+            Join-Path -Path $TaskContext.OutputDirectory.FullName -ChildPath '*.nupkg' |
+            Resolve-Path |
+            Select-Object -ExpandProperty 'ProviderPath'
     }
 
     $publishSymbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
 
-    $paths = $TaskParameter['Path'] |
-                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' |
+    $paths = $Path |
                 Where-Object {
                     $wildcard = '*.symbols.nupkg'
                     if( $publishSymbols )
@@ -72,9 +78,9 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         return
     }
 
-    foreach ($path in $paths)
+    foreach ($packagePath in $paths)
     {
-        $packageFilename = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
+        $packageFilename = [IO.Path]::GetFileNameWithoutExtension(($packagePath | Split-Path -Leaf))
         $packageName = $packageFilename -replace '\.\d+\.\d+\.\d+(-.*)?(\.symbols)?',''
 
         $packageFilename -match '(\d+\.\d+\.\d+(?:-[0-9a-z]+)?)'
@@ -130,7 +136,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $path -Uri $source -ApiKey $apiKey -NuGetPath $nuGetPath
+        Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey -NuGetPath $nuGetPath
 
         if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
         {
