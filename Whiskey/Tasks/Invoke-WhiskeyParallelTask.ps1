@@ -73,6 +73,9 @@ function Invoke-WhiskeyParallelTask
                     $VerbosePreference = $using:VerbosePreference
                     $DebugPreference = $using:DebugPreference
                     $ProgressPreference = $using:ProgressPreference
+                    $WarningPreference = $using:WarningPreference
+                    $ErrorActionPreference = $using:ErrorActionPreference
+
                     $whiskeyModulePath = $using:whiskeyModulePath
                     $serializedContext = $using:serializableContext
 
