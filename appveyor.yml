@@ -22,7 +22,9 @@ build_script:
     # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
     
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
-    $ProgressPreference = 'SilentlyContinue'
+    $Global:ProgressPreference = 'SilentlyContinue'
+    
+    Write-Verbose -Message ([Environment]::UserInteractive) -Verbose
     
     .\build.ps1 -Verbose
 
