@@ -1376,6 +1376,7 @@ Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error 
 }
 
 Describe 'ProGetUniversalPackage.when using the "." syntax to package a directory into the root of the package' {
+    $Global:DebugPreference = $Global:VerbosePreference = 'Continue'
     Init
     GivenARepositoryWithItems 'dir1\dir2\file.txt'
     WhenPackaging -WithYaml @"
@@ -1392,3 +1393,4 @@ Build:
     ThenTaskSucceeds
     ThenPackageArchive 'TestPackage' -ContainsPath 'package\file.txt'
 }
+$Global:DebugPreference = $Global:VerbosePreference = 'SilentlyContinue'
