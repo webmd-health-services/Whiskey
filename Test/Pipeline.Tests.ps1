@@ -276,7 +276,7 @@ function WhenRunningPipeline
     }    
 }
 
-Describe 'Invoke-WhiskeyPipeline.when running an unknown task' {
+Describe 'Pipeline.when running an unknown task' {
     GivenWhiskeyYmlBuildFile -Yaml @'
 Build:
     - FubarSnafu:
@@ -287,7 +287,7 @@ Build:
     ThenThrewException 'not\ exist'
 }
 
-Describe 'Invoke-WhiskeyPipeline.when a task fails' {
+Describe 'Pipeline.when a task fails' {
     GivenFile 'ishouldnotrun.ps1' @'
 New-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'iran.txt')
 '@
@@ -303,7 +303,7 @@ Build:
     ThenFile 'iran.txt' -Not -Exists -Because 'should not execute additional tasks'
 }
 
-Describe 'Invoke-WhiskeyPipeline.when task has no properties' {
+Describe 'Pipeline.when task has no properties' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - PublishNodeModule
@@ -318,7 +318,7 @@ Build:
     }
 }
 
-Describe 'Invoke-WhiskeyPipeline.when task has a default property' {
+Describe 'Pipeline.when task has a default property' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: This is a default property
@@ -332,7 +332,7 @@ Build:
     }
 }
 
-Describe 'Invoke-WhiskeyPipeline.when task has a default property with quoted arguments' {
+Describe 'Pipeline.when task has a default property with quoted arguments' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: someexec somearg
@@ -346,7 +346,7 @@ Build:
     }
 }
 
-Describe 'Invoke-WhiskeyPipeline.when task has a default property when entire string is quoted' {
+Describe 'Pipeline.when task has a default property when entire string is quoted' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: 'someexec "some arg"'
@@ -360,7 +360,7 @@ Build:
     }
 }
 
-Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
+Describe 'Pipeline.when pipeline does not exist' {
     GivenWhiskeyYmlBuildFile @"
 "@
     WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
@@ -368,7 +368,7 @@ Describe 'Invoke-WhiskeyPipeline.when pipeline does not exist' {
     ThenThrewException 'Pipeline\ ''Build''\ does\ not\ exist'
 }
 
-Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and not a YAML object' {
+Describe 'Pipeline.when pipeline is empty and not a YAML object' {
     GivenWhiskeyYmlBuildFile @"
 Build
 "@
@@ -377,7 +377,7 @@ Build
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
 
-Describe 'Invoke-WhiskeyPipeline.when pipeline is empty and is a YAML object' {
+Describe 'Pipeline.when pipeline is empty and is a YAML object' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 "@
@@ -386,7 +386,7 @@ Build:
     ThenShouldWarn 'doesn''t\ have\ any\ tasks'
 }
 
-Describe 'Invoke-WhiskeyPipeline.when there are registered event handlers' {
+Describe 'Pipeline.when there are registered event handlers' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - PowerShell:
@@ -400,7 +400,7 @@ Build:
     ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
 }
 
-Describe 'Invoke-WhiskeyPipeline.when there are task-specific registered event handlers' {
+Describe 'Pipeline.when there are task-specific registered event handlers' {
     GivenWhiskeyYmlBuildFile @"
 Build:
 - PowerShell:
@@ -425,7 +425,7 @@ foreach( $task in $tasks )
     $functionName = $task.CommandName
 
     # Skip tasks that can't run on this platform
-    Describe ('Invoke-WhiskeyPipeline.when calling {0} task' -f $taskName) {
+    Describe ('Pipeline.when calling {0} task' -f $taskName) {
 
         function Assert-TaskCalled
         {

@@ -251,7 +251,7 @@ function ThenTheCommitShouldNotBeTagged
     }
 }
 
-Describe 'Publish-WhiskeyBBServerTag.when repository cloned using SSH' {
+Describe 'PublishBitbucketServerTag.when repository cloned using SSH' {
     Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
@@ -263,7 +263,7 @@ Describe 'Publish-WhiskeyBBServerTag.when repository cloned using SSH' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyBBServerTag.when repository cloned using HTTPS' {
+Describe 'PublishBitbucketServerTag.when repository cloned using HTTPS' {
     Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
@@ -275,7 +275,7 @@ Describe 'Publish-WhiskeyBBServerTag.when repository cloned using HTTPS' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyBBServerTag.when user provides repository keys' {
+Describe 'PublishBitbucketServerTag.when user provides repository keys' {
     Init
     GivenCredential 'bbservercredential' 'username' 'password'
     GivenBBServerAt 'https://bbserver.example.com'
@@ -287,7 +287,7 @@ Describe 'Publish-WhiskeyBBServerTag.when user provides repository keys' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyBBServerTag.when attempting to tag without a valid commit' {
+Describe 'PublishBitbucketServerTag.when attempting to tag without a valid commit' {
     Init
     GivenGitUrl 'does not matter'
     GivenACommit -ThatIsInvalid

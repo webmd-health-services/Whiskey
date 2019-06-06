@@ -347,7 +347,7 @@ function ThenTaskFails
     }
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
+Describe 'PublishBuildMasterPackage.when called' {
     Init
     GivenProperty $packageVariable
     WhenCreatingPackage
@@ -355,7 +355,7 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when called' {
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when creating package with defined name' {
+Describe 'PublishBuildMasterPackage.when creating package with defined name' {
     $packageNameOverride = 'PackageABCD'
     Init
     GivenPackageName $packageNameOverride
@@ -365,7 +365,7 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when creating package with defined n
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when deploying release package to specific stage' {
+Describe 'PublishBuildMasterPackage.when deploying release package to specific stage' {
     $releaseStage = 'Test'
     Init
     GivenStartAtStage $releaseStage
@@ -375,7 +375,7 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when deploying release package to sp
     ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when creating package without starting deployment' {
+Describe 'PublishBuildMasterPackage.when creating package without starting deployment' {
     Init
     GivenSkipDeploy
     GivenProperty $packageVariable
@@ -384,7 +384,7 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when creating package without starti
     ThenPackageNotDeployed
 }
 
-Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in BuildMaster' {
+Describe 'PublishBuildMasterPackage.when no application or release in BuildMaster' {
     Init
     GivenNoRelease 'release' -ForApplication 'application'
     WhenCreatingPackage -ErrorAction SilentlyContinue
@@ -392,7 +392,7 @@ Describe 'Publish-WhiskeyBuildMasterPackage.when no application or release in Bu
     ThenTaskFails 'unable\ to\ create\ and\ deploy\ a\ release\ package'
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is missing') {
+Describe ('PublishBuildMasterPackage.when ApplicationName property is missing') {
     Init
     GivenNoApplicationName
     WhenCreatingPackage -ErrorAction SilentlyContinue
@@ -400,7 +400,7 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ApplicationName property is mi
     ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missing') {
+Describe ('PublishBuildMasterPackage.when ReleaseName property is missing') {
     Init
     GivenNoReleaseName
     WhenCreatingPackage -ErrorAction SilentlyContinue
@@ -408,7 +408,7 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when ReleaseName property is missin
     ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when Uri property is missing') {
+Describe ('PublishBuildMasterPackage.when Uri property is missing') {
     Init
     GivenNoUri
     WhenCreatingPackage -ErrorAction SilentlyContinue
@@ -416,7 +416,7 @@ Describe ('Publish-WhiskeyBuildMasterPackage.when Uri property is missing') {
     ThenTaskFails ('\bUri\b.*\bmandatory\b')
 }
 
-Describe ('Publish-WhiskeyBuildMasterPackage.when ApiKeyID property is missing') {
+Describe ('PublishBuildMasterPackage.when ApiKeyID property is missing') {
     Init
     GivenNoApiKey
     WhenCreatingPackage -ErrorAction SilentlyContinue

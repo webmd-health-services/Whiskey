@@ -246,7 +246,7 @@ function ThenTaskFailedWithMessage
     }
 }
 
-Describe 'Invoke-WhiskeyExec.when running an executable with no arguments' {
+Describe 'Exec.when running an executable with no arguments' {
     Init
     GivenPowerShellFile 'exec.ps1' '0'
     GivenPath 'exec.ps1'
@@ -256,7 +256,7 @@ Describe 'Invoke-WhiskeyExec.when running an executable with no arguments' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when running an executable with an argument' {
+Describe 'Exec.when running an executable with an argument' {
     Init
     GivenPowerShellFile 'exec.ps1' '0'
     GivenPath 'exec.ps1'
@@ -267,7 +267,7 @@ Describe 'Invoke-WhiskeyExec.when running an executable with an argument' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when running an executable with multiple arguments' {
+Describe 'Exec.when running an executable with multiple arguments' {
     Init
     GivenPowerShellFile 'exec.ps1' '0'
     GivenPath 'exec.ps1'
@@ -278,7 +278,7 @@ Describe 'Invoke-WhiskeyExec.when running an executable with multiple arguments'
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when utilizing default task property to define executable and arguments' {
+Describe 'Exec.when utilizing default task property to define executable and arguments' {
     Init
     GivenPowerShellFile 'exec.ps1' '0'
     GivenTaskDefaultProperty '.\exec.ps1 Arg1 Arg2 "Arg 3" ''Arg 4'''
@@ -288,20 +288,20 @@ Describe 'Invoke-WhiskeyExec.when utilizing default task property to define exec
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when missing Path parameter' {
+Describe 'Exec.when missing Path parameter' {
     Init
     WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage '"Path" is mandatory.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given bad path' {
+Describe 'Exec.when given bad path' {
     Init
     GivenPath 'nonexistent.exe'
     WhenRunningExecutable -ErrorAction SilentlyContinue
     ThenTaskFailedWithMessage 'Executable "nonexistent.exe" does not exist.'
 }
 
-Describe 'Invoke-WhiskeyExec.when Path has spaces' {
+Describe 'Exec.when Path has spaces' {
     Init
     GivenPowerShellFile 'e x e c.ps1' '0'
     GivenPath 'e x e c.ps1'
@@ -311,7 +311,7 @@ Describe 'Invoke-WhiskeyExec.when Path has spaces' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given success exit codes' {
+Describe 'Exec.when given success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '123'
     GivenPath 'exec.ps1'
@@ -322,7 +322,7 @@ Describe 'Invoke-WhiskeyExec.when given success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when executable exits with non-success exit code' {
+Describe 'Exec.when executable exits with non-success exit code' {
     Init
     GivenPowerShellFile 'exec.ps1' '42'
     GivenPath 'exec.ps1'
@@ -333,7 +333,7 @@ Describe 'Invoke-WhiskeyExec.when executable exits with non-success exit code' {
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ".." of success exit codes' {
+Describe 'Exec.when given a range ".." of success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '123'
     GivenPath 'exec.ps1'
@@ -344,7 +344,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ".." of success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ".." and exits with code outside success range' {
+Describe 'Exec.when given a range ".." and exits with code outside success range' {
     Init
     GivenPowerShellFile 'exec.ps1' '133'
     GivenPath 'exec.ps1'
@@ -355,7 +355,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ".." and exits with code outside
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ">=" of success exit codes' {
+Describe 'Exec.when given a range ">=" of success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '500'
     GivenPath 'exec.ps1'
@@ -366,7 +366,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">=" of success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ">=" and exits with code outside success range' {
+Describe 'Exec.when given a range ">=" and exits with code outside success range' {
     Init
     GivenPowerShellFile 'exec.ps1' '85'
     GivenPath 'exec.ps1'
@@ -377,7 +377,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">=" and exits with code outside
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range "<=" of success exit codes' {
+Describe 'Exec.when given a range "<=" of success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '9'
     GivenPath 'exec.ps1'
@@ -388,7 +388,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<=" of success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range "<=" and exits with code outside success range' {
+Describe 'Exec.when given a range "<=" and exits with code outside success range' {
     Init
     GivenPowerShellFile 'exec.ps1' '10'
     GivenPath 'exec.ps1'
@@ -399,7 +399,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<=" and exits with code outside
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ">" of success exit codes' {
+Describe 'Exec.when given a range ">" of success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '91'
     GivenPath 'exec.ps1'
@@ -410,7 +410,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">" of success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range ">" and exits with code outside success range' {
+Describe 'Exec.when given a range ">" and exits with code outside success range' {
     Init
     GivenPowerShellFile 'exec.ps1' '90'
     GivenPath 'exec.ps1'
@@ -421,7 +421,7 @@ Describe 'Invoke-WhiskeyExec.when given a range ">" and exits with code outside 
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range "<" of success exit codes' {
+Describe 'Exec.when given a range "<" of success exit codes' {
     Init
     GivenPowerShellFile 'exec.ps1' '89'
     GivenPath 'exec.ps1'
@@ -432,7 +432,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<" of success exit codes' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given a range "<" and exits with code outside success range' {
+Describe 'Exec.when given a range "<" and exits with code outside success range' {
     Init
     GivenPowerShellFile 'exec.ps1' '90'
     GivenPath 'exec.ps1'
@@ -443,7 +443,7 @@ Describe 'Invoke-WhiskeyExec.when given a range "<" and exits with code outside 
     ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
 }
 
-Describe 'Invoke-WhiskeyExec.when given a working directory' {
+Describe 'Exec.when given a working directory' {
     Init
     GivenADirectory 'workdir'
     GivenPowerShellFile 'workdir\exec.ps1' '0'
@@ -455,7 +455,7 @@ Describe 'Invoke-WhiskeyExec.when given a working directory' {
     ThenTaskSuccess
 }
 
-Describe 'Invoke-WhiskeyExec.when given bad working directory' {
+Describe 'Exec.when given bad working directory' {
     Init
     GivenADirectory 'workdir'
     GivenPowerShellFile 'exec.ps1' '0'

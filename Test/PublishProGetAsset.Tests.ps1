@@ -143,7 +143,7 @@ function ThenTaskSucceeds
     }
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly' {
+Describe 'PublishProGetAsset.when Asset is uploaded correctly' {
     Init
     GivenContext
     GivenCredentials
@@ -153,7 +153,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded correctly' {
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded to a subdirectory correctly'{
+Describe 'PublishProGetAsset.when Asset is uploaded to a subdirectory correctly'{
     Init
     GivenContext
     GivenCredentials
@@ -163,7 +163,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset is uploaded to a subdirectory co
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly'{
+Describe 'PublishProGetAsset.when multiple Assets are uploaded correctly'{
     Init
     GivenContext
     GivenCredentials
@@ -173,7 +173,7 @@ Describe 'Publish-WhiskeyProGetAsset.when multiple Assets are uploaded correctly
     ThenTaskSucceeds
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
+Describe 'PublishProGetAsset.when Asset Name parameter does not exist'{
     Init
     GivenContext
     GivenCredentials
@@ -183,7 +183,7 @@ Describe 'Publish-WhiskeyProGetAsset.when Asset Name parameter does not exist'{
     ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'    
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
+Describe 'PublishProGetAsset.when there are less names than paths'{
     Init
     GivenContext
     GivenCredentials
@@ -193,7 +193,7 @@ Describe 'Publish-WhiskeyProGetAsset.when there are less names than paths'{
     ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
+Describe 'PublishProGetAsset.when there are less paths than names'{
     Init
     GivenContext
     GivenCredentials
@@ -203,7 +203,7 @@ Describe 'Publish-WhiskeyProGetAsset.when there are less paths than names'{
     ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
+Describe 'PublishProGetAsset.when credentials are not given'{
     Init
     GivenContext
     GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
@@ -212,7 +212,7 @@ Describe 'Publish-WhiskeyProGetAsset.when credentials are not given'{
     ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
 }
 
-Describe 'Publish-WhiskeyProGetAsset.when Asset already exists'{
+Describe 'PublishProGetAsset.when Asset already exists'{
     Init
     GivenContext
     GivenCredentials
