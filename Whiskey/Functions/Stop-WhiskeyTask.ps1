@@ -24,12 +24,12 @@ function Stop-WhiskeyTask
     
     if( -not ($PropertyDescription) )
     {
-        $PropertyDescription = 'Build[{0}]: {1}' -f $TaskContext.TaskIndex,$TaskContext.TaskName
+        $PropertyDescription = 'Build[{0}]: Task "{1}"' -f $TaskContext.TaskIndex,$TaskContext.TaskName
     }
 
     if( $PropertyName )
     {
-        $PropertyName = ': {0}' -f $PropertyName
+        $PropertyName = ': Property "{0}"' -f $PropertyName
     }
 
     if( $ErrorActionPreference -ne 'Ignore' )
