@@ -1,6 +1,11 @@
 
-& {
-    $VerbosePreference = 'SilentlyContinue'
+$originalVerbosePreference = $Global:VerbosePreference
+
+try
+{
+    $Global:VerbosePreference = 'SilentlyContinue'
+
+
     # Some tests load ProGetAutomation from a Pester test drive. Forcibly remove the module if it is loaded to avoid errors.
     if( (Get-Module -Name 'ProGetAutomation') )
     {
@@ -23,4 +28,8 @@
     }
 
     Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force
+}
+finally
+{
+    $Global:VerbosePreference = $originalVerbosePreference
 }
