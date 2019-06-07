@@ -64,7 +64,7 @@ function ThenTaskCalled
         $taskParameters.Count | Should -Be $WithParameter.Count
         foreach( $key in $WithParameter.Keys )
         {
-            $taskParameters[$key] | Should -Be $WithParameter[$key]
+            $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
         }
     }
 }
@@ -87,7 +87,7 @@ function ThenThrewException
 
 function WhenRunningTask
 {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]
         $Name,
@@ -491,6 +491,120 @@ Describe ('Get-TaskParameter.when passing typed parameters') {
         Init
         WhenRunningTask 'Task' -Parameter @{ 'SwitchOne' = 'true' ; 'SwitchTwo' = 'false'; 'Bool' = 'true' ; 'Int' = '1' }
         ThenTaskCalled -WithParameter @{ 'SwitchOne' = $true ; 'SwitchTwo' = $false; 'Bool' = $true ; 'Int' = 1 }
+    }
+}
+
+Describe ('Get-TaskParameter.when passing common parameters that map to preference values') {
+    It ('should convert common parameters to preference values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            [CmdletBinding(SupportsShouldProcess)]
+            param(
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+            foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+            {
+                $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+            }
+        }
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'true' ; 'Debug' = 'true'; 'WhatIf' = 'true' }
+        ThenTaskCalled -WithParameter @{ 
+                                            'Verbose' = $true ; 
+                                            'VerbosePreference' = 'Continue'
+                                            'Debug' = $true;
+                                            'DebugPreference' = 'Inquire';
+                                            'WhatIf' = $true;
+                                            'WhatIfPreference' = $true;
+                                        }
+        $Global:VerbosePreference | Should -Be $origVerbose
+        $Global:DebugPreference | Should -Be $origDebug
+        $Global:WhatIfPreference | Should -Be $origWhatIf
+    }
+}
+
+Describe ('Get-TaskParameter.when turning off preference values') {
+    It ('should convert common parameters to preference values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            [CmdletBinding(SupportsShouldProcess)]
+            param(
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+            foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+            {
+                $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+            }
+        }
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'false' ; 'Debug' = 'false'; 'WhatIf' = 'false' } -Verbose -Debug -WhatIf
+        ThenTaskCalled -WithParameter @{ 
+                                            'Verbose' = $false ; 
+                                            'VerbosePreference' = 'SilentlyContinue'
+                                            'Debug' = $false;
+                                            'DebugPreference' = 'SilentlyContinue';
+                                            'WhatIf' = $false;
+                                            'WhatIfPreference' = $false;
+                                        }
+        $Global:VerbosePreference | Should -Be $origVerbose
+        $Global:DebugPreference | Should -Be $origDebug
+        $Global:WhatIfPreference | Should -Be $origWhatIf
+    }
+}
+
+Describe ('Get-TaskParameter.when turning off global preference values') {
+    It ('should convert common parameters to preference values') {
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        try
+        {
+            function global:Task
+            {
+                [Whiskey.Task('Task')]
+                [CmdletBinding(SupportsShouldProcess)]
+                param(
+                )
+                $global:taskCalled = $true
+                $global:taskParameters = $PSBoundParameters
+                foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+                {
+                    $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+                }
+            }
+            $Global:VerbosePreference = 'Continue'
+            $Global:DebugPreference = 'Continue'
+            $Global:WhatIfPreference = $true
+            Init
+            WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'false' ; 'Debug' = 'false'; 'WhatIf' = 'false' }
+            ThenTaskCalled -WithParameter @{ 
+                                                'Verbose' = $false;
+                                                'VerbosePreference' = 'SilentlyContinue';
+                                                'Debug' = $false;
+                                                'DebugPreference' = 'SilentlyContinue';
+                                                'WhatIf' = $false;
+                                                'WhatIfPreference' = $false;
+                                            }
+            $Global:VerbosePreference | Should -Be 'Continue'
+            $Global:DebugPreference | Should -Be 'Continue'
+            $Global:WhatIfPreference | Should -Be $true
+        }
+        finally
+        {
+            $Global:VerbosePreference = $origVerbose
+            $Global:DebugPreference = $origDebug
+            $Global:WhatIfPreference = $origWhatIf
+        }
     }
 }
 
