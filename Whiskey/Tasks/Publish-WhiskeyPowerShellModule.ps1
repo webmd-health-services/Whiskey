@@ -3,14 +3,17 @@ function Publish-WhiskeyPowerShellModule
     [Whiskey.Task("PublishPowerShellModule")]
     [CmdletBinding()]
     param(
-
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -29,25 +32,6 @@ function Publish-WhiskeyPowerShellModule
     }
     $repositoryName = $TaskParameter['RepositoryName']
 
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should a path relative to your whiskey.yml file, to the module directory of the module to publish, e.g.
-
-        Build:
-        - PublishPowerShellModule:
-            Path: mymodule
-            RepositoryName: PSGallery
-        ')
-        return
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    if( -not (Test-Path $path -PathType Container) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Path "{0}" isn''t a directory. It must be the path to the root directory of a Powershell module. The directory name must match the name of the module.' -f $path)
-        return
-    }
-
     $apiKeyID = $TaskParameter['ApiKeyID']
     if( -not $apiKeyID )
     {
@@ -57,7 +41,7 @@ function Publish-WhiskeyPowerShellModule
 
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
-    $manifestPath = '{0}\{1}.psd1' -f $path,($path | Split-Path -Leaf)
+    $manifestPath = '{0}\{1}.psd1' -f $Path,($Path | Split-Path -Leaf)
     if( $TaskParameter.ContainsKey('ModuleManifestPath') )
     {
         $manifestPath = $TaskParameter['ModuleManifestPath']
@@ -111,5 +95,5 @@ function Publish-WhiskeyPowerShellModule
         Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
     }
 
-    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams
+    Publish-Module -Path $Path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams
 }

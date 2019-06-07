@@ -4,13 +4,17 @@
     [CmdletBinding()]
     [Whiskey.Task("Version")]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(PathType='File')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -58,14 +62,8 @@
         $rawVersion = $TaskParameter['Version']
         $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
-    elseif( $TaskParameter['Path'] )
+    elseif( $Path )
     {
-        $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-        if( -not $path )
-        {
-            return
-        }
-
         $fileInfo = Get-Item -Path $path
         if( $fileInfo.Extension -eq '.psd1' )
         {

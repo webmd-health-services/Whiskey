@@ -398,7 +398,7 @@ function New-WhiskeyTestContext
     if( $IncludePSModules )
     {
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) `
-                  -Destination (Join-Path -Path $context.BuildRoot -ChildPath 'PSModules') `
+                  -Destination $context.BuildRoot `
                   -Recurse
     }
 

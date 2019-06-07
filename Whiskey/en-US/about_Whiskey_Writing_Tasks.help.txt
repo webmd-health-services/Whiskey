@@ -6,34 +6,17 @@ SHORT DESCRIPTION
 
 LONG DESCRIPTION
 
-    A Whiskey task is a PowerShell function that has:
+    A Whiskey task is a PowerShell function that has a `Whiskey.Task` attribute:
 
-    * the `Whiskey.Task` attribute
-    * a `TaskContext` parameter
-    * a `TaskParameter` parameter that's a hashtable
-    * a `script` scope
-
-    Tasks should be loaded into your build using the `LoadTask` task. 
-
-    Here is a stub function to get you started:
-
-        function script:FUNCTION_NAME
+        function FUNCTION_NAME
         {
             [Whiskey.Task('TASK_NAME')]
             [CmdletBinding()]
             param(
-                [Parameter(Mandatory=$true)]
-                [object]
-                $TaskContext,
-
-                [Parameter(Mandatory=$true)]
-                [hashtable]
-                $TaskParameter
             )
 
             Set-StrictMode -Version 'Latest'
         }
-
 
     To use your task in a whiskey.yml file, make sure the task is loaded first, then use the name from the `Whiskey.Task` attribute, e.g.
 
@@ -46,14 +29,77 @@ LONG DESCRIPTION
             - One
             - Two
 
-    Everything under your task in the whiskey.yml file is passed to your function to the `$TaskParameter` hashtable parameter. For example, given the whiskey.yml above, your task would receive this hashtable:
+    To allow users to pass values to your task, create parameters on your function. Whiskey will map the parameter names to the property names from the build YAML.
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                [string]
+                $Property
+            )
 
-        @{
-            Property = 'Value';
-            Property2 = @( 'One', 'Two' )
+            Set-StrictMode -Version 'Latest'
         }
 
-    Whiskey supports these global task properties. They are *not* in the `TaskParameter` hashtable.
+    With the above task, your task would be used in the YAML like this:
+    
+        - TASK_NAME:
+            Property: Value
+            
+    With this YAML, Whiskey will pass `Value` to your function's `Property` parameter.
+    
+    You can get the raw parsed YAML as a hashtable by having a `TaskParameter` parameter on your function:
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                [hasthable]
+                $TaskParameter
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+        
+    Named parameters are never passed in the `TaskParameter` hashtable.
+
+    If you want the value of your parameter to come from a Whiskey variable, decorate the parameter with Whiskey's `Whiskey.Tasks.ParameterValueFromVariable` attribute, passing the variable expression (method/property names allowed):
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT')]
+                $Environment,
+                
+                [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT.Length')]
+                $Length
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+
+    See `about_Whiskey_Variables` for a list of variables available. All environment variables are available, too.
+    
+    If you need to muck about with Whiskey's context (not recommended), add a `TaskContext` parameter to your function:
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                [Whiskey.Context]
+                $TaskContext
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+
+    Whiskey supports these global task properties. They are *never* passed to your task:
 
     * OnlyDuring
     * ExceptDuring
@@ -66,7 +112,79 @@ LONG DESCRIPTION
     * UnlessExists
 
     In other words, your task isn't allowed to have these properties.
+    
+    # Validating Paths
+    
+    If you have a parameter that should be a path to a single file/directory, Whiskey can validate the path exists and convert it to a full path for you. To enable this, add the `Whiskey.Tasks.ValidatePath` attribute to the function parameter (or parameters) that should be resolved as paths.
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                [Whiskey.Tasks.ValidatePath()]
+                [string]
+                $Path
+            )
 
+            Set-StrictMode -Version 'Latest'
+        }
+
+    By default, the property can be empty and any values from the YAML file *must* exist. If you want to require that the user provide a value (and fail a build if it doesn't), use the `Mandatory` property:
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                # The user must supply a path to a single file/directory that exists.
+                [Whiskey.Tasks.ValidatePath(Mandatory)]
+                [string]
+                $Path
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+
+    To support multiple paths, set the type of the parameter to `[string[]]`:
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                # The user can use wildcards that point to multiple items.
+                [Whiskey.Tasks.ValidatePath(Mandatory)]
+                [string[]]
+                $Path
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+
+    If the path must be to a file or directory, use the `PathType` property to specify which. The build will fail if any path in the YAML isn't of the given type.
+    
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                # Must be paths to files only.
+                [Whiskey.Tasks.ValidatePath(PathType='File')]
+                [string[]]
+                $FilePath,
+                
+                # Must be paths to directories only.
+                [Whiskey.Tasks.ValidatePath(PathType='Directory')]
+                [string[]]
+                $DirectoryPath
+            )
+
+            Set-StrictMode -Version 'Latest'
+        }
+
+    If you have more advanced needs, your task can use the `Resolve-WhiskeyTaskPath` function.
+    
     # Platform
 
     If your task should only run on certain platforms/operating systems, set the `Platform` property on your task's `TaskAttribute` to the platform(s) it is restricted to. If the task runs on an unsupported platform, the build will fail. By default, tasks can run on all platforms. Supported platforms are `Windows`, `Linux`, and `MacOS`. For example, a task with this task attribute will only run on Windows:
@@ -76,6 +194,16 @@ LONG DESCRIPTION
     To run on multiple platforms, use PowerShell's `-bor` operator: 
 
         [Whiskey.Task('TASK_NAME',Platform=[Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux)]
+
+    # Aliases
+
+    You can define aliases for your task name. This is useful for making your tasks more discoverable or for re-naming tasks without requiring people to update their build scripts when they upgrade. Use the `Aliases` property to define a list of aliases.
+
+        [Whiskey.Task('TASK_NAME',Aliases=('OldName','AnotherOldName'))]
+
+    If you want to warn when someone uses your task using an aliased name, set the `WarnWhenUsingAlias` property to `$true`.
+
+        [Whiskey.Task('TASK_NAME',Aliases=('DeprecatedName'),WarnWhenUsingAlias=$true)]
 
     # Deprecating Tasks
 

@@ -4,24 +4,21 @@ function Set-WhiskeyVariableFromXml
     [Whiskey.Task("SetVariableFromXml")]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType File
-    if( ($path | Measure-Object).Count -ne 1 )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('resolves to multiple files. The "Path" property must only resolve to one file.')
-        return
-    }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
     [xml]$xml = $null
