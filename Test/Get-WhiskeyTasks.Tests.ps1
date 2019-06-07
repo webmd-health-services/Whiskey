@@ -16,6 +16,13 @@ function global:MyTask2
     )
 }
 
+function global:MyObsoleteTask
+{
+    [Whiskey.Task("TaskTwo",Obsolete)]
+    param(
+    )
+}
+
 Describe 'Get-WhiskeyTasks' {
     $expectedTasks = @{
                         ProGetUniversalPackage         = 'New-WhiskeyProGetUniversalPackage';
@@ -68,6 +75,14 @@ Describe 'Get-WhiskeyTasks' {
         }
     }
 
+    It ('should not return obsolete tasks') {
+        $tasks | Where-Object { $_.Obsolete } | Should -BeNullOrEmpty
+    }
+
+    $tasks = Get-WhiskeyTask -Force
+    It ('should return obsolete tasks when forced to do so') {
+        $tasks | Where-Object { $_.Obsolete } | Should -Not -BeNullOrEmpty
+    }
 
 }
 
