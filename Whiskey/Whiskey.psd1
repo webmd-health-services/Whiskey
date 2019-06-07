@@ -155,6 +155,7 @@
             ReleaseNotes = @'
 * Fixed: `Version` task uses the last matching item in the prerelease label branch map instead of the first match.
 * NUnit3 task supports running NUnit2 tests and uses version 3.10 of ConsoleRunner.
+* Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
 '@
         } # End of PSData hashtable
 

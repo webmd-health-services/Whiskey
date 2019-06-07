@@ -123,6 +123,16 @@ function Invoke-WhiskeyTask
 
     $TaskContext.TaskName = $Name
 
+    if( $task.Obsolete )
+    {
+        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $task.Name
+        if( $task.ObsoleteMessage )
+        {
+            $message = $task.ObsoleteMessage
+        }
+        Write-WhiskeyWarning -TaskContext $TaskContext -Message $message
+    }
+
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
         Write-Error -Message ('Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f $task.Name,$task.Platform,$CurrentPlatform) -ErrorAction Stop

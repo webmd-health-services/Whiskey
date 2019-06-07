@@ -77,6 +77,16 @@ LONG DESCRIPTION
 
         [Whiskey.Task('TASK_NAME',Platform=[Whiskey.Platform]::Windows -bor [Whiskey.Platform]::Linux)]
 
+    # Deprecating Tasks
+
+    To deprecate a task, set the `Obsolete` property on its `Whiskey.Task` attribute:
+
+        [Whiskey.Task('TASK_NAME',Obsolete)]
+
+    When someone uses your task, Whiskey will write a warning that the task is obsolete and shouldn't be used. You can customize the message shown to users with the `ObsoleteMessage` property:
+
+        [Whiskey.Task('TASK_NAME',Obsolete,ObsoleteMessage='The "TASK_NAME" task is obsolete. Please use the "NonObsoleteTask" instead.')]
+
     # Tools
 
     Whiskey can automatically install some tools for your task. The path to that tool is passed to your task in the `TaskParameter` parameter.

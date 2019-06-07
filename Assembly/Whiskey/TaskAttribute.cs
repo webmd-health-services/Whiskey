@@ -14,6 +14,10 @@ namespace Whiskey
 
         public string Name { get; private set; }
 
+        public bool Obsolete { get; set; }
+
+        public string ObsoleteMessage { get; set; }
+
         public Platform Platform { get; set; }
 
         public bool SupportsClean { get; set; }
