@@ -445,7 +445,6 @@ Describe ('Get-TaskParameter.when path should be a file and passed multiple path
     }
 }
 
-
 Describe ('Get-TaskParameter.when an optional path that doesn''t exist should be a specific type') {
     It ('should pass nothing') {
         function global:Task
@@ -462,6 +461,36 @@ Describe ('Get-TaskParameter.when an optional path that doesn''t exist should be
         Init
         WhenRunningTask 'Task' -Parameter @{ }
         ThenTaskCalled -WithParameter @{ }
+    }
+}
+
+Describe ('Get-TaskParameter.when passing typed parameters') {
+    It ('should convert original values to boolean values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            param(
+                [Switch]
+                $SwitchOne,
+                [Switch]
+                $SwitchTwo,
+                [Switch]
+                $SwitchThree,
+                [bool]
+                $Bool,
+                [int]
+                $Int,
+                [bool]
+                $NoBool,
+                [int]
+                $NoInt
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+        }
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'SwitchOne' = 'true' ; 'SwitchTwo' = 'false'; 'Bool' = 'true' ; 'Int' = '1' }
+        ThenTaskCalled -WithParameter @{ 'SwitchOne' = $true ; 'SwitchTwo' = $false; 'Bool' = $true ; 'Int' = 1 }
     }
 }
 
