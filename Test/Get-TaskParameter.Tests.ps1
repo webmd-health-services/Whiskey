@@ -312,8 +312,9 @@ Describe ('Get-TaskParameter.when path parameter wants to be resolved but parame
             $global:taskParameters = $PSBoundParameters
         }
         Init
-        GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
+        GivenFile 'abc.txt' 
+        GivenFile 'xyz.txt' 
+        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.txt' } -ErrorAction SilentlyContinue
         ThenThrewException -Pattern 'requires\ a\ single\ path'
         ThenTaskNotCalled
     }
@@ -423,7 +424,7 @@ Describe ('Get-TaskParameter.when path should be a directory but it''s a file') 
     }
 }
 
-Describe ('Get-TaskParameter.when path should be a file and passed multiple patht and one isn''t') {
+Describe ('Get-TaskParameter.when all paths should be files but one is a directory') {
     It ('should fail') {
         function global:Task
         {
