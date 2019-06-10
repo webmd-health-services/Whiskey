@@ -47,7 +47,7 @@ function Remove-GlobalTestItem
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
-    $threwException | Should -Be $false
+    $threwException | Should -BeFalse
 }
 
 function ThenTaskCalled
@@ -81,7 +81,7 @@ function ThenThrewException
         $Pattern
     )
 
-    $threwException | Should -Be $true
+    $threwException | Should -BeTrue
     $Global:Error | Should -Match $Pattern
 }
 
@@ -597,7 +597,7 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
                                             }
             $Global:VerbosePreference | Should -Be 'Continue'
             $Global:DebugPreference | Should -Be 'Continue'
-            $Global:WhatIfPreference | Should -Be $true
+            $Global:WhatIfPreference | Should -BeTrue
         }
         finally
         {
