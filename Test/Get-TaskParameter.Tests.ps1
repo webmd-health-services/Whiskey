@@ -97,9 +97,9 @@ function WhenRunningTask
     )
 
     $script:context = New-WhiskeyTestContext -ForDeveloper
-    $context.PipelineName = 'Build';
-    $context.TaskName = $null;
-    $context.TaskIndex = 1;
+    $context.PipelineName = 'Build'
+    $context.TaskName = $null
+    $context.TaskIndex = 1
 
     $Global:Error.Clear()
     $script:threwException = $false
