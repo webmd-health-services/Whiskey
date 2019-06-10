@@ -9,7 +9,6 @@ namespace Whiskey.Tasks
             VariableName = name;
         }
 
-        public string VariableName { get; set; }
-
+        public string VariableName { get; }
     }
 }
