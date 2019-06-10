@@ -6,7 +6,7 @@ Set-StrictMode -Version 'Latest'
 
 [Whiskey.Context]$context = $null
 $global:taskCalled = $false
-$global:taskParameters = $false
+$global:taskParameters = $null
 
 function GivenDirectory
 {
