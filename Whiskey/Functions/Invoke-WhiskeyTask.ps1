@@ -136,7 +136,7 @@ function Invoke-WhiskeyTask
 
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
-    $taskProperties = $Parameter.Clone()
+    [hashtable]$taskProperties = $Parameter.Clone()
     $commonProperties = @{}
     foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyOnPlatform', 'ExceptOnPlatform' ) )
     {
@@ -206,7 +206,9 @@ function Invoke-WhiskeyTask
         {
             New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
         }
-        & $task.CommandName -TaskContext $TaskContext -TaskParameter $taskProperties
+
+        $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+        & $task.CommandName @parameter
         $result = 'COMPLETED'
     }
     finally

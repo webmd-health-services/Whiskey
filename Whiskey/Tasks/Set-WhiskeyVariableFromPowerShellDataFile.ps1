@@ -4,24 +4,26 @@ function Set-WhiskeyVariableFromPowerShellDataFile
     [CmdletBinding()]
     [Whiskey.Task('SetVariableFromPowerShellDataFile')]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $path = Resolve-WhiskeyTaskPath -TaskContext $TaskContext -Path $TaskParameter['Path'] -PropertyName 'Path'
-
-    $data = Import-PowerShellDataFile -Path $path
+    $data = Import-PowerShellDataFile -Path $Path
     if( -not $data )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('Failed to parse PowerShell Data File "{0}". Make sure this is a properly formatted PowerShell data file. Use the `Import-PowerShellDataFile` cmdlet.' -f $path)
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('Failed to parse PowerShell Data File "{0}". Make sure this is a properly formatted PowerShell data file. Use the `Import-PowerShellDataFile` cmdlet.' -f $Path)
         return
     }
 
@@ -43,7 +45,7 @@ function Set-WhiskeyVariableFromPowerShellDataFile
             $variableName = $Variable[$propertyName]
             if( -not $Data.ContainsKey($propertyName) )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Variables' -Message ('PowerShell Data File "{0}" does not contain "{1}{2}" property.' -f $path,$ParentPropertyName,$propertyName)
+                Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Variables' -Message ('PowerShell Data File "{0}" does not contain "{1}{2}" property.' -f $Path,$ParentPropertyName,$propertyName)
                 continue
             }
 

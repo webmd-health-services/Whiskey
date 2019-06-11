@@ -548,7 +548,7 @@ Describe 'PublishPowerShellModule.when path parameter is not included' {
     Initialize-Test
     GivenRepository 'Fubar'
     Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property "Path" is mandatory'
+    ThenFailed -WithError '"Path\b.*\bis mandatory'
     ThenRepositoryNotChecked
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
@@ -566,7 +566,7 @@ Describe 'PublishPowerShellModule.when non-directory path parameter' {
     Initialize-Test
     GivenRepository 'Fubar'
     Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'path to the root directory of a PowerShell module'
+    ThenFailed -WithError 'must\ be\ a\ directory'
     ThenModuleNotPublished
 }
 

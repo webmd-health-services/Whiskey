@@ -4,35 +4,32 @@ function Set-WhiskeyVariableFromXml
     [Whiskey.Task("SetVariableFromXml")]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType File
-    if( ($path | Measure-Object).Count -ne 1 )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Path' -Message ('resolves to multiple files. The "Path" property must only resolve to one file.')
-        return
-    }
-
-    Write-WhiskeyVerbose -Context $TaskContext -Message ($path)
+    Write-WhiskeyVerbose -Context $TaskContext -Message ($Path)
     [xml]$xml = $null
     try
     {
-        $xml = Get-Content -Path $path -Raw
+        $xml = Get-Content -Path $Path -Raw
     }
     catch
     {
         $Global:Error.RemoveAt(0)
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Exception reading XML from file "{0}": {1}"' -f $path,$_)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Exception reading XML from file "{0}": {1}"' -f $Path,$_)
         return
     }
 
@@ -69,7 +66,7 @@ function Set-WhiskeyVariableFromXml
             {
                 if( -not $allowMissingNodes )
                 {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Variable {0}: XPath expression "{1}" matched no elements/attributes in XML file "{2}".' -f $variableName,$xpath,$path)
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Variable {0}: XPath expression "{1}" matched no elements/attributes in XML file "{2}".' -f $variableName,$xpath,$Path)
                     return
                 }
                 $value = ''
