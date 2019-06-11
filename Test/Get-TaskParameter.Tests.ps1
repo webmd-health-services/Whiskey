@@ -6,7 +6,7 @@ Set-StrictMode -Version 'Latest'
 
 [Whiskey.Context]$context = $null
 $global:taskCalled = $false
-$global:taskParameters = $false
+$global:taskParameters = $null
 
 function GivenDirectory
 {
@@ -47,7 +47,7 @@ function Remove-GlobalTestItem
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
-    $threwException | Should -Be $false
+    $threwException | Should -BeFalse
 }
 
 function ThenTaskCalled
@@ -81,7 +81,7 @@ function ThenThrewException
         $Pattern
     )
 
-    $threwException | Should -Be $true
+    $threwException | Should -BeTrue
     $Global:Error | Should -Match $Pattern
 }
 
@@ -97,9 +97,9 @@ function WhenRunningTask
     )
 
     $script:context = New-WhiskeyTestContext -ForDeveloper
-    $context.PipelineName = 'Build';
-    $context.TaskName = $null;
-    $context.TaskIndex = 1;
+    $context.PipelineName = 'Build'
+    $context.TaskName = $null
+    $context.TaskIndex = 1
 
     $Global:Error.Clear()
     $script:threwException = $false
@@ -312,8 +312,9 @@ Describe ('Get-TaskParameter.when path parameter wants to be resolved but parame
             $global:taskParameters = $PSBoundParameters
         }
         Init
-        GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
+        GivenFile 'abc.txt' 
+        GivenFile 'xyz.txt' 
+        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.txt' } -ErrorAction SilentlyContinue
         ThenThrewException -Pattern 'requires\ a\ single\ path'
         ThenTaskNotCalled
     }
@@ -423,7 +424,7 @@ Describe ('Get-TaskParameter.when path should be a directory but it''s a file') 
     }
 }
 
-Describe ('Get-TaskParameter.when path should be a file and passed multiple patht and one isn''t') {
+Describe ('Get-TaskParameter.when all paths should be files but one is a directory') {
     It ('should fail') {
         function global:Task
         {
@@ -597,7 +598,7 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
                                             }
             $Global:VerbosePreference | Should -Be 'Continue'
             $Global:DebugPreference | Should -Be 'Continue'
-            $Global:WhatIfPreference | Should -Be $true
+            $Global:WhatIfPreference | Should -BeTrue
         }
         finally
         {

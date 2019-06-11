@@ -48,7 +48,7 @@ LONG DESCRIPTION
         - TASK_NAME:
             Property: Value
             
-    With this YAML, Whiskey will pass `Value` to your function's `Property` parameter.
+    With this YAML, Whiskey will pass `Value` to your function's `Property` parameter. 
     
     You can get the raw parsed YAML as a hashtable by having a `TaskParameter` parameter on your function:
     
@@ -66,6 +66,8 @@ LONG DESCRIPTION
         
     Named parameters are never passed in the `TaskParameter` hashtable.
 
+    All values from YAML files are strings and are passed to your function as strings. If a named parameter has a specific type, PowerShell must be able to implicity convert strings to that type. Additionally, Whiskey will convert YAML booleans (`yes`, `no`, `true`, `false`, `1`, or `0`) to PowerShell booleans for any parameters whose types are `[Switch]` or `[bool]`.
+    
     If you want the value of your parameter to come from a Whiskey variable, decorate the parameter with Whiskey's `Whiskey.Tasks.ParameterValueFromVariable` attribute, passing the variable expression (method/property names allowed):
     
         function FUNCTION_NAME
@@ -99,7 +101,7 @@ LONG DESCRIPTION
             Set-StrictMode -Version 'Latest'
         }
 
-    Whiskey supports these global task properties. They are *never* passed to your task:
+    Whiskey supports these reserved global task properties:
 
     * OnlyDuring
     * ExceptDuring
@@ -111,8 +113,9 @@ LONG DESCRIPTION
     * IfExists
     * UnlessExists
 
-    In other words, your task isn't allowed to have these properties.
-    
+    Reserved properties are never passed to your function, either as a parameter or in the parameter hashtable.
+
+
     # Validating Paths
     
     If you have a parameter that should be a path to a single file/directory, Whiskey can validate the path exists and convert it to a full path for you. To enable this, add the `Whiskey.Tasks.ValidatePath` attribute to the function parameter (or parameters) that should be resolved as paths.
@@ -130,7 +133,7 @@ LONG DESCRIPTION
             Set-StrictMode -Version 'Latest'
         }
 
-    By default, the property can be empty and any values from the YAML file *must* exist. If you want to require that the user provide a value (and fail a build if it doesn't), use the `Mandatory` property:
+    By default, the property can be empty and any paths that are given in YAML *must* exist. If you want to require that the user give at least one path (and fail the build if they don't), use the `Mandatory` property:
     
         function FUNCTION_NAME
         {
