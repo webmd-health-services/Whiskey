@@ -121,7 +121,7 @@ function Invoke-WhiskeyTask
         $taskCount = ($task | Measure-Object).Count
         if( $taskCount -gt 1 )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks with alias "{1}". Please update to use one of these task names: {3}.' -f $taskCount,$Name,$TaskContext.ConfigurationPath.FullName,(($task | Select-Object -ExpandProperty 'Name') -join ', '))
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks with alias "{1}". Please update to use one of these task names: {2}.' -f $taskCount,$Name,(($task | Select-Object -ExpandProperty 'Name') -join ', '))
             return
         }
         if( $task -and $task.WarnWhenUsingAlias )
