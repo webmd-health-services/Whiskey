@@ -8,7 +8,10 @@ namespace Whiskey
         {
             Name = name;
             Platform = Platform.All;
+            Aliases = new string[0];
         }
+
+        public string[] Aliases { get; set; }
 
         public string CommandName { get; set; }
 
@@ -19,5 +22,7 @@ namespace Whiskey
         public bool SupportsClean { get; set; }
 
         public bool SupportsInitialize { get; set; }
+
+        public bool WarnWhenUsingAlias { get; set; }
     }
 }

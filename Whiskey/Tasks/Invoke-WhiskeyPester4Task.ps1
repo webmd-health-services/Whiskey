@@ -69,6 +69,12 @@ function Invoke-WhiskeyPester4Task
     Write-Verbose -Message ('  OutputFile  {0}' -f $outputFile)
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
+        $VerbosePreference = $using:VerbosePreference
+        $DebugPreference = $using:DebugPreference
+        $ProgressPreference = $using:ProgressPreference
+        $WarningPreference = $using:WarningPreference
+        $ErrorActionPreference = $using:ErrorActionPreference
+
         $script = $using:Path
         $pesterModulePath = $using:TaskParameter['PesterPath']
         $outputFile = $using:outputFile

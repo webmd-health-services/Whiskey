@@ -4,13 +4,17 @@
     [CmdletBinding()]
     [Whiskey.Task("Version")]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         $TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]
-        $TaskParameter
+        $TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(PathType='File')]
+        [string]
+        $Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -58,44 +62,38 @@
         $rawVersion = $TaskParameter['Version']
         $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
-    elseif( $TaskParameter['Path'] )
+    elseif( $Path )
     {
-        $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-        if( -not $path )
-        {
-            return
-        }
-
-        $fileInfo = Get-Item -Path $path
+        $fileInfo = Get-Item -Path $Path
         if( $fileInfo.Extension -eq '.psd1' )
         {
             $rawVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore  | Select-Object -ExpandProperty 'Version'
             if( -not $rawVersion )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $Path)
                 return
             }
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from PowerShell module manifest ''{1}''.' -f $rawVersion,$path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $path)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from PowerShell module manifest ''{1}''.' -f $rawVersion,$Path)
+            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $Path)
         }
         elseif( $fileInfo.Name -eq 'package.json' )
         {
             try
             {
-                $rawVersion = Get-Content -Path $path -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version' -ErrorAction Ignore
+                $rawVersion = Get-Content -Path $Path -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version' -ErrorAction Ignore
             }
             catch
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node package.json file ''{0}'' contains invalid JSON.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node package.json file ''{0}'' contains invalid JSON.' -f $Path)
                 return
             }
             if( -not $rawVersion )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $Path)
                 return
             }
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from Node package.json ''{1}''.' -f $rawVersion,$path)
-            $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $path)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from Node package.json ''{1}''.' -f $rawVersion,$Path)
+            $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $Path)
         }
         elseif( $fileInfo.Extension -eq '.csproj' )
         {
@@ -106,28 +104,28 @@
             }
             catch
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .cspoj file ''{0}'' contains invalid XMl.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .cspoj file ''{0}'' contains invalid XMl.' -f $Path)
                 return
             }
 
             if( $csprojXml.DocumentElement.Attributes['xmlns'] )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .csproj file ''{0}'' has an "xmlns" attribute. .NET Core/Standard .csproj files should not have a default namespace anymore (see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" attribute from the root "Project" document element. If this is a .NET framework .csproj, it doesn''t support versioning. Use the Whiskey Version task''s Version property to version your assemblies.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .csproj file ''{0}'' has an "xmlns" attribute. .NET Core/Standard .csproj files should not have a default namespace anymore (see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" attribute from the root "Project" document element. If this is a .NET framework .csproj, it doesn''t support versioning. Use the Whiskey Version task''s Version property to version your assemblies.' -f $Path)
                 return
             }
             $csprojVersionNode = $csprojXml.SelectSingleNode('/Project/PropertyGroup/Version')
             if( -not $csprojVersionNode )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $path)
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $Path)
                 return
             }
             $rawVersion = $csprojVersionNode.InnerText
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $path)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$Path)
+            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $Path)
         }
         elseif( $fileInfo.Name -eq 'metadata.rb' )
         {
-            $metadataContent = Get-Content -Path $path -Raw
+            $metadataContent = Get-Content -Path $Path -Raw
             $metadataContent = $metadataContent.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
 
             $rawVersion = $null
@@ -142,12 +140,12 @@
 
             if( -not $rawVersion )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to locate property "version ''x.x.x''" in metadata.rb file "{0}"' -f $path )
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to locate property "version ''x.x.x''" in metadata.rb file "{0}"' -f $Path )
                 return
             }
 
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version "{0}" from metadata.rb file "{1}".' -f $rawVersion,$path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from metadata.rb file "{0}"' -f $path)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version "{0}" from metadata.rb file "{1}".' -f $rawVersion,$Path)
+            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from metadata.rb file "{0}"' -f $Path)
         }
     }
 

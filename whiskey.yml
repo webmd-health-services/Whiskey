@@ -6,6 +6,7 @@ Build:
 - TaskDefaults:
     Pester4:
         DescribeDurationReportCount: 20
+        Verbose: false
 
 - Version:
     Path: Whiskey\Whiskey.psd1
@@ -37,8 +38,14 @@ Build:
     Path:
     - Test\about_Whiskey_Tasks.Tests.ps1
 
+- Pester4:
+    OnlyOnPlatform: Linux
+    Path:
+    - "Test\\*.Tests.ps1"
+
 - Parallel:
     OnlyBy: BuildServer
+    OnlyOnPlatform: Windows
     Queues:
     - Tasks:
         Pester4:
