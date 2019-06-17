@@ -184,6 +184,9 @@ $ErrorActionPreference = 'Continue'
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
 
+Write-Verbose -Message '# POWERSHELLVERSIONTABLE'
+$PSVersionTable | Format-List | Out-String | Write-Verbose
+
 Write-Verbose -Message '# VARIABLES'
 Get-Variable | Format-Table | Out-String | Write-Verbose
 

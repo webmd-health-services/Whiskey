@@ -46,12 +46,11 @@ function WhenRunningTask
     $jobCount = Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count'
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter
+        Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter -ErrorAction Continue
     }
     catch
     {
         $script:failed = $true
-        Write-Error $_
     }
 
     It ('should cleanup jobs') {
@@ -242,7 +241,7 @@ Queues:
     WhenRunningTask $task -ErrorAction SilentlyContinue
     ThenFailed
     It ('should parse task YAML') {
-        $Global:Error[2] | Should -Match 'Invalid\ task\ YAML'
+        $Global:Error[1] | Should -Match 'Invalid\ task\ YAML'
     }
 }
 

@@ -128,7 +128,8 @@ function WhenTheTaskRuns
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter
+
+        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter -ErrorAction Continue
     }
     catch
     {

@@ -69,6 +69,12 @@ function Invoke-WhiskeyPowerShell
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-RunResult-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
         $job = Start-Job -ScriptBlock {
+            $VerbosePreference = $using:VerbosePreference
+            $DebugPreference = $using:DebugPreference
+            $ProgressPreference = $using:ProgressPreference
+            $WarningPreference = $using:WarningPreference
+            $ErrorActionPreference = $using:ErrorActionPreference
+
             $workingDirectory = $using:WorkingDirectory
             $scriptPath = $using:ScriptPath
             $argument = $using:argument
@@ -82,8 +88,6 @@ function Invoke-WhiskeyPowerShell
                                             & (Join-Path -Path $moduleRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
                                         }
             [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
-
-            $VerbosePreference = $using:VerbosePreference
 
             $contextArgument = @{ }
             if( $passTaskContext )
