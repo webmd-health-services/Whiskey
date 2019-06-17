@@ -111,7 +111,7 @@ function Invoke-WhiskeyTask
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
 
-    $knownTasks = Get-WhiskeyTask
+    $knownTasks = Get-WhiskeyTask -Force
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
 
