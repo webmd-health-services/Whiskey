@@ -28,11 +28,19 @@ function Get-TaskParameter
     # Parameters to pass to the command.
     $taskParameters = @{ }
 
+    [Management.Automation.ParameterMetadata]$cmdParameter = $null
+
     foreach( $cmdParameter in $cmdParameters.Values )
     {
         $propertyName = $cmdParameter.Name
 
         $value = $TaskProperty[$propertyName]
+
+        # PowerShell can't implicitly convert strings to bool/switch values so we have to do it.
+        if( $cmdParameter.ParameterType -eq [Switch] -or $cmdParameter.ParameterType -eq [bool] )
+        {
+            $value = $value | ConvertFrom-WhiskeyYamlScalar
+        }
 
         [Whiskey.Tasks.ParameterValueFromVariableAttribute]$valueFromVariableAttr = $cmdParameter.Attributes | Where-Object { $_ -is [Whiskey.Tasks.ParameterValueFromVariableAttribute] }
         if( $valueFromVariableAttr )

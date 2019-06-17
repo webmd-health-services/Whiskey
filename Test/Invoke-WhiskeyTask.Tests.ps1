@@ -1677,6 +1677,80 @@ Describe ('Invoke-WhiskeyTask.when warning about using an alias') {
     }
 }
 
+Describe ('Invoke-WhiskeyTask.when multiple tasks have the same alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    function Global:AliasedTask2
+    {
+        [Whiskey.Task('NewName2',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{} -ErrorAction SilentlyContinue
+        ThenThrewException -Pattern 'Found\ \d+\ tasks\ with\ alias'
+        It ('should not run the task') {
+            $aliasedTaskRan | Should -BeFalse
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+        Remove-Item -Path 'function:AliasedTask2'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when multiple tasks have the same name') {
+    $global:taskRan = $false
+    function Global:Dup
+    {
+        [Whiskey.Task('Dup')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:taskRan = $true
+    }
+    function Global:Dup2
+    {
+        [Whiskey.Task('Dup')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:taskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'Dup' -Parameter @{} -ErrorAction SilentlyContinue
+        ThenThrewException -Pattern 'Found\ \d+\ tasks\ named'
+        It ('should not run the task') {
+            $taskRan | Should -BeFalse
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:taskRan'
+        Remove-Item -Path 'function:Dup'
+        Remove-Item -Path 'function:Dup2'
+    }
+}
+
 Describe ('Invoke-WhiskeyTask.when task is obsolete') {
     function Global:ObsoleteTask
     {

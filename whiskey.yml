@@ -6,6 +6,7 @@ Build:
 - TaskDefaults:
     Pester4:
         DescribeDurationReportCount: 20
+        Verbose: false
 
 - Version:
     Path: Whiskey\Whiskey.psd1

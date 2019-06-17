@@ -6,7 +6,19 @@ Set-StrictMode -Version 'Latest'
 
 [Whiskey.Context]$context = $null
 $global:taskCalled = $false
-$global:taskParameters = $false
+$global:taskParameters = $null
+
+# The default DebugPreference when using the -Debug switch changed in PowerShell Core 6.2. 
+# This function exists to get the default.
+function Get-DefaultDebugPreference
+{
+    [CmdletBinding()]
+    param(
+    )
+    return $DebugPreference
+}
+$defaultDebugPreference = Get-DefaultDebugPreference -Debug
+Write-Verbose -Message ('Default DebugPreference: {0}' -f $defaultDebugPreference) -Verbose
 
 function GivenDirectory
 {
@@ -47,7 +59,7 @@ function Remove-GlobalTestItem
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
-    $threwException | Should -Be $false
+    $threwException | Should -BeFalse
 }
 
 function ThenTaskCalled
@@ -64,7 +76,7 @@ function ThenTaskCalled
         $taskParameters.Count | Should -Be $WithParameter.Count
         foreach( $key in $WithParameter.Keys )
         {
-            $taskParameters[$key] | Should -Be $WithParameter[$key]
+            $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
         }
     }
 }
@@ -81,13 +93,13 @@ function ThenThrewException
         $Pattern
     )
 
-    $threwException | Should -Be $true
+    $threwException | Should -BeTrue
     $Global:Error | Should -Match $Pattern
 }
 
 function WhenRunningTask
 {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]
         $Name,
@@ -97,9 +109,9 @@ function WhenRunningTask
     )
 
     $script:context = New-WhiskeyTestContext -ForDeveloper
-    $context.PipelineName = 'Build';
-    $context.TaskName = $null;
-    $context.TaskIndex = 1;
+    $context.PipelineName = 'Build'
+    $context.TaskName = $null
+    $context.TaskIndex = 1
 
     $Global:Error.Clear()
     $script:threwException = $false
@@ -312,8 +324,9 @@ Describe ('Get-TaskParameter.when path parameter wants to be resolved but parame
             $global:taskParameters = $PSBoundParameters
         }
         Init
-        GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
+        GivenFile 'abc.txt' 
+        GivenFile 'xyz.txt' 
+        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.txt' } -ErrorAction SilentlyContinue
         ThenThrewException -Pattern 'requires\ a\ single\ path'
         ThenTaskNotCalled
     }
@@ -423,7 +436,7 @@ Describe ('Get-TaskParameter.when path should be a directory but it''s a file') 
     }
 }
 
-Describe ('Get-TaskParameter.when path should be a file and passed multiple patht and one isn''t') {
+Describe ('Get-TaskParameter.when all paths should be files but one is a directory') {
     It ('should fail') {
         function global:Task
         {
@@ -445,7 +458,6 @@ Describe ('Get-TaskParameter.when path should be a file and passed multiple path
     }
 }
 
-
 Describe ('Get-TaskParameter.when an optional path that doesn''t exist should be a specific type') {
     It ('should pass nothing') {
         function global:Task
@@ -462,6 +474,150 @@ Describe ('Get-TaskParameter.when an optional path that doesn''t exist should be
         Init
         WhenRunningTask 'Task' -Parameter @{ }
         ThenTaskCalled -WithParameter @{ }
+    }
+}
+
+Describe ('Get-TaskParameter.when passing typed parameters') {
+    It ('should convert original values to boolean values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            param(
+                [Switch]
+                $SwitchOne,
+                [Switch]
+                $SwitchTwo,
+                [Switch]
+                $SwitchThree,
+                [bool]
+                $Bool,
+                [int]
+                $Int,
+                [bool]
+                $NoBool,
+                [int]
+                $NoInt
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+        }
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'SwitchOne' = 'true' ; 'SwitchTwo' = 'false'; 'Bool' = 'true' ; 'Int' = '1' }
+        ThenTaskCalled -WithParameter @{ 'SwitchOne' = $true ; 'SwitchTwo' = $false; 'Bool' = $true ; 'Int' = 1 }
+    }
+}
+
+Describe ('Get-TaskParameter.when passing common parameters that map to preference values') {
+    It ('should convert common parameters to preference values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            [CmdletBinding(SupportsShouldProcess)]
+            param(
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+            foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+            {
+                $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+            }
+        }
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'true' ; 'Debug' = 'true'; 'WhatIf' = 'true' }
+        ThenTaskCalled -WithParameter @{ 
+                                            'Verbose' = $true ; 
+                                            'VerbosePreference' = 'Continue'
+                                            'Debug' = $true;
+                                            'DebugPreference' = $defaultDebugPreference;
+                                            'WhatIf' = $true;
+                                            'WhatIfPreference' = $true;
+                                        }
+        $Global:VerbosePreference | Should -Be $origVerbose
+        $Global:DebugPreference | Should -Be $origDebug
+        $Global:WhatIfPreference | Should -Be $origWhatIf
+    }
+}
+
+Describe ('Get-TaskParameter.when turning off preference values') {
+    It ('should convert common parameters to preference values') {
+        function global:Task
+        {
+            [Whiskey.Task('Task')]
+            [CmdletBinding(SupportsShouldProcess)]
+            param(
+            )
+            $global:taskCalled = $true
+            $global:taskParameters = $PSBoundParameters
+            foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+            {
+                $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+            }
+        }
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        Init
+        WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'false' ; 'Debug' = 'false'; 'WhatIf' = 'false' } -Verbose -Debug -WhatIf
+        ThenTaskCalled -WithParameter @{ 
+                                            'Verbose' = $false ; 
+                                            'VerbosePreference' = 'SilentlyContinue'
+                                            'Debug' = $false;
+                                            'DebugPreference' = 'SilentlyContinue';
+                                            'WhatIf' = $false;
+                                            'WhatIfPreference' = $false;
+                                        }
+        $Global:VerbosePreference | Should -Be $origVerbose
+        $Global:DebugPreference | Should -Be $origDebug
+        $Global:WhatIfPreference | Should -Be $origWhatIf
+    }
+}
+
+Describe ('Get-TaskParameter.when turning off global preference values') {
+    It ('should convert common parameters to preference values') {
+        $origVerbose = $Global:VerbosePreference
+        $origDebug = $Global:DebugPreference
+        $origWhatIf = $Global:WhatIfPreference
+        try
+        {
+            function global:Task
+            {
+                [Whiskey.Task('Task')]
+                [CmdletBinding(SupportsShouldProcess)]
+                param(
+                )
+                $global:taskCalled = $true
+                $global:taskParameters = $PSBoundParameters
+                foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference' ) )
+                {
+                    $global:taskParameters[$prefName] = Get-Variable -Name $prefName -ValueOnly
+                }
+            }
+            $Global:VerbosePreference = 'Continue'
+            $Global:DebugPreference = 'Continue'
+            $Global:WhatIfPreference = $true
+            Init
+            WhenRunningTask 'Task' -Parameter @{ 'Verbose' = 'false' ; 'Debug' = 'false'; 'WhatIf' = 'false' }
+            ThenTaskCalled -WithParameter @{ 
+                                                'Verbose' = $false;
+                                                'VerbosePreference' = 'SilentlyContinue';
+                                                'Debug' = $false;
+                                                'DebugPreference' = 'SilentlyContinue';
+                                                'WhatIf' = $false;
+                                                'WhatIfPreference' = $false;
+                                            }
+            $Global:VerbosePreference | Should -Be 'Continue'
+            $Global:DebugPreference | Should -Be 'Continue'
+            $Global:WhatIfPreference | Should -BeTrue
+        }
+        finally
+        {
+            $Global:VerbosePreference = $origVerbose
+            $Global:DebugPreference = $origDebug
+            $Global:WhatIfPreference = $origWhatIf
+        }
     }
 }
 
