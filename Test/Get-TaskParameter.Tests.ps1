@@ -8,6 +8,18 @@ Set-StrictMode -Version 'Latest'
 $global:taskCalled = $false
 $global:taskParameters = $null
 
+# The default DebugPreference when using the -Debug switch changed in PowerShell Core 6.2. 
+# This function exists to get the default.
+function Get-DefaultDebugPreference
+{
+    [CmdletBinding()]
+    param(
+    )
+    return $DebugPreference
+}
+$defaultDebugPreference = Get-DefaultDebugPreference -Debug
+Write-Verbose -Message ('Default DebugPreference: {0}' -f $defaultDebugPreference) -Verbose
+
 function GivenDirectory
 {
     param(
@@ -519,7 +531,7 @@ Describe ('Get-TaskParameter.when passing common parameters that map to preferen
                                             'Verbose' = $true ; 
                                             'VerbosePreference' = 'Continue'
                                             'Debug' = $true;
-                                            'DebugPreference' = 'Inquire';
+                                            'DebugPreference' = $defaultDebugPreference;
                                             'WhatIf' = $true;
                                             'WhatIfPreference' = $true;
                                         }
