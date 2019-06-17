@@ -1,6 +1,6 @@
 PublishOn:
 - master
-- develop
+- release
 
 Build:
 - TaskDefaults:
@@ -11,7 +11,7 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
     Prerelease:
-    - develop: beta$(WHISKEY_BUILD_NUMBER)
+    - release: beta$(WHISKEY_BUILD_NUMBER)
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
