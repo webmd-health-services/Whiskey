@@ -23,6 +23,10 @@
                         <Label>SupportsInitialize</Label>
                         <Width>18</Width>
                     </TableColumnHeader>
+                    <TableColumnHeader>
+                        <Label>Obsolete</Label>
+                        <Width>8</Width>
+                    </TableColumnHeader>
                 </TableHeaders>
                 <TableRowEntries>
                     <TableRowEntry>
@@ -44,6 +48,14 @@
                             <TableColumnItem>
                                 <ScriptBlock>
                                     if( $_.SupportsInitialize )
+                                    {
+                                        $true
+                                    }
+                                </ScriptBlock>
+                            </TableColumnItem>
+                            <TableColumnItem>
+                                <ScriptBlock>
+                                    if( $_.Obsolete )
                                     {
                                         $true
                                     }
@@ -74,6 +86,9 @@
                             </ListItem>
                             <ListItem>
                                 <PropertyName>SupportsInitialize</PropertyName>
+                            </ListItem>
+                            <ListItem>
+                                <PropertyName>Obsolete</PropertyName>
                             </ListItem>
                             <ListItem>
                                 <PropertyName>Aliases</PropertyName>

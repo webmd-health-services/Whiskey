@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyNpmRunScript
 {
-    [Whiskey.Task('NpmRunScript')]
+    [Whiskey.Task('NpmRunScript',Obsolete,ObsoleteMessage='The "NpmRunScriptTask" is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
     [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
@@ -16,8 +16,6 @@ function Invoke-WhiskeyNpmRunScript
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "NpmRunScript" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')
 
     $npmScripts = $TaskParameter['Script']
     if (-not $npmScripts)

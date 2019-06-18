@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyNpmInstall
 {
-    [Whiskey.Task('NpmInstall',SupportsClean=$true)]
+    [Whiskey.Task('NpmInstall',SupportsClean,Obsolete,ObsoleteMessage='The "NpmInstall" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
     [Whiskey.RequiresTool('Node', 'NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
@@ -16,8 +16,6 @@ function Invoke-WhiskeyNpmInstall
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "NpmInstall" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')
 
     $workingDirectory = (Get-Location).ProviderPath
 

@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyNpmPrune
 {
-    [Whiskey.Task('NpmPrune')]
+    [Whiskey.Task('NpmPrune',Obsolete,ObsoleteMessage='The "NpmPrune" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
     [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
@@ -18,8 +18,6 @@ function Invoke-WhiskeyNpmPrune
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "NpmPrune" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')
 
     Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
 }

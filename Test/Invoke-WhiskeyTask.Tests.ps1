@@ -1750,4 +1750,52 @@ Describe ('Invoke-WhiskeyTask.when multiple tasks have the same name') {
         Remove-Item -Path 'function:Dup2'
     }
 }
+
+Describe ('Invoke-WhiskeyTask.when task is obsolete') {
+    function Global:ObsoleteTask
+    {
+        [Whiskey.Task('ObsoleteTask',Obsolete)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+        It ('should warn') {
+            $warnings | Should -Match 'is\ obsolete'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'function:ObsoleteTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when task is obsolete and user provides custom obsolete message') {
+    function Global:ObsoleteTask
+    {
+        [Whiskey.Task('ObsoleteTask',Obsolete,ObsoleteMessage='Use the NonObsoleteTask instead.')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+        It ('should warn') {
+            $warnings | Should -Match 'Use\ the\ NonObsoleteTask\ instead\.'
+            $warnings | Should -Not -Match 'is\ obsolete'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'function:ObsoleteTask'
+    }
+}
+
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore

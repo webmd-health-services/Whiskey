@@ -2,7 +2,7 @@
 function Invoke-WhiskeyDotNetTest
 {
     [CmdletBinding()]
-    [Whiskey.Task("DotNetTest")]
+    [Whiskey.Task("DotNetTest",Obsolete,ObsoleteMessage='The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
     [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory=$true)]
@@ -16,8 +16,6 @@ function Invoke-WhiskeyDotNetTest
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')
 
     $dotnetExe = $TaskParameter['DotNetPath']
 

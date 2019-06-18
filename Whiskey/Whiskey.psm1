@@ -47,7 +47,7 @@ $context = New-Object -TypeName 'Whiskey.Context'
 Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 
 $taskAttribute = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Fubar'
-Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias' )
+Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
