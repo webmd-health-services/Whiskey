@@ -111,7 +111,7 @@ function Invoke-WhiskeyTask
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
 
-    $knownTasks = Get-WhiskeyTask
+    $knownTasks = Get-WhiskeyTask -Force
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
 
@@ -144,6 +144,16 @@ function Invoke-WhiskeyTask
     }
 
     $TaskContext.TaskName = $Name
+
+    if( $task.Obsolete )
+    {
+        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $task.Name
+        if( $task.ObsoleteMessage )
+        {
+            $message = $task.ObsoleteMessage
+        }
+        Write-WhiskeyWarning -TaskContext $TaskContext -Message $message
+    }
 
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {

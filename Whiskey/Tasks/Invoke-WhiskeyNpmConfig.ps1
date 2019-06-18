@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyNpmConfig
 {
-    [Whiskey.Task('NpmConfig')]
+    [Whiskey.Task('NpmConfig',Obsolete,ObsoleteMessage='The "NpmConfig" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
     [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
     param(
         [Parameter(Mandatory=$true)]
@@ -15,8 +15,6 @@ function Invoke-WhiskeyNpmConfig
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "NpmConfig" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')
 
     $configuration = $TaskParameter['Configuration']
     if( -not $configuration )

@@ -1,9 +1,9 @@
 
 function Invoke-WhiskeyNodeNspCheck
 {
-    [Whiskey.Task("NodeNspCheck")]
-    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
-    [Whiskey.RequiresTool("NodeModule::nsp", "NspPath", VersionParameterName="Version")]
+    [Whiskey.Task('NodeNspCheck',Obsolete,ObsoleteMessage='The "NodeNspCheck" task is obsolete and will be removed in a future version of Whiskey. Please use the "Npm" task instead. The NSP project shut down in September 2018 and was replaced with the `npm audit` command.')]
+    [Whiskey.RequiresTool('Node', 'NodePath', VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('NodeModule::nsp', 'NspPath', VersionParameterName='Version')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -17,8 +17,6 @@ function Invoke-WhiskeyNodeNspCheck
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Write-Warning -Message ('The "NodeNspCheck" task is obsolete and will be removed in a future version of Whiskey. Please use the "NpmAudit" task instead. The NSP project died in September 2018 and was replaced with the `npm audit` command.')
 
     $nspPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['NspPath'] -CommandPath 'bin\nsp' -ErrorAction Stop
 
