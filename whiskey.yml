@@ -11,7 +11,7 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
     Prerelease:
-    - release: beta$(WHISKEY_BUILD_NUMBER)
+    - prerelease: beta$(WHISKEY_BUILD_NUMBER)
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
