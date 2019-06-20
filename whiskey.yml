@@ -1,6 +1,6 @@
 PublishOn:
 - master
-- release
+- prerelease
 
 Build:
 - TaskDefaults:
