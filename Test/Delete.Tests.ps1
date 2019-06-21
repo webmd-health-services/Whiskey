@@ -102,7 +102,7 @@ function WhenDeleting
     Invoke-WhiskeyTask -TaskContext $context -Name 'Delete' -Parameter @{ Path = $path }
 }
 
-Describe 'Remove-WhiskeyItem.when run in Clean mode and item is a file' {
+Describe 'Delete.when run in Clean mode and item is a file' {
     Init
     GivenClean
     GivenItem 'dir1\file.txt' -ItemType 'File'
@@ -111,7 +111,7 @@ Describe 'Remove-WhiskeyItem.when run in Clean mode and item is a file' {
     ThenItemDoesNotExist 'dir1\file.txt'
 }
 
-Describe 'Remove-WhiskeyItem.when item is a file' {
+Describe 'Delete.when item is a file' {
     Init
     GivenItem 'dir1\file.txt' -ItemType 'File'
     GivenPath 'dir1\file.txt'
@@ -119,7 +119,7 @@ Describe 'Remove-WhiskeyItem.when item is a file' {
     ThenItemDoesNotExist 'dir1\file.txt'
 }
 
-Describe 'Remove-WhiskeyItem.when item is a read-only file' {
+Describe 'Delete.when item is a read-only file' {
     Init
     GivenItem 'dir1\file.txt' -ItemType 'File' -ReadOnly
     GivenPath 'dir1\file.txt'
@@ -127,7 +127,7 @@ Describe 'Remove-WhiskeyItem.when item is a read-only file' {
     ThenItemDoesNotExist 'dir1\file.txt'
 }
 
-Describe 'Remove-WhiskeyItem.when item is adirectory' {
+Describe 'Delete.when item is adirectory' {
     Init
     GivenItem 'dir1\file.txt' -ItemType 'File' -ReadOnly
     GivenPath 'dir1'
@@ -135,7 +135,7 @@ Describe 'Remove-WhiskeyItem.when item is adirectory' {
     ThenItemDoesNotExist 'dir1'
 }
 
-Describe 'Remove-WhiskeyItem.when file does not exist' {
+Describe 'Delete.when file does not exist' {
     Init
     GivenPath 'somefile'
     WhenDeleting
