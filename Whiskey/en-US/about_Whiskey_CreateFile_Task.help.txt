@@ -1,0 +1,45 @@
+TOPIC
+    about_Whiskey_CreateFile_Task
+
+
+SUMMARY
+    Creates files.
+
+
+DESCRIPTION
+    The `CreateFile` task creates a file in the destination directory. Pass the path of the desired directory for the new file to the `Path` property. Pass the content for the new file to the `Content` property. If a file of the same name already exists, then pass 'true','yes', or '1' to the `Force` property. Otherwise the file will not be overwritten. Directories cannot be overwritten. Uses Powershell's `New-Item` cmdlet.
+
+
+PROPERTIES
+    * `Path` (**mandatory**): the path to the desired directory for the new file.
+    * `Content`: the content to be added to the file. 
+    * `Force`: allows a file to be overwritten. By default, it is set to *false*.
+
+EXAMPLES
+
+    ## Example 1
+
+        Build:
+        - CreateFile
+            Path: file.txt
+            Content: 'File content.'
+
+    In this example, the file "file.txt" is created with the provided content.
+
+    ## Example 2
+        
+        Build:
+        - CreateFile:
+            Path: file.txt
+
+    In this example, an empty file is created
+    
+    ## Example 3
+    
+        Build:
+        -CreateFile:
+            Path: non-existing_directory\file.txt
+            Content: 'File content.'
+            Force: true
+
+    In this example, the entire path will be created and any file by the same name will be overwritten.
