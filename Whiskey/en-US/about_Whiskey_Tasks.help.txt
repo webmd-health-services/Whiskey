@@ -10,7 +10,7 @@ LONG DESCRIPTION
     ## Tasks
 
     Whiskey has the following tasks:
-
+    * `CreateFile`: creates files.
     * `CopyFile`: copies files.
     * `Delete`: deletes files.
     * `DotNet`: runs `dotnet` commands.

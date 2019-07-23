@@ -228,7 +228,7 @@ Describe -Name 'Createfile.when the path is outside root' {
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenFile -Path '../file.txt' -Contains "File above root."
+        ThenError -Matches "'Path' given is outside of root. Please change one or more elements of the 'path'".
     }
 }
 

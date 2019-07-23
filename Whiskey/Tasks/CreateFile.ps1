@@ -41,7 +41,7 @@ function New-WhiskeyFile
 
     if ( -not ($Path.StartsWith($TaskContext.BuildRoot)) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathErrorMessage
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathOutOfRoot
         return
     }
 
@@ -90,4 +90,8 @@ function New-WhiskeyFile
 '@
     $subdirectoryErrorMessage = @'
 'Path' contains subdirectories that do not exist. Use Force property to create entire path.
+'@
+
+    $pathOutOfRoot = @'
+'Path' given is outside of root. Please change one or more elements of the 'path'.
 '@
