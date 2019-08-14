@@ -17,9 +17,14 @@ environment:
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 build_script:
+- ps: >-
+    if( Test-Path -Path ('env:APPVEYOR_ENABLE_RDP') )
+    {
+        $blockRdp = $true; 
+        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    }
+
 - pwsh: >-
-    $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-    
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
     $ProgressPreference = 'SilentlyContinue'
     
