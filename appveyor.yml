@@ -19,6 +19,7 @@ environment:
 build_script:
 - ps: >-
     Get-ChildItem -Path 'env:'
+    
     if( Test-Path -Path ('env:APPVEYOR_ENABLE_RDP') )
     {
         $blockRdp = $true; 
