@@ -28,7 +28,7 @@ build_script:
 
 - pwsh: >-
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
-    $ProgressPreference = 'SilentlyContinue'
+    $Global:ProgressPreference = 'SilentlyContinue'
     
     .\build.ps1 -Verbose
 
