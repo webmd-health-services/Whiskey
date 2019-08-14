@@ -12,13 +12,13 @@ environment:
   GITHUB_ACCESS_TOKEN:
     secure: cEpuAn4TbJ17Y4WMMsHj46T4DLFMGE4n7xafkbiVQL4jueqc9TGG7NHWg4qbwmt7
   matrix:
-  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
-    LANG: us_US.UTF-8
+  #- APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+  #  LANG: us_US.UTF-8
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 build_script:
 - pwsh: >-
-    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
     
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
     $ProgressPreference = 'SilentlyContinue'
