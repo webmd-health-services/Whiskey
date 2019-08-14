@@ -19,8 +19,8 @@ environment:
 build_script:
 - ps: >-
     Get-ChildItem -Path 'env:'
-    
-    if( Test-Path -Path ('env:APPVEYOR_ENABLE_RDP') )
+
+    if( Test-Path -Path ('env:ENABLE_RDP') )
     {
         $blockRdp = $true; 
         iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
