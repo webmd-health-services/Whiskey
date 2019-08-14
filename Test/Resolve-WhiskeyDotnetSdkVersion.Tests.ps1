@@ -2,23 +2,12 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 . (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
-$givenVersion = $null
 $resolvedVersion = $null
 
 function Init
 {
     $Global:Error.Clear()
-    $script:givenVersion = $null
     $script:resolvedVersion = $null
-}
-
-function GivenVersion
-{
-    param(
-        $Version
-    )
-
-    $script:givenVersion = $Version
 }
 
 function ThenError
@@ -27,9 +16,7 @@ function ThenError
         $Message
     )
 
-    It 'should write an error message' {
-        $Global:Error | Should -Match $Message
-    }
+    $Global:Error | Should -Match $Message -Because 'it should write the expected error message'
 }
 
 function ThenResolvedLatestLTSVersion
@@ -37,9 +24,7 @@ function ThenResolvedLatestLTSVersion
     Invoke-RestMethod -Uri 'https://dotnetcli.blob.core.windows.net/dotnet/Sdk/LTS/latest.version' | Where-Object { $_ -match '(\d+\.\d+\.\d+)'} | Out-Null
     $ltsVersion = $Matches[1]
 
-    It ('should resolve latest LTS version ''{0}''' -f $ltsVersion) {
-        $resolvedVersion | Should -Be $ltsVersion
-    }
+    $resolvedVersion | Should -Be $ltsVersion -Because 'it should resolve the latest LTS version'
 }
 
 function ThenResolvedVersion
@@ -48,9 +33,7 @@ function ThenResolvedVersion
         $Version
     )
 
-    It ('should resolve SDK version ''{0}''' -f $Version) {
-        $resolvedVersion | Should -Be $Version
-    }
+    $resolvedVersion | Should -Be $Version -Because ('it should resolve SDK version to "{0}"' -f $Version)
 }
 
 function ThenResolvedWildcardVersion
@@ -60,78 +43,85 @@ function ThenResolvedWildcardVersion
     )
 
     $releasesJson = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/dotnet/core/master/release-notes/releases.json'
-    $sdkVersions =  $releasesJson |
-                        Select-Object -ExpandProperty 'version-sdk' -Unique |
-                        Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-                        Sort-Object -Descending
+    $sdkVersions =
+        $releasesJson |
+        Select-Object -ExpandProperty 'version-sdk' -Unique |
+        Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+        Sort-Object -Descending
 
     $expectedVersion = $sdkVersions | Where-Object { [version]$_ -like $WildcardVersion } | Select-Object -First 1
 
-    It ('should resolve SDK version ''{0}''' -f $expectedVersion) {
-        $resolvedVersion | Should -Be $expectedVersion
-    }
+    $resolvedVersion | Should -Be $expectedVersion -Because ('it should resolve SDK version to "{0}"' -f $expectedVersion)
 }
 
 function ThenReturnedNothing
 {
-    It 'should not return anything' {
-        $resolvedVersion | Should -BeNullOrEmpty
-    }
+    $resolvedVersion | Should -BeNullOrEmpty -Because 'it should not return anything'
 }
 
 function WhenResolvingSdkVersion
 {
     [CmdletBinding()]
-    param()
+    param(
+        $Version
+    )
 
     $versionParam = @{}
-    if ($givenVersion)
+    if ($Version)
     {
-        $versionParam['Version'] = $givenVersion
+        $versionParam['Version'] = $Version
     }
 
     $script:resolvedVersion = Resolve-WhiskeyDotNetSdkVersion @versionParam
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version that does not exist' {
-    Init
-    GivenVersion '0.0.1'
-    WhenResolvingSdkVersion -ErrorAction SilentlyContinue
-    ThenError 'could\ not\ be\ found'
-    ThenReturnedNothing
+    It 'should write an error' {
+        Init
+        WhenResolvingSdkVersion '0.0.1' -ErrorAction SilentlyContinue
+        ThenError 'could\ not\ be\ found'
+        ThenReturnedNothing
+    }
 }
 
-Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.1.2''' {
-    Init
-    GivenVersion '2.1.2'
-    WhenResolvingSdkVersion
-    ThenResolvedVersion '2.1.2'
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version "2.1.2"' {
+    It 'should resolve SDK version' {
+        Init
+        WhenResolvingSdkVersion '2.1.2'
+        ThenResolvedVersion '2.1.2'
+    }
 }
 
-Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.*''' {
-    Init
-    GivenVersion '2.*'
-    WhenResolvingSdkVersion
-    ThenResolvedWildcardVersion '2.*'
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version "2.*"' {
+    It 'should resolve SDK version' {
+        Init
+        WhenResolvingSdkVersion '2.*'
+        ThenResolvedWildcardVersion '2.*'
+    }
 }
 
-Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''1.0.*''' {
-    Init
-    GivenVersion '1.0.*'
-    WhenResolvingSdkVersion
-    ThenResolvedWildcardVersion '1.0.*'
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version "1.0.*"' {
+    It 'should resolve SDK version' {
+        Init
+        WhenResolvingSdkVersion '1.0.*'
+        ThenResolvedWildcardVersion '1.0.*'
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving latest LTS version' {
-    Init
-    WhenResolvingSdkVersion
-    ThenResolvedLatestLTSVersion
+    It 'should resolve SDK LTS version' {
+        Init
+        WhenResolvingSdkVersion
+        ThenResolvedLatestLTSVersion
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t return a valid version' {
-    Init
-    Mock -CommandName Invoke-RestMethod -MockWith { '1' }
-    WhenResolvingSdkVersion -ErrorAction SilentlyContinue
-    ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
-    ThenReturnedNothing
+    It 'should write an error' {
+        Init
+        Mock -CommandName Invoke-RestMethod -MockWith { '1' }
+        WhenResolvingSdkVersion -ErrorAction SilentlyContinue
+        ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
+        ThenReturnedNothing
+    }
 }
