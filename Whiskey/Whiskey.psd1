@@ -154,6 +154,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Fixed: installing PowerShell modules failed if there is a PowerShell repository registered that requires credentials (upgraded PackageManagement from 1.3.1 to 1.4.3 and PowerShellGet from 2.1.2 to 2.2.0).
+* Fixed: NUnit2 task always showing verbose output.
 '@
         } # End of PSData hashtable
 
