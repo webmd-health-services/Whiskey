@@ -199,7 +199,8 @@ function Invoke-Publish
                     param(
                         $NuGetApiKey,
                         $Repository,
-                        $Path
+                        $Path,
+                        [Switch]$Force
                     ) 
                     Write-Error -Message $message
                 }.GetNewClosure()
@@ -273,13 +274,6 @@ function ThenFailed
 
 function ThenModuleNotPublished
 {    
-    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
-}
-
-function Assert-ModuleNotPublished
-{
-    Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
-    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
     Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
 }
 
@@ -390,6 +384,7 @@ function ThenModulePublished
         Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
         $NuGetApiKey -eq $expectedApiKey
     }
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Force }
 }
 
 function ThenManifest
