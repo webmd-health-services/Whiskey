@@ -6,6 +6,7 @@ $failed = $false
 $context = $null
 $buildRoot = $null
 $variables = $null
+$dates = $null
 
 function Init
 {
@@ -13,6 +14,35 @@ function Init
     $script:context = $null
     $script:buildRoot = $TestDrive.FullName
     $script:variables = @{}
+    $script:dates = @{}
+}
+
+function GivenDirectory
+{
+   param(
+       $Path
+   )
+
+   $Path = Join-Path -Path $buildRoot -ChildPath $Path
+   New-Item -Path $Path -ItemType 'directory'
+}
+
+function GivenFile
+{
+   param(
+       $Path,
+       $Contains
+   )
+  $Path = Join-Path -Path $buildRoot -ChildPath $Path
+  if ($Contains)
+  {
+       New-Item -Path $Path -Value $Contains
+  }
+  else
+  {
+       New-Item -Path $Path
+  }
+  $script:dates[$Path] = (Get-Item $Path).LastWriteTime
 }
 
 function GivenVariable
@@ -34,17 +64,17 @@ function GivenWhiskeyYml
     $Content | Set-Content -Path (Join-Path -Path $buildRoot -ChildPath 'whiskey.yml')
 }
 
-function GivenDirectory
+function ThenDate
 {
    param(
        $Path
    )
-
    $Path = Join-Path -Path $buildRoot -ChildPath $Path
-   New-Item -Path $Path -ItemType "directory"
+   (Get-Item $Path).LastWriteTime | Should -BeGreaterThan $script:dates[$Path]
 }
 
-function ThenFile {
+function ThenFile
+{
     param(
         $Path,
         $Contains
@@ -57,22 +87,25 @@ function ThenFile {
     if ($Contains)
     {
         $actualContent = Get-Content -Path $Path 
-        $actualContent | Should -Match $Contains
+        $actualContent | Should -BeExactly $Contains
     }
 
     else
     {
         $actualContent = Get-Content -Path $Path 
         $actualContent | Should -BeNullOrEmpty
+        Get-Item -Path $Path | Select-Object -Expand 'Length' | Should -Be 0
     }
 }
 
-function ThenSuccess {
+function ThenSuccess
+{
     $Global:Error | Should -BeNullOrEmpty
     $script:failed | Should -BeFalse
 }
 
-function ThenTaskFailed {
+function ThenTaskFailed
+{
     $Global:Error | Should -Not -BeNullOrEmpty
     $script:failed | Should -BeTrue
 }
@@ -86,7 +119,8 @@ function ThenError
     $Global:Error | Should -Match $Matches
 }
 
-function WhenRunningTask {
+function WhenRunningTask
+{
     [CmdletBinding()]
     param(
     )
@@ -94,7 +128,8 @@ function WhenRunningTask {
     $Global:Error.Clear()
 
     
-    try {
+    try 
+    {
 
         [Whiskey.Context]$script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $buildRoot -ChildPath 'whiskey.yml')
         
@@ -107,24 +142,34 @@ function WhenRunningTask {
             Where-Object { $_.ContainsKey('CreateFile') } | 
             ForEach-Object { $_['CreateFile'] }
         
-        foreach ($task in $tasks) {
-            Invoke-WhiskeyTask -TaskContext $context -Name 'CreateFile' -Parameter $task
+        foreach ($task in $tasks)
+        {
+            try
+            {
+                Invoke-WhiskeyTask -TaskContext $context -Name 'CreateFile' -Parameter $task
+            }
+            catch
+            {
+                Write-Error -ErrorRecord $_
+                $script:failed = $true
+            }
         }
     }
-    catch {
+    catch
+    {
         Write-Error -ErrorRecord $_
         $script:failed = $true
     }
 }
 
-Describe -Name 'CreateFile.when creating a file' {
-    It -Name 'should create the file' {
+Describe 'CreateFile.when file doesn''t exist.' {
+    It 'should create the file' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
             Path: file.txt
-            Content: "Hello World."
+            Content: 'Hello World.'
 '@
         WhenRunningTask
         ThenSuccess
@@ -133,23 +178,23 @@ Describe -Name 'CreateFile.when creating a file' {
    
 }
 
- Describe -Name 'CreateFile.when and resolves Whiskey variables' {
-    It -Name 'should create the file'{
+Describe 'CreateFile.when content contains variables' {
+    It 'should expand variable value in content'{
         Init
         GivenVariable 'Environment' -WithValue 'Test'
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
             Path: file.txt
-            Content: "My environment is: $(Environment)"
+            Content: 'My environment is: $(Environment)'
 '@
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask
         ThenSuccess
-        ThenFile -Path 'file.txt' -Contains "My environment is: Test"
+        ThenFile -Path 'file.txt' -Contains 'My environment is: Test'
     }
- }
+}
 
-Describe -Name 'CreateFile.when the content is empty' {
+Describe 'CreateFile.when there is no content' {
     It 'should create an empty file' {
         Init
         GivenWhiskeyYml @'
@@ -162,77 +207,76 @@ Describe -Name 'CreateFile.when the content is empty' {
     }
 }
 
-Describe -Name 'CreateFile.when the path is missing' {
-    It -Name 'should not create a file' {
+Describe 'CreateFile.when the path is missing' {
+    It 'should not create a file' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
-            Content: "No path file"
+            Content: 'No path file'
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches "'Path' property is missing. Please set it to list of target locations to create new file."
+        ThenError -Matches 'path is mandatory.'
     }
 }
 
-Describe -Name 'Createfile.when the path already exists' {
+Describe 'CreateFile.when the file already exists' {
     It 'should only create the first file' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
             Path: file.txt
-            Content: "First File."
+            Content: 'First File.'
 
         - CreateFile:
             Path: file.txt
-            Content: "Second File... First File Overwritten"
-            Force: N
+            Content: 'Second File... First File Overwritten'
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenFile -Path 'file.txt' -Contains 'First File.'
-        ThenError -Matches "'Path' already exists. Please change 'path' to create new file."
+        ThenError -Matches '''Path'' already exists. Please change ''path'' to create new file.'
     }
 }
 
-Describe -Name 'Createfile.when the path already exists and Force enabled' {
-    It 'should only create the first file' {
+Describe 'CreateFile.when the file exists but using Force to overwrite it.' {
+    It 'should overwrite the file' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
             Path: file.txt
-            Content: "First File."
+            Content: 'First File.'
         
         - CreateFile:
             Path: file.txt
-            Content: "Second File... First File Overwritten"
+            Content: 'Second File... First File Overwritten'
             Force: true
 '@
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask
         ThenSuccess
-        ThenFile -Path 'file.txt' -Contains "Second File... First File Overwritten"
+        ThenFile -Path 'file.txt' -Contains 'Second File... First File Overwritten'
     }
 }
 
-Describe -Name 'Createfile.when the path is outside root' {
+Describe 'CreateFile.when the path is outside root' {
     It 'should not create the file' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
             Path: ../file.txt
-            Content: "File above root."
+            Content: 'File above root.'
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches "'Path' given is outside of root. Please change one or more elements of the 'path'".
+        ThenError -Matches 'outside\ of\ the\ build\ root'
     }
 }
 
-Describe -Name 'Createfile.when the path does not contain a file extension' {
+Describe 'CreateFile.when the path does not contain a file extension' {
     It 'should create the file' {
         Init
         GivenWhiskeyYml @'
@@ -240,14 +284,14 @@ Describe -Name 'Createfile.when the path does not contain a file extension' {
         - CreateFile:
             Path: file
 '@
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask
         ThenSuccess
         ThenFile -Path 'file'
     }
 }
 
-Describe -Name 'CreateFile.when a directory already exists with same path name' {
-    It -Name 'should not create the file'{
+Describe 'CreateFile.when a directory already exists with same path name' {
+    It 'should not create the file'{
         Init
         GivenDirectory -Path 'file.txt'
         GivenWhiskeyYml @'
@@ -257,12 +301,12 @@ Describe -Name 'CreateFile.when a directory already exists with same path name' 
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches "'Path' already points to a directory of the same name."
+        ThenError -Matches 'Unable to create file '{0}': a directory exists at that path.'
     }
- }
+}
 
- Describe -Name 'CreateFile.when a directory already exists with same path name and Force enabled' {
-    It -Name 'should not create the file'{
+Describe 'CreateFile.when a directory already exists with same path name and Force enabled' {
+    It 'should not create the file'{
         Init
         GivenDirectory -Path 'file.txt'
         GivenWhiskeyYml @'
@@ -273,37 +317,156 @@ Describe -Name 'CreateFile.when a directory already exists with same path name' 
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches "'Path' already points to a directory of the same name."
+        ThenError -Matches 'Unable to create file '{0}': a directory exists at that path.'
     }
- }
+}
 
- Describe -Name 'CreateFile.when a subdirectory in the path does not exist' {
-    It -Name 'should not create the path' {
+Describe 'CreateFile.when a subdirectory in the path does not exist' {
+    It 'should not create the path' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
-            Path: \notreal\stillnotreal\file.txt
+            Path: notreal\stillnotreal\file.txt
             Content: 'I am not real.'
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches "'Path' contains subdirectories that do not exist."
+        ThenError -Matches 'Unable to create file '{0}': one or more of its parent directory, '{1}', does not exist. Either create this directory or use the ''Force'' property to create it.'
     }
- }
+}
  
- Describe -Name 'CreateFile.when a subdirectory in path does not exist but Force is true' {
-    It -Name 'should create the entire path' {
+Describe 'CreateFile.when a subdirectory in path does not exist but Force is true' {
+    It 'should create the entire path' {
         Init
         GivenWhiskeyYml @'
         Build:
         - CreateFile:
-            Path: \real\Iamreal\file.txt
+            Path: real\Iamreal\file.txt
             Content: 'I am a real.'
             Force: true
 '@
         WhenRunningTask
         ThenSuccess
-        ThenFile -Path '\real\Iamreal\file.txt' -Contains 'I am a real.'
+        ThenFile -Path 'real\Iamreal\file.txt' -Contains 'I am a real.'
     }
- }
+}
+
+Describe 'CreateFile.when parent directory is a file.' {
+    It 'should not create the file.' {
+        Init
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path: 
+            - IExistButImActuallyAFile.txt
+            - IExistButImActuallyAFile.txt\file.txt
+'@
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailed
+        ThenFile -Path 'IExistButImActuallyAFile.txt'
+        ThenError -Matches 'Parent directory of '{0}' is a file, not a directory.'
+    }
+}
+
+Describe 'CreateFile.when multiple files are given.' {
+    It 'should create all the files.' {
+        Init
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path:
+            - file.txt
+            - file2.txt
+            - file3.txt
+            Content: 'file'
+'@
+    WhenRunningTask
+    ThenSuccess
+    ThenFile -Path 'file.txt' -Contains 'file'
+    ThenFile -Path 'file2.txt' -Contains 'file'
+    ThenFile -Path 'file3.txt' -Contains 'file'
+    }
+}
+
+Describe 'CreateFile.when one of the paths is invalid' {
+    It 'should stop at first invalid path' {
+        Init
+        GivenDirectory -Path 'file2.txt'
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path:
+            - file.txt
+            - file2.txt
+            - file3.txt
+            Content: 'file'
+'@
+    WhenRunningTask -ErrorAction SilentlyContinue
+    ThenError -Matches 'Unable to create file '{0}': a directory exists at that path.'
+    ThenFile -Path 'file.txt' -Contains 'file'
+    }
+}
+
+Describe 'CreateFile.when Touch specified and file exists' {
+    It 'should update the last write time' {
+        Init
+        GivenFile 'file.txt'
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path: file.txt
+            Touch: True
+'@
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenSuccess
+        ThenDate 'file.txt'
+    }
+}
+ 
+Describe 'CreateFile.when multiple existing files and are given and force is true.' {
+    It 'should overwrite all the files.' {
+        Init
+        GivenFile -Path 'file.txt' -Contains 'file1'
+        GivenFile -Path 'file2.txt' -Contains 'file2'
+        GivenFile -Path 'file3.txt' -Contains 'file3'
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path:
+            - file.txt
+            - file2.txt
+            - file3.txt
+            Content: 'fubarbarfu'
+            Force: True
+'@
+        WhenRunningTask
+        ThenSuccess
+        ThenFile -Path 'file.txt' -Contains 'fubarbarfu'
+        ThenFile -Path 'file2.txt' -Contains 'fubarbarfu'
+        ThenFile -Path 'file3.txt' -Contains 'fubarbarfu'
+    }
+}
+
+Describe 'CreateFile.when multiple files are given and Touch is true.' {
+    It 'should update the last write time of all the files.' {
+        Init
+        GivenFile -Path 'file.txt'
+        GivenFile -Path 'file2.txt'
+        GivenFile -Path 'file3.txt'
+        GivenWhiskeyYml @'
+        Build:
+        - CreateFile:
+            Path:
+            - file.txt
+            - file2.txt
+            - file3.txt
+            Touch: True
+'@
+        WhenRunningTask
+        ThenSuccess
+        ThenDate -Path 'file.txt'
+        ThenDate -Path 'file2.txt'
+        ThenDate -Path 'file3.txt'
+    }
+}

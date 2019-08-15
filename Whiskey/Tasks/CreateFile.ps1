@@ -1,97 +1,69 @@
 function New-WhiskeyFile
 {
-    [Whiskey.Task("CreateFile")]
+    [Whiskey.Task('CreateFile')]
     [CmdletBinding()]
     param(
-        [Parameter()]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowAbsolute)]
+        [string[]]$Path,
 
-        [Parameter()]
-        [string]
-        $Path,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter()]
-        [string]
-        $Content,
+        [string]$Content,
 
-        [Parameter()]
-        [bool]
-        $Force
+        [bool]$Force,
 
+        [bool]$Touch
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if ( -not $Path )
-    {                                                         
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathErrorMessage
+    if (-not $TaskContext)
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('No task context provided.')
         return
     }
 
-    if ( -not $TaskContext )
+    foreach($item in $Path)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathExistsErrorMessage
-        return
-    }
-
-    $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
-    $Path = [System.IO.Path]::GetFullPath($Path)
-
-    if ( -not ($Path.StartsWith($TaskContext.BuildRoot)) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathOutOfRoot
-        return
-    }
-
-    if ( $Path | Test-Path )
-    {
-        if((Get-Item -Path $Path) -is [IO.DirectoryInfo])
+        if (Test-Path -Path $item)
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathExistsAsDirectoryMessage
+            if(Test-Path -Path $item -PathType Container)
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext `
+                                 -Message ('Unable to create file ''{0}'': a directory exists at that path.' -f $item)
+                return
+            }
+
+            if(-not $Force)
+            {
+                if($Touch)
+                {
+                    (Get-Item $Item).LastWriteTime = Get-Date
+                    continue
+                }
+
+                Stop-WhiskeyTask -TaskContext $TaskContext `
+                                 -Message ('''Path'' already exists. Please change ''Path'' to create new file.')
+                return
+            }
+        }
+
+        $parentPath = Split-Path -Path $item    
+        if(-not (Test-Path -Path $parentPath) -and (-not $Force))
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext `
+                             -Message ('Unable to create file ''{0}'': one or more of its parent directory, ''{1}'', does not exist. Either create this directory or use the ''Force'' property to create it.')
             return
         }
 
-        if ( $Force )
+        if(Test-Path -Path $parentPath -PathType Leaf)
         {
-            New-Item -Path $Path -Value $Content -Force
+            Stop-WhiskeyTask -TaskContext $TaskContext `
+                             -Message ('Parent directory of ''{0}'' is a file, not a directory.' -f $item)
             return
         }
 
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $pathExistsErrorMessage
-        return
+        New-Item -Path $item -Value $Content -Force
     }
-
-    if( -not (Test-Path -Path ($Path | Split-Path)))
-    {
-        if ( $Force )
-        {
-            New-Item -Path $Path -Value $Content -Force
-            return
-        }
-
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ($subdirectoryErrorMessage)
-        return
-    }
-
-    New-Item -Path $Path -Value $Content
 }
-
-    #Error Messages
-    $pathErrorMessage = @'
-'Path' property is missing. Please set it to list of target locations to create new file.
-'@
-    $pathExistsErrorMessage = @'
-'Path' already exists. Please change 'path' to create new file.
-'@
-    $pathExistsAsDirectoryMessage = @'
-'Path' already points to a directory of the same name. Please change 'path' to create new file.
-'@
-    $subdirectoryErrorMessage = @'
-'Path' contains subdirectories that do not exist. Use Force property to create entire path.
-'@
-
-    $pathOutOfRoot = @'
-'Path' given is outside of root. Please change one or more elements of the 'path'.
-'@

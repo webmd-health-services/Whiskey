@@ -56,6 +56,23 @@ function Remove-GlobalTestItem
     }
 }
 
+function Remove-TestItem
+{
+    param(
+        # relative path
+        [string[]] $name
+    )
+
+    foreach ( $item in $name )
+    {
+        $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $item
+        if(Test-Path -Path $fullPath)
+        {
+            Remove-Item -Path $fullPath
+        }
+    }
+}
+
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
@@ -105,10 +122,18 @@ function WhenRunningTask
         $Name,
 
         [hashtable]
-        $Parameter
+        $Parameter,
+
+        [string]
+        $BuildRoot
     )
 
-    $script:context = New-WhiskeyTestContext -ForDeveloper
+    $optionalParams = @{}
+    if( $BuildRoot )
+    {
+        $optionalParams['ForBuildRoot'] = $BuildRoot
+    }
+    $script:context = New-WhiskeyTestContext -ForDeveloper @optionalParams
     $context.PipelineName = 'Build'
     $context.TaskName = $null
     $context.TaskIndex = 1

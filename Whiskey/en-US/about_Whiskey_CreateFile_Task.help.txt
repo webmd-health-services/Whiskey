@@ -7,13 +7,13 @@ SUMMARY
 
 
 DESCRIPTION
-    The `CreateFile` task creates a file in the destination directory. Pass the path of the desired directory for the new file to the `Path` property. Pass the content for the new file to the `Content` property. If a file of the same name already exists, then pass 'true','yes', or '1' to the `Force` property. Otherwise the file will not be overwritten. Directories cannot be overwritten. Uses Powershell's `New-Item` cmdlet.
+    The `CreateFile` task creates files. Pass the path to one or more files to create the `Path` property. Pass the content for the file to the `Content` property. If a file already exists, your build will fail. To overwrite any existing file, set the `Force` property to `true`. This task uses PowerShell's `New-Item` cmdlet to create the file and sets its content.  
 
 
 PROPERTIES
-    * `Path` (**mandatory**): the path to the desired directory for the new file.
-    * `Content`: the content to be added to the file. 
-    * `Force`: allows a file to be overwritten. By default, it is set to *false*.
+    * `Path` (**mandatory**): one or more paths to file to create.
+    * `Content`: the content of the file.
+    * `Force`: overwrite a file, if it already exists. By default, the CreateFile task fails a build if a file already exists.
 
 EXAMPLES
 
@@ -24,7 +24,7 @@ EXAMPLES
             Path: file.txt
             Content: 'File content.'
 
-    In this example, the file "file.txt" is created with the provided content.
+    In this example, the file "file.txt" is created with the content "File content.".
 
     ## Example 2
         
@@ -42,4 +42,4 @@ EXAMPLES
             Content: 'File content.'
             Force: true
 
-    In this example, the entire path will be created and any file by the same name will be overwritten.
+    This example demonstrates how to create the entire directory structure to a file and overwrite its contents (if it exists) with the "Force" parameter.
