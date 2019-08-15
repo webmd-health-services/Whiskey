@@ -267,28 +267,20 @@ function ThenFailed
         $WithError
     )
 
-    It 'should fail' {
-        $failed | Should -BeTrue
-        $Global:Error | Should -Match $WithError
-    }
+    $failed | Should -BeTrue
+    $Global:Error | Should -Match $WithError
 }
 
 function ThenModuleNotPublished
 {    
-    It 'should not attempt to publish the module'{
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
 }
 
 function Assert-ModuleNotPublished
-{    
-    It 'should not attempt to register the module'{
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
-    }    
-    It 'should not attempt to publish the module'{
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
-    }
+{
+    Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 0
 }
 
 function ThenRepositoryChecked
@@ -299,20 +291,16 @@ function ThenRepositoryChecked
         $Named
     )
 
-    It ('should check that repository exists') {
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { 
-            Write-Debug -Message ('Name  expected  {0}' -f $Named)
-            Write-Debug -Message ('      actual    {0}' -f $Name)
-            $Name -eq $Named 
-        }
+    Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { 
+        Write-Debug -Message ('Name  expected  {0}' -f $Named)
+        Write-Debug -Message ('      actual    {0}' -f $Name)
+        $Name -eq $Named 
     }
 }
 
 function ThenRepositoryNotChecked
 {
-    It ('should not check that repository exists') {
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 0
 }
 
 function ThenRepositoryNotRegistered
@@ -320,9 +308,7 @@ function ThenRepositoryNotRegistered
     param(
     )
 
-    It ('should not register repository') {
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
 }
 
 function ThenRepositoryRegistered
@@ -340,35 +326,32 @@ function ThenRepositoryRegistered
         $WithCredential
     )
 
-    It ('should register the repository')  {
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Repository Name                 expected {0}' -f $Named)
-            Write-Debug -Message ('                                actual   {0}' -f $Name)
-            $Name -eq $Named
-        }
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Source Location                 expected {0}' -f $AtUri)
-            Write-Debug -Message ('                                actual   {0}' -f $SourceLocation)
-            $AtUri -eq $SourceLocation
-        }
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Publish Location                expected {0}' -f $AtUri)
-            Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
-            $AtUri -eq $PublishLocation
-        }
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $InstallationPolicy -eq 'Trusted' }
-        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $PackageManagementPRovider -eq 'NuGet' }
-
-        if( $WithCredential )
-        {
-            Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.UserName -eq $WithCredential.UserName }
-            Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.GetNetworkCredential().Password -eq $WithCredential.GetNetworkCredential().Password }
-        }
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Repository Name                 expected {0}' -f $Named)
+        Write-Debug -Message ('                                actual   {0}' -f $Name)
+        $Name -eq $Named
     }
-    
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Source Location                 expected {0}' -f $AtUri)
+        Write-Debug -Message ('                                actual   {0}' -f $SourceLocation)
+        $AtUri -eq $SourceLocation
+    }
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Publish Location                expected {0}' -f $AtUri)
+        Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
+        $AtUri -eq $PublishLocation
+    }
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $InstallationPolicy -eq 'Trusted' }
+    Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $PackageManagementPRovider -eq 'NuGet' }
+
+    if( $WithCredential )
+    {
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.UserName -eq $WithCredential.UserName }
+        Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.GetNetworkCredential().Password -eq $WithCredential.GetNetworkCredential().Password }
+    }
 }
 
 function ThenModulePublished
@@ -385,33 +368,27 @@ function ThenModulePublished
         $WithNoRepositoryName
     )
     
-    $WhiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin' -Resolve
-    It ('should bootstrap NuGet provider') {
-        Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'NuGet' }
-        Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $ForceBootstrap }
+    Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'NuGet' }
+    Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $ForceBootstrap }
+    $expectedApiKey = $apikey
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
+        Write-Debug -Message ('                                actual   {0}' -f $Path)
+        
+        $Path -eq $ExpectedPathName
     }
-    
-    It ('should publish the module')  {
-        $expectedApiKey = $apikey
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
-            Write-Debug -Message ('                                actual   {0}' -f $Path)
-            
-            $Path -eq $ExpectedPathName
-        }
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Repository Name                 expected {0}' -f $ToRepositoryNamed)
-            Write-Debug -Message ('                                actual   {0}' -f $Repository)
-            $Repository -eq $ToRepositoryNamed
-        }
-        Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
-            Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
-            $NuGetApiKey -eq $expectedApiKey
-        }
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Repository Name                 expected {0}' -f $ToRepositoryNamed)
+        Write-Debug -Message ('                                actual   {0}' -f $Repository)
+        $Repository -eq $ToRepositoryNamed
+    }
+    Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
+        Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
+        $NuGetApiKey -eq $expectedApiKey
     }
 }
 
@@ -435,145 +412,165 @@ function ThenManifest
 
     $manifest = Test-ModuleManifest -Path $manifestPath
 
-    It ('should have a matching Manifest Version with the Context'){
-        $manifest.Version | Should -Be $AtVersion
-        if( $HasPrerelease )
-        {
-            $manifest.PrivateData.PSData.Prerelease | Should -Be $HasPrerelease
-        }
-        else
-        {
-            $manifest.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
-        }
+    $manifest.Version | Should -Be $AtVersion
+    if( $HasPrerelease )
+    {
+        $manifest.PrivateData.PSData.Prerelease | Should -Be $HasPrerelease
+    }
+    else
+    {
+        $manifest.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
     }
 }
 
 function ThenSucceeded
 {
-    It 'should succeed'{
-        $failed | Should -BeFalse
-    }
-    It 'should exit without error'{
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    $failed | Should -BeFalse
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 Describe 'PublishPowerShellModule.when publishing new module' {
-    Initialize-Test
-    GivenRepository 'FubarSnafu'
-    Invoke-Publish -ForRepositoryNamed 'FubarSnafu'
-    ThenSucceeded
-    ThenRepositoryChecked 'FubarSnafu' 
-    ThenRepositoryNotRegistered
-    ThenModulePublished -ToRepositoryNamed 'FubarSnafu'
+    It 'should publish the module' {
+        Initialize-Test
+        GivenRepository 'FubarSnafu'
+        Invoke-Publish -ForRepositoryNamed 'FubarSnafu'
+        ThenSucceeded
+        ThenRepositoryChecked 'FubarSnafu' 
+        ThenRepositoryNotRegistered
+        ThenModulePublished -ToRepositoryNamed 'FubarSnafu'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing prerelease module' {
-    Initialize-Test
-    GivenRepository 'SomeRepo'
-    GivenPrerelease 'beta1'
-    Invoke-Publish -ForRepositoryNamed 'SomeRepo'
-    ThenSucceeded
-    ThenRepositoryChecked 'SomeRepo'
-    ThenRepositoryNotRegistered
-    ThenModulePublished -ToRepositoryNamed 'SomeRepo'
-    ThenManifest -HasPrerelease 'beta1'
+    It 'should publish the prerelease module' {
+        Initialize-Test
+        GivenRepository 'SomeRepo'
+        GivenPrerelease 'beta1'
+        Invoke-Publish -ForRepositoryNamed 'SomeRepo'
+        ThenSucceeded
+        ThenRepositoryChecked 'SomeRepo'
+        ThenRepositoryNotRegistered
+        ThenModulePublished -ToRepositoryNamed 'SomeRepo'
+        ThenManifest -HasPrerelease 'beta1'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing with no repository name' {
-    Initialize-Test
-    Invoke-Publish -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property\ "RepositoryName"\ is mandatory'
-    ThenRepositoryNotChecked
-    ThenRepositoryNotRegistered
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        Invoke-Publish -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'Property\ "RepositoryName"\ is mandatory'
+        ThenRepositoryNotChecked
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing fails' {
-    Initialize-Test
-    GivenRepository 'FubarSnafu'
-    GivenPublishingFails -WithError 'something went wrong!'
-    Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'something\ went\ wrong\!'
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'FubarSnafu'
+        GivenPublishingFails -WithError 'something went wrong!'
+        Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'something\ went\ wrong\!'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository' {
-    Initialize-Test
-    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
-    ThenSucceeded
-    ThenRepositoryChecked 'ANewRepo'
-    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
-    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    It 'should create the repository' {
+        Initialize-Test
+        Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
+        ThenSucceeded
+        ThenRepositoryChecked 'ANewRepo'
+        ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
+        ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository that requires a credential' {
-    Initialize-Test
-    $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
-    GivenCredential $cred -WithID 'somecred'
-    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
-    ThenSucceeded
-    ThenRepositoryChecked 'ANewRepo'
-    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
-    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    It 'should create the repository with the credential' {
+        Initialize-Test
+        $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
+        GivenCredential $cred -WithID 'somecred'
+        Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
+        ThenSucceeded
+        ThenRepositoryChecked 'ANewRepo'
+        ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
+        ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository but its URI is not given' {
-    Initialize-Test 
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
-    ThenRepositoryChecked 'Fubar'
-    ThenRepositoryNotRegistered
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test 
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
+        ThenRepositoryChecked 'Fubar'
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when registering a repository fails' {
-    Initialize-Test
-    GivenRegisteringFails -WithError 'something went wrong!'
-    Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -RepoAtUri 'https://example.com' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'something\ went\ wrong\!'
+    It 'should fail' {
+        Initialize-Test
+        GivenRegisteringFails -WithError 'something went wrong!'
+        Invoke-Publish -ForRepositoryNamed 'FubarSnafu' -RepoAtUri 'https://example.com' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'something\ went\ wrong\!'
+    }
 }
 
 Describe 'PublishPowerShellModule.when no API key' {
-    Initialize-Test
-    GivenNoApiKey
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar'  -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property\ "ApiKeyID"\ is\ mandatory'
-    ThenRepositoryNotChecked
-    ThenRepositoryNotRegistered
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenNoApiKey
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar'  -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'Property\ "ApiKeyID"\ is\ mandatory'
+        ThenRepositoryNotChecked
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when path parameter is not included' {
-    Initialize-Test
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property "Path" is mandatory'
-    ThenRepositoryNotChecked
-    ThenRepositoryNotRegistered
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -WithoutPathParameter -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'Property "Path" is mandatory'
+        ThenRepositoryNotChecked
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when non-existent path parameter' {
-    Initialize-Test
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithNonExistentPath -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'does\ not\ exist'
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -WithNonExistentPath -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'does\ not\ exist'
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when non-directory path parameter' {
-    Initialize-Test
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'path to the root directory of a PowerShell module'
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'path to the root directory of a PowerShell module'
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when invalid manifest' {
-    Initialize-Test
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
+        ThenModuleNotPublished
+    }
 }
