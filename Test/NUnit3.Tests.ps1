@@ -629,8 +629,8 @@ Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
         Init
         GivenPath (Get-PassingNUnit2TestPath)
         WhenRunningTask
-        ThenNUnitReportGenerated
-        ThenCodeCoverageReportGenerated -ResultFormat 'nuit3'
+        ThenNUnitReportGenerated 
+        ThenCodeCoverageReportGenerated 
         ThenTaskSucceeded
     }
 }
