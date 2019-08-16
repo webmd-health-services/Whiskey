@@ -39,19 +39,43 @@ function Resolve-WhiskeyDotNetSdkVersion
 
     if ($Version)
     {
-        $releasesJsonUri = 'https://raw.githubusercontent.com/dotnet/core/master/release-notes/releases.json'
+        $releasesIndexUri = 'https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json'
+        $releasesIndex =
+            Invoke-RestMethod -Uri $releasesIndexUri -ErrorAction Stop |
+            Select-Object -ExpandProperty 'releases-index' |
+            Sort-Object -Property 'channel-version' -Descending
 
+        $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
+        $matcher = $Matches[0]
+
+        $release = $releasesIndex | Where-Object { $_.'channel-version' -like $matcher } | Select-Object -First 1
+        if (-not $release)
+        {
+            Write-Error -Message ('.NET Core release matching "{0}" could not be found in "{1}"' -f $matcher, $releasesIndexUri)
+            return
+        }
+
+        $releasesJsonUri = $release | Select-Object -ExpandProperty 'releases.json'
         Write-Verbose -Message ('[{0}] Resolving .NET Core SDK version "{1}" against known released versions at: "{2}"' -f $MyInvocation.MyCommand,$Version,$releasesJsonUri)
+
         $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
 
-        $sdkVersions =
-            $releasesJson |
-            Select-Object -ExpandProperty 'version-sdk' -Unique |
-            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-            Sort-Object -Descending
+        $sdkVersions = & {
+            $releasesJson.releases |
+                Where-Object { $_ | Get-Member -Name 'sdk' } |
+                Select-Object -ExpandProperty 'sdk' |
+                Select-Object -ExpandProperty 'version'
+
+            $releasesJson.releases |
+                Where-Object { $_ | Get-Member -Name 'sdks' } |
+                Select-Object -ExpandProperty 'sdks' |
+                Select-Object -ExpandProperty 'version'
+        }
 
         $resolvedVersion =
             $sdkVersions |
+            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object -Descending |
             Where-Object { $_ -like $Version } |
             Select-Object -First 1
 
