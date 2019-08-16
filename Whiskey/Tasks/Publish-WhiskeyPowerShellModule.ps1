@@ -111,5 +111,11 @@ function Publish-WhiskeyPowerShellModule
         Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
     }
 
-    Publish-Module -Path $path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams
+    # Use the Force switch to allow publishing versions that come *before* the latest version.
+    Publish-Module -Path $path `
+                   -Repository $repositoryName `
+                   -NuGetApiKey $apiKey `
+                   -Force `
+                   -ErrorAction Stop `
+                   @commonParams
 }
