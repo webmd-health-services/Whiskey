@@ -38,6 +38,25 @@ Build:
     Path:
     - Test\about_Whiskey_Tasks.Tests.ps1
 
+# Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into a single file.
+- MergeFile:
+    OnlyBy: BuildServer
+    Path:
+    - Whiskey\Functions\*.ps1
+    DestinationPath:
+    - Whiskey\Functions\Functions.ps1
+    TextSeparator: "$(NewLine)$(NewLine)"
+    DeleteSourceFiles: true
+
+- MergeFile:
+    OnlyBy: BuildServer
+    Path:
+    - Whiskey\Tasks\*.ps1
+    DestinationPath:
+    - Whiskey\Functions\Tasks.ps1
+    TextSeparator: "$(NewLine)$(NewLine)"
+    DeleteSourceFiles: true
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs.
