@@ -14,7 +14,9 @@ function Merge-WhiskeyFile
 
         [switch]$DeleteSourceFiles,
 
-        [string]$Separator
+        [string]$TextSeparator,
+
+        [byte[]]$BinarySeparator
     )
 
     Set-StrictMode -Version 'Latest'
@@ -36,26 +38,52 @@ function Merge-WhiskeyFile
 
     Clear-Content -Path $DestinationPath
 
-    $relativePath = Resolve-Path -Path $DestinationPath -Relative
-    Write-WhiskeyInfo -Context $TaskContext -Message $relativePath -Verbose
-    $afterFirst = $false
-    foreach( $filePath in $Path )
+    [byte[]]$separatorBytes = $BinarySeparator
+    if( $TextSeparator )
     {
-        $relativePath = Resolve-Path -Path $filePath -Relative
-        Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath) -Verbose
+        $separatorBytes = [Text.Encoding]::UTF8.GetBytes($TextSeparator)
+    }
 
-        if( $afterFirst -and $PSBoundParameters.ContainsKey('Separator') )
+    $relativePath = Resolve-Path -Path $DestinationPath -Relative
+    $writer = [IO.File]::OpenWrite($relativePath)
+    try 
+    {
+        Write-WhiskeyInfo -Context $TaskContext -Message $relativePath -Verbose
+        $afterFirst = $false
+        foreach( $filePath in $Path )
         {
-            [IO.File]::AppendAllText($DestinationPath,$Separator)
-        }
-        $afterFirst = $true
+            $relativePath = Resolve-Path -Path $filePath -Relative
+            Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath) -Verbose
 
-        $content = [IO.File]::ReadAllText($filePath)
-        [IO.File]::AppendAllText($DestinationPath, $content)
+            if( $afterFirst -and $separatorBytes )
+            {
+                $writer.Write($separatorBytes,0,$separatorBytes.Length)
+            }
+            $afterFirst = $true
 
-        if( $DeleteSourceFiles )
-        {
-            Remove-Item -Path $filePath -Force
+            $reader = [IO.File]::OpenRead($filePath)
+            try
+            {
+                $bufferSize = 4kb
+                [byte[]]$buffer = New-Object 'byte[]' ($bufferSize)
+                while( $bytesRead = $reader.Read($buffer,0,$bufferSize) )
+                {
+                    $writer.Write($buffer,0,$bytesRead)
+                }
+            }
+            finally
+            {
+                $reader.Close()
+            }
+
+            if( $DeleteSourceFiles )
+            {
+                Remove-Item -Path $filePath -Force
+            }
         }
+    }
+    finally
+    {
+        $writer.Close()
     }
 }

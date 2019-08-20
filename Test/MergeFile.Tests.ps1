@@ -12,11 +12,39 @@ function GivenFile
         [Parameter(Mandatory)]
         [string]$Path,
 
-        [string]$WithContent
+        [object]$WithContent
     )
 
     $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
-    [IO.File]::WriteAllText($fullPath,$WithContent)
+    if( $WithContent )
+    {
+        if( $WithContent -is [string] )
+        {
+            [IO.File]::WriteAllText($fullPath,$WithContent)
+        }
+        elseif( $WithContent -is [byte[]] )
+        {
+            [IO.File]::WriteAllBytes($fullPath,$WithContent)
+        }
+        else
+        {
+            throw ('GivenFile: parameter "WithContent" must be a string or an array of bytes but got a [{0}].' -f $WithContent.GetType().FullName)
+        }
+    }
+    else
+    {
+        New-Item -Path $fullPath
+    }
+}
+
+function Get-RandomByte
+{
+    [CmdletBinding()]
+    [OutputType([byte[]])]
+    param(
+    )
+
+    1..(4kb * 3) | ForEach-Object { Get-Random -Minimum 0 -Maximum 255 }
 }
 
 function Init
@@ -49,7 +77,7 @@ function ThenFile
         [switch]$Exists,
 
         [Parameter(ParameterSetName='Exists')]
-        [string]$HasContent
+        [object]$HasContent
     )
 
     $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
@@ -58,7 +86,19 @@ function ThenFile
         $fullPath | Should -Exist
         if( $PSBoundParameters.ContainsKey('HasContent') )
         {
-            [IO.File]::ReadAllText($fullPath) | Should -Be $HasContent
+            if( $HasContent -is [string] )
+            {
+                [IO.File]::ReadAllText($fullPath) | Should -Be $HasContent
+            }
+            elseif( $HasContent -is [byte[]] )
+            {
+                [byte[]]$content = [IO.File]::ReadAllBytes($fullPath)
+                $content | Should -Be $HasContent
+            }
+            else
+            {
+                throw ('ThenFile: parameter "HasContent" must be a [string] or [byte[]] but got a [{0}]' -f $HasContent.GetType().FullName)
+            }
         }
     }
     else
@@ -79,7 +119,7 @@ function WhenMerging
 
         [switch]$AndDeletingSourceFiles,
 
-        [string]$WithSeparator
+        [object]$WithSeparator
     )
 
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -92,7 +132,14 @@ function WhenMerging
     
     if( $WithSeparator )
     {
-        $parameters['Separator'] = $WithSeparator
+        if( $WithSeparator -is [string] )
+        {
+            $parameters['TextSeparator'] = $WithSeparator
+        }
+        else
+        {
+            $parameters['BinarySeparator'] = $WithSeparator | ForEach-Object { $_.ToString() }
+        }
     }
 
     try
@@ -178,5 +225,39 @@ Describe 'MergeFile.when customizing separator' {
         GivenFile 'two.txt' -WithContent 'two'
         WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') 
         ThenFile 'merged.txt' -HasContent ('one{0}two' -f [Environment]::NewLine)
+    }
+}
+
+Describe 'MergeFile.when files are empty' {
+    It 'should separate file contents with separator' {
+        Init
+        GivenFile 'one.txt' 
+        GivenFile 'two.txt' 
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' 
+        ThenFile 'merged.txt' -HasContent ('')
+    }
+}
+
+Describe 'MergeFile.when files are binary' {
+    It 'should concatenate files' {
+        Init
+        [byte[]]$content = Get-RandomByte
+        GivenFile 'one.txt' -WithContent $content 
+        [byte[]]$content2 = Get-RandomByte
+        GivenFile 'two.txt' -WithContent ($content2)
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt'
+        ThenFile 'merged.txt' -HasContent ([byte[]]($content + $content2))
+    }
+}
+
+Describe 'MergeFile.when separator and files are binary' {
+    It 'should concatenate files with separator' {
+        Init
+        [byte[]]$content = Get-RandomByte
+        GivenFile 'one.txt' -WithContent $content 
+        [byte[]]$content2 = Get-RandomByte
+        GivenFile 'two.txt' -WithContent ($content2)
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ([byte[]]@( 28 ))
+        ThenFile 'merged.txt' -HasContent ([byte[]]($content + 28 + $content2))
     }
 }
