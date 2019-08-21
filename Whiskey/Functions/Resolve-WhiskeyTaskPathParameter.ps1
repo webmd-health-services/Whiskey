@@ -2,26 +2,21 @@ function Resolve-WhiskeyTaskPathParameter
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # An object that holds context about the current build and executing task.
-        $TaskContext,
+        [object]$TaskContext,
 
         [Parameter(ValueFromPipeline=$true)]
-        [string]
-        $Path,
+        [string]$Path,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $PropertyName,
+        [Parameter(Mandatory)]
+        [string]$PropertyName,
 
-        [Parameter(Mandatory=$true)]
-        [Management.Automation.ParameterMetadata]
-        $CmdParameter,
+        [Parameter(Mandatory)]
+        [Management.Automation.ParameterMetadata]$CmdParameter,
 
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Tasks.ValidatePathAttribute]
-        $ValidateAsPathAttr
+        [Parameter(Mandatory)]
+        [Whiskey.Tasks.ValidatePathAttribute]$ValidateAsPathAttribute
     )
 
     begin
@@ -39,71 +34,70 @@ function Resolve-WhiskeyTaskPathParameter
 
         $result = $Path
 
-        if( -not $Path -and $ValidateAsPathAttr.Mandatory )
+        if( -not $Path )
         {
-            $errorMsg = 'path is mandatory.' -f $TaskProperty[$propertyName]
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName $CmdParameter.Name -Message $errorMsg
-        }
-
-        if( $Path )
-        {
-            if( [IO.Path]::IsPathRooted($Path) -and -not $ValidateAsPathAttr.AllowAbsolute )
+            if( $ValidateAsPathAttribute.Mandatory )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' is absolute but must be relative to the ''{3}'' file.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+                Stop-WhiskeyTask -TaskContext $Context `
+                                 -PropertyName $CmdParameter.Name `
+                                 -Message ('{0} is mandatory.' -f $TaskProperty[$propertyName])
                 return
             }
+            return     
+        }
 
-            if( -not [IO.Path]::IsPathRooted($Path) )
-            {
-                $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
+        if( -not [IO.Path]::IsPathRooted($Path) )
+        {
+            $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
+        }
+
+        $optionalParams = @{}
+        if( -not $ValidateAsPathAttribute.MustExist)
+        {
+            $optionalParams['ErrorAction'] = 'Ignore'
+        }
+
+        $message = 'Resolve {0} ->' -f $result
+        $prefix = ' ' * ($message.Length - 3)
+        Write-Debug -Message $message
+        $result = 
+            Resolve-Path -Path $Path @optionalParams | 
+            Select-Object -ExpandProperty 'ProviderPath' |
+            ForEach-Object { 
+                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
+                $_
             }
 
-            $optionalParams = @{}
-            if( -not $ValidateAsPathAttr.MustExist)
+        if( -not $result ) 
+        {
+            if( $ValidateAsPathAttribute.MustExist )
             {
-                $optionalParams['ErrorAction'] = 'Ignore'
+                Stop-WhiskeyTask -TaskContext $TaskContext `
+                                 -Message ('{0}[{1}] "{2}" does not exist and must exist.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+                return
             }
+            $result = [IO.Path]::GetFullPath($Path)
+        }
+            
+        if( -not $ValidateAsPathAttribute.AllowOutsideBuildRoot )
+        {
+            $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+            $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
+            
+            $invalidPaths =
+                $result |
+                Where-Object { -not ( $_.StartsWith($normalizedBuildRoot) ) }
 
-            $message = 'Resolve {0} ->' -f $result
-            $prefix = ' ' * ($message.Length - 3)
-            Write-Debug -Message $message
-            $result = 
-                Resolve-Path -Path $Path @optionalParams | 
-                Select-Object -ExpandProperty 'ProviderPath' |
-                ForEach-Object { 
-                    Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
-                    $_
-                }
-
-            if( -not $result ) 
+            if( $invalidPaths )
             {
-                if( $ValidateAsPathAttr.MustExist -or [WildcardPattern]::ContainsWildcardCharacters( $Path ) )
-                {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' does not exist and must exist.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
-                    return
-                }
-                $result = [IO.Path]::GetFullPath($Path)
-            }
-                
-            if( -not $ValidateAsPathAttr.AllowOutsideBuildRoot )
-            {
-                $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-                $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
-                
-                $invalidPaths =
-                    $result |
-                    Where-Object { -not ( $_.StartsWith($normalizedBuildRoot) ) }
-
-                if( $invalidPaths )
-                {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0}[{1}] ''{2}'' is outside of the build root and not allowed to be.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
-                    return
-                }
+                Stop-WhiskeyTask -TaskContext $TaskContext `
+                                 -Message ('{0}[{1}] "{2}" is outside of the build root and not allowed to be.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+                return
             }
         }
 
-        $expectedPathType = $validateAsPathAttr.PathType  
-        if( $result -and $expectedPathType -and $validateAsPathAttr.MustExist )
+        $expectedPathType = $ValidateAsPathAttribute.PathType  
+        if( $expectedPathType -and $ValidateAsPathAttribute.MustExist )
         {
             $pathType = 'Leaf'
             if( $expectedPathType -eq 'Directory' )
@@ -121,6 +115,7 @@ must be a {0}, but found {1} path(s) that are not:
 * {2}
 
 '@ -f $expectedPathType.ToLowerInvariant(),($invalidPaths | Measure-Object).Count,($invalidPaths -join ('{0}* ' -f [Environment]::NewLine)))
+                return
             }
         }
 

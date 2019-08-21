@@ -186,7 +186,21 @@ LONG DESCRIPTION
             Set-StrictMode -Version 'Latest'
         }
 
-    If you have more advanced needs, your task can use the `Resolve-WhiskeyTaskPath` function.
+    By default, users are allowed to pass any relative and absolute paths that are to items in or under the build root. To allow paths outside the build root, set the 'AllowOutsideBuildRoot' property. This is *not* recommended.
+
+        function FUNCTION_NAME
+        {
+            [Whiskey.Task('TASK_NAME')]
+            [CmdletBinding()]
+            param(
+                #Must be paths to files only.
+                [Whiskey.Tasks.ValidatePath(AllowOutsideBuildRoot)]
+                [string]
+                $Path
+            )
+
+            Set-StrictMode -Version 'Latest'
+        } 
     
     # Platform
 

@@ -48,14 +48,14 @@ function Get-TaskParameter
             $value = Resolve-WhiskeyVariable -InputObject ('$({0})' -f $valueFromVariableAttr.VariableName) -Context $Context
         }
 
-        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttr = $cmdParameter.Attributes | Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
-        if( $validateAsPathAttr )
+        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttribute = $cmdParameter.Attributes | Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
+        if( $validateAsPathAttribute )
         {
             $params = @{ }
 
             $params['PropertyName'] = $propertyName
             $params['CmdParameter'] = $cmdParameter
-            $params['ValidateAsPathAttr'] = $validateAsPathAttr
+            $params['ValidateAsPathAttribute'] = $validateAsPathAttribute
             $value = $value | Resolve-WhiskeyTaskPathParameter -TaskContext $Context @params
         }
 
