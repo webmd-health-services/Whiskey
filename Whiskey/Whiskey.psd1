@@ -160,6 +160,7 @@
 * Whiskey tasks can now have named parameters and Whiskey will pass task properties from the build YAML file that match a parameter on a task's function. See about_Whiskey_Writing_Tasks for more information.
 * Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
 * Added a `File` task to create and update files with a given path and content as parameters.
+* ValidatePathAttribute can now allow paths outside of the build root with the `AllowOutsideBuildRoot` property and allow paths that do not exist by setting the `MustExist` property. See `about_Whiskey_Writing_Tasks` for more information.
 '@
         } # End of PSData hashtable
 

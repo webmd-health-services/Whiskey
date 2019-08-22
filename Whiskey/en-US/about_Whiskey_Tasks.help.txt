@@ -10,11 +10,11 @@ LONG DESCRIPTION
     ## Tasks
 
     Whiskey has the following tasks:
-    * `CreateFile`: creates files.
     * `CopyFile`: copies files.
     * `Delete`: deletes files.
     * `DotNet`: runs `dotnet` commands.
     * `Exec`: runs an executable/program.
+    * `File`: creates and modifies files.
     * `GetPowerShellModule`: installs a PowerShell module.
     * `GitHubRelease`: creates a release in GitHub and uploads files for that
       release.

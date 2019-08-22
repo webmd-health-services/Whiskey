@@ -56,23 +56,6 @@ function Remove-GlobalTestItem
     }
 }
 
-function Remove-TestItem
-{
-    param(
-        # relative path
-        [string[]] $name
-    )
-
-    foreach ( $item in $name )
-    {
-        $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $item
-        if(Test-Path -Path $fullPath)
-        {
-            Remove-Item -Path $fullPath
-        }
-    }
-}
-
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
