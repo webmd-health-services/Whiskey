@@ -27,9 +27,7 @@ function ThenError
         $Message
     )
 
-    It 'should write an error message' {
-        $Global:Error | Should -Match $Message
-    }
+    $Global:Error | Should -Match $Message
 }
 
 function ThenResolvedLatestLTSVersion
@@ -37,9 +35,7 @@ function ThenResolvedLatestLTSVersion
     Invoke-RestMethod -Uri 'https://dotnetcli.blob.core.windows.net/dotnet/Sdk/LTS/latest.version' | Where-Object { $_ -match '(\d+\.\d+\.\d+)'} | Out-Null
     $ltsVersion = $Matches[1]
 
-    It ('should resolve latest LTS version ''{0}''' -f $ltsVersion) {
-        $resolvedVersion | Should -Be $ltsVersion
-    }
+    $resolvedVersion | Should -Be $ltsVersion
 }
 
 function ThenResolvedVersion
@@ -48,9 +44,7 @@ function ThenResolvedVersion
         $Version
     )
 
-    It ('should resolve SDK version ''{0}''' -f $Version) {
-        $resolvedVersion | Should -Be $Version
-    }
+    $resolvedVersion | Should -Be $Version
 }
 
 function ThenResolvedWildcardVersion
@@ -67,16 +61,12 @@ function ThenResolvedWildcardVersion
 
     $expectedVersion = $sdkVersions | Where-Object { [version]$_ -like $WildcardVersion } | Select-Object -First 1
 
-    It ('should resolve SDK version ''{0}''' -f $expectedVersion) {
-        $resolvedVersion | Should -Be $expectedVersion
-    }
+    $resolvedVersion | Should -Be $expectedVersion
 }
 
 function ThenReturnedNothing
 {
-    It 'should not return anything' {
-        $resolvedVersion | Should -BeNullOrEmpty
-    }
+    $resolvedVersion | Should -BeNullOrEmpty
 }
 
 function WhenResolvingSdkVersion
@@ -94,44 +84,56 @@ function WhenResolvingSdkVersion
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version that does not exist' {
-    Init
-    GivenVersion '0.0.1'
-    WhenResolvingSdkVersion -ErrorAction SilentlyContinue
-    ThenError 'could\ not\ be\ found'
-    ThenReturnedNothing
+    It 'should fail' {
+        Init
+        GivenVersion '0.0.1'
+        WhenResolvingSdkVersion -ErrorAction SilentlyContinue
+        ThenError 'could\ not\ be\ found'
+        ThenReturnedNothing
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.1.2''' {
-    Init
-    GivenVersion '2.1.2'
-    WhenResolvingSdkVersion
-    ThenResolvedVersion '2.1.2'
+    It 'should resolve to 2.1.1' {
+        Init
+        GivenVersion '2.1.2'
+        WhenResolvingSdkVersion
+        ThenResolvedVersion '2.1.2'
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''2.*''' {
-    Init
-    GivenVersion '2.*'
-    WhenResolvingSdkVersion
-    ThenResolvedWildcardVersion '2.*'
+    It 'should resolve to latest 2 version' {
+        Init
+        GivenVersion '2.*'
+        WhenResolvingSdkVersion
+        ThenResolvedWildcardVersion '2.*'
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version ''1.0.*''' {
-    Init
-    GivenVersion '1.0.*'
-    WhenResolvingSdkVersion
-    ThenResolvedWildcardVersion '1.0.*'
+    It 'should resolve to latest patch version' {
+        Init
+        GivenVersion '1.0.*'
+        WhenResolvingSdkVersion
+        ThenResolvedWildcardVersion '1.0.*'
+    }
 }
 
-Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving latest LTS version' {
-    Init
-    WhenResolvingSdkVersion
-    ThenResolvedLatestLTSVersion
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when no version given' {
+    It 'should get the latest LTS version' {
+        Init
+        WhenResolvingSdkVersion
+        ThenResolvedLatestLTSVersion
+    }
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t return a valid version' {
-    Init
-    Mock -CommandName Invoke-RestMethod -MockWith { '1' }
-    WhenResolvingSdkVersion -ErrorAction SilentlyContinue
-    ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
-    ThenReturnedNothing
+    It 'should fail' {
+        Init
+        Mock -CommandName Invoke-RestMethod -MockWith { '1' }
+        WhenResolvingSdkVersion -ErrorAction SilentlyContinue
+        ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
+        ThenReturnedNothing
+    }
 }

@@ -36,9 +36,7 @@ function ThenError
         $Message
     )
 
-    It 'should write an error' {
-        $Global:Error[0] | Should -Match $Message
-    }
+    $Global:Error[0] | Should -Match $Message
 }
 
 function ThenGlobalJson
@@ -52,9 +50,7 @@ function ThenGlobalJson
     $globalJson = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 100
     $ExpectedJson = $ExpectedJson | ConvertFrom-Json | ConvertTo-Json -Depth 100
 
-    It 'should update global.json' {
-        $globalJson | Should -Be $ExpectedJson
-    }
+    $globalJson | Should -Be $ExpectedJson
 }
 
 function WhenSettingGlobalJson
@@ -65,48 +61,55 @@ function WhenSettingGlobalJson
     Set-WhiskeyDotNetGlobalJson -Directory $globalJsonDirectory -SdkVersion $sdkVersion
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when global.json root directory does not exist' {
-    Init
-    $script:globalJsonDirectory = 'a non existent directory'
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson -ErrorAction SilentlyContinue
-    ThenError 'does\ not\ exist\.'
+Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson root directory does not exist' {
+    It 'should fail' {
+        Init
+        $script:globalJsonDirectory = 'a non existent directory'
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson -ErrorAction SilentlyContinue
+        ThenError 'does\ not\ exist\.'
+    }
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when global.json contains invalid JSON' {
-    Init
-    GivenExistingGlobalJson @"
+Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson contains invalid JSON' {
+    It 'should fail' {
+        Init
+        GivenExistingGlobalJson @"
     {
         "sdk": { "version": '1.0.0'
 "@
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson -ErrorAction SilentlyContinue
-    ThenError 'contains\ invalid\ JSON.'
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson -ErrorAction SilentlyContinue
+        ThenError 'contains\ invalid\ JSON.'
+    }
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when global.json does not exist' {
-    Init
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson
-    ThenGlobalJson @"
+Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson does not exist' {
+    It 'should create it' {
+        Init
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson
+        ThenGlobalJson @"
 {
     "sdk": {
         "version": "2.1.4"
     }
 }
 "@
+    }
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''sdk'' property to existing global.json' {
-    Init
-    GivenExistingGlobalJson @"
+Describe 'Set-WhiskeyDotNetGlobalJson.when adding sdk property is missing from globalJson' {
+    It 'should add it' {
+        Init
+        GivenExistingGlobalJson @"
 {
     "name": "app"
 }
 "@
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson
-    ThenGlobalJson @"
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson
+        ThenGlobalJson @"
 {
     "name": "app",
     "sdk": {
@@ -114,11 +117,13 @@ Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''sdk'' property to existing g
     }
 }
 "@
+    }
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''version'' property to existing global.json' {
-    Init
-    GivenExistingGlobalJson @"
+Describe 'Set-WhiskeyDotNetGlobalJson.when version property is missing from globalJson' {
+    It 'should add it' {
+        Init
+        GivenExistingGlobalJson @"
 {
     "name": "app",
     "sdk": {
@@ -126,9 +131,9 @@ Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''version'' property to existi
     }
 }
 "@
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson
-    ThenGlobalJson @"
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson
+        ThenGlobalJson @"
 {
     "name": "app",
     "sdk": {
@@ -137,11 +142,13 @@ Describe 'Set-WhiskeyDotNetGlobalJson.when adding ''version'' property to existi
     }
 }
 "@
+    }
 }
 
-Describe 'Set-WhiskeyDotNetGlobalJson.when updating existing sdk version in global.json' {
-    Init
-    GivenExistingGlobalJson @"
+Describe 'Set-WhiskeyDotNetGlobalJson.when sdk version exists in globalJson' {
+    It 'should update the sdk property' {
+        Init
+        GivenExistingGlobalJson @"
 {
     "name": "app",
     "sdk": {
@@ -150,9 +157,9 @@ Describe 'Set-WhiskeyDotNetGlobalJson.when updating existing sdk version in glob
     }
 }
 "@
-    GivenSdkVersion '2.1.4'
-    WhenSettingGlobalJson
-    ThenGlobalJson @"
+        GivenSdkVersion '2.1.4'
+        WhenSettingGlobalJson
+        ThenGlobalJson @"
 {
     "name": "app",
     "sdk": {
@@ -161,4 +168,5 @@ Describe 'Set-WhiskeyDotNetGlobalJson.when updating existing sdk version in glob
     }
 }
 "@
+    }
 }

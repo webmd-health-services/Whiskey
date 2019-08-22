@@ -8,8 +8,6 @@ $projectName ='NUnit2PassingTest.csproj'
 $context = $null
 $nugetUri = $null
 $apiKey = $null
-$defaultVersion = '1.2.3'
-$packageExists = $false
 $publishFails = $false
 $packageExistsCheckFails = $false
 $threwException = $false
@@ -23,7 +21,6 @@ function InitTest
 
     $script:nugetUri = 'https://nuget.org'
     $script:apiKey = 'fubar:snafu'
-    $script:packageExists = $false
     $script:publishFails = $false
     $script:packageExistsCheckFails = $false
     $script:path = $projectName
@@ -196,18 +193,14 @@ function ThenFile
     $extractDir = Join-Path -Path $TestDrive.FullName -ChildPath '.output\extracted'
     [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractDir)
 
-    It ('should have a "{0}" file' -f $FileName) {
-        Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
-    }
+    Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
 }
 
 function ThenSpecificNuGetVersionInstalled
 {
     $nugetVersion = 'NuGet.CommandLine.{0}' -f $version
 
-    It ('should install ''{0}''' -f $nugetVersion) {
-        Join-Path -Path $context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
-    }
+    Join-Path -Path $context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
 }
 
 function ThenTaskThrowsAnException
@@ -216,23 +209,17 @@ function ThenTaskThrowsAnException
         $ExpectedErrorMessage
     )
 
-    It 'should throw an exception' {
-        $threwException | Should Be $true
-    }
+    $threwException | Should Be $true
 
-    It ('should throw an exception that matches /{0}/' -f $ExpectedErrorMessage) {
-        $Global:Error | Should Not BeNullOrEmpty
-        $lastError = $Global:Error[0]
-        $lastError | Should -Match $ExpectedErrorMessage
-    }
+    $Global:Error | Should Not BeNullOrEmpty
+    $lastError = $Global:Error[0]
+    $lastError | Should -Match $ExpectedErrorMessage
 }
 
 function ThenTaskSucceeds
 {
-    It 'should not throw an exception' {
-        $threwException | Should Be $false
-        $Global:Error | Should BeNullOrEmpty
-    }
+    $threwException | Should Be $false
+    $Global:Error | Should BeNullOrEmpty
 }
 
 function ThenPackageCreated
@@ -250,99 +237,101 @@ function ThenPackageCreated
     $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Version)
     if( $Symbols )
     {
-        It ('should create NuGet symbols package') {
-            $symbolsPath | Should -Exist
-        }
-
-        It ('should create a non-symbols package') {
-            $nonSymbolsPath | Should -Exist
-        }
+        $symbolsPath | Should -Exist
+        $nonSymbolsPath | Should -Exist
     }
     else
     {
-        It ('should create NuGet package') {
-            $nonSymbolsPath | Should -Exist
-        }
-
-        It ('should not create a symbols package') {
-            $symbolsPath | Should -Not -Exist
-        }
+        $nonSymbolsPath | Should -Exist
+        $symbolsPath | Should -Not -Exist
     }
  }
 
 function ThenPackageNotCreated
 {
-    It 'should not create any .nupkg files' {
-        (Join-Path -Path $context.OutputDirectory -ChildPath '*.nupkg') | Should Not Exist
-    }
+    (Join-Path -Path $context.OutputDirectory -ChildPath '*.nupkg') | Should Not Exist
 }
 
 if( -not $IsWindows )
 {
     Describe 'NuGetPack.when run on non-Windows platform' {
-        InitTest
-        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-        ThenTaskThrowsAnException 'Windows\ platform'
+        It 'should fail' {
+            InitTest
+            WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+            ThenTaskThrowsAnException 'Windows\ platform'
+        }
     }
     return
 }
 
 Describe 'NuGetPack.when creating a NuGet package with an invalid project' {
-    InitTest
-    GivenABuiltLibrary
-    GivenPath -Path 'I\do\not\exist.csproj'
-    WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskThrowsAnException 'does not exist'
+    It 'should fail' {
+        InitTest
+        GivenABuiltLibrary
+        GivenPath -Path 'I\do\not\exist.csproj'
+        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskThrowsAnException 'does not exist'
+    }
 }
 
 Describe 'NuGetPack.when creating a NuGet package' {
-    InitTest
-    GivenABuiltLibrary
-    WhenRunningNuGetPackTask
-    ThenTaskSucceeds
-    ThenPackageCreated
+    It 'should create the package' {
+        InitTest
+        GivenABuiltLibrary
+        WhenRunningNuGetPackTask
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 }
 
 Describe 'NuGetPack.when creating a symbols NuGet package' {
-    InitTest
-    GivenABuiltLibrary
-    WhenRunningNuGetPackTask -Symbols
-    ThenTaskSucceeds
-    ThenPackageCreated -Symbols
+    It 'should include symbols in the package' {
+        InitTest
+        GivenABuiltLibrary
+        WhenRunningNuGetPackTask -Symbols
+        ThenTaskSucceeds
+        ThenPackageCreated -Symbols
+    }
 }
 
 Describe 'NuGetPack.when creating a package built in release mode' {
-    InitTest
-    GivenABuiltLibrary -InReleaseMode
-    GivenRunByBuildServer
-    WhenRunningNugetPackTask
-    ThenTaskSucceeds
-    ThenPackageCreated
+    It 'create the package' {
+        InitTest
+        GivenABuiltLibrary -InReleaseMode
+        GivenRunByBuildServer
+        WhenRunningNugetPackTask
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 }
 
 Describe 'NuGetPack.when creating multiple packages for publishing' {
-    InitTest
-    GivenABuiltLibrary
-    GivenPath @( $projectName, $projectName )
-    WhenRunningNugetPackTask 
-    ThenPackageCreated
-    ThenTaskSucceeds
+    It 'should create all the packages' {
+        InitTest
+        GivenABuiltLibrary
+        GivenPath @( $projectName, $projectName )
+        WhenRunningNugetPackTask 
+        ThenPackageCreated
+        ThenTaskSucceeds
+    }
 }
-
 Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
-    InitTest
-    GivenABuiltLibrary
-    GivenVersion '3.5.0'
-    WhenRunningNuGetPackTask
-    ThenSpecificNuGetVersionInstalled
-    ThenTaskSucceeds
-    ThenPackageCreated
+    It 'should download and use that version of NuGet' {
+        InitTest
+        GivenABuiltLibrary
+        GivenVersion '3.5.0'
+        WhenRunningNuGetPackTask
+        ThenSpecificNuGetVersionInstalled
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 }
 
 Describe 'NuGetPack.when creating package from .nuspec file' {
-    InitTest
-    GivenFile 'package.nuspec' @'
+    It 'should create the package' {
+        InitTest
+        GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -353,10 +342,10 @@ Describe 'NuGetPack.when creating package from .nuspec file' {
   </metadata>
 </package>
 '@
-    GivenPath 'package.nuspec'
-    WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
-    ThenPackageCreated 'package'
-    ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
+        ThenPackageCreated 'package'
+        ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -369,11 +358,13 @@ Describe 'NuGetPack.when creating package from .nuspec file' {
   </metadata>
 </package>
 "@
+    }
 }
 
 Describe 'NuGetPack.when package ID is different than path' {
-    InitTest
-    GivenFile 'FileName.nuspec' @'
+    It 'should leave the ID alone' {
+        InitTest
+        GivenFile 'FileName.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -385,10 +376,10 @@ Describe 'NuGetPack.when package ID is different than path' {
   </metadata>
 </package>
 '@
-    GivenPath 'FileName.nuspec'
-    WhenRunningNuGetPackTask -ID 'ID'
-    ThenPackageCreated 'ID'
-    ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
+        GivenPath 'FileName.nuspec'
+        WhenRunningNuGetPackTask -ID 'ID'
+        ThenPackageCreated 'ID'
+        ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -402,11 +393,13 @@ Describe 'NuGetPack.when package ID is different than path' {
   </metadata>
 </package>
 "@
+    }
 }
 
 Describe 'NuGetPack.when customizing version' {
-    InitTest
-    GivenFile 'package.nuspec' @'
+    It 'should change the version in the .nuspec file' {
+        InitTest
+        GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -417,10 +410,10 @@ Describe 'NuGetPack.when customizing version' {
   </metadata>
 </package>
 '@
-    GivenPath 'package.nuspec'
-    WhenRunningNuGetPackTask -PackageVersion '2.2.2'
-    ThenPackageCreated 'package' -Version '2.2.2'
-    ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -PackageVersion '2.2.2'
+        ThenPackageCreated 'package' -Version '2.2.2'
+        ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -433,11 +426,13 @@ Describe 'NuGetPack.when customizing version' {
   </metadata>
 </package>
 "@
+    }
 }
 
 Describe 'NuGetPack.when Properties property is invalid' {
-    InitTest
-    GivenFile 'package.nuspec' @'
+    It 'should fail' {
+        InitTest
+        GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -448,8 +443,9 @@ Describe 'NuGetPack.when Properties property is invalid' {
   </metadata>
 </package>
 '@
-    GivenPath 'package.nuspec'
-    WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskThrowsAnException 'Property\ is\ invalid'
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskThrowsAnException 'Property\ is\ invalid'
+    }
 }

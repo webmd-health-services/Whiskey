@@ -123,24 +123,17 @@ function ThenModule
 
     if ($Exists)
     {
-        It ('should not remove module "{0}"' -f $Name) {
-            $modulePath | Should -Not -BeNullOrEmpty
-        }
-
+        $modulePath | Should -Not -BeNullOrEmpty
     }
     else
     {
-        It ('should remove module "{0}"' -f $Name) {
-            $modulePath | Should -BeNullOrEmpty
-        }
+        $modulePath | Should -BeNullOrEmpty
     }
 }
 
 function ThenNoErrorsWritten
 {
-    It 'should not write any errors' {
-        $Global:Error | Where-Object { $_ -notmatch '\bnpm (notice|warn)\b' } | Should -BeNullOrEmpty
-    }
+    $Global:Error | Where-Object { $_ -notmatch '\bnpm (notice|warn)\b' } | Should -BeNullOrEmpty
 }
 
 function ThenErrorMessage
@@ -149,29 +142,23 @@ function ThenErrorMessage
         $Message
     )
 
-    It ('error message should match [{0}]' -f $Message) {
-        $Global:Error | Should -Match $Message
-    }
+    $Global:Error | Should -Match $Message
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should not fail' {
         Init
         GivenName 'wrappy'
         WhenUninstallingNodeModule
         ThenNoErrorsWritten
         ThenModule 'wrappy' -DoesNotExist
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should remove the module' {
         Init
         GivenInstalledModule 'wrappy'
         GivenInstalledModule 'pify'
@@ -181,15 +168,11 @@ Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
         ThenModule 'pify' -Exists
         ThenNoErrorsWritten
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails to remove module' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should ignore uninstall failures' {
         Init
         GivenInstalledModule 'wrappy'
         GivenInstalledModule 'pify'
@@ -201,15 +184,11 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails t
         ThenModule 'pify' -Exists
         ThenNoErrorsWritten
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should fail' {
         Init
         GivenInstalledModule 'wrappy'
         GivenName 'wrappy'
@@ -217,15 +196,11 @@ Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module'
         WhenUninstallingNodeModule -ErrorAction SilentlyContinue
         ThenErrorMessage 'Failed to remove Node module "wrappy"'
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should fail' {
         Init
         GivenInstalledModule 'wrappy'
         GivenName 'wrappy'
@@ -234,9 +209,5 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails'
         GivenFailingRemoveItem
         WhenUninstallingNodeModule -ErrorAction SilentlyContinue
         ThenErrorMessage 'Failed to remove Node module "wrappy"'
-    }
-    finally
-    {
-        Remove-Node
     }
 }
