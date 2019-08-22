@@ -3,7 +3,7 @@ function New-WhiskeyFile
     [Whiskey.Task('File')]
     [CmdletBinding()]
     param(
-        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowAbsolute)]
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false)]
         [string[]]$Path,
 
         [Parameter(Mandatory)]
