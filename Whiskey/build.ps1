@@ -57,8 +57,28 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
         Invoke-WebRequest -UseBasicParsing -Uri $zipUri -OutFile $zipFilePath
     }
 
+    # Whiskey.zip uses Windows directory separator which extracts strangely on Linux. So, we have
+    # to extract each entry by hand.
     Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
-    [IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath,$whiskeyModuleRoot)
+    $zipFile = [IO.Compression.ZipFile]::OpenRead($zipFilePath)
+    try
+    {
+        foreach( $entry in $zipFile.Entries )
+        {
+            $destinationPath = Join-Path -Path $whiskeyModuleRoot -ChildPath $entry.FullName
+            $destinationDirectory = $destinationPath | Split-Path
+            if( -not (Test-Path -Path $destinationDirectory -PathType Container) )
+            {
+                New-Item -Path $destinationDirectory -ItemType 'Directory' | Out-Null
+            }
+            Write-Debug -Message ('{0} -> {1}' -f $entry.FullName,$destinationPath)
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destinationPath, $true)
+        }
+    }
+    finally
+    {
+        $zipFile.Dispose()
+    }
 
     Rename-Item -Path (Join-Path -Path $whiskeyModuleRoot -ChildPath 'Whiskey') -NewName $release.name
 
