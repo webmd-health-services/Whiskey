@@ -3,7 +3,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$projectName ='NUnit2PassingTest.csproj' 
+$projectName = 'NuGetPack.csproj'
 $context = $null
 $nugetUri = $null
 $apiKey = $null
@@ -37,21 +37,76 @@ function GivenABuiltLibrary
         $InReleaseMode
     )
 
-    $projectRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest'
-    Copy-Item -Path (Join-Path -Path $projectRoot -ChildPath '*') -Destination $TestDrive.FullName -Recurse
+    @'
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A4366E0A-29F0-4F5E-B6CD-C35F022FB924}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>NuGetPack</RootNamespace>
+    <AssemblyName>NuGetPack</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="NoOp.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
+'@ | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $projectName)
+
+    @'
+namespace NuGetPack
+{
+    public sealed class NoOp
+    {
+    }
+}
+'@ | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'NoOp.cs')
 
     # Make sure output directory gets created by the task
     $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    @'
+Build:
+- Version:
+    Version: 0.0.0
+- MSBuild:
+    Path: NuGetPack.csproj
+'@ | Set-Content -Path $whiskeyYmlPath
 
-    $project = Join-Path -Path $TestDrive.FullName -ChildPath $projectName -Resolve
-    
     $propertyArg = @{}
     if( $InReleaseMode )
     {
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    #Get-ChildItem -Path $TestDrive.FullName -File '*.sln' | ForEach-Object { & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve) restore $_.FullName }# $project
     $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
     if( $InReleaseMode )
     {
@@ -61,8 +116,9 @@ function GivenABuiltLibrary
     {
         $context.RunBy = [Whiskey.RunBy]::Developer
     }
-    Invoke-WhiskeyBuild -Context $context
-    #Invoke-WhiskeyMSBuild -Path $project -Target 'build' @propertyArg | Write-Verbose
+    Invoke-WhiskeyBuild -Context $context |
+        Out-String |
+        Write-Verbose -Verbose
 }
 
 function GivenFile
@@ -224,7 +280,7 @@ function ThenTaskSucceeds
 function ThenPackageCreated
 {
     param(
-        $Name = 'NUnit2PassingTest',
+        $Name = 'NuGetPack',
 
         $Version = $context.Version.SemVer1,
 
