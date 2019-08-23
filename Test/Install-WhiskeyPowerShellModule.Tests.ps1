@@ -16,16 +16,7 @@ function Install-WhiskeyPowerShellModule
         $Path
     )
 
-    $Global:Parameter = $PSBoundParameters
-    try
-    {
-        InModuleScope 'Whiskey' { Install-WhiskeyPowerShellModule @Parameter } 
-    }
-    finally
-    {
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
-    }
-
+    Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter $PSBoundParameters
 }
 
 function Invoke-PowershellInstall

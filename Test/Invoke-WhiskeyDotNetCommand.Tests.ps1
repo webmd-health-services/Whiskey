@@ -185,24 +185,18 @@ function WhenRunningDotNetCommand
     param(
     )
 
-    $Global:Parameter = @{ 
-        'DotNetPath' = $dotNetPath;
-        'Name' = $commandName;
-    }
+    $parameter = $PSBoundParameters
+    $parameter['DotNetPath'] = $dotNetPath;
+    $parameter['Name'] = $commandName;
 
     if ($argumentList)
     {
-        $Parameter['ArgumentList'] = $argumentList
+        $parameter['ArgumentList'] = $argumentList
     }
 
     if ($projectPath)
     {
-        $Parameter['ProjectPath'] = $projectPath
-    }
-
-    if( $PSBoundParameters.ContainsKey('ErrorAction') )
-    {
-        $Parameter['ErrorAction'] = $ErrorActionPreference
+        $parameter['ProjectPath'] = $projectPath
     }
 
     $Global:Error.Clear()
@@ -210,8 +204,8 @@ function WhenRunningDotNetCommand
     try
     {
         $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
-        $Parameter['TaskContext'] = $taskContext
-        InModuleScope 'Whiskey' { Invoke-WhiskeyDotNetCommand @Parameter } 
+        $parameter['TaskContext'] = $taskContext
+        Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyDotNetCommand' -Parameter $parameter 
     }
     catch
     {

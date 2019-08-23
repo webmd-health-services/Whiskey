@@ -57,17 +57,11 @@ function WhenSettingGlobalJson
     [CmdletBinding()]
     param()
 
-    $Global:Parameter = $PSBoundParameters
-    $Parameter['Directory'] = $globalJsonDirectory
-    $Parameter['SdkVersion'] = $sdkVersion
-    try
-    {
-        InModuleScope 'Whiskey' { Set-WhiskeyDotNetGlobalJson @Parameter } 
-    }
-    finally
-    {
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
-    }
+    $parameter = $PSBoundParameters
+    $parameter['Directory'] = $globalJsonDirectory
+    $parameter['SdkVersion'] = $sdkVersion
+
+    Invoke-WhiskeyNpmcommand -Name 'Set-WhiskeyDotNetGlobalJson' -Parameter $paramete 
 }
 
 Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson root directory does not exist' {

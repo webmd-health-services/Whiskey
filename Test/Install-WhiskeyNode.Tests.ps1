@@ -134,22 +134,19 @@ function WhenInstallingTool
 
     $Global:Error.Clear()
 
-    $Global:Parameter = @{
-        'InstallRoot' = $TestDrive.FullName;
-        'InCleanMode' = $InCleanMode;
-    }
+    $Global:Parameter = $PSBoundParameters
+    $parameter['InstallRoot'] = $TestDrive.FullName
+    $parameter['InCleanMode'] = $InCleanMode
 
     if( $Version )
     {
-        $Parameter['Version'] = $Version
+        $parameter['Version'] = $Version
     }
 
     Push-Location -path $taskWorkingDirectory
     try
     {
-        $script:nodePath = InModuleScope 'Whiskey' {
-            Install-WhiskeyNode @Parameter
-        }
+        $script:nodePath = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' -Parameter $parameter
     }
     catch
     {
@@ -159,7 +156,6 @@ function WhenInstallingTool
     finally
     {
         Pop-Location
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
     }
 }
 
