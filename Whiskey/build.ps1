@@ -15,41 +15,54 @@ Set-StrictMode -Version Latest
 # Set to a specific version to use a specific version of Whiskey. 
 $whiskeyVersion = '0.*'
 
-# Set to `$true` to use prerelease versions of Whiskey.
-$allowPrerelease = $false
-
 $psModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'PSModules'
 $whiskeyModuleRoot = Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Whiskey'
 
 if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
 {
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+    $release = 
+        Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' |
+        ForEach-Object { $_ } |
+        Where-Object { $_.name -like $whiskeyVersion } |
+        Sort-Object -Property 'created_at' -Descending |
+        Select-Object -First 1
+
+    if( -not $release )
+    {
+        Write-Error -Message ('Whiskey version "{0}" not found.' -f $whiskeyVersion) -ErrorAction Stop
+        return
+    }
+
+    $zipUri = 
+        $release.assets |
+        ForEach-Object { $_ } |
+        Where-Object { $_.name -eq 'Whiskey.zip' } |
+        Select-Object -ExpandProperty 'browser_download_url'
+    
+    if( -not $zipUri )
+    {
+        Write-Error -Message ('URI to Whiskey ZIP file does not exist.') -ErrorAction Stop
+    }
+
+    Write-Verbose -Message ('Found Whiskey {0}.' -f $release.name)
+
     if( -not (Test-Path -Path $psModulesRoot -PathType Container) )
     {
         New-Item -Path $psModulesRoot -ItemType 'Directory' | Out-Null
     }
+    $zipFilePath = Join-Path -Path $psModulesRoot -ChildPath 'Whiskey.zip'
+    & {
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -UseBasicParsing -Uri $zipUri -OutFile $zipFilePath
+    }
 
-    $job = Start-Job -ScriptBlock {
-        $VerbosePreference = $using:VerbosePreference
-        $whiskey = 
-            Find-Module -Name 'Whiskey' -AllowPrerelease:$using:allowPrerelease -AllVersions |
-            Where-Object { $_.Version -like $using:whiskeyVersion } |
-            Sort-Object -Property 'Version' -Descending |
-            Select-Object -First 1
+    Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+    [IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath,$whiskeyModuleRoot)
 
-        if( -not $whiskey )
-        {
-            Write-Error -Message ('Whiskey matching version "{0}" does not exist.' -f $using:whiskeyVersion)
-            return
-        }
+    Rename-Item -Path (Join-Path -Path $whiskeyModuleRoot -ChildPath 'Whiskey') -NewName $release.name
 
-        Write-Verbose -Message ('Found Whiskey {0} in repository {1}.' -f $whiskey.ModuleVersion,$whiskey.Repository)
-        Save-Module -Name 'Whiskey' `
-                    -Path $using:psModulesRoot `
-                    -RequiredVersion $whiskey.Version `
-                    -Repository $whiskey.Repository
-    } 
-    $job | Wait-Job | Receive-Job -ErrorAction Stop
-    $job | Remove-Job
+    Remove-Item -Path $zipFilePath
 }
 
 & {
