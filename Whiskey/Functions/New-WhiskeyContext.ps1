@@ -266,7 +266,7 @@ Whiskey also no longer automatically adds build metadata to your version number.
     }
     else
     {
-        Write-Warning ('Whiskey''s default, date-base default version number is OBSOLETE. Beginning with Whiskey 1.0, the default Whiskey version number will be 0.0.0. Use the Version task to set your own custom version. For example, this Version task preserves the existing behavior:
+        Write-Warning ('Whiskey''s default, date-based version number is OBSOLETE. Beginning with Whiskey 1.0, the default Whiskey version number will be 0.0.0. Use the Version task to set your own custom version. For example, this Version task preserves the existing behavior:
 
     Build
     - Version:
