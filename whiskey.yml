@@ -210,3 +210,6 @@ Publish:
     - Path: .output\Whiskey.zip
       ContentType: application/zip
       Name: Whiskey-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
+    - Path: Whiskey\build.ps1
+      ContentType: text/plain
+      Name: build.ps1
