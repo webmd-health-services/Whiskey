@@ -160,7 +160,7 @@ function Invoke-WhiskeyNUnit2Task
     $openCoverReport = Join-Path -Path $coverageReportDir -ChildPath 'openCover.xml'
 
     $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
-    $VerbosePreference = 'Continue'
+    
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path | Select-Object -First 1))
     $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $frameworkParam)

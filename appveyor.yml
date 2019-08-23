@@ -14,13 +14,21 @@ environment:
   matrix:
   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
     LANG: us_US.UTF-8
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  # We have to use the previous version because the newest version breaks OpenCover filtering.
+  # https://github.com/OpenCover/opencover/issues/911
+  - APPVEYOR_BUILD_WORKER_IMAGE: Previous Visual Studio 2017
 
 build_script:
+- ps: >-
+    Get-ChildItem -Path 'env:'
+
+    if( Test-Path -Path ('env:ENABLE_RDP') )
+    {
+        $blockRdp = $true; 
+        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    }
 #- sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 - pwsh: >-
-    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-    
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
     $Global:ProgressPreference = 'SilentlyContinue'
     
