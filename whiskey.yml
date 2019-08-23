@@ -53,7 +53,7 @@ Build:
     Path:
     - Whiskey\Tasks\*.ps1
     DestinationPath:
-    - Whiskey\Functions\Tasks.ps1
+    - Whiskey\Tasks\Tasks.ps1
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
