@@ -2,7 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 
 $name = $null
 $output = $null
@@ -20,7 +19,7 @@ function Init
 
 function GivenNpmSucceedsButModuleNotInstalled
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith $SuccessCommandScriptBlock
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -Module 'Whiskey' -MockWith $SuccessCommandScriptBlock
 }
 
 function GivenName
@@ -73,16 +72,20 @@ function WhenInstallingNodeModule
     
     CreatePackageJson
 
-    $versionParam = @{}
+    $parameter = $PSBoundParameters
+
     if ($version)
     {
-        $versionParam['Version'] = $version
+        $parameter['Version'] = $version
     }
+
+    $parameter['Name'] = $name
+    $parameter['BuildRootPath'] = $TestDrive.FullName
 
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -BuildRootPath $TestDrive.FullName
+        $script:output = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter
     }
     finally
     {

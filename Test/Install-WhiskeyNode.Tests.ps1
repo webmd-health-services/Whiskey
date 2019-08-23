@@ -3,7 +3,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNode.ps1' -Resolve)
 
 $threwException = $false
 $taskWorkingDirectory = $null
@@ -135,16 +134,22 @@ function WhenInstallingTool
 
     $Global:Error.Clear()
 
-    $optionalParams = @{}
+    $Global:Parameter = @{
+        'InstallRoot' = $TestDrive.FullName;
+        'InCleanMode' = $InCleanMode;
+    }
+
     if( $Version )
     {
-        $optionalParams['Version'] = $Version
+        $Parameter['Version'] = $Version
     }
 
     Push-Location -path $taskWorkingDirectory
     try
     {
-        $script:nodePath = Install-WhiskeyNode -InstallRoot $TestDrive.FullName -InCleanMode:$InCleanMode @optionalParams
+        $script:nodePath = InModuleScope 'Whiskey' {
+            Install-WhiskeyNode @Parameter
+        }
     }
     catch
     {
@@ -154,6 +159,7 @@ function WhenInstallingTool
     finally
     {
         Pop-Location
+        Remove-Variable -Name 'Parameter' -Scope 'Global'
     }
 }
 

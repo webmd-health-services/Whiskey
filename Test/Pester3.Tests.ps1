@@ -3,8 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Publish-WhiskeyPesterTestResult.ps1' -Resolve)
-
 $modulesDirectoryName = 'PSModules'
 
 $context = $null
@@ -12,6 +10,11 @@ $pesterPath = $null
 $version = $null
 $taskParameter = @{}
 $failed = $false
+
+# So we can mock Whiskey's private function.
+function Publish-WhiskeyPesterTestResult
+{
+}
 
 function GivenTestContext
 {

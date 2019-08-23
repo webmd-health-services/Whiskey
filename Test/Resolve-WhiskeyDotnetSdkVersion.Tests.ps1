@@ -1,6 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $givenVersion = $null
 $resolvedVersion = $null
@@ -74,13 +73,17 @@ function WhenResolvingSdkVersion
     [CmdletBinding()]
     param()
 
-    $versionParam = @{}
+    $parameter = @{}
     if ($givenVersion)
     {
-        $versionParam['Version'] = $givenVersion
+        $parameter['Version'] = $givenVersion
     }
 
-    $script:resolvedVersion = Resolve-WhiskeyDotNetSdkVersion @versionParam
+    if( $PSBoundParameters.ContainsKey('ErrorAction') )
+    {
+        $parameter['ErrorAction'] = $ErrorActionPreference
+    }
+    $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' -Parameter $parameter
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given SDK version that does not exist' {
@@ -131,7 +134,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when no version given' {
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t return a valid version' {
     It 'should fail' {
         Init
-        Mock -CommandName Invoke-RestMethod -MockWith { '1' }
+        Mock -CommandName Invoke-RestMethod -ModuleName 'Whiskey' -MockWith { '1' }
         WhenResolvingSdkVersion -ErrorAction SilentlyContinue
         ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
         ThenReturnedNothing

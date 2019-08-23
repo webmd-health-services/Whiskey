@@ -2,8 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyDotNetCommand.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Write-WhiskeyCommand.ps1' -Resolve)
 
 $argumentList = $null
 $commandName = $null
@@ -11,6 +9,11 @@ $dotNetPath = $null
 $failed = $false
 $projectPath = $null
 $taskContext = $null
+
+# So we can mock Whiskey's private function.
+function Write-WhiskeyCommand
+{
+}
 
 function Init
 {
@@ -27,9 +30,9 @@ function Init
 
     if( -not $SkipDotNetMock )
     {
-        Mock -CommandName 'Invoke-Command' -MockWith $SuccessCommandScriptBlock
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith $SuccessCommandScriptBlock
     }
-    Mock -CommandName 'Write-WhiskeyCommand'
+    Mock -CommandName 'Write-WhiskeyCommand' -ModuleName 'Whiskey'
 }
 
 function GivenArgumentList
@@ -56,7 +59,7 @@ function GivenDotNetPath
     )
 
     $script:dotNetPath = $Path
-    Mock -CommandName 'Resolve-Path' -MockWith { $Path }
+    Mock -CommandName 'Resolve-Path' -ModuleName 'Whiskey' -MockWith { $Path }
 }
 
 function GivenNonExistentDotNetPath
@@ -95,7 +98,7 @@ function ThenLogFileName
     $logFilePath = Join-Path -Path $taskContext.OutputDirectory.FullName -ChildPath $LogFileName
     $expectedLoggerArg = ('/filelogger9 /flp9:LogFile={0};Verbosity=d' -f $logFilePath)
 
-    Assert-MockCalled -CommandName 'Invoke-Command' -ParameterFilter {
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualLoggerArg = $ArgumentList[3] -join ' '
         Write-Debug ('LoggerArg  EXPECTED  {0}' -f $expectedLoggerArg)
@@ -115,7 +118,7 @@ function ThenRanCommand
         $ExpectedCommand
     )
 
-    Assert-MockCalled -CommandName 'Invoke-Command' -ParameterFilter {
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualCommand = $ArgumentList[1]
         Write-Debug ('Name  EXPECTED  {0}' -f $ExpectedCommand)
@@ -131,7 +134,7 @@ function ThenRanWithArguments
         $ExpectedArguments
     )
 
-    Assert-MockCalled -CommandName 'Invoke-Command' -ParameterFilter {
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $ExpectedArguments = $ExpectedArguments -join ','
         $actualArguments = $ArgumentList[2] -join ','
@@ -147,7 +150,7 @@ function ThenRanWithPath
         $ExpectedPath
     )
 
-    Assert-MockCalled -CommandName 'Invoke-Command' -ParameterFilter {
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualDotNetPath = $ArgumentList[0]
         Write-Debug ('DotNetPath  EXPECTED  {0}' -f $ExpectedPath)
@@ -162,7 +165,7 @@ function ThenRanWithProject
         $ExpectedProjectPath
     )
 
-    Assert-MockCalled -CommandName 'Invoke-Command' -ParameterFilter {
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualProjectPath = $ArgumentList[4]
         Write-Debug ('ProjectPath  EXPECTED  {0}' -f $ExpectedProjectPath)
@@ -173,22 +176,33 @@ function ThenRanWithProject
 
 function ThenWroteCommandInfo
 {
-    Assert-MockCalled -CommandName 'Write-WhiskeyCommand'
+    Assert-MockCalled -CommandName 'Write-WhiskeyCommand' -ModuleName 'Whiskey'
 }
 
 function WhenRunningDotNetCommand
 {
     [CmdletBinding()]
-    Param()
+    param(
+    )
 
-    $optionalParams = @{ }
+    $Global:Parameter = @{ 
+        'DotNetPath' = $dotNetPath;
+        'Name' = $commandName;
+    }
+
     if ($argumentList)
     {
-        $optionalParams['ArgumentList'] = $argumentList
+        $Parameter['ArgumentList'] = $argumentList
     }
+
     if ($projectPath)
     {
-        $optionalParams['ProjectPath'] = $projectPath
+        $Parameter['ProjectPath'] = $projectPath
+    }
+
+    if( $PSBoundParameters.ContainsKey('ErrorAction') )
+    {
+        $Parameter['ErrorAction'] = $ErrorActionPreference
     }
 
     $Global:Error.Clear()
@@ -196,7 +210,8 @@ function WhenRunningDotNetCommand
     try
     {
         $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
-        Invoke-WhiskeyDotNetCommand -TaskContext $taskContext -DotNetPath $dotNetPath -Name $commandName @optionalParams
+        $Parameter['TaskContext'] = $taskContext
+        InModuleScope 'Whiskey' { Invoke-WhiskeyDotNetCommand @Parameter } 
     }
     catch
     {
@@ -262,7 +277,7 @@ Describe 'Invoke-WhiskeyDotNetCommand.when dotnet command exits with non-zero ex
         Init
         GivenDotNetPath 'C:\dotnet\dotnet.exe'
         GivenCommandName 'build'
-        Mock -CommandName 'Invoke-Command' -MockWith $FailureCommandScriptBlock
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith $FailureCommandScriptBlock
         WhenRunningDotNetCommand -ErrorAction SilentlyContinue
         ThenErrorMessage 'dotnet\.exe"\ failed\ with\ exit\ code\ \d+'
     }

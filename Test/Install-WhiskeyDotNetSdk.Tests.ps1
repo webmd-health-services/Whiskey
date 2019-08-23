@@ -1,6 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyDotNetSdk.ps1' -Resolve)
 
 $dotNetPath = $null
 $originalPath = $env:PATH
@@ -55,29 +54,34 @@ function GivenGlobalDotNet
 
 function GivenDotNetSuccessfullyInstalls
 {
-    Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } -MockWith {
-        $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
-        New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
+    Mock -CommandName 'Invoke-Command' `
+         -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } `
+         -MockWith {
+            $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
+            New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
-        $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
-        New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
-    }
+            $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
+            New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
+        }
 }
 
 function GivenDotNetCommandFailsToInstall
 {
-    Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' }
+    Mock -CommandName 'Invoke-Command' `
+         -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' }
 }
 
 function GivenDotNetSdkFailsToInstall
 {
-    Mock -CommandName 'Invoke-Command' -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' } -MockWith {
-        $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
-        New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
+    Mock -CommandName 'Invoke-Command' `
+         -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' } `
+         -MockWith {
+            $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
+            New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
-        $sdkWithoutVersionPath = Join-Path -Path $InstallRoot -ChildPath 'sdk'
-        New-Item -Path $sdkWithoutVersionPath -ItemType Directory -Force | Out-Null
-    }
+            $sdkWithoutVersionPath = Join-Path -Path $InstallRoot -ChildPath 'sdk'
+            New-Item -Path $sdkWithoutVersionPath -ItemType Directory -Force | Out-Null
+        }
 }
 
 function GivenDotNetNotInstalled
@@ -164,7 +168,9 @@ function WhenInstallingDotNet
         $Global
     )
 
-    $script:dotNetPath = Install-WhiskeyDotNetSdk -InstallRoot $localDotNetDirectory -Version $Version -Global:$Global
+    $parameter = $PSBoundParameters
+    $parameter['InstallRoot'] = $localDotNetDirectory;
+    $script:dotNetPath = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyDotNetSdk' -Parameter $parameter
 }
 
 Describe 'Install-WhiskeyDotNetSdk.when installing the SDK version "2.0.3"' {

@@ -1,9 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyDotNetTool.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyDotNetSdk.ps1')
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Set-WhiskeyDotNetGlobalJson.ps1')
 
 $dotnetPath = $null
 $globalDotNetDirectory = $null
@@ -85,15 +81,17 @@ function GivenWorkingDirectory
 
 function GivenDotNetSuccessfullyInstalls
 {
-    Mock -CommandName 'Install-WhiskeyDotNetSdk' -MockWith {
-        $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
-        New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
+    Mock -CommandName 'Install-WhiskeyDotNetSdk' `
+         -ModuleName 'Whiskey' `
+         -MockWith {
+            $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
+            New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
-        $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
-        New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
+            $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
+            New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
 
-        return $dotNetExePath
-    }
+            return $dotNetExePath
+        }
 }
 
 function GivenDotNetNotInstalled
@@ -196,7 +194,12 @@ function WhenInstallingDotNetTool
         $script:workingDirectory = $TestDrive.FullName
     }
 
-    $script:dotnetPath = Install-WhiskeyDotNetTool -InstallRoot $TestDrive.FullName -WorkingDirectory $workingDirectory -Version $version
+    $parameter = $PSBoundParameters
+    $parameter['InstallRoot'] = $TestDrive.FullName;
+    $parameter['WorkingDirectory'] = $workingDirectory
+    $parameter['Version'] = $version
+
+    $script:dotnetPath = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyDotNetTool' -Parameter $parameter
 }
 
 Describe 'Install-WhiskeyDotNetTool.when installing specific version' {
@@ -231,8 +234,9 @@ Describe 'Install-WhiskeyDotNetTool.when given wildcard version' {
         GivenVersion '2.*'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion (InModuleScope 'Whiskey' { Resolve-WhiskeyDotNetSdkVersion -Version '2.*' })
-        ThenDotNetSdkVersion (InModuleScope 'Whiskey' { Resolve-WhiskeyDotNetSdkVersion -Version '2.*' })
+        $expectedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' -Parameter @{ 'Version' = '2.*'; }
+        ThenGlobalJsonVersion $expectedVersion
+        ThenDotNetSdkVersion $expectedVersion
     }
 }
 

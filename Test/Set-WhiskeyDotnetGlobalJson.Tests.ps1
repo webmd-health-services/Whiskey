@@ -1,6 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Set-WhiskeyDotNetGlobalJson.ps1' -Resolve)
 
 $globalJsonDirectory = $null
 $sdkVersion = $null
@@ -58,7 +57,17 @@ function WhenSettingGlobalJson
     [CmdletBinding()]
     param()
 
-    Set-WhiskeyDotNetGlobalJson -Directory $globalJsonDirectory -SdkVersion $sdkVersion
+    $Global:Parameter = $PSBoundParameters
+    $Parameter['Directory'] = $globalJsonDirectory
+    $Parameter['SdkVersion'] = $sdkVersion
+    try
+    {
+        InModuleScope 'Whiskey' { Set-WhiskeyDotNetGlobalJson @Parameter } 
+    }
+    finally
+    {
+        Remove-Variable -Name 'Parameter' -Scope 'Global'
+    }
 }
 
 Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson root directory does not exist' {

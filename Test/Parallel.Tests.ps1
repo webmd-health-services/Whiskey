@@ -32,6 +32,15 @@ function Init
 {
 }
 
+function Invoke-ImportWhiskeyYaml
+{
+    param(
+        [string]$Yaml
+    )
+
+    Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $Yaml }
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -86,7 +95,7 @@ Describe 'Parallel.when running multiple queues' {
         GivenFile 'one.ps1' '1 | Set-Content one.txt'
         GivenFile 'two.ps1' '2 | Set-Content two.txt'
         GivenFile 'three.ps1' '3 | Set-Content three.txt'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -118,7 +127,7 @@ Describe 'Parallel.when queue missing task' {
     It 'should fail' {
         Init
         GivenFile 'one.ps1' 'Start-Sleep -Seconds 1 ; 1'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -139,7 +148,7 @@ Describe 'Parallel.when one queue fails' {
         Init
         GivenFile 'one.ps1' 'throw "fubar!"'
         GivenFile 'two.ps1' 'Start-Sleep -Seconds 10'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -160,7 +169,7 @@ Describe 'Parallel.when one queue writes an error' {
         Init
         GivenFile 'one.ps1' 'Write-Error "fubar!" ; 1 | Set-Content "one.txt"'
         GivenFile 'two.ps1' '2 | Set-Content "two.txt"'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -181,7 +190,7 @@ Describe 'Parallel.when second queue finishes before first queue' {
         Init
         GivenFile 'one.ps1' 'Write-Host ("1" * 80) ; Write-Host (Get-Date) ; Start-Sleep -Seconds 12 ; 1 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
         GivenFile 'two.ps1' 'Write-Host ("2" * 80) ; Write-Host (Get-Date) ; 2 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -205,7 +214,7 @@ Describe 'Parallel.when multiple tasks per queue' {
         GivenFile 'one.ps1' '1'
         GivenFile 'two.ps1' '2'
         GivenFile 'three.ps1' '3'
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
@@ -229,7 +238,7 @@ Queues:
 Describe 'Parallel.when a task definition is invalid' {
     It 'should fail' {
         Init
-        $task = Import-WhiskeyYaml -Yaml @'
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - 

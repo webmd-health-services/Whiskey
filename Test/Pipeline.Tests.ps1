@@ -3,12 +3,15 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Tasks\PowerShell.ps1' -Resolve)
 
 $whiskeyYmlPath = $null
 $context = $null
 $warnings = $null
 
+# So we can mock Whiskey's internal version.
+function Invoke-WhiskeyPowerShell
+{
+}
 function GivenFile
 {
     param(

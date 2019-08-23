@@ -1,7 +1,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1' -Resolve)
 
 $moduleName = $null
 $moduleVersion = $null
@@ -33,7 +32,7 @@ function GivenVersion
 
 function GivenReturnedModuleFromTwoRepositories
 {
-    $pesterRepo1 = Find-Module -Name 'Pester'
+    $pesterRepo1 = Find-Module -Name 'Pester' | Select-Object -First 1
     $pesterRepo2 = $pesterRepo1.PSObject.Copy()
     $pesterRepo2.Repository = 'Another PowerShellGet Repository'
 
@@ -53,13 +52,15 @@ function WhenResolvingPowerShellModule
     [CmdletBinding()]
     param()
 
-    $versionParam = @{}
-    if ($moduleVersion)
+    $parameters = $PSBoundParameters
+    $parameters['Name'] = $moduleName
+
+    if( $moduleVersion )
     {
-        $versionParam['Version'] = $moduleVersion
+        $parameters['Version'] = $moduleVersion
     }
 
-    $script:output = Resolve-WhiskeyPowerShellModule -Name $moduleName @versionParam
+    $script:output = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' -Parameter $parameter
 }
 
 function ThenReturnedModuleInfoObject
@@ -104,7 +105,7 @@ function ThenErrorMessage
     $Global:Error | Should -Match $Message
 }
 
-Describe 'Resolve-WhiskeyPowerShellModule.when given module Name ''Pester''' {
+Describe 'Resolve-WhiskeyPowerShellModule.when given module Name "Pester"' {
     It 'should find it' {
         Init
         GivenName 'Pester'
@@ -115,7 +116,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given module Name ''Pester''' {
     }
 }
 
-Describe 'Resolve-WhiskeyPowerShellModule.when given module Name ''Pester'' and Version ''4.1.1''' {
+Describe 'Resolve-WhiskeyPowerShellModule.when given module Name "Pester" and Version "4.1.1"' {
     It 'should resolve that version' {
         Init
         GivenName 'Pester'
@@ -160,5 +161,3 @@ Describe 'Resolve-WhiskeyPowerShellModule.when Find-Module returns module from t
         ThenNoErrors
     }
 }
-
-Remove-Item -Path 'function:Resolve-WhiskeyPowerShellModule'

@@ -5,9 +5,28 @@ Set-StrictMode -Version 'Latest'
 $powerShellModulesDirectoryName = 'PSModules'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyPowerShellModule.ps1' -Resolve)
 
+# Wrap private function so we can call it like it's public.
+function Install-WhiskeyPowerShellModule
+{
+    [CmdletBinding()]
+    param(
+        $Name,
+        $Version,
+        $Path
+    )
+
+    $Global:Parameter = $PSBoundParameters
+    try
+    {
+        InModuleScope 'Whiskey' { Install-WhiskeyPowerShellModule @Parameter } 
+    }
+    finally
+    {
+        Remove-Variable -Name 'Parameter' -Scope 'Global'
+    }
+
+}
 
 function Invoke-PowershellInstall
 {
@@ -22,12 +41,11 @@ function Invoke-PowershellInstall
         $ActualVersion = $Version
     }
 
-    $optionalParams = @{ }
     $Global:Error.Clear()
 
+    Push-Location -Path $TestDrive.FullName
     try
     {
-        Push-Location -Path $TestDrive.FullName
         $result = Install-WhiskeyPowerShellModule -Name $ForModule -Version $Version
     }
     finally
@@ -35,19 +53,17 @@ function Invoke-PowershellInstall
         Pop-Location
     }
 
-    Context 'the module' {
-        $moduleRootPath = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\{0}' -f $ForModule)
-        $result | Should -Not -BeNullOrEmpty
-        $result | Should -Exist
-        $result | Should -Be $moduleRootPath
+    $moduleRootPath = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\{0}' -f $ForModule)
+    $result | Should -Not -BeNullOrEmpty
+    $result | Should -Exist
+    $result | Should -Be $moduleRootPath
 
-        $errors = @()
-        $module = Start-Job {
-            Import-Module -Name $using:result -PassThru
-        } | Wait-Job | Receive-Job -ErrorVariable 'errors'
-        $errors | Should -BeNullOrEmpty
-        $module.Version | Should -Be $ActualVersion
-    }
+    $errors = @()
+    $module = Start-Job {
+        Import-Module -Name $using:result -PassThru
+    } | Wait-Job | Receive-Job -ErrorVariable 'errors'
+    $errors | Should -BeNullOrEmpty
+    $module.Version | Should -Be $ActualVersion
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and it''s already installed' {
@@ -69,14 +85,15 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module omitting Version' {
     It 'should install the latest version' {
-        $module = Resolve-WhiskeyPowerShellModule -Version '' -Name 'Zip'
+        $module = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' -Parameter @{ 'Name' = 'Zip' }
         Invoke-PowershellInstall -ForModule 'Zip' -Version '' -ActualVersion $module.Version
     }
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module using wildcard version' {
     It 'should resolve to the latest version that matches the wildcard' {
-        $module = Resolve-WhiskeyPowerShellModule -Version '0.*' -Name 'Zip'
+        $module = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' `
+                                               -Parameter @{ 'Version' = '0.*'; 'Name' = 'Zip' }
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.*' -ActualVersion $module.Version
     }
 }
