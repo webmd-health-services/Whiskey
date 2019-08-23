@@ -61,7 +61,7 @@ function WhenSettingGlobalJson
     $parameter['Directory'] = $globalJsonDirectory
     $parameter['SdkVersion'] = $sdkVersion
 
-    Invoke-WhiskeyNpmcommand -Name 'Set-WhiskeyDotNetGlobalJson' -Parameter $paramete 
+    Invoke-WhiskeyPrivateCommand -Name 'Set-WhiskeyDotNetGlobalJson' -Parameter $parameter
 }
 
 Describe 'Set-WhiskeyDotNetGlobalJson.when globalJson root directory does not exist' {
