@@ -52,12 +52,12 @@ function WhenResolvingPowerShellModule
     [CmdletBinding()]
     param()
 
-    $parameters = $PSBoundParameters
-    $parameters['Name'] = $moduleName
+    $parameter = $PSBoundParameters
+    $parameter['Name'] = $moduleName
 
     if( $moduleVersion )
     {
-        $parameters['Version'] = $moduleVersion
+        $parameter['Version'] = $moduleVersion
     }
 
     $script:output = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' -Parameter $parameter

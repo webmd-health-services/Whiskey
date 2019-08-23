@@ -55,6 +55,7 @@ function GivenGlobalDotNet
 function GivenDotNetSuccessfullyInstalls
 {
     Mock -CommandName 'Invoke-Command' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } `
          -MockWith {
             $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
@@ -68,12 +69,14 @@ function GivenDotNetSuccessfullyInstalls
 function GivenDotNetCommandFailsToInstall
 {
     Mock -CommandName 'Invoke-Command' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' }
 }
 
 function GivenDotNetSdkFailsToInstall
 {
     Mock -CommandName 'Invoke-Command' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' } `
          -MockWith {
             $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
