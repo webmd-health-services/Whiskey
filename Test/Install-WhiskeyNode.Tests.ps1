@@ -124,24 +124,15 @@ function WhenInstallingTool
 {
     [CmdletBinding()]
     param(
-        $Name,
-
         $Version,
 
-        [Switch]
-        $InCleanMode
+        [Switch]$InCleanMode
     )
 
     $Global:Error.Clear()
 
-    $Global:Parameter = $PSBoundParameters
+    $parameter = $PSBoundParameters
     $parameter['InstallRoot'] = $TestDrive.FullName
-    $parameter['InCleanMode'] = $InCleanMode
-
-    if( $Version )
-    {
-        $parameter['Version'] = $Version
-    }
 
     Push-Location -path $taskWorkingDirectory
     try
@@ -163,7 +154,7 @@ Describe 'Install-WhiskeyNode.when installing' {
     AfterEach { Remove-Node }
     It 'should install Node.js' {
         Init
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion
     }
 }
@@ -184,7 +175,7 @@ Describe 'Install-WhiskeyNode.when installing old version' {
     }
 }
 "@
-        WhenInstallingTool 'Node' -ErrorAction SilentlyContinue
+        WhenInstallingTool -ErrorAction SilentlyContinue
         ThenThrewException ([regex]::Escape(('Failed to download Node v{0}' -f $oldVersion)))
         ThenNodeNotInstalled
         ThenNodePackageNotFound
@@ -202,7 +193,7 @@ Describe 'Install-WhiskeyNode.when installing specific version' {
     }
 }
 '@
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled 'v9.2.1' -NpmVersion '5.5.1'
     }
 }
@@ -218,7 +209,7 @@ Describe 'Install-WhiskeyNode.when upgrading to a new version' {
     }
 }
 '@
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
 
         GivenPackageJson @'
@@ -229,7 +220,7 @@ Describe 'Install-WhiskeyNode.when upgrading to a new version' {
     }
 }
 '@
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled 'v8.9.0' -NpmVersion '5.6.0'
     }
 }
@@ -246,7 +237,7 @@ Describe 'Install-WhiskeyNode.when user specifies version in whiskey.yml and use
     }
 }
 '@
-        WhenInstallingTool 'Node' -Version '8.8.*'
+        WhenInstallingTool -Version '8.8.*'
         ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
     }
 }
@@ -262,7 +253,7 @@ Describe 'Install-WhiskeyNode.when using custom version of NPM' {
     }
 }
 '@
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0'
     }
 }
@@ -271,13 +262,13 @@ Describe 'Install-WhiskeyNode.when already installed' {
     AfterEach { Remove-Node }
     It 'should use version of Node already there' {
         Init
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion
 
         Mock -CommandName 'Invoke-WebRequest' -Module 'Whiskey'
         $nodeUnzipPath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node-*-win-x64'
         Get-ChildItem -Path $nodeUnzipPath -Directory | Remove-Item
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         $nodeUnzipPath | Should -Not -Exist
         Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -Times 0
     }
@@ -306,7 +297,7 @@ Describe 'Install-WhiskeyNode.when packageJson is in working directory' {
 }
 '@ -InDirectory $taskWorkingDirectory
 
-        WhenInstallingTool 'Node'
+        WhenInstallingTool
         ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1'
     }
 }
@@ -315,7 +306,7 @@ Describe 'Install-WhiskeyNode.when run in clean mode' {
     AfterEach { Remove-Node }
     It 'should remove Node.js' {
         Init
-        WhenInstallingTool 'Node' -InCleanMode
+        WhenInstallingTool -InCleanMode
         ThenNodeNotInstalled
         ThenNoError
         ThenNothingReturned
@@ -328,7 +319,7 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
     It 'should uninstall Node.js' {
         Init
         Install-Node
-        WhenInstallingTool 'Node' -InCleanMode
+        WhenInstallingTool -InCleanMode
         ThenNodeInstalled -AtLatestVersion
         ThenNoError
     }
