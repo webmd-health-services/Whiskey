@@ -40,7 +40,6 @@ Build:
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
-    OnlyBy: BuildServer
     Path:
     - Whiskey\Functions\*.ps1
     - Whiskey\Tasks\*.ps1
@@ -53,7 +52,6 @@ Build:
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs.
 - Parallel:
-    OnlyBy: BuildServer
     ExceptOnPlatform: Windows
     Queues:
     - Tasks:
@@ -116,7 +114,6 @@ Build:
             - "*/Test/Zip.Tests.ps1"
 
 - Parallel:
-    OnlyBy: BuildServer
     OnlyOnPlatform: Windows
     Queues:
     - Tasks:

@@ -15,6 +15,11 @@ $events = @{ }
 
 $powerShellModulesDirectoryName = 'PSModules'
 
+$whiskeyScriptRoot = $PSScriptRoot
+$whiskeyModulesRoot = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Modules' -Resolve
+$whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
+$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
+
 $buildStartedAt = [DateTime]::MinValue
 
 $PSModuleAutoLoadingPreference = 'None'

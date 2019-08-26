@@ -43,7 +43,7 @@ function Invoke-WhiskeyParallelTask
         foreach( $queue in $queues )
         {
             $queueIdx++
-            $whiskeyModulePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey.psd1' -Resolve
+            $whiskeyModulePath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Whiskey.psd1' -Resolve
 
             if( -not $queue.ContainsKey('Tasks') )
             {

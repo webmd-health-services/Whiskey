@@ -13,7 +13,7 @@ function Resolve-WhiskeyNuGetPackageVersion
         $Version,
 
         [string]
-        $NugetPath = (Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve)
+        $NugetPath = ($whiskeyNuGetExePath)
     )
 
     Set-StrictMode -Version 'Latest'
