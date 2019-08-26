@@ -78,13 +78,13 @@ function Invoke-WhiskeyPowerShell
             $scriptPath = $using:ScriptPath
             $argument = $using:argument
             $serializedContext = $using:serializableContext
-            $whiskeyModuleRoot = $using:whiskeyModuleRoot
+            $whiskeyScriptRoot = $using:whiskeyScriptRoot
             $resultPath = $using:resultPath
             $passTaskContext = $using:passTaskContext
 
             Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
-                                            & (Join-Path -Path $whiskeyModuleRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
+                                            & (Join-Path -Path $whiskeyScriptRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
                                         }
             [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
 
