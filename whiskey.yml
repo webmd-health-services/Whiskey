@@ -38,22 +38,14 @@ Build:
     Path:
     - Test\about_Whiskey_Tasks.Tests.ps1
 
-# Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into a single file.
+# Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
     OnlyBy: BuildServer
     Path:
     - Whiskey\Functions\*.ps1
-    DestinationPath:
-    - Whiskey\Functions\Functions.ps1
-    TextSeparator: "$(NewLine)$(NewLine)"
-    DeleteSourceFiles: true
-
-- MergeFile:
-    OnlyBy: BuildServer
-    Path:
     - Whiskey\Tasks\*.ps1
     DestinationPath:
-    - Whiskey\Tasks\Tasks.ps1
+    - Whiskey\Whiskey.psm1
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
