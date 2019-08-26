@@ -77,10 +77,15 @@ Build:
             - Test\Version.Tests.ps1
             - Test\Zip.Tests.ps1
     - Tasks:
-        Pester4:
+        # This test needs to run in its own instance since it loads an old version
+        # of Whiskey.
+        - Pester4:
+            Path: "Test\\build.ps1.Tests.ps1"
+        - Pester4:
             Path:
             - "Test\\*.Tests.ps1"
             Exclude:
+            - "*/Test/build.ps1.Tests.ps1"
             - "*/Test/DotNet.Tests.ps1"
             - "*/Test/GetPowerShellModule.Tests.ps1"
             - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
@@ -109,9 +114,13 @@ Build:
     OnlyOnPlatform: Windows
     Queues:
     - Tasks:
-        Pester4:
+        # Needs to run in its own Pester task since it loads old versions of Whiskey.
+        - Pester4:
+            Path: Test\build.ps1.Tests.ps1
+        - Pester4:
             Path: Test\*.Tests.ps1
             Exclude:
+            - "*\\Test\\build.ps1.Tests.ps1"
             - "*\\Test\\Documentation.Tests.ps1"
             - "*\\Test\\DotNet.Tests.ps1"
             - "*\\Test\\GetPowerShellModule.Tests.ps1"
