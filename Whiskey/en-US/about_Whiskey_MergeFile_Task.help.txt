@@ -5,7 +5,7 @@ SUMMARY
     Merges multiple files into a single, new file.
 
 DESCRIPTION
-    The `MergeFile` task takes one or more source files and merges them together into a new, destination file. Pass the list of source files to merge to the `Path` property (wildcards are supported). Pass the path to the destination file where the files should be merged to the `DestinationPath` property. The destination file will be created if it doesn't exist. If the destination file already exists, its content will be cleared.
+    The `MergeFile` task takes one or more source files and merges them together into a destination file. Pass the list of source files to merge to the `Path` property (wildcards are supported). Pass the path to the destination file where the files should be merged to the `DestinationPath` property. The destination file will be created if it doesn't exist. If the destination file already exists, its contents will be preserved. To clear the contents of the destination file before merging in other files, set the `Clear` property to `true`.
 
     By default, the source files are left in place. If you'd like to delete the source files as they are merged into the destination file, set the `DeleteSourceFiles` property to `true`.
 
@@ -17,6 +17,7 @@ PROPERTY
     * `DeleteSourceFiles`: if set to `true`, will delete each source file after is is merged into the destination file. The default value is `false`.
     * `TextSeparator`: a string of text to use to separate each file's content when merging. We recommend `$(NewLine)` when merging text files.
     * `BinarySeparator`: a list of bytes to use to separate each file's content when merging. Each item in the list must be a number between 0 and 255. 
+    * `Clear`: by default, the task leaves to destination file's content in place. To clear the destination file before merging files, set this property to `true`.
 
 EXAMPLES
 
@@ -64,8 +65,10 @@ EXAMPLES
 
         Build:
         - MergeFile:
-            Path: Whiskey\Functions\*.ps1
-            DestinationPath: Whiskey\Functions\Functions.ps1
+            Path: 
+            - Whiskey\Functions\*.ps1
+            - Whiskey\Tasks\*.ps1
+            DestinationPath: Whiskey\Whiskey.psm1
             DeleteSourceFiles: true
             TextSeparator: "$(NewLine)$(NewLine)"
 

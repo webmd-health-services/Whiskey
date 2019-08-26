@@ -16,7 +16,9 @@ function Merge-WhiskeyFile
 
         [string]$TextSeparator,
 
-        [byte[]]$BinarySeparator
+        [byte[]]$BinarySeparator,
+
+        [switch]$Clear
     )
 
     Set-StrictMode -Version 'Latest'
@@ -36,7 +38,10 @@ function Merge-WhiskeyFile
         return
     }
 
-    Clear-Content -Path $DestinationPath
+    if( $Clear )
+    {
+        Clear-Content -Path $DestinationPath
+    }
 
     [byte[]]$separatorBytes = $BinarySeparator
     if( $TextSeparator )
@@ -49,17 +54,23 @@ function Merge-WhiskeyFile
     try 
     {
         Write-WhiskeyInfo -Context $TaskContext -Message $relativePath -Verbose
-        $afterFirst = $false
+
+        # Move to the end of the file.
+        $writer.Position = $writer.Length
+
+        # Only add the separator first if we didn't clear the file's original contents.
+        $addSeparator = (-not $Clear) -and ($writer.Length -gt 0)
+
         foreach( $filePath in $Path )
         {
             $relativePath = Resolve-Path -Path $filePath -Relative
             Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath) -Verbose
 
-            if( $afterFirst -and $separatorBytes )
+            if( $addSeparator -and $separatorBytes )
             {
                 $writer.Write($separatorBytes,0,$separatorBytes.Length)
             }
-            $afterFirst = $true
+            $addSeparator = $true
 
             $reader = [IO.File]::OpenRead($filePath)
             try

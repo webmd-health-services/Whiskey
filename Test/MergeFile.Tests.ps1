@@ -119,7 +119,9 @@ function WhenMerging
 
         [switch]$AndDeletingSourceFiles,
 
-        [object]$WithSeparator
+        [object]$WithSeparator,
+
+        [switch]$Clear
     )
 
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -140,6 +142,11 @@ function WhenMerging
         {
             $parameters['BinarySeparator'] = $WithSeparator | ForEach-Object { $_.ToString() }
         }
+    }
+
+    if( $Clear )
+    {
+        $parameters['Clear'] = $Clear
     }
 
     try
@@ -187,11 +194,22 @@ Describe 'MergeFile.when destination path directory doesn''t exist' {
 }
 
 Describe 'MergeFile.when destination file exists and has stuff in it' {
+    It 'should keep existing contents' {
+        Init
+        GivenFile 'merged.txt' -WithContent 'i should not disappear'
+        GivenFile 'one.txt' -WithContent 'snafu'
+        WhenMerging 'one.txt' -Into 'merged.txt'
+        ThenFile 'one.txt' -Exists
+        ThenFile 'merged.txt' -HasContent 'i should not disappearsnafu'
+    }
+}
+
+Describe 'MergeFile.when destination file exists and user wants to clear it' {
     It 'should clear existing contents' {
         Init
         GivenFile 'merged.txt' -WithContent 'i should disappear'
         GivenFile 'one.txt' -WithContent 'snafu'
-        WhenMerging 'one.txt' -Into 'merged.txt'
+        WhenMerging 'one.txt' -Into 'merged.txt' -Clear
         ThenFile 'one.txt' -Exists
         ThenFile 'merged.txt' -HasContent 'snafu'
     }
@@ -224,6 +242,28 @@ Describe 'MergeFile.when customizing separator' {
         GivenFile 'one.txt' -WithContent 'one'
         GivenFile 'two.txt' -WithContent 'two'
         WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') 
+        ThenFile 'merged.txt' -HasContent ('one{0}two' -f [Environment]::NewLine)
+    }
+}
+
+Describe 'MergeFile.when customizing separator and keeping destination file content' {
+    It 'should add separator after existing contents' {
+        Init
+        GivenFile 'one.txt' -WithContent 'one'
+        GivenFile 'two.txt' -WithContent 'two'
+        GivenFile 'merged.txt' -WithContent 'i was here first'
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') 
+        ThenFile 'merged.txt' -HasContent ('i was here first{0}one{0}two' -f [Environment]::NewLine)
+    }
+}
+
+Describe 'MergeFile.when customizing separator and clearing destination file content' {
+    It 'should not add separator to beginning of file' {
+        Init
+        GivenFile 'one.txt' -WithContent 'one'
+        GivenFile 'two.txt' -WithContent 'two'
+        GivenFile 'merge.tst' -WithContent 'gone gone gone'
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') -Clear
         ThenFile 'merged.txt' -HasContent ('one{0}two' -f [Environment]::NewLine)
     }
 }
