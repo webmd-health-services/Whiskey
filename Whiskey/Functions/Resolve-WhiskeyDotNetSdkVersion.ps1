@@ -43,6 +43,10 @@ function Resolve-WhiskeyDotNetSdkVersion
         $releasesIndex =
             Invoke-RestMethod -Uri $releasesIndexUri -ErrorAction Stop |
             Select-Object -ExpandProperty 'releases-index' |
+            ForEach-Object {
+                $_.'channel-version' = [version]$_.'channel-version'
+                $_
+            } |
             Sort-Object -Property 'channel-version' -Descending
 
         $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
@@ -75,6 +79,7 @@ function Resolve-WhiskeyDotNetSdkVersion
         $resolvedVersion =
             $sdkVersions |
             Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            ForEach-Object { [version]$_ } |
             Sort-Object -Descending |
             Where-Object { $_ -like $Version } |
             Select-Object -First 1

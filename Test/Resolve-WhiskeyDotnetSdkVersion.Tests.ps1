@@ -73,11 +73,11 @@ function ThenResolvedLatestLTSVersion
 function ThenResolvedVersion
 {
     param(
-        $Version
+        [version]$Version
     )
 
     $resolvedVersion | Should -HaveCount 1 -Because 'it should only return one version'
-    $resolvedVersion | Should -Be $Version -Because ('it should resolve SDK version to "{0}"' -f $Version)
+    $resolvedVersion | Should -Be $Version -Because ('it should resolve SDK version to {0}' -f $Version)
 }
 
 function ThenReturnedNothing
@@ -139,6 +139,14 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving SDK version' {
     }
 }
 
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving a real SDK version (No mocking of web request)' {
+    It 'should resolve SDK version' {
+        Init
+        WhenResolvingSdkVersion '2.1.801'
+        ThenResolvedVersion '2.1.801'
+    }
+}
+
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given patch wildcard' {
     It 'should resolve SDK version' {
         Init
@@ -153,11 +161,12 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when given patch wildcard' {
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when given minor wildcard' {
     It 'should resolve SDK version' {
         Init
-        GivenReleases '1.0', '2.0', '2.1', '3.0'
+        GivenReleases '1.0', '2.0', '2.2', '2.11', '3.0'
         GivenSDKVersions '2.0.000' -ForRelease '2.0'
-        GivenSDKVersions '2.1.100', '2.1.200', '2.1.201' -ForRelease '2.1'
+        GivenSDKVersions '2.2.100', '2.2.200', '2.2.201' -ForRelease '2.2'
+        GivenSDKVersions '2.11.000' -ForRelease '2.11'
         WhenResolvingSdkVersion '2.*'
-        ThenResolvedVersion '2.1.201'
+        ThenResolvedVersion '2.11.000'
     }
 }
 
