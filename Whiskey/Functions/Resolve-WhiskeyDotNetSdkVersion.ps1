@@ -78,7 +78,7 @@ function Resolve-WhiskeyDotNetSdkVersion
 
         $resolvedVersion =
             $sdkVersions |
-            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
+            Where-Object { [Version]::TryParse($_,[ref]$null) } |
             ForEach-Object { [version]$_ } |
             Sort-Object -Descending |
             Where-Object { $_ -like $Version } |
