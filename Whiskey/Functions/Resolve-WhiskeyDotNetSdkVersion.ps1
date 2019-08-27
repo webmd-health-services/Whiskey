@@ -26,14 +26,12 @@ function Resolve-WhiskeyDotNetSdkVersion
     [CmdletBinding(DefaultParameterSetName='LatestLTS')]
     param(
         [Parameter(ParameterSetName='LatestLTS')]
-        [switch]
         # Returns the latest LTS version of the .NET Core SDK.
-        $LatestLTS,
+        [switch]$LatestLTS,
 
-        [Parameter(Mandatory=$true, ParameterSetName='Version')]
-        [string]
+        [Parameter(Mandatory, ParameterSetName='Version')]
         # Version of the .NET Core SDK to search for and resolve. Accepts wildcards.
-        $Version
+        [string]$Version
     )
 
     Set-StrictMode -version 'Latest'
@@ -41,33 +39,64 @@ function Resolve-WhiskeyDotNetSdkVersion
 
     if ($Version)
     {
-        $releasesJsonUri = 'https://raw.githubusercontent.com/dotnet/core/master/release-notes/releases.json'
+        $releasesIndexUri = 'https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json'
+        $releasesIndex =
+            Invoke-RestMethod -Uri $releasesIndexUri -ErrorAction Stop |
+            Select-Object -ExpandProperty 'releases-index' |
+            Where-Object { [Version]::TryParse($_.'channel-version', [ref]$null) } |
+            ForEach-Object {
+                $_.'channel-version' = [Version]$_.'channel-version'
+                $_
+            } |
+            Sort-Object -Property 'channel-version' -Descending
 
-        Write-Verbose -Message ('[{0}] Resolving .NET Core SDK version ''{1}'' against known released versions at: ''{2}''' -f $MyInvocation.MyCommand,$Version,$releasesJsonUri)
-        $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
+        $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
+        $matcher = $Matches[0]
 
-        $sdkVersions =  $releasesJson |
-                            Select-Object -ExpandProperty 'version-sdk' -Unique |
-                            Where-Object { $_ -match '^\d+\.\d+\.\d+$' } |
-                            Sort-Object -Descending
-
-        $resolvedVersion =  $sdkVersions |
-                                Where-Object { $_ -like $Version } |
-                                Select-Object -First 1
-
-        if (-not $resolvedVersion)
+        $release = $releasesIndex | Where-Object { $_.'channel-version' -like $matcher } | Select-Object -First 1
+        if (-not $release)
         {
-            Write-Error -Message ('A released version of the .NET Core SDK matching ''{0}'' could not be found in ''{1}''' -f $Version, $releasesJsonUri)
+            Write-Error -Message ('.NET Core release matching "{0}" could not be found in "{1}"' -f $matcher, $releasesIndexUri)
             return
         }
 
-        Write-Verbose -Message ('[{0}] SDK version ''{1}'' resolved to ''{2}''' -f $MyInvocation.MyCommand,$Version,$resolvedVersion)
+        $releasesJsonUri = $release | Select-Object -ExpandProperty 'releases.json'
+        Write-Verbose -Message ('[{0}] Resolving .NET Core SDK version "{1}" against known released versions at: "{2}"' -f $MyInvocation.MyCommand,$Version,$releasesJsonUri)
+
+        $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
+
+        $sdkVersions = & {
+            $releasesJson.releases |
+                Where-Object { $_ | Get-Member -Name 'sdk' } |
+                Select-Object -ExpandProperty 'sdk' |
+                Select-Object -ExpandProperty 'version'
+
+            $releasesJson.releases |
+                Where-Object { $_ | Get-Member -Name 'sdks' } |
+                Select-Object -ExpandProperty 'sdks' |
+                Select-Object -ExpandProperty 'version'
+        }
+
+        $resolvedVersion =
+            $sdkVersions |
+            ForEach-Object { $_ -as [Version] } |
+            Where-Object { $_ -like $Version } |
+            Sort-Object -Descending |
+            Select-Object -First 1
+
+        if (-not $resolvedVersion)
+        {
+            Write-Error -Message ('A released version of the .NET Core SDK matching "{0}" could not be found in "{1}"' -f $Version, $releasesJsonUri)
+            return
+        }
+
+        Write-Verbose -Message ('[{0}] SDK version "{1}" resolved to "{2}"' -f $MyInvocation.MyCommand,$Version,$resolvedVersion)
     }
     else
     {
         $latestLTSVersionUri = 'https://dotnetcli.blob.core.windows.net/dotnet/Sdk/LTS/latest.version'
 
-        Write-Verbose -Message ('[{0}] Resolving latest LTS version of .NET Core SDK from: ''{1}''' -f $MyInvocation.MyCommand,$latestLTSVersionUri)
+        Write-Verbose -Message ('[{0}] Resolving latest LTS version of .NET Core SDK from: "{1}"' -f $MyInvocation.MyCommand,$latestLTSVersionUri)
         $latestLTSVersion = Invoke-RestMethod -Uri $latestLTSVersionUri -ErrorAction Stop
 
         if ($latestLTSVersion -match '(\d+\.\d+\.\d+)')
@@ -76,11 +105,11 @@ function Resolve-WhiskeyDotNetSdkVersion
         }
         else
         {
-            Write-Error -Message ('Could not retrieve the latest LTS version of the .NET Core SDK. ''{0}'' returned:{1}{2}' -f $latestLTSVersionUri,[Environment]::NewLine,$latestLTSVersion)
+            Write-Error -Message ('Could not retrieve the latest LTS version of the .NET Core SDK. "{0}" returned:{1}{2}' -f $latestLTSVersionUri,[Environment]::NewLine,$latestLTSVersion)
             return
         }
 
-        Write-Verbose -Message ('[{0}] Latest LTS version resolved as: ''{1}''' -f $MyInvocation.MyCommand,$resolvedVersion)
+        Write-Verbose -Message ('[{0}] Latest LTS version resolved as: "{1}"' -f $MyInvocation.MyCommand,$resolvedVersion)
     }
 
     return $resolvedVersion
