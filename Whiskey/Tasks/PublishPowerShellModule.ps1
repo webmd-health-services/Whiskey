@@ -76,8 +76,9 @@ function Publish-WhiskeyPowerShellModule
     }
 
     Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
+    $registeredRepositories = Get-PSRepository -ErrorAction Ignore @commonParams
 
-    if( -not (Get-PSRepository -Name $repositoryName -ErrorAction Ignore @commonParams) )
+    if( $repositoryName -notin $registeredRepositories.Name )
     {
         $publishLocation = $TaskParameter['RepositoryUri']
         if( -not $publishLocation )
@@ -92,7 +93,16 @@ function Publish-WhiskeyPowerShellModule
             $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
         }
 
-        Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
+        $exists = $registeredRepositories | Where-Object { $_.SourceLocation -eq $publishLocation }
+        if( $exists )
+        {
+            $repositoryName = $exists.Name 
+            Write-Warning -Message ('The uri "{0}" is already a registered repository under a different name. Please update your whiskey.yml file.' -f $publishLocation)
+        }
+        else
+        {
+            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
+        }
     }
 
     Publish-Module -Path $Path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams

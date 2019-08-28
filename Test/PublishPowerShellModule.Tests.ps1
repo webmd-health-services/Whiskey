@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 $apikey = $null
 $apikeyID = $null
 $repositoryName = $null
+$repositoryUri = $null
 $prerelease = $null
 $context = $null
 $credentials = @{ }
@@ -67,10 +68,12 @@ function GivenRegisteringFails
 function GivenRepository
 {
     param(
-        $Named
+        $Named,
+        $Uri
     )
 
     $script:repositoryName = $Named
+    $script:repositoryUri = $Uri
 }
 
 function Initialize-Test
@@ -81,6 +84,7 @@ function Initialize-Test
     $script:apikey = 'fubar:snauf'
     $script:apikeyID = 'PowerShellExampleCom'
     $script:repositoryName = $null
+    $script:repositoryUri = $null
     $script:prerelease = $null
     $script:context = $null
     $script:credentials = @{ }
@@ -177,15 +181,18 @@ function Invoke-Publish
 
     Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
-    $repoName = $repositoryName
-    Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith { 
-        param(
-            $Name
-        )
-        #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Name  expected  {0}' -f $repoName)
-        Write-Debug -Message ('      actual    {0}' -f $Name)
-        return ($Name -eq $repoName) 
+    $repoName = $script:repositoryName
+    $repoUri = $script:repositoryUri
+
+    Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith {
+        $repositoryObject = New-Object System.Object
+        $repositoryObject | Add-Member -Type NoteProperty `
+                                       -Name Name `
+                                       -Value $repoName
+        $repositoryObject | Add-Member -Type NoteProperty `
+                                       -Name SourceLocation `
+                                       -Value $repoUri
+        return $repositoryObject
     }.GetNewClosure()
 
     Add-Type -AssemblyName System.Net.Http
@@ -222,7 +229,7 @@ function Invoke-Publish
                     Write-Error -Message $message
                 }.GetNewClosure()
     }
-    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey'  -MockWith $mock
+    Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith $mock
     Mock -CommandName 'Get-PackageSource' -ModuleName 'PowerShellGet'  # Called by a dynamic parameter set on Register-PSRepository.
     
     $Global:Error.Clear()
@@ -293,18 +300,8 @@ function Assert-ModuleNotPublished
 
 function ThenRepositoryChecked
 {
-    param(
-        [Parameter(Mandatory)]
-        [string]
-        $Named
-    )
-
     It ('should check that repository exists') {
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { 
-            Write-Debug -Message ('Name  expected  {0}' -f $Named)
-            Write-Debug -Message ('      actual    {0}' -f $Name)
-            $Name -eq $Named 
-        }
+        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1
     }
 }
 
@@ -368,7 +365,6 @@ function ThenRepositoryRegistered
             Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Credential.GetNetworkCredential().Password -eq $WithCredential.GetNetworkCredential().Password }
         }
     }
-    
 }
 
 function ThenModulePublished
@@ -474,7 +470,7 @@ Describe 'PublishPowerShellModule.when publishing prerelease module' {
     GivenPrerelease 'beta1'
     Invoke-Publish -ForRepositoryNamed 'SomeRepo'
     ThenSucceeded
-    ThenRepositoryChecked 'SomeRepo'
+    ThenRepositoryChecked
     ThenRepositoryNotRegistered
     ThenModulePublished -ToRepositoryNamed 'SomeRepo'
     ThenManifest -HasPrerelease 'beta1'
@@ -501,7 +497,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository' {
     Initialize-Test
     Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
     ThenSucceeded
-    ThenRepositoryChecked 'ANewRepo'
+    ThenRepositoryChecked
     ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
     ThenModulePublished -ToRepositoryNamed 'ANewRepo'
 }
@@ -512,7 +508,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository that requi
     GivenCredential $cred -WithID 'somecred'
     Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
     ThenSucceeded
-    ThenRepositoryChecked 'ANewRepo'
+    ThenRepositoryChecked
     ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
     ThenModulePublished -ToRepositoryNamed 'ANewRepo'
 }
@@ -521,7 +517,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository but its UR
     Initialize-Test 
     Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
     ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
-    ThenRepositoryChecked 'Fubar'
+    ThenRepositoryChecked
     ThenRepositoryNotRegistered
     ThenModuleNotPublished
 }
@@ -576,4 +572,24 @@ Describe 'PublishPowerShellModule.when invalid manifest' {
     Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
     ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
     ThenModuleNotPublished
+}
+
+Describe 'PublishPowerShellModule.when registering an existing PSRepository under a different name' {
+    Initialize-Test
+    GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
+    Invoke-Publish -ForRepositoryNamed 'ImposterRepo' -RepoAtUri 'https://example.com'
+    ThenSucceeded
+    ThenRepositoryNotRegistered
+    ThenRepositoryChecked
+    ThenModulePublished -ToRepositoryNamed 'FirstRepo'
+}
+
+Describe 'PublishPowerShellModule.when re-registering an existing PSRepository under the same name' {
+    Initialize-Test
+    GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
+    Invoke-Publish -ForRepositoryNamed 'FirstRepo' -RepoAtUri 'https://example.com'
+    ThenSucceeded
+    ThenRepositoryChecked
+    ThenRepositoryNotRegistered
+    ThenModulePublished -ToRepositoryNamed 'FirstRepo'
 }
