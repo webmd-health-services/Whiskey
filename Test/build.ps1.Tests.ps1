@@ -37,7 +37,9 @@ function ThenNoErrors
 
 function ThenWhiskeyInstalled
 {
-    (Join-Path -Path $TestDrive.FullName -ChildPath 'PSModules\Whiskey') | Should -Exist
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'PSModules\Whiskey\*\Whiskey.ps*1'
+    $path | Should -Exist
+    $path | Get-Item | Should -HaveCount 2
 }
 
 function WhenBootstrapping
