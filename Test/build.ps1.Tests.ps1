@@ -8,6 +8,15 @@ function Init
     Get-Module 'PowerShellGet','Whiskey','PackageManagement' | Remove-Module -Force -ErrorAction Ignore
 }
 
+$releases = 
+    Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' |
+    ForEach-Object { $_ } 
+
+$latestRelease = 
+    $releases |
+    Sort-Object -Property 'created_at' -Descending |
+    Select-Object -First 1
+
 function ThenModule
 {
     param(
@@ -37,7 +46,7 @@ function ThenNoErrors
 
 function ThenWhiskeyInstalled
 {
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'PSModules\Whiskey\*\Whiskey.ps*1'
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $latestRelease.name)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
 }
