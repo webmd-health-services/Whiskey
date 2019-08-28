@@ -286,9 +286,7 @@ function ThenModuleNotPublished
 
 function ThenRepositoryChecked
 {
-    It ('should check that repository exists') {
-        Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1
-    }
+    Assert-MockCalled -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -Times 1
 }
 
 function ThenRepositoryNotChecked
@@ -298,9 +296,6 @@ function ThenRepositoryNotChecked
 
 function ThenRepositoryNotRegistered
 {
-    param(
-    )
-
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 0
 }
 
@@ -429,22 +424,24 @@ Describe 'PublishPowerShellModule.when publishing new module' {
         GivenRepository 'FubarSnafu'
         Invoke-Publish -ForRepositoryNamed 'FubarSnafu'
         ThenSucceeded
-        ThenRepositoryChecked 'FubarSnafu' 
+        ThenRepositoryChecked
         ThenRepositoryNotRegistered
         ThenModulePublished -ToRepositoryNamed 'FubarSnafu'
     }
 }
 
 Describe 'PublishPowerShellModule.when publishing prerelease module' {
-    Initialize-Test
-    GivenRepository 'SomeRepo'
-    GivenPrerelease 'beta1'
-    Invoke-Publish -ForRepositoryNamed 'SomeRepo'
-    ThenSucceeded
-    ThenRepositoryChecked
-    ThenRepositoryNotRegistered
-    ThenModulePublished -ToRepositoryNamed 'SomeRepo'
-    ThenManifest -HasPrerelease 'beta1'
+    It 'should succeed' {
+        Initialize-Test
+        GivenRepository 'SomeRepo'
+        GivenPrerelease 'beta1'
+        Invoke-Publish -ForRepositoryNamed 'SomeRepo'
+        ThenSucceeded
+        ThenRepositoryChecked
+        ThenRepositoryNotRegistered
+        ThenModulePublished -ToRepositoryNamed 'SomeRepo'
+        ThenManifest -HasPrerelease 'beta1'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing with no repository name' {
@@ -469,32 +466,38 @@ Describe 'PublishPowerShellModule.when publishing fails' {
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository' {
-    Initialize-Test
-    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
-    ThenSucceeded
-    ThenRepositoryChecked
-    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
-    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    It 'should succeed' {
+        Initialize-Test
+        Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
+        ThenSucceeded
+        ThenRepositoryChecked
+        ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
+        ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository that requires a credential' {
-    Initialize-Test
-    $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
-    GivenCredential $cred -WithID 'somecred'
-    Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
-    ThenSucceeded
-    ThenRepositoryChecked
-    ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
-    ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    It 'should succeed' {
+        Initialize-Test
+        $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
+        GivenCredential $cred -WithID 'somecred'
+        Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' -WithCredentialID 'somecred'
+        ThenSucceeded
+        ThenRepositoryChecked
+        ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/' -WithCredential $cred
+        ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+    }
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository but its URI is not given' {
-    Initialize-Test 
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
-    ThenRepositoryChecked
-    ThenRepositoryNotRegistered
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test 
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'Property\ "RepositoryUri"\ is\ mandatory'
+        ThenRepositoryChecked
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when registering a repository fails' {
@@ -552,29 +555,35 @@ Describe 'PublishPowerShellModule.when non-directory path parameter' {
 }
 
 Describe 'PublishPowerShellModule.when invalid manifest' {
-    Initialize-Test
-    GivenRepository 'Fubar'
-    Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
-    ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
-    ThenModuleNotPublished
+    It 'should fail' {
+        Initialize-Test
+        GivenRepository 'Fubar'
+        Invoke-Publish -ForRepositoryNamed 'Fubar' -withoutRegisteredRepo -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'path\ "fubar"\ either\ does\ not\ exist'
+        ThenModuleNotPublished
+    }
 }
 
 Describe 'PublishPowerShellModule.when registering an existing PSRepository under a different name' {
-    Initialize-Test
-    GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
-    Invoke-Publish -ForRepositoryNamed 'ImposterRepo' -RepoAtUri 'https://example.com'
-    ThenSucceeded
-    ThenRepositoryNotRegistered
-    ThenRepositoryChecked
-    ThenModulePublished -ToRepositoryNamed 'FirstRepo'
+    It 'should use already registered PSRepository' {
+        Initialize-Test
+        GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
+        Invoke-Publish -ForRepositoryNamed 'ImposterRepo' -RepoAtUri 'https://example.com'
+        ThenSucceeded
+        ThenRepositoryNotRegistered
+        ThenRepositoryChecked
+        ThenModulePublished -ToRepositoryNamed 'FirstRepo'
+    }
 }
 
 Describe 'PublishPowerShellModule.when re-registering an existing PSRepository under the same name' {
-    Initialize-Test
-    GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
-    Invoke-Publish -ForRepositoryNamed 'FirstRepo' -RepoAtUri 'https://example.com'
-    ThenSucceeded
-    ThenRepositoryChecked
-    ThenRepositoryNotRegistered
-    ThenModulePublished -ToRepositoryNamed 'FirstRepo'
+    It 'should succeed' {
+        Initialize-Test
+        GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
+        Invoke-Publish -ForRepositoryNamed 'FirstRepo' -RepoAtUri 'https://example.com'
+        ThenSucceeded
+        ThenRepositoryChecked
+        ThenRepositoryNotRegistered
+        ThenModulePublished -ToRepositoryNamed 'FirstRepo'
+    }
 }
