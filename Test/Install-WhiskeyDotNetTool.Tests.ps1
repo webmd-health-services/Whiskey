@@ -205,26 +205,26 @@ function WhenInstallingDotNetTool
 Describe 'Install-WhiskeyDotNetTool.when installing specific version' {
     It 'should install that version of .NET Core' {
         Init
-        GivenVersion '2.1.4'
-        GivenGlobalJsonSdkVersion '2.1.3'
+        GivenVersion '2.1.505'
+        GivenGlobalJsonSdkVersion '2.1.300'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.4'
-        ThenDotNetSdkVersion '2.1.4'
+        ThenGlobalJsonVersion '2.1.505'
+        ThenDotNetSdkVersion '2.1.505'
     }
 }
 
 Describe 'Install-WhiskeyDotNetTool.when installing newer version' {
     It 'should overwrite the existing version' {
         Init
-        GivenVersion '2.1.2'
+        GivenVersion '2.1.300'
         WhenInstallingDotNetTool
 
-        GivenVersion '2.1.4'
+        GivenVersion '2.1.505'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.4'
-        ThenDotNetSdkVersion '2.1.4'
+        ThenGlobalJsonVersion '2.1.505'
+        ThenDotNetSdkVersion '2.1.505'
     }
 }
 
@@ -253,11 +253,11 @@ Describe 'Install-WhiskeyDotNetTool.when existing global.json contains invalid J
 Describe 'Install-WhiskeyDotNetTool.when installing version from global.json' {
     It 'should use the version in global.json' {
         Init
-        GivenGlobalJsonSdkVersion '2.1.4'
+        GivenGlobalJsonSdkVersion '2.1.505'
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.4'
-        ThenDotNetSdkVersion '2.1.4'
+        ThenGlobalJsonVersion '2.1.505'
+        ThenDotNetSdkVersion '2.1.505'
     }
 }
 
@@ -279,23 +279,23 @@ try
         It 'should install .NET Core locally' {
             Init
             GivenDotNetSuccessfullyInstalls
-            GivenVersion '2.1.4'
+            GivenVersion '2.1.505'
             WhenInstallingDotNetTool
             ThenReturnedValidDotNetPath
-            ThenGlobalJsonVersion '2.1.4'
-            ThenDotNetLocallyInstalled '2.1.4'
+            ThenGlobalJsonVersion '2.1.505'
+            ThenDotNetLocallyInstalled '2.1.505'
         }
     }
 
     Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet exists globally' {
         It 'should use global version' {
             Init
-            GivenGlobalDotNetInstalled '2.1.4'
-            GivenVersion '2.1.4'
+            GivenGlobalDotNetInstalled '2.1.505'
+            GivenVersion '2.1.505'
             WhenInstallingDotNetTool
             ThenReturnedValidDotNetPath
-            ThenGlobalJsonVersion '2.1.4'
-            ThenDotNetNotLocallyInstalled '2.1.4'
+            ThenGlobalJsonVersion '2.1.505'
+            ThenDotNetNotLocallyInstalled '2.1.505'
         }
     }
 
@@ -305,13 +305,13 @@ try
             GivenGlobalDotNetInstalled '1.1.11'
             GivenWorkingDirectory 'app'
             GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
-            GivenGlobalJsonSdkVersion '2.1.4' -Directory $TestDrive.FullName
+            GivenGlobalJsonSdkVersion '2.1.505' -Directory $TestDrive.FullName
             GivenVersion '1.1.11'
             WhenInstallingDotNetTool
             ThenReturnedValidDotNetPath
             ThenDotNetNotLocallyInstalled
             ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
-            ThenGlobalJsonVersion '2.1.4' -Directory $TestDrive.FullName
+            ThenGlobalJsonVersion '2.1.505' -Directory $TestDrive.FullName
         }
     }
 }
