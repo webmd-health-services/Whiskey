@@ -105,5 +105,11 @@ function Publish-WhiskeyPowerShellModule
         }
     }
 
-    Publish-Module -Path $Path -Repository $repositoryName -NuGetApiKey $apiKey -ErrorAction Stop @commonParams
+    # Use the Force switch to allow publishing versions that come *before* the latest version.
+    Publish-Module -Path $Path `
+                   -Repository $repositoryName `
+                   -NuGetApiKey $apiKey `
+                   -Force `
+                   -ErrorAction Stop `
+                   @commonParams
 }
