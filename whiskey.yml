@@ -80,7 +80,7 @@ Build:
         # This test needs to run in its own instance since it loads an old version
         # of Whiskey.
         - Pester4:
-            Path: "Test\\build.ps1.Tests.ps1"
+            Path: Test\build.ps1.Tests.ps1
         - Pester4:
             Path:
             - "Test\\*.Tests.ps1"
