@@ -119,7 +119,9 @@ function WhenMerging
 
         [switch]$AndDeletingSourceFiles,
 
-        [object]$WithSeparator,
+        [string]$WithTextSeparator,
+
+        [byte[]]$WithBinarySeparator,
 
         [switch]$Clear
     )
@@ -132,16 +134,14 @@ function WhenMerging
         $parameters['DeleteSourceFiles'] = 'true'
     }
     
-    if( $WithSeparator )
+    if( $WithTextSeparator )
     {
-        if( $WithSeparator -is [string] )
-        {
-            $parameters['TextSeparator'] = $WithSeparator
-        }
-        else
-        {
-            $parameters['BinarySeparator'] = $WithSeparator | ForEach-Object { $_.ToString() }
-        }
+        $parameters['TextSeparator'] = $WithTextSeparator
+    }
+
+    if( $WithBinarySeparator )
+    {
+        $parameters['BinarySeparator'] = $WithBinarySeparator | ForEach-Object { $_.ToString() }
     }
 
     if( $Clear )
@@ -241,7 +241,7 @@ Describe 'MergeFile.when customizing separator' {
         Init
         GivenFile 'one.txt' -WithContent 'one'
         GivenFile 'two.txt' -WithContent 'two'
-        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') 
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithTextSeparator ('$(NewLine)') 
         ThenFile 'merged.txt' -HasContent ('one{0}two' -f [Environment]::NewLine)
     }
 }
@@ -252,7 +252,7 @@ Describe 'MergeFile.when customizing separator and keeping destination file cont
         GivenFile 'one.txt' -WithContent 'one'
         GivenFile 'two.txt' -WithContent 'two'
         GivenFile 'merged.txt' -WithContent 'i was here first'
-        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') 
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithTextSeparator ('$(NewLine)') 
         ThenFile 'merged.txt' -HasContent ('i was here first{0}one{0}two' -f [Environment]::NewLine)
     }
 }
@@ -263,7 +263,7 @@ Describe 'MergeFile.when customizing separator and clearing destination file con
         GivenFile 'one.txt' -WithContent 'one'
         GivenFile 'two.txt' -WithContent 'two'
         GivenFile 'merge.tst' -WithContent 'gone gone gone'
-        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ('$(NewLine)') -Clear
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithTextSeparator ('$(NewLine)') -Clear
         ThenFile 'merged.txt' -HasContent ('one{0}two' -f [Environment]::NewLine)
     }
 }
@@ -297,7 +297,16 @@ Describe 'MergeFile.when separator and files are binary' {
         GivenFile 'one.txt' -WithContent $content 
         [byte[]]$content2 = Get-RandomByte
         GivenFile 'two.txt' -WithContent ($content2)
-        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithSeparator ([byte[]]@( 28 ))
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithBinarySeparator ([byte[]]@( 28 ))
         ThenFile 'merged.txt' -HasContent ([byte[]]($content + 28 + $content2))
+    }
+}
+
+Describe 'MergeFile.when text and binary separators given' {
+    It 'should fail' {
+        Init
+        GivenFile 'one.txt' -WithContent 'abc'
+        WhenMerging 'one.txt' -Into 'merged.txt' -WithTextSeparator 'def' -WithBinarySeparator @( 28, 29, 30 )
+        ThenFailed 'use\ only\ the\ TextSeparator\ or\ BinarySeparator\ property'
     }
 }

@@ -43,6 +43,13 @@ function Merge-WhiskeyFile
         Clear-Content -Path $DestinationPath
     }
 
+    if( $TextSeparator -and $BinarySeparator )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext `
+                         -Message ('You can''t use both a text separator and binary separator when merging files. Please use only the TextSeparator or BinarySeparator property, not both.')
+        return
+    }
+
     [byte[]]$separatorBytes = $BinarySeparator
     if( $TextSeparator )
     {
