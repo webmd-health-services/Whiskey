@@ -13,7 +13,7 @@ DESCRIPTION
 
 PROPERTY
     * `Path` (*mandatory*): a list of one or more paths to merge. Wildcards are supported. Must be to files under the current build root.
-    * `DestinationPath (*mandatory*): the path to the file into which the files will be merged. Will be created if it doesn't exist. Existing contents will be lost. Must be under the current build root.
+    * `DestinationPath (*mandatory*): the path to the file into which the files will be merged. Must be under the build root. Will be created if it doesn't exist. Existing contents will be preserved. Set the `Clear` property to `true` to remove any existing contents before merging any files.
     * `DeleteSourceFiles`: if set to `true`, will delete each source file after is is merged into the destination file. The default value is `false`.
     * `TextSeparator`: a string of text to use to separate each file's content when merging. We recommend `$(NewLine)` when merging text files.
     * `BinarySeparator`: a list of bytes to use to separate each file's content when merging. Each item in the list must be a number between 0 and 255. 
