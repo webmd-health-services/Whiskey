@@ -348,7 +348,7 @@ Describe 'Pipeline.when pipeline does not exist' {
 }
 
 Describe 'Pipeline.when pipeline is empty and not a YAML object' {
-    It 'should fail' {
+    It 'should write warning and succeed' {
         GivenWhiskeyYmlBuildFile @"
 Build
 "@
@@ -359,7 +359,7 @@ Build
 }
 
 Describe 'Pipeline.when pipeline is empty and is a YAML object' {
-    It 'should fail' {
+    It 'should write warning and succeed' {
         GivenWhiskeyYmlBuildFile @"
 Build:
 "@
