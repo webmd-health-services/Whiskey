@@ -178,7 +178,7 @@ function ThenPesterShouldHaveRun
     #check to see if we were supposed to run any tests.
     if( ($FailureCount + $PassingCount) -gt 0 )
     {
-        $testReports | Should Not BeNullOrEmpty
+        $testReports | Should -Not -BeNullOrEmpty
     }
 
     $total = 0
