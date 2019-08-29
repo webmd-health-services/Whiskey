@@ -68,6 +68,7 @@ function ThenResolvedLatestLTSVersion
     $ltsVersion = $Matches[1]
 
     $resolvedVersion | Should -HaveCount 1 -Because 'it should only return one version'
+    $resolvedVersion | Should -Be $ltsVersion -Because 'it should resolve the latest LTS version'
 }
 
 function ThenResolvedVersion
