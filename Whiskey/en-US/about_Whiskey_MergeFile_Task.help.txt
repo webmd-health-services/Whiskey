@@ -9,7 +9,7 @@ DESCRIPTION
 
     By default, the source files are left in place. If you'd like to delete the source files as they are merged into the destination file, set the `DeleteSourceFiles` property to `true`.
 
-    Files are concateneated as-is. If you want to ensure each file is separated from other files appropriately, set either the `TextSeparator` property to a string to use to separate each file, or the `BinarySeparator` property to an array of bytes (i.e. numbers between 0 and 255). After merging each file, the task adds the separator. If both `TextSeparator` and `BinarySeparator` are given, `TextSeparator` takes precedence.
+    Files are concatenated as-is. If you want to ensure each file is separated from other files, set either the `TextSeparator` property to a string to use to separate each file, or the `BinarySeparator` property to an array of bytes (i.e. numbers between 0 and 255). After merging each file, the task adds the separator. If both `TextSeparator` and `BinarySeparator` are given, the task (and your build) will fail.
 
 PROPERTY
     * `Path` (*mandatory*): a list of one or more paths to merge. Wildcards are supported. Must be to files under the current build root.
@@ -17,7 +17,7 @@ PROPERTY
     * `DeleteSourceFiles`: if set to `true`, will delete each source file after is is merged into the destination file. The default value is `false`.
     * `TextSeparator`: a string of text to use to separate each file's content when merging. We recommend `$(NewLine)` when merging text files.
     * `BinarySeparator`: a list of bytes to use to separate each file's content when merging. Each item in the list must be a number between 0 and 255. 
-    * `Clear`: by default, the task leaves to destination file's content in place. To clear the destination file before merging files, set this property to `true`.
+    * `Clear`: by default, the task leaves the destination file's content in place. To clear the destination file before merging files, set this property to `true`.
 
 EXAMPLES
 
