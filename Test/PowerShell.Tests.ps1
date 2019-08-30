@@ -318,7 +318,7 @@ param(
 }
 
 Describe 'PowerShell.when script has TaskContext parameter' {
-    $emptyContext = New-WhiskeyContextObject
+    $emptyContext = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
     GivenAScript @"
 exit 0
 "@ -WithParam @"

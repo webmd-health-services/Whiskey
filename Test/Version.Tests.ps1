@@ -13,7 +13,8 @@ function Init
     $script:version = $null
     $script:failed = $false
     $script:branch = $null
-    $script:initialVersion = New-WhiskeyVersionObject '0.0.0'
+    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                          -Parameter @{ 'SemVer' = '0.0.0' }
 }
 
 function GivenFile
@@ -61,7 +62,8 @@ function GivenCurrentVersion
         $Version
     )
 
-    $script:initialVersion = New-WhiskeyVersionObject $Version
+    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                          -Parameter @{ 'SemVer' = $Version }
 }
 
 function ThenSemVer2Is

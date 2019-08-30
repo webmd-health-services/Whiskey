@@ -16,27 +16,23 @@ LONG DESCRIPTION
 
     ## System Requirements
 
-    * PowerShell 4
+    * PowerShell 5.1+ (.NET Core, too)
     * A build server. Jenkins, TeamCity, or Appveyor are supported.
 
     ## Getting Started
 
-    1. Create a `.whiskey` directory in the root of your source code 
-       repository.
-    2. [Download Whiskey](https://www.powershellgallery.com/packages/Whiskey)
-       from the PowerShell Gallery and put it in the ".whiskey" directory. 
-    3. Copy the ".whiskey\build.ps1" script into the root of your repository.
-    4. Copy the ".whiskey\whiskey.sample.yml" file into the root of your 
-       repository. Rename it to "whiskey.yml".
-    5. Add the .whiskey directory and the build.ps1 and whiskey.yml files to 
-       your repository. If you're using Git, run:
+    1. Grab the latest default `build.ps1` script, which will bootstraps Whiskey into
+       your repository and create a `whiskey.yml` file for you:
            
-           > git add .whiskey build.ps1 whiskey.yml
-           > git commit -m "Adding Whiskey."
+           > Invoke-WebRequest 'https://github.com/webmd-health-services/Whiskey/releases/latest/download/build.ps1' -OutFile 'build.ps1'
            
-    6. Run your build:
+    2. Run your build:
         
            > .\build.ps1
+
+    3. Add Whiskey to your `.gitignore` file:
+
+        /PSModules/**
 
     ## Configuring Your Build
 

@@ -43,7 +43,7 @@ function Invoke-WhiskeyParallelTask
         foreach( $queue in $queues )
         {
             $queueIdx++
-            $whiskeyModulePath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey.psd1' -Resolve
+            $whiskeyModulePath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Whiskey.psd1' -Resolve
 
             if( -not $queue.ContainsKey('Tasks') )
             {
@@ -66,6 +66,15 @@ function Invoke-WhiskeyParallelTask
 
             $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
 
+            $tasks = 
+                $queue['Tasks'] |
+                ForEach-Object { 
+                    $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $_ -ErrorAction Stop
+                    [pscustomobject]@{
+                        Name = $taskName;
+                        Parameter = $taskParameter
+                    }
+                }
             $job = Start-Job -Name $queueIdx -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
@@ -92,17 +101,11 @@ function Invoke-WhiskeyParallelTask
                         . $info.FullName
                     }
 
-                    $moduleRoot = $whiskeyModulePath | Split-Path
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\Use-CallerPreference.ps1' -Resolve)
-                    . (Join-Path -Path $moduleRoot -ChildPath 'Functions\ConvertTo-WhiskeyTask.ps1' -Resolve)
-
-                    $tasks = $using:queue['Tasks']
-                    foreach( $task in $tasks )
+                    foreach( $task in $using:tasks )
                     {
-                        $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $task -ErrorAction Stop
-                        Write-Debug -Message ($taskName)
-                        $taskParameter | ConvertTo-Json -Depth 50 | Write-Debug
-                        Invoke-WhiskeyTask -TaskContext $context -Name $taskName -Parameter $taskParameter
+                        Write-Debug -Message ($task.Name)
+                        $task.Parameter | ConvertTo-Json -Depth 50 | Write-Debug
+                        Invoke-WhiskeyTask -TaskContext $context -Name $task.Name -Parameter $task.Parameter
                     }
                 }
 
