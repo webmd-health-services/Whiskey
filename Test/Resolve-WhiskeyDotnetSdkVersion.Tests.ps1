@@ -1,6 +1,5 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyDotNetSdkVersion.ps1')
 
 $resolvedVersion = $null
 
@@ -26,6 +25,7 @@ function GivenReleases
     } | ConvertTo-Json -Depth 100 | ConvertFrom-Json
 
     Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter { $Uri -like '*releases-index.json' } `
          -MockWith { $releasesIndex }.GetNewClosure()
 }
@@ -48,6 +48,7 @@ function GivenSDKVersions
     } | ConvertTo-Json -Depth 100 | ConvertFrom-Json
 
     Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
          -ParameterFilter ([scriptblock]::Create("`$Uri -like '*/$ForRelease/releases.json'")) `
          -MockWith { $sdkReleases }.GetNewClosure()
 }
@@ -93,18 +94,8 @@ function WhenResolvingSdkVersion
         [string]$Version
     )
 
-    $param = @{}
-    if ($Version)
-    {
-        $param['Version'] = $Version
-    }
-
-    if ($LatestLTS)
-    {
-        $param['LatestLTS'] = $true
-    }
-
-    $script:resolvedVersion = Resolve-WhiskeyDotNetSdkVersion @param
+    $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' `
+                                                           -Parameter $PSBoundParameters
 }
 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when version is not a valid .NET Core release' {
@@ -193,7 +184,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when resolving latest LTS version' {
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t return a valid version' {
     It 'should write an error' {
         Init
-        Mock -CommandName Invoke-RestMethod -MockWith { '1' }
+        Mock -CommandName Invoke-RestMethod -ModuleName 'Whiskey' -MockWith { '1' }
         WhenResolvingSdkVersion -LatestLTS -ErrorAction SilentlyContinue
         ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
         ThenReturnedNothing

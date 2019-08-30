@@ -161,6 +161,7 @@
 * Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
 * Fixed: `DotNet` task fails to resolve recent version of the .NET Core SDK.
 * You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
+* Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
 '@
         } # End of PSData hashtable
 

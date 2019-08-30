@@ -69,13 +69,13 @@ function Install-WhiskeyDotNetSdk
 
     Write-Verbose -Message ('[{0}] Installing .NET Core SDK version "{1}" to "{2}"' -f $MyInvocation.MyCommand,$Version,$InstallRoot)
 
-    $dotnetInstallScript = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\dotnet-install.ps1' -Resolve
+    $dotnetInstallScript = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' -Resolve
     $errorActionParam = @{ ErrorAction = 'Stop' }
     $installingWithShell = $false
     $executableName = 'dotnet.exe'
     if( $IsLinux -or $IsMacOS )
     {
-        $dotnetInstallScript = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\dotnet-install.sh' -Resolve
+        $dotnetInstallScript = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' -Resolve
         $errorActionParam = @{ }
         $installingWithShell = $true
         $executableName = 'dotnet'  

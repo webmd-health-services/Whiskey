@@ -2,7 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Install-WhiskeyNodeModule.ps1' -Resolve)
 
 $name = $null
 $output = $null
@@ -20,7 +19,7 @@ function Init
 
 function GivenNpmSucceedsButModuleNotInstalled
 {
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -MockWith $SuccessCommandScriptBlock
+    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -Module 'Whiskey' -MockWith $SuccessCommandScriptBlock
 }
 
 function GivenName
@@ -73,16 +72,20 @@ function WhenInstallingNodeModule
     
     CreatePackageJson
 
-    $versionParam = @{}
+    $parameter = $PSBoundParameters
+
     if ($version)
     {
-        $versionParam['Version'] = $version
+        $parameter['Version'] = $version
     }
+
+    $parameter['Name'] = $name
+    $parameter['BuildRootPath'] = $TestDrive.FullName
 
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Install-WhiskeyNodeModule -Name $name @versionParam -BuildRootPath $TestDrive.FullName
+        $script:output = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter
     }
     finally
     {
@@ -114,31 +117,23 @@ function ThenModule
 
     if ($Exists)
     {
-        It ('should install module "{0}"' -f $Name) {
-            $modulePath | Should -Exist
-        }
+        $modulePath | Should -Exist
 
         if ($Version)
         {
             $moduleVersion = Get-Content -Path (Join-Path -Path $modulePath -ChildPath 'package.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version'
-            It ('module should be version {0}' -f $Version) {
-                $moduleVersion | Should -Be $Version
-            }
+            $moduleVersion | Should -Be $Version
         }
     }
     else
     {
-        It ('should not install module "{0}"' -f $Name) {
-            $modulePath | Should -Not -Exist
-        }
+        $modulePath | Should -Not -Exist
     }
 }
 
 function ThenNoErrorsWritten
 {
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 function ThenErrorMessage
@@ -147,9 +142,7 @@ function ThenErrorMessage
         $Message
     )
 
-    It ('error message should match [{0}]' -f $Message) {
-        $Global:Error | Where-Object { $_ -match $Message } | Should -Not -BeNullOrEmpty
-    }
+    $Global:Error | Where-Object { $_ -match $Message } | Should -Not -BeNullOrEmpty
 }
 
 function ThenReturnedPathForModule
@@ -160,21 +153,17 @@ function ThenReturnedPathForModule
 
     $modulePath = Resolve-WhiskeyNodeModulePath -Name $Module -BuildRootPath $TestDrive.FullName
     
-    It 'should return the path to the module' {
-        $output | Should -Be $modulePath
-    }
+    $output | Should -Be $modulePath
 }
 
 function ThenReturnedNothing
 {
-    It 'should return nothing' {
-        $output | Should -BeNullOrEmpty
-    }
+    $output | Should -BeNullOrEmpty
 }
 
 Describe 'Install-WhiskeyNodeModule.when given name' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should install the module' {
         Init
         GivenName 'wrappy'
         WhenInstallingNodeModule
@@ -182,15 +171,11 @@ Describe 'Install-WhiskeyNodeModule.when given name' {
         ThenReturnedPathForModule 'wrappy'
         ThenNoErrorsWritten
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Install-WhiskeyNodeModule.when given name and version' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should install that version' {
         Init
         GivenName 'wrappy'
         GivenVersion '1.0.2'
@@ -199,42 +184,28 @@ Describe 'Install-WhiskeyNodeModule.when given name and version' {
         ThenReturnedPathForModule 'wrappy'
         ThenNoErrorsWritten
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Install-WhiskeyNodeModule.when given bad module name' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should fail' {
         Init
         GivenName 'nonexistentmodule'
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
         ThenErrorMessage 'failed\ with\ exit\ code\ 1'
-        It ('should not report NPM finished successfully') {
-            $Global:Error | Where-Object { $_ -match 'NPM\ executed\ successfully' } | Should -BeNullOrEmpty
-        }
-    }
-    finally
-    {
-        Remove-Node
+        $Global:Error | Where-Object { $_ -match 'NPM\ executed\ successfully' } | Should -BeNullOrEmpty
     }
 }
 
 Describe 'Install-WhiskeyNodeModule.when NPM executes successfully but module is not found' {
-    try
-    {
+    AfterEach { Remove-Node }
+    It 'should fail' {
         Init
         GivenName 'wrappy'
         GivenNpmSucceedsButModuleNotInstalled
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing
         ThenErrorMessage 'NPM executed successfully when attempting to install "wrappy" but the module was not found'
-    }
-    finally
-    {
-        Remove-Node
     }
 }

@@ -1,4 +1,8 @@
 
+[CmdletBinding()]
+param(
+    [string[]]$ExportedPrivateCommand
+)
 $originalVerbosePreference = $Global:VerbosePreference
 
 try
@@ -12,6 +16,14 @@ try
         Remove-Module -Name 'ProGetAutomation' -Force
     }
 
+    if( (Test-Path -Path 'env:WHISKEY_EXPORTED_PRIVATE_COMMAND' ) )
+    {
+        Remove-Item -Path 'env:WHISKEY_EXPORTED_PRIVATE_COMMAND'
+    }
+    if( $ExportedPrivateCommand )
+    {
+        $env:WHISKEY_EXPORTED_PRIVATE_COMMAND = $ExportedPrivateCommand -join ','
+    }
     & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Import-Whiskey.ps1' -Resolve)
 
     Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BuildMasterAutomation' -Resolve) -Force
