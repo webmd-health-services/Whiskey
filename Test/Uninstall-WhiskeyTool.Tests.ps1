@@ -3,6 +3,11 @@
 
 $powerShellModulesDirectoryName = 'PSModules'
 
+# Private Whiskey function. Define it so Pester doesn't complain about it not existing.
+function Remove-WhiskeyFileSystemItem
+{
+}
+
 function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]

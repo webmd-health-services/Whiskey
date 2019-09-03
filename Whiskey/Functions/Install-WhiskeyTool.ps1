@@ -101,9 +101,8 @@ function Install-WhiskeyTool
                 Write-Error -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
                 return
             }
-            $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
             $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
+            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
             if( -not $Version )
             {
                 return
@@ -114,7 +113,7 @@ function Install-WhiskeyTool
             Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
             if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
             {
-               & $nugetPath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
+               & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
             }
             return $nuGetRoot
         }

@@ -19,6 +19,8 @@ LONG DESCRIPTION
     * `GitHubRelease`: creates a release in GitHub and uploads files for that
       release.
     * `LoadTask`: loads custom tasks so they can be used in the current build.
+    * `MergeFile`: merges files into a single file, using an optional text or 
+      binary separator. Source files can be optionally deleted. 
     * `MSBuild`: runs MSBuild, the Microsoft build engine. Only supported on 
       Windows.
     * `NodeLicenseChecker`: runs license checker, a Node module/command that

@@ -278,7 +278,7 @@ function WhenRunningBuild
         $config[$publishPipelineName] = $publishingTasks
     }
 
-    $script:context = New-WhiskeyContextObject
+    $script:context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
     $context.BuildRoot = $TestDrive.FullName;
     $context.Configuration = $config;
     $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
