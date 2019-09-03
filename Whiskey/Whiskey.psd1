@@ -111,7 +111,10 @@
                             'Set-WhiskeyMSBuildConfiguration',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
-                            'Unregister-WhiskeyEvent'
+                            'Unregister-WhiskeyEvent',
+                            'Write-WhiskeyInfo',
+                            'Write-WhiskeyVerbose',
+                            'Write-WhiskeyWarning'
                          );
 
     # Cmdlets to export from this module
@@ -162,6 +165,7 @@
 * Fixed: `DotNet` task fails to resolve recent version of the .NET Core SDK.
 * You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
+* Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
 '@
         } # End of PSData hashtable
 
