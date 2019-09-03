@@ -40,6 +40,17 @@ Build:
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
+    OnlyBy: Developer
+    Path:
+    - Whiskey\Functions\*.ps1
+    - Whiskey\Tasks\*.ps1
+    DestinationPath:
+    - Whiskey\Whiskey.psm1
+    TextSeparator: "$(NewLine)$(NewLine)"
+    DeleteSourceFiles: false
+
+- MergeFile:
+    OnlyBy: BuildServer
     Path:
     - Whiskey\Functions\*.ps1
     - Whiskey\Tasks\*.ps1
