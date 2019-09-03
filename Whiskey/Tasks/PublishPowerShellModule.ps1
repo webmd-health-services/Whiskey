@@ -4,16 +4,13 @@ function Publish-WhiskeyPowerShellModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-        [string]
-        $Path
+        [string]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -21,7 +18,8 @@ function Publish-WhiskeyPowerShellModule
 
     if( -not $TaskParameter.ContainsKey('RepositoryName') )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryName" is mandatory. It should be the name of the PowerShell repository you want to publish to, e.g.
+        Stop-WhiskeyTask -TaskContext $TaskContext `
+                         -Message ('Property "RepositoryName" is mandatory. It should be the name of the PowerShell repository you want to publish to, e.g.
 
         Build:
         - PublishPowerShellModule:
@@ -35,7 +33,8 @@ function Publish-WhiskeyPowerShellModule
     $apiKeyID = $TaskParameter['ApiKeyID']
     if( -not $apiKeyID )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "ApiKeyID" is mandatory. It must be the ID of the API key to use when publishing to the "{0}" repository. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $repositoryName)
+        Stop-WhiskeyTask -TaskContext $TaskContext `
+                         -Message ('Property "ApiKeyID" is mandatory. It must be the ID of the API key to use when publishing to the "{0}" repository. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $repositoryName)
         return
     }
 
@@ -48,7 +47,8 @@ function Publish-WhiskeyPowerShellModule
     }
     if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Module manifest path "{0}" either does not exist or is a directory.' -f $manifestPath)
+        Stop-WhiskeyTask -TaskContext $TaskContext `
+                         -Message ('Module manifest path "{0}" either does not exist or is a directory.' -f $manifestPath)
         return
     }
 
@@ -83,14 +83,18 @@ function Publish-WhiskeyPowerShellModule
         $publishLocation = $TaskParameter['RepositoryUri']
         if( -not $publishLocation )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
+            Stop-WhiskeyTask -TaskContext $TaskContext `
+                             -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
             return
         }
 
         $credentialParam = @{ }
         if( $TaskParameter.ContainsKey('CredentialID') )
         {
-            $credentialParam['Credential'] = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
+            $credentialParam['Credential'] = 
+                Get-WhiskeyCredential -Context $TaskContext `
+                                      -ID $TaskParameter['CredentialID'] `
+                                      -PropertyName 'CredentialID'
         }
 
         $exists = $registeredRepositories | Where-Object { $_.SourceLocation -eq $publishLocation }
@@ -101,7 +105,12 @@ function Publish-WhiskeyPowerShellModule
         }
         else
         {
-            Register-PSRepository -Name $repositoryName -SourceLocation $publishLocation -PublishLocation $publishLocation -InstallationPolicy Trusted -PackageManagementProvider NuGet @credentialParam -ErrorAction Stop @commonParams
+            Register-PSRepository -Name $repositoryName `
+                                  -SourceLocation $publishLocation `
+                                  -PublishLocation $publishLocation `
+                                  -InstallationPolicy Trusted `
+                                  -PackageManagementProvider NuGet @credentialParam `
+                                  -ErrorAction Stop @commonParams
         }
     }
 
