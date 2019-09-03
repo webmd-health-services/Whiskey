@@ -2,7 +2,6 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Resolve-WhiskeyTaskPathParameter.ps1' -Resolve)
 
 [Whiskey.Context]$context = $null
 $global:taskCalled = $false
@@ -129,8 +128,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of buildroot an
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowOutsideBuildRoot)]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -149,8 +147,8 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of buildroot an
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowOutsideBuildRoot=$false)]
-                [string]
-                $Path
+                [string]$Path
+                
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -169,8 +167,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given path that must exist and 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -190,8 +187,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given path that must exist and 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -210,8 +206,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given path is absolute') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -230,8 +225,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given path doesn''t exist but h
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -258,8 +252,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path does not start with the co
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -281,8 +274,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given path that contains wildca
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(AllowOutsideBuildRoot)]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -310,8 +302,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multiple paths that conta
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(AllowOutsideBuildRoot)]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -341,8 +332,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths as paramete
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -368,8 +358,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths as paramete
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -390,8 +379,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multiple paths as paramet
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowOutsideBuildRoot)]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -420,8 +408,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths as paramete
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -439,5 +426,3 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths as paramete
         ThenThrewException -Pattern 'outside\ of\ the\ build\ root'
     }
 }
-
-Remove-Item -Path 'function:Resolve-WhiskeyTaskPathParameter'
