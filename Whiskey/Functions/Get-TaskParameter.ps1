@@ -3,27 +3,26 @@ function Get-TaskParameter
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [string]
         # The name of the command.
-        $Name,
-
         [Parameter(Mandatory)]
-        [hashtable]
+        [string]$Name,
+
         # The properties from the tasks's YAML.
-        $TaskProperty,
-
         [Parameter(Mandatory)]
-        [Whiskey.Context]
+        [hashtable]$TaskProperty,
+
         # The current context.
-        $Context
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$Context
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     # Parameters of the actual command.
-    $cmdParameters = Get-Command -Name $task.CommandName | Select-Object -ExpandProperty 'Parameters'
+    $cmdParameters =
+        Get-Command -Name $task.CommandName |
+        Select-Object -ExpandProperty 'Parameters'
 
     # Parameters to pass to the command.
     $taskParameters = @{ }
@@ -42,13 +41,20 @@ function Get-TaskParameter
             $value = $value | ConvertFrom-WhiskeyYamlScalar
         }
 
-        [Whiskey.Tasks.ParameterValueFromVariableAttribute]$valueFromVariableAttr = $cmdParameter.Attributes | Where-Object { $_ -is [Whiskey.Tasks.ParameterValueFromVariableAttribute] }
+        [Whiskey.Tasks.ParameterValueFromVariableAttribute]$valueFromVariableAttr =
+            $cmdParameter.Attributes |
+            Where-Object { $_ -is [Whiskey.Tasks.ParameterValueFromVariableAttribute] }
+
         if( $valueFromVariableAttr )
         {
-            $value = Resolve-WhiskeyVariable -InputObject ('$({0})' -f $valueFromVariableAttr.VariableName) -Context $Context
+            $value = Resolve-WhiskeyVariable -InputObject ('$({0})' -f $valueFromVariableAttr.VariableName) `
+                                             -Context $Context
         }
 
-        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttribute = $cmdParameter.Attributes | Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
+        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttribute =
+            $cmdParameter.Attributes |
+            Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
+
         if( $validateAsPathAttribute )
         {
             $params = @{ }

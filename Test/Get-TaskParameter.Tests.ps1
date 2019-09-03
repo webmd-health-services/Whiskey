@@ -65,8 +65,7 @@ function ThenPipelineSucceeded
 function ThenTaskCalled
 {
     param(
-        [hashtable]
-        $WithParameter
+        [hashtable]$WithParameter
     )
     $taskCalled | should -BeTrue
     $taskParameters | Should -Not -BeNullOrEmpty
@@ -101,14 +100,11 @@ function WhenRunningTask
 {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [string]
-        $Name,
+        [string]$Name,
 
-        [hashtable]
-        $Parameter,
+        [hashtable]$Parameter,
 
-        [string]
-        $BuildRoot
+        [string]$BuildRoot
     )
 
     $optionalParams = @{}
@@ -200,8 +196,7 @@ Describe ('Get-TaskParameter.when task parameter should come from a Whiskey vari
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT')]
-                [string]
-                $Environment
+                [string]$Environment
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -220,8 +215,7 @@ Describe ('Get-TaskParameter.when task parameter value uses a Whiskey variable m
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT.Length')]
-                [string]
-                $Environment
+                [string]$Environment
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -240,8 +234,7 @@ Describe ('Get-TaskParameter.when parameter is an optional path') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -260,8 +253,7 @@ Describe ('Get-TaskParameter.when parameter is an optional path but it doesn''t 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -280,8 +272,7 @@ Describe ('Get-TaskParameter.when parameter is a path with wildcards') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -304,8 +295,7 @@ Describe ('Get-TaskParameter.when parameter is a path that the user wants resolv
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string[]]
-                $Path
+                [string[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -325,8 +315,7 @@ Describe ('Get-TaskParameter.when path parameter wants to be resolved but parame
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -347,8 +336,7 @@ Describe ('Get-TaskParameter.when path is mandatory and missing') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory)]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -368,8 +356,7 @@ Describe ('Get-TaskParameter.when path is mandatory and does not exist') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory)]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -389,8 +376,7 @@ Describe ('Get-TaskParameter.when path should be a file') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -409,8 +395,7 @@ Describe ('Get-TaskParameter.when path should be a file but it''s a directory') 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -430,8 +415,7 @@ Describe ('Get-TaskParameter.when path should be a directory but it''s a file') 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -451,8 +435,7 @@ Describe ('Get-TaskParameter.when all paths should be files but one is a directo
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -473,8 +456,7 @@ Describe ('Get-TaskParameter.when an optional path that doesn''t exist should be
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(PathType='File')]
-                [string]
-                $Path
+                [string]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -491,20 +473,19 @@ Describe ('Get-TaskParameter.when passing typed parameters') {
         {
             [Whiskey.Task('Task')]
             param(
-                [Switch]
-                $SwitchOne,
-                [Switch]
-                $SwitchTwo,
-                [Switch]
-                $SwitchThree,
-                [bool]
-                $Bool,
-                [int]
-                $Int,
-                [bool]
-                $NoBool,
-                [int]
-                $NoInt
+                [Switch]$SwitchOne,
+
+                [Switch]$SwitchTwo,
+
+                [Switch]$SwitchThree,
+
+                [bool]$Bool,
+
+                [int]$Int,
+
+                [bool]$NoBool,
+
+                [int]$NoInt
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
