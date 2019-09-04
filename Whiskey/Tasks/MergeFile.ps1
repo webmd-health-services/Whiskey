@@ -70,6 +70,10 @@ function Merge-WhiskeyFile
         # Only add the separator first if we didn't clear the file's original contents.
         $addSeparator = (-not $Clear) -and ($writer.Length -gt 0)
 
+        # Normalize the exclusion pattern so it works across platforms.
+        $Exclude = 
+            $Exclude | 
+            ForEach-Object { $_ -replace '\\|/',[IO.Path]::DirectorySeparatorChar }
         foreach( $filePath in $Path )
         {
             $excluded = $false
