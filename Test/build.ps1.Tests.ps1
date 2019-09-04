@@ -8,6 +8,7 @@ function Init
     Get-Module 'PowerShellGet','Whiskey','PackageManagement' | Remove-Module -Force -ErrorAction Ignore
 }
 
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 $releases = 
     Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' |
     ForEach-Object { $_ } 
@@ -46,7 +47,8 @@ function ThenNoErrors
 
 function ThenWhiskeyInstalled
 {
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $latestRelease.name)
+    $moduleDirName = $latestRelease.name -replace '-.*$',''
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
 }

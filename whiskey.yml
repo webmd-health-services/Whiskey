@@ -215,7 +215,6 @@ Publish:
                 ReleaseNotes: RELEASE_NOTES
 - GitHubRelease:
     OnlyOnPlatform: Windows
-    OnlyOnBranch: master
     UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
     RepositoryName: webmd-health-services/Whiskey
     ApiKeyID: github.com
