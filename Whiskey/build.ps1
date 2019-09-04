@@ -14,6 +14,7 @@ Set-StrictMode -Version Latest
 
 # Set to a specific version to use a specific version of Whiskey. 
 $whiskeyVersion = '0.*'
+$allowPrerelease = $false
 
 $psModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'PSModules'
 $whiskeyModuleRoot = Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Whiskey'
@@ -25,6 +26,14 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
         Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' |
         ForEach-Object { $_ } |
         Where-Object { $_.name -like $whiskeyVersion } |
+        Where-Object {
+            if( $allowPrerelease )
+            {
+                return $true
+            }
+            [version]::TryParse($_.name,[ref]$null)
+            return $true
+        } |
         Sort-Object -Property 'created_at' -Descending |
         Select-Object -First 1
 
@@ -80,7 +89,9 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
         $zipFile.Dispose()
     }
 
-    Rename-Item -Path (Join-Path -Path $whiskeyModuleRoot -ChildPath 'Whiskey') -NewName $release.name
+    # Remove any prerelease information.
+    $moduleDirName = $release.name -replace '-.*$',''
+    Rename-Item -Path (Join-Path -Path $whiskeyModuleRoot -ChildPath 'Whiskey') -NewName $moduleDirName
 
     Remove-Item -Path $zipFilePath
 }
