@@ -4,13 +4,10 @@ function Resolve-WhiskeyTaskPathParameter
     param(
         [Parameter(Mandatory)]
         # An object that holds context about the current build and executing task.
-        [object]$TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline)]
         [string]$Path,
-
-        [Parameter(Mandatory)]
-        [string]$PropertyName,
 
         [Parameter(Mandatory)]
         [Management.Automation.ParameterMetadata]$CmdParameter,
@@ -40,7 +37,7 @@ function Resolve-WhiskeyTaskPathParameter
             {
                 Stop-WhiskeyTask -TaskContext $Context `
                                  -PropertyName $CmdParameter.Name `
-                                 -Message ('{0} is mandatory.' -f $TaskProperty[$propertyName])
+                                 -Message ('{0} is mandatory.' -f $CmdParameter.Name)
                 return
             }
             return     
@@ -73,25 +70,33 @@ function Resolve-WhiskeyTaskPathParameter
             if( $ValidateAsPathAttribute.MustExist )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext `
-                                 -Message ('{0}[{1}] "{2}" does not exist and must exist.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+                                 -Message ('{0}[{1}] "{2}" does not exist.' -f $CmdParameter.Name,$pathIdx,$Path)
                 return
             }
             $result = [IO.Path]::GetFullPath($Path)
         }
+
             
         if( -not $ValidateAsPathAttribute.AllowOutsideBuildRoot )
         {
+            $fsCaseSensitive = -not (Test-Path -Path ($TaskContext.BuildRoot.FullName.ToUpperInvariant()))
             $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
             $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
+
+            $comparer = [System.StringComparison]::OrdinalIgnoreCase
+            if( $fsCaseSensitive )
+            {
+                $comparer = [System.StringComparison]::Ordinal
+            }
             
             $invalidPaths =
                 $result |
-                Where-Object { -not ( $_.StartsWith($normalizedBuildRoot) ) }
+                Where-Object { -not ( $_.StartsWith($normalizedBuildRoot, $comparer) ) }
 
             if( $invalidPaths )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext `
-                                 -Message ('{0}[{1}] "{2}" is outside of the build root and not allowed to be.' -f $PropertyName,$pathIdx,$Path,$TaskContext.ConfigurationPath)
+                                 -Message ('{0}[{1}] "{2}" is outside the build root "{3}".' -f $CmdParameter.Name,$pathIdx,$Path,$TaskContext.ConfigurationPath)
                 return
             }
         }
@@ -109,8 +114,8 @@ function Resolve-WhiskeyTaskPathParameter
                 Where-Object { -not (Test-Path -Path $_ -PathType $pathType) }
             if( $invalidPaths )
             {
-                Stop-WhiskeyTask -TaskContext $Context -PropertyName $cmdParameter.Name -Message (@'
-must be a {0}, but found {1} path(s) that are not:
+                Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $CmdParameter.Name -Message (@'
+Found {1} paths that should be a {0}, but aren''t:
 
 * {2}
 
@@ -120,9 +125,9 @@ must be a {0}, but found {1} path(s) that are not:
         }
 
         $pathCount = $result | Measure-Object | Select-Object -ExpandProperty 'Count'
-        if( $cmdParameter.ParameterType -ne ([string[]]) -and $pathCount -gt 1 )
+        if( $CmdParameter.ParameterType -ne ([string[]]) -and $pathCount -gt 1 )
         {
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName $cmdParameter.Name -Message (@'
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $CmdParameter.Name -Message (@'
 The value "{1}" resolved to {2} paths [1] but this task requires a single path. Please change "{1}" to a value that resolves to a single item.
 
 If you are this task''s author, and you want this property to accept multiple paths, please update the "{3}" command''s "{0}" property so it''s type is "[string[]]".
@@ -131,7 +136,7 @@ If you are this task''s author, and you want this property to accept multiple pa
 
 * {4}
 
-'@ -f $cmdParameter.Name,$TaskProperty[$propertyName],$pathCount,$task.CommandName,($result -join ('{0}* ' -f [Environment]::NewLine)))
+'@ -f $CmdParameter.Name,$Path,$pathCount,$TaskContext.TaskName,($result -join ('{0}* ' -f [Environment]::NewLine)))
         }
 
         return $result

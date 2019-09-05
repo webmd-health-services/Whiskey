@@ -2,6 +2,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
 $failed = $false
 $context = $null
 $buildRoot = $null
@@ -281,7 +282,7 @@ Describe 'File.when a directory already exists with same path name' {
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches 'Unable to create file '{0}': a directory exists at that path.'
+        ThenError -Matches 'Path '{0}' is a directory but must be a file.'
     }
 }
 
@@ -297,23 +298,6 @@ Describe 'File.when a subdirectory in the path does not exist' {
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenSuccess
         ThenFile -Path 'notreal\stillnotreal\file.txt' -Contains 'I am real.'
-    }
-}
-
-Describe 'File.when parent directory is a file.' {
-    It 'should not create the file.' {
-        Init
-        GivenWhiskeyYml @'
-        Build:
-        - File:
-            Path: 
-            - IExistButImActuallyAFile.txt
-            - IExistButImActuallyAFile.txt\file.txt
-'@
-        WhenRunningTask -ErrorAction SilentlyContinue
-        ThenTaskFailed
-        ThenFile -Path 'IExistButImActuallyAFile.txt'
-        ThenError -Matches 'Parent directory of '{0}' is a file, not a directory.'
     }
 }
 
@@ -351,7 +335,7 @@ Describe 'File.when one of the paths is invalid' {
             Content: 'file'
 '@
     WhenRunningTask -ErrorAction SilentlyContinue
-    ThenError -Matches 'Unable to create file '{0}': a directory exists at that path.'
+    ThenError -Matches 'Path '{0}' is a directory but must be a file.'
     ThenFile -Path 'file.txt' -Contains 'file'
     }
 }

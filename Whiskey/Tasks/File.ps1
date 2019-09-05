@@ -19,32 +19,23 @@ function New-WhiskeyFile
 
     foreach( $item in $Path )
     {
-        if( Test-Path -Path (Split-Path -Path $item) -PathType Leaf )
+        if( Test-Path -Path $item -PathType Container )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext `
-                             -Message ('Parent directory of "{0}" is a file, not a directory.' -f $item)
+                             -Message ('Path "{0}" is a directory but must be a file.' -f $item)
             return
         }
-        elseif( -not (Test-Path -Path $item) )
+        if( -not (Test-Path -Path $item) )
         {
-            New-Item -Path $item -Value $Content -Force
+            New-Item -Path $item -Value $Content -Force -ErrorAction Stop
         }
-        elseif( Test-Path -Path $item -PathType Container )
+        if( $Touch )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext `
-                                -Message ('Unable to create file "{0}": a directory exists at that path.' -f $item)
-            return
+            (Get-Item $item).LastWriteTime = Get-Date
         }
-        else
+        if( $Content ) 
         {
-            if( $Touch )
-            {
-                (Get-Item $Item).LastWriteTime = Get-Date
-            }
-            if( $Content ) 
-            {
-                Set-Content -Path $Path -Value $Content
-            }
+            Set-Content -Path $item -Value $Content
         }
     }
 }

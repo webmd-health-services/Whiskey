@@ -59,7 +59,6 @@ function Get-TaskParameter
         {
             $params = @{ }
 
-            $params['PropertyName'] = $propertyName
             $params['CmdParameter'] = $cmdParameter
             $params['ValidateAsPathAttribute'] = $validateAsPathAttribute
             $value = $value | Resolve-WhiskeyTaskPathParameter -TaskContext $Context @params
