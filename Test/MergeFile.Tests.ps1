@@ -123,7 +123,9 @@ function WhenMerging
 
         [byte[]]$WithBinarySeparator,
 
-        [switch]$Clear
+        [switch]$Clear,
+
+        [string[]]$Excluding
     )
 
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -147,6 +149,11 @@ function WhenMerging
     if( $Clear )
     {
         $parameters['Clear'] = $Clear
+    }
+
+    if( $Excluding )
+    {
+        $parameters['Exclude'] = $Excluding
     }
 
     try
@@ -306,7 +313,20 @@ Describe 'MergeFile.when text and binary separators given' {
     It 'should fail' {
         Init
         GivenFile 'one.txt' -WithContent 'abc'
-        WhenMerging 'one.txt' -Into 'merged.txt' -WithTextSeparator 'def' -WithBinarySeparator @( 28, 29, 30 )
+        WhenMerging 'one.txt' -Into 'merged.txt' -WithTextSeparator 'def' -WithBinarySeparator @( 28, 29, 30 ) -ErrorAction SilentlyContinue
         ThenFailed 'use\ only\ the\ TextSeparator\ or\ BinarySeparator\ property'
+    }
+}
+
+Describe 'MergeFile.when excluding files' {
+    It 'should exclude those files' {
+        Init
+        GivenFile 'Another-Function.ps1' -WithContent 'function Another-Function'
+        GivenFile 'Another-PrefixFunction.ps1' -WithContent 'function Another-PrefixFunction'
+        GivenFile 'Last-Function.ps1' -WithContent 'function Last-Function'
+        GivenFile 'Some-Function.ps1' -WithContent 'function Some-Function'
+        GivenFile 'Some-PrefixFunction.ps1' -WithContent 'function Some-PrefixFunction'
+        WhenMerging '*.ps1' -Into 'Functions.ps1' -Excluding '*Prefix*','*\Last-Function.ps1'
+        ThenFile 'Functions.ps1' -HasContent 'function Another-Functionfunction Some-Function'
     }
 }

@@ -18,7 +18,9 @@ function Merge-WhiskeyFile
 
         [byte[]]$BinarySeparator,
 
-        [switch]$Clear
+        [switch]$Clear,
+
+        [string[]]$Exclude
     )
 
     Set-StrictMode -Version 'Latest'
@@ -60,7 +62,7 @@ function Merge-WhiskeyFile
     $writer = [IO.File]::OpenWrite($relativePath)
     try 
     {
-        Write-WhiskeyInfo -Context $TaskContext -Message $relativePath -Verbose
+        Write-WhiskeyInfo -Context $TaskContext -Message $relativePath 
 
         # Move to the end of the file.
         $writer.Position = $writer.Length
@@ -68,8 +70,32 @@ function Merge-WhiskeyFile
         # Only add the separator first if we didn't clear the file's original contents.
         $addSeparator = (-not $Clear) -and ($writer.Length -gt 0)
 
+        # Normalize the exclusion pattern so it works across platforms.
+        $Exclude = 
+            $Exclude | 
+            ForEach-Object { $_ -replace '\\|/',[IO.Path]::DirectorySeparatorChar }
         foreach( $filePath in $Path )
         {
+            $excluded = $false
+            foreach( $pattern in $Exclude )
+            {
+                if( $filePath -like $pattern )
+                {
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('Skipping file "{0}": it matches exclusion pattern "{1}".' -f $filePath,$pattern)
+                    $excluded = $true
+                    break
+                }
+                else 
+                {
+                    Write-Debug -Message ('"{0}" -notlike "{1}"' -f $filePath,$pattern)
+                }
+            }
+
+            if( $excluded )
+            {
+                continue
+            }
+
             $relativePath = Resolve-Path -Path $filePath -Relative
             Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath) -Verbose
 
