@@ -17,15 +17,13 @@ function GivenCredential
 {
     param(
         [Parameter(Mandatory)]
-        [pscredential]
-        $Credential,
+        [pscredential]$Credential,
 
         [Parameter(Mandatory)]
-        [string]
-        $WithID
+        [string]$WithID
     )
 
-    $credentials[$WithID] = $Credential
+    $script:credentials[$WithID] = $Credential
 }
 
 function GivenNoApiKey
@@ -47,8 +45,7 @@ function GivenPublishingFails
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $WithError
+        [string]$WithError
     )
 
     $script:publishError = $WithError
@@ -58,8 +55,7 @@ function GivenRegisteringFails
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $WithError
+        [string]$WithError
     )
 
     $script:registerError = $WithError
@@ -97,35 +93,25 @@ function Invoke-Publish
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $withoutRegisteredRepo,
+        [Switch]$withoutRegisteredRepo,
 
-        [String]
-        $ForRepositoryNamed,
+        [String]$ForRepositoryNamed,
 
-        [string]
-        $RepoAtUri,
+        [string]$RepoAtUri,
 
-        [String]
-        $ForManifestPath,
+        [String]$ForManifestPath,
 
-        [Switch]
-        $WithNoRepositoryName,
+        [Switch]$WithNoRepositoryName,
 
-        [Switch]
-        $withNoProgetURI,
+        [Switch]$withNoProgetURI,
 
-        [Switch]
-        $WithInvalidPath,
+        [Switch]$WithInvalidPath,
 
-        [Switch]
-        $WithNonExistentPath,
+        [Switch]$WithNonExistentPath,
 
-        [Switch]
-        $WithoutPathParameter,
+        [Switch]$WithoutPathParameter,
 
-        [string]
-        $WithCredentialID
+        [string]$WithCredentialID
     )
     
     $version = '1.2.3'
@@ -185,14 +171,10 @@ function Invoke-Publish
     $repoUri = $script:repositoryUri
 
     Mock -CommandName 'Get-PSRepository' -ModuleName 'Whiskey' -MockWith {
-        $repositoryObject = New-Object System.Object
-        $repositoryObject | Add-Member -Type NoteProperty `
-                                       -Name Name `
-                                       -Value $repoName
-        $repositoryObject | Add-Member -Type NoteProperty `
-                                       -Name SourceLocation `
-                                       -Value $repoUri
-        return $repositoryObject
+        return [pscustomobject]@{
+            'Name' = $repoName;
+            'SourceLocation' = $repoUri;
+        }
     }.GetNewClosure()
 
     Add-Type -AssemblyName System.Net.Http
@@ -234,7 +216,7 @@ function Invoke-Publish
     Mock -CommandName 'Get-PackageSource' -ModuleName 'PowerShellGet'  # Called by a dynamic parameter set on Register-PSRepository.
     
     $Global:Error.Clear()
-    $failed = $False
+    $script:failed = $False
 
     if( $RepoAtUri )
     {
@@ -275,7 +257,7 @@ function ThenFailed
         $WithError
     )
 
-    $failed | Should -BeTrue
+    $script:failed | Should -BeTrue
     $Global:Error | Should -Match $WithError
 }
 
@@ -303,15 +285,12 @@ function ThenRepositoryRegistered
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $Named,
+        [string]$Named,
 
         [Parameter(Mandatory)]
-        [string]
-        $AtUri,
+        [string]$AtUri,
 
-        [pscredential]
-        $WithCredential
+        [pscredential]$WithCredential
     )
 
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
@@ -346,14 +325,11 @@ function ThenModulePublished
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $ToRepositoryNamed,
+        [string]$ToRepositoryNamed,
 
-        [String]
-        $ExpectedPathName = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'),
+        [string]$ExpectedPathName = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'),
 
-        [switch]
-        $WithNoRepositoryName
+        [switch]$WithNoRepositoryName
     )
     
     Assert-MockCalled -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'NuGet' }
@@ -384,14 +360,11 @@ function ThenModulePublished
 function ThenManifest
 {
     param(
-        [string]
-        $manifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1'),
+        [string]$ManifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1'),
 
-        [string]
-        $AtVersion,
+        [string]$AtVersion,
 
-        [string]
-        $HasPrerelease
+        [string]$HasPrerelease
     )
 
     if( -not $AtVersion )
@@ -399,7 +372,7 @@ function ThenManifest
         $AtVersion = '{0}.{1}.{2}' -f $context.Version.SemVer2.Major, $context.Version.SemVer2.Minor, $context.Version.SemVer2.Patch
     }
 
-    $manifest = Test-ModuleManifest -Path $manifestPath
+    $manifest = Test-ModuleManifest -Path $ManifestPath
 
     $manifest.Version | Should -Be $AtVersion
     if( $HasPrerelease )
@@ -414,7 +387,7 @@ function ThenManifest
 
 function ThenSucceeded
 {
-    $failed | Should -BeFalse
+    $script:failed | Should -BeFalse
     $Global:Error | Should -BeNullOrEmpty
 }
 
