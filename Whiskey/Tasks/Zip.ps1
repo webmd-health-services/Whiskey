@@ -19,6 +19,28 @@ function New-WhiskeyZipArchive
 
     Import-WhiskeyPowerShellModule -Name 'Zip'
 
+    function Write-CompressionInfo
+    {
+        param(
+            [Parameter(Mandatory)]
+            [ValidateSet('file','directory','filtered directory')]
+            [string]$What,
+            [string]$Source,
+            [string]$Destination
+        )
+
+        if( $Destination )
+        {
+            $Destination = ' -> {0}' -f ($Destination -replace '\\','/')
+        }
+
+        if( [IO.Path]::DirectorySeparatorChar -eq [IO.Path]::AltDirectorySeparatorChar )
+        {
+            $Source = $Source -replace '\\','/'
+        }
+        Write-WhiskeyInfo -Context $TaskContext -Message ('  compressing {0,-18} {1}{2}' -f $What,$Source,$Destination)
+    }
+
     $archivePath = $TaskParameter['ArchivePath']
     if( -not [IO.Path]::IsPathRooted($archivePath) )
     {
@@ -133,16 +155,16 @@ function New-WhiskeyZipArchive
             $relativePath = $relativePath.Trim([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
 
             $addParams = @{ BasePath = $sourceRoot }
-            $overrideInfo = ''
+            $destinationParam = @{ }
             if( $override )
             {
-                $addParams = @{ PackageItemName = $destinationItemName }
-                $overrideInfo = ' -> {0}' -f $destinationItemName
+                $addParams = @{ EntryName = $destinationItemName }
+                $destinationParam['Destination'] = $destinationItemName
             }
 
             if( (Test-Path -Path $sourcePath -PathType Leaf) )
             {
-                Write-WhiskeyInfo -Context $TaskContext -Message ('  compressing file               {0}{1}' -f $relativePath,$overrideInfo)
+                Write-CompressionInfo -What 'file' -Source $relativePath @destinationParam
                 Add-ZipArchiveEntry -ZipArchivePath $archivePath -InputObject $sourcePath @addParams @behaviorParams
                 continue
             }
@@ -181,17 +203,17 @@ function New-WhiskeyZipArchive
             {
                 $addParams['BasePath'] = $sourcePath
                 $addParams['EntryParentPath'] = $destinationItemName
-                $addParams.Remove('PackageItemName')
-                $overrideInfo = ' -> {0}' -f $destinationItemName
+                $addParams.Remove('EntryName')
+                $destinationParam['Destination'] = $destinationItemName
             }
 
-            $typeDesc = 'directory         '
+            $typeDesc = 'directory'
             if( $TaskParameter['Include'] -or $TaskParameter['Exclude'] )
             {
                 $typeDesc = 'filtered directory'
             }
 
-            Write-WhiskeyInfo -Context $TaskContext -Message ('  compressing {0} {1}{2}' -f $typeDesc,$relativePath,$overrideInfo)
+            Write-CompressionInfo -What $typeDesc -Source $relativePath @destinationParam
             Find-Item -Path $sourcePath |
                 Add-ZipArchiveEntry -ZipArchivePath $archivePath @addParams @behaviorParams
         }
