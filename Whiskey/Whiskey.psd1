@@ -166,6 +166,7 @@
 * You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
 * Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
+* Fixed: `Zip` task doesn't allow customzing file names in ZIP file.
 '@
         } # End of PSData hashtable
 
