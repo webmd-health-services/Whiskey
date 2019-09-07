@@ -48,90 +48,60 @@ function Uninstall-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [Parameter(Mandatory=$true)]
         [string]
         # The name of the tool to uninstall. Currently only Node is supported.
         $Name,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
+        [Parameter(Mandatory=$true)]
         [string]
         # The directory where the tool should be uninstalled from.
-        $InstallRoot,
-
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
-        # The name of the NuGet package to uninstall.
-        $NuGetPackageName,
-
-        [String]
-        # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        $Version,
-
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
-        # The build root where the build is currently running. Tools are installed here.
-        $BuildRoot
+        $InstallRoot
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
+    $provider,$Name = $Name -split '::'
+    if( -not $Name )
     {
-        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-        $Version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
-        if( -not $Version )
-        {
-            return
-        }
-        $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
-        $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
-        $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-        
-        if( (Test-Path -Path $nuGetRoot -PathType Container) )
-        {
-            Remove-Item -Path $nuGetRoot -Recurse -Force
-        }
+        $Name = $provider
+        $provider = ''
     }
-    elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
-    {
-        $provider,$Name = $Name -split '::'
-        if( -not $Name )
-        {
-            $Name = $provider
-            $provider = ''
-        }
 
-        switch( $provider )
+    switch( $provider )
+    {
+        'NodeModule'
         {
-            'NodeModule'
+            # Don't do anything. All node modules require the Node tool to also be defined so they'll get deleted by the Node deletion.
+        }
+        'PowerShellModule'
+        {
+            Uninstall-WhiskeyPowerShellModule -Name $Name
+        }
+        'NuGet'
+        {
+            Uninstall-WhiskeyNuGetPackage -Name $Name -BuildRoot $InstallRoot
+        }
+        default
+        {
+            switch( $Name )
             {
-                # Don't do anything. All node modules require the Node tool to also be defined so they'll get deleted by the Node deletion.
-            }
-            'PowerShellModule'
-            {
-                Uninstall-WhiskeyPowerShellModule -Name $Name
-            }
-            default
-            {
-                switch( $Name )
+                'Node'
                 {
-                    'Node'
-                    {
-                        $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
-                        Remove-WhiskeyFileSystemItem -Path $dirToRemove
-                    }
-                    'DotNet'
-                    {
-                        $dotnetToolRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
-                        Remove-WhiskeyFileSystemItem -Path $dotnetToolRoot
-                    }
-                    default
-                    {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
-                    }
+                    $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
+                    Remove-WhiskeyFileSystemItem -Path $dirToRemove
+                }
+                'DotNet'
+                {
+                    $dotnetToolRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+                    Remove-WhiskeyFileSystemItem -Path $dotnetToolRoot
+                }
+                default
+                {
+                    throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
                 }
             }
         }
-    }
+    } 
 }

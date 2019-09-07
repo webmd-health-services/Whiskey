@@ -1,6 +1,7 @@
 function Invoke-WhiskeyNUnit2Task
 {
     [Whiskey.Task("NUnit2",SupportsClean, SupportsInitialize,Platform='Windows')]
+    [Whiskey.RequiresTool('NuGet::NUnit2.ConsoleRunner','NUnitPath',VersionParameterName='NUnitVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -84,7 +85,8 @@ function Invoke-WhiskeyNUnit2Task
     $frameworkParam = '/framework={0}' -f $frameworkParam
 
     Write-WhiskeyTiming -Message ('Installing NUnit.')
-    $nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
+    #$nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
+    $nunitRoot = Install-WhiskeyNuGetPackage -Name $package -Version $version -DownloadRoot $TaskContext.BuildRoot
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
@@ -101,7 +103,8 @@ function Invoke-WhiskeyNUnit2Task
     }
 
     Write-WhiskeyTiming -Message ('Installing OpenCover.')
-    $openCoverRoot = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+    #$openCoverRoot = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+    $openCoverRoot = Install-WhiskeyNuGetPackage -Name 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $openCoverRoot -PathType Container))
     {
@@ -118,7 +121,8 @@ function Invoke-WhiskeyNUnit2Task
     }
 
     Write-WhiskeyTiming -Message ('Installing ReportGenerator.')
-    $reportGeneratorRoot = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+    #$reportGeneratorRoot = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+    $reportGeneratorRoot = Install-WhiskeyNuGetPackage -Name 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container))
     {

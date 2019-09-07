@@ -89,6 +89,7 @@
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
                             'Get-WhiskeyMSBuildConfiguration',
+                            'Install-WhiskeyNuGetPackage',
                             'Import-WhiskeyPowerShellModule',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
@@ -111,6 +112,7 @@
                             'Set-WhiskeyMSBuildConfiguration',
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
+                            'Uninstall-WhiskeyNuGetPackage',
                             'Unregister-WhiskeyEvent'
                          );
 

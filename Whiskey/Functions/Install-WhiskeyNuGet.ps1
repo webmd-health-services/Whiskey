@@ -29,6 +29,6 @@ function Install-WhiskeyNuGet
         $versionParam['Version'] = $Version
     }
 
-    $nuGetPath = Install-WhiskeyTool -NuGetPackageName 'NuGet.CommandLine' -DownloadRoot $DownloadRoot @versionParam
+    $nuGetPath = Install-WhiskeyNuGetPackage -Name 'NuGet.CommandLine' -DownloadRoot $DownloadRoot @versionParam
     return Join-Path -Path $nuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
 }
