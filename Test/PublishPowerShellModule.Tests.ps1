@@ -23,7 +23,7 @@ function GivenCredential
         [string]$WithID
     )
 
-    $script:credentials[$WithID] = $Credential
+    $credentials[$WithID] = $Credential
 }
 
 function GivenNoApiKey
