@@ -1,16 +1,18 @@
 function Invoke-WhiskeyNUnit2Task
 {
-    [Whiskey.Task("NUnit2",SupportsClean, SupportsInitialize,Platform='Windows')]
-    [Whiskey.RequiresTool('NuGet::NUnit2.ConsoleRunner','NUnitPath',VersionParameterName='NUnitVersion')]
+    [Whiskey.Task("NUnit2",SupportsInitialize,Platform='Windows')]
+    [Whiskey.RequiresTool('NuGet::NUnit.Runners','NUnitPath',Version='2.6.4',VersionParameterName='NUnitVersion')]
+    [Whiskey.RequiresTool('NuGet::OpenCover','OpenCoverPath',VersionParameterName='OpenCoverVersion')]
+    [Whiskey.RequiresTool('NuGet::ReportGenerator','ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context] $TaskContext,
+        
 
         [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [hashtable] $TaskParameter
+        
     )
 
     Set-StrictMode -version 'latest'
@@ -18,25 +20,14 @@ function Invoke-WhiskeyNUnit2Task
 
     $package = 'NUnit.Runners'
     $version = '2.6.4'
-    if( $TaskParameter['Version'] )
+    if( $TaskParameter['NUnitVersion'] )
     {
-        $version = $TaskParameter['Version']
+        $version = $TaskParameter['NUnitVersion']
         if( $version -notlike '2.*' )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 2.x version of NUnit.' -f $TaskParameter['Version'])
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 2.x version of NUnit.' -f $TaskParameter['NUnitVersion'])
             return
         }
-    }
-
-    $openCoverVersionArg  = @{}
-    $reportGeneratorVersionArg = @{}
-    if( $TaskParameter['OpenCoverVersion'] )
-    {
-        $openCoverVersionArg['Version'] = $TaskParameter['OpenCoverVersion']
-    }
-    if( $TaskParameter['ReportGeneratorVersion'] )
-    {
-        $reportGeneratorVersionArg['Version'] = $TaskParameter['ReportGeneratorVersion']
     }
 
     $openCoverArgs = @()
@@ -49,20 +40,6 @@ function Invoke-WhiskeyNUnit2Task
     if( $TaskParameter['ReportGeneratorArgument'] )
     {
         $reportGeneratorArgs += $TaskParameter['ReportGeneratorArgument']
-    }
-
-    if( $TaskContext.ShouldClean )
-    {
-        Write-WhiskeyTiming -Message ('Uninstalling ReportGenerator.')
-        Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
-        Write-WhiskeyTiming -Message ('COMPLETE')
-        Write-WhiskeyTiming -Message ('Uninstalling OpenCover.')
-        Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionArg
-        Write-WhiskeyTiming -Message ('COMPLETE')
-        Write-WhiskeyTiming -Message ('Uninstalling NUnit.')
-        Uninstall-WhiskeyTool -NuGetPackageName $package -BuildRoot $TaskContext.BuildRoot -Version $version
-        Write-WhiskeyTiming -Message ('COMPLETE')
-        return
     }
 
     $includeParam = $null
@@ -85,8 +62,7 @@ function Invoke-WhiskeyNUnit2Task
     $frameworkParam = '/framework={0}' -f $frameworkParam
 
     Write-WhiskeyTiming -Message ('Installing NUnit.')
-    #$nunitRoot = Install-WhiskeyTool -NuGetPackageName $package -Version $version -DownloadRoot $TaskContext.BuildRoot
-    $nunitRoot = Install-WhiskeyNuGetPackage -Name $package -Version $version -DownloadRoot $TaskContext.BuildRoot
+    $nunitRoot = $TaskParameter['NUnitPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
@@ -103,8 +79,7 @@ function Invoke-WhiskeyNUnit2Task
     }
 
     Write-WhiskeyTiming -Message ('Installing OpenCover.')
-    #$openCoverRoot = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
-    $openCoverRoot = Install-WhiskeyNuGetPackage -Name 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionArg
+    $openCoverRoot = $TaskParameter['OpenCoverPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $openCoverRoot -PathType Container))
     {
@@ -121,8 +96,7 @@ function Invoke-WhiskeyNUnit2Task
     }
 
     Write-WhiskeyTiming -Message ('Installing ReportGenerator.')
-    #$reportGeneratorRoot = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
-    $reportGeneratorRoot = Install-WhiskeyNuGetPackage -Name 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionArg
+    $reportGeneratorRoot = $TaskParameter['ReportGeneratorPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container))
     {

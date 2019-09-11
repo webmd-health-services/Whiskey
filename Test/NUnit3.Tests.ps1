@@ -300,7 +300,7 @@ function WhenRunningTask
 
     if( $nunitVersion )
     {
-        $taskParameter['Version'] = $nunitVersion
+        $taskParameter['NUnitVersion'] = $nunitVersion
     }
 
     if ($InCleanMode)
@@ -771,7 +771,7 @@ Describe 'NUnit3.when using a non-3 version of NUnit' {
         GivenPassingPath
         GivenVersion '2.6.4'
         WhenRunningTask -ErrorAction SilentlyContinue
-        ThenPackageNotInstalled 'NUnit.ConsoleRunner'
+        ThenNUnitShouldNotRun
         ThenTaskFailedWithMessage 'isn''t\ a\ valid\ 3\.x\ version\ of\ NUnit'
     }
 }

@@ -4,21 +4,29 @@ function Invoke-WhiskeyNUnit3Task
     [CmdletBinding()]
     [Whiskey.Task("NUnit3",SupportsInitialize,Platform='Windows')]
     [Whiskey.RequiresTool('NuGet::NUnit.Console','NUnitConsolePath',Version='3.10.0',VersionParameterName='ConsoleVersion')]
-    [Whiskey.RequiresTool('NuGet::NUnit.ConsoleRunner','NUnitPath',Version='3.10.0',VersionParameterName='Version')]
+    [Whiskey.RequiresTool('NuGet::NUnit.ConsoleRunner','NUnitPath',Version='3.10.0',VersionParameterName='NUnitVersion')]
     [Whiskey.RequiresTool('NuGet::OpenCover','OpenCoverPath',VersionParameterName='OpenCoverVersion')]
     [Whiskey.RequiresTool('NuGet::ReportGenerator','ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     param(
         [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context] $TaskContext,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [hashtable] $TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    if( $TaskParameter['NUnitVersion'] )
+    {
+        $version = $TaskParameter['NUnitVersion']
+        if( $version -notlike '3.*' )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 3.x version of NUnit.' -f $TaskParameter['NUnitVersion'])
+            return
+        }
+    }
 
     # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
     # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.

@@ -10,7 +10,6 @@ function Install-WhiskeyNuGetPackage {
         [Parameter()]
         [string] $Version,
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        
 
         [Parameter(Mandatory)]
         [string] $DownloadRoot
@@ -42,14 +41,14 @@ function Install-WhiskeyNuGetPackage {
 
             if ( $LASTEXITCODE )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NuGet.exe failed to install "{0}" with exit code "{1}"' -f $Name, $LASTEXITCODE)
+                $ErrorActionPreference = "Stop"
+                Write-Error ('NuGet.exe failed to install "{0}" with exit code "{1}"' -f $Name, $LASTEXITCODE)
                 return
             }
             if( -not $nugetPath )
             {
-                Write-Error -Message 
-                return $null
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NuGet executed successfully when attempting to install "{0}" but the module was not found anywhere in the build root "{1}"' -f $nugetPath,$nuGetRoot)
+                $ErrorActionPreference = "Stop"
+                Write-Error ('NuGet executed successfully when attempting to install "{0}" but the module was not found anywhere in the build root "{1}"' -f $nugetPath,$nuGetRoot)
                 return
             }
 

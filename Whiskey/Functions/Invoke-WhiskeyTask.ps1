@@ -11,19 +11,16 @@ function Invoke-WhiskeyTask
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Whiskey.Context] $TaskContext,
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
-        $TaskContext,
 
         [Parameter(Mandatory=$true)]
-        [string]
+        [string] $Name,
         # The name of the task.
-        $Name,
 
         [Parameter(Mandatory=$true)]
-        [hashtable]
+        [hashtable] $Parameter
         # The parameters/configuration to use to run the task.
-        $Parameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -249,7 +246,7 @@ function Invoke-WhiskeyTask
         {
             foreach( $requiredTool in $requiredTools )
             {
-                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
+                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name -Version $requiredTool.Version
             }
         }
 

@@ -49,14 +49,16 @@ function Uninstall-WhiskeyTool
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]
-        # The name of the tool to uninstall. Currently only Node is supported.
-        $Name,
+        [string] $Name,
+        # The name of the tool to uninstall.
+
+        [Parameter()]
+        [string] $Version,
+        # The tool version. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
 
         [Parameter(Mandatory=$true)]
-        [string]
+        [string] $InstallRoot
         # The directory where the tool should be uninstalled from.
-        $InstallRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -81,7 +83,7 @@ function Uninstall-WhiskeyTool
         }
         'NuGet'
         {
-            Uninstall-WhiskeyNuGetPackage -Name $Name -BuildRoot $InstallRoot
+            Uninstall-WhiskeyNuGetPackage -Name $Name -Version $Version -BuildRoot $InstallRoot
         }
         default
         {

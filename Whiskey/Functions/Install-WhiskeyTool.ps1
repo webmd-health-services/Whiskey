@@ -108,11 +108,6 @@ function Install-WhiskeyTool
             }
             'NuGet'
             {   
-                <#if( ($TaskParameter['Version'] -notlike '3*') )
-                {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 3.x version of NUnit.' -f $TaskParameter['Version'])
-                    return
-                }#>
                 $nuGetRoot = Install-WhiskeyNuGetPackage -Name $name -Version $version -DownloadRoot $InstallRoot -ErrorAction Stop
                 $TaskParameter[$ToolInfo.PathParameterName] = $nuGetRoot
             }
