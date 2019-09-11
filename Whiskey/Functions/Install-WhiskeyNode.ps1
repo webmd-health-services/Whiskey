@@ -8,7 +8,6 @@ function Install-WhiskeyNode
         # The directory where Node should be installed. Will actually be installed into `Join-Path -Path $InstallRoot -ChildPath '.node'`.
         $InstallRoot,
 
-        [Parameter(Mandatory)]
         [Switch]
         # Are we running in clean mode? If so, don't re-install the tool.
         $InCleanMode,

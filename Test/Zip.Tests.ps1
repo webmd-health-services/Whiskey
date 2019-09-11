@@ -218,9 +218,9 @@ function WhenPackaging
     }
 }
 
-Describe 'Zip.when packaging a directory with custom destination name' {
+Describe 'Zip.when packaging items with custom destination names' {
     Init
-    GivenARepositoryWithItems 'dir1\some_file.txt','dir2\dir3\another_file.txt','dir4\dir5\last_file.txt'
+    GivenARepositoryWithItems 'LICENSE.txt','dir1\some_file.txt','dir2\dir3\another_file.txt','dir4\dir5\last_file.txt'
     WhenPackaging @'
 Build:
 - Zip:
@@ -229,11 +229,12 @@ Build:
     - dir1: dirA
     - dir2\dir3: dir2\dirC
     - dir4\dir5: dirD\dir5
+    - LICENSE.txt: somedir\LICENSE.txt
     Include:
     - "*.txt"
 '@
     ThenTaskSucceeds
-    ThenArchiveShouldInclude 'dirA\some_file.txt','dir2\dirC\another_file.txt','dirD\dir5\last_file.txt'
+    ThenArchiveShouldInclude 'dirA/some_file.txt','dir2/dirC/another_file.txt','dirD/dir5/last_file.txt','somedir/LICENSE.txt'
 }
 
 Describe 'Zip.when archive is empty' {
@@ -278,7 +279,7 @@ Build:
     Include:
     - "*.txt"
 '@
-    ThenArchiveShouldInclude 'dir1\subdir\file.txt'
+    ThenArchiveShouldInclude 'dir1/subdir/file.txt'
 }
 
 Describe 'Zip.when packaging a filtered directory' {
@@ -295,8 +296,8 @@ Build:
     Exclude:
     - dir2
 '@
-    ThenArchiveShouldInclude 'dir1\subdir\file.txt'
-    ThenArchiveShouldNotInclude 'dir1\one.ps1','dir1\dir2\file.txt'
+    ThenArchiveShouldInclude 'dir1/subdir/file.txt'
+    ThenArchiveShouldNotInclude 'dir1/one.ps1','dir1/dir2/file.txt'
 }
 
 Describe 'Zip.when packaging a directory with a space' {
@@ -311,7 +312,7 @@ Build:
     Include:
     - "*.txt"
 '@
-    ThenArchiveShouldInclude 'dir 1\sub dir\file.txt'
+    ThenArchiveShouldInclude 'dir 1/sub dir/file.txt'
 }
 
 Describe 'Zip.when packaging a directory with a space and trailing backslash' {
@@ -326,7 +327,7 @@ Build:
     Include:
     - "*.txt"
 '@
-    ThenArchiveShouldInclude 'dir 1\sub dir\file.txt'
+    ThenArchiveShouldInclude 'dir 1/sub dir/file.txt'
 }
 
 Describe ('Zip.when compression level is Optimal') {
@@ -413,8 +414,8 @@ Build:
     Exclude:
     - .output
 '@
-    ThenArchiveShouldInclude 'root.ps1','dir1\one.ps1'
-    ThenArchiveShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
+    ThenArchiveShouldInclude 'root.ps1','dir1/one.ps1'
+    ThenArchiveShouldNotInclude 'dir1/emptyDir1', 'dir1/emptyDir2'
 }
 
 Describe 'Zip.when archive has JSON files' {
@@ -444,7 +445,7 @@ Build:
     Path:
     - dir
 '@
-    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+    ThenArchiveShouldInclude 'dir/my.json','dir/yours.json'
 }
 
 Describe 'Zip.when customizing entry name encoding' {
@@ -536,7 +537,7 @@ Build:
     Path: dir
     Include: "*.json"
 '@ -ToFile (Join-Path -Path (Get-BuildRoot) -ChildPath '.output\Zip.zip')
-    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+    ThenArchiveShouldInclude 'dir/my.json','dir/yours.json'
 }
 
 Describe 'Zip.when absolute path to archive root outside repository' {
@@ -580,7 +581,7 @@ Build:
     Path: dir
     Include: "*.json"
 '@ -ToFile (Join-Path -Path (Get-BuildRoot) -ChildPath 'some\custom\directory\Zip.zip')
-    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+    ThenArchiveShouldInclude 'dir/my.json','dir/yours.json'
 }
 
 Describe 'Zip.when Path property is missing' {
@@ -603,6 +604,6 @@ Build:
     ArchivePath: Zip.zip
     Path: dir
 '@
-    ThenArchiveShouldInclude 'dir\my.json','dir\yours.json'
+    ThenArchiveShouldInclude 'dir/my.json','dir/yours.json'
 }
 
