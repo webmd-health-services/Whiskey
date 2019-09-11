@@ -18,6 +18,7 @@ PROPERTY
     * `TextSeparator`: a string of text to use to separate each file's content when merging. We recommend `$(NewLine)` when merging text files.
     * `BinarySeparator`: a list of bytes to use to separate each file's content when merging. Each item in the list must be a number between 0 and 255. 
     * `Clear`: by default, the task leaves the destination file's content in place. To clear the destination file before merging files, set this property to `true`.
+    * `Exclude`: files to exclude from the merge. Wildcards supported. Each pattern is checked against each file's full path. You may use either slash as a directory separator character.
 
 EXAMPLES
 
@@ -73,3 +74,18 @@ EXAMPLES
             TextSeparator: "$(NewLine)$(NewLine)"
 
     This example demonstrates how to optimize PowerShell modules that store each function in their own file. It merges each file into a single file. This makes importing modules with many functions much faster.
+
+    ## Example 6
+
+        Build:
+        - MergeFile:
+            Path:
+            - Carbon\Functions\*.ps1
+            Exclude:
+            - "*-Iis*"
+            - "*\\Initalize-Lcm.ps1"
+            DestinationPath: Carbon\Functions\Functions.ps1
+            DeleteSourceFile: true
+            TextSeparator: "$(NewLine)$(NewLine)"
+
+    Demonstrates how to exclude files from being merged. In this case, all files with "*-Iis*" in their full path will be excluded, as well as files whose paths end with "\\Initialize-Lcm.ps1".
