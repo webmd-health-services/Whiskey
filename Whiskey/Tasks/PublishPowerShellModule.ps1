@@ -101,7 +101,7 @@ function Publish-WhiskeyPowerShellModule
         if( $exists )
         {
             $repositoryName = $exists.Name 
-            Write-WhiskeyWarning -TaskContext $Taskcontext `
+            Write-WhiskeyWarning -Context $TaskContext `
                                  -Message ('The URI "{0}" is registered as the {1} repository. Please update your whiskey.yml file to use this repository name.' -f $publishLocation, $repositoryName)
         }
         else
