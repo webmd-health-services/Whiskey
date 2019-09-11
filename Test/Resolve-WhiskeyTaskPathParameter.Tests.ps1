@@ -23,7 +23,11 @@ function GivenFile
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Name) -ItemType 'File'
+    if( -not [IO.Path]::IsPathRooted($Name) )
+    {
+        $Name = Join-Path -Path $TestDrive.FullName -ChildPath $Name
+    }
+    New-Item -Path $Name -ItemType 'File' -Force
 }
 
 function Init
@@ -649,8 +653,8 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths that can''t
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when buildroot differs only by case') {
-    It ('should act accordingly based on the filesystem') {
+Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to try to reach outside its build root') {
+    It ('should fail on case-sensitive platforms and succeed on case-insensitive platforms') {
         function global:Task
         {
             [Whiskey.Task('Task')]
@@ -662,15 +666,26 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when buildroot differs only by case'
             $global:taskParameters = $PSBoundParameters
         }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml'} -BuildRoot ($TestDrive.FullName.ToUpperInvariant())
-        if( $script:fsCaseSensitive )
+        $tempDir = $TestDrive.FullName | Split-Path -Parent
+        $buildDirName = $TestDrive.FullName | Split-Path -Leaf
+        $attackersBuildDirName = $buildDirName.ToUpper()
+        $attackersBuildDir = Join-Path -Path $tempDir -ChildPath $attackersBuildDirName
+        $attackersFile = Join-Path -Path $attackersBuildDir -ChildPath 'abc.yml'
+        GivenFile $attackersFile
+        $optionalParam = @{}
+        if( $fsCaseSensitive )
+        {
+            $optionalParam['ErrorAction'] = 'SilentlyContinue'
+        }
+        WhenRunningTask 'Task' -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } @optionalParam
+        if( $fsCaseSensitive )
         {
             ThenTaskNotCalled 
             ThenThrewException -Pattern 'outside\ the\ build\ root'
         }
         else
         {
-            ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path ($TestDrive.FullName.ToUpperInvariant()) -ChildPath 'abc.yml')}
+            ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path ($TestDrive.FullName) -ChildPath 'abc.yml')}
             ThenPipelineSucceeded
         }
     }

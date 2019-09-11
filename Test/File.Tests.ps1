@@ -253,7 +253,7 @@ Describe 'File.when the path is outside root' {
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenError -Matches 'outside\ of\ the\ build\ root'
+        ThenError -Matches 'outside\ the\ build\ root'
     }
 }
 
