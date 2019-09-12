@@ -3,11 +3,11 @@ function New-WhiskeyFile
     [Whiskey.Task('File')]
     [CmdletBinding()]
     param(
-        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false)]
-        [string[]]$Path,
-
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent)]
+        [string[]]$Path,
 
         [string]$Content,
 
@@ -25,17 +25,21 @@ function New-WhiskeyFile
                              -Message ('Path "{0}" is a directory but must be a file.' -f $item)
             return
         }
+
         if( -not (Test-Path -Path $item) )
         {
-            New-Item -Path $item -Value $Content -Force -ErrorAction Stop
+            New-Item -Path $item -Force -ErrorAction Stop
         }
+
         if( $Touch )
         {
             (Get-Item $item).LastWriteTime = Get-Date
         }
+
         if( $Content ) 
         {
             Set-Content -Path $item -Value $Content
         }
+
     }
 }

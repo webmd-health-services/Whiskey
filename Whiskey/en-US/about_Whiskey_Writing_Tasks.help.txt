@@ -186,7 +186,7 @@ LONG DESCRIPTION
             Set-StrictMode -Version 'Latest'
         }
 
-    By default, users are allowed to pass any relative and absolute paths that are to items in or under the build root. To allow paths outside the build root, set the 'AllowOutsideBuildRoot' property. This is *not* recommended.
+    By default, users are allowed to pass any relative and absolute paths for items under the build root. To allow paths outside the build root, set the 'AllowOutsideBuildRoot' property. This is *not* recommended.
 
         function FUNCTION_NAME
         {

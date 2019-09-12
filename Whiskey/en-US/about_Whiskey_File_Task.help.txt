@@ -7,14 +7,14 @@ SUMMARY
 
 
 DESCRIPTION
-    The `File` task manages files. Pass the path to one or more files to the `Path` property. If you pass a path to a file that doesn't exist, it will be created, along with all necessary parent directories. The task uses PowerShell's `New-Item` cmdlet to create the file. By default, an empty file is created. To give the file specific content, pass that content to the Content property.
+    The `File` task manages files. Pass the path to one or more files to the `Path` property. If you pass a path to a file that doesn't exist, it will be created, along with all necessary parent directories. The task uses PowerShell's `New-Item` cmdlet to create the file. By default, an empty file is created. To give the file specific content, pass that content to the `Content` property.
 
-    If you pass paths of files that exist, or pass a path that contains wildcards, the task won't do anything to those existing files. If you pass the `Touch` property, it will update the file's last write time to the current date/time. If you pass the `Content` property, each file's content will be reset to that value.
+    If you pass paths of files that exist, the task won't do anything to those existing files. If you pass the `Touch` property, it will update each file's last write time to the current date/time. If you pass the `Content` property, each file's content will be reset to that value.
 
 PROPERTIES
-    * `Path` (**mandatory**): one or more paths to file to create.
+    * `Path` (**mandatory**): a list of paths to create, update, or touch. Wildcards supported when updating or touching files.
     * `Content`: the content of the file.
-    * `Touch`: update the access date and/or modification date of a file
+    * `Touch`: if `true`, sets the file's last modification date to the current date/time. The default is `false`.
 
 EXAMPLES
 
@@ -33,7 +33,7 @@ EXAMPLES
         - File:
             Path: file.txt
 
-    In this example, an empty file is created
+    In this example, an empty file is created.
 
     ## Example 3
 
@@ -42,4 +42,4 @@ EXAMPLES
             Path: file.txt
             Touch: true
 
-    In this example, the access time and date of "file.txt" is updated.
+    This example demonstrates how to update the last modified timestamp of a file to the current date/time.

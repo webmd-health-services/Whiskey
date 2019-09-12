@@ -353,7 +353,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of buildroot an
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowOutsideBuildRoot)]
+                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,AllowOutsideBuildRoot)]
                 [string]$Path
             )
             $global:taskCalled = $true
@@ -372,7 +372,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of buildroot an
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',MustExist=$false,AllowOutsideBuildRoot=$false)]
+                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,AllowOutsideBuildRoot=$false)]
                 [string]$Path
                 
             )
@@ -431,7 +431,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is absolute') {
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
+                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
                 [string]$Path
             )
             $global:taskCalled = $true
@@ -450,7 +450,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path doesn''t exist but has a w
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
+                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
                 [string]$Path
             )
             $global:taskCalled = $true
@@ -477,7 +477,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path does not start with the co
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,MustExist=$false,PathType='File')]
+                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
                 [string]$Path
             )
             $global:taskCalled = $true
@@ -659,7 +659,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to t
         {
             [Whiskey.Task('Task')]
             param(
-                [Whiskey.Tasks.ValidatePath(MustExist=$false)]
+                [Whiskey.Tasks.ValidatePath(AllowNonexistent)]
                 [string]$Path
             )
             $global:taskCalled = $true

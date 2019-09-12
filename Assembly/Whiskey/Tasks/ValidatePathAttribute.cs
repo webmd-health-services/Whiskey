@@ -8,7 +8,7 @@ namespace Whiskey.Tasks
 
         public string PathType { get; set; }
 
-        public bool MustExist { get; set; } = true;
+        public bool AllowNonexistent { get; set; }
 
         public bool AllowOutsideBuildRoot { get; set; }
     }

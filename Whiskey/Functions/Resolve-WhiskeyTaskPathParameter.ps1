@@ -49,7 +49,7 @@ function Resolve-WhiskeyTaskPathParameter
         }
 
         $optionalParams = @{}
-        if( -not $ValidateAsPathAttribute.MustExist)
+        if( $ValidateAsPathAttribute.AllowNonexistent )
         {
             $optionalParams['ErrorAction'] = 'Ignore'
         }
@@ -67,7 +67,7 @@ function Resolve-WhiskeyTaskPathParameter
 
         if( -not $result ) 
         {
-            if( $ValidateAsPathAttribute.MustExist )
+            if( -not $ValidateAsPathAttribute.AllowNonexistent )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext `
                                  -Message ('{0}[{1}] "{2}" does not exist.' -f $CmdParameter.Name,$pathIdx,$Path)
@@ -102,7 +102,7 @@ function Resolve-WhiskeyTaskPathParameter
         }
 
         $expectedPathType = $ValidateAsPathAttribute.PathType  
-        if( $expectedPathType -and $ValidateAsPathAttribute.MustExist )
+        if( $expectedPathType -and -not $ValidateAsPathAttribute.AllowNonexistent )
         {
             $pathType = 'Leaf'
             if( $expectedPathType -eq 'Directory' )

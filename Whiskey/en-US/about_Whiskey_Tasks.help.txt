@@ -14,7 +14,7 @@ LONG DESCRIPTION
     * `Delete`: deletes files.
     * `DotNet`: runs `dotnet` commands.
     * `Exec`: runs an executable/program.
-    * `File`: creates and modifies files.
+    * `File`: creates, updates, or touches files.
     * `GetPowerShellModule`: installs a PowerShell module.
     * `GitHubRelease`: creates a release in GitHub and uploads files for that
       release.

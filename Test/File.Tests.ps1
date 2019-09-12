@@ -7,7 +7,6 @@ $failed = $false
 $context = $null
 $buildRoot = $null
 $variables = $null
-$dates = $null
 
 function Init
 {
@@ -15,36 +14,33 @@ function Init
     $script:context = $null
     $script:buildRoot = $TestDrive.FullName
     $script:variables = @{}
-    $script:dates = @{}
 }
 
 function GivenDirectory
 {
-   param(
-       $Path
-   )
+    param(
+        $Path
+    )
 
-   $Path = Join-Path -Path $buildRoot -ChildPath $Path
-   New-Item -Path $Path -ItemType 'directory'
+    $Path = Join-Path -Path $buildRoot -ChildPath $Path
+    New-Item -Path $Path -ItemType 'directory'
 }
 
 function GivenFile
 {
-   param(
-       $Path,
-       $Contains
-   )
-  $Path = Join-Path -Path $buildRoot -ChildPath $Path
-  if ($Contains)
-  {
-       New-Item -Path $Path -Value $Contains
-  }
-  else
-  {
-       New-Item -Path $Path
-  }
-  $script:dates[$Path] = (Get-Item $Path).LastWriteTime
-  Start-Sleep -Seconds 1
+    param(
+        $Path,
+        $Contains
+    )
+    $Path = Join-Path -Path $buildRoot -ChildPath $Path
+    if ($Contains)
+    {
+        New-Item -Path $Path -Value $Contains
+    }
+    else
+    {
+        New-Item -Path $Path
+    }
 }
 
 function GivenVariable
@@ -66,13 +62,15 @@ function GivenWhiskeyYml
     $Content | Set-Content -Path (Join-Path -Path $buildRoot -ChildPath 'whiskey.yml')
 }
 
-function ThenDate
+function ThenLastModified
 {
-   param(
-       $Path
-   )
-   $Path = Join-Path -Path $buildRoot -ChildPath $Path
-   (Get-Item $Path).LastWriteTime | Should -BeGreaterThan $script:dates[$Path]
+    param(
+        $Path,
+        $After
+    )
+
+    $Path = Join-Path -Path $buildRoot -ChildPath $Path
+    (Get-Item $Path).LastWriteTime | Should -BeGreaterThan $After
 }
 
 function ThenFile
@@ -98,6 +96,18 @@ function ThenFile
         $actualContent | Should -BeNullOrEmpty
         Get-Item -Path $Path | Select-Object -Expand 'Length' | Should -Be 0
     }
+}
+
+function ThenNotFile
+{
+    param(
+        $Path
+    )
+
+    $Path = Join-Path -Path $buildroot -ChildPath $Path
+    $Path = [IO.Path]::GetFullPath($Path)
+
+    $Path | Should -Not -Exist
 }
 
 function ThenSuccess
@@ -140,7 +150,8 @@ function WhenRunningTask
             Add-WhiskeyVariable -Context $context -Name $key -Value $variables[$key]
         }
 
-        $tasks = $context.Configuration['Build'] | 
+        $tasks = 
+            $context.Configuration['Build'] | 
             Where-Object { $_.ContainsKey('File') } | 
             ForEach-Object { $_['File'] }
         
@@ -253,6 +264,7 @@ Describe 'File.when the path is outside root' {
 '@
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
+        ThenNotFile -Path '../file.txt'
         ThenError -Matches 'outside\ the\ build\ root'
     }
 }
@@ -295,7 +307,7 @@ Describe 'File.when a subdirectory in the path does not exist' {
             Path: notreal\stillnotreal\file.txt
             Content: 'I am real.'
 '@
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask
         ThenSuccess
         ThenFile -Path 'notreal\stillnotreal\file.txt' -Contains 'I am real.'
     }
@@ -313,47 +325,30 @@ Describe 'File.when multiple files are given.' {
             - file3.txt
             Content: 'file'
 '@
-    WhenRunningTask
-    ThenSuccess
-    ThenFile -Path 'file.txt' -Contains 'file'
-    ThenFile -Path 'file2.txt' -Contains 'file'
-    ThenFile -Path 'file3.txt' -Contains 'file'
-    }
-}
-
-Describe 'File.when one of the paths is invalid' {
-    It 'should stop at first invalid path' {
-        Init
-        GivenDirectory -Path 'file2.txt'
-        GivenWhiskeyYml @'
-        Build:
-        - File:
-            Path:
-            - file.txt
-            - file2.txt
-            - file3.txt
-            Content: 'file'
-'@
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenError -Matches 'Path '{0}' is a directory but must be a file.'
-    ThenFile -Path 'file.txt' -Contains 'file'
+        WhenRunningTask
+        ThenSuccess
+        ThenFile -Path 'file.txt' -Contains 'file'
+        ThenFile -Path 'file2.txt' -Contains 'file'
+        ThenFile -Path 'file3.txt' -Contains 'file'
     }
 }
 
 Describe 'File.when Touch specified and file exists' {
     It 'should update the last write time and not change content' {
         Init
-        GivenFile 'file.txt'
+        GivenFile -Path 'file.txt' -Contains 'This is a file.'
+        $currentDate = Get-Date
+        Start-Sleep 1
         GivenWhiskeyYml @'
         Build:
         - File:
             Path: file.txt
             Touch: True
 '@
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask
         ThenSuccess
-        ThenDate 'file.txt'
-        ThenFile -Path 'file.txt' -Contains ''
+        ThenLastModified -Path 'file.txt' -After $currentDate
+        ThenFile -Path 'file.txt' -Contains 'This is a file.'
     }
 }
  
@@ -363,6 +358,8 @@ Describe 'File.when multiple files are given and Touch is true.' {
         GivenFile -Path 'file.txt'
         GivenFile -Path 'file2.txt'
         GivenFile -Path 'file3.txt'
+        $currentDate = Get-Date
+        Start-Sleep 1
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -374,9 +371,9 @@ Describe 'File.when multiple files are given and Touch is true.' {
 '@
         WhenRunningTask
         ThenSuccess
-        ThenDate -Path 'file.txt'
-        ThenDate -Path 'file2.txt'
-        ThenDate -Path 'file3.txt'
+        ThenLastModified -Path 'file.txt' -After $currentDate
+        ThenLastModified -Path 'file2.txt' -After $currentDate
+        ThenLastModified -Path 'file3.txt' -After $currentDate
     }
 }
 
