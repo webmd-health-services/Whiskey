@@ -10,31 +10,23 @@ function Install-WhiskeyTool
 
     `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
 
-    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
-
-    .EXAMPLE
-    #change example
-    Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-
-    Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed.
+    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.RequiresToolAttribute] $ToolInfo,
+        [Whiskey.RequiresToolAttribute]$ToolInfo,
         # The attribute that defines what tool is necessary.
 
         [Parameter(Mandatory)]
-        [string] $InstallRoot,
+        [string]$InstallRoot,
         # The directory where you want the tools installed.
 
         [Parameter(Mandatory)]
-        [hashtable] $TaskParameter,
+        [hashtable]$TaskParameter,
         # The task parameters for the currently running task.
         
-
-        [Parameter()]
-        [Switch] $InCleanMode
+        [Switch]$InCleanMode
         # Running in clean mode, so don't install the tool if it isn't installed.
     )
 
@@ -125,7 +117,7 @@ function Install-WhiskeyTool
                     }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $name)
+                        throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                     }
                 }
             }

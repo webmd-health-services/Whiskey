@@ -11,15 +11,15 @@ function Invoke-WhiskeyTask
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [Whiskey.Context] $TaskContext,
+        [Whiskey.Context]$TaskContext,
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
 
         [Parameter(Mandatory=$true)]
-        [string] $Name,
+        [string]$Name,
         # The name of the task.
 
         [Parameter(Mandatory=$true)]
-        [hashtable] $Parameter
+        [hashtable]$Parameter
         # The parameters/configuration to use to run the task.
     )
 
@@ -68,11 +68,9 @@ function Invoke-WhiskeyTask
     function Merge-Parameter
     {
         param(
-            [hashtable]
-            $SourceParameter,
+            [hashtable]$SourceParameter,
 
-            [hashtable]
-            $TargetParameter
+            [hashtable]$TargetParameter
         )
 
         foreach( $key in $SourceParameter.Keys )
@@ -92,57 +90,54 @@ function Invoke-WhiskeyTask
         }
     }
 
-    function Get-RequiredTool #gets 
+    function Get-RequiredTool
     {
         param(
             $CommandName
         )
 
-        $cmd = Get-Command -Name $CommandName -ErrorAction Ignore #gets full command object
-        if( -not $cmd -or -not (Get-Member -InputObject $cmd -Name 'ScriptBlock') ) #if command dne
+        $cmd = Get-Command -Name $CommandName -ErrorAction Ignore 
+        if( -not $cmd -or -not (Get-Member -InputObject $cmd -Name 'ScriptBlock') )
         {
             return
         }
 
         $cmd.ScriptBlock.Attributes |
-            Where-Object { $_ -is [Whiskey.RequiresToolAttribute] } #returns command attributes that are of type requirestoolattribute
+            Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
-    #get all known whiskey tasks
     $knownTasks = Get-WhiskeyTask -Force
-    #find task by name
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
-    #if cannot find task by name
     if( -not $task )
     {
-        $task = $knownTasks | Where-Object { $_.Aliases -contains $Name } #check if using aliases
-        $taskCount = ($task | Measure-Object).Count #check if found in aliases
-        if( $taskCount -gt 1 ) #$knownTasks returned several tasks when name searched in aliases
+        $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
+        $taskCount = ($task | Measure-Object).Count
+        if( $taskCount -gt 1 )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks with alias "{1}". Please update to use one of these task names: {2}.' -f $taskCount,$Name,(($task | Select-Object -ExpandProperty 'Name') -join ', '))
             return
         }
-        if( $task -and $task.WarnWhenUsingAlias ) #warn not to use aliases
+        if( $task -and $task.WarnWhenUsingAlias )
         {
             Write-Warning -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
         }
     }
 
-    if( -not $task ) #if no task found still
+    if( -not $task )
     {
-        $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object #collect list of known task names, throw task not found error
+        $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object
         throw ('{0}: {1}[{2}]: ''{3}'' task does not exist. Supported tasks are:{4} * {5}' -f $TaskContext.ConfigurationPath,$Name,$TaskContext.TaskIndex,$Name,[Environment]::NewLine,($knownTaskNames -join ('{0} * ' -f [Environment]::NewLine)))
     }
 
-    $taskCount = ($task | Measure-Object).Count #check for multiple names found
+    $taskCount = ($task | Measure-Object).Count
     if( $taskCount -gt 1 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks named "{1}". We don''t know which one to use. Please make sure task names are unique.' -f $taskCount,$Name)
         return
     }
 
-    $TaskContext.TaskName = $Name #assign context name to found name
+    $TaskContext.TaskName = $Name
 
-    if( $task.Obsolete ) #check if task flagged obsolete, warn
+    if( $task.Obsolete )
     {
         $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $task.Name
         if( $task.ObsoleteMessage )
@@ -152,52 +147,52 @@ function Invoke-WhiskeyTask
         Write-WhiskeyWarning -TaskContext $TaskContext -Message $message
     }
 
-    if( -not $task.Platform.HasFlag($CurrentPlatform) ) #check for platform errors
+    if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
         Write-Error -Message ('Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f $task.Name,$task.Platform,$CurrentPlatform) -ErrorAction Stop
         return
     }
 
-    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) ) #??
+    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
     {
         Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
     }
 
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null #converts strings in $parameter to objects?
+    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
     [hashtable]$taskProperties = $Parameter.Clone()
-    $commonProperties = @{} #hashtable for holding common properties
+    $commonProperties = @{}
     foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyOnPlatform', 'ExceptOnPlatform' ) )
     {
         if ($taskProperties.ContainsKey($commonPropertyName))
         {
-            $commonProperties[$commonPropertyName] = $taskProperties[$commonPropertyName] #copies common properties into $commonProperties
-            $taskProperties.Remove($commonPropertyName) #removes common properties from $taskProperties
+            $commonProperties[$commonPropertyName] = $taskProperties[$commonPropertyName]
+            $taskProperties.Remove($commonPropertyName)
         }
     }
 
-    $workingDirectory = $TaskContext.BuildRoot #setting buildroot
+    $workingDirectory = $TaskContext.BuildRoot
     if( $Parameter['WorkingDirectory'] )
     {
         $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
     }
 
     $taskTempDirectory = ''
-    $requiredTools = Get-RequiredTool -CommandName $task.CommandName #calls get-required tool, returns array of requires tool attributes
+    $requiredTools = Get-RequiredTool -CommandName $task.CommandName
     $startedAt = Get-Date
     $result = 'FAILED'
-    $currentDirectory = [IO.Directory]::GetCurrentDirectory() #get the directory invoke-whiskeytask is in
-    Push-Location -Path $workingDirectory #'cd' current directory to buildroot, this function exists in $currentDirectory
-    [IO.Directory]::SetCurrentDirectory($workingDirectory) #set current directory to buildroot
+    $currentDirectory = [IO.Directory]::GetCurrentDirectory()
+    Push-Location -Path $workingDirectory
+    [IO.Directory]::SetCurrentDirectory($workingDirectory)
     try
     {
-        if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties) #determine if the task should be skipped
+        if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
         {
             $result = 'SKIPPED'
             return
         }
 
-        if( $TaskContext.ShouldClean ) #if running in clean mode
+        if( $TaskContext.ShouldClean )
         {
             if( -not $task.SupportsClean )
             {
@@ -207,7 +202,7 @@ function Invoke-WhiskeyTask
             }
         }
 
-        foreach( $requiredTool in $requiredTools ) #install each tool specified for task
+        foreach( $requiredTool in $requiredTools )
         {
             Install-WhiskeyTool -ToolInfo $requiredTool `
                                 -InstallRoot $TaskContext.BuildRoot `

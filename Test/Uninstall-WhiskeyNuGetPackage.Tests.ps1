@@ -4,11 +4,9 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [String]$WithName = 'NUnit.Runners'
     )
     $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
     if( -not $WithVersion )
@@ -24,11 +22,9 @@ function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [String]$WithName = 'NUnit.Runners'
     )
 
     $Global:Error.Clear()
@@ -39,41 +35,31 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [String]$WithName = 'NUnit.Runners'
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
-    It 'should successfully uninstall the NuGet Package' {
-        $uninstalledPath | Should not Exist
-    }
+    $uninstalledPath | Should not Exist
 
-    It 'Should not write any errors' {
-        $Global:Error | Should beNullOrEmpty
-    }
+    $Global:Error | Should beNullOrEmpty
 }
 
 function ThenNuGetPackageNotUninstalled
 {
-        [CmdLetBinding()]
+    [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners',
+        [String]$WithName = 'NUnit.Runners',
 
-        [switch]
-        $PackageShouldExist,
+        [switch]$PackageShouldExist,
 
-        [string]
-        $WithError
+        [string]$WithError
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -82,40 +68,40 @@ function ThenNuGetPackageNotUninstalled
 
     if( -not $PackageShouldExist )
     {
-        It 'should never have installed the package' {
-            $uninstalledPath | Should not Exist
-        }
+        $uninstalledPath | Should not Exist
     }
     else
     {
-        It 'should not have uninstalled the existing package' {
-            $uninstalledPath | Should Exist
-        }
+        $uninstalledPath | Should Exist
         Remove-Item -Path $uninstalledPath -Recurse -Force
     }
 
-    It 'Should write errors' {
-        $Global:Error | Should Match $WithError
-    }
+    $Global:Error | Should Match $WithError
 }
 
 if( $IsWindows )
 {
     Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package' {
-        GivenAnInstalledNuGetPackage
-        WhenUninstallingNuGetPackage
-        ThenNuGetPackageUnInstalled
+        It 'should successfully uninstall the NuGet Package' {
+            GivenAnInstalledNuGetPackage
+            WhenUninstallingNuGetPackage
+            ThenNuGetPackageUnInstalled
+        }
     }
 
     Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package with an empty Version' {
-        GivenAnInstalledNuGetPackage -WithVersion ''
-        WhenUninstallingNuGetPackage -WithVersion ''
-        ThenNuGetPackageUnInstalled -WithVersion ''
+        It 'should successfully uninstall the NuGet Package' {
+            GivenAnInstalledNuGetPackage -WithVersion ''
+            WhenUninstallingNuGetPackage -WithVersion ''
+            ThenNuGetPackageUnInstalled -WithVersion ''
+        }
     }
     
     Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package with a wildcard Version' {
-        GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+        It 'should never have installed the package' {
+            GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+            WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+            ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+        }
     }    
 }

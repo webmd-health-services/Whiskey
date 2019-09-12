@@ -15,9 +15,14 @@ function Invoke-WhiskeyNUnit3Task
         [hashtable] $TaskParameter
     )
 
+    # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
+    # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    # Due to a bug in NuGet we can't search for and install packages with wildcards (e.g. 3.*), so we're hardcoding a version for now. See Resolve-WhiskeyNuGetPackageVersion for more details.
+    # (This is the version of NUnit.Console/NUnit.ConsoleRunner which may differ from the core NUnit library version.)
     if( $TaskParameter['NUnitVersion'] )
     {
         $version = $TaskParameter['NUnitVersion']
@@ -28,17 +33,13 @@ function Invoke-WhiskeyNUnit3Task
         }
     }
 
-    # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
-    # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
     $nunitPath = $TaskParameter['NUnitPath']
     $nunitConsolePath = $TaskParameter['NUnitConsolePath']
     $openCoverPath = $TaskParameter['OpenCoverPath']
     $reportGeneratorPath = $TaskParameter['reportGeneratorPath']
 
-    # Due to a bug in NuGet we can't search for and install packages with wildcards (e.g. 3.*), so we're hardcoding a version for now. See Resolve-WhiskeyNuGetPackageVersion for more details.
-    # (This is the version of NUnit.Console/NUnit.ConsoleRunner which may differ from the core NUnit library version.)
     $reportFormat = 'nunit3';
-    if ($TaskParameter['ResultFormat'])
+    if( $TaskParameter['ResultFormat'] )
     {
         $reportFormat = $TaskParameter['ResultFormat']
     }
@@ -47,26 +48,25 @@ function Invoke-WhiskeyNUnit3Task
     $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('{0}+{1}.xml' -f  $reportFormat, [IO.Path]::GetRandomFileName())
     $nunitReportParam = '--result={0};format={1}' -f $nunitReport, $reportFormat
 
-    #stop here if init only
     if( $TaskContext.ShouldInitialize )
     {
         return
     }
 
     $openCoverArgument = @()
-    if ($TaskParameter['OpenCoverArgument'])
+    if( $TaskParameter['OpenCoverArgument'] )
     {
         $openCoverArgument = $TaskParameter['OpenCoverArgument']
     }
 
     $reportGeneratorArgument = @()
-    if ($TaskParameter['ReportGeneratorArgument'])
+    if( $TaskParameter['ReportGeneratorArgument'] )
     {
         $reportGeneratorArgument = $TaskParameter['ReportGeneratorArgument']
     }
 
     $framework = '4.0'
-    if ($TaskParameter['Framework'])
+    if( $TaskParameter['Framework'] )
     {
         $framework = $TaskParameter['Framework']
     }
@@ -74,7 +74,7 @@ function Invoke-WhiskeyNUnit3Task
 
     $testFilter = ''
     $testFilterParam = ''
-    if ($TaskParameter['TestFilter'])
+    if( $TaskParameter['TestFilter'] )
     {
         $testFilter = $TaskParameter['TestFilter'] | ForEach-Object { '({0})' -f $_ }
         $testFilter = $testFilter -join ' or '
@@ -82,7 +82,7 @@ function Invoke-WhiskeyNUnit3Task
     }
 
     $nunitExtraArgument = ''
-    if ($TaskParameter['Argument'])
+    if( $TaskParameter['Argument'] )
     {
         $nunitExtraArgument = $TaskParameter['Argument']
     }
@@ -90,7 +90,7 @@ function Invoke-WhiskeyNUnit3Task
     $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
 
     $coverageFilter = ''
-    if ($TaskParameter['CoverageFilter'])
+    if( $TaskParameter['CoverageFilter'] )
     {
         $coverageFilter = $TaskParameter['CoverageFilter'] -join ' '
     }
@@ -127,7 +127,7 @@ function Invoke-WhiskeyNUnit3Task
         return
     }
 
-    if (-not $TaskParameter['Path'])
+    if( -not $TaskParameter['Path'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
 
@@ -171,7 +171,7 @@ function Invoke-WhiskeyNUnit3Task
     $openCoverExitCode = 0
     $openCoverExitCodeOffset = 1000
 
-    if (-not $disableCodeCoverage)
+    if( -not $disableCodeCoverage )
     {
 
         $path = $path | ForEach-Object { '\"{0}\"' -f $_ }
@@ -217,19 +217,19 @@ function Invoke-WhiskeyNUnit3Task
 
     }
 
-    if ($reportGeneratorExitCode -ne 0)
+    if( $reportGeneratorExitCode -ne 0 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ReportGenerator didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $reportGeneratorConsolePath,$reportGeneratorExitCode)
         return
     }
-    elseif ($openCoverExitCode -ne 0)
+    elseif( $openCoverExitCode -ne 0 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('OpenCover didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $openCoverConsolePath, $openCoverExitCode)
         return
     }
-    elseif ($nunitExitCode -ne 0)
+    elseif( $nunitExitCode -ne 0 )
     {
-        if (-not (Test-Path -Path $nunitReport -PathType Leaf))
+        if( -not (Test-Path -Path $nunitReport -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit3 didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $nunitConsolePath,$nunitExitCode)
             return

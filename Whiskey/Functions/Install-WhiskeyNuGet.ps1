@@ -11,13 +11,13 @@ function Install-WhiskeyNuGet
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]
+        [string]$DownloadRoot,
         # Where to install NuGet.
-        $DownloadRoot,
+        
 
-        [string]
+        [string]$Version
         # The version to download.
-        $Version
+        
     )
 
     Set-StrictMode -version 'Latest'  

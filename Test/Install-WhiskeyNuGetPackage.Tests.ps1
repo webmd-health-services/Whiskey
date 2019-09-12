@@ -1,4 +1,5 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
 function Init
 {
     $script:threwException = $false
@@ -12,7 +13,7 @@ function WhenRunningNuGetInstall
     [CmdletBinding()]
     param(
         $Package,
-        $Version,
+        $Version
     )
     $Global:Error.Clear()
     try
@@ -41,7 +42,7 @@ function ThenInvalidPackage
 
         $Global:Error | Should -Not -BeNullOrEmpty
 
-        if ($script:result)
+        if ( $script:result )
         {
             $script:result | Should -Not -Exist
         }

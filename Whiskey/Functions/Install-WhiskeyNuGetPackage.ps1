@@ -3,16 +3,14 @@ function Install-WhiskeyNuGetPackage {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string] $Name,
+        [string]$Name,
         # The name of the NuGet package to download. 
         
-
-        [Parameter()]
-        [string] $Version,
+        [string]$Version,
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
 
         [Parameter(Mandatory)]
-        [string] $DownloadRoot
+        [string]$DownloadRoot
         # The root directory where the tools should be downloaded. The default is your build root.
         #
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
@@ -55,14 +53,3 @@ function Install-WhiskeyNuGetPackage {
         }
         return $nuGetRoot
 }
-
-
-
-
-
-
-
-
-
-
-

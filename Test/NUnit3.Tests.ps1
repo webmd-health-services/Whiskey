@@ -63,7 +63,7 @@ function Init
 function BuildNunit2PassingTest
 {
     $nunit2PassingAssembly = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Debug\NUnit2PassingTest.dll'
-    if (Test-Path -Path $nunit2PassingAssembly)
+    if( Test-Path -Path $nunit2PassingAssembly )
     {
        return    
     }
@@ -232,11 +232,9 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode,
+        [Switch]$InCleanMode,
 
-        [Switch]
-        $WithoutMock
+        [Switch]$WithoutMock
     )
 
     $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
@@ -435,7 +433,7 @@ function ThenNUnitReportGenerated
 
     $nunitReport | Should -Not -BeNullOrEmpty -Because 'test results should be saved'
     $nunitReport | Select-Object -ExpandProperty 'Name' | Should -Match "^$($ResultFormat)\+.{8}\..{3}\.xml"
-    if ($ResultFormat -eq 'nunit3') 
+    if( $ResultFormat -eq 'nunit3' ) 
     {
         Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-run' | Should -Not -BeNullOrEmpty
     }
@@ -564,7 +562,7 @@ Describe 'NUnit3.when given bad Path' {
 }
 
 Describe 'NUnit3.when NuGet package fails to install' {
-    foreach ($package in @('NUnit.Console', 'NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
+    foreach( $package in @('NUnit.Console', 'NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator') )
     {
         Context ('for missing "{0}" module' -f $package) {
             It 'should fail' {
@@ -581,7 +579,7 @@ Describe 'NUnit3.when NuGet package fails to install' {
 }
 
 Describe 'NUnit3.when module executables cannot be found' {
-    foreach ($executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe'))
+    foreach( $executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe') )
     {
         Context ('for missing "{0}" executable' -f $executable) {
             It 'should fail' {

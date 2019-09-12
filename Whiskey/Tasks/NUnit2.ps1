@@ -8,11 +8,9 @@ function Invoke-WhiskeyNUnit2Task
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context] $TaskContext,
-        
 
         [Parameter(Mandatory=$true)]
         [hashtable] $TaskParameter
-        
     )
 
     Set-StrictMode -version 'latest'
@@ -72,7 +70,7 @@ function Invoke-WhiskeyNUnit2Task
     $nunitRoot = Get-Item -Path $nunitRoot | Select-Object -First 1
     $nunitRoot = Join-Path -Path $nunitRoot -ChildPath 'tools'
     $nunitConsolePath = Join-Path -Path $nunitRoot -ChildPath 'nunit-console.exe' -Resolve
-    if( -not ($nunitConsolePath))
+    if( -not ($nunitConsolePath) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('{0} {1} was installed, but couldn''t find nunit-console.exe at ''{2}''.' -f $package,$version,$nunitConsolePath)
         return
@@ -81,7 +79,7 @@ function Invoke-WhiskeyNUnit2Task
     Write-WhiskeyTiming -Message ('Installing OpenCover.')
     $openCoverRoot = $TaskParameter['OpenCoverPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
-    if( -not (Test-Path -Path $openCoverRoot -PathType Container))
+    if( -not (Test-Path -Path $openCoverRoot -PathType Container) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package OpenCover {0}.' -f $version)
         return
@@ -98,7 +96,7 @@ function Invoke-WhiskeyNUnit2Task
     Write-WhiskeyTiming -Message ('Installing ReportGenerator.')
     $reportGeneratorRoot = $TaskParameter['ReportGeneratorPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
-    if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container))
+    if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package ReportGenerator.' -f $version)
         return
@@ -118,7 +116,7 @@ function Invoke-WhiskeyNUnit2Task
     }
 
     # Be sure that the Taskparameter contains a 'Path'.
-    if( -not ($TaskParameter.ContainsKey('Path')))
+    if( -not ($TaskParameter.ContainsKey('Path')) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g.
 

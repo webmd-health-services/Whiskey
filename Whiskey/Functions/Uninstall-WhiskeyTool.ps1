@@ -49,15 +49,14 @@ function Uninstall-WhiskeyTool
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string] $Name,
+        [string]$Name,
         # The name of the tool to uninstall.
 
-        [Parameter()]
-        [string] $Version,
+        [string]$Version,
         # The tool version. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
 
         [Parameter(Mandatory=$true)]
-        [string] $InstallRoot
+        [string]$InstallRoot
         # The directory where the tool should be uninstalled from.
     )
 
