@@ -77,8 +77,7 @@ function Resolve-WhiskeyTaskPathParameter
 
             if( [Management.Automation.WildCardPattern]::ContainsWildcardCharacters($result) )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext `
-                                 -Message ('{0}[{1}] "{2}" did not resolve to anything.' -f $CmdParameter.Name,$pathIdx,$Path)
+                return
             }
         }
 
