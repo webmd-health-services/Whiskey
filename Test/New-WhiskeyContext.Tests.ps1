@@ -152,7 +152,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             $Configuration['PublishOn'] = $PublishingOn
         }
 
-        $buildInfo = New-WhiskeyBuildMetadataObject
+        $buildInfo = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyBuildMetadataObject'
         $buildInfo.BuildNumber = $BuildNumber
 
         Mock -CommandName 'Get-WhiskeyBuildMetadata' -ModuleName 'Whiskey' -MockWith { return $buildInfo }.GetNewClosure()

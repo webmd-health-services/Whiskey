@@ -39,7 +39,6 @@ function Invoke-WhiskeyPowerShell
         $argument = @{ }
     }
 
-    $moduleRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
     foreach( $scriptPath in $path )
     {
 
@@ -79,13 +78,13 @@ function Invoke-WhiskeyPowerShell
             $scriptPath = $using:ScriptPath
             $argument = $using:argument
             $serializedContext = $using:serializableContext
-            $moduleRoot = $using:moduleRoot
+            $whiskeyScriptRoot = $using:whiskeyScriptRoot
             $resultPath = $using:resultPath
             $passTaskContext = $using:passTaskContext
 
             Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
-                                            & (Join-Path -Path $moduleRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
+                                            & (Join-Path -Path $whiskeyScriptRoot -ChildPath 'Import-Whiskey.ps1' -Resolve -ErrorAction Stop)
                                         }
             [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
 

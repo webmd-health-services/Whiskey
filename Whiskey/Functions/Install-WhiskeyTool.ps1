@@ -65,14 +65,26 @@ function Install-WhiskeyTool
         $provider,$name = $ToolInfo.Name -split '::'
         if( -not $name )
         {
-            $name = $provider
-            $provider = ''
-        }
+            if( -not $IsWindows )
+            {
+                Write-Error -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
+                return
+            }
+            $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
+            if( -not $Version )
+            {
+                return
+            }
 
-        $version = $TaskParameter[$ToolInfo.VersionParameterName]
-        if( -not $version )
-        {
-            $version = $ToolInfo.Version
+            $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
+            $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
+            Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
+            if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
+            {
+               & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
+            }
+            return $nuGetRoot
         }
 
         switch( $provider )

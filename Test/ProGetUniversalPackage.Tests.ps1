@@ -42,7 +42,7 @@ function GivenBuildVersion
         $Version
     )
 
-    $script:buildVersion = New-WhiskeyVersionObject
+    $script:buildVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject'
     $buildVersion.SemVer2 = [SemVersion.SemanticVersion]$Version
     $buildVersion.Version = [Version]('{0}.{1}.{2}' -f $Version.Major,$Version.Minor,$Version.Patch)
     $buildVersion.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}.{1}.{2}-{3}' -f $Version.Major,$Version.Minor,$Version.Patch,$Version.Prerelease)

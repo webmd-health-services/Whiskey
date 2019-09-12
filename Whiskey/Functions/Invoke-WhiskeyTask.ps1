@@ -144,7 +144,7 @@ function Invoke-WhiskeyTask
         {
             $message = $task.ObsoleteMessage
         }
-        Write-WhiskeyWarning -TaskContext $TaskContext -Message $message
+        Write-WhiskeyWarning -Context $TaskContext -Message $message
     }
 
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
