@@ -74,6 +74,12 @@ function Resolve-WhiskeyTaskPathParameter
                 return
             }
             $result = [IO.Path]::GetFullPath($Path)
+
+            if( [Management.Automation.WildCardPattern]::ContainsWildcardCharacters($result) )
+            {
+                Stop-WhiskeyTask -TaskContext $TaskContext `
+                                 -Message ('{0}[{1}] "{2}" did not resolve to anything.' -f $CmdParameter.Name,$pathIdx,$Path)
+            }
         }
 
             
@@ -115,7 +121,7 @@ function Resolve-WhiskeyTaskPathParameter
             if( $invalidPaths )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $CmdParameter.Name -Message (@'
-Found {1} paths that should be a {0}, but aren''t:
+Found {1} paths that should be to a {0}, but aren''t:
 
 * {2}
 
