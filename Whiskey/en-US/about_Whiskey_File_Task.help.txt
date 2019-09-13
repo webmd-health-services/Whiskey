@@ -1,0 +1,45 @@
+TOPIC
+    about_Whiskey_File_Task
+
+
+SUMMARY
+    Creates and modifies files.
+
+
+DESCRIPTION
+    The `File` task manages files. Pass the path to one or more files to the `Path` property. If you pass a path to a file that doesn't exist, it will be created, along with all necessary parent directories. The task uses PowerShell's `New-Item` cmdlet to create the file. By default, an empty file is created. To give the file specific content, pass that content to the `Content` property.
+
+    If you pass paths of files that exist, the task won't do anything to those existing files. If you pass the `Touch` property, it will update each file's last write time to the current date/time. If you pass the `Content` property, each file's content will be reset to that value.
+
+PROPERTIES
+    * `Path` (**mandatory**): a list of paths to create, update, or touch. Wildcards supported when updating or touching files.
+    * `Content`: the content of the file.
+    * `Touch`: if `true`, sets the file's last modification date to the current date/time. The default is `false`.
+
+EXAMPLES
+
+    ## Example 1
+
+        Build:
+        - File
+            Path: non-existing_directory/file.txt
+            Content: 'File content.'
+
+    In this example, the path to file "file.txt" is created with the content "File content.".
+
+    ## Example 2
+        
+        Build:
+        - File:
+            Path: file.txt
+
+    In this example, an empty file is created.
+
+    ## Example 3
+
+        Build:
+        - File:
+            Path: file.txt
+            Touch: true
+
+    This example demonstrates how to update the last modified timestamp of a file to the current date/time.

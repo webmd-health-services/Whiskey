@@ -162,6 +162,8 @@
 * Task authors can now define task aliases. Use the `Aliases` property on your task's `TaskAttribute` attribute. Build scripts can then use your task using its name or one of its aliases. See `about_Whiskey_Writing_Tasks` for more information.
 * Whiskey tasks can now have named parameters and Whiskey will pass task properties from the build YAML file that match a parameter on a task's function. See about_Whiskey_Writing_Tasks for more information.
 * Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
+* Added a `File` task to create, update, and/or touch files.
+* ValidatePathAttribute can now allow paths outside of the build root with the `AllowOutsideBuildRoot` property and allow paths that do not exist by setting the `MustExist` property. See `about_Whiskey_Writing_Tasks` for more information.
 * Fixed: `DotNet` task fails to resolve recent version of the .NET Core SDK.
 * You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
