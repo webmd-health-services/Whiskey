@@ -248,22 +248,25 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
     It 'should uninstall the module' {
-        $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $powerShellModulesDirectoryName
+        $mockModulePath = '{0}\Foo\0.37.1\Foo.psd1' -f $powerShellModulesDirectoryName
         Init
         GivenFile $mockModulePath
-        WhenUninstallingTool 'PowerShellModule::Whiskey'
+        WhenUninstallingTool 'PowerShellModule::Foo'
         ThenFile $mockModulePath -Not -Exists
         ThenNoErrors
     }
 }
 
-Describe 'Uninstall-WhiskeyTool.when uninstalling a NuGet package' {
-    It 'should call uninstall the package' {
-        $mockPackagePath = '\packages\NUnit.Console.3.10.0\NUnit.Console.3.10.0.nupkg'
-        Init
-        GivenFile $mockPackagePath
-        WhenUninstallingTool 'NuGet::NUnit.Console'
-        ThenFile $mockPackagePath -Not -Exists
-        ThenNoErrors
+if ( $IsWindows )
+{
+    Describe 'Uninstall-WhiskeyTool.when uninstalling a NuGet package' {
+        It 'should call uninstall the package' {
+            $mockPackagePath = '\packages\NUnit.Console.3.10.0\NUnit.Console.3.10.0.nupkg'
+            Init
+            GivenFile $mockPackagePath
+            WhenUninstallingTool 'NuGet::NUnit.Console'
+            ThenFile $mockPackagePath -Not -Exists
+            ThenNoErrors
+        }
     }
 }
