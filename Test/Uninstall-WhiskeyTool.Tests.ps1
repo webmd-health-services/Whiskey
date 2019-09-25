@@ -36,11 +36,11 @@ function WhenUninstallingNuGetPackage
         $WithVersion = '2.6.4',
 
         [String]
-        $WithName = 'NUnit.Runners'
+        $WithName = 'NuGet::NUnit.Runners'
     )
 
     $Global:Error.Clear()
-    Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
+    Uninstall-WhiskeyTool -Name $WithName -Version $WithVersion -InstallRoot $TestDrive.FullName
 }
 
 function ThenNuGetPackageUninstalled

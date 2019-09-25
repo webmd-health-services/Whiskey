@@ -105,6 +105,15 @@ if( $IsWindows )
             Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
         }
     }
+
+    Describe 'Install-WhiskeyNuGetPackage.when install succeeded but path is missing' {
+        It 'should write errors' {
+            Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey'
+            WhenRunningNuGetInstall -Package 'Nunit.Runners' -Version '2.6.4'
+            Assert-MockCalled 'Invoke-Command' -ModuleName 'Whiskey'
+            ThenInvalidPackage -ExpectedError 'but\ the\ module\ was\ not\ found'
+        }
+    }
 }
 else
 {

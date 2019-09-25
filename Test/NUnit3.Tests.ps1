@@ -298,7 +298,7 @@ function WhenRunningTask
 
     if( $nunitVersion )
     {
-        $taskParameter['NUnitVersion'] = $nunitVersion
+        $taskParameter['Version'] = $nunitVersion
     }
 
     if ($InCleanMode)

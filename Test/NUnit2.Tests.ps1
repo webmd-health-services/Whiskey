@@ -173,18 +173,18 @@ function Invoke-NUnitTask
         $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
         if( $WhenRunningClean )
         {
-            $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-            $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
-            $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
-            $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath 'OpenCover.*'
-            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
-            $threwException | Should -BeFalse
-            $Global:Error | Should -BeNullorEmpty
-            $nunitPath | Should -Not -Exist
-            $oldNUnitPath | should -Exist
-            $openCoverPackagePath | Should -Not -Exist
-            $reportGeneratorPath | Should -Not -Exist
-            Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
+        #     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
+        #     $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
+        #     $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
+        #     $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath 'OpenCover.*'
+        #     $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
+        #     $threwException | Should -BeFalse
+        #     $Global:Error | Should -BeNullorEmpty
+        #     $nunitPath | Should -Not -Exist
+        #     $oldNUnitPath | should -Exist
+        #     $openCoverPackagePath | Should -Not -Exist
+        #     $reportGeneratorPath | Should -Not -Exist
+        #     Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
         }
         elseif( $ThatFails )
         {
@@ -388,7 +388,7 @@ function WhenRunningTask
         }
         if( $nunitVersion )
         {
-            $WithParameters['NUnitVersion'] = $nunitVersion
+            $WithParameters['Version'] = $nunitVersion
         }
         $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' | ForEach-Object { Write-Verbose -Message $_ ; $_ }
         $script:threwException = $false
