@@ -113,7 +113,7 @@
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
                             'Uninstall-WhiskeyNuGetPackage',
-                            'Unregister-WhiskeyEvent'
+                            'Unregister-WhiskeyEvent',
                             'Unregister-WhiskeyEvent',
                             'Write-WhiskeyInfo',
                             'Write-WhiskeyVerbose',
@@ -170,6 +170,7 @@
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
 * Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
 * Fixed: `Zip` task doesn't allow customzing file names in ZIP file.
+* Added: NuGet support for the `RequiresTool` task attribute.
 '@
         } # End of PSData hashtable
 

@@ -268,6 +268,7 @@ LONG DESCRIPTION
     * Node Modules
     * .NET Core SDK
     * PowerShell modules
+    * NuGet Packages
 
     ## Node
 
@@ -291,7 +292,7 @@ LONG DESCRIPTION
 
     To install a Node module, pass the name of the module (case-sensitive) to the `Whiskey.RequiresTool` attribute, prefixed with `NodeModule::`. For example,
 
-        [Whiskey.Requirestool('NodeModule::nsp', 'NspPath')]
+        [Whiskey.RequiresTool('NodeModule::nsp', 'NspPath')]
 
     would cause Whiskey to install the NSP module and send the path to its directory in the `NspPath` key of the `TaskParameter` hashtable when calling your task. The path will always be to the Node module's directory in the `node_modules` directory.
 
@@ -323,10 +324,21 @@ LONG DESCRIPTION
 
     To install a PowerShell module, add this to your task:
 
-        [Whiskey.RequiresTol('PowerShellModule::Whiskey','WhiskeyPath')]
+        [Whiskey.RequiresTool('PowerShellModule::Whiskey','WhiskeyPath')]
 
     The `WhiskeyPath` string is the name of the key where the path to the module root should be saved in the `$TaskParameter` hashtable passed to your task.
 
     Use the `Import-WhiskeyPowerShellModule` function in your task to import the module. Pass the name (or names) of the module to the `Import-WhiskeyPowerShellModule` function's `Name` parameter.
 
     Modules are saved to a directory in working directory of the task that requires it. The exact directory is an implementation detail, and is subject to change. Use the path as passed to your task.
+
+    ## NuGet
+
+    To install a NuGet Package, add this to your task:
+    
+        [Whiskey.RequiresTool('NuGet::NUnit.Console', 'ConsolePath',)]
+    
+    The `ConsolePath` string is the name of the key where the path to the package root should be saved in the `$TaskParameter` hashtable passed to your task.
+
+    Packages are saved to the packages directory in your build root.
+

@@ -1,16 +1,16 @@
 function Invoke-WhiskeyNUnit2Task
 {
     [Whiskey.Task("NUnit2",SupportsInitialize,Platform='Windows')]
-    [Whiskey.RequiresTool('NuGet::NUnit.Runners','NUnitPath',Version='2.6.4',VersionParameterName='NUnitVersion')]
+    [Whiskey.RequiresTool('NuGet::NUnit.Runners','NUnitPath',Version='2.6.4',VersionParameterName='Version')]
     [Whiskey.RequiresTool('NuGet::OpenCover','OpenCoverPath',VersionParameterName='OpenCoverVersion')]
     [Whiskey.RequiresTool('NuGet::ReportGenerator','ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [Whiskey.Context] $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory=$true)]
-        [hashtable] $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -version 'latest'
@@ -18,12 +18,12 @@ function Invoke-WhiskeyNUnit2Task
 
     $package = 'NUnit.Runners'
     $version = '2.6.4'
-    if( $TaskParameter['NUnitVersion'] )
+    if( $TaskParameter['Version'] )
     {
-        $version = $TaskParameter['NUnitVersion']
+        $version = $TaskParameter['Version']
         if( $version -notlike '2.*' )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 2.x version of NUnit.' -f $TaskParameter['NUnitVersion'])
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 2.x version of NUnit.' -f $TaskParameter['Version'])
             return
         }
     }

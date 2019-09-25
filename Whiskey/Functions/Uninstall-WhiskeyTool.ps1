@@ -17,7 +17,7 @@ function Uninstall-WhiskeyTool
     Demonstrates how to remove the `Pester` module from the default location.
         
     .EXAMPLE
-    Uninstall-WhiskeyTool -NugetPackageName 'NUnit.Runners' -Version '2.6.4'
+    Uninstall-WhiskeyTool -Name 'NuGet::NUnit.Runners' -Version '2.6.4'
 
     Demonstrates how to uninstall a specific NuGet Package. In this case, NUnit Runners version 2.6.4 would be removed from the default location. 
 
@@ -48,16 +48,16 @@ function Uninstall-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]$Name,
+        [Parameter(Mandatory)]
         # The name of the tool to uninstall.
+        [string]$Name,
 
-        [string]$Version,
-        # The tool version. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-
-        [Parameter(Mandatory=$true)]
-        [string]$InstallRoot
+        [Parameter(Mandatory)]
         # The directory where the tool should be uninstalled from.
+        [string]$InstallRoot,
+
+        # The tool version. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
+        [string]$Version
     )
 
     Set-StrictMode -Version 'Latest'

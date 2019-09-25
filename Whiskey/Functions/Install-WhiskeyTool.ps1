@@ -1,33 +1,37 @@
-
 function Install-WhiskeyTool
 {
-    <# does actual installation
+    <#
     .SYNOPSIS
     Downloads and installs tools needed by the Whiskey module.
 
     .DESCRIPTION
     The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
-    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
+    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet', and 'NuGet'.
 
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
+
+    .EXAMPLE
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\...\tooldir\' -TaskParameter $currentTaskProperties
+
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\...\tooldir\' -TaskParameter $currentTaskProperties -InCleanMode
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.RequiresToolAttribute]$ToolInfo,
         # The attribute that defines what tool is necessary.
+        [Whiskey.RequiresToolAttribute]$ToolInfo,
 
         [Parameter(Mandatory)]
-        [string]$InstallRoot,
         # The directory where you want the tools installed.
+        [string]$InstallRoot,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter,
         # The task parameters for the currently running task.
+        [hashtable]$TaskParameter,
         
-        [Switch]$InCleanMode
         # Running in clean mode, so don't install the tool if it isn't installed.
+        [Switch]$InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'
@@ -65,28 +69,15 @@ function Install-WhiskeyTool
         $provider,$name = $ToolInfo.Name -split '::'
         if( -not $name )
         {
-            if( -not $IsWindows )
-            {
-                Write-Error -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
-                return
-            }
-            $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
-            if( -not $Version )
-            {
-                return
-            }
-
-            $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
-            $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-            Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
-            if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
-            {
-               & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
-            }
-            return $nuGetRoot
+            $name = $provider
+            $provider = '' 
         }
 
+        $version = $TaskParameter[$ToolInfo.VersionParameterName]
+        if( -not $version )
+        {
+            $version = $ToolInfo.Version
+        }
         switch( $provider )
         {
             'NodeModule'
