@@ -308,7 +308,7 @@ If ( $IsWindows )
     Describe 'Install-WhiskeyTool.when failing to install a NuGet Package' {
         It 'should not install, and should throw an exception' {
             Init
-            WhenInstallingTool -Name 'NuGet::TROLOLO' -Version 'Version' -ErrorAction SilentlyContinue
+            WhenInstallingTool -Name 'NuGet::TROLOLO' -Version '1.1.1' -ErrorAction SilentlyContinue
             ThenDirectory 'packages\TROLOLO' -Not -Exists
             ThenThrewException -Regex 'failed\ to\ install'
         }
