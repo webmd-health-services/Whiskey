@@ -110,7 +110,11 @@ function ThenThrewException
     )
 
     $threwException | Should -Be $true
-    $Global:Error[0] | Should -Match $Regex
+
+    if( $Regex )
+    {
+        $Global:Error[0] | Should -Match $Regex
+    }
 }
 
 function WhenInstallingTool
@@ -310,7 +314,8 @@ If ( $IsWindows )
             Init
             WhenInstallingTool -Name 'NuGet::TROLOLO' -Version '1.1.1' -ErrorAction SilentlyContinue
             ThenDirectory 'packages\TROLOLO' -Not -Exists
-            ThenThrewException -Regex 'failed\ to\ install'
+            ThenThrewException
+            $Global:Error | Where-Object { $_ -match 'failed to install' } | Should -Not -BeNullOrEmpty
         }
     }
 
