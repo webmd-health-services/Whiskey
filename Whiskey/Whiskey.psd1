@@ -169,6 +169,7 @@
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
 * Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
 * Fixed: `Zip` task doesn't allow customzing file names in ZIP file.
+* Moved Whiskey's documentation to [GitHub](https://github.com/webmd-health-services/Whiskey/wiki).
 '@
         } # End of PSData hashtable
 
