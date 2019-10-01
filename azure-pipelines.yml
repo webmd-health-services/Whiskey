@@ -10,7 +10,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- powershell: dir env: | ft -auto
+- powershell: "dir env: | ft -auto"
   displayName: 'Run a one-line script'
 
 - script: |
