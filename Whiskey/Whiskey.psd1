@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.42.0'
+    ModuleVersion = '0.43.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -157,18 +157,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `Version` task uses the last matching item in the prerelease label branch map instead of the first match.
-* NUnit3 task supports running NUnit2 tests and uses version 3.10 of ConsoleRunner.
-* Task authors can now define task aliases. Use the `Aliases` property on your task's `TaskAttribute` attribute. Build scripts can then use your task using its name or one of its aliases. See `about_Whiskey_Writing_Tasks` for more information.
-* Whiskey tasks can now have named parameters and Whiskey will pass task properties from the build YAML file that match a parameter on a task's function. See about_Whiskey_Writing_Tasks for more information.
-* Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
-* Added a `File` task to create, update, and/or touch files.
-* ValidatePathAttribute can now allow paths outside of the build root with the `AllowOutsideBuildRoot` property and allow paths that do not exist by setting the `MustExist` property. See `about_Whiskey_Writing_Tasks` for more information.
-* Fixed: `DotNet` task fails to resolve recent version of the .NET Core SDK.
-* You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
-* Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
-* Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
-* Fixed: `Zip` task doesn't allow customzing file names in ZIP file.
+* Whiskey no longer ships with PackageManagement and PowerShellGet modules. They are now downloaded from one of your registered PowerShell repositories the first time another PowerShell module is installed.
 '@
         } # End of PSData hashtable
 

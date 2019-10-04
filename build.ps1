@@ -151,38 +151,6 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
     Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
 
-# TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
-# fixed, change version numbers to wildcards on the patch version.
-$nestedModules = @{
-                        'PackageManagement' = '1.4.3';
-                        'PowerShellGet' = '2.2.1';
-                 }
-$privateModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Modules'
-if( -not (Test-Path -Path $privateModulesRoot -PathType 'Container') )
-{
-    New-Item -Path $privateModulesRoot -ItemType 'Directory'
-}
-foreach( $nestedModuleName in $nestedModules.Keys )
-{
-    $moduleRoot = Join-Path -Path $privateModulesRoot -ChildPath $nestedModuleName
-    if( -not (Test-Path -Path $moduleRoot -PathType Container) )
-    {
-        $nestedModuleVersion = $nestedModules[$nestedModuleName]
-        # Run in a background job otherwise the default global 
-        # PackageManagement module assembly remains loaded.
-        Start-Job -ScriptBlock {
-            $module = 
-                Find-Module -Name $using:nestedModuleName -RequiredVersion $using:nestedModuleVersion |
-                Select-Object -First 1 
-            $module | Format-List | Out-String | Write-Verbose 
-            Save-Module -Path $using:privateModulesRoot `
-                        -Name $module.Name `
-                        -RequiredVersion $module.Version `
-                        -Repository $module.Repository
-        } | Wait-Job | Receive-Job | Remove-Job
-    }
-}
-
 $ErrorActionPreference = 'Continue'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)

@@ -33,6 +33,14 @@ Build:
     Name: Zip
     Version: 0.3.*
 
+- GetPowerShellModule:
+    Name: PackageManagement
+    Version: 1.4.5
+
+- GetPowerShellModule:
+    Name: PowerShellGet
+    Version: 2.2.1
+
 - Pester4:
     OnlyBy: Developer
     Path:

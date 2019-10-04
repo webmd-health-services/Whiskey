@@ -43,15 +43,57 @@ function Install-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
-
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-
     $modulesRoot = Join-Path -Path $Path -ChildPath $powerShellModulesDirectoryName
     if( -not (Test-Path -Path $modulesRoot -PathType Container) )
     {
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Stop | Out-Null
     }
+
+    $packageManagementPackages = @{
+                                    'PackageManagement' = '1.4.5';
+                                    'PowerShellGet' = '2.2.1'
+                                 }
+    $modulesToInstall = New-Object 'Collections.ArrayList' 
+    foreach( $packageName in $packageManagementPackages.Keys )
+    {
+        $packageVersion = $packageManagementPackages[$packageName]
+        $moduleRootPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}' -f $packageName,$packageVersion)
+        if( -not (Test-Path -Path $moduleRootPath -PathType Container) )
+        {
+            Write-WhiskeyTiming -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,$moduleRootPath)
+            $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
+            [void]$modulesToInstall.Add($module)
+        }
+    }
+
+    if( $modulesToInstall.Count )
+    {
+        Write-WhiskeyTiming -Message ('Installing package management modules to {0}.  BEGIN' -f $modulesRoot)
+        # Install Package Management modules in the background so we can load the new versions. These modules use 
+        # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
+        Start-Job -ScriptBlock {
+            $modulesToInstall = $using:modulesToInstall
+            $modulesRoot = $using:modulesRoot
+
+            Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
+            foreach( $moduleInfo in $modulesToInstall )
+            {
+                $module = Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version
+                if( -not $module )
+                {
+                    continue
+                }
+
+                Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $module.Name,$module.Version,$modulesRoot,$module.Repository)
+                Save-Module -Name $module.Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
+            }
+        } | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        Write-WhiskeyTiming -Message ('                                               END')
+    }
+
+    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
+
+    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
 
     $expectedPath = Join-Path -Path $modulesRoot -ChildPath $Name
 
