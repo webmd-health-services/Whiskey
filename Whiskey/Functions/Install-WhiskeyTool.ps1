@@ -7,14 +7,14 @@ function Install-WhiskeyTool
     .DESCRIPTION
     The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
-    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet', and 'NuGet'.
+    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are `Node`, `NodeModule`, `DotNet`, and `NuGet`.
 
-    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
+    Users of the Whiskey API typcially won't need to use this function. It is called by other Whiskey function so they have the tools they need.
 
     .EXAMPLE
-    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\...\tooldir\' -TaskParameter $currentTaskProperties
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\tooldir\' -TaskParameter $currentTaskProperties
 
-    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\...\tooldir\' -TaskParameter $currentTaskProperties -InCleanMode
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\tooldir\' -TaskParameter $currentTaskProperties -InCleanMode
     #>
     [CmdletBinding()]
     param(

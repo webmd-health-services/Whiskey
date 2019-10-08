@@ -1,16 +1,18 @@
 function Uninstall-WhiskeyNuGetPackage
 {
-<#
+    <#
     .SYNOPSIS
-    Removes a package installed with `Install-WhiskeyNuGetPackage`.
+    Removes a NuGet package.
 
     .DESCRIPTION
-    The `Install-WhiskeyNuGetPackage` removes the NuGet package specified if it exists. NuGetPackages are removed from the `packages` directory in your buildroot. `Uninstall-WhiskeyNuGetPackage` returns void.
+    The `Uninstall-WhiskeyNuGetPackage` removes a NuGet package from the `packages` directory in your build root. Pass the name of the package to the `Name` parameter. By default, all versions of a package are removed. If you want to uninstall a specific version, pass that version to the `Version` parameter. Wildcards supported. Pass the path to your build root (the directory where your packages directory is located) to the `BuildRoot` parameter.
 
     .EXAMPLE
-    Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners.2.6.4' -DownloadRoot 'C:\Rootdir\...\packages'
+    Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners -DownloadRoot 'C:\Rootdir\packages'
 
-    Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -DownloadRoot 'C:\Rootdir\...\packages' -Version '2.6.4'
+    Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -DownloadRoot 'C:\Rootdir\packages' -Version '2.6.4'
+
+    Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners -DownloadRoot 'C:\Rootdir\packages' -Version '2.*'
     #>
     [CmdletBinding()]
     param (
@@ -25,18 +27,22 @@ function Uninstall-WhiskeyNuGetPackage
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         [String]$Version
     )
-        $nugetPath = Join-Path -Path $whiskeyBinPath -ChildPath '\NuGet.exe' -Resolve
-        $Version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $Name -Version $Version -NugetPath $nugetPath
+        Set-StrictMode -Version 'Latest'
+        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
         if( -not $Version )
         {
-            return
+            $Version = '*'
         }
+
         $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
-        $nuGetRootName = '{0}.{1}' -f $Name,$Version
-        $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-        
-        if( (Test-Path -Path $nuGetRoot -PathType Container) )
+        $packageRoot = Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $Name,$Version)
+        if( (Test-Path -Path $packageRoot -PathType Container) )
         {
-            Remove-WhiskeyFileSystemItem -Path $nuGetRoot
+            Get-Item -Path $packageRoot | Remove-WhiskeyFileSystemItem
+        }
+        else
+        {
+            Write-Error -Message ('Could not find package "{0}" anywhere within parent directory' -f $packageRoot)
         }
 }

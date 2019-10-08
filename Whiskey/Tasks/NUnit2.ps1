@@ -1,6 +1,6 @@
 function Invoke-WhiskeyNUnit2Task
 {
-    [Whiskey.Task("NUnit2",SupportsInitialize,Platform='Windows')]
+    [Whiskey.Task('NUnit2',SupportsInitialize,Platform='Windows')]
     [Whiskey.RequiresTool('NuGet::NUnit.Runners','NUnitPath',Version='2.6.4',VersionParameterName='Version')]
     [Whiskey.RequiresTool('NuGet::OpenCover','OpenCoverPath',VersionParameterName='OpenCoverVersion')]
     [Whiskey.RequiresTool('NuGet::ReportGenerator','ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]

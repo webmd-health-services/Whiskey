@@ -348,11 +348,12 @@ LONG DESCRIPTION
 
     ## NuGet
 
-    To install a NuGet Package, add this to your task:
+    To install a NuGet package, pass the name of the NuGet package to the `Whiskey.RequiresTool` attribute, prefixed with `NuGet::`. For example, to install `NUnit.Console`, your attribute would look like:
     
-        [Whiskey.RequiresTool('NuGet::NUnit.Console', 'ConsolePath',)]
+        [Whiskey.RequiresTool('NuGet::NUnit.Console', 'ConsolePath')]
     
-    The `ConsolePath` string is the name of the key where the path to the package root should be saved in the `$TaskParameter` hashtable passed to your task.
+    The second parameter is the name of the task parameter to which the path to the NuGet package should be passed. In the above example, the task should have a `ConsolePath` parameter (or, looks in `$TaskParameter['ConsolePath']` for the path).
 
-    Packages are saved to the packages directory in your build root.
+    The path to the tool is the root of the package. The layout of NuGet packages can vary, so your task is responsible for finding the right files inside that package.
 
+    Packages are saved to the `packages` directory in your build root.

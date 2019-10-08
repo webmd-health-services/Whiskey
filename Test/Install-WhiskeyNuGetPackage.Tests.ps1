@@ -15,10 +15,16 @@ function WhenRunningNuGetInstall
         $Package,
         $Version
     )
+
+    $params = @{}
+    $params['Name'] = $Package
+    $params['Version'] = $Version
+    $params['DownloadRoot'] = $TestDrive.FullName
+
     $Global:Error.Clear()
     try
     {
-        $script:result = Install-WhiskeyNuGetPackage -Name $Package -Version $Version -DownloadRoot $TestDrive.FullName
+        $script:result = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNuGetPackage' -Parameter $params
     }
     catch
     {
@@ -100,7 +106,11 @@ if( $IsWindows )
     Describe 'Install-WhiskeyNuGetPackage.when set EnableNuGetPackageRestore' {
         It 'should enable NuGet package restore' {
             Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
-            Install-WhiskeyNuGetPackage -DownloadRoot $TestDrive.FullName -name 'NUnit.Runners' -version '2.6.4'
+            $params = @{}
+            $params['DownloadRoot'] = $TestDrive.FullName
+            $params['Name'] = 'NUnit.Runners'
+            $params['Version'] = '2.6.4'
+            Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNuGetPackage' -Parameter $params
             Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
             Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
         }

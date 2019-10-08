@@ -2,7 +2,7 @@
 function Invoke-WhiskeyNUnit3Task
 {
     [CmdletBinding()]
-    [Whiskey.Task("NUnit3",SupportsInitialize,Platform='Windows')]
+    [Whiskey.Task('NUnit3',SupportsInitialize,Platform='Windows')]
     # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
     # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
     [Whiskey.RequiresTool('NuGet::NUnit.Console','NUnitConsolePath',Version='3.10.0',VersionParameterName='Version')]

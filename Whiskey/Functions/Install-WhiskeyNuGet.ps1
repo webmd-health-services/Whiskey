@@ -11,12 +11,11 @@ function Install-WhiskeyNuGet
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [string]$DownloadRoot,
         # Where to install NuGet.
-        
+        [string]$DownloadRoot,
 
-        [string]$Version
         # The version to download.
+        [string]$Version
         
     )
 

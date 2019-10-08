@@ -4,15 +4,11 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]$WithName = 'NUnit.Runners'
+        [String]$WithVersion
     )
-    $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
-    if( -not $WithVersion )
-    {
-        return
-    }
+
     $dirName = '{0}.{1}' -f $WithName, $WithVersion
     $installRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
@@ -22,86 +18,138 @@ function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]$WithName = 'NUnit.Runners'
+        [String]$WithVersion
     )
 
     $Global:Error.Clear()
-    Uninstall-WhiskeyNuGetPackage -Name $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
+    $params = @{}
+    $params['Name'] = $WithName
+    $params['Version'] = $WithVersion
+    $params['BuildRoot'] = $TestDrive.FullName
+    Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyNuGetPackage' -Parameter $params
 }
 
 function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]$WithName = 'NUnit.Runners'
+        [String]$WithVersion
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
-    $uninstalledPath | Should not Exist
+    $uninstalledPath | Should -Not -Exist
 
-    $Global:Error | Should beNullOrEmpty
+    $Global:Error | Should -beNullOrEmpty
 }
 
 function ThenNuGetPackageNotUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]$WithName = 'NUnit.Runners',
-
-        [switch]$PackageShouldExist,
-
-        [string]$WithError
+        [String]$WithVersion
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
+    $uninstalledPath | Should Exist
+    Remove-Item -Path $uninstalledPath -Recurse -Force
+}
 
-    if( -not $PackageShouldExist )
+function ThenThrewErrors
+{
+    param(
+        $ExpectedError
+    )
+    $Global:Error | Should -Not -beNullOrEmpty
+    if( $ExpectedError )
     {
-        $uninstalledPath | Should not Exist
-    }
-    else
-    {
-        $uninstalledPath | Should Exist
-        Remove-Item -Path $uninstalledPath -Recurse -Force
+        $Global:Error[0] | Should -Match $ExpectedError
     }
 
-    $Global:Error | Should Match $WithError
+}
+
+function ThenRanSuccessfully
+{
+    $Global:Error | Should -beNullOrEmpty
 }
 
 if( $IsWindows )
 {
-    Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package' {
-        It 'should successfully uninstall the NuGet Package' {
-            GivenAnInstalledNuGetPackage
-            WhenUninstallingNuGetPackage
-            ThenNuGetPackageUnInstalled
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package' {
+        It 'should successfully uninstall the NuGet package' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            WhenUninstallingNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenRanSuccessfully
         }
     }
 
-    Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package with an empty Version' {
-        It 'should successfully uninstall the NuGet Package' {
-            GivenAnInstalledNuGetPackage -WithVersion ''
-            WhenUninstallingNuGetPackage -WithVersion ''
-            ThenNuGetPackageUnInstalled -WithVersion ''
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package with an empty Version' {
+        It 'should uninstall all NuGet package versions with the same name' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            WhenUninstallingNuGetPackage -WithName 'NUnit.Runners'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageNotUninstalled -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            ThenRanSuccessfully
         }
     }
-    
-    Describe 'Uninstall-WhiskeyNuGetPackage.when given an NuGet Package with a wildcard Version' {
-        It 'should never have installed the package' {
-            GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package with an empty string as a version' {
+        It 'should uninstall all NuGet package versions with the same name' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            WhenUninstallingNuGetPackage -WithName 'NUnit.Runners' -WithVersion ''
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageNotUninstalled -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            ThenRanSuccessfully
+        }
+    }
+
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package with a wildcard Version' {
+        It 'should uninstall all NuGet package versions with the same name' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            WhenUninstallingNuGetPackage -WithName 'NUnit.Runners' -WithVersion '*'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageNotUninstalled -WithName 'NUnit.OpenCover' -WithVersion '4.7.922'
+            ThenRanSuccessfully
         }
     }    
+
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package with a pinned wildcard Version' {
+        It 'should uninstall all NuGet package versions with the same name' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '3.6.4'
+            WhenUninstallingNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.*'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            ThenNuGetPackageUnInstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageNotUninstalled -WithName 'NUnit.Runners' -WithVersion '3.6.4'
+            ThenRanSuccessfully
+        }
+    }    
+
+    Describe 'Uninstall-WhiskeyNuGetPackage.when given a NuGet package that does not exist' {
+        It 'should stop and throw an error' {
+            WhenUninstallingNuGetPackage -WithName 'NUnit.TROLOLO' -WithVersion '3.14.159' -ErrorAction SilentlyContinue
+            ThenThrewErrors -ExpectedError 'Could\ not\ find\ package'
+        }
+    }
 }

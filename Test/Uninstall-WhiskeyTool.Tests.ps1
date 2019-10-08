@@ -11,18 +11,10 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]
-        $WithName = 'NUnit.Runners'
-
+        [String]$WithVersion
     )
-    $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
-    if( -not $WithVersion )
-    {
-        return
-    }
     $dirName = '{0}.{1}' -f $WithName, $WithVersion
     $installRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
@@ -32,11 +24,9 @@ function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]
-        $WithName = 'NuGet::NUnit.Runners'
+        [String]$WithVersion
     )
 
     $Global:Error.Clear()
@@ -47,85 +37,102 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [String]$WithVersion
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
-    It 'should successfully uninstall the NuGet Package' {
-        $uninstalledPath | Should not Exist
-    }
+    $uninstalledPath | Should not Exist
 
-    It 'Should not write any errors' {
-        $Global:Error | Should beNullOrEmpty
-    }
+    $Global:Error | Should beNullOrEmpty
 }
 
 function ThenNuGetPackageNotUninstalled
 {
         [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]
-        $WithName = 'NUnit.Runners',
+        [String]$WithVersion,
 
-        [switch]
-        $PackageShouldExist,
-
-        [string]
-        $WithError
+        [string]$WithError
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
     $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
-    if( -not $PackageShouldExist )
+    $uninstalledPath | Should Exist
+    Remove-Item -Path $uninstalledPath -Recurse -Force
+
+    if( $WithError )
     {
-        It 'should never have installed the package' {
-            $uninstalledPath | Should not Exist
-        }
+        $Global:Error[0] | Should Match $WithError
     }
     else
     {
-        It 'should not have uninstalled the existing package' {
-            $uninstalledPath | Should Exist
-        }
-        Remove-Item -Path $uninstalledPath -Recurse -Force
-    }
-
-    It 'Should write errors' {
-        $Global:Error | Should Match $WithError
+        $Global:Error | Should -beNullOrEmpty
     }
 }
 
 if( $IsWindows )
 {
     Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
-        GivenAnInstalledNuGetPackage
-        WhenUninstallingNuGetPackage
-        ThenNuGetPackageUnInstalled
+        It 'Should uninstall the package' {
+            GivenAnInstalledNuGetPackage 'NUnit.Runners' -WithVersion '2.6.4'
+            WhenUninstallingNuGetPackage 'NuGet::NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUnInstalled 'NUnit.Runners' -WithVersion '2.6.4'
+        }
     }
     
-    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
-        GivenAnInstalledNuGetPackage -WithVersion ''
-        WhenUninstallingNuGetPackage -WithVersion ''
-        ThenNuGetPackageUnInstalled -WithVersion ''
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty string as Version' {
+        It 'should uninstall all versions of the package' {
+            GivenAnInstalledNuGetPackage 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage 'NUnit.Runners' -WithVersion '2.6.3'
+            WhenUninstallingNuGetPackage 'NuGet::NUnit.Runners' -WithVersion '' -ErrorAction SilentlyContinue
+            ThenNuGetPackageUnInstalled 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUnInstalled 'NUnit.Runners' -WithVersion '2.6.3'
+        }
     }
+
     
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with missing Version' {
+        It 'should uninstall all versions of the package' {
+            GivenAnInstalledNuGetPackage 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage 'NUnit.Runners' -WithVersion '2.6.3'
+            WhenUninstallingNuGetPackage 'NuGet::NUnit.Runners' -ErrorAction SilentlyContinue
+            ThenNuGetPackageUnInstalled 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUnInstalled 'NUnit.Runners' -WithVersion '2.6.3'
+        }
+    }
+
     Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
-        GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+        It 'should uninstall all versions of the package' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '3.6.3'
+            WhenUninstallingNuGetPackage -WithName 'NuGet::NUnit.Runners' -WithVersion '*' -ErrorAction SilentlyContinue
+            ThenNuGetPackageUninstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUninstalled -WithName 'NUnit.Runners' -WithVersion '3.6.3'
+        }
+    }
+
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a pinned wildcard Version' {
+        It 'should uninstall all versions of the package' {
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            GivenAnInstalledNuGetPackage -WithName 'NUnit.Runners' -WithVersion '3.6.3'
+            WhenUninstallingNuGetPackage -WithName 'NuGet::NUnit.Runners' -WithVersion '2.*' -ErrorAction SilentlyContinue
+            ThenNuGetPackageUninstalled -WithName 'NUnit.Runners' -WithVersion '2.6.4'
+            ThenNuGetPackageUninstalled -WithName 'NUnit.Runners' -WithVersion '2.6.3'
+            ThenNuGetPackageNotUninstalled -WithName 'NUnit.Runners' -WithVersion '3.6.3'
+        }
     }    
+
+
 }
 
 $toolsInstallRoot = $null

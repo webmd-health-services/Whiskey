@@ -171,22 +171,7 @@ function Invoke-NUnitTask
 
         $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
         $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
-        if( $WhenRunningClean )
-        {
-        #     $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-        #     $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
-        #     $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
-        #     $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath 'OpenCover.*'
-        #     $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
-        #     $threwException | Should -BeFalse
-        #     $Global:Error | Should -BeNullorEmpty
-        #     $nunitPath | Should -Not -Exist
-        #     $oldNUnitPath | should -Exist
-        #     $openCoverPackagePath | Should -Not -Exist
-        #     $reportGeneratorPath | Should -Not -Exist
-        #     Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
-        }
-        elseif( $ThatFails )
+        if( $ThatFails )
         {
             $threwException | Should -BeTrue
         }
@@ -553,13 +538,6 @@ foreach( $packageID in $packages.Keys )
 
 $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit2.yml')
 Invoke-WhiskeyBuild -Context $taskContext
-
-Describe 'NUnit2.when the Clean Switch is active' {
-    It 'should remove dependent packages' {
-        GivenNuGetPackageInstalled 'NUnit.Runners' -AtVersion '2.6.3'
-        Invoke-NUnitTask -WhenRunningClean
-    }
-}
 
 Describe 'NUnit2.when running NUnit tests with no code coverage' {
     It 'should run NUnit2 directly' {
