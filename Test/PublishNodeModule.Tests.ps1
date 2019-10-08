@@ -50,7 +50,7 @@ function New-PublishNodeModuleStructure
     Mock -CommandName 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter {$Path -match '\.npmrc'}
 
     $context = New-WhiskeyTestContext -ForBuildServer
-    
+
     $taskParameter = @{}
     if( $npmRegistryUri )
     {
@@ -81,32 +81,23 @@ function New-PublishNodeModuleStructure
 
 function ThenNodeModulePublished
 {
-    It ('should publish the module') {
-        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
-                            -ModuleName 'Whiskey' `
-                            -ParameterFilter { $Name -eq 'publish' } -Times 1 -Exactly
-    }
+    Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Name -eq 'publish' } -Times 1 -Exactly
 }
 
 function ThenNodeModuleIsNotPublished
 {
-    It 'should not publish the module' {
-        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
-                            -ModuleName 'Whiskey' `
-                            -ParameterFilter { $Name -eq 'publish' } -Times 0 -Exactly
-    }
+    Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Name -eq 'publish' } -Times 0 -Exactly
 }
 
 function ThenNpmPackagesPruned
 {
-    It 'should prune npm packages' {
-        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
-                            -ModuleName 'Whiskey' `
-                            -ParameterFilter { $Name -eq 'prune' } -Times 1 -Exactly
-        Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
-                            -ModuleName 'Whiskey' `
-                            -ParameterFilter { $Name -eq 'prune' -and $ArgumentList[0] -eq '--production' } -Times 1 -Exactly
-    }
+    Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Name -eq 'prune' -and $ArgumentList[0] -eq '--production' } -Times 1 -Exactly
 }
 
 function ThenNpmrcCreated
@@ -123,9 +114,7 @@ function ThenNpmrcCreated
 
     $npmRcPath = Join-Path -Path $buildRoot -ChildPath '.npmrc'
 
-    It ('should create a temporary .npmrc file in {0}' -f $buildRoot) {
-        Test-Path -Path $npmrcPath | Should be $true
-    }
+    Test-Path -Path $npmrcPath | Should be $true
 
     $npmRegistryUri = [uri]$script:npmRegistryUri
     $npmUserName = $credential.UserName
@@ -139,16 +128,12 @@ function ThenNpmrcCreated
     $npmrcFileLine5 = ('registry={0}' -f $npmRegistryUri)
     $npmrcFileContents = "$npmrcFileLine2{0}$npmrcFileLine3{0}$npmrcFileLine4{0}$npmrcFileLine5{0}" -f [Environment]::NewLine
 
-    It ('.npmrc file should be{0}{1}' -f [Environment]::newLine,$npmrcFileLine2){
-        # should populate the .npmrc file with the appropriate configuration values' {
-        $actualFileContents = Get-Content -Raw -Path $npmrcPath
-        $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
-    }
+    # should populate the .npmrc file with the appropriate configuration values' {
+    $actualFileContents = Get-Content -Raw -Path $npmrcPath
+    $actualFileContents.Trim() | Should Be $npmrcFileContents.Trim()
 
-    It ('should remove {0}' -f $npmRcPath) {
-        Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
-                          -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
-    }
+    Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
+                        -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
 }
 
 function ThenTaskFailed
@@ -157,13 +142,9 @@ function ThenTaskFailed
         $ExpectedErrorMessagePattern
     )
 
-    It ('the task should throw an exception') {
-        $threwException | Should -Be $true
-    }
+    $threwException | Should -Be $true
 
-    It ('should fail with error message /{0}/' -f $ExpectedErrorMessagePattern) {
-        $Global:Error | Should -Match $ExpectedErrorMessagePattern
-    }
+    $Global:Error | Should -Match $ExpectedErrorMessagePattern
 }
 
 function WhenPublishingNodeModule
@@ -174,11 +155,11 @@ function WhenPublishingNodeModule
 
     Mock -CommandName 'Invoke-WhiskeyNpmCommand' `
          -ModuleName 'Whiskey' `
-         -ParameterFilter { 
-            if( $ErrorActionPreference -ne 'Stop' ) 
-            { 
-                throw 'Invoke-WhiskeyNpmCommand must be called with `-ErrorAction Stop`.' 
-            } 
+         -ParameterFilter {
+            if( $ErrorActionPreference -ne 'Stop' )
+            {
+                throw 'Invoke-WhiskeyNpmCommand must be called with `-ErrorAction Stop`.'
+            }
             return $true
         }
 
@@ -210,62 +191,70 @@ function WhenPublishingNodeModule
 }
 
 Describe 'PublishNodeModule.when publishing node module' {
-    try
-    {
-        Init
-        New-PublishNodeModuleStructure
-        WhenPublishingNodeModule
-        ThenNpmrcCreated
-        ThenNpmPackagesPruned
-        ThenNodeModulePublished
-    }
-    finally
-    {
-        Remove-Node
+    It 'should publish the module' {
+        try
+        {
+            Init
+            New-PublishNodeModuleStructure
+            WhenPublishingNodeModule
+            ThenNpmrcCreated
+            ThenNpmPackagesPruned
+            ThenNodeModulePublished
+        }
+        finally
+        {
+            Remove-Node
+        }
     }
 }
 
 Describe 'PublishNodeModule.when NPM registry URI property is missing' {
-    try
-    {
-        Init
-        GivenNoNpmRegistryUri
-        New-PublishNodeModuleStructure
-        WhenPublishingNodeModule -ErrorAction SilentlyContinue
-        ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
-    }
-    finally
-    {
-        Remove-Node
+    It 'should fail' {
+        try
+        {
+            Init
+            GivenNoNpmRegistryUri
+            New-PublishNodeModuleStructure
+            WhenPublishingNodeModule -ErrorAction SilentlyContinue
+            ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
+        }
+        finally
+        {
+            Remove-Node
+        }
     }
 }
 
 Describe 'PublishNodeModule.when credential ID property missing' {
-    try
-    {
-        Init
-        GivenNoCredentialID
-        New-PublishNodeModuleStructure
-        WhenPublishingNodeModule -ErrorAction SilentlyContinue
-        ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
-    }
-    finally
-    {
-        Remove-Node
+    It 'should fail' {
+        try
+        {
+            Init
+            GivenNoCredentialID
+            New-PublishNodeModuleStructure
+            WhenPublishingNodeModule -ErrorAction SilentlyContinue
+            ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
+        }
+        finally
+        {
+            Remove-Node
+        }
     }
 }
 
 Describe 'PublishNodeModule.when email address property missing' {
-    try
-    {
-        Init
-        GivenNoEmailAddress
-        New-PublishNodeModuleStructure
-        WhenPublishingNodeModule -ErrorAction SilentlyContinue
-        ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
-    }
-    finally
-    {
-        Remove-Node
+    It 'should fail' {
+        try
+        {
+            Init
+            GivenNoEmailAddress
+            New-PublishNodeModuleStructure
+            WhenPublishingNodeModule -ErrorAction SilentlyContinue
+            ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+        }
+        finally
+        {
+            Remove-Node
+        }
     }
 }
