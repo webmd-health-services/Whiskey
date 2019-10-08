@@ -29,11 +29,6 @@ function Publish-WhiskeyNodeModule
         return
     }
 
-    if (!$TaskContext.Publish)
-    {
-        return
-    }
-    
     $npmConfigPrefix = '//{0}{1}:' -f $NpmRegistryUri.Authority,$NpmRegistryUri.LocalPath
 
     if( -not $CredentialID )
