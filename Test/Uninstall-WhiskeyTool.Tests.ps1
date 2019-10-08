@@ -158,7 +158,7 @@ function GivenToolInstalled
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $toolsInstallRoot -ChildPath ('.{0}\{0}.exe' -f $Name)) -ItemType File -Force | Out-Null
+    New-Item -Path (Join-Path -Path $toolsInstallRoot -ChildPath ('.{0}\{0}.exe' -f $Name))  -ItemType File -Force | Out-Null
 }
 
 function ThenFile
@@ -240,15 +240,15 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
 Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
     It 'should use Remove-WhiskeyFileSystemItem to delete .Net Core SDK' {
         Init
-        GivenToolInstalled 'DotNet'
-        WhenUninstallingTool 'DotNet'
+        GivenToolInstalled 'dotnet'
+        WhenUninstallingTool 'dotnet'
         ThenUninstalledDotNet
         ThenNoErrors
     
         # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
         Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-        GivenToolInstalled 'DotNet'
-        WhenUninstallingTool 'DotNet'
+        GivenToolInstalled 'dotnet'
+        WhenUninstallingTool 'dotnet'
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
