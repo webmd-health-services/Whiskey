@@ -127,6 +127,11 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenRunningTask
 {
     [CmdletBinding()]
@@ -168,7 +173,7 @@ function WhenRunningTask
         $optionalParams['ForVersion'] = $AtVersion
     }
 
-    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Get-BuildRoot)
+    $context = New-WhiskeyTestContext @optionalParams -ForBuildRoot (Get-BuildRoot) -IncludePSModule 'VSSetup'
 
     if( -not $WithNoPath )
     {
@@ -416,6 +421,7 @@ function ThenWritesError
 if( -not $IsWindows )
 {
     Describe 'MSBuild.when run on non-Windows platform' {
+        AfterEach { Reset }
         It 'should fail' {
             Init
             GivenAProjectThatCompiles
@@ -429,6 +435,7 @@ if( -not $IsWindows )
 }
 
 Describe 'MSBuild.when building real projects as a developer' {
+    AfterEach { Reset }
     It 'should compile the projects' {
         Init
         GivenAProjectThatCompiles
@@ -441,6 +448,7 @@ Describe 'MSBuild.when building real projects as a developer' {
 }
 
 Describe 'MSBuild.when building multiple real projects as a developer' {
+    AfterEach { Reset }
     It 'should build all the projects' {
         Init
         GivenProjectsThatCompile
@@ -452,6 +460,7 @@ Describe 'MSBuild.when building multiple real projects as a developer' {
 }
 
 Describe 'MSBuild.when building real projects as build server' {
+    AfterEach { Reset }
     It 'should version with build metadata' {
         Init
         GivenAProjectThatCompiles
@@ -463,6 +472,7 @@ Describe 'MSBuild.when building real projects as build server' {
 }
 
 Describe 'MSBuild.when compilation fails' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenAProjectThatDoesNotCompile
@@ -475,6 +485,7 @@ Describe 'MSBuild.when compilation fails' {
 }
 
 Describe 'MSBuild.when Path parameter is empty' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoPathToBuild
@@ -487,6 +498,7 @@ Describe 'MSBuild.when Path parameter is empty' {
 }
 
 Describe 'MSBuild.when Path parameter is not provided' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenAProjectThatCompiles
@@ -499,6 +511,7 @@ Describe 'MSBuild.when Path parameter is not provided' {
 }
 
 Describe 'MSBuild.when Path Parameter does not exist' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenAProjectThatDoesNotExist
@@ -511,6 +524,7 @@ Describe 'MSBuild.when Path Parameter does not exist' {
 }
 
 Describe 'MSBuild.when cleaning build output' {
+    AfterEach { Reset }
     It 'should build using the clean target' {
         Init
         GivenAProjectThatCompiles
@@ -522,6 +536,7 @@ Describe 'MSBuild.when cleaning build output' {
 }
 
 Describe 'MSBuild.when customizing output level' {
+    AfterEach { Reset }
     It 'should output at that level' {
         Init
         GivenAProjectThatCompiles
@@ -531,6 +546,7 @@ Describe 'MSBuild.when customizing output level' {
 }
 
 Describe 'MSBuild.when run by developer using default verbosity output level' {
+    AfterEach { Reset }
     It 'should use minimal output level' {
         Init
         GivenAProjectThatCompiles
@@ -540,6 +556,7 @@ Describe 'MSBuild.when run by developer using default verbosity output level' {
 }
 
 Describe 'MSBuild.when run by build server using default verbosity output level' {
+    AfterEach { Reset }
     It 'should output at minimal level' {
         Init
         GivenAProjectThatCompiles
@@ -549,6 +566,7 @@ Describe 'MSBuild.when run by build server using default verbosity output level'
 }
 
 Describe 'MSBuild.when passing extra build properties' {
+    AfterEach { Reset }
     It 'should pass the parameters' {
         Init
         GivenAProjectThatCompiles
@@ -558,6 +576,7 @@ Describe 'MSBuild.when passing extra build properties' {
 }
 
 Describe 'MSBuild.when passing custom arguments' {
+    AfterEach { Reset }
     It 'should pass the parameters' {
         Init
         GivenAProjectThatCompiles
@@ -567,6 +586,7 @@ Describe 'MSBuild.when passing custom arguments' {
 }
 
 Describe 'MSBuild.when passing a single custom argument' {
+    AfterEach { Reset }
     It 'should pass the argument' {
         Init
         GivenAProjectThatCompiles
@@ -576,6 +596,7 @@ Describe 'MSBuild.when passing a single custom argument' {
 }
 
 Describe 'MSBuild.when run with no CPU parameter' {
+    AfterEach { Reset }
     It 'should default to multi-CPU build' {
         Init
         GivenAProjectThatCompiles
@@ -585,6 +606,7 @@ Describe 'MSBuild.when run with no CPU parameter' {
 }
 
 Describe 'MSBuild.when run with CPU parameter' {
+    AfterEach { Reset }
     It 'should use that CPU count' {
         Init
         GivenAProjectThatCompiles
@@ -594,6 +616,7 @@ Describe 'MSBuild.when run with CPU parameter' {
 }
 
 Describe 'MSBuild.when using custom output directory' {
+    AfterEach { Reset }
     It 'should use that output directory' {
         Init
         GivenAProjectThatCompiles
@@ -603,6 +626,7 @@ Describe 'MSBuild.when using custom output directory' {
 }
 
 Describe 'MSBuild.when using custom targets' {
+    AfterEach { Reset }
     It 'should build that target' {
         Init
         GivenCustomMSBuildScriptWithMultipleTargets
@@ -612,6 +636,7 @@ Describe 'MSBuild.when using custom targets' {
 }
 
 Describe 'MSBuild.when using invalid version of MSBuild' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenAProjectThatCompiles
@@ -623,6 +648,7 @@ Describe 'MSBuild.when using invalid version of MSBuild' {
 }
 
 Describe 'MSBuild.when customizing version of MSBuild' {
+    AfterEach { Reset }
     It 'should use that version of MSBuild' {
         Init
         GivenProject @"
@@ -643,6 +669,7 @@ Describe 'MSBuild.when customizing version of MSBuild' {
 }
 
 Describe 'MSBuild.when customizing version of MSBuild and multiple installs for a version exist' {
+    AfterEach { Reset }
     It 'should pick one' {
         Init
         GivenProject @"
@@ -674,6 +701,7 @@ Describe 'MSBuild.when customizing version of MSBuild and multiple installs for 
 }
 
 Describe 'MSBuild.when disabling multi-CPU builds' {
+    AfterEach { Reset }
     It 'should run using default MSBuild CPU count' {
         Init
         GivenProject @"
@@ -689,6 +717,7 @@ Describe 'MSBuild.when disabling multi-CPU builds' {
 }
 
 Describe 'MSBuild.when disabling file logger' {
+    AfterEach { Reset }
     It 'should not log to a file' {
         Init
         GivenProject @"
@@ -704,6 +733,7 @@ Describe 'MSBuild.when disabling file logger' {
 }
 
 Describe 'MSBuild.when run by developer using a specific version of NuGet' {
+    AfterEach { Reset }
     It 'should use that version of NuGet' {
         Init
         GivenProjectsThatCompile
@@ -724,6 +754,7 @@ $procArchProject = @"
 "@
 
 Describe 'MSBuild.when using 32-bit MSBuild is undefined' {
+    AfterEach { Reset }
     It 'should use 64-bit MSBuild' {
         Init
         GivenProject $procArchProject
@@ -733,6 +764,7 @@ Describe 'MSBuild.when using 32-bit MSBuild is undefined' {
 }
 
 Describe 'MSBuild.when using 32-bit MSBuild' {
+    AfterEach { Reset }
     It 'should use 32-bit MSBuild' {
         Init
         GivenProject $procArchProject
@@ -743,6 +775,7 @@ Describe 'MSBuild.when using 32-bit MSBuild' {
 }
 
 Describe 'MSBuild.when explicitly not using 32-bit MSBuild' {
+    AfterEach { Reset }
     It 'should use 64-bit' {
         Init
         GivenProject $procArchProject

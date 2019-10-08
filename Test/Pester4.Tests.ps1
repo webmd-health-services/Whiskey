@@ -37,11 +37,23 @@ function Init
     $script:failed = $false
     $script:taskParameter = @{}
     $Global:Error.Clear()
+
     $script:testRoot = New-WhiskeyTestRoot
 
     $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
                                              -ForDeveloper `
-                                             -ForBuildRoot $testRoot
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'Pester'
+
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powershellModulesDirectoryName)
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+        Where-Object { $_.Name -notlike '4.*' } |
+        Remove-Item -Recurse -Force
+}
+
+function Reset
+{
+    Reset-WhiskeyTestPSModule
 }
 
 function GivenExclude
@@ -253,6 +265,7 @@ function ThenTestShouldCreateMultipleReportFiles
 }
 
 Describe 'Pester4.when running passing Pester tests' {
+    AfterEach { Reset }
     It 'should run the tests' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
@@ -272,6 +285,7 @@ Describe 'One' {
 }
 
 Describe 'Pester4.when running failing Pester tests' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestFile 'FailingTests.ps1' @'
@@ -291,6 +305,7 @@ Describe 'Failing' {
 }
 
 Describe 'Pester4.when running multiple test scripts' {
+    AfterEach { Reset }
     It 'should run all the scripts' {
         Init
         GivenTestFile 'FailingTests.ps1' @'
@@ -313,6 +328,7 @@ Describe 'Passing' {
 }
 
 Describe 'Pester4.when run multiple times in the same build' {
+    AfterEach { Reset }
     It 'should run multiple times' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
@@ -330,6 +346,7 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester4.when missing path' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
@@ -339,6 +356,7 @@ Describe 'Pester4.when missing path' {
 }
 
 Describe 'Pester4.when a task path is absolute' {
+    AfterEach { Reset }
     It 'should fail' {
         $pesterPath = 'C:\FubarSnafu'
         if( -not $IsWindows )
@@ -354,6 +372,7 @@ Describe 'Pester4.when a task path is absolute' {
 }
 
 Describe 'Pester4.when showing duration reports' {
+    AfterEach { Reset }
     It 'should output the report' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
@@ -372,6 +391,7 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester4.when excluding tests and an exclusion filter doesn''t match' {
+    AfterEach { Reset }
     It 'should still run' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
@@ -395,6 +415,7 @@ Describe 'FailingTests' {
 }
 
 Describe 'Pester4.when excluding tests and exclusion filters match all paths' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestFile 'PassingTests.ps1' @'

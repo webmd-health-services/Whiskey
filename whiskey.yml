@@ -41,6 +41,10 @@ Build:
     Name: PowerShellGet
     Version: 2.2.1
 
+- GetPowerShellModule:
+    Name: Pester
+    Version: 3.*
+
 - Pester4:
     OnlyBy: Developer
     Path:

@@ -98,6 +98,11 @@ function Install-ProGetAutomation
     }
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function ThenTaskFails
 {
     Param(
@@ -213,7 +218,8 @@ function Assert-NewWhiskeyProGetUniversalPackage
     }
 
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot (Join-Path -Path $testRoot -ChildPath 'Repo') `
-                                                            -ForBuildServer 
+                                                            -ForBuildServer `
+                                                            -IncludePSModule 'ProGetAutomation'
 
     Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
@@ -678,7 +684,9 @@ function WhenPackaging
     if( $PSCmdlet.ParameterSetName -eq 'WithYaml' )
     {
         $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot (Join-Path -Path $testRoot -ChildPath 'Repo') `
-                                                                -ForBuildServer -ForYaml $WithYaml
+                                                                -ForBuildServer -ForYaml $WithYaml `
+                                                                -IncludePSModule 'ProGetAutomation'
+
         $taskParameter = $context.Configuration['Build'][0]['ProGetUniversalPackage']
     }
     else
@@ -728,7 +736,9 @@ function WhenPackaging
         }
 
         $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot (Join-Path -Path $testRoot -ChildPath 'Repo') `
-                                                                -ForBuildServer -ForVersion $WithVersion
+                                                                -ForBuildServer -ForVersion $WithVersion `
+                                                                -IncludePSModule 'ProGetAutomation'
+                                                                
         if( $WithApplicationName )
         {
             $taskContext.ApplicationName = $WithApplicationName
@@ -768,6 +778,7 @@ function WhenPackaging
 }
 
 Describe 'ProGetUniversalPackage.when packaging everything in a directory' {
+    AfterEach { Reset }
     It 'should create the package' {
         Init
         $dirNames = @( 'dir1', 'dir1\sub' )
@@ -783,6 +794,7 @@ Describe 'ProGetUniversalPackage.when packaging everything in a directory' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging root files' {
+    AfterEach { Reset }
     It 'should package the root files' {
         Init
         $file = 'project.json'
@@ -796,6 +808,7 @@ Describe 'ProGetUniversalPackage.when packaging root files' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging whitelisted files in a directory' {
+    AfterEach { Reset }
     It 'should only package whitelisted files' {
         Init
         $dirNames = @( 'dir1', 'dir1\sub' )
@@ -811,6 +824,7 @@ Describe 'ProGetUniversalPackage.when packaging whitelisted files in a directory
 }
 
 Describe 'ProGetUniversalPackage.when packaging multiple directories' {
+    AfterEach { Reset }
     It 'should package each directory' {
         Init
         $dirNames = @( 'dir1', 'dir1\sub', 'dir2' )
@@ -826,6 +840,7 @@ Describe 'ProGetUniversalPackage.when packaging multiple directories' {
 }
 
 Describe 'ProGetUniversalPackage.when whitelist includes items that need to be excluded' {
+    AfterEach { Reset }
     It 'should exclude files that are in the whiteliset' {
         Init
         $dirNames = @( 'dir1', 'dir1\sub' )
@@ -842,6 +857,7 @@ Describe 'ProGetUniversalPackage.when whitelist includes items that need to be e
 }
 
 Describe 'ProGetUniversalPackage.when paths do not exist' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
 
@@ -857,6 +873,7 @@ Describe 'ProGetUniversalPackage.when paths do not exist' {
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items' {
+    AfterEach { Reset }
     It 'should not filter third-party items' {
         Init
         $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
@@ -877,6 +894,7 @@ Describe 'ProGetUniversalPackage.when including third-party items' {
 foreach( $parameterName in @( 'Name', 'Description' ) )
 {
     Describe ('ProGetUniversalPackage.when {0} property is omitted' -f $parameterName) {
+        AfterEach { Reset }
         It 'should fail' {
             Init
             $parameter = @{
@@ -887,7 +905,7 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
                         }
             $parameter.Remove($parameterName)
 
-            $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+            $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
             Install-ProGetAutomation -BuildRoot $context.BuildRoot
             $Global:Error.Clear()
             $threwException = $false
@@ -908,9 +926,10 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
 }
 
 Describe 'ProGetUniversalPackage.when path to package does not exist' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
-        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
         Install-ProGetAutomation -BuildRoot $context.BuildRoot
         $Global:Error.Clear()
 
@@ -921,9 +940,10 @@ Describe 'ProGetUniversalPackage.when path to package does not exist' {
 }
 
 Describe 'ProGetUniversalPackage.when path to third-party item does not exist' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
-        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
         Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
         $Global:Error.Clear()
@@ -934,6 +954,7 @@ Describe 'ProGetUniversalPackage.when path to third-party item does not exist' {
 }
 
 Describe 'ProGetUniversalPackage.when application root is not the root of the repository' {
+    AfterEach { Reset }
     It 'should use source root as package root' {
         Init
         $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
@@ -953,12 +974,13 @@ Describe 'ProGetUniversalPackage.when application root is not the root of the re
 }
 
 Describe 'ProGetUniversalPackage.when custom application root does not exist' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         $dirNames = @( 'dir1', 'thirdparty', 'thirdpart2' )
         $fileNames = @( 'html.html', 'thirdparty.txt' )
         Initialize-Test -DirectoryName $dirNames -FileName $fileNames
-        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
 
         Install-ProGetAutomation -BuildRoot $context.BuildRoot
         $Global:Error.Clear()
@@ -979,6 +1001,7 @@ Describe 'ProGetUniversalPackage.when custom application root does not exist' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging given a full relative path' {
+    AfterEach { Reset }
     It 'should package the file' {
         Init
         $file = 'project.json'
@@ -991,6 +1014,7 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging given a full relative path to a file with override syntax' {
+    AfterEach { Reset }
     It 'should customzie the item name in package' {
         Init
         $file = 'project.json'
@@ -1004,6 +1028,7 @@ Describe 'ProGetUniversalPackage.when packaging given a full relative path to a 
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory with custom destination name' {
+    AfterEach { Reset }
     It 'should customize directory name in package' {
         Init
         GivenARepositoryWithItems 'dir1\some_file.txt','dir2\dir3\another_file.txt','dir4\dir5\last_file.txt'
@@ -1026,6 +1051,7 @@ Build:
 }
 
 Describe 'ProGetUniversalPackage.when including third-party items with override syntax' {
+    AfterEach { Reset }
     It 'should customize third-party name in package`' {
         Init
         GivenARepositoryWithItems 'dir1\thirdparty.txt', 'app\thirdparty\none of your business', 'app\fourthparty\none of your business'
@@ -1039,6 +1065,7 @@ Describe 'ProGetUniversalPackage.when including third-party items with override 
 }
 
 Describe 'ProGetUniversalPackage.when package is empty' {
+    AfterEach { Reset }
     It 'should pass' {
         Init
         GivenARepositoryWIthItems 'file.txt'
@@ -1048,6 +1075,7 @@ Describe 'ProGetUniversalPackage.when package is empty' {
 }
 
 Describe 'ProGetUniversalPackage.when path contains wildcards' {
+    AfterEach { Reset }
     It 'should package items that match wildcard' {
         Init
         GivenARepositoryWIthItems 'one.ps1','two.ps1','three.ps1'
@@ -1058,6 +1086,7 @@ Describe 'ProGetUniversalPackage.when path contains wildcards' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory' {
+    AfterEach { Reset }
     It 'should package contents that match whitelist' {
         Init
         GivenARepositoryWIthItems 'dir1\subdir\file.txt'
@@ -1068,6 +1097,7 @@ Describe 'ProGetUniversalPackage.when packaging a directory' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory with a space' {
+    AfterEach { Reset }
     It 'should pass' {
         Init
         GivenARepositoryWIthItems 'dir 1\sub dir\file.txt'
@@ -1078,6 +1108,7 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space' {
 }
 
 Describe 'ProGetUniversalPackage.when packaging a directory with a space and trailing backslash' {
+    AfterEach { Reset }
     It 'should pass' {
         Init
         GivenARepositoryWIthItems 'dir 1\sub dir\file.txt'
@@ -1090,6 +1121,7 @@ Describe 'ProGetUniversalPackage.when packaging a directory with a space and tra
 foreach( $compressionLevel in @( 9, 'Optimal' ) )
 {
     Describe ('ProGetUniversalPackage.when compression level is {0}' -f $compressionLevel) {
+        AfterEach { Reset }
         It 'should use compression level' {
             Init
             GivenARepositoryWIthItems 'one.ps1'
@@ -1102,6 +1134,7 @@ foreach( $compressionLevel in @( 9, 'Optimal' ) )
 foreach( $compressionLevel in @( 1, 'Fastest' ) )
 {
     Describe ('ProGetUniversalPackage.when compression level is {0}' -f $compressionLevel) {
+        AfterEach { Reset }
         It 'should use compression level' {
             Init
             GivenARepositoryWIthItems 'one.ps1'
@@ -1112,6 +1145,7 @@ foreach( $compressionLevel in @( 1, 'Fastest' ) )
 }
 
 Describe 'ProGetUniversalPackage.when compression level is not included' {
+    AfterEach { Reset }
     It 'should use optimal compression' {
         Init
         GivenARepositoryWIthItems 'one.ps1'
@@ -1121,6 +1155,7 @@ Describe 'ProGetUniversalPackage.when compression level is not included' {
 }
 
 Describe 'ProGetUniversalPackage.when a bad compression level is included' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenARepositoryWIthItems 'one.ps1'
@@ -1130,6 +1165,7 @@ Describe 'ProGetUniversalPackage.when a bad compression level is included' {
 }
 
 Describe 'ProGetUniversalPackage.when package has empty directories' {
+    AfterEach { Reset }
     It 'should not package empty directories' {
         Init
         GivenARepositoryWithItems 'root.ps1','dir1\one.ps1','dir1\emptyDir2\text.txt'
@@ -1141,6 +1177,7 @@ Describe 'ProGetUniversalPackage.when package has empty directories' {
 }
 
 Describe 'ProGetUniversalPackage.when package has JSON files' {
+    AfterEach { Reset }
     It 'should package the JSON files' {
         Init
         GivenARepositoryWIthItems 'my.json'
@@ -1150,6 +1187,7 @@ Describe 'ProGetUniversalPackage.when package has JSON files' {
 }
 
 Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-party paths and only files' {
+    AfterEach { Reset }
     It 'should package' {
         Init
         GivenARepositoryWithItems 'my.json','dir\yours.json', 'my.txt'
@@ -1160,6 +1198,7 @@ Describe 'New-WhiskeyProGetUniversalPackage.when package contains only third-par
 }
 
 Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is empty' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
@@ -1169,6 +1208,7 @@ Describe 'ProGetUniversalPackage.when package includes a directory but whitelist
 }
 
 Describe 'ProGetUniversalPackage.when package includes a directory but whitelist is missing' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
@@ -1178,6 +1218,7 @@ Describe 'ProGetUniversalPackage.when package includes a directory but whitelist
 }
 
 Describe 'ProGetUniversalPackage.when package includes a file and there is no whitelist' {
+    AfterEach { Reset }
     It 'should interpret files in include list as whitelisted' {
         Init
         GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
@@ -1189,6 +1230,7 @@ Describe 'ProGetUniversalPackage.when package includes a file and there is no wh
 }
 
 Describe 'ProGetUniversalPackage.when customizing package version' {
+    AfterEach { Reset }
     It 'should package' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1213,6 +1255,7 @@ Describe 'ProGetUniversalPackage.when customizing package version' {
 }
 
 Describe 'ProGetUniversalPackage.when not customizing package version' {
+    AfterEach { Reset }
     It 'should use build version' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1236,6 +1279,7 @@ Describe 'ProGetUniversalPackage.when not customizing package version' {
 }
 
 Describe 'ProGetUniversalPackage.when Name property is in invalid format' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1246,6 +1290,7 @@ Describe 'ProGetUniversalPackage.when Name property is in invalid format' {
 }
 
 Describe 'ProGetUniversalPackage.when given ManifestProperties' {
+    AfterEach { Reset }
     It 'should add them to manifest' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1271,6 +1316,7 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties' {
 }
 
 Describe 'ProGetUniversalPackage.when given ManifestProperties that contain Name, Description, and Version task properties' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1289,6 +1335,7 @@ Describe 'ProGetUniversalPackage.when given ManifestProperties that contain Name
 }
 
 Describe 'ProGetUniversalPackage.when missing required properties' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
@@ -1304,6 +1351,7 @@ Describe 'ProGetUniversalPackage.when missing required properties' {
 }
 
 Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error when packaging a file' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation')
@@ -1315,6 +1363,7 @@ Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error 
 }
 
 Describe 'ProGetUniversalPackage.when using the "." syntax to package a directory into the root of the package' {
+    AfterEach { Reset }
     It 'should put item in root of package' {
         Init
         GivenARepositoryWithItems 'dir1\dir2\file.txt'

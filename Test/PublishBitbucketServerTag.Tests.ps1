@@ -107,6 +107,11 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenTaggingACommit
 {
     [CmdletBinding()]
@@ -118,7 +123,9 @@ function WhenTaggingACommit
     $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' `
                                              -ForVersion $version `
                                              -ForBuildServer `
-                                             -ForBuildRoot $testRoot
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BitbucketServerAutomation'
+
     $context.BuildMetadata.ScmUri = $gitUri
     mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 
@@ -228,6 +235,7 @@ function ThenTheCommitShouldNotBeTagged
 }
 
 Describe 'PublishBitbucketServerTag.when repository cloned using SSH' {
+    AfterEach { Reset }
     It 'should create the tag' {
         Init
         GivenCredential 'bbservercredential' 'username' 'password'
@@ -242,6 +250,7 @@ Describe 'PublishBitbucketServerTag.when repository cloned using SSH' {
 }
 
 Describe 'PublishBitbucketServerTag.when repository cloned using HTTPS' {
+    AfterEach { Reset }
     It 'should create the tag' {
         Init
         GivenCredential 'bbservercredential' 'username' 'password'
@@ -256,6 +265,7 @@ Describe 'PublishBitbucketServerTag.when repository cloned using HTTPS' {
 }
 
 Describe 'PublishBitbucketServerTag.when user provides repository keys' {
+    AfterEach { Reset }
     It 'should create the tag' {
         Init
         GivenCredential 'bbservercredential' 'username' 'password'
@@ -270,6 +280,7 @@ Describe 'PublishBitbucketServerTag.when user provides repository keys' {
 }
 
 Describe 'PublishBitbucketServerTag.when attempting to tag without a valid commit' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenGitUrl 'does not matter'
@@ -281,6 +292,7 @@ Describe 'PublishBitbucketServerTag.when attempting to tag without a valid commi
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no credential ID' {
+    AfterEach { Reset }
     It 'shoudl fail' {
         Init
         GivenNoCredential
@@ -290,6 +302,7 @@ Describe 'Publsh-WhiskeyBBServerTag.when no credential ID' {
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
@@ -300,6 +313,7 @@ Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no repository information' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoRepoInformation
