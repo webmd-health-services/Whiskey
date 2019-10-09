@@ -49,7 +49,7 @@ function ThenNoErrors
 function ThenWhiskeyInstalled
 {
     $moduleDirName = $latestRelease.name -replace '-.*$',''
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('{0}\Whiskey\{1}\Whiskey.ps*1' -f $PSModulesDirectoryName,$moduleDirName)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
     $manifest = Test-ModuleManifest -Path ($path -replace '\.ps\*1','.psd1')

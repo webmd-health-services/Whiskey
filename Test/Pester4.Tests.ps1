@@ -3,8 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$powershellModulesDirectoryName = 'PSModules'
-
 $testRoot = $null
 $context = $null
 $version = $null
@@ -45,7 +43,7 @@ function Init
                                              -ForBuildRoot $testRoot `
                                              -IncludePSModule 'Pester'
 
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powershellModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '4.*' } |
         Remove-Item -Recurse -Force

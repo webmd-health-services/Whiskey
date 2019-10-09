@@ -85,6 +85,19 @@ function ConvertTo-Yaml
     }
 }
 
+function Import-WhiskeyTestModule
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]$Name,
+        
+        [Switch]$Force
+    )
+
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}\{1}' -f $PSModulesDirectoryName,$Name) -Resolve) `
+                  -Force:$Force
+}
+
 function Initialize-WhiskeyTestPSModule
 {
     [CmdletBinding()]
@@ -95,7 +108,7 @@ function Initialize-WhiskeyTestPSModule
         [string[]]$Name
     )
 
-    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath 'PSModules'
+    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
     Write-WhiskeyTestTiming ('Copying Modules  {0}  START' -f $destinationRoot) 
     if( -not (Test-Path -Path $destinationRoot -PathType Container) )
     {
@@ -109,7 +122,7 @@ function Initialize-WhiskeyTestPSModule
         $Name
     }
     
-    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) -Directory))
+    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve) -Directory))
     {
         if( $module.Name -notin $Name )
         {
@@ -542,7 +555,7 @@ function ThenModuleInstalled
         [string]$AtVersion
     )
 
-    Join-Path -Path $InBuildRoot -ChildPath ('PSModules\{0}\{1}' -f $Named,$AtVersion) | 
+    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
         Should -Exist
 }
 
@@ -564,11 +577,14 @@ if( $IsWindows )
     $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
 
+$PSModulesDirectoryName = 'PSModules'
+
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
     'SuccessCommandScriptBlock'
     'FailureCommandScriptBlock'
     'WhiskeyPlatform'
+    'PSModulesDirectoryName'
     # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
     if( $exportPlatformVars )
     {

@@ -157,7 +157,7 @@ function WhenCreatingPackage
 
     if( -not (Get-Module 'BuildMasterAutomation') )
     {
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BuildMasterAutomation' -Resolve)
+        Import-WhiskeyTestModule -Name 'BuildMasterAutomation'
     }
 
     if( $apiKeyID )

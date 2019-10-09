@@ -17,8 +17,7 @@ try
 
     & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Import-Whiskey.ps1' -Resolve)
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BuildMasterAutomation' -Resolve) -Force
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve) -Force
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force 
 
     foreach( $name in @( 'PackageManagement', 'PowerShellGet' ) )
     {
@@ -27,10 +26,12 @@ try
             Remove-Module -Name $name -Force 
         }
 
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\PSModules\{0}' -f $name) -Resolve) -Force
+        Import-WhiskeyTestModule -Name $name -Force
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force 
+    Import-WhiskeyTestModule -Name 'BuildMasterAutomation' -Force
+    Import-WhiskeyTestModule -Name 'ProGetAutomation' -Force
+
 }
 finally
 {

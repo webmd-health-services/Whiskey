@@ -12,7 +12,7 @@ function GivenContext
 {
     $script:taskParameter = @{ }
     $script:taskParameter['Uri'] = 'TestURI'
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
+    Import-WhiskeyTestModule -Name 'ProGetAutomation'
     $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
     $Global:globalTestSession = $session
     $Script:Context = New-WhiskeyTestContext -ForBuildServer `

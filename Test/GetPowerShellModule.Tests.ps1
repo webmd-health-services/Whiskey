@@ -28,7 +28,7 @@ function GivenModule
     )
     $script:taskParameter['Name'] = $Module
 
-    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath 'PSModules'
+    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath $PSModulesDirectoryName
     $script:modulePath = Join-path -Path $modulePath -ChildPath $taskParameter['Name']
 }
 

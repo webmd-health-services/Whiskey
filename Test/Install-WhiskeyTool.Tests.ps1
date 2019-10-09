@@ -380,8 +380,8 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
         Init
         GivenVersionParameterName 'Version'
         WhenInstallingTool 'PowerShellModule::Zip' -Parameter @{ 'Version' = '0.2.0' }
-        ThenDirectory 'PSModules\Zip' -Exists
-        $job = Start-Job { Import-Module -Name (Join-Path -Path $using:testRoot -ChildPath 'PSModules\Zip') -PassThru }
+        ThenDirectory ('{0}\Zip' -f $PSModulesDirectoryName) -Exists
+        $job = Start-Job { Import-Module -Name (Join-Path -Path $using:testRoot -ChildPath ('{0}\Zip' -f $PSModulesDirectoryName)) -PassThru }
         $moduleInfo = $job | Wait-Job | Receive-Job
         $moduleInfo.Version | Should -Be '0.2.0'
     }
@@ -392,7 +392,7 @@ Describe 'Install-WhiskeyTool.when failing to install a PowerShell module' {
         Init
         GivenVersionParameterName 'Version'
         WhenInstallingTool 'PowerShellModule::jfklfjsiomklmslkfs' -ErrorAction SilentlyContinue
-        ThenDirectory 'PSModules\Whiskey' -Not -Exists
+        ThenDirectory ('{0}\Whiskey' -f $PSModulesDirectoryName) -Not -Exists
         ThenThrewException -Regex 'Failed\ to\ find'
     }
 }

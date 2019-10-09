@@ -313,7 +313,7 @@ function WhenPublishingPackage
         $mock = { if( -not $Force ) { Write-Error -Message ('Package already exists!') } }
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
+    Import-WhiskeyTestModule -Name 'ProGetAutomation'
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
 
     $script:threwException = $false

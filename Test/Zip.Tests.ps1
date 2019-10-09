@@ -477,7 +477,7 @@ Describe 'Zip.when customizing entry name encoding' {
     AfterEach { Reset }
     BeforeEach { 
         Init
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Zip')
+        Import-WhiskeyTestModule -Name 'Zip'
     }
     Context ('using encoding name') {
         It 'should encode names in the custom encoding' {

@@ -2,7 +2,7 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
+Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
 
 $context = $null
 $threwException = $false
@@ -168,7 +168,7 @@ function WhenTaggingACommit
         # Remove so Pester can delete the test drive
         Remove-Module -Name 'BitbucketServerAutomation' -Force
         # Re-import so Pester can verify mocks.
-        Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
+        Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
     }
 }
 

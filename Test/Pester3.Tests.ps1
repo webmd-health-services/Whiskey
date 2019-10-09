@@ -3,8 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$powershellModulesDirectoryName = 'PSModules'
-
 $testRoot = $null
 $context = $null
 $taskParameter = @{}
@@ -33,7 +31,7 @@ function GivenTestContext
                                              @optionalParams
 
     # Make sure only Pester 3 is included.
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powershellModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '3.*' } |
         Remove-Item -Recurse -Force
@@ -117,7 +115,7 @@ function ThenPesterShouldBeInstalled
         $ExpectedVersion
     )
 
-    $pesterDirectoryName = '{0}\Pester\{1}' -f $powershellModulesDirectoryName,$ExpectedVersion
+    $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
 

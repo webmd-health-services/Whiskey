@@ -5,7 +5,6 @@ Set-StrictMode -Version 'Latest'
 $packageManagementVersion = '1.4.5'
 $powerShellGetVersion = '2.2.1'
 $testRoot = $null
-$powerShellModulesDirectoryName = 'PSModules'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
@@ -54,7 +53,7 @@ function Invoke-PowershellInstall
         Pop-Location
     }
 
-    $moduleRootPath = Join-Path -Path $testRoot -ChildPath ('PSModules\{0}' -f $ForModule)
+    $moduleRootPath = Join-Path -Path $testRoot -ChildPath ('{0}\{1}' -f $PSModulesDirectoryName,$ForModule)
     $result | Should -Not -BeNullOrEmpty
     $result | Should -Exist
     $result | Should -Be $moduleRootPath
@@ -85,7 +84,7 @@ function ThenModuleInstalled
         $AtVersion
     )
     
-    Join-Path -Path $testRoot -ChildPath ('PSModules\{0}\{1}' -f $Name,$AtVersion) | Should -Exist
+    Join-Path -Path $testRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Name,$AtVersion) | Should -Exist
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a PowerShell module' {
@@ -186,7 +185,7 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     AfterEach { Reset }
     It 'should still install the module' {
         Init
-        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powerShellModulesDirectoryName)
+        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
         New-Item -Path $moduleRootDir -ItemType Directory | Write-Debug
         Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
     }
@@ -197,7 +196,7 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is missing file
     It 'should do something' {
         Init
         Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Pester' -Version '4.4.0'
-        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Pester\4.4.0\Pester.psd1' -f $powerShellModulesDirectoryName) -Resolve
+        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Pester\4.4.0\Pester.psd1' -f $PSModulesDirectoryName) -Resolve
         Remove-Item -Path $moduleManifest -Force
         Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
     }

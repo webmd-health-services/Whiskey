@@ -77,27 +77,6 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
-function Install-ProGetAutomation
-{
-    param(
-        $BuildRoot
-    )
-
-    # Copy ProGetAutomation in place otherwise every test downloads it from the gallery
-    $psModulesRoot = Join-Path -Path $BuildRoot -ChildPath 'PSModules'
-    if( -not (Test-Path -Path $psModulesRoot -PathType Container) )
-    {
-        New-Item -Path $psModulesRoot -ItemType 'Directory'
-    }
-
-    if( -not (Test-Path -Path (Join-Path -Path $psModulesRoot -ChildPath 'ProGetAutomation') -PathType Container ) )
-    {
-        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation') `
-                  -Destination $psModulesRoot `
-                  -Recurse
-    }
-}
-
 function Reset
 {
     Reset-WhiskeyTestPSModule
@@ -220,8 +199,6 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot (Join-Path -Path $testRoot -ChildPath 'Repo') `
                                                             -ForBuildServer `
                                                             -IncludePSModule 'ProGetAutomation'
-
-    Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
@@ -461,9 +438,8 @@ function GivenARepositoryWithItems
         $destinationPath = Join-Path -Path $buildRoot -ChildPath $item
         Copy-Item -Path $PSCommandPath -Destination $destinationPath
     }
-
-    Install-ProGetAutomation -BuildRoot $buildRoot
 }
+
 function ThenPackageArchive
 {
     param(
@@ -906,7 +882,6 @@ foreach( $parameterName in @( 'Name', 'Description' ) )
             $parameter.Remove($parameterName)
 
             $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
-            Install-ProGetAutomation -BuildRoot $context.BuildRoot
             $Global:Error.Clear()
             $threwException = $false
             try
@@ -930,7 +905,6 @@ Describe 'ProGetUniversalPackage.when path to package does not exist' {
     It 'should fail' {
         Init
         $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
-        Install-ProGetAutomation -BuildRoot $context.BuildRoot
         $Global:Error.Clear()
 
         { Invoke-WhiskeyTask -TaskContext $context -Parameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } -Name 'ProGetUniversalPackage' } | Should -Throw
@@ -944,7 +918,6 @@ Describe 'ProGetUniversalPackage.when path to third-party item does not exist' {
     It 'should fail' {
         Init
         $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
-        Install-ProGetAutomation -BuildRoot $context.BuildRoot
 
         $Global:Error.Clear()
 
@@ -982,7 +955,6 @@ Describe 'ProGetUniversalPackage.when custom application root does not exist' {
         Initialize-Test -DirectoryName $dirNames -FileName $fileNames
         $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot -IncludePSModule 'ProGetAutomation'
 
-        Install-ProGetAutomation -BuildRoot $context.BuildRoot
         $Global:Error.Clear()
 
         $parameter = @{
@@ -1354,7 +1326,7 @@ Describe 'ProGetUniversalPackage.when ProGetAutomation function writes an error 
     AfterEach { Reset }
     It 'should fail' {
         Init
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation')
+        Import-WhiskeyTestModule -Name 'ProGetAutomation'
         Mock -CommandName 'Add-ProGetUniversalPackageFile' -ModuleName 'Whiskey' -MockWith { Write-Error -Message 'Failed to add file to package' }
         GivenARepositoryWithItems 'my.file'
         WhenPackaging -Paths 'my.file' -ErrorAction SilentlyContinue

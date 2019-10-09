@@ -1,5 +1,4 @@
 
-$powerShellModulesDirectoryName = 'PSModules'
 $PSModuleAutoLoadingPreference = 'None'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -23,7 +22,7 @@ function GivenAnInstalledPowerShellModule
         $WithName = 'SomeModule'
     )
 
-    $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
+    $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath $PSModulesDirectoryName
     if( $LikePowerShell4 )
     {
         $Name = '{0}' -f $WithName
@@ -109,7 +108,7 @@ function ThenPowerShellModuleUninstalled
         $Name = '{0}\{1}' -f $WithName, $WithVersion
     }
 
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
+    $path = Join-Path -Path $TestDrive.FullName -ChildPath $PSModulesDirectoryName
     $modulePath = Join-Path -Path $path -ChildPath $Name
 
     Test-Path -Path $modulePath -PathType Container | Should -BeFalse
@@ -119,7 +118,7 @@ function ThenPowerShellModuleUninstalled
 
 function ThenRemovedPSModulesDirectory
 {
-    Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName | Should -Not -Exist
+    Join-Path -Path $TestDrive.FullName -ChildPath $PSModulesDirectoryName | Should -Not -Exist
 }
 
 Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 4' {
@@ -154,14 +153,14 @@ Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under
         WhenUninstallingPowerShellModule -WithVersion '0.37.*'
         ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '0.37.*'
 
-        $psmodulesRoot = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
+        $psmodulesRoot = Join-Path -Path $TestDrive.FullName -ChildPath $PSModulesDirectoryName
         $modulePath = Join-Path -Path $psmodulesRoot -ChildPath 'SomeModule\0.38.2\SomeModule.psd1'
         $modulePath | Should -Exist
     }
 }
 
-Describe 'Uninstall-WhiskeyPowerShellModule.when PSModules directory is empty after module uninstall' {
-    It 'should delete the PSModules directory' {
+Describe ('Uninstall-WhiskeyPowerShellModule.when {0} directory is empty after module uninstall' -f $PSModulesDirectoryName) {
+    It ('should delete the {0} directory' -f $PSModulesDirectoryName) {
         GivenAnInstalledPowerShellModule -LikePowerShell5
         WhenUninstallingPowerShellModule
         ThenPowerShellModuleUninstalled -LikePowerShell5

@@ -53,7 +53,7 @@ function Init
 {
     $script:testRoot = New-WhiskeyTestRoot
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
+    Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
 }
 
 function ThenBuildStatusReportedToBitbucketServer

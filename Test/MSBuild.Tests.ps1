@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 
 # Load this module here so that it's assemblies get loaded into memory. Otherwise, the test will load
 # the module from the test drive, and Pester will complain that it can't delete the test drive.
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\VSSetup' -Resolve) -Force
+Import-WhiskeyTestModule -Name 'VSSetup' -Force
 Remove-Module -Name 'VSSetup' -Force
 
 $testRoot = $null

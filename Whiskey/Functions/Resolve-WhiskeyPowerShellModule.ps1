@@ -69,5 +69,7 @@ function Resolve-WhiskeyPowerShellModule
         return
     }
 
-    return $module | Select-Object -First 1
+    $module = $module | Select-Object -First 1
+    Write-WhiskeyTiming -Message ('{0}  {1} -> {2}' -f $Name,$Version,$module.Version)
+    return $module
 }

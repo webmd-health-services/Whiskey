@@ -1,7 +1,6 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$powerShellModulesDirectoryName = 'PSModules'
 $testRoot = $null
 
 # Private Whiskey function. Define it so Pester doesn't complain about it not existing.
@@ -237,7 +236,7 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
 Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
     It 'should delete PowerShell module' {
         Init
-        $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $powerShellModulesDirectoryName
+        $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $PSModulesDirectoryName
         Init
         GivenFile $mockModulePath
         WhenUninstallingTool 'PowerShellModule::Whiskey'
