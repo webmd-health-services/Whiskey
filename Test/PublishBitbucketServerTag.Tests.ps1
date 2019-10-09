@@ -104,6 +104,7 @@ function GivenVersion
 function Init
 {
     $script:gitUri = ''
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function WhenTaggingACommit
@@ -114,7 +115,10 @@ function WhenTaggingACommit
         $ThatWillFail
     )
 
-    $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' -ForVersion $version -ForBuildServer
+    $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' `
+                                             -ForVersion $version `
+                                             -ForBuildServer `
+                                             -ForBuildRoot $testRoot
     $context.BuildMetadata.ScmUri = $gitUri
     mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 
@@ -167,20 +171,13 @@ function ThenTaskFails
         $Pattern
     )
 
-    it 'should throw an exception' {
-        $threwException | Should be $true
-    }
-
-    It ('the exception should match /{0}/' -f $Pattern) {
-        $Global:Error | Should -Match $Pattern
-    }
+    $threwException | Should -BeTrue
+    $Global:Error | Should -Match $Pattern
 }
 
 function ThenTaskSucceeds
 {
-    it 'should not throw an exception' {
-        $threwException | should be $false
-    }
+    $threwException | Should -BeFalse
 }
 
 function ThenTheCommitShouldBeTagged
@@ -205,38 +202,19 @@ function ThenTheCommitShouldBeTagged
         $WithPassword
     )
 
-    it ('should tag the commit ''{0}''' -f $Tag) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Name  expected  {0}' -f $Tag)
-            Write-Debug -Message ('      actual    {0}' -f $Name)
-            $Name -eq $Tag 
-        }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Name  expected  {0}' -f $Tag)
+        Write-Debug -Message ('      actual    {0}' -f $Name)
+        $Name -eq $Tag 
     }
 
-    it ('should connect to Bitbucket Server at ''{0}''' -f $AtUri) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Uri -eq $AtUri }
-    }
-
-    it ('should connect to Bitbucket Server as user ''{0}''' -f $AsUser) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.UserName -eq $AsUser }
-    }
-
-    it ('should connect to Bitbucket Server with password ''{0}''' -f $WithPassword) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $WithPassword }
-    }
-
-    it ('should tag the commit in Bitbucket Server project ''{0}''' -f $InProject) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ProjectKey -eq $InProject }
-    }
-
-    it ('should tag the commit in Bitbucket Server repository ''{0}''' -f $InRepository) {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $RepositoryKey -eq $InRepository }
-    }
-
-    it ('should fail the build if creating tag fails') {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ErrorActionPreference -eq [Management.Automation.ActionPreference]::Stop }
-    }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Uri -eq $AtUri }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.UserName -eq $AsUser }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $WithPassword }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ProjectKey -eq $InProject }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $RepositoryKey -eq $InRepository }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ErrorActionPreference -eq [Management.Automation.ActionPreference]::Stop }
 }
 
 function ThenTheCommitShouldNotBeTagged
@@ -246,77 +224,89 @@ function ThenTheCommitShouldNotBeTagged
         $WithError
     )
 
-    it 'should not tag the commit' {
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
 }
 
 Describe 'PublishBitbucketServerTag.when repository cloned using SSH' {
-    Init
-    GivenCredential 'bbservercredential' 'username' 'password'
-    GivenBBServerAt 'https://bbserver.example.com'
-    GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
-    GivenACommit 
-    GivenVersion '1.4.5'
-    WhenTaggingACommit
-    ThenTheCommitShouldBeTagged '1.4.5' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
-    ThenTaskSucceeds
+    It 'should create the tag' {
+        Init
+        GivenCredential 'bbservercredential' 'username' 'password'
+        GivenBBServerAt 'https://bbserver.example.com'
+        GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
+        GivenACommit 
+        GivenVersion '1.4.5'
+        WhenTaggingACommit
+        ThenTheCommitShouldBeTagged '1.4.5' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTaskSucceeds
+    }
 }
 
 Describe 'PublishBitbucketServerTag.when repository cloned using HTTPS' {
-    Init
-    GivenCredential 'bbservercredential' 'username' 'password'
-    GivenBBServerAt 'https://bbserver.example.com'
-    GivenGitUrl 'https://user@bbserver.example.com/scm/project/repo.git'
-    GivenACommit 
-    GivenVersion '34.432.3'
-    WhenTaggingACommit
-    ThenTheCommitShouldBeTagged '34.432.3' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
-    ThenTaskSucceeds
+    It 'should create the tag' {
+        Init
+        GivenCredential 'bbservercredential' 'username' 'password'
+        GivenBBServerAt 'https://bbserver.example.com'
+        GivenGitUrl 'https://user@bbserver.example.com/scm/project/repo.git'
+        GivenACommit 
+        GivenVersion '34.432.3'
+        WhenTaggingACommit
+        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTaskSucceeds
+    }
 }
 
 Describe 'PublishBitbucketServerTag.when user provides repository keys' {
-    Init
-    GivenCredential 'bbservercredential' 'username' 'password'
-    GivenBBServerAt 'https://bbserver.example.com'
-    GivenRepository 'fubar' -InProject 'snafu'
-    GivenACommit 
-    GivenVersion '34.432.3'
-    WhenTaggingACommit
-    ThenTheCommitShouldBeTagged '34.432.3' -InProject 'snafu' -InRepository 'fubar' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
-    ThenTaskSucceeds
+    It 'should create the tag' {
+        Init
+        GivenCredential 'bbservercredential' 'username' 'password'
+        GivenBBServerAt 'https://bbserver.example.com'
+        GivenRepository 'fubar' -InProject 'snafu'
+        GivenACommit 
+        GivenVersion '34.432.3'
+        WhenTaggingACommit
+        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'snafu' -InRepository 'fubar' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTaskSucceeds
+    }
 }
 
 Describe 'PublishBitbucketServerTag.when attempting to tag without a valid commit' {
-    Init
-    GivenGitUrl 'does not matter'
-    GivenACommit -ThatIsInvalid
-    WhenTaggingACommit -ErrorAction SilentlyContinue
-    ThenTaskFails 'Unable to identify a valid commit to tag'
-    ThenTheCommitShouldNotBeTagged
+    It 'should fail' {
+        Init
+        GivenGitUrl 'does not matter'
+        GivenACommit -ThatIsInvalid
+        WhenTaggingACommit -ErrorAction SilentlyContinue
+        ThenTaskFails 'Unable to identify a valid commit to tag'
+        ThenTheCommitShouldNotBeTagged
+    }
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no credential ID' {
-    Init
-    GivenNoCredential
-    WhenTaggingACommit -ErrorAction SilentlyContinue
-    ThenTaskFails '\bCredentialID\b.*\bis\ mandatory\b'
+    It 'shoudl fail' {
+        Init
+        GivenNoCredential
+        WhenTaggingACommit -ErrorAction SilentlyContinue
+        ThenTaskFails '\bCredentialID\b.*\bis\ mandatory\b'
+    }
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
-    Init
-    GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
-    GivenNoBBServerUri
-    WhenTaggingACommit -ErrorAction SilentlyContinue
-    ThenTaskFails '\bUri\b.*\bis\ mandatory\b'
+    It 'should fail' {
+        Init
+        GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
+        GivenNoBBServerUri
+        WhenTaggingACommit -ErrorAction SilentlyContinue
+        ThenTaskFails '\bUri\b.*\bis\ mandatory\b'
+    }
 }
 
 Describe 'Publsh-WhiskeyBBServerTag.when no repository information' {
-    Init
-    GivenNoRepoInformation
-    GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
-    GivenBBServerAt 'https://bitbucket.example.com'
-    GivenACommit 'deadbeedeadbee'
-    WhenTaggingACommit -ErrorAction SilentlyContinue
-    ThenTaskFails '\bunable\ to\ determine\ the\ repository'
+    It 'should fail' {
+        Init
+        GivenNoRepoInformation
+        GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
+        GivenBBServerAt 'https://bitbucket.example.com'
+        GivenACommit 'deadbeedeadbee'
+        WhenTaggingACommit -ErrorAction SilentlyContinue
+        ThenTaskFails '\bunable\ to\ determine\ the\ repository'
+    }
 }

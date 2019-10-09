@@ -39,6 +39,7 @@ function Remove-WhiskeyFileSystemItem
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    Write-WhiskeyTiming -Message ('Remove-WhiskeyFileSystemItem  BEGIN  {0}' -f $Path)
     if( (Test-Path -Path $Path -PathType Leaf) )
     {
         Remove-Item -Path $Path -Force
@@ -76,4 +77,5 @@ function Remove-WhiskeyFileSystemItem
             Remove-Item -Path $Path -Recurse -Force
         }
     }
+    Write-WhiskeyTiming -Message ('Remove-WhiskeyFileSystemItem  END')
 }

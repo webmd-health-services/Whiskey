@@ -1,8 +1,12 @@
-    
+
+#Requires -Version 5.1
+Set-StrictMode -Version 'Latest'
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 [Environment]::SetEnvironmentVariable( 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE', 'true', [EnvironmentVariableTarget]::Process ) 
 
+$testRoot = $null
 $argument = $null
 $dotNetOutput = $null
 $failed = $false
@@ -10,17 +14,6 @@ $outputDirectory = $null
 $path = $null
 $taskContext = $null
 $verbosity = $null
-
-function Init
-{
-    $script:argument = $null
-    $script:dotNetOutput = $null
-    $script:failed = $false
-    $script:outputDirectory = $null
-    $script:path = $null
-    $script:taskContext = $null
-    $script:verbosity = $null
-}
 
 function GivenDotNetCoreProject
 {
@@ -33,7 +26,7 @@ function GivenDotNetCoreProject
 
     foreach ($project in $Path)
     {
-        $projectRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($project | Split-Path -Parent)
+        $projectRoot = Join-Path -Path $testRoot -ChildPath ($project | Split-Path -Parent)
         New-Item -Path $projectRoot -ItemTYpe 'Directory' -Force | Out-Null
 
         $csprojPath = Join-Path -Path $projectRoot -ChildPath ($project | Split-Path -Leaf)
@@ -48,6 +41,24 @@ function GivenDotNetCoreProject
     }
 }
 
+function Init
+{
+    $script:argument = $null
+    $script:dotNetOutput = $null
+    $script:failed = $false
+    $script:outputDirectory = $null
+    $script:path = $null
+    $script:taskContext = $null
+    $script:verbosity = $null
+
+    $script:testRoot = New-WhiskeyTestRoot
+}
+
+function Reset
+{
+    Remove-DotNet -BuildRoot $testRoot
+}
+
 function ThenLogFile
 {
     param(
@@ -58,17 +69,19 @@ function ThenLogFile
         $Exists
     )
 
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $fullPath = Join-Path -Path $testRoot -ChildPath '.output'
     $fullPath = Join-Path -Path $fullPath -ChildPath $Name
     if( $Not )
     {
-        If ('should not create build log file') {
+        if ('should not create build log file') 
+        {
             $fullPath | Should -Not -Exist
         }
     }
     else
     {
-        If ('should create build log file') {
+        if ('should create build log file') 
+        {
             $fullPath | Should -Exist
         }
     }
@@ -81,11 +94,9 @@ function ThenProjectBuilt
         $AssemblyPath
     )
 
-    $AssemblyPath = Join-Path -Path $TestDrive.FullName -ChildPath $AssemblyPath
+    $AssemblyPath = Join-Path -Path $testRoot -ChildPath $AssemblyPath
 
-    It 'should build the project assembly' {
-        $AssemblyPath | Should -Exist
-    }
+    $AssemblyPath | Should -Exist
 }
 
 function ThenTaskFailedWithError
@@ -94,24 +105,14 @@ function ThenTaskFailedWithError
         $ExpectedError
     )
 
-    It 'task should fail' {
-        $failed | Should -Be $true
-    }
-
-    It 'should write an error' {
-        $Global:Error | Should -Match $ExpectedError
-    }
+    $failed | Should -BeTrue
+    $Global:Error | Should -Match $ExpectedError
 }
 
 function ThenTaskSuccess
 {
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
-
-    It 'task should succeed' {
-        $failed | Should -Be $false
-    }
+    $Global:Error | Should -BeNullOrEmpty
+    $failed | Should -BeFalse
 }
 
 function WhenRunningDotNet
@@ -127,7 +128,7 @@ function WhenRunningDotNet
         $WithSdkVersion
     )
 
-    $script:taskContext = New-WhiskeyTestContext -ForBuildServer
+    $script:taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
     $taskParameter = @{ }
 
     if( $Command )
@@ -163,8 +164,8 @@ function WhenRunningDotNet
 }
 
 Describe 'DotNet.when command succeeds' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should pass build' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.*'
@@ -172,29 +173,21 @@ Describe 'DotNet.when command succeeds' {
         ThenLogFile 'dotnet.build.log' -Exists
         ThenTaskSuccess
     }
-    finally
-    {
-        Remove-DotNet
-    }
 }
 
 Describe 'DotNet.when command fails' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should fail build' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.1'
         WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.0.*' -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'dotnet(\.exe)?"\ failed\ with\ exit\ code'
     }
-    finally
-    {
-        Remove-DotNet
-    }
 }
 
 Describe 'DotNet.when passing paths to the command' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should resolve paths' {
         Init
         GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         GivenDotNetCoreProject 'DotNetCore2\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
@@ -205,24 +198,15 @@ Describe 'DotNet.when passing paths to the command' {
         ThenLogFile 'dotnet.build.DotNetCore2.csproj.log' -Exists
         ThenTaskSuccess
     }
-    finally
-    {
-        Remove-DotNet
-    }
 }
 
 
 Describe 'DotNet.when command is missing' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should fail' {
         Init
         GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         WhenRunningDotNet -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'is\ required'
     }
-    finally
-    {
-        Remove-DotNet
-    }
 }
-

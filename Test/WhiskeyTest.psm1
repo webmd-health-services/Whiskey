@@ -88,15 +88,23 @@ function ConvertTo-Yaml
 function Install-Node
 {
     param(
-        [string[]]
-        $WithModule
+        [string[]]$WithModule,
+
+        [string]$BuildRoot
     )
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath'
     Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
-    $destinationDir = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
+
+    if( -not $BuildRoot )
+    {
+        Write-Warning -Message ('Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.')
+        $BuildRoot = $TestDrive.FullName
+    }
+
+    $destinationDir = Join-Path -Path $BuildRoot -ChildPath '.node'
     $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
     $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
     if( -not $IsWindows )
@@ -162,9 +170,22 @@ function Invoke-WhiskeyPrivateCommand
     $Global:Name = $Name
     $Global:Parameter = $Parameter
 
+    if( $VerbosePreference -eq 'Continue' )
+    {
+        $Parameter['Verbose'] = $true
+    }
+
+    $Parameter['ErrorAction'] = $ErrorActionPreference
+
     try
     {
-        InModuleScope 'Whiskey' { & $Name @Parameter }
+        InModuleScope 'Whiskey' { 
+            if( $Name -eq 'Write-WhiskeyTiming' )
+            {
+                $DebugPreference = 'Continue'
+            }
+            & $Name @Parameter 
+        }
     }
     finally
     {
@@ -275,54 +296,39 @@ function New-MSBuildProject
 function New-WhiskeyTestContext
 {
     param(
-        [string]
-        $ForBuildRoot,
+        [string]$ForBuildRoot,
 
-        [string]
-        $ForTaskName,
+        [string]$ForTaskName,
 
-        [string]
-        $ForOutputDirectory,
+        [string]$ForOutputDirectory,
 
-        [switch]
-        $InReleaseMode,
+        [switch]$InReleaseMode,
 
         [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
-        [Switch]
         [Alias('ByBuildServer')]
-        $ForBuildServer,
+        [Switch]$ForBuildServer,
 
         [Parameter(Mandatory=$true,ParameterSetName='ByDeveloper')]
-        [Switch]
         [Alias('ByDeveloper')]
-        $ForDeveloper,
+        [Switch]$ForDeveloper,
 
-        [SemVersion.SemanticVersion]
-        $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
+        [SemVersion.SemanticVersion]$ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
-        [string]
-        $ConfigurationPath,
+        [string]$ConfigurationPath,
 
-        [string]
-        $ForYaml,
+        [string]$ForYaml,
 
-        [hashtable]
-        $TaskParameter = @{},
+        [hashtable]$TaskParameter = @{},
 
-        [string]
-        $DownloadRoot,
+        [string]$DownloadRoot,
 
-        [Switch]
-        $IgnoreExistingOutputDirectory,
+        [Switch]$IgnoreExistingOutputDirectory,
 
-        [Switch]
-        $InCleanMode,
+        [Switch]$InCleanMode,
 
-        [Switch]
-        $InInitMode,
+        [Switch]$InInitMode,
 
-        [Switch]
-        $IncludePSModules
+        [Switch]$IncludePSModules
     )
 
     Set-StrictMode -Version 'Latest'
@@ -430,20 +436,55 @@ function New-WhiskeyTestContext
     return $context
 }
 
+function New-WhiskeyTestRoot
+{
+    # Eventually, I hope Invoke-Pester supports running individual `It` blocks (as of this writing, you can only run 
+    # individual `Describe` blocks, which is why we use a single-It-per-Describe pattern). Unfortunately, Pester's test
+    # drive is setup and torn down at the Describe block, which means all our tests were written with the expectation 
+    # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
+    # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5, 
+    # which will allow running specific `It` blocks.
+    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
+    return $testRoot
+}
+
 function Remove-Node
 {
-    $parameter = @{ 'Path' = (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules') }
+    param(
+        [string]$BuildRoot
+    )
+
+    if( -not $BuildRoot )
+    {
+        Write-Warning -Message ('Remove-Node''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
+        $BuildRoot = $TestDrive.FullName
+    }
+
+    $parameter = @{ 'Path' = (Join-Path -Path $BuildRoot -ChildPath '.node\node_modules') }
     Invoke-WhiskeyPrivateCommand -Name 'Remove-WhiskeyFileSystemItem' -Parameter $parameter
 }
 
 function Remove-DotNet
 {
+    param(
+        [string]$BuildRoot
+    )
+
+    if( -not $BuildRoot )
+    {
+        Write-Warning -Message ('Remove-DotNet''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
+        $BuildRoot = $TestDrive.FullName
+    }
+
     Get-Process -Name 'dotnet' -ErrorAction Ignore |
-        Where-Object { $_.Path -like ('{0}\*\.dotnet\dotnet' -f ([IO.Path]::GetTempPath())) } |
-        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+        Where-Object { $_.Path -like ('{0}\*' -f $BuildRoot) } |
+        ForEach-Object { 
+            Write-Debug ('Killing process "{0}" (Id: {1}; Path: {2})' -f $_.Name,$_.Id,$_.Path)
+            Stop-Process -Id $_.Id -Force }
 
     $parameter = @{
-        'Path' = (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
+        'Path' = (Join-Path -Path $BuildRoot -ChildPath '.dotnet')
     }
     Invoke-WhiskeyPrivateCommand 'Remove-WhiskeyFileSystemItem' -Parameter $parameter
 }

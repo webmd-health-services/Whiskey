@@ -3,13 +3,23 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$modulesDirectoryName = 'PSModules'
+$powershellModulesDirectoryName = 'PSModules'
 
+$testRoot = $null
 $context = $null
-$pesterPath = $null
-$version = $null
 $taskParameter = @{}
 $failed = $false
+
+$repoRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
+$psmodulesRoot = Join-Path -Path $repoRoot -ChildPath ('{0}' -f $powershellModulesDirectoryName) -Resolve
+if( -not (Test-Path -Path (Join-Path -Path $psmodulesRoot -ChildPath 'Pester\3.*')) )
+{
+    Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter @{
+        'Name' = 'Pester';
+        'Version' = '3.*';
+        'Path' = $repoRoot;
+    }
+}
 
 # So we can mock Whiskey's private function.
 function Publish-WhiskeyPesterTestResult
@@ -18,76 +28,69 @@ function Publish-WhiskeyPesterTestResult
 
 function GivenTestContext
 {
-    $script:pesterPath = $null
-    $script:version = $null
-    $script:failed = $false
-    $script:taskParameter = @{}
-    $Global:Error.Clear()
-    $script:context = New-WhiskeyPesterTestContext
+    param(
+    )
 
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
-    }
-    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-    if(Test-Path $pesterPAth)
-    {
-        Remove-item $pesterPath -Recurse -Force
-    }
+    $script:context = New-WhiskeyPesterTestContext 
 }
 
 function New-WhiskeyPesterTestContext 
 {
-    param()
-    process
-    {
-        $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.\.output'
-        if( -not (Test-Path -Path $outputRoot -PathType Container) )
-        {
-            New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
-        }
-        $buildRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester' -Resolve
-        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester3' -ForOutputDirectory $outputRoot -ForBuildRoot $buildRoot -ForDeveloper
-        return $context
-    }
+    param(
+    )
+
+    $optionalParams = @{}
+
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester3' `
+                                             -ForBuildRoot $testRoot `
+                                             -ForDeveloper
+
+    # Make sure only Pester 3 is included.
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powershellModulesDirectoryName)
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+        Where-Object { $_.Name -notlike '3.*' } |
+        Remove-Item -Recurse -Force
+
+    return $context
 }
 function GivenVersion
 {
     param(
-        [string]
-        $Version
+        [string]$Version
     )
-    $Script:taskparameter['version'] = $Version
+
+    $taskParameter['Version'] = $Version
 }
 
-function GivenInvalidVersion
-{
-    $Script:taskparameter['version'] = '3.0.0'
-    Mock -CommandName 'Test-Path' `
-        -ModuleName 'Whiskey' `
-        -MockWith { return $False }`
-        -ParameterFilter { $Path -eq $context.BuildRoot }
-}
-
-function GivenPesterPath
+function GivenTestFile
 {
     param(
-        [string[]]
-        $pesterPath
+        [string]$Path,
+        [string]$Content
     )
-    $script:taskParameter['path'] = $pesterPath 
+
+    $taskParameter['Path'] = & {
+        if( $taskParameter.ContainsKey('Path') )
+        {
+            $taskParameter['Path']
+        }
+        $Path
+    }
+
+    if( -not [IO.Path]::IsPathRooted($Path) )
+    {
+        $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
+    }
 }
 
-function GivenWithCleanFlag
+function Init
 {
-    $context.RunMode = 'Clean'
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
-}
 
-function GivenWithInitilizeFlag
-{
-    $context.RunMode = 'initialize'
+    $script:failed = $false
+    $script:taskParameter = @{}
+    $Global:Error.Clear()
+
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function WhenPesterTaskIsInvoked
@@ -121,44 +124,15 @@ function ThenPesterShouldBeInstalled
         $ExpectedVersion
     )
 
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$ExpectedVersion
-    }
+    $pesterDirectoryName = '{0}\Pester\{1}' -f $powershellModulesDirectoryName,$ExpectedVersion
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
 
     $manifest = Test-ModuleManifest -Path $pesterPath
+
     $manifest.Version.ToString() | Should -BeLike $ExpectedVersion
-
     $script:failed | Should -BeFalse
-
-    $pesterPath | Should Exist
-}
-
-function ThenPesterShouldBeUninstalled {
-    if( -not $script:Taskparameter['Version'] )
-    {
-        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '3.*' } ) 
-        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
-        $version = $latestPester.Version 
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($Version.major, $Version.minor, $Version.build)
-    }
-    else
-    {
-        $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
-    }
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
-    }
-    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-    $script:failed | Should -BeFalse
-
-    Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -Times 1 -ModuleName 'Whiskey'
+    $pesterPath | Should -Exist
 }
 
 function ThenPesterShouldHaveRun
@@ -222,7 +196,8 @@ function ThenTestShouldFail
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
 }
 
-function ThenNoPesterTestFileShouldExist {
+function ThenNoPesterTestFileShouldExist 
+{
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
     write-host $testReports
@@ -242,9 +217,10 @@ if( -not $IsWindows )
 {
     Describe 'Pester3.when running on non-Windows platform' {
         It 'should fail' {
+            Init
             GivenTestContext
-            GivenPesterPath -pesterPath 'PassingTests'
-            GivenVersion '3.4.3'
+            GivenTestFile 'PassingTests.ps1' @'
+'@
             WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
             ThenTestShouldFail -failureMessage 'Windows\ platform'
         }
@@ -255,53 +231,88 @@ if( -not $IsWindows )
 
 Describe 'Pester3.when running passing Pester tests' {
     It 'should not fail' {
+        Init
         GivenTestContext
-        GivenPesterPath -pesterPath 'PassingTests'
-        GivenVersion '3.4.3'
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should Be $true
+    }
+    It 'should pass 2' {
+        $true | Should Be $true
+    }
+}
+'@
         WhenPesterTaskIsInvoked 
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-        ThenPesterShouldBeInstalled '3.4.3'
+        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 2
     }
 }
 
 Describe 'Pester3.when running failing Pester tests' {
     It 'should fail' {
+        Init
         GivenTestContext
-        GivenPesterPath -pesterPath 'FailingTests'
-        GivenVersion '3.4.3'
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'FailingTests' {
+    It 'should fail 1' {
+        $true | Should Be $false
+    }
+    It 'should fail 2' {
+        $true | Should Be $false
+    }
+}
+'@
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 0
+        ThenPesterShouldHaveRun -FailureCount 2 -PassingCount 0
         ThenTestShouldFail -failureMessage 'Pester tests failed'
     }
 }
 
 Describe 'Pester3.when running multiple test scripts' {
     It 'should run them all' {
+        Init
         GivenTestContext
-        GivenPesterPath 'FailingTests','PassingTests'
-        GivenVersion '3.4.3'
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should Be $true
+    }
+}
+'@
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'FailingTests' {
+    It 'should fail' {
+        $true | Should Be $false
+    }
+}
+'@
         WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
+        ThenPesterShouldHaveRun -FailureCount 1 -PassingCount 1
     }
 }
 
 Describe 'Pester3.when run multiple times in the same build' {
     It 'should output separate reports for each run' {
+        Init
         GivenTestContext
-        GivenPesterPath -pesterPath 'PassingTests'  
-        GivenVersion '3.4.3'
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should Be $true
+    }
+}
+'@
         WhenPesterTaskIsInvoked
         WhenPesterTaskIsInvoked
-        ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-        ThenPesterShouldBeInstalled '3.4.3'
+        ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
         ThenTestShouldCreateMultipleReportFiles
     }
 }
 
 Describe 'Pester3.when missing Path Configuration' {
     It 'should fail' {
+        Init
         GivenTestContext
-        GivenVersion '3.4.3'
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
         ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
@@ -310,46 +321,46 @@ Describe 'Pester3.when missing Path Configuration' {
 
 Describe 'Pester3.when missing Version configuration' {
     It 'should install latest version of Pester 3' {
-        GivenTestContext
-        GivenPesterPath -pesterPath 'PassingTests'
+        Init
+        GivenTestContext 
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should Be $true
+    }
+}
+'@
         WhenPesterTaskIsInvoked
-        ThenPesterShouldHaveRun -PassingCount 4 -FailureCount 0
+        ThenPesterShouldHaveRun -PassingCount 1 -FailureCount 0
         ThenPesterShouldBeInstalled '3.4.6'
+    }
+}
+
+Describe 'Pester3.when customizing version' {
+    It 'should install latest version of Pester 3' {
+        Init
+        GivenVersion '3.4.5'
+        GivenTestContext 
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should Be $true
+    }
+}
+'@
+        WhenPesterTaskIsInvoked
+        ThenPesterShouldHaveRun -PassingCount 1 -FailureCount 0
+        ThenPesterShouldBeInstalled '3.4.5'
     }
 }
 
 Describe 'Pester3.when a task path is absolute' {
     It 'should fail' {
+        Init
         GivenTestContext
-        GivenPesterPath -pesterPath 'C:\FubarSnafu'
-        GivenVersion '3.4.3'
+        GivenTestFile 'C:\FubarSnafu'
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
         ThenTestShouldFail -failureMessage 'absolute'
     }
 }
-
-Describe 'Pester3.when running passing Pester tests with Clean Switch the tests don''t run' {
-    It 'should remove Pester and not run any tests' {
-        GivenTestContext
-        GivenPesterPath -pesterPath 'PassingTests'
-        GivenVersion '3.4.3'
-        GivenWithCleanFlag
-        WhenPesterTaskIsInvoked
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
-        ThenPesterShouldBeUninstalled
-    }
-}
-
-Describe 'Pester3.when running passing Pester tests with initialization switch the tests don''t run' {
-    It 'should install Pester but not run any tests' {
-        GivenTestContext
-        GivenPesterPath -pesterPath 'PassingTests'
-        GivenVersion '3.4.3'
-        GivenWithInitilizeFlag
-        WhenPesterTaskIsInvoked
-        ThenNoPesterTestFileShouldExist 
-        ThenPesterShouldBeInstalled '3.4.3'
-    }
-}
-
