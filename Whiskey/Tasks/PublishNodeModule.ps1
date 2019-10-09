@@ -29,8 +29,6 @@ function Publish-WhiskeyNodeModule
         return
     }
 
-    $npmConfigPrefix = '//{0}{1}:' -f $NpmRegistryUri.Authority,$NpmRegistryUri.LocalPath
-
     if( -not $CredentialID )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
@@ -44,6 +42,7 @@ function Publish-WhiskeyNodeModule
     ' -f $NpmRegistryUri)
         return
     }
+
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $CredentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
     if( -not $EmailAddress )
@@ -58,9 +57,14 @@ function Publish-WhiskeyNodeModule
     ' -f $NpmRegistryUri,$CredentialID)
         return
     }
+
+    $npmConfigPrefix = '//{0}{1}:' -f $NpmRegistryUri.Authority,$NpmRegistryUri.LocalPath
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
+
+    $originalPackageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
+    $backupPackageJsonPath = Join-Path -Path $TaskContext.Temp -ChildPath 'package.json'
 
     try
     {
@@ -80,15 +84,27 @@ function Publish-WhiskeyNodeModule
             } |
             Write-WhiskeyVerbose -Context $TaskContext
 
+
+        Copy-Item -Path $originalPackageJsonPath -Destination $backupPackageJsonPath
+        Invoke-WhiskeyNpmCommand -Name 'version' `
+                                -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version', '--allow-same-version' `
+                                -BuildRootPath $TaskContext.BuildRoot `
+                                -ErrorAction Stop
+
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
         Invoke-WhiskeyNpmCommand -Name 'publish' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
     }
     finally
     {
-        if (Test-Path $packageNpmrc)
+        if (Test-Path -Path $packageNpmrc -PathType Leaf)
         {
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
+        }
+
+        if (Test-Path -Path $backupPackageJsonPath -PathType Leaf)
+        {
+            Copy-Item -Path $backupPackageJsonPath -Destination $originalPackageJsonPath -Force
         }
     }
 }
