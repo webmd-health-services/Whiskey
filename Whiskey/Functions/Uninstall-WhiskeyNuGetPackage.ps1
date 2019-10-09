@@ -27,22 +27,19 @@ function Uninstall-WhiskeyNuGetPackage
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         [String]$Version
     )
-        Set-StrictMode -Version 'Latest'
-        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        if( -not $Version )
-        {
-            $Version = '*'
-        }
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
-        $packageRoot = Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $Name,$Version)
-        if( (Test-Path -Path $packageRoot -PathType Container) )
-        {
-            Get-Item -Path $packageRoot | Remove-WhiskeyFileSystemItem
-        }
-        else
-        {
-            Write-Error -Message ('Could not find package "{0}" anywhere within parent directory' -f $packageRoot)
-        }
+    if( -not $Version )
+    {
+        $Version = '*'
+    }
+
+    $packagesRoot = Join-Path -Path $BuildRoot -ChildPath 'packages'
+    $packageRoot = Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $Name,$Version)
+    if( (Test-Path -Path $packageRoot -PathType Container) )
+    {
+        Get-Item -Path $packageRoot | Remove-WhiskeyFileSystemItem
+    }
 }

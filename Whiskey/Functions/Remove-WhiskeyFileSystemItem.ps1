@@ -36,13 +36,13 @@ function Remove-WhiskeyFileSystemItem
         $Path
     )
 
-    Begin
+    begin
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     }
 
-    Process
+    process
     {
         if( (Test-Path -Path $Path -PathType Leaf ) )
         {
@@ -81,13 +81,5 @@ function Remove-WhiskeyFileSystemItem
                 Remove-Item -Path $Path -Recurse -Force
             }
         }
-        else
-        {
-            Write-Error -Message ('Could not find "{0}" anywhere within parent directory' -f $Path) -ErrorAction Continue
-        }
-    }
-
-    End
-    {
     }
 }

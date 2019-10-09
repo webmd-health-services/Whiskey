@@ -5,18 +5,11 @@ function GivenFileOrDirectory
     param(
         $Path,
 
-        [switch]$Directory
+        [string]$PathType
     )
 
     $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
-    if( $Directory )
-    {
-        New-Item -Path $fullPath -ItemType 'Directory' -Force | Out-Null
-    }
-    else
-    {
-        New-Item -Path $fullPath -ItemType 'File' -Force | Out-Null
-    }
+    New-Item -Path $fullPath -ItemType $PathType -Force | Out-Null
 }
 
 function WhenRemovingFileOrDirectory
@@ -30,15 +23,21 @@ function WhenRemovingFileOrDirectory
 
     $Global:Error.Clear()
     $Global:Path = $Path
-    if( $Piped )
+    try
     {
-        InModuleScope 'Whiskey' { ($Global:Path | Remove-WhiskeyFileSystemItem) }
+        if( $Piped )
+        {
+            InModuleScope 'Whiskey' { ($Global:Path | Remove-WhiskeyFileSystemItem) }
+        }
+        else
+        {
+            InModuleScope 'Whiskey' { & Remove-WhiskeyFileSystemItem -Path $Global:Path }
+        }
     }
-    else
+    finally
     {
-        InModuleScope 'Whiskey' { & Remove-WhiskeyFileSystemItem -Path $Global:Path }
+        Remove-Variable -Name 'Path' -Scope 'Global'
     }
-    Remove-Variable -Name 'Path' -Scope 'Global'
 }
 
 function ThenFileOrDirectoryShouldNotExist
@@ -82,7 +81,7 @@ function ThenRanSuccessfully
 Describe 'Remove-WhiskeyFileSystemItem.when given a valid file' {
     It 'should remove the file' {
         $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath 'file.txt'
-        GivenFileOrDirectory -Path 'file.txt'
+        GivenFileOrDirectory -Path 'file.txt' -PathType 'file'
         WhenRemovingFileOrDirectory -Path $fullPath 
         ThenFileOrDirectoryShouldNotExist 'file.txt'
         ThenRanSuccessfully
@@ -91,18 +90,18 @@ Describe 'Remove-WhiskeyFileSystemItem.when given a valid file' {
 
 Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid files' {
     It 'should remove all files' {
-        GivenFileOrDirectory -Path 'file.txt'
-        GivenFileOrDirectory -Path 'file1.txt'
-        GivenFileOrDirectory -Path 'file2.txt'
+        GivenFileOrDirectory -Path 'file.txt' -PathType 'file'
+        GivenFileOrDirectory -Path 'file1.txt' -PathType 'file'
+        GivenFileOrDirectory -Path 'file2.txt' -PathType 'file'
         $pathList = @(
             (Join-Path -Path $TestDrive.FullName -ChildPath 'file.txt'),
             (Join-Path -Path $TestDrive.FullName -ChildPath 'file1.txt'),
             (Join-Path -Path $TestDrive.FullName -ChildPath 'file2.txt')
         )
         WhenRemovingFileOrDirectory -Path $pathList -Piped
-        ThenFileOrDirectoryShouldNotExist -Path 'file.txt'
-        ThenFileOrDirectoryShouldNotExist -Path 'file2.txt'
-        ThenFileOrDirectoryShouldNotExist -Path 'file3.txt'
+        ThenFileOrDirectoryShouldNotExist -Path 'file.txt' -PathType 'file'
+        ThenFileOrDirectoryShouldNotExist -Path 'file2.txt' -PathType 'file'
+        ThenFileOrDirectoryShouldNotExist -Path 'file3.txt' -PathType 'file'
         ThenRanSuccessfully
 
     }
@@ -111,7 +110,7 @@ Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid files' {
 Describe 'Remove-WhiskeyFileSystemItem.when given a valid directory' {
     It 'should remove the directory' {
         $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath 'dir'
-        GivenFileOrDirectory -Path 'dir' -Directory
+        GivenFileOrDirectory -Path 'dir' -PathType 'container'
         WhenRemovingFileOrDirectory -Path $fullPath
         ThenFileOrDirectoryShouldNotExist 'dir'
         ThenRanSuccessfully
@@ -120,9 +119,9 @@ Describe 'Remove-WhiskeyFileSystemItem.when given a valid directory' {
 
 Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid directories' {
     It 'should remove all directories' {
-        GivenFileOrDirectory -Path 'dir' -Directory
-        GivenFileOrDirectory -Path 'dir1' -Directory
-        GivenFileOrDirectory -Path 'dir2' -Directory
+        GivenFileOrDirectory -Path 'dir' -PathType 'container'
+        GivenFileOrDirectory -Path 'dir1' -PathType 'container'
+        GivenFileOrDirectory -Path 'dir2' -PathType 'container'
         $pathList = @(
             (Join-Path -Path $TestDrive.FullName -ChildPath 'dir'),
             (Join-Path -Path $TestDrive.FullName -ChildPath 'dir1'),
@@ -137,17 +136,17 @@ Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid directories' {
 }
 
 Describe 'Remove-WhiskeyFileSystemItem.when given a file that doesn''t exist' {
-    It 'should throw errors' {
+    It 'should do nothing' {
         $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath 'file.txt'
         WhenRemovingFileOrDirectory -Path $fullPath -ErrorAction SilentlyContinue
-        ThenShouldThrowErrors -ExpectedError 'Could\ not\ find'
+        ThenRanSuccessfully
     }
 }
 
 Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid files and one that doesn''t exist' {
-    It 'should remove all valid files and throw an error' {
-        GivenFileOrDirectory -Path 'file.txt'
-        GivenFileOrDirectory -Path 'file2.txt'
+    It 'should remove all valid files' {
+        GivenFileOrDirectory -Path 'file.txt' -PathType 'file'
+        GivenFileOrDirectory -Path 'file2.txt' -PathType 'file'
         $pathList = @(
                     (Join-Path -Path $TestDrive.FullName -ChildPath 'file.txt'),
                     (Join-Path -Path $TestDrive.FullName -ChildPath 'file1.txt'),
@@ -156,22 +155,22 @@ Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid files and one t
         WhenRemovingFileOrDirectory -Path $pathList -Piped -ErrorAction SilentlyContinue
         ThenFileOrDirectoryShouldNotExist 'file.txt'
         ThenFileOrDirectoryShouldNotExist 'file2.txt'
-        ThenShouldThrowErrors -ExpectedError 'Could\ not\ find' 
+        ThenRanSuccessfully
     }
 }
 
 Describe 'Remove-WhiskeyFileSystemItem.when given a directory that doesn''t exist' {
-    It 'should throw errors' {
+    It 'should do nothing' {
         $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath 'dir'
         WhenRemovingFileOrDirectory -Path $fullPath -ErrorAction SilentlyContinue
-        ThenShouldThrowErrors -ExpectedError 'Could\ not\ find'
+        ThenRanSuccessfully
     }
 }
 
 Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid directories and one that doesn''t exist' {
-    It 'should remove all valid directories and throw and error' {
-        GivenFileOrDirectory -Path 'dir'
-        GivenFileOrDirectory -Path 'dir2'
+    It 'should remove all valid directories' {
+        GivenFileOrDirectory -Path 'dir' -PathType 'container'
+        GivenFileOrDirectory -Path 'dir2' -PathType 'container'
         $pathList = @(
                     (Join-Path -Path $TestDrive.FullName -ChildPath 'dir'),
                     (Join-Path -Path $TestDrive.FullName -ChildPath 'dir1'),
@@ -180,15 +179,15 @@ Describe 'Remove-WhiskeyFileSystemItem.when given multiple valid directories and
         WhenRemovingFileOrDirectory -Path $pathList -Piped -ErrorAction SilentlyContinue
         ThenFileOrDirectoryShouldNotExist 'dir'
         ThenFileOrDirectoryShouldNotExist 'dir2'
-        ThenShouldThrowErrors -ExpectedError 'Could\ not\ find' 
+        ThenRanSuccessfully
     }
 }
 
 Describe 'Remove-WhiskeyFileSystemItem.when given a valid file in a directory with other valid files' {
     It 'should remove the file without removing the other files' {
-        GivenFileOrDirectory -Path 'file.txt'
-        GivenFileOrDirectory -Path 'file1.txt'
-        GivenFileOrDirectory -Path 'file2.txt'
+        GivenFileOrDirectory -Path 'file.txt' -PathType 'file'
+        GivenFileOrDirectory -Path 'file1.txt' -PathType 'file'
+        GivenFileOrDirectory -Path 'file2.txt' -PathType 'file'
         WhenRemovingFileOrDirectory -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'file.txt')
         ThenFileOrDirectoryShouldNotExist 'file.txt'
         ThenFileOrDirectoryShouldExist 'file1.txt'
@@ -200,7 +199,7 @@ Describe 'Remove-WhiskeyFileSystemItem.when given a valid file in a directory wi
 Describe 'Remove-WhiskeyFileSystemItem.when given a valid nested file' {
     It 'should remove the file but not the directory' {
         $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath 'dir/file.txt'
-        GivenFileOrDirectory 'dir/file.txt'
+        GivenFileOrDirectory 'dir/file.txt' -PathType 'file'
         WhenRemovingFileOrDirectory -Path $fullPath
         ThenFileOrDirectoryShouldNotExist 'dir/file.txt'
         ThenFileOrDirectoryShouldExist 'dir'

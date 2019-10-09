@@ -309,45 +309,42 @@ Describe 'Install-WhiskeyTool.when failing to install a PowerShell module' {
 
 If ( $IsWindows )
 {
-    Describe 'Install-WhiskeyTool.when failing to install a NuGet Package' {
-        It 'should not install, and should throw an exception' {
-            Init
-            WhenInstallingTool -Name 'NuGet::TROLOLO' -Version '1.1.1' -ErrorAction SilentlyContinue
-            ThenDirectory 'packages\TROLOLO' -Not -Exists
-            ThenThrewException
-            $Global:Error | Where-Object { $_ -match 'failed to install' } | Should -Not -BeNullOrEmpty
-        }
-    }
 
     Describe 'Install-WhiskeyNuGetPackage.when NuGet is the provider' {
-        It 'should enable NuGet package restore' {
+        It 'should pass the correct parameters' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
-            WhenInstallingTool 'NuGet::Nunit.Runners'
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$Name -eq 'Nunit.Runners'}
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$DownloadRoot -eq $TestDrive.FullName}
+            WhenInstallingTool -Name 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' }
+            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
+                $Name -eq 'NUnit.Runners'
+                $DownloadRoot -eq $TestDrive.FullName
+            }
         }
     }
 
     Describe 'Install-WhiskeyTool.when NuGet is the provider and version specified' {
-        It 'should enable NuGet package restore' {
+        It 'should pass the correct parameters' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
             WhenInstallingTool 'NuGet::Nunit.Runners' -Version '2.6.1'
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$Name -eq 'Nunit.Runners'}
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$DownloadRoot -eq $TestDrive.FullName}
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$Version -eq '2.6.1'}
+            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
+                $Name -eq 'NUnit.Runners'
+                $DownloadRoot -eq $TestDrive.FullName
+                $Version -eq '2.6.1'
+            }
         }
     }
 
-    Describe 'Install-WhiskeyTool.when NuGet is the provider' {
-        It 'should enable NuGet package restore' {
+    Describe 'Install-WhiskeyTool.when NuGet is the provider and two versions specified' {
+        It 'should pass the version passed as parameter to Install-WhiskeyTool as parameter to Install-WhiskeyNuGetPackage' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
             WhenInstallingTool 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' } -Version '2.6.3'
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$Name -eq 'Nunit.Runners'}
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$DownloadRoot -eq $TestDrive.FullName}
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {$Version -eq '2.6.4'}
+            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
+                $Name -eq 'NUnit.Runners'
+                $DownloadRoot -eq $TestDrive.FullName
+                $Version -eq '2.6.4'
+            }
         }
     }
 }
