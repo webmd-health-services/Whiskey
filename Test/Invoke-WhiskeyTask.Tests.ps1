@@ -1617,4 +1617,185 @@ Describe ('Invoke-WhiskeyTask.when ExceptOnPlatform is invalid') {
     ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
 }
 
+Describe ('Invoke-WhiskeyTask.when invoking a task using its alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName','AnotherOldName'))]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{}
+        It ('should run the task using its alias') {
+            $aliasedTaskRan | Should -BeTrue
+        }
+
+        # Now, do it with another alias.
+        $global:aliasedTaskRan = $false
+        WhenRunningTask 'AnotherOldName' -Parameter @{}
+        It ('should run the task using its alias') {
+            $aliasedTaskRan | Should -BeTrue
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when warning about using an alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{} -WarningVariable 'warnings'
+        It ('should write warnings') {
+            $warnings | Should -Not -BeNullOrEmpty
+            $warnings | Should -Match 'is\ an\ alias'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when multiple tasks have the same alias') {
+    $global:aliasedTaskRan = $false
+    function Global:AliasedTask
+    {
+        [Whiskey.Task('NewName',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    function Global:AliasedTask2
+    {
+        [Whiskey.Task('NewName2',Aliases=('OldName'),WarnWhenUsingAlias=$true)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:aliasedTaskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'OldName' -Parameter @{} -ErrorAction SilentlyContinue
+        ThenThrewException -Pattern 'Found\ \d+\ tasks\ with\ alias'
+        It ('should not run the task') {
+            $aliasedTaskRan | Should -BeFalse
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:aliasedTaskRan'
+        Remove-Item -Path 'function:AliasedTask'
+        Remove-Item -Path 'function:AliasedTask2'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when multiple tasks have the same name') {
+    $global:taskRan = $false
+    function Global:Dup
+    {
+        [Whiskey.Task('Dup')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:taskRan = $true
+    }
+    function Global:Dup2
+    {
+        [Whiskey.Task('Dup')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+        $global:taskRan = $true
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'Dup' -Parameter @{} -ErrorAction SilentlyContinue
+        ThenThrewException -Pattern 'Found\ \d+\ tasks\ named'
+        It ('should not run the task') {
+            $taskRan | Should -BeFalse
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'variable:taskRan'
+        Remove-Item -Path 'function:Dup'
+        Remove-Item -Path 'function:Dup2'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when task is obsolete') {
+    function Global:ObsoleteTask
+    {
+        [Whiskey.Task('ObsoleteTask',Obsolete)]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+        It ('should warn') {
+            $warnings | Should -Match 'is\ obsolete'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'function:ObsoleteTask'
+    }
+}
+
+Describe ('Invoke-WhiskeyTask.when task is obsolete and user provides custom obsolete message') {
+    function Global:ObsoleteTask
+    {
+        [Whiskey.Task('ObsoleteTask',Obsolete,ObsoleteMessage='Use the NonObsoleteTask instead.')]
+        param(
+            $TaskContext,
+            $TaskParameter
+        )
+    }
+    try
+    {
+        Init
+        WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+        It ('should warn') {
+            $warnings | Should -Match 'Use\ the\ NonObsoleteTask\ instead\.'
+            $warnings | Should -Not -Match 'is\ obsolete'
+        }
+    }
+    finally
+    {
+        Remove-Item -Path 'function:ObsoleteTask'
+    }
+}
+
 Remove-Item -Path 'function:ToolTask' -ErrorAction Ignore

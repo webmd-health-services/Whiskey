@@ -155,7 +155,7 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 # fixed, change version numbers to wildcards on the patch version.
 $nestedModules = @{
                         'PackageManagement' = '1.4.3';
-                        'PowerShellGet' = '2.2';
+                        'PowerShellGet' = '2.2.1';
                  }
 $privateModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Modules'
 if( -not (Test-Path -Path $privateModulesRoot -PathType 'Container') )
@@ -171,9 +171,14 @@ foreach( $nestedModuleName in $nestedModules.Keys )
         # Run in a background job otherwise the default global 
         # PackageManagement module assembly remains loaded.
         Start-Job -ScriptBlock {
-            Save-Module -Name $using:nestedModuleName `
-                        -RequiredVersion $using:nestedModuleVersion `
-                        -Path $using:privateModulesRoot
+            $module = 
+                Find-Module -Name $using:nestedModuleName -RequiredVersion $using:nestedModuleVersion |
+                Select-Object -First 1 
+            $module | Format-List | Out-String | Write-Verbose 
+            Save-Module -Path $using:privateModulesRoot `
+                        -Name $module.Name `
+                        -RequiredVersion $module.Version `
+                        -Repository $module.Repository
         } | Wait-Job | Receive-Job | Remove-Job
     }
 }
@@ -183,6 +188,9 @@ $ErrorActionPreference = 'Continue'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
+
+Write-Verbose -Message '# POWERSHELLVERSIONTABLE'
+$PSVersionTable | Format-List | Out-String | Write-Verbose
 
 Write-Verbose -Message '# VARIABLES'
 Get-Variable | Format-Table | Out-String | Write-Verbose

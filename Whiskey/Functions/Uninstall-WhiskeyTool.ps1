@@ -78,8 +78,7 @@ function Uninstall-WhiskeyTool
     
     if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
-        $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\bin\NuGet.exe' -Resolve
-        $Version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $nugetPath
+        $Version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
         if( -not $Version )
         {
             return

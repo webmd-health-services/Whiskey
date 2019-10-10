@@ -132,7 +132,11 @@ function Install-Node
                 {
                     New-Item -Path $moduleDestinationDir -ItemType 'Directory' -Force | Out-Null
                 }
-                Invoke-WhiskeyRobocopy -Source $_.FullName -Destination $moduleDestinationDir
+                $robocopyParameter = @{
+                    'Source' = $_.FullName;
+                    'Destination' = $moduleDestinationDir
+                }
+                Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyRobocopy' -Parameter $robocopyParameter
             }
             else
             {
@@ -146,6 +150,28 @@ function Install-Node
         ForEach-Object { New-Item -Path $_ -ItemType 'File' }
 }
 
+function Invoke-WhiskeyPrivateCommand
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [hashtable]$Parameter = @{}
+    )
+
+    $Global:Name = $Name
+    $Global:Parameter = $Parameter
+
+    try
+    {
+        InModuleScope 'Whiskey' { & $Name @Parameter }
+    }
+    finally
+    {
+        Remove-Variable -Name 'Parameter' -Scope 'Global'
+        Remove-Variable -Name 'Name' -Scope 'Global'
+    }
+}
 function New-AssemblyInfo
 {
     param(
@@ -246,7 +272,6 @@ function New-MSBuildProject
     }
 }
 
-
 function New-WhiskeyTestContext
 {
     param(
@@ -314,7 +339,7 @@ function New-WhiskeyTestContext
 
     if( $ConfigurationPath )
     {
-        $configData = Import-WhiskeyYaml -Path $ConfigurationPath
+        $configData = Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Path' = $ConfigurationPath }
     }
     else
     {
@@ -322,7 +347,7 @@ function New-WhiskeyTestContext
         if( $ForYaml )
         {
             $ForYaml | Set-Content -Path $ConfigurationPath
-            $configData = Import-WhiskeyYaml -Yaml $ForYaml
+            $configData = Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $ForYaml }
         }
         else
         {
@@ -341,7 +366,7 @@ function New-WhiskeyTestContext
         }
     }
 
-    $context = New-WhiskeyContextObject
+    $context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
     $context.BuildRoot = $ForBuildRoot
     $context.Environment = 'Verificaiton'
     $context.ConfigurationPath = $ConfigurationPath
@@ -398,7 +423,7 @@ function New-WhiskeyTestContext
     if( $IncludePSModules )
     {
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) `
-                  -Destination (Join-Path -Path $context.BuildRoot -ChildPath 'PSModules') `
+                  -Destination $context.BuildRoot `
                   -Recurse
     }
 
@@ -407,7 +432,8 @@ function New-WhiskeyTestContext
 
 function Remove-Node
 {
-    Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules')
+    $parameter = @{ 'Path' = (Join-Path -Path $TestDrive.FullName -ChildPath '.node\node_modules') }
+    Invoke-WhiskeyPrivateCommand -Name 'Remove-WhiskeyFileSystemItem' -Parameter $parameter
 }
 
 function Remove-DotNet
@@ -416,18 +442,11 @@ function Remove-DotNet
         Where-Object { $_.Path -like ('{0}\*\.dotnet\dotnet' -f ([IO.Path]::GetTempPath())) } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
-    Remove-WhiskeyFileSystemItem -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
+    $parameter = @{
+        'Path' = (Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet')
+    }
+    Invoke-WhiskeyPrivateCommand 'Remove-WhiskeyFileSystemItem' -Parameter $parameter
 }
-
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Use-CallerPreference.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyContextObject.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyVersionObject.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\New-WhiskeyBuildMetadataObject.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Import-WhiskeyYaml.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Get-WhiskeyMSBuildConfiguration.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Invoke-WhiskeyRobocopy.ps1' -Resolve)
-. (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Functions\Remove-WhiskeyFileSystemItem.ps1' -Resolve)
-
 
 $SuccessCommandScriptBlock = { 'exit 0' | sh }
 $FailureCommandScriptBlock = { 'exit 1' | sh }
@@ -449,5 +468,6 @@ $variablesToExport = & {
         'IsWindows'
     }
 }
+
 # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 Export-ModuleMember -Function '*' -Variable $variablesToExport

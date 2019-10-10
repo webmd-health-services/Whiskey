@@ -111,9 +111,24 @@ function Invoke-WhiskeyTask
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
 
-    $knownTasks = Get-WhiskeyTask
+    $knownTasks = Get-WhiskeyTask -Force
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
+
+    if( -not $task )
+    {
+        $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
+        $taskCount = ($task | Measure-Object).Count
+        if( $taskCount -gt 1 )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks with alias "{1}". Please update to use one of these task names: {2}.' -f $taskCount,$Name,(($task | Select-Object -ExpandProperty 'Name') -join ', '))
+            return
+        }
+        if( $task -and $task.WarnWhenUsingAlias )
+        {
+            Write-Warning -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
+        }
+    }
 
     if( -not $task )
     {
@@ -121,7 +136,24 @@ function Invoke-WhiskeyTask
         throw ('{0}: {1}[{2}]: ''{3}'' task does not exist. Supported tasks are:{4} * {5}' -f $TaskContext.ConfigurationPath,$Name,$TaskContext.TaskIndex,$Name,[Environment]::NewLine,($knownTaskNames -join ('{0} * ' -f [Environment]::NewLine)))
     }
 
+    $taskCount = ($task | Measure-Object).Count
+    if( $taskCount -gt 1 )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks named "{1}". We don''t know which one to use. Please make sure task names are unique.' -f $taskCount,$Name)
+        return
+    }
+
     $TaskContext.TaskName = $Name
+
+    if( $task.Obsolete )
+    {
+        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $task.Name
+        if( $task.ObsoleteMessage )
+        {
+            $message = $task.ObsoleteMessage
+        }
+        Write-WhiskeyWarning -Context $TaskContext -Message $message
+    }
 
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
@@ -136,7 +168,7 @@ function Invoke-WhiskeyTask
 
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
-    $taskProperties = $Parameter.Clone()
+    [hashtable]$taskProperties = $Parameter.Clone()
     $commonProperties = @{}
     foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyOnPlatform', 'ExceptOnPlatform' ) )
     {
@@ -206,7 +238,9 @@ function Invoke-WhiskeyTask
         {
             New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
         }
-        & $task.CommandName -TaskContext $TaskContext -TaskParameter $taskProperties
+
+        $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+        & $task.CommandName @parameter
         $result = 'COMPLETED'
     }
     finally

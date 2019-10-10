@@ -13,7 +13,8 @@ function Init
     $script:version = $null
     $script:failed = $false
     $script:branch = $null
-    $script:initialVersion = New-WhiskeyVersionObject '0.0.0'
+    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                          -Parameter @{ 'SemVer' = '0.0.0' }
 }
 
 function GivenFile
@@ -61,7 +62,8 @@ function GivenCurrentVersion
         $Version
     )
 
-    $script:initialVersion = New-WhiskeyVersionObject $Version
+    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                          -Parameter @{ 'SemVer' = $Version }
 }
 
 function ThenSemVer2Is
@@ -117,7 +119,10 @@ function WhenRunningTask
     [CmdletBinding()]
     param(
         [Switch]
-        $AsDeveloper
+        $AsDeveloper,
+
+        [string]
+        $WithYaml
     )
 
     $forParam = @{ ForBuildServer = $true }
@@ -126,7 +131,16 @@ function WhenRunningTask
         $forParam = @{ ForDeveloper = $true }
     }
 
-    $script:context = New-WhiskeyTestContext @forParam
+    if( $WithYaml )
+    {
+        $script:context = New-WhiskeyTestContext -ForYaml $WithYaml @forParam
+        $script:property = $context.Configuration['Build'][0]['Version']
+    }
+    else
+    {
+        $script:context = New-WhiskeyTestContext @forParam
+    }
+
     $context.Version = $initialVersion
     if( $branch )
     {
@@ -141,7 +155,7 @@ function WhenRunningTask
     catch
     {
         $script:failed = $true
-        Write-Error $_
+        Write-Error -ErrorRecord $_
 
     }
 }
@@ -431,6 +445,23 @@ Describe 'Version.when Prerelease is a branch map' {
     ThenVersionIs '1.2.3'
     ThenSemVer1Is '1.2.3-beta2'
     ThenSemVer2Is '1.2.3-beta.2'
+}
+
+Describe 'Version.when Prerelease contains multiple matches' {
+    Init
+    GivenBranch 'feature/fubar-test'
+    WhenRunningTask -WithYaml @'
+Build:
+- Version:
+    Version: 1.2.3
+    Prerelease:
+    - feature/fubar-*: fubar.1
+    - feature/*: alpha.1
+    - develop: beta.1
+'@
+    ThenVersionIs '1.2.3'
+    ThenSemVer1Is '1.2.3-fubar1'
+    ThenSemVer2Is '1.2.3-fubar.1'
 }
 
 Describe 'Version.when Prerelease branch map isn''t a map' {

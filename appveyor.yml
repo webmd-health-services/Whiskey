@@ -27,7 +27,7 @@ build_script:
         $blockRdp = $true; 
         iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
     }
-
+#- sh: curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
 - pwsh: >-
     # On Linux, progress bars still show when running on the build server and take *ages* to render and they screw up the displayed output.
     $Global:ProgressPreference = 'SilentlyContinue'
