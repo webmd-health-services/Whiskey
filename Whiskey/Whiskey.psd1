@@ -169,6 +169,7 @@
 * Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
 * Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
 * Fixed: `Zip` task doesn't allow customzing file names in ZIP file.
+* `PublishNodeModule` task now supports publishing prerelease versions of node modules. See the `Version` task documentation for information on prerelease version labels.
 '@
         } # End of PSData hashtable
 
