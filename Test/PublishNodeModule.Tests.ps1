@@ -44,7 +44,8 @@ function ThenNodeModulePublished
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
                         -ParameterFilter { $Name -eq 'publish' -and $ErrorActionPreference -eq 'Stop' } `
-                        -Times 1 -Exactly
+                        -Times 1 `
+                        -Exactly
 }
 
 function ThenNodeModuleIsNotPublished
@@ -52,7 +53,8 @@ function ThenNodeModuleIsNotPublished
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
                         -ParameterFilter { $Name -eq 'publish' } `
-                        -Times 0 -Exactly
+                        -Times 0 `
+                        -Exactly
 }
 
 function ThenNodeModuleVersionUpdated
@@ -64,7 +66,8 @@ function ThenNodeModuleVersionUpdated
 
     Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' `
                       -ModuleName 'Whiskey' `
-                      -Times 1 -Exactly `
+                      -Times 1 `
+                      -Exactly `
                       -ParameterFilter {
                           if( $Name -ne 'version')
                           {
@@ -94,12 +97,13 @@ function ThenNpmPackagesPruned
 {
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
+                        -Times 1 `
+                        -Exactly `
                         -ParameterFilter {
                             $Name -eq 'prune' -and
                             $ArgumentList[0] -eq '--production' -and
                             $ErrorActionPreference -eq 'Stop'
-                        } `
-                        -Times 1 -Exactly
+                        }
 }
 
 function ThenNpmrcCreated
@@ -129,8 +133,11 @@ function ThenNpmrcCreated
     $actualFileContents = Get-Content -Raw -Path $npmrcPath
     $actualFileContents.Trim() | Should -Be $npmrcFileContents.Trim()
 
-    Assert-MockCalled -CommandName 'Remove-Item' -ModuleName 'Whiskey' `
-                        -ParameterFilter {$Path -eq $npmRcPath} -Times 1 -Exactly
+    Assert-MockCalled -CommandName 'Remove-Item' `
+                      -ModuleName 'Whiskey' `
+                      -Times 1 `
+                      -Exactly `
+                      -ParameterFilter { $Path -eq $npmRcPath }
 }
 
 function ThenPackageJsonVersion
