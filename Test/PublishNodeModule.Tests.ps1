@@ -20,6 +20,11 @@ function Init
     Install-Node
 }
 
+function Reset
+{
+    Remove-Node
+}
+
 function GivenPackageJson
 {
     param(
@@ -214,80 +219,79 @@ function WhenPublishingNodeModule
 }
 
 Describe 'PublishNodeModule.when publishing node module' {
+    AfterEach { Reset }
     It 'should publish the module' {
-        try
+        Init
+        GivenPackageJson @"
         {
-            Init
-            GivenPackageJson @"
-            {
-                "name": "publishnodemodule_test",
-                "version": "1.2.0"
-            }
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
 "@
-            WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                     -WithEmailAddress 'somebody@example.com' `
-                                     -WithNpmRegistryUri 'http://registry@example.com'
-            ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
-            ThenNpmPackagesPruned
-            ThenNodeModulePublished
-        }
-        finally
-        {
-            Remove-Node
-        }
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com'
+        ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
     }
 }
 
 Describe 'PublishNodeModule.when NPM registry URI property is missing' {
+    AfterEach { Reset }
     It 'should fail' {
-        try
+        Init
+        GivenPackageJson @"
         {
-            Init
-            GivenPackageJson @"
-            {
-                "name": "publishnodemodule_test",
-                "version": "1.2.0"
-            }
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
 "@
-            WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                     -WithEmailAddress 'somebody@example.com' `
-                                     -ErrorAction SilentlyContinue
-            ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
-        }
-        finally
-        {
-            Remove-Node
-        }
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
     }
 }
 
 Describe 'PublishNodeModule.when credential ID property missing' {
+    AfterEach { Reset }
     It 'should fail' {
-        try
+        Init
+        GivenPackageJson @"
         {
-            Init
-            GivenPackageJson @"
-            {
-                "name": "publishnodemodule_test",
-                "version": "1.2.0"
-            }
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
 "@
-            WhenPublishingNodeModule -WithEmailAddress 'somebody@example.com' `
-                                     -WithNpmRegistryUri 'http://registry@example.com' `
-                                     -ErrorAction SilentlyContinue
-            ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
-        }
-        finally
-        {
-            Remove-Node
-        }
+        WhenPublishingNodeModule -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com' `
+                                    -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
     }
 }
 
 Describe 'PublishNodeModule.when email address property missing' {
+    AfterEach { Reset }
     It 'should fail' {
-        try
+        Init
+        GivenPackageJson @"
         {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
+"@
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithNpmRegistryUri 'http://registry@example.com' `
+                                    -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
+    }
+}
+
+Describe 'PublishNodeModule.when publishing node module with prerelease version' {
+    AfterEach { Reset }
+    Context 'mocked "npm version" command' {
+        It 'should publish module with the prerelease version' {
             Init
             GivenPackageJson @"
             {
@@ -295,64 +299,35 @@ Describe 'PublishNodeModule.when email address property missing' {
                 "version": "1.2.0"
             }
 "@
+            GivenPrerelease 'alpha.1'
+            Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
             WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                     -WithNpmRegistryUri 'http://registry@example.com' `
-                                     -ErrorAction SilentlyContinue
-            ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
-        }
-        finally
-        {
-            Remove-Node
-        }
-    }
-}
-
-Describe 'PublishNodeModule.when publishing node module with prerelease version' {
-    try
-    {
-        Context 'mocked "npm version" command' {
-            It 'should publish module with the prerelease version' {
-                Init
-                GivenPackageJson @"
-                {
-                    "name": "publishnodemodule_test",
-                    "version": "1.2.0"
-                }
-"@
-                GivenPrerelease 'alpha.1'
-                Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
-                WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                        -WithEmailAddress 'somebody@example.com' `
-                                        -WithNpmRegistryUri 'http://registry@example.com'
-                ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
-                ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
-                ThenNpmPackagesPruned
-                ThenNodeModulePublished
-            }
-        }
-
-        Context 'un-mocked "npm version" command' {
-            It 'should restore non-prerelease version in package.json after publishing' {
-                Init
-                GivenPackageJson @"
-                {
-                    "name": "publishnodemodule_test",
-                    "version": "1.2.0"
-                }
-"@
-                GivenPrerelease 'alpha.1'
-                WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                        -WithEmailAddress 'somebody@example.com' `
-                                        -WithNpmRegistryUri 'http://registry@example.com'
-                ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
-                ThenNpmPackagesPruned
-                ThenNodeModulePublished
-                ThenPackageJsonVersion -Is '1.2.0'
-            }
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com'
+            ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
+            ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
+            ThenNpmPackagesPruned
+            ThenNodeModulePublished
         }
     }
-    finally
-    {
-        Remove-Node
+
+    Context 'un-mocked "npm version" command' {
+        It 'should restore non-prerelease version in package.json after publishing' {
+            Init
+            GivenPackageJson @"
+            {
+                "name": "publishnodemodule_test",
+                "version": "1.2.0"
+            }
+"@
+            GivenPrerelease 'alpha.1'
+            WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com'
+            ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
+            ThenNpmPackagesPruned
+            ThenNodeModulePublished
+            ThenPackageJsonVersion -Is '1.2.0'
+        }
     }
 }
