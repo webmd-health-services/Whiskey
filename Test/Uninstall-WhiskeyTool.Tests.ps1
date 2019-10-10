@@ -174,25 +174,19 @@ function WhenUninstallingTool
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
     It 'should use Remove-WhiskeyFileSystemItem to delete node' {
-        try
-        {
-            Init
-            GivenToolInstalled 'node'
-            WhenUninstallingTool 'Node'
-            WhenUninstallingTool 'NodeModule::rimraf'
-            ThenUninstalledNode
-            ThenNoErrors
-    
-            # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
-            Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-            GivenToolInstalled 'node'
-            WhenUninstallingTool 'Node'
-            Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-        }
-        finally
-        {
-            Remove-Node
-        } 
+        AfterEach { Remove-Node }
+        Init
+        GivenToolInstalled 'node'
+        WhenUninstallingTool 'Node'
+        WhenUninstallingTool 'NodeModule::rimraf'
+        ThenUninstalledNode
+        ThenNoErrors
+
+        # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
+        Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
+        GivenToolInstalled 'node'
+        WhenUninstallingTool 'Node'
+        Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
 

@@ -64,7 +64,7 @@ function ThenShouldThrowErrors
     param(
         $ExpectedError
     )
-    $Global:Error | Should -Not -beNullOrEmpty
+    $Global:Error | Should -Not -BeNullOrEmpty
 
     if( $ExpectedError )
     {
@@ -74,7 +74,7 @@ function ThenShouldThrowErrors
 
 function ThenRanSuccessfully
 {
-    $Global:Error[0] | Should -beNullOrEmpty
+    $Global:Error[0] | Should -BeNullOrEmpty
 }
 
 

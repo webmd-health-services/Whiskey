@@ -314,23 +314,11 @@ If ( $IsWindows )
         It 'should pass the correct parameters' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
-            WhenInstallingTool -Name 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' }
+            WhenInstallingTool -Name 'NuGet::Nunit.Runners' -Version '2.6.4'
             Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
+                $Version -eq '2.6.4'
                 $DownloadRoot -eq $TestDrive.FullName
-            }
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when NuGet is the provider and version specified' {
-        It 'should pass the correct parameters' {
-            Init
-            Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
-            WhenInstallingTool 'NuGet::Nunit.Runners' -Version '2.6.1'
-            Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
-                $Name -eq 'NUnit.Runners'
-                $DownloadRoot -eq $TestDrive.FullName
-                $Version -eq '2.6.1'
             }
         }
     }
@@ -348,7 +336,8 @@ If ( $IsWindows )
         }
     }
 }
-else {
+else
+{
     Describe 'Install-WhiskeyTool.when NuGet is the provider and running on non-Windows OS' {
         It 'should not install' {
             Init
