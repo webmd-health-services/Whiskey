@@ -152,7 +152,7 @@ function Install-WhiskeyTool
                 }
                 'PowerShellModule'
                 {
-                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name -Version $version -ErrorAction Stop
+                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name -Version $version -BuildRoot $InstallRoot -ErrorAction Stop
                     $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
                 }
                 default

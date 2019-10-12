@@ -17,8 +17,6 @@ function New-WhiskeyProGetUniversalPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'ProGetAutomation'
-
     $manifestProperties = @{}
     if( $TaskParameter.ContainsKey('ManifestProperties') )
     {

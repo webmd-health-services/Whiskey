@@ -19,8 +19,6 @@ function Invoke-WhiskeyMSBuild
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'VSSetup'
-
     #setup
     $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']
 

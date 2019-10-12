@@ -19,8 +19,6 @@ function Publish-WhiskeyProGetAsset
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'ProGetAutomation'
-
     $message = "
     Build:
     - PublishProGetAsset:

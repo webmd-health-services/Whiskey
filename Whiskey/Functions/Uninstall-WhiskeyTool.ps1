@@ -109,7 +109,7 @@ function Uninstall-WhiskeyTool
             }
             'PowerShellModule'
             {
-                Uninstall-WhiskeyPowerShellModule -Name $Name
+                Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $InstallRoot
             }
             default
             {

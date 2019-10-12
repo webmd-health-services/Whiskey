@@ -2,17 +2,19 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-$packageManagementVersion = '1.4.5'
-$powerShellGetVersion = '2.2.1'
-$testRoot = $null
-
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
+$testRoot = $null
+$latestZip = Find-Module -Name 'Zip' | Select-Object -First 1
 
 function Init
 {
     param(
     )
-    $script:testRoot = New-WhiskeyTestRoot
+
+    $script:testRoot = New-WhiskeyTestRoot'
+
+    Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
 }
 
 # Wrap private function so we can call it like it's public.
@@ -22,10 +24,13 @@ function Install-WhiskeyPowerShellModule
     param(
         $Name,
         $Version,
-        $Path
+        [Switch]$SkipImport
     )
 
-    Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter $PSBoundParameters
+    $parameter = $PSBoundParameters
+    $parameter['BuildRoot'] = $testRoot
+
+    Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter $PSBoundParameters -ErrorAction $ErrorActionPreference
 }
 
 function Invoke-PowershellInstall
@@ -33,7 +38,8 @@ function Invoke-PowershellInstall
     param(
         $ForModule,
         $Version,
-        $ActualVersion
+        $ActualVersion,
+        [Switch]$SkipImport
     )
 
     if( -not $ActualVersion )
@@ -43,15 +49,12 @@ function Invoke-PowershellInstall
 
     $Global:Error.Clear()
 
-    Push-Location -Path $testRoot
-    try
+    if( Get-Module -Name $ForModule )
     {
-        $result = Install-WhiskeyPowerShellModule -Name $ForModule -Version $Version
+        Remove-Module -Name $ForModule -Force -ErrorAction Ignore
     }
-    finally
-    {
-        Pop-Location
-    }
+
+    $result = Install-WhiskeyPowerShellModule -Name $ForModule -Version $Version -SkipImport:$SkipImport
 
     $moduleRootPath = Join-Path -Path $testRoot -ChildPath ('{0}\{1}' -f $PSModulesDirectoryName,$ForModule)
     $result | Should -Not -BeNullOrEmpty
@@ -66,15 +69,30 @@ function Invoke-PowershellInstall
     $module.Version | Should -Be $ActualVersion
 }
 
+
 function Reset
 {
-    Remove-Module 'PowerShellGet' -Force -ErrorAction Ignore
-    Remove-Module 'PackageManagement' -Force -ErrorAction Ignore
+    Reset-WhiskeyTestPSModule
 }
-function ThenPackageManagementModulesInstalled
+function ThenModuleImported
 {
-    ThenModuleInstalled 'PackageManagement' -AtVersion $packageManagementVersion 
-    ThenModuleInstalled 'PowerShellGet' -AtVersion $powerShellGetVersion 
+    param(
+        $Named,
+        $AtVersion
+    )
+
+    $module = Get-Module -Name $Named 
+    $module | Should -Not -BeNullOrEmpty
+    $module.Version | Should -Be $AtVersion
+}
+
+function ThenModuleNotImported
+{
+    param(
+        $Named
+    )
+
+    Get-Module -Name $Named | Should -BeNullOrEmpty
 }
 
 function ThenModuleInstalled
@@ -96,7 +114,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a Po
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
         ThenModuleInstalled 'Zip' -AtVersion '0.2.0'
-        ThenPackageManagementModulesInstalled
+        ThenModuleImported 'Zip' -AtVersion '0.2.0'
 
         $Global:Error | Should -BeNullOrEmpty
 
@@ -112,6 +130,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     It 'should install at patch number 0' {
         Init
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2' -ActualVersion '0.2.0'
+        ThenModuleImported 'Zip' -AtVersion '0.2.0'
     }
 }
 
@@ -119,8 +138,8 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module om
     AfterEach { Reset }
     It 'should install the latest version' {
         Init
-        $module = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' -Parameter @{ 'Name' = 'Zip' }
-        Invoke-PowershellInstall -ForModule 'Zip' -Version '' -ActualVersion $module.Version
+        Invoke-PowershellInstall -ForModule 'Zip' -Version '' -ActualVersion $latestZip.Version
+        ThenModuleImported 'Zip' -AtVersion $latestZip.Version
     }
 }
 
@@ -128,9 +147,9 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module us
     AfterEach { Reset }
     It 'should resolve to the latest version that matches the wildcard' {
         Init
-        $module = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyPowerShellModule' `
-                                               -Parameter @{ 'Version' = '0.*'; 'Name' = 'Zip' }
-        Invoke-PowershellInstall -ForModule 'Zip' -Version '0.*' -ActualVersion $module.Version
+        $version = [version]($latestZip.Version)
+        Invoke-PowershellInstall -ForModule 'Zip' -Version ('{0}.*' -f $version.Major) -ActualVersion $latestZip.Version
+        ThenModuleImported 'Zip' -AtVersion $latestZip.Version
     }
 }
 
@@ -139,6 +158,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module' {
     It 'should install the module' {
         Init
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
+        ThenModuleImported 'Zip' -AtVersion '0.2.0'
     }
 }
 
@@ -147,10 +167,10 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     It 'should fail' {
         Init
         $Global:Error.Clear()
-        $result = Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Pester' -Version '3.0.0' -ErrorAction SilentlyContinue
+        $result = Install-WhiskeyPowerShellModule -Name 'Zip' -Version '0.0.1' -ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
-        $Global:Error | Where-Object { $_ -match 'failed to find module' } | Should -Not -BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -match 'failed to find' } | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -159,10 +179,10 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     It 'should fail' {
         Init
         $Global:Error.Clear()
-        $result = Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
+        $result = Install-WhiskeyPowerShellModule -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
-        $Global:Error | Where-Object { $_ -match 'failed to find module' } | Should -Not -BeNullOrEmpty
+        $Global:Error | Where-Object { $_ -match 'failed to find' } | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -170,12 +190,12 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is already inst
     AfterEach { Reset }
     It 'should install the new version' {
         Init
-        Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Pester' -Version '4.0.6'
-        $info = Get-ChildItem -Path $testRoot -Filter 'Pester.psd1' -Recurse
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version $latestZip.Version
+        $info = Get-ChildItem -Path $testRoot -Filter 'Zip.psd1' -Recurse
         $manifest = Test-ModuleManifest -Path $info.FullName
         Start-Sleep -Milliseconds 333
-        Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Pester' -Version '4.0.7'
-        $newInfo = Get-ChildItem -Path $testRoot -Filter 'Pester.psd1' -Recurse
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version $latestZip.Version
+        $newInfo = Get-ChildItem -Path $testRoot -Filter 'Zip.psd1' -Recurse
         $newManifest = Test-ModuleManifest -Path $newInfo.FullName
         $newManifest.Version | Should -Be $manifest.Version
     }
@@ -185,9 +205,9 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     AfterEach { Reset }
     It 'should still install the module' {
         Init
-        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Zip' -f $PSModulesDirectoryName)
         New-Item -Path $moduleRootDir -ItemType Directory | Write-Debug
-        Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
+        Invoke-PowershellInstall -ForModule 'Zip' -Version $latestZip.Version
     }
 }
 
@@ -195,9 +215,18 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is missing file
     AfterEach { Reset }
     It 'should do something' {
         Init
-        Install-WhiskeyPowerShellModule -Path $testRoot -Name 'Pester' -Version '4.4.0'
-        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Pester\4.4.0\Pester.psd1' -f $PSModulesDirectoryName) -Resolve
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version $latestZip.Version
+        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Zip\{1}\Zip.psd1' -f $PSModulesDirectoryName,$latestZip.Version) -Resolve
         Remove-Item -Path $moduleManifest -Force
-        Invoke-PowershellInstall -ForModule 'Pester' -Version '4.4.0'
+        Invoke-PowershellInstall -ForModule 'Zip' -Version $latestZip.Version
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when skipping import' {
+    AfterEach { Reset }
+    It 'should not  import the module' {
+        Init
+        Install-WhiskeyPowerShellModule 'Zip' -SkipImport
+        ThenModuleNotImported 'Zip'
     }
 }

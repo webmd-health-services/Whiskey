@@ -25,9 +25,12 @@ function Import-WhiskeyPowerShellModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string[]]
         # The module names to import.
-        $Name
+        [string[]]$Name,
+
+        [Parameter(Mandatory)]
+        # The path to the build root, where the PSModules directory can be found.
+        [string]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -39,7 +42,7 @@ function Import-WhiskeyPowerShellModule
     }
 
     $searchPaths = & {
-                        Join-Path -Path (Get-Location).ProviderPath -ChildPath $powerShellModulesDirectoryName
+                        Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
                    }
 
     foreach( $moduleName in $Name )
@@ -49,7 +52,7 @@ function Import-WhiskeyPowerShellModule
             $moduleDir = Join-Path -Path $searchDir -ChildPath $moduleName
             if( (Test-Path -Path $moduleDir -PathType Container) )
             {
-                Write-Debug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
+                Write-WhiskeyTiming -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
                 Write-Verbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
                 $numErrorsBefore = $Global:Error.Count
                 & {

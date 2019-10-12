@@ -17,8 +17,6 @@ function Publish-WhiskeyBuildMasterPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomation'
-
     $applicationName = $TaskParameter['ApplicationName']
     if( -not $applicationName )
     {

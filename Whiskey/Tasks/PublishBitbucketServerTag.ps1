@@ -17,8 +17,6 @@ function Publish-WhiskeyBBServerTag
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation'
-
     $exampleTask = 'Publish:
         - PublishBitbucketServerTag:
             CredentialID: BitbucketServerCredential

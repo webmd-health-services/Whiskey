@@ -1,6 +1,8 @@
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task("PublishPowerShellModule")]
+    [Whiskey.RequiresTool('PowerShellModule::PackageManagement','PackageManagementPath',Version='1.4.4',VersionParameterName='PackageManagementVersion')]
+    [Whiskey.RequiresTool('PowerShellModule::PowerShellGet','PowerShellGetPath',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -58,8 +60,6 @@ function Publish-WhiskeyPowerShellModule
     $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
     $manifest = $manifest -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifest | Set-Content $manifestPath
-
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
     $commonParams = @{}
     if( $VerbosePreference -in @('Continue','Inquire') )

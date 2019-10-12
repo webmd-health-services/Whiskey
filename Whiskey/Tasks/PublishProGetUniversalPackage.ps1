@@ -17,8 +17,6 @@ function Publish-WhiskeyProGetUniversalPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'ProGetAutomation'
-
     $exampleTask = 'Publish:
         - PublishProGetUniversalPackage:
             CredentialID: ProGetCredential

@@ -30,12 +30,16 @@ function GivenNoReporters
 
 function GivenRunByBuildServer
 {
-    $script:context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
+    $script:context = New-WhiskeyTestContext -ForBuildServer `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BitbucketServerAutomation'
 }
 
 function GivenRunByDeveloper
 {
-    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+    $script:context = New-WhiskeyTestContext -ForDeveloper `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BitbucketServerAutomation'
 }
 
 function GivenReporter
@@ -52,8 +56,13 @@ function GivenReporter
 function Init
 {
     $script:testRoot = New-WhiskeyTestRoot
-
+    # So we can mock the calls.
     Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
+}
+
+function Reset
+{
+    Reset-WhiskeyTestPSModule
 }
 
 function ThenBuildStatusReportedToBitbucketServer
@@ -143,6 +152,7 @@ function ThenReportingFailed
 }
 
 Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
+    AfterEach { Reset }
     Context 'by build server' {
         It 'should do nothing' {
             Init
@@ -165,6 +175,7 @@ Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Server' {
+    AfterEach { Reset }
     Context 'by build server' {
         It 'should report build status' {
             Init
@@ -189,6 +200,7 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Serve
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenRunByBuildServer
@@ -201,6 +213,7 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Server' {
+    AfterEach { Reset }
     It 'should set status' {
         Init
         GivenRunByBuildServer
@@ -213,6 +226,7 @@ Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Ser
 }
 
 Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenRunByBuildServer
@@ -223,6 +237,7 @@ Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenRunByBuildServer
@@ -234,6 +249,7 @@ Describe 'Set-WhiskeyBuildStatus.when missing credential' {
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenRunByBuildServer
@@ -244,6 +260,7 @@ Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing URI' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenRunByBuildServer
