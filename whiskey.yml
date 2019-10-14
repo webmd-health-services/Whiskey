@@ -45,11 +45,6 @@ Build:
     Name: Pester
     Version: 3.*
 
-- Pester4:
-    OnlyBy: Developer
-    Path:
-    - Test\about_Whiskey_Tasks.Tests.ps1
-
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
     OnlyBy: BuildServer
@@ -142,7 +137,6 @@ Build:
             Path: Test\*.Tests.ps1
             Exclude:
             - "*\\Test\\build.ps1.Tests.ps1"
-            - "*\\Test\\Documentation.Tests.ps1"
             - "*\\Test\\DotNet.Tests.ps1"
             - "*\\Test\\GetPowerShellModule.Tests.ps1"
             - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
@@ -191,7 +185,6 @@ Build:
     - Tasks:
         Pester4:
             Path:
-            - Test\Documentation.Tests.ps1
             - Test\DotNet.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
             - Test\NuGetPush.Tests.ps1
