@@ -12,7 +12,7 @@ function Init
     param(
     )
 
-    $script:testRoot = New-WhiskeyTestRoot'
+    $script:testRoot = New-WhiskeyTestRoot
 
     Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
 }
@@ -119,9 +119,9 @@ Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a Po
         $Global:Error | Should -BeNullOrEmpty
 
         # Now, make sure the package management modules don't get re-installed.
-        Mock -CommandName 'Start-Job' -ModuleName 'Whiskey'
+        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '0.2.0'
-        Assert-MockCalled -CommandName 'Start-Job' -ModuleName 'Whiskey' -Times 0
+        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
     }
 }
 
@@ -130,6 +130,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     It 'should install at patch number 0' {
         Init
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2' -ActualVersion '0.2.0'
+        $Global:Error | Should -BeNullOrEmpty
         ThenModuleImported 'Zip' -AtVersion '0.2.0'
     }
 }
@@ -139,6 +140,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module om
     It 'should install the latest version' {
         Init
         Invoke-PowershellInstall -ForModule 'Zip' -Version '' -ActualVersion $latestZip.Version
+        $Global:Error | Should -BeNullOrEmpty
         ThenModuleImported 'Zip' -AtVersion $latestZip.Version
     }
 }
@@ -228,5 +230,21 @@ Describe 'Install-WhiskeyPowerShellModule.when skipping import' {
         Init
         Install-WhiskeyPowerShellModule 'Zip' -SkipImport
         ThenModuleNotImported 'Zip'
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when previous version installed and user wants latest version by leaving version empty' {
+    AfterEach { Reset }
+    It 'should install the latest version' {
+        Init
+        # Make sure we import from here first so the assembly gets loaded from here so that 
+        # Pester can delete the version we're going to install and import on the test drive.
+        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}\Carbon' -f $PSModulesDirectoryName) -Resolve)
+        Install-WhiskeyPowerShellModule -Name 'Carbon' -Version '1.*'
+        Install-WhiskeyPowerShellModule -Name 'Carbon'
+        ThenModuleInstalled 'Carbon' -AtVersion '1.9.0'
+        $latestCarbon = Find-Module -Name 'Carbon' | Select-Object -First 1
+        ThenModuleInstalled 'Carbon' -AtVersion $latestCarbon.Version
+        ThenModuleImported 'Carbon' -AtVersion $latestCarbon.Version
     }
 }

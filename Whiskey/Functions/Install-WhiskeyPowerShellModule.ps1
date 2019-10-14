@@ -44,34 +44,49 @@ function Install-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
-    $expectedPath = Join-Path -Path $modulesRoot -ChildPath $Name
-
-    if( (Test-Path -Path $expectedPath -PathType Container) -and (Get-ChildItem -Path $expectedPath -File -Filter ('{0}.psd1' -f $Name) -Recurse))
+    $module = $null
+    if( -not $Version )
     {
-        Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
-    }
-    else
-    {
-        $module = Resolve-WhiskeyPowerShellModule -Name $Name -Version $Version -BuildRoot $BuildRoot
+        $module = Resolve-WhiskeyPowerShellModule -Name $Name -BuildRoot $BuildRoot
         if( -not $module )
         {
             return
+        }
+        $Version = $module.Version
+    }
+
+    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
+    $modulePath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $Version,$Name)
+
+    if( (Test-Path -Path $modulePath -PathType Leaf) )
+    {
+        $moduleRoot | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
+    }
+    else
+    {
+        if( -not $module )
+        {
+            $module = Resolve-WhiskeyPowerShellModule -Name $Name -Version $Version -BuildRoot $BuildRoot
+            if( -not $module )
+            {
+                return
+            }
         }
 
         Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
         Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
 
-        if( -not (Test-Path -Path $expectedPath -PathType Container) )
+        $modulePath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $module.Version,$Name)
+        if( -not (Test-Path -Path $modulePath -PathType Leaf) )
         {
-            Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+            Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
         }
-        $expectedPath
+        $moduleRoot | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
     }
 
     if( -not $SkipImport )
     {
         Import-WhiskeyPowerShellModule -Name $Name -BuildRoot $BuildRoot
     }
-
 }
