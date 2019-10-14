@@ -171,7 +171,7 @@ function ThenPesterShouldHaveRun
     {
         $reportPath = $reportPath.FullName
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { 
-            $DebugPreference = 'Continue'
+            #$DebugPreference = 'Continue'
             Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
             $Path -eq $reportPath 
         }

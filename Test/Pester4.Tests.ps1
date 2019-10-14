@@ -38,6 +38,16 @@ function Init
 
     $script:testRoot = New-WhiskeyTestRoot
 
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
+                                             -ForDeveloper `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'Pester'
+
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+        Where-Object { $_.Name -notlike '4.*' } |
+        Remove-Item -Recurse -Force
+
 }
 
 function Reset
@@ -105,16 +115,6 @@ function WhenPesterTaskIsInvoked
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
-
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
-                                             -ForDeveloper `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'Pester'
-
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
-    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
-        Where-Object { $_.Name -notlike '4.*' } |
-        Remove-Item -Recurse -Force
 
     try
     {
