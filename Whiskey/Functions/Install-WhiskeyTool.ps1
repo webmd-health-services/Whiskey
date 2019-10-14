@@ -132,6 +132,11 @@ function Install-WhiskeyTool
                 $version = $ToolInfo.Version
             }
 
+            if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+            {
+                $provider = 'PowerShellModule'
+            }
+
             switch( $provider )
             {
                 'NodeModule'
@@ -152,7 +157,11 @@ function Install-WhiskeyTool
                 }
                 'PowerShellModule'
                 {
-                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name -Version $version -BuildRoot $InstallRoot -ErrorAction Stop
+                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name `
+                                                                  -Version $version `
+                                                                  -BuildRoot $InstallRoot `
+                                                                  -SkipImport:$ToolInfo.SkipImport `
+                                                                  -ErrorAction Stop
                     $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
                 }
                 default
@@ -169,7 +178,7 @@ function Install-WhiskeyTool
                         }
                         default
                         {
-                            throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $name)
+                            throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                         }
                     }
                 }

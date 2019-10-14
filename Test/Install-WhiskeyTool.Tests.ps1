@@ -64,7 +64,7 @@ function Invoke-NuGetInstall
 
 function Reset
 {
-    Remove-Node
+    Remove-Node -BuildRoot $testRoot
 }
 
 if( $IsWindows )
@@ -238,25 +238,35 @@ function ThenThrewException
 
 function WhenInstallingTool
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='HandleAttributeForMe')]
     param(
+        [Parameter(ParameterSetName='FromAttribute')]
+        [Whiskey.RequiresToolAttribute]$FromAttribute,
+
+        [Parameter(ParameterSetName='HandleAttributeForMe')]
         $Name,
+
         $Parameter = @{ },
+
+        [Parameter(ParameterSetName='HandleAttributeForMe')]
         $Version
     )
 
     $Global:Error.Clear()
 
-    $toolAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name,$pathParameterName
-
-    if( $versionParameterName )
+    if( $PSCmdlet.ParameterSetName -eq 'HandleAttributeForMe' )
     {
-        $toolAttribute.VersionParameterName = $versionParameterName
-    }
+        $FromAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name,$pathParameterName
 
-    if( $Version )
-    {
-        $toolAttribute.Version = $Version
+        if( $versionParameterName )
+        {
+            $FromAttribute.VersionParameterName = $versionParameterName
+        }
+
+        if( $Version )
+        {
+            $FromAttribute.Version = $Version
+        }
     }
 
     $script:taskParameter = $Parameter
@@ -264,7 +274,7 @@ function WhenInstallingTool
     Push-Location -path $taskWorkingDirectory
     try
     {
-        Install-WhiskeyTool -ToolInfo $toolAttribute -InstallRoot $testRoot -TaskParameter $Parameter
+        Install-WhiskeyTool -ToolInfo $FromAttribute -InstallRoot $testRoot -TaskParameter $Parameter
     }
     catch
     {
@@ -379,7 +389,10 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
     It 'should install the module' {
         Init
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return 'PSModulePath' }
-        WhenInstallingTool 'PowerShellModule::Zip' -Parameter @{  'Version' = '0.2.0'; 'InstallRoot' = $testRoot ; }
+        $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip','ZipPath'
+        $attr.Version = '0.2.0'
+        $attr.SkipImport = $true
+        WhenInstallingTool -FromAttribute $attr 
         $assertMockParams = @{ 
             'CommandName' = 'Install-WhiskeyPowerShellModule';
             'ModuleName' = 'Whiskey';
@@ -387,7 +400,8 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
         Assert-MockCalled @assertMockParams -ParameterFilter { $Name -eq 'Zip' }
         Assert-MockCalled @assertMockParams -ParameterFilter { $Version -eq '0.2.0' }
         Assert-MockCalled @assertMockParams -ParameterFilter { $BuildRoot -eq $testRoot }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $SkipImport -eq $true }
         Assert-MockCalled @assertMockParams -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
-        $taskParameter[$pathParameterName] | Should -Be 'PSModulePath'
+        $taskParameter['ZipPath'] | Should -Be 'PSModulePath'
     }
 }

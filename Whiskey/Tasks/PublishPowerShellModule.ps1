@@ -1,8 +1,8 @@
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task("PublishPowerShellModule")]
-    [Whiskey.RequiresTool('PowerShellModule::PackageManagement','PackageManagementPath',Version='1.4.4',VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresTool('PowerShellModule::PowerShellGet','PowerShellGetPath',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
+    [Whiskey.RequiresPowerShellModule('PackageManagement','PackageManagementPath',Version='1.4.4',VersionParameterName='PackageManagementVersion')]
+    [Whiskey.RequiresPowerShellModule('PowerShellGet','PowerShellGetPath',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

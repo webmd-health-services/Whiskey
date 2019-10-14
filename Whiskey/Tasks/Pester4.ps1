@@ -2,7 +2,7 @@
 function Invoke-WhiskeyPester4Task
 {
     [Whiskey.Task("Pester4")]
-    [Whiskey.RequiresTool('PowerShellModule::Pester','PesterPath',Version='4.*',VersionParameterName='Version')]
+    [Whiskey.RequiresPowerShellModule('Pester','PesterPath',Version='4.*',VersionParameterName='Version',SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

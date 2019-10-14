@@ -38,15 +38,6 @@ function Init
 
     $script:testRoot = New-WhiskeyTestRoot
 
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
-                                             -ForDeveloper `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'Pester'
-
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
-    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
-        Where-Object { $_.Name -notlike '4.*' } |
-        Remove-Item -Recurse -Force
 }
 
 function Reset
@@ -114,6 +105,16 @@ function WhenPesterTaskIsInvoked
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
+                                             -ForDeveloper `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'Pester'
+
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+        Where-Object { $_.Name -notlike '4.*' } |
+        Remove-Item -Recurse -Force
 
     try
     {
@@ -221,13 +222,13 @@ function ThenPesterShouldHaveRun
         $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
         Write-Debug ('reportPath: {0}' -f $reportPath)
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
-                            -ModuleName 'Whiskey' `
-                            -ParameterFilter { 
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { 
                                 Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
                                 $result = $Path -eq $reportPath 
                                 Write-Debug ('  {0}' -f $result) 
                                 return $result
-                            }
+                          }
     }
 }
 

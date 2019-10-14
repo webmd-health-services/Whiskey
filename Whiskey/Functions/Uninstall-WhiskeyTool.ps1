@@ -49,28 +49,23 @@ function Uninstall-WhiskeyTool
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [string]
         # The name of the tool to uninstall. Currently only Node is supported.
-        $Name,
+        [Whiskey.RequiresToolAttribute]$ToolInfo,
 
         [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [string]
         # The directory where the tool should be uninstalled from.
-        $InstallRoot,
+        [string]$InstallRoot,
 
         [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
         # The name of the NuGet package to uninstall.
-        $NuGetPackageName,
+        [string]$NuGetPackageName,
 
-        [String]
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        $Version,
+        [string]$Version,
 
         [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
         # The build root where the build is currently running. Tools are installed here.
-        $BuildRoot
+        [string]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -94,11 +89,16 @@ function Uninstall-WhiskeyTool
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
     {
-        $provider,$Name = $Name -split '::'
-        if( -not $Name )
+        $provider,$name = $ToolInfo.Name -split '::'
+        if( -not $name )
         {
-            $Name = $provider
+            $name = $provider
             $provider = ''
+        }
+
+        if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+        {
+            $provider = 'PowerShellModule'
         }
 
         switch( $provider )
@@ -109,16 +109,15 @@ function Uninstall-WhiskeyTool
             }
             'PowerShellModule'
             {
-                Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $InstallRoot
+                Uninstall-WhiskeyPowerShellModule -Name $name -BuildRoot $InstallRoot
             }
             default
             {
-                switch( $Name )
+                switch( $name )
                 {
                     'Node'
                     {
-                        $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
-                        Remove-WhiskeyFileSystemItem -Path $dirToRemove
+                        Uninstall-WhiskeyNode -InstallRoot $InstallRoot
                     }
                     'DotNet'
                     {
@@ -127,7 +126,7 @@ function Uninstall-WhiskeyTool
                     }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
+                        throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                     }
                 }
             }
