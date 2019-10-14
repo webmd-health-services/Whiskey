@@ -237,14 +237,10 @@ Describe 'Install-WhiskeyPowerShellModule.when previous version installed and us
     AfterEach { Reset }
     It 'should install the latest version' {
         Init
-        # Make sure we import from here first so the assembly gets loaded from here so that 
-        # Pester can delete the version we're going to install and import on the test drive.
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}\Carbon' -f $PSModulesDirectoryName) -Resolve)
-        Install-WhiskeyPowerShellModule -Name 'Carbon' -Version '1.*'
-        Install-WhiskeyPowerShellModule -Name 'Carbon'
-        ThenModuleInstalled 'Carbon' -AtVersion '1.9.0'
-        $latestCarbon = Find-Module -Name 'Carbon' | Select-Object -First 1
-        ThenModuleInstalled 'Carbon' -AtVersion $latestCarbon.Version
-        ThenModuleImported 'Carbon' -AtVersion $latestCarbon.Version
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version '0.1.*'
+        Install-WhiskeyPowerShellModule -Name 'Zip'
+        ThenModuleInstalled 'Zip' -AtVersion '0.1.0'
+        ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version
+        ThenModuleImported 'Zip' -AtVersion $latestZip.Version
     }
 }

@@ -45,9 +45,6 @@ Build:
     Name: Pester
     Version: 3.*
 
-- GetPowerShellModule:
-    Name: Carbon
-
 - Pester4:
     OnlyBy: Developer
     Path:
