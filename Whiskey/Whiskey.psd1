@@ -159,6 +159,7 @@
 * Whiskey no longer ships with PackageManagement and PowerShellGet modules. They are now downloaded from one of your registered PowerShell repositories the first time another PowerShell module is installed.
 * The function `Import-WhiskeyPowerShellModule` is no longer public. If your task uses Whiskey's `RequiresTool` attribute to install a PowerShell module, Whiskey now imports that module for you automatically.
 * Whiskey now automatically imports PowerShell modules tasks use as declared by their `RequiresTool` attribute.
+* Upgraded Whiskey to use PackageManagement 1.4.5 (from 1.4.4).
 '@
         } # End of PSData hashtable
 

@@ -45,7 +45,7 @@ function Resolve-WhiskeyPowerShellModule
     }
 
     $packageManagementPackages = @{
-                                    'PackageManagement' = '1.4.4';
+                                    'PackageManagement' = '1.4.5';
                                     'PowerShellGet' = '2.2.1'
                                  }
     $modulesToInstall = New-Object 'Collections.ArrayList' 
