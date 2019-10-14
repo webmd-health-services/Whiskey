@@ -94,8 +94,21 @@ function Import-WhiskeyTestModule
         [Switch]$Force
     )
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}\{1}' -f $PSModulesDirectoryName,$Name) -Resolve) `
-                  -Force:$Force
+    $originalPSModulePath = $env:PSModulePath
+    try
+    {
+        $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
+        if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
+        {
+            $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
+        }
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $Name -Resolve) -Force:$Force
+    }
+    finally
+    {
+        $env:PSModulePath = $originalPSModulePath
+    }
+
 }
 
 function Initialize-WhiskeyTestPSModule
