@@ -1,7 +1,12 @@
+
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task("PublishPowerShellModule")]
-    [Whiskey.RequiresPowerShellModule('PackageManagement','PackageManagementPath',Version='1.4.4',VersionParameterName='PackageManagementVersion')]
+    # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+    # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+    # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+    # * whiskey.yml
+    [Whiskey.RequiresPowerShellModule('PackageManagement','PackageManagementPath',Version='1.4.5',VersionParameterName='PackageManagementVersion')]
     [Whiskey.RequiresPowerShellModule('PowerShellGet','PowerShellGetPath',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(

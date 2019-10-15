@@ -2,6 +2,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $apikey = $null
 $apikeyID = $null
 $repositoryName = $null
@@ -87,6 +88,8 @@ function Initialize-Test
     $script:failed = $false
     $script:publishError = $null
     $script:registerError = $null
+
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function Invoke-Publish
@@ -120,7 +123,10 @@ function Invoke-Publish
         $version = '1.2.3-{0}' -f $prerelease
     }
 
-    $script:context = New-WhiskeyTestContext -ForBuildServer -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ForBuildServer `
+                                             -ForVersion $version `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule @( 'PackageManagement', 'PowerShellGet' )
     
     $TaskParameter = @{ }
 
@@ -132,7 +138,7 @@ function Invoke-Publish
     if( $WithInvalidPath )
     {
         $TaskParameter.Add( 'Path', 'MyModule.ps1' )
-        New-Item -Path $TestDrive.FullName -ItemType 'file' -Name 'MyModule.ps1'
+        New-Item -Path $testRoot -ItemType 'file' -Name 'MyModule.ps1'
     }
     elseif( $WithNonExistentPath )
     {
@@ -141,8 +147,8 @@ function Invoke-Publish
     elseif( -not $WithoutPathParameter )
     {
         $TaskParameter.Add( 'Path', 'MyModule' )
-        New-Item -Path $TestDrive.FullName -ItemType 'directory' -Name 'MyModule' 
-        $module = Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'
+        New-Item -Path $testRoot -ItemType 'directory' -Name 'MyModule' 
+        $module = Join-Path -Path $testRoot -ChildPath 'MyModule'
         if( -not $ForManifestPath )
         {            
             New-Item -Path $module -ItemType 'file' -Name 'MyModule.psd1' -Value @"
@@ -165,6 +171,7 @@ function Invoke-Publish
         }
     }
 
+    Import-WhiskeyTestModule -Name 'PackageManagement','PowerShellGet'
     Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
     $repoName = $script:repositoryName
@@ -213,7 +220,6 @@ function Invoke-Publish
                 }.GetNewClosure()
     }
     Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -MockWith $mock
-    Mock -CommandName 'Get-PackageSource' -ModuleName 'PowerShellGet'  # Called by a dynamic parameter set on Register-PSRepository.
     
     $Global:Error.Clear()
     $script:failed = $False
@@ -262,7 +268,7 @@ function ThenFailed
     )
 
     $script:failed | Should -BeTrue
-    $Global:Error | Should -Match $WithError
+    Get-Error | Should -Match $WithError
 }
 
 function ThenModuleNotPublished
@@ -331,7 +337,7 @@ function ThenModulePublished
         [Parameter(Mandatory)]
         [string]$ToRepositoryNamed,
 
-        [string]$ExpectedPathName = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule'),
+        [string]$ExpectedPathName = (Join-Path -Path $testRoot -ChildPath 'MyModule'),
 
         [switch]$WithNoRepositoryName
     )
@@ -364,7 +370,7 @@ function ThenModulePublished
 function ThenManifest
 {
     param(
-        [string]$ManifestPath = (Join-Path -Path $TestDrive.FullName -ChildPath 'MyModule\MyModule.psd1'),
+        [string]$ManifestPath = (Join-Path -Path $testRoot -ChildPath 'MyModule\MyModule.psd1'),
 
         [string]$AtVersion,
 
@@ -392,7 +398,27 @@ function ThenManifest
 function ThenSucceeded
 {
     $script:failed | Should -BeFalse
-    $Global:Error | Should -BeNullOrEmpty
+    Get-Error | Should -BeNullOrEmpty
+}
+
+function Get-Error
+{
+    [CmdletBinding()]
+    param(
+    )
+
+    $Global:Error |
+        Where-Object {
+            if( -not $_.TargetObject -or -not $_.ScriptStackTrace )
+            {
+                return $true
+            }
+
+            # These errors are internal and can be ignored.
+            $fromGetPackageSource = $_.TargetObject.ToString() -eq 'Microsoft.PowerShell.PackageManagement.Cmdlets.GetPackageSource'
+            $fromResolvingDynamicParams = $_.ScriptStackTrace -match '\bGet-DynamicParameters\b'
+            return -not ( $fromGetPackageSource -and $fromResolvingDynamicParams )
+        }
 }
 
 Describe 'PublishPowerShellModule.when publishing new module' {
@@ -451,10 +477,10 @@ Describe 'PublishPowerShellModule.when publishing to a new repository' {
     It 'should succeed' {
         Initialize-Test
         Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
-        ThenSucceeded
         ThenRepositoryChecked
         ThenRepositoryRegistered 'ANewRepo' -AtUri 'https://example.com/'
         ThenModulePublished -ToRepositoryNamed 'ANewRepo'
+        ThenSucceeded
     }
 }
 

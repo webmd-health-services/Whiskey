@@ -192,6 +192,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules aren''
         WhenResolvingPowerShellModule -SkipCaching
         # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
         # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+        # * Whiskey\Tasks\PublishPowerShellModule.ps1
         # * whiskey.yml
         Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\1.4.5' -f $PSModulesDirectoryName) | Should -Exist
         Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\2.2.1' -f $PSModulesDirectoryName) | Should -Exist

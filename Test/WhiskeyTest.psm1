@@ -89,7 +89,7 @@ function Import-WhiskeyTestModule
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Name,
+        [string[]]$Name,
         
         [Switch]$Force
     )
@@ -99,7 +99,11 @@ function Import-WhiskeyTestModule
     {
         $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
     }
-    Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $Name -Resolve) -Force:$Force
+
+    foreach( $moduleName in $Name )
+    {
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force
+    }
 }
 
 function Initialize-WhiskeyTestPSModule

@@ -46,6 +46,7 @@ function Resolve-WhiskeyPowerShellModule
 
     # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
     # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+    # * Whiskey\Tasks\PublishPowerShellModule.ps1
     # * whiskey.yml
     $packageManagementPackages = @{
                                     'PackageManagement' = '1.4.5';
