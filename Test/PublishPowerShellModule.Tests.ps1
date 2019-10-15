@@ -250,6 +250,10 @@ function Invoke-Publish
     }
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
 function ThenFailed
 {
     param(
@@ -392,6 +396,7 @@ function ThenSucceeded
 }
 
 Describe 'PublishPowerShellModule.when publishing new module' {
+    AfterEach { Reset }
     It 'should publish the module' {
         Initialize-Test
         GivenRepository 'FubarSnafu'
@@ -404,6 +409,7 @@ Describe 'PublishPowerShellModule.when publishing new module' {
 }
 
 Describe 'PublishPowerShellModule.when publishing prerelease module' {
+    AfterEach { Reset }
     It 'should succeed' {
         Initialize-Test
         GivenRepository 'SomeRepo'
@@ -418,6 +424,7 @@ Describe 'PublishPowerShellModule.when publishing prerelease module' {
 }
 
 Describe 'PublishPowerShellModule.when publishing with no repository name' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         Invoke-Publish -ErrorAction SilentlyContinue
@@ -429,6 +436,7 @@ Describe 'PublishPowerShellModule.when publishing with no repository name' {
 }
 
 Describe 'PublishPowerShellModule.when publishing fails' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRepository 'FubarSnafu'
@@ -439,6 +447,7 @@ Describe 'PublishPowerShellModule.when publishing fails' {
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository' {
+    AfterEach { Reset }
     It 'should succeed' {
         Initialize-Test
         Invoke-Publish -ForRepositoryName 'ANewRepo' -RepoAtUri 'https://example.com' 
@@ -450,6 +459,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository' {
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository that requires a credential' {
+    AfterEach { Reset }
     It 'should succeed' {
         Initialize-Test
         $cred = New-Object 'pscredential' ('fubar',(ConvertTo-SecureString -String 'snafu' -AsPlainText -Force))
@@ -463,6 +473,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository that requi
 }
 
 Describe 'PublishPowerShellModule.when publishing to a new repository but its URI is not given' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test 
         Invoke-Publish -ForRepositoryNamed 'Fubar' -ErrorAction SilentlyContinue
@@ -474,6 +485,7 @@ Describe 'PublishPowerShellModule.when publishing to a new repository but its UR
 }
 
 Describe 'PublishPowerShellModule.when registering a repository fails' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRegisteringFails -WithError 'something went wrong!'
@@ -483,6 +495,7 @@ Describe 'PublishPowerShellModule.when registering a repository fails' {
 }
 
 Describe 'PublishPowerShellModule.when no API key' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenNoApiKey
@@ -496,6 +509,7 @@ Describe 'PublishPowerShellModule.when no API key' {
 }
 
 Describe 'PublishPowerShellModule.when path parameter is not included' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRepository 'Fubar'
@@ -508,6 +522,7 @@ Describe 'PublishPowerShellModule.when path parameter is not included' {
 }
 
 Describe 'PublishPowerShellModule.when non-existent path parameter' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRepository 'Fubar'
@@ -518,6 +533,7 @@ Describe 'PublishPowerShellModule.when non-existent path parameter' {
 }
 
 Describe 'PublishPowerShellModule.when non-directory path parameter' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRepository 'Fubar'
@@ -528,6 +544,7 @@ Describe 'PublishPowerShellModule.when non-directory path parameter' {
 }
 
 Describe 'PublishPowerShellModule.when invalid manifest' {
+    AfterEach { Reset }
     It 'should fail' {
         Initialize-Test
         GivenRepository 'Fubar'
@@ -538,6 +555,7 @@ Describe 'PublishPowerShellModule.when invalid manifest' {
 }
 
 Describe 'PublishPowerShellModule.when registering an existing PSRepository under a different name' {
+    AfterEach { Reset }
     It 'should use already registered PSRepository' {
         Initialize-Test
         GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
@@ -550,6 +568,7 @@ Describe 'PublishPowerShellModule.when registering an existing PSRepository unde
 }
 
 Describe 'PublishPowerShellModule.when re-registering an existing PSRepository under the same name' {
+    AfterEach { Reset }
     It 'should succeed' {
         Initialize-Test
         GivenRepository -Named 'FirstRepo' -Uri 'https://example.com'
