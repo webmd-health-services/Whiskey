@@ -246,6 +246,8 @@ function WhenInstallingTool
         [Parameter(ParameterSetName='HandleAttributeForMe',Position=0)]
         $Name,
 
+        [Parameter(ParameterSetName='FromAttribute')]
+        [Parameter(ParameterSetName='HandleAttributeForMe',Position=1)]
         $Parameter = @{ },
 
         [Parameter(ParameterSetName='HandleAttributeForMe')]
