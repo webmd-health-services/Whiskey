@@ -107,14 +107,19 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $WithClean
+        [Switch]$WithClean,
+
+        [switch]$CaptureOutput
     )
 
     $failed = $false
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+    if( -not $CaptureOutput )
+    {
+        Mock -CommandName 'Receive-Job' -ModuleName 'Whiskey'
+    }
 
     try
     {
@@ -383,7 +388,7 @@ Describe 'PassingTests' {
 '@
         GivenDescribeDurationReportCount 1
         GivenItDurationReportCount 1
-        WhenPesterTaskIsInvoked 
+        WhenPesterTaskIsInvoked -CaptureOutput
         ThenDescribeDurationReportHasRows 1
         ThenItDurationReportHasRows 1
     }

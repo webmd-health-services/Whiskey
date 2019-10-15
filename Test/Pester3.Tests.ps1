@@ -96,6 +96,7 @@ function WhenPesterTaskIsInvoked
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+    Mock -CommandName 'Receive-Job' -ModuleName 'Whiskey'
 
     try
     {
