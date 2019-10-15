@@ -44,6 +44,9 @@ function Resolve-WhiskeyPowerShellModule
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Stop | Out-Null
     }
 
+    # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+    # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+    # * whiskey.yml
     $packageManagementPackages = @{
                                     'PackageManagement' = '1.4.5';
                                     'PowerShellGet' = '2.2.1'

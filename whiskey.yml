@@ -33,6 +33,9 @@ Build:
     Name: Zip
     Version: 0.3.*
 
+# If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+# * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+# * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
 - GetPowerShellModule:
     Name: PackageManagement
     Version: 1.4.5

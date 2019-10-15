@@ -243,7 +243,7 @@ function WhenInstallingTool
         [Parameter(ParameterSetName='FromAttribute')]
         [Whiskey.RequiresToolAttribute]$FromAttribute,
 
-        [Parameter(ParameterSetName='HandleAttributeForMe')]
+        [Parameter(ParameterSetName='HandleAttributeForMe',Position=0)]
         $Name,
 
         $Parameter = @{ },

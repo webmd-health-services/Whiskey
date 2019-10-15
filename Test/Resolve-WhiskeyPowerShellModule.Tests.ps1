@@ -190,7 +190,10 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules aren''
         Init
         GivenName 'Pester'
         WhenResolvingPowerShellModule -SkipCaching
-        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\1.4.4' -f $PSModulesDirectoryName) | Should -Exist
+        # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+        # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+        # * whiskey.yml
+        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\1.4.5' -f $PSModulesDirectoryName) | Should -Exist
         Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\2.2.1' -f $PSModulesDirectoryName) | Should -Exist
     }
 }
