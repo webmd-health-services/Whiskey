@@ -3,23 +3,14 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$modulesDirectoryName = 'PSModules'
+$powershellModulesDirectoryName = 'PSModules'
 
-$testModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('Pester\{0}' -f $modulesDirectoryName)
-if( -not (Test-Path -Path $testModulesRoot) )
-{
-    New-Item -Path $testModulesRoot -ItemType 'Directory'
-}
-Save-Module -Name 'Pester' -Path $testModulesRoot
-
+$testRoot = $null
 $context = $null
-$pesterPath = $null
 $version = $null
 $taskParameter = @{}
 $failed = $false
 $output = $null
-$describeReportRowCount = 0
-$itReportRowCount = 0
 
 function GivenDescribeDurationReportCount
 {
@@ -39,44 +30,18 @@ function GivenItDurationReportCount
     $taskParameter['ItDurationReportCount'] = $Count
 }
 
-function GivenPesterNotPreInstalled
-{
-    Join-Path -Path $TestDrive.FullName -ChildPath 'PSModules' | Remove-Item -Recurse -Force
-}
-
 function Init
 {
     $script:taskParameter = @{}
-    $script:pesterPath = $null
     $script:version = $null
     $script:failed = $false
     $script:taskParameter = @{}
     $Global:Error.Clear()
-    $outputRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.\.output'
-    if( -not (Test-Path -Path $outputRoot -PathType Container) )
-    {
-        New-Item -Path $outputRoot -ItemType 'Directory' | Out-Null
-    }
-    $sourceRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Pester'
-    Get-ChildItem -Path $sourceRoot |
-        ForEach-Object { Copy-Item -Path $_.FullName (Join-Path -Path $TestDrive.FullName -ChildPath $_.Name) -Recurse } | 
-        Out-Null
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' -ForDeveloper
+    $script:testRoot = New-WhiskeyTestRoot
 
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
-    }
-    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-}
-
-function New-WhiskeyPesterTestContext 
-{
-    param()
-    process
-    {
-    }
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
+                                             -ForDeveloper `
+                                             -ForBuildRoot $testRoot
 }
 
 function GivenExclude
@@ -106,24 +71,25 @@ function GivenInvalidVersion
         -ParameterFilter { $Path -eq $context.BuildRoot }
 }
 
-function GivenPesterPath
+function GivenTestFile
 {
     param(
-        [string[]]
-        $pesterPath
+        [string]$Path,
+        [string]$Content
     )
-    $script:taskParameter['Path'] = $pesterPath 
-}
 
-function GivenWithCleanFlag
-{
-    $context.RunMode = 'Clean'
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -MockWith { return $true }
-}
+    $taskParameter['Path'] = & {
+        if( $taskParameter.ContainsKey('Path') )
+        {
+            $taskParameter['Path']
+        }
+        $Path 
+    }
 
-function GivenWithInitilizeFlag
-{
-    $context.RunMode = 'initialize'
+    if( -not [IO.Path]::IsPathRooted($Path) )
+    {
+        $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
+    }
 }
 
 function WhenPesterTaskIsInvoked
@@ -187,9 +153,7 @@ function ThenDescribeDurationReportHasRows
         $Count
     )
 
-    It ('should output {0} rows in the Describe Duration Report' -f $Count) {
-        Get-OutputReportRowCount -Regex '\bDescribe\b +\bDuration\b' | Should -Be $Count
-    }
+    Get-OutputReportRowCount -Regex '\bDescribe\b +\bDuration\b' | Should -Be $Count
 }
 
 function ThenItDurationReportHasRows
@@ -198,66 +162,7 @@ function ThenItDurationReportHasRows
         $Count
     )
 
-    It ('should output {0} rows in the It Duration Report' -f $Count) {
-        Get-OutputReportRowCount -Regex '\bDescribe\b +\bName\b +\bTime\b' | Should -Be $Count
-    }
-}
-
-function ThenPesterShouldBeInstalled
-{
-    param(
-        [string]
-        $ExpectedVersion
-    )
-
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$ExpectedVersion
-    }
-
-    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-    $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
-
-    It ('should install version {0}' -f $ExpectedVersion) {
-        $module = Test-ModuleManifest -Path $pesterPath
-        $module.Version.ToString() | Should -BeLike $ExpectedVersion
-    }
-
-    It 'should pass' {
-        $script:failed | Should Be $false
-    }
-    It 'Should pass the build root to the Install tool' {
-        $pesterPath | Should Exist
-    }
-}
-
-function ThenPesterShouldBeUninstalled 
-{
-    if( -not $script:Taskparameter['Version'] )
-    {
-        $latestPester = ( Find-Module -Name 'Pester' -AllVersions | Where-Object { $_.Version -like '4.*' } ) 
-        $latestPester = $latestPester | Sort-Object -Property Version -Descending | Select-Object -First 1
-        $script:Taskparameter['Version'] = $latestPester.Version 
-    }
-    else
-    {
-        $script:Taskparameter['Version'] = $script:Taskparameter['Version'] | ConvertTo-WhiskeySemanticVersion
-        $script:Taskparameter['Version'] = '{0}.{1}.{2}' -f ($script:Taskparameter['Version'].major, $script:Taskparameter['Version'].minor, $script:Taskparameter['Version'].patch)
-    }
-    $pesterDirectoryName = '{0}\Pester' -f $modulesDirectoryName
-    if( $PSVersionTable.PSVersion.Major -ge 5 )
-    {
-        $pesterDirectoryName = '{0}\Pester\{1}' -f $modulesDirectoryName,$Version
-    }
-    $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
-    It 'should pass' {
-        $script:failed | Should Be $false
-    }
-
-    It 'should attempt to uninstall Pester' {
-        Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -Times 1 -ModuleName 'Whiskey'
-    }
+    Get-OutputReportRowCount -Regex '\bDescribe\b +\bName\b +\bTime\b' | Should -Be $Count
 }
 
 function ThenPesterShouldHaveRun
@@ -277,9 +182,7 @@ function ThenPesterShouldHaveRun
     #check to see if we were supposed to run any tests.
     if( ($FailureCount + $PassingCount) -gt 0 )
     {
-        It 'should run pester tests' {
-            $testReports | Should Not BeNullOrEmpty
-        }
+        $testReports | Should -Not -BeNullOrEmpty
     }
 
     $total = 0
@@ -297,34 +200,24 @@ function ThenPesterShouldHaveRun
     }
 
     $expectedTotal = $FailureCount + $PassingCount
-    It ('should run {0} tests' -f $expectedTotal) {
-        $total | Should Be $expectedTotal
-    }
-
-    It ('should have {0} failed tests' -f $FailureCount) {
-        $failed | Should Be $FailureCount
-    }
-
-    It ('should run {0} passing tests' -f $PassingCount) {
-        $passed | Should Be $PassingCount
-    }
+    $total | Should -Be $expectedTotal
+    $failed | Should -Be $FailureCount
+    $passed | Should -Be $PassingCount
 
     foreach( $reportPath in $testReports )
     {
-        It ('should publish {0} test results' -f $reportPath) {
-            Write-Debug ('ReportsIn:  {0}' -f $ReportsIn)
-            Write-Debug ('reportPath: {0}' -f $reportPath)
-            $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
-            Write-Debug ('reportPath: {0}' -f $reportPath)
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
-                              -ModuleName 'Whiskey' `
-                              -ParameterFilter { 
-                                    Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
-                                    $result = $Path -eq $reportPath 
-                                    Write-Debug ('  {0}' -f $result) 
-                                    return $result
-                                }
-        }
+        Write-Debug ('ReportsIn:  {0}' -f $ReportsIn)
+        Write-Debug ('reportPath: {0}' -f $reportPath)
+        $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
+        Write-Debug ('reportPath: {0}' -f $reportPath)
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
+                            -ModuleName 'Whiskey' `
+                            -ParameterFilter { 
+                                Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
+                                $result = $Path -eq $reportPath 
+                                Write-Debug ('  {0}' -f $result) 
+                                return $result
+                            }
     }
 }
 
@@ -334,12 +227,8 @@ function ThenTestShouldFail
         [string]
         $failureMessage
     )
-    It 'should throw a terminating exception' {
-        $Script:failed | Should Be $true
-    }
-    It 'should fail' {
-        $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
-    }
+    $Script:failed | Should -BeTrue
+    $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
 }
 
 function ThenNoPesterTestFileShouldExist 
@@ -347,124 +236,185 @@ function ThenNoPesterTestFileShouldExist
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
     write-host $testReports
-    it 'should not have created any test reports' {
-        $testReports | should BeNullOrEmpty
-    }
+    $testReports | Should -BeNullOrEmpty
 }
 
 function ThenNoDurationReportPresent
 {
-    It ('should not output a duration report') {
-        $output | Out-String | Should -Not -Match '\bDescribe\b( +\bName\b)? +\b(Duration|Time)\b'
-    }
+    $output | Out-String | Should -Not -Match '\bDescribe\b( +\bName\b)? +\b(Duration|Time)\b'
 }
 
 function ThenTestShouldCreateMultipleReportFiles
 {
-    It 'should create multiple report files' {
-        Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
-            Measure-Object |
-            Select-Object -ExpandProperty 'Count' |
-            Should -Be 2
-    }
+    Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
+        Measure-Object |
+        Select-Object -ExpandProperty 'Count' |
+        Should -Be 2
 }
 
 Describe 'Pester4.when running passing Pester tests' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests'
-    WhenPesterTaskIsInvoked 
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
-    ThenNoDurationReportPresent
+    It 'should run the tests' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'One' {
+    It 'should pass 1' {
+        $true | Should -BeTrue
+    }
+    It 'should pass again 2' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        WhenPesterTaskIsInvoked 
+        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 2
+        ThenNoDurationReportPresent
+    }
 }
 
 Describe 'Pester4.when running failing Pester tests' {
-    Init
-    GivenPesterPath -pesterPath 'FailingTests'
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 0
-    ThenTestShouldFail -failureMessage 'Pester tests failed'
+    It 'should fail' {
+        Init
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'Failing' {
+    It 'should fail 1' {
+        $true | Should -BeFalse
+    }
+    It 'should fail 2' {
+        $true | Should -BeFalse
+    }
+}
+'@
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        ThenPesterShouldHaveRun -FailureCount 2 -PassingCount 0
+        ThenTestShouldFail -failureMessage 'Pester tests failed'
+    }
 }
 
 Describe 'Pester4.when running multiple test scripts' {
-    Init
-    GivenPesterPath 'FailingTests','PassingTests'
-    WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -FailureCount 4 -PassingCount 4
+    It 'should run all the scripts' {
+        Init
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'Failing' {
+    It 'should fail' {
+        $true | Should -BeFalse
+    }
+}
+'@
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'Passing' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
+        ThenPesterShouldHaveRun -FailureCount 1 -PassingCount 1
+    }
 }
 
 Describe 'Pester4.when run multiple times in the same build' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests'  
-    WhenPesterTaskIsInvoked
-    WhenPesterTaskIsInvoked
-    ThenPesterShouldHaveRun -PassingCount 8 -FailureCount 0
-    ThenTestShouldCreateMultipleReportFiles
+    It 'should run multiple times' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        WhenPesterTaskIsInvoked
+        WhenPesterTaskIsInvoked
+        ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
+        ThenTestShouldCreateMultipleReportFiles
+    }
 }
 
-Describe 'Pester4.when missing Path Configuration' {
-    Init
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
+Describe 'Pester4.when missing path' {
+    It 'should fail' {
+        Init
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
+        ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
+    }
 }
 
 Describe 'Pester4.when a task path is absolute' {
-    $pesterPath = 'C:\FubarSnafu'
-    if( -not $IsWindows )
-    {
-        $pesterPath = '/FubarSnafu'
+    It 'should fail' {
+        $pesterPath = 'C:\FubarSnafu'
+        if( -not $IsWindows )
+        {
+            $pesterPath = '/FubarSnafu'
+        }
+        Init
+        GivenTestFile $pesterPath
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
+        ThenTestShouldFail -failureMessage 'absolute'
     }
-    Init
-    GivenPesterPath -pesterPath $pesterPath
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-    ThenTestShouldFail -failureMessage 'absolute'
-}
-
-Describe 'Pester4.when running passing Pester tests with Clean Switch' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests'
-    GivenWithCleanFlag
-    WhenPesterTaskIsInvoked
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
-    ThenPesterShouldBeUninstalled -withClean
-}
-
-Describe 'Pester4.when running passing Pester tests with initialization switch' {
-    Init
-    GivenPesterNotPreInstalled
-    GivenPesterPath -pesterPath 'PassingTests'
-    GivenWithInitilizeFlag
-    GivenVersion '4.5.0'
-    WhenPesterTaskIsInvoked
-    ThenNoPesterTestFileShouldExist
-    ThenPesterShouldBeInstalled '4.5.0'
 }
 
 Describe 'Pester4.when showing duration reports' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests'
-    GivenDescribeDurationReportCount 1
-    GivenItDurationReportCount 1
-    WhenPesterTaskIsInvoked 
-    ThenDescribeDurationReportHasRows 1
-    ThenItDurationReportHasRows 1
+    It 'should output the report' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        GivenDescribeDurationReportCount 1
+        GivenItDurationReportCount 1
+        WhenPesterTaskIsInvoked 
+        ThenDescribeDurationReportHasRows 1
+        ThenItDurationReportHasRows 1
+    }
 }
 
 Describe 'Pester4.when excluding tests and an exclusion filter doesn''t match' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests','FailingTests'
-    GivenExclude '*fail*','Passing*'
-    WhenPesterTaskIsInvoked
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 4
+    It 'should still run' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' { 
+        $true | Should -BeTrue
+    }
+}
+'@
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'FailingTests' {
+    It 'should fail' {
+        $true | Should -BeFalse
+    }
+}
+'@
+        GivenExclude '*fail*','Passing*'
+        WhenPesterTaskIsInvoked
+        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1
+    }
 }
 
 Describe 'Pester4.when excluding tests and exclusion filters match all paths' {
-    Init
-    GivenPesterPath -pesterPath 'PassingTests','FailingTests'
-    GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
-    WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-    ThenNoPesterTestFileShouldExist
-    ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))
-    ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
+    It 'should fail' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        GivenTestFile 'FailingTests.ps1' @'
+Describe 'FailingTests' {
+    It 'should fail' {
+        $true | Should -BeFalse
+    }
+}
+'@
+        GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        ThenNoPesterTestFileShouldExist
+        ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))
+        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
+    }
 }

@@ -1,9 +1,10 @@
 
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $progetUri = $null
 $credentialID = $null
 $credential = $null
@@ -113,7 +114,7 @@ function GivenUpackFile
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $Name)) -Force -ItemType 'File'
+    New-Item -Path (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $Name)) -Force -ItemType 'File'
 }
 
 function Init
@@ -121,21 +122,22 @@ function Init
     $script:myTimeout = $null
     $script:packageExists = $false
     $script:properties = @{ }
+
     Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
+
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function ThenPackageOverwritten
 {
-    It ('should overwrite existing package') {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                          -ModuleName 'Whiskey' `
-                          -ParameterFilter { 
-                                #$DebugPreference = 'continue'
-                                Write-Debug -Message ('Force  expected  true')
-                                Write-Debug -Message ('       actual    false' -f $Force)
-                                $Force.ToBool()
-                            }
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { 
+                          #$DebugPreference = 'continue'
+                          Write-Debug -Message ('Force  expected  true')
+                          Write-Debug -Message ('       actual    false' -f $Force)
+                          $Force.ToBool()
+                      }
 }
 
 function ThenPackageNotPublished
@@ -144,9 +146,10 @@ function ThenPackageNotPublished
         $FileName
     )
 
-    It ('should not publish file ''.output\{0}''' -f $FileName) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackagePath -eq (Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $FileName)) } -Times 0
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $PackagePath -eq (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $FileName)) } `
+                      -Times 0
 }
 
 function ThenPackagePublished
@@ -155,13 +158,10 @@ function ThenPackagePublished
         $FileName
     )
 
-    It ('should publish file ''.output\{0}''' -f $FileName) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackagePath -eq (Join-Path -Path $TestDrive.FullName -ChildPath ('.output\{0}' -f $FileName)) }
-    }
-
-    It ('should not throw any errors') {
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $PackagePath -eq (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $FileName)) }
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 function ThenPackagePublishedAs
@@ -170,10 +170,12 @@ function ThenPackagePublishedAs
         $Credential
     )
 
-    It ('should publish as ''{0}''' -f $Credential) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Credential.UserName -eq $Credential }
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Credential.GetNetworkCredential().Password -eq $Credential }
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Session.Credential.UserName -eq $Credential }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Session.Credential.GetNetworkCredential().Password -eq $Credential }
 }
 
 function ThenPackagePublishedAt
@@ -182,14 +184,12 @@ function ThenPackagePublishedAt
         $Uri
     )
 
-    It ('should publish to ''{0}''' -f $Uri) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Uri  expected  {0}' -f $Uri)
-            Write-Debug -Message ('     actual    {0}' -f $Session.Uri)
-            $session | Format-List | Out-String | Write-Debug
-            $Session.Uri -eq $Uri
-        }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Uri  expected  {0}' -f $Uri)
+        Write-Debug -Message ('     actual    {0}' -f $Session.Uri)
+        $session | Format-List | Out-String | Write-Debug
+        $Session.Uri -eq $Uri
     }
 }
 
@@ -199,9 +199,9 @@ function ThenPackagePublishedToFeed
         $Named
     )
 
-    It ('should publish to feed ''{0}''' -f $Named) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $FeedName -eq $Named }
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $FeedName -eq $Named }
 }
 
 function ThenPackagePublishedWithTimeout
@@ -210,13 +210,11 @@ function ThenPackagePublishedWithTimeout
         $ExpectedTimeout
     )
 
-    It ('should publish with timeout ''{0}'' seconds' -f $ExpectedTimeout) {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-            #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Timeout  expected  {0}' -f $Timeout)
-            Write-Debug -Message ('         actual    {0}' -f $ExpectedTimeout)
-            $Timeout -eq $ExpectedTimeout 
-        }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
+        #$DebugPreference = 'Continue'
+        Write-Debug -Message ('Timeout  expected  {0}' -f $Timeout)
+        Write-Debug -Message ('         actual    {0}' -f $ExpectedTimeout)
+        $Timeout -eq $ExpectedTimeout 
     }
 }
 
@@ -225,9 +223,7 @@ function ThenPackagePublishedWithDefaultTimeout
     param(
     )
 
-    It ('should publish to feed with default timeout') {
-        Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Timeout -eq $null }
-    }
+    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Timeout -eq $null }
 }
 
 function ThenTaskCompleted
@@ -235,13 +231,8 @@ function ThenTaskCompleted
     param(
     )
 
-    It ('the task should not throw an exception') {
-        $threwException | Should -Be $false
-    }
-
-    It ('the task should not write an error') {
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    $threwException | Should -BeFalse
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 function ThenTaskFailed
@@ -250,13 +241,8 @@ function ThenTaskFailed
         $Pattern
     )
 
-    It ('the task should throw an exception') {
-        $threwException | Should -Be $true
-    }
-
-    It ('the exception should match /{0}/' -f $Pattern) {
-        $Global:Error | Should -Match $Pattern
-    }
+    $threwException | Should -BeTrue
+    $Global:Error | Should -Match $Pattern
 }
 
 function WhenPublishingPackage
@@ -266,7 +252,11 @@ function WhenPublishingPackage
         $Excluding
     )
 
-    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' -ForBuildServer -IgnoreExistingOutputDirectory -IncludePSModules
+    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' `
+                                      -ForBuildServer `
+                                      -IgnoreExistingOutputDirectory `
+                                      -IncludePSModules `
+                                      -ForBuildRoot $testRoot
 
     if( $credentialID )
     {
@@ -335,157 +325,185 @@ function WhenPublishingPackage
 }
 
 Describe 'PublishProGetUniversalPackage.when user publishes default files' {
-    Init
-    GivenUpackFile 'myfile1.upack'
-    GivenUpackFile 'myfile2.upack'
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    WhenPublishingPackage
-    ThenPackagePublished 'myfile1.upack'
-    ThenPackagePublished 'myfile2.upack'
-    ThenPackagePublishedAt 'my uri'
-    ThenPackagePublishedToFeed 'universalfeed'
-    ThenPackagePublishedAs 'fubar'
-    ThenPackagePublishedWithDefaultTimeout
+    It 'should public files' {
+        Init
+        GivenUpackFile 'myfile1.upack'
+        GivenUpackFile 'myfile2.upack'
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        WhenPublishingPackage
+        ThenPackagePublished 'myfile1.upack'
+        ThenPackagePublished 'myfile2.upack'
+        ThenPackagePublishedAt 'my uri'
+        ThenPackagePublishedToFeed 'universalfeed'
+        ThenPackagePublishedAs 'fubar'
+        ThenPackagePublishedWithDefaultTimeout
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when user excludes files' {
-    Init
-    GivenUpackFile 'myfile1.upack'
-    GivenUpackFile 'myfile2.upack'
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    WhenPublishingPackage -Excluding '*2.upack'
-    ThenPackagePublished 'myfile1.upack'
-    ThenPackageNotPublished 'myfile2.upack'
+    It 'should not package those fils' {
+        Init
+        GivenUpackFile 'myfile1.upack'
+        GivenUpackFile 'myfile2.upack'
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        WhenPublishingPackage -Excluding '*2.upack'
+        ThenPackagePublished 'myfile1.upack'
+        ThenPackageNotPublished 'myfile2.upack'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
-    Init
-    GivenUpackFile 'myfile1.upack'
-    GivenUpackFile 'myfile2.upack'
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    GivenPath '.output\myfile1.upack'
-    WhenPublishingPackage
-    ThenPackagePublished 'myfile1.upack'
-    ThenPackageNotPublished 'myfile2.upack'
+    It 'should package just those files' {
+        Init
+        GivenUpackFile 'myfile1.upack'
+        GivenUpackFile 'myfile2.upack'
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        GivenPath '.output\myfile1.upack'
+        WhenPublishingPackage
+        ThenPackagePublished 'myfile1.upack'
+        ThenPackageNotPublished 'myfile2.upack'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when user specifies files to publish and excluding some' {
-    Init
-    GivenUpackFile 'myfile1.upack'
-    GivenUpackFile 'myfile2.upack'
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    GivenPath '.output\*.upack'
-    WhenPublishingPackage -Excluding '*1.upack'
-    ThenPackageNotPublished 'myfile1.upack'
-    ThenPackagePublished 'myfile2.upack'
+    It 'should include the files and not include the excluded files' {
+        Init
+        GivenUpackFile 'myfile1.upack'
+        GivenUpackFile 'myfile2.upack'
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        GivenPath '.output\*.upack'
+        WhenPublishingPackage -Excluding '*1.upack'
+        ThenPackageNotPublished 'myfile1.upack'
+        ThenPackagePublished 'myfile2.upack'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when CredentialID property is missing' {
-    Init
-    GivenNoParameters
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
+    It 'should fail' {
+        Init
+        GivenNoParameters
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when Uri property is missing' {
-    Init
-    GivenNoParameters
-    GivenCredential 'somecredential' -WithID 'fubar'
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
+    It 'should fail' {
+        Init
+        GivenNoParameters
+        GivenCredential 'somecredential' -WithID 'fubar'
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when FeedName property is missing' {
-    Init
-    GivenNoParameters
-    GivenCredential 'somecredential' -WithID 'fubar'
-    GivenProGetIsAt 'some uri'
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
+    It 'should fail' {
+        Init
+        GivenNoParameters
+        GivenCredential 'somecredential' -WithID 'fubar'
+        GivenProGetIsAt 'some uri'
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when there are no upack files' {
-    Init
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubatr' -WithID 'id'
-    GivenUniversalFeed 'universal'
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed ([regex]::Escape(('.output{0}*.upack" does not exist' -f [IO.Path]::DirectorySeparatorChar)))
+    It 'should fail' {
+        Init
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubatr' -WithID 'id'
+        GivenUniversalFeed 'universal'
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFailed ([regex]::Escape(('.output{0}*.upack" does not exist' -f [IO.Path]::DirectorySeparatorChar)))
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
-    Init
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubatr' -WithID 'id'
-    GivenUniversalFeed 'universal'
-    GivenProperty 'AllowMissingPackage' -Is 'true'
-    WhenPublishingPackage
-    ThenTaskCompleted
-    ThenPackageNotPublished
+    It 'should not fail' {
+        Init
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubatr' -WithID 'id'
+        GivenUniversalFeed 'universal'
+        GivenProperty 'AllowMissingPackage' -Is 'true'
+        WhenPublishingPackage
+        ThenTaskCompleted
+        ThenPackageNotPublished
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
-    Init
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubatr' -WithID 'id'
-    GivenUniversalFeed 'universal'
-    GivenProperty 'AllowMissingPackage' -Is 'true'
-    GivenProperty 'Path' -Is '*.fubar'
-    WhenPublishingPackage
-    ThenTaskCompleted
-    ThenPackageNotPublished
+    It 'should not fail' {
+        Init
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubatr' -WithID 'id'
+        GivenUniversalFeed 'universal'
+        GivenProperty 'AllowMissingPackage' -Is 'true'
+        GivenProperty 'Path' -Is '*.fubar'
+        WhenPublishingPackage
+        ThenTaskCompleted
+        ThenPackageNotPublished
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when user does not have permission' {
-    Init
-    GivenProGetIsAt 'my uri'
-    GivenUpackFile 'my.upack'
-    GivenCredential 'fubatr' -WithID 'id'
-    GivenNoAccessToProGet
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFAiled 'Failed to upload'
+    It 'should fail' {
+        Init
+        GivenProGetIsAt 'my uri'
+        GivenUpackFile 'my.upack'
+        GivenCredential 'fubatr' -WithID 'id'
+        GivenNoAccessToProGet
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFAiled 'Failed to upload'
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when uploading a large package' {
-    Init
-    GivenUpackFile 'myfile1.upack'
-    GivenUpackFile 'myfile2.upack'
-    GivenProGetIsAt 'my uri'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    GivenTimeout 600
-    WhenPublishingPackage
-    ThenPackagePublishedWithTimeout 600
+    It 'should allow custom upload timeout' {
+        Init
+        GivenUpackFile 'myfile1.upack'
+        GivenUpackFile 'myfile2.upack'
+        GivenProGetIsAt 'my uri'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        GivenTimeout 600
+        WhenPublishingPackage
+        ThenPackagePublishedWithTimeout 600
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when package already exists' {
-    Init
-    GivenUpackFile 'my.upack'
-    GivenProGetIsAt 'proget.example.com'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    GivenPackageExists
-    WhenPublishingPackage -ErrorAction SilentlyContinue
-    ThenTaskFailed
+    It 'shoudl fail' {
+        Init
+        GivenUpackFile 'my.upack'
+        GivenProGetIsAt 'proget.example.com'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        GivenPackageExists
+        WhenPublishingPackage -ErrorAction SilentlyContinue
+        ThenTaskFailed
+    }
 }
 
 Describe 'PublishProGetUniversalPackage.when replacing existing package' {
-    Init
-    GivenUpackFile 'my.upack'
-    GivenProGetIsAt 'proget.example.com'
-    GivenCredential 'fubar' -WithID 'progetid'
-    GivenUniversalFeed 'universalfeed'
-    GivenPackageExists
-    GivenOverwrite
-    WhenPublishingPackage
-    ThenPackagePublished 'my.upack'
-    ThenPackageOverwritten
+    It 'shouldd overwrite package' {
+        Init
+        GivenUpackFile 'my.upack'
+        GivenProGetIsAt 'proget.example.com'
+        GivenCredential 'fubar' -WithID 'progetid'
+        GivenUniversalFeed 'universalfeed'
+        GivenPackageExists
+        GivenOverwrite
+        WhenPublishingPackage
+        ThenPackagePublished 'my.upack'
+        ThenPackageOverwritten
+    }
 }

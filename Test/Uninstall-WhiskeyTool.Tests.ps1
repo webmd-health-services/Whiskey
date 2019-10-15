@@ -2,6 +2,7 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $powerShellModulesDirectoryName = 'PSModules'
+$testRoot = $null
 
 # Private Whiskey function. Define it so Pester doesn't complain about it not existing.
 function Remove-WhiskeyFileSystemItem
@@ -25,116 +26,8 @@ function GivenAnInstalledNuGetPackage
         return
     }
     $dirName = '{0}.{1}' -f $WithName, $WithVersion
-    $installRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
+    $installRoot = Join-Path -Path $testRoot -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
-}
-
-function WhenUninstallingNuGetPackage
-{
-    [CmdletBinding()]
-    param(
-        [String]
-        $WithVersion = '2.6.4',
-
-        [String]
-        $WithName = 'NUnit.Runners'
-    )
-
-    $Global:Error.Clear()
-    Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $TestDrive.FullName
-}
-
-function ThenNuGetPackageUninstalled
-{
-    [CmdLetBinding()]
-    param(
-        [String]
-        $WithVersion = '2.6.4',
-
-        [String]
-        $WithName = 'NUnit.Runners'
-    )
-
-    $Name = '{0}.{1}' -f $WithName, $WithVersion
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
-    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
-
-    It 'should successfully uninstall the NuGet Package' {
-        $uninstalledPath | Should not Exist
-    }
-
-    It 'Should not write any errors' {
-        $Global:Error | Should beNullOrEmpty
-    }
-}
-
-function ThenNuGetPackageNotUninstalled
-{
-        [CmdLetBinding()]
-    param(
-        [String]
-        $WithVersion = '2.6.4',
-
-        [String]
-        $WithName = 'NUnit.Runners',
-
-        [switch]
-        $PackageShouldExist,
-
-        [string]
-        $WithError
-    )
-
-    $Name = '{0}.{1}' -f $WithName, $WithVersion
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath 'packages'
-    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
-
-    if( -not $PackageShouldExist )
-    {
-        It 'should never have installed the package' {
-            $uninstalledPath | Should not Exist
-        }
-    }
-    else
-    {
-        It 'should not have uninstalled the existing package' {
-            $uninstalledPath | Should Exist
-        }
-        Remove-Item -Path $uninstalledPath -Recurse -Force
-    }
-
-    It 'Should write errors' {
-        $Global:Error | Should Match $WithError
-    }
-}
-
-if( $IsWindows )
-{
-    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
-        GivenAnInstalledNuGetPackage
-        WhenUninstallingNuGetPackage
-        ThenNuGetPackageUnInstalled
-    }
-    
-    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with an empty Version' {
-        GivenAnInstalledNuGetPackage -WithVersion ''
-        WhenUninstallingNuGetPackage -WithVersion ''
-        ThenNuGetPackageUnInstalled -WithVersion ''
-    }
-    
-    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package with a wildcard Version' {
-        GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-        ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
-    }    
-}
-
-$toolsInstallRoot = $null
-
-function Init
-{
-    $Global:Error.Clear()
-    $script:toolsInstallRoot = $TestDrive.FullName
 }
 
 function GivenFile
@@ -143,7 +36,7 @@ function GivenFile
         $Path
     )
 
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path) -ItemType 'File' -Force
+    New-Item -Path (Join-Path -Path $testRoot -ChildPath $Path) -ItemType 'File' -Force
 }
 
 function GivenToolInstalled
@@ -152,7 +45,13 @@ function GivenToolInstalled
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $toolsInstallRoot -ChildPath ('.{0}\{0}.exe' -f $Name)) -ItemType File -Force | Out-Null
+    New-Item -Path (Join-Path -Path $testRoot -ChildPath ('.{0}\{0}.exe' -f $Name)) -ItemType File -Force | Out-Null
+}
+
+function Init
+{
+    $Global:Error.Clear()
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function ThenFile
@@ -167,37 +66,92 @@ function ThenFile
 
     if( $Not )
     {
-        It ('should not uninstall tool') {
-            Join-Path -Path $TestDrive.FullName -ChildPath $Path | Should -Not -Exist
-        }
+        Join-Path -Path $testRoot -ChildPath $Path | Should -Not -Exist
     }
     else
     {
-        It ('should uninstall tool') {
-            Join-Path -Path $TestDrive.FullName -ChildPath $Path | Should -Exist
-        }
+        Join-Path -Path $testRoot -ChildPath $Path | Should -Exist
     }
 }
 
 function ThenNoErrors
 {
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
+    $Global:Error | Should -BeNullOrEmpty
+}
+
+function ThenNuGetPackageUninstalled
+{
+    [CmdLetBinding()]
+    param(
+        [String]
+        $WithVersion = '2.6.4',
+
+        [String]
+        $WithName = 'NUnit.Runners'
+    )
+
+    $Name = '{0}.{1}' -f $WithName, $WithVersion
+    $path = Join-Path -Path $testRoot -ChildPath 'packages'
+    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
+
+    $uninstalledPath | Should -Not -Exist
+
+    $Global:Error | Should -beNullOrEmpty
+}
+
+function ThenNuGetPackageNotUninstalled
+{
+    [CmdLetBinding()]
+    param(
+        [String]$WithVersion = '2.6.4',
+
+        [String]$WithName = 'NUnit.Runners',
+
+        [switch]$PackageShouldExist,
+
+        [string]$WithError
+    )
+
+    $Name = '{0}.{1}' -f $WithName, $WithVersion
+    $path = Join-Path -Path $testRoot -ChildPath 'packages'
+    $uninstalledPath = Join-Path -Path $path -ChildPath $Name
+
+    if( -not $PackageShouldExist )
+    {
+        $uninstalledPath | Should -Not -Exist
     }
+    else
+    {
+        $uninstalledPath | Should -Exist
+        Remove-Item -Path $uninstalledPath -Recurse -Force
+    }
+
+    $Global:Error | Should -Match $WithError
 }
 
 function ThenUninstalledDotNet
 {
-    It 'should delete .NET Core SDK' {
-        Join-Path -Path $toolsInstallRoot -ChildPath '.dotnet' | Should -Not -Exist
-    }
+    Join-Path -Path $testRoot -ChildPath '.dotnet' | Should -Not -Exist
 }
 
 function ThenUninstalledNode
 {
-    It 'should delete Node' {
-        Join-Path -Path $toolsInstallRoot -ChildPath '.node' | Should -Not -Exist
-    }
+    Join-Path -Path $testRoot -ChildPath '.node' | Should -Not -Exist
+}
+
+function WhenUninstallingNuGetPackage
+{
+    [CmdletBinding()]
+    param(
+        [String]
+        $WithVersion = '2.6.4',
+
+        [String]
+        $WithName = 'NUnit.Runners'
+    )
+
+    $Global:Error.Clear()
+    Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $testRoot
 }
 
 function WhenUninstallingTool
@@ -206,10 +160,10 @@ function WhenUninstallingTool
         $Name
     )
 
-    Push-Location $TestDrive.FullName
+    Push-Location $testRoot
     try
     {
-        Uninstall-WhiskeyTool -Name $Name -InstallRoot $toolsInstallRoot
+        Uninstall-WhiskeyTool -Name $Name -InstallRoot $testRoot
     }
     finally
     {
@@ -217,9 +171,38 @@ function WhenUninstallingTool
     }
 }
 
+if( $IsWindows )
+{
+    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package' {
+        It 'should delete it' {
+            Init
+            GivenAnInstalledNuGetPackage
+            WhenUninstallingNuGetPackage
+            ThenNuGetPackageUnInstalled
+        }
+    }
+    
+    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package with an empty version' {
+        It 'should delete all versions' {
+            Init
+            GivenAnInstalledNuGetPackage -WithVersion ''
+            WhenUninstallingNuGetPackage -WithVersion ''
+            ThenNuGetPackageUnInstalled -WithVersion ''
+        }
+    }
+    
+    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package with a wildcard version' {
+        It 'should fail' {
+            Init
+            GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+            WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
+            ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
+        }
+    }    
+}
+
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
-    try
-    {
+    It 'should uninstall everything' {
         Init
         GivenToolInstalled 'node'
         WhenUninstallingTool 'Node'
@@ -231,37 +214,34 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
         Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
         GivenToolInstalled 'node'
         WhenUninstallingTool 'Node'
-        It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
-            Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-        }
-    }
-    finally
-    {
-        Remove-Node
+        Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
-    Init
-    GivenToolInstalled 'DotNet'
-    WhenUninstallingTool 'DotNet'
-    ThenUninstalledDotNet
-    ThenNoErrors
+    It 'should remove dotNet SDK' {
+        Init
+        GivenToolInstalled 'DotNet'
+        WhenUninstallingTool 'DotNet'
+        ThenUninstalledDotNet
+        ThenNoErrors
 
-    # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
-    Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-    GivenToolInstalled 'DotNet'
-    WhenUninstallingTool 'DotNet'
-    It 'should use Remove-WhiskeyFileSystemItem to delete tool' {
+        # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
+        Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
+        GivenToolInstalled 'DotNet'
+        WhenUninstallingTool 'DotNet'
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
-    $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $powerShellModulesDirectoryName
-    Init
-    GivenFile $mockModulePath
-    WhenUninstallingTool 'PowerShellModule::Whiskey'
-    ThenFile $mockModulePath -Not -Exists
-    ThenNoErrors
+    It 'should delete PowerShell module' {
+        Init
+        $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $powerShellModulesDirectoryName
+        Init
+        GivenFile $mockModulePath
+        WhenUninstallingTool 'PowerShellModule::Whiskey'
+        ThenFile $mockModulePath -Not -Exists
+        ThenNoErrors
+    }
 }
