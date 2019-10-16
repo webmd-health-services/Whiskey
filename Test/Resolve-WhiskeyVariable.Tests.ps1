@@ -130,13 +130,26 @@ function ThenValueIs
 
 function WhenResolving
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='ByPipeline')]
     param(
-        $Value
+        [Parameter(ParameterSetName='ByPipeline',Position=0)]
+        $Value,
+
+        [Parameter(ParameterSetName='ByName')]
+        $ByName
     )
 
     $Global:Error.Clear()
-    $script:result = $Value | Resolve-WhiskeyVariable -Context $context
+
+    if( $PSCmdlet.ParameterSetName -eq 'ByPipeline' )
+    {
+        $script:result = $Value | Resolve-WhiskeyVariable -Context $context
+    }
+    else
+    {
+        $script:result = Resolve-WhiskeyVariable -Context $context -Name $ByName
+    }
+
 }
 
 Describe 'Resolve-WhiskeyVariable.when passed a string with no variable' {
@@ -676,6 +689,15 @@ Describe 'Resolve-WhiskeyVariable.exposes current task''s temp directory as Whis
         ThenValueIs $testRoot
         WhenResolving '$(WHISKEY_TASK_TEMP_DIRECTORY.Name)'
         ThenValueIs (Split-Path -Leaf -Path $testRoot)
+    }
+}
+
+Describe 'Resolve-WhiskeyVariable.when resolving by name' {
+    It 'should resolve' {
+        Init
+        $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+        WhenResolving -ByName 'WHISKEY_SEMVER2_VERSION'
+        ThenValueIs '1.2.3'
     }
 }
 

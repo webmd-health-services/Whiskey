@@ -44,11 +44,10 @@ function Resolve-WhiskeyVariable
             'Integer' = 4;
         }
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='ByPipeline')]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName='ByPipeline')]
         [AllowNull()]
-        [object]
         # The object on which to perform variable replacement/substitution. If the value is a string, all variables in the string are replaced with their values.
         #
         # If the value is an array, variable expansion is done on each item in the array. 
@@ -56,9 +55,13 @@ function Resolve-WhiskeyVariable
         # If the value is a hashtable, variable replcement is done on each value of the hashtable. 
         #
         # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
-        $InputObject,
+        [object]$InputObject,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(ParameterSetName='ByName')]
+        # The name of a single Whiskey variable to resolve.
+        [string]$Name,
+
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         # The context of the current build. Necessary to lookup any variables.
         $Context
@@ -68,6 +71,11 @@ function Resolve-WhiskeyVariable
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+        if( $Name )
+        {
+            $InputObject = '$({0})' -f $Name
+        }
 
         $version = $Context.Version
         $prereleaseID = ''
