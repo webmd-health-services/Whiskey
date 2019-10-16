@@ -12,7 +12,9 @@ function Publish-WhiskeyNodeModule
 
         [string]$EmailAddress,
 
-        [uri]$NpmRegistryUri
+        [uri]$NpmRegistryUri,
+
+        [string]$Tag
     )
 
     Set-StrictMode -Version 'Latest'
@@ -92,7 +94,21 @@ function Publish-WhiskeyNodeModule
                                 -ErrorAction Stop
 
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
-        Invoke-WhiskeyNpmCommand -Name 'publish' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
+
+        $publishArgumentList = @(
+            if( $Tag )
+            {
+                '--tag'
+                $Tag
+            }
+            elseif( $TaskContext.Version.SemVer2.Prerelease )
+            {
+                '--tag'
+                Resolve-WhiskeyVariable -Context $TaskContext -Name 'WHISKEY_SEMVER2_PRERELEASE_ID'
+            }
+        )
+
+        Invoke-WhiskeyNpmCommand -Name 'publish' -ArgumentList $publishArgumentList -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
     }
     finally
     {

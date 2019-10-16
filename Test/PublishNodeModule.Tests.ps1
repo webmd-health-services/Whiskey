@@ -156,6 +156,41 @@ function ThenPackageJsonVersion
     $packageJson | Select-Object -ExpandProperty 'version' | Should -Be $ExpectedVersion
 }
 
+function ThenPublishedWithTag
+{
+    param(
+        $ExpectedTag
+    )
+
+    Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                        -ModuleName 'Whiskey' `
+                        -Times 1 `
+                        -Exactly `
+                        -ParameterFilter {
+                            if( $Name -ne 'publish')
+                            {
+                                return $false
+                            }
+
+                            # $DebugPreference = 'Continue'
+                            Write-Debug -Message ('NPM Command: "{0}"' -f $Name)
+
+                            $expectedArguments = @('--tag', $ExpectedTag)
+                            Write-Debug -Message ('ArgumentList expected "{0}"' -f ($expectedArguments -join '", "'))
+                            Write-Debug -Message ('ArgumentList actual   "{0}"' -f ($ArgumentList -join '", "'))
+
+                            foreach ($argument in $expectedArguments)
+                            {
+                                if( $argument -notin $ArgumentList )
+                                {
+                                    return $false
+                                }
+                            }
+
+                            return $true
+                        }
+}
+
 function ThenTaskFailed
 {
     param(
@@ -173,7 +208,8 @@ function WhenPublishingNodeModule
     param(
         [string]$WithCredentialID,
         [string]$WithEmailAddress,
-        [string]$WithNpmRegistryUri
+        [string]$WithNpmRegistryUri,
+        [string]$WithTag
     )
 
     Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -ne 'version' }
@@ -204,6 +240,11 @@ function WhenPublishingNodeModule
         $parameter['NpmRegistryUri'] = $WithNpmRegistryuri
     }
 
+    if( $WithTag )
+    {
+        $parameter['Tag'] = $WithTag
+    }
+
     $script:threwException = $false
     $Global:Error.Clear()
 
@@ -229,8 +270,8 @@ Describe 'PublishNodeModule.when publishing node module' {
         }
 "@
         WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                    -WithEmailAddress 'somebody@example.com' `
-                                    -WithNpmRegistryUri 'http://registry@example.com'
+                                 -WithEmailAddress 'somebody@example.com' `
+                                 -WithNpmRegistryUri 'http://registry@example.com'
         ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
         ThenNpmPackagesPruned
         ThenNodeModulePublished
@@ -248,8 +289,8 @@ Describe 'PublishNodeModule.when NPM registry URI property is missing' {
         }
 "@
         WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                    -WithEmailAddress 'somebody@example.com' `
-                                    -ErrorAction SilentlyContinue
+                                 -WithEmailAddress 'somebody@example.com' `
+                                 -ErrorAction SilentlyContinue
         ThenTaskFailed '\bNpmRegistryUri\b.*\bmandatory\b'
     }
 }
@@ -265,8 +306,8 @@ Describe 'PublishNodeModule.when credential ID property missing' {
         }
 "@
         WhenPublishingNodeModule -WithEmailAddress 'somebody@example.com' `
-                                    -WithNpmRegistryUri 'http://registry@example.com' `
-                                    -ErrorAction SilentlyContinue
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -ErrorAction SilentlyContinue
         ThenTaskFailed '\bCredentialID\b.*\bmandatory\b'
     }
 }
@@ -282,8 +323,8 @@ Describe 'PublishNodeModule.when email address property missing' {
         }
 "@
         WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                    -WithNpmRegistryUri 'http://registry@example.com' `
-                                    -ErrorAction SilentlyContinue
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -ErrorAction SilentlyContinue
         ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
     }
 }
@@ -302,12 +343,13 @@ Describe 'PublishNodeModule.when publishing node module with prerelease version'
             GivenPrerelease 'alpha.1'
             Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
             WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                    -WithEmailAddress 'somebody@example.com' `
-                                    -WithNpmRegistryUri 'http://registry@example.com'
+                                     -WithEmailAddress 'somebody@example.com' `
+                                     -WithNpmRegistryUri 'http://registry@example.com'
             ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
             ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
             ThenNpmPackagesPruned
             ThenNodeModulePublished
+            ThenPublishedWithTag 'alpha'
         }
     }
 
@@ -322,12 +364,54 @@ Describe 'PublishNodeModule.when publishing node module with prerelease version'
 "@
             GivenPrerelease 'alpha.1'
             WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                    -WithEmailAddress 'somebody@example.com' `
-                                    -WithNpmRegistryUri 'http://registry@example.com'
+                                     -WithEmailAddress 'somebody@example.com' `
+                                     -WithNpmRegistryUri 'http://registry@example.com'
             ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
             ThenNpmPackagesPruned
             ThenNodeModulePublished
             ThenPackageJsonVersion -Is '1.2.0'
         }
+    }
+}
+
+Describe 'PublishNodeModule.when publishing node module with a specific tag' {
+    AfterEach { Reset }
+    It 'should publish the module with given tag' {
+        Init
+        GivenPackageJson @"
+        {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
+"@
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                 -WithEmailAddress 'somebody@example.com' `
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -WithTag 'mytag'
+        ThenNodeModulePublished
+        ThenPublishedWithTag 'mytag'
+    }
+}
+
+Describe 'PublishNodeModule.when publishing node module with prerelease version and a specific tag' {
+    AfterEach { Reset }
+    It 'should publish the module with given tag' {
+        Init
+        GivenPackageJson @"
+        {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
+"@
+        GivenPrerelease 'alpha.1'
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                 -WithEmailAddress 'somebody@example.com' `
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -WithTag 'mytag'
+        ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
+        ThenPublishedWithTag 'mytag'
     }
 }
