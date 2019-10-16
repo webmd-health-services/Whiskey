@@ -1,5 +1,0 @@
-Whiskey branches PR order:
-* feature/task-named-parameters
-* feature/task-alias
-* feature/obsolete-tasks
-* feature/rename-task-test-fixtures
