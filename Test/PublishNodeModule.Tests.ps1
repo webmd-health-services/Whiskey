@@ -7,6 +7,7 @@ $credential = $null
 $context = $null
 $packageJsonPath = $null
 $prerelease = $null
+$testRoot = $null
 $threwException = $false
 
 function Init
@@ -15,14 +16,15 @@ function Init
     $script:context = $null
     $script:packageJsonPath = $null
     $script:prerelease = $null
+    $script:testRoot = New-WhiskeyTestRoot
     $script:threwException = $false
 
-    Install-Node
+    Install-Node -BuildRoot $testRoot
 }
 
 function Reset
 {
-    Remove-Node
+    Remove-Node -BuildRoot $testRoot
 }
 
 function GivenPackageJson
@@ -31,7 +33,7 @@ function GivenPackageJson
         $Content
     )
 
-    $script:packageJsonPath = Join-Path -Path $TestDrive.Fullname -ChildPath 'package.json'
+    $script:packageJsonPath = Join-Path -Path $testRoot -ChildPath 'package.json'
     New-Item -Path $packageJsonPath -ItemType File -Value $Content -Force | Out-Null
 }
 
@@ -221,7 +223,7 @@ function WhenPublishingNodeModule
         $version = '{0}-{1}' -f $version, $prerelease
     }
 
-    $script:context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $TestDrive.FullName -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot -ForVersion $version
 
     $parameter = @{ }
     if( $WithCredentialID )
