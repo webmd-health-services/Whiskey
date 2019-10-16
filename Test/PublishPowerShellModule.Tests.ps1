@@ -260,6 +260,7 @@ function Reset
 {
     Reset-WhiskeyTestPSModule
 }
+
 function ThenFailed
 {
     param(

@@ -55,6 +55,7 @@ function Reset
 {
     Reset-WhiskeyTestPSModule
 }
+
 function WhenPowershellModuleIsRan
 {
     [CmdletBinding()]

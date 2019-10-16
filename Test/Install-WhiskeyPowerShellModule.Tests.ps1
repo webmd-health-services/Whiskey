@@ -74,6 +74,7 @@ function Reset
 {
     Reset-WhiskeyTestPSModule
 }
+
 function ThenModuleImported
 {
     param(

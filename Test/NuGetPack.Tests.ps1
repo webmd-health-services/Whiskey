@@ -128,7 +128,6 @@ Build:
     Reset-WhiskeyTestPSModule
 }
 
-
 function GivenFile
 {
     param(
