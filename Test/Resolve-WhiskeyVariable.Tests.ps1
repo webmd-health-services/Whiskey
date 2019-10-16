@@ -381,6 +381,15 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE' {
     }
 }
 
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE_ID' {
+    It 'should resolve' {
+        Init
+        $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
+        WhenResolving '$(WHISKEY_SEMVER2_PRERELEASE_ID)'
+        ThenValueIs 'fubar'
+    }
+}
+
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_BUILD' {
     It 'should resolve' {
         Init

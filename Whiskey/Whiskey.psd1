@@ -158,6 +158,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Moved Whiskey's documentation to [GitHub](https://github.com/webmd-health-services/Whiskey/wiki).
+* Added a new built-in Whiskey variable `WHISKEY_SEMVER2_PRERELEASE_ID` which contains the prerelease identifier of the prerelease label on a SemVer2 version string. E.g. Given the version `1.2.3-alpha.47+buildmetata`, this variable would be `alpha`.
 '@
         } # End of PSData hashtable
 
