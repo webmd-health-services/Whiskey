@@ -158,6 +158,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Moved Whiskey's documentation to [GitHub](https://github.com/webmd-health-services/Whiskey/wiki).
+* Fixed: Whiskey's assembly wasn't getting its version metadata set.
 '@
         } # End of PSData hashtable
 

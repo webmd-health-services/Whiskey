@@ -18,18 +18,21 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version Latest
 
-# We can't use Whiskey to build Whiskey's assembly because we need Whiskey's assembly to use Whiskey.
-$manifest = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -Raw
-if( $manifest -notmatch '\bModuleVersion\b\s*=\s*(''|")([^''"]+)' )
+# ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
+$manifest = Test-ModuleManifest -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -ErrorAction Ignore
+if( -not $manifest )
 {
-    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.'
+    Write-Error -Message ('Unable to load Whiskey''s module manifest.')
+    exit 1
 }
-$version = $Matches[2]
+
+$version = $manifest.Version
 
 $buildInfo = ''
+$prereleaseInfo = ''
 if( Test-Path -Path ('env:APPVEYOR') )
 {
     $commitID = $env:APPVEYOR_REPO_COMMIT
@@ -39,6 +42,13 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $branch = $branch -replace '[^A-Za-z0-9-]','-'
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+
+    if( $branch -eq 'prerelease' )
+    {
+        $prereleaseInfo = '-beta.{0}' -f $env:APPVEYOR_BUILD_NUMBER
+        $buildInfo = '+{0}.{1}' -f $branch,$commitID
+    }
+
     $MSBuildConfiguration = 'Release'
 
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
@@ -96,6 +106,8 @@ if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
     }
 }
 
+$versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
+$productVersion = '{0}{1}' -f $version,$versionSuffix
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
 try
 {
@@ -106,11 +118,11 @@ try
     }
 
     $params = & {
-                            '/p:Version={0}{1}' -f $version,$buildInfo
+                            '/p:Version={0}' -f $productVersion
                             '/p:VersionPrefix={0}' -f $version
-                            if( $buildInfo )
+                            if( $versionSuffix )
                             {
-                                '/p:VersionSuffix={0}' -f $buildInfo
+                                '/p:VersionSuffix={0}' -f $versionSuffix
                             }
                             if( $VerbosePreference -eq 'Continue' )
                             {
@@ -122,7 +134,7 @@ try
     Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
     & $dotnetPath build --configuration=$MSBuildConfiguration $params
 
-    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
@@ -135,6 +147,21 @@ finally
 
 $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
 $whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
+$whiskeyAssemblyPath = Get-Item -Path (Join-Path -Path $whiskeyOutBinPath -ChildPath 'Whiskey.dll')
+$whiskeyAssemblyVersion = $whiskeyAssemblyPath.VersionInfo
+$fileVersion = [version]('{0}.0' -f $version)
+if( $whiskeyAssemblyVersion.FileVersion -ne $fileVersion )
+{
+    Write-Error -Message ('{0}: file version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$fileVersion,$whiskeyAssemblyVersion.FileVersion) 
+    exit 1
+}
+
+if( $whiskeyAssemblyVersion.ProductVersion -ne $productVersion )
+{
+    Write-Error -Message ('{0}: product version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$productVersion,$whiskeyAssemblyVersion.ProductVersion) 
+    exit 1
+}
+
 foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 {
     $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name
