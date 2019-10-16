@@ -97,7 +97,7 @@ function Merge-WhiskeyFile
             }
 
             $relativePath = Resolve-Path -Path $filePath -Relative
-            Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath) -Verbose
+            Write-WhiskeyInfo -Context $TaskContext -Message ('    + {0}' -f $relativePath)
 
             if( $addSeparator -and $separatorBytes )
             {
