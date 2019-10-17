@@ -205,15 +205,15 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {
     It 'should uninstall everything' {
         Init
         GivenToolInstalled 'node'
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath')
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'NodeModule::rimraf','NodeModulePath')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'Node')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'NodeModule::rimraf')
         ThenUninstalledNode
         ThenNoErrors
 
         # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
         Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
         GivenToolInstalled 'node'
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'Node')
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
@@ -222,14 +222,14 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling DotNet SDK' {
     It 'should remove dotNet SDK' {
         Init
         GivenToolInstalled 'DotNet'
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'DotNet','DotNetPath')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'DotNet')
         ThenUninstalledDotNet
         ThenNoErrors
 
         # Also ensure Remove-WhiskeyFileSystemItem is used to delete the tool
         Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
         GivenToolInstalled 'DotNet'
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'DotNet','DotNetPath')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresToolAttribute' 'DotNet')
         Assert-MockCalled -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
     }
 }
@@ -240,7 +240,7 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
         $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $PSModulesDirectoryName
         Init
         GivenFile $mockModulePath
-        WhenUninstallingTool (New-Object 'Whiskey.RequiresPowerShellModuleAttribute' 'Whiskey','WhiskeyPath')
+        WhenUninstallingTool (New-Object 'Whiskey.RequiresPowerShellModuleAttribute' 'Whiskey')
         ThenFile $mockModulePath -Not -Exists
         ThenNoErrors
     }

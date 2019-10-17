@@ -157,20 +157,24 @@ function GivenWorkingDirectory
 
 function ThenDotNetPathAddedToTaskParameter
 {
-    $taskParameter[$pathParameterName] | Should -Match '[\\/]dotnet(\.exe)$'
+    param(
+        [Parameter(Mandatory)]
+        [string]$Named
+    )
+
+    $taskParameter[$Named] | Should -Match '[\\/]dotnet(\.exe)$'
 }
 
 function ThenNodeInstalled
 {
     param(
-        [string]
-        $NodeVersion,
+        [string]$NodeVersion,
 
-        [string]
-        $NpmVersion,
+        [string]$NpmVersion,
 
-        [Switch]
-        $AtLatestVersion
+        [Switch]$AtLatestVersion,
+
+        [string]$AndPathParameterIs
     )
 
     $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $testRoot
@@ -195,19 +199,38 @@ function ThenNodeInstalled
     $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
     $npmPath | Should -Exist
     & $nodePath $npmPath '--version' | Should -Be $NpmVersion
-    $taskParameter[$pathParameterName] | Should -Be (Resolve-WhiskeyNodePath -BuildRootPath $testRoot)
+    $expectedNodePath = Resolve-WhiskeyNodePath -BuildRootPath $testRoot
+    if( $AndPathParameterIs )
+    {
+        $taskParameter[$AndPathParameterIs] | Should -Be $expectedNodePath
+    }
+    else
+    {
+        $taskParameter.Values | Should -Not -Contain $expectedNodePath
+        $Global:Error | Should -BeNullOrEmpty
+    }
 }
 
 function ThenNodeModuleInstalled
 {
     param(
         $Name,
-        $AtVersion
+        $AtVersion,
+        $AndPathParameterIs
     )
 
     $expectedPath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $testRoot -Global
     $expectedPath | Should -Exist
-    $taskParameter[$pathParameterName] | Should -Be $expectedPath
+
+    if( $AndPathParameterIs )
+    {
+        $taskParameter[$AndPathParameterIs] | Should -Be $expectedPath
+    }
+    else
+    {
+        $taskParameter.Values | Should -Not -Contain $expectedPath
+        $Global:Error | Should -BeNullOrEmpty
+    }
 
     if( $AtVersion )
     {
@@ -218,12 +241,13 @@ function ThenNodeModuleInstalled
 function ThenNodeModuleNotInstalled
 {
     param(
-        $Name
+        $Name,
+        $AndPathParameterIs
     )
 
-    $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $testRoot -Global -ErrorAction Ignore | Should -BeNullOrEmpty
-    $nodeModulesPath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $testRoot -ErrorAction Ignore | Should -BeNullOrEmpty
-    $taskParameter.ContainsKey($pathParameterName) | Should -Be $false
+    Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $testRoot -Global -ErrorAction Ignore | Should -BeNullOrEmpty
+    Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $testRoot -ErrorAction Ignore | Should -BeNullOrEmpty
+    $taskParameter.ContainsKey($AndPathParameterIs) | Should -BeFalse
 }
 
 function ThenThrewException
@@ -251,14 +275,21 @@ function WhenInstallingTool
         $Parameter = @{ },
 
         [Parameter(ParameterSetName='HandleAttributeForMe')]
-        $Version
+        $Version,
+
+        [Parameter(ParameterSetName='HandleAttributeForMe')]
+        [string]$PathParameterName
     )
 
     $Global:Error.Clear()
 
     if( $PSCmdlet.ParameterSetName -eq 'HandleAttributeForMe' )
     {
-        $FromAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name,$pathParameterName
+        $FromAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name
+        if( $PathParameterName )
+        {
+            $script:pathParameterName = $FromAttribute.PathParameterName = $PathParameterName
+        }
 
         if( $versionParameterName )
         {
@@ -289,7 +320,18 @@ function WhenInstallingTool
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing Node and a Node module' {
+Describe 'Install-WhiskeyTool.when installing Node and a Node module and task needs tool paths' {
+    AfterEach { Reset }
+    It 'should install Node and the node module' {
+        Init
+        WhenInstallingTool 'Node' -PathParameterName 'NodePath'
+        ThenNodeInstalled -AtLatestVersion -AndPathParameterIs 'NodePath'
+        WhenInstallingTool 'NodeModule::license-checker' -PathParameterName 'LicenseCheckerPath'
+        ThenNodeModuleInstalled 'license-checker' -AndPathParameterIs 'LicenseCheckerPath'
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing Node and a Node module and task doesn''t need tool path' {
     AfterEach { Reset }
     It 'should install Node and the node module' {
         Init
@@ -313,9 +355,9 @@ Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t instal
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenInstallingTool 'NodeModule::license-checker' -ErrorAction SilentlyContinue
+        WhenInstallingTool 'NodeModule::license-checker' -PathParameterName 'LicenseCheckerPath' -ErrorAction SilentlyContinue
         ThenThrewException 'Node\ isn''t\ installed\ in\ your\ repository'
-        ThenNodeModuleNotInstalled 'license-checker'
+        ThenNodeModuleNotInstalled 'license-checker' -AndPathParameterIs 'LicenseCheckerPath'
     }
 }
 
@@ -346,8 +388,8 @@ Describe 'Install-WhiskeyTool.when installing .NET Core SDK' {
         Mock -CommandName 'Install-WhiskeyDotNetTool' -ModuleName 'Whiskey' -MockWith { Join-Path -Path $InstallRoot -ChildPath '.dotnet\dotnet.exe' }
         GivenWorkingDirectory 'app'
         GivenVersionParameterName 'SdkVersion'
-        WhenInstallingTool 'DotNet' @{ 'SdkVersion' = '2.1.4' }
-        ThenDotNetPathAddedToTaskParameter
+        WhenInstallingTool 'DotNet' @{ 'SdkVersion' = '2.1.4' } -PathParameterName 'DotNetPath'
+        ThenDotNetPathAddedToTaskParameter -Named 'DotNetPath'
         Assert-MockCalled -CommandName 'Install-WhiskeyDotNetTool' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
             $InstallRoot -eq $testRoot -and `
             $WorkingDirectory -eq $taskWorkingDirectory -and `
@@ -386,12 +428,13 @@ function ThenDirectory
     }
 }
 
-Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and task needs PSModuleInfo' {
     AfterEach { Reset }
     It 'should install the module' {
         Init
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return 'PSModulePath' }
-        $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip','ZipPath'
+        $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
+        $attr.ModuleInfoParameterName = 'ZipModuleInfo'
         $attr.Version = '0.2.0'
         $attr.SkipImport = $true
         WhenInstallingTool -FromAttribute $attr 
@@ -404,6 +447,28 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module' {
         Assert-MockCalled @assertMockParams -ParameterFilter { $BuildRoot -eq $testRoot }
         Assert-MockCalled @assertMockParams -ParameterFilter { $SkipImport -eq $true }
         Assert-MockCalled @assertMockParams -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
-        $taskParameter['ZipPath'] | Should -Be 'PSModulePath'
+        $taskParameter['ZipModuleInfo'] | Should -Be 'PSModulePath'
+    }
+}
+
+Describe 'Install-WhiskeyTool.when installing a PowerShell module and task doesn''t need PSModuleInfo' {
+    AfterEach { Reset }
+    It 'should install the module' {
+        Init
+        Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return 'PSModulePath' }
+        $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
+        $attr.Version = '0.2.0'
+        $attr.SkipImport = $true
+        WhenInstallingTool -FromAttribute $attr 
+        $assertMockParams = @{ 
+            'CommandName' = 'Install-WhiskeyPowerShellModule';
+            'ModuleName' = 'Whiskey';
+        }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $Name -eq 'Zip' }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $Version -eq '0.2.0' }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $BuildRoot -eq $testRoot }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $SkipImport -eq $true }
+        Assert-MockCalled @assertMockParams -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+        $taskParameter.Values | Should -Not -BeOfType ([Management.Automation.PSModuleInfo])
     }
 }

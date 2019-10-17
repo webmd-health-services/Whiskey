@@ -2,7 +2,7 @@
 function Invoke-WhiskeyPester3Task
 {
     [Whiskey.Task('Pester3',Platform='Windows')]
-    [Whiskey.RequiresPowerShellModule('Pester','PesterPath',Version='3.*',VersionParameterName='Version',SkipImport)]
+    [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='3.*',VersionParameterName='Version',SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -34,6 +34,9 @@ function Invoke-WhiskeyPester3Task
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
     $outputFile = [IO.Path]::GetFullPath($outputFile)
 
+    $moduleInfo = $TaskParameter['PesterModuleInfo']
+    $pesterManifestPath = $moduleInfo.Path
+
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $VerbosePreference = $using:VerbosePreference
@@ -43,12 +46,12 @@ function Invoke-WhiskeyPester3Task
         $ErrorActionPreference = $using:ErrorActionPreference
 
         $script = $using:Path
-        $pesterModulePath = $using:TaskParameter['PesterPath']
+        $pesterManifestPath = $using:pesterManifestPath
         $outputFile = $using:outputFile
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterModulePath
+                                        Import-Module -Name $pesterManifestPath
                                     }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru

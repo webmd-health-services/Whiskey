@@ -2,8 +2,8 @@
 function Publish-WhiskeyBuildMasterPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("PublishBuildMasterPackage")]
-    [Whiskey.RequiresPowerShellModule('BuildMasterAutomation','BuildMasterAutomationPath',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
+    [Whiskey.Task('PublishBuildMasterPackage')]
+    [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

@@ -39,7 +39,7 @@ if( -not ($attr | Get-Member 'Platform') )
     Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
 }
 
-$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey','WhiskeyPath') -ErrorAction Ignore
+$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
 if( -not $attr )
 {
     Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop

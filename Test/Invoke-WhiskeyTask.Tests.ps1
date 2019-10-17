@@ -21,8 +21,8 @@ $variables = @{ }
 
 function Global::ToolTask
 {
-    [Whiskey.Task("ToolTask",SupportsClean=$true)]
-    [Whiskey.RequiresTool("Node", "NodePath")]
+    [Whiskey.Task('ToolTask',SupportsClean=$true)]
+    [Whiskey.RequiresTool('Node', PathParameterName='NodePath')]
     [CmdletBinding()]
     param(
         $TaskContext,

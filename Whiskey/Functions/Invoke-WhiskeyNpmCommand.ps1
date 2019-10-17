@@ -15,7 +15,7 @@ function Invoke-WhiskeyNpmCommand
         function MyTask
         {
             [Whiskey.Task('MyTask')]
-            [Whiskey.RequiresTool('Node', 'NodePath')]
+            [Whiskey.RequiresTool('Node', PathParameterName='NodePath')]
             param(
             )
         }
