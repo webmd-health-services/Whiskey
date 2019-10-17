@@ -162,6 +162,7 @@
 * Whiskey now automatically imports PowerShell modules tasks use as declared by their `RequiresTool` attribute.
 * Upgraded Whiskey to use PackageManagement 1.4.5 (from 1.4.4).
 * Fixed: Whiskey doesn't install the latest version of a PowerShell module if there's any version already installed.
+* Improved detection of corrupted PowerShell modules that will force a re-install. Whiskey now uses `Test-ModuleManifest` to determine if a module was installed correctly.
 '@
         } # End of PSData hashtable
 

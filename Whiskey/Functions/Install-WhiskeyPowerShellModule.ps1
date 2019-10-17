@@ -57,11 +57,23 @@ function Install-WhiskeyPowerShellModule
 
     $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
     $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
-    $modulePath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $Version,$Name)
+    $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $Version,$Name)
 
-    if( (Test-Path -Path $modulePath -PathType Leaf) )
+    $module = $null
+    $moduleOk = $false
+    try
     {
-        $moduleRoot | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
+        $module = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
+        $moduleOk = $true
+    }
+    catch
+    {
+        $Global:Error.RemoveAt(0)
+    }
+
+    if( $moduleOk -and $module )
+    {
+        $module.Path | Split-Path | Split-Path
     }
     else
     {
@@ -77,12 +89,14 @@ function Install-WhiskeyPowerShellModule
         Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
         Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
 
-        $modulePath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $module.Version,$Name)
-        if( -not (Test-Path -Path $modulePath -PathType Leaf) )
+        $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $module.Version,$Name)
+        $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
+        if( -not $manifest )
         {
             Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+            return
         }
-        $moduleRoot | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
+        $manifest.Path | Split-Path | Split-Path
     }
 
     if( -not $SkipImport )

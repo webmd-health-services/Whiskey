@@ -2,6 +2,13 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+# If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+# * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+# * Whiskey\Tasks\PublishPowerShellModule.ps1
+# * whiskey.yml
+$packageManagementVersion = '1.4.5'
+$powerShellGetVersion = '2.2.1'
+
 $moduleName = $null
 $moduleVersion = $null
 $output = $null
@@ -190,11 +197,38 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules aren''
         Init
         GivenName 'Pester'
         WhenResolvingPowerShellModule -SkipCaching
-        # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-        # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
-        # * Whiskey\Tasks\PublishPowerShellModule.ps1
-        # * whiskey.yml
-        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\1.4.5' -f $PSModulesDirectoryName) | Should -Exist
-        Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\2.2.1' -f $PSModulesDirectoryName) | Should -Exist
+        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}' -f $PSModulesDirectoryName,$packageManagementVersion) | Should -Exist
+        Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\{1}' -f $PSModulesDirectoryName,$powerShellGetVersion) | Should -Exist
+    }
+}
+
+Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manifest is missing' {
+    AfterEach { Reset }
+    It 'should uninstall potentially corrupt modules' {
+        Init
+        GivenName 'Pester'
+        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $PSModulesDirectoryName,$packageManagementVersion) 
+        New-Item -Path $manifestPath -ItemType 'Directory' -Force
+        { Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore } | Should -Throw
+        $Global:Error.Clear()
+        WhenResolvingPowerShellModule -SkipCaching
+        Test-ModuleManifest -Path $manifestPath | Should -Not -BeNullOrEmpty
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manifests can''t be loaded' {
+    AfterEach { Reset }
+    It 'should uninstall potentially corrupt modules' {
+        Init
+        GivenName 'Pester'
+        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $PSModulesDirectoryName,$packageManagementVersion) 
+        New-Item -Path $manifestPath -ItemType 'File' -Force
+        '@{ "RequiredAssemblies" = "Fubar.dll" }' | Set-Content -Path $manifestPath
+        { Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore } | Should -Throw
+        $Global:Error.Clear()
+        WhenResolvingPowerShellModule -SkipCaching
+        Test-ModuleManifest -Path $manifestPath | Should -Not -BeNullOrEmpty
+        $Global:Error | Should -BeNullOrEmpty
     }
 }

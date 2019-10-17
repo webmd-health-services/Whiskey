@@ -56,10 +56,22 @@ function Resolve-WhiskeyPowerShellModule
     foreach( $packageName in $packageManagementPackages.Keys )
     {
         $packageVersion = $packageManagementPackages[$packageName]
-        $moduleRootPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}' -f $packageName,$packageVersion)
-        if( -not (Test-Path -Path $moduleRootPath -PathType Container) )
+        $moduleManifestPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $packageName,$packageVersion)
+        $manifestOk = $false
+        $manifest = $null
+        try
         {
-            Write-WhiskeyTiming -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,$moduleRootPath)
+            $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
+            $manifestOk = $true
+        }
+        catch
+        {
+            $Global:Error.RemoveAt(0)
+        }
+
+        if( -not $manifestOk -or -not $manifest )
+        {
+            Write-WhiskeyTiming -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
             $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
             [void]$modulesToInstall.Add($module)
         }
@@ -77,7 +89,9 @@ function Resolve-WhiskeyPowerShellModule
             Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
             foreach( $moduleInfo in $modulesToInstall )
             {
-                $module = Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version
+                $module = 
+                    Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version |
+                    Select-Object -First 1
                 if( -not $module )
                 {
                     continue

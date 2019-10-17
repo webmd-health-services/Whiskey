@@ -214,20 +214,22 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     }
 }
 
-Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is missing files' {
+Describe 'Install-WhiskeyPowerShellModule.when PowerShell module can''t be imported' {
     AfterEach { Reset }
-    It 'should do something' {
+    It 'should re-download the module' {
         Init
         Install-WhiskeyPowerShellModule -Name 'Zip' -Version $latestZip.Version
         $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Zip\{1}\Zip.psd1' -f $PSModulesDirectoryName,$latestZip.Version) -Resolve
-        Remove-Item -Path $moduleManifest -Force
+        '@{ }' | Set-Content -Path $moduleManifest
+        { Test-ModuleManifest -Path $moduleManifest -ErrorAction Ignore } | Should -Throw
+        $Global:Error.Clear()
         Invoke-PowershellInstall -ForModule 'Zip' -Version $latestZip.Version
     }
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when skipping import' {
     AfterEach { Reset }
-    It 'should not  import the module' {
+    It 'should not import the module' {
         Init
         Install-WhiskeyPowerShellModule 'Zip' -SkipImport
         ThenModuleNotImported 'Zip'
