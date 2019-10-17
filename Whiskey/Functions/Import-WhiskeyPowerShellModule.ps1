@@ -42,8 +42,8 @@ function Import-WhiskeyPowerShellModule
     }
 
     $searchPaths = & {
-                        Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
-                   }
+        Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    }
 
     foreach( $moduleName in $Name )
     {

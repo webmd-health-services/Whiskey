@@ -160,22 +160,22 @@ function WhenPackaging
     # Make sure the build root exists.
     Get-BuildRoot | Out-Null
 
-    $optionalParams = @{ 
+    $contextParams = @{ 
+        'ForBuildRoot' = (Get-BuildRoot);
+        'ForBuildServer' = $true;
+        'ForYaml' = $WithYaml;
         'IncludePSModule' = 'Zip'
     }
+    
     if( $AndModuleNotInstalled )
     {
-        $optionalParams = @{ }
+        $contextParams.Remove('IncludePSModule')
     }
 
-    $script:context = $taskContext = New-WhiskeyTestContext -ForBuildRoot (Get-BuildRoot) `
-                                                            -ForBuildServer `
-                                                            -ForYaml $WithYaml `
-                                                            @optionalParams
+    $script:context = $taskContext = New-WhiskeyTestContext @contextParams
+
     $taskParameter = $context.Configuration['Build'][0]['Zip']
 
-    $At = $null
-    
     $Global:Error.Clear()
 
     try
@@ -278,7 +278,7 @@ Build:
 
 Describe 'Zip.when packaging a filtered directory' {
     AfterEach { Reset }
-    It 'should package only items that match teh filter' {
+    It 'should package only items that match the filter' {
         Init
         GivenARepositoryWIthItems 'dir1\subdir\file.txt','dir1\one.ps1','dir1\dir2\file.txt'
         WhenPackaging @'
@@ -615,7 +615,7 @@ Build:
 
 Describe 'Zip.when path to archive is in directory that doesn''t exist' {
     AfterEach { Reset }
-    It 'should fail' {
+    It 'should create destination directory' {
         Init
         GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
         WhenPackaging @'
