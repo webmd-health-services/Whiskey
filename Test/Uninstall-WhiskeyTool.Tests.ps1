@@ -163,7 +163,7 @@ function WhenUninstallingTool
     Push-Location $testRoot
     try
     {
-        Uninstall-WhiskeyTool -ToolInfo $ToolInfo -InstallRoot $testRoot
+        Uninstall-WhiskeyTool -ToolInfo $ToolInfo -BuildRoot $testRoot
     }
     finally
     {
