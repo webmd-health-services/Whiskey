@@ -27,7 +27,7 @@ function Uninstall-WhiskeyPowerShellModule
         [string]$Version = '*.*.*',
 
         [Parameter(Mandatory)]
-        # Modules are saved into a PSModules directory. This is path where the PSModules directory should be created.
+        # Modules are saved into a PSModules directory. This is the path where the PSModules directory was created and should be the same path passed to `Install-WhiskeyPowerShellModule`.
         [string]$BuildRoot
     )
 
