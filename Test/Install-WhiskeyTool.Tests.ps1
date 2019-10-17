@@ -229,7 +229,8 @@ function ThenNodeModuleInstalled
     else
     {
         $taskParameter.Values | Should -Not -Contain $expectedPath
-        $Global:Error | Should -BeNullOrEmpty
+        # NPM writes errors to STDERR which can sometimes cause builds to fail.
+        $Global:Error | Where-Object { $_ -notmatch '\bnpm WARN\b' } |Should -BeNullOrEmpty
     }
 
     if( $AtVersion )
