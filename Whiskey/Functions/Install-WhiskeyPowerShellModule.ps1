@@ -59,25 +59,30 @@ function Install-WhiskeyPowerShellModule
     $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
     $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $Version,$Name)
 
-    $module = $null
-    $moduleOk = $false
+    $manifest = $null
+    $manifestOk = $false
     try
     {
-        $module = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
-        $moduleOk = $true
+        $manifest =
+            Get-Item -Path $moduleManifestPath -ErrorAction Ignore |
+            Test-ModuleManifest -ErrorAction Ignore |
+            Sort-Object -Property 'Version' -Descending |
+            Select-Object -First 1
+        $manifestOk = $true
     }
     catch
     {
         $Global:Error.RemoveAt(0)
     }
 
-    if( $moduleOk -and $module )
+    if( $manifestOk -and $manifest )
     {
-        $module.Path | Split-Path | Split-Path
+        $manifest
     }
     else
     {
-        if( -not $module )
+        $module = $null
+        if( -not $manifest )
         {
             $module = Resolve-WhiskeyPowerShellModule -Name $Name -Version $Version -BuildRoot $BuildRoot
             if( -not $module )
@@ -96,7 +101,7 @@ function Install-WhiskeyPowerShellModule
             Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
             return
         }
-        $manifest.Path | Split-Path | Split-Path
+        $manifest
     }
 
     if( -not $SkipImport )

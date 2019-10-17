@@ -5,12 +5,15 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $testRoot = $null
-$latestZip = Find-Module -Name 'Zip' | Select-Object -First 1
+$allZipVersions = Find-Module -Name 'Zip' -AllVersions
+$latestZip = $allZipVersions | Select-Object -First 1
 
 function Init
 {
     param(
     )
+
+    $Global:Error.Clear()
 
     $script:testRoot = New-WhiskeyTestRoot
 
@@ -55,15 +58,11 @@ function Invoke-PowershellInstall
     }
 
     $result = Install-WhiskeyPowerShellModule -Name $ForModule -Version $Version -SkipImport:$SkipImport
-
-    $moduleRootPath = Join-Path -Path $testRoot -ChildPath ('{0}\{1}' -f $PSModulesDirectoryName,$ForModule)
-    $result | Should -Not -BeNullOrEmpty
-    $result | Should -Exist
-    $result | Should -Be $moduleRootPath
+    $result | Should -BeOfType ([Management.Automation.PSModuleInfo])
 
     $errors = @()
     $module = Start-Job {
-        Import-Module -Name $using:result -PassThru
+        Import-Module -Name $using:result.Path -PassThru
     } | Wait-Job | Receive-Job -ErrorVariable 'errors'
     $errors | Should -BeNullOrEmpty
     $module.Version | Should -Be $ActualVersion
@@ -110,8 +109,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a Po
     AfterEach { Reset }
     It 'should install package management modules and the module' {
         Init
-        $Global:Error.Clear()
-
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
         Invoke-PowershellInstall -ForModule 'Zip' -Version '0.2.0'
         ThenModuleInstalled 'Zip' -AtVersion '0.2.0'
@@ -169,7 +166,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     AfterEach { Reset }
     It 'should fail' {
         Init
-        $Global:Error.Clear()
         $result = Install-WhiskeyPowerShellModule -Name 'Zip' -Version '0.0.1' -ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
@@ -181,7 +177,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     AfterEach { Reset }
     It 'should fail' {
         Init
-        $Global:Error.Clear()
         $result = Install-WhiskeyPowerShellModule -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
@@ -245,5 +240,23 @@ Describe 'Install-WhiskeyPowerShellModule.when previous version installed and us
         ThenModuleInstalled 'Zip' -AtVersion '0.1.0'
         ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version
         ThenModuleImported 'Zip' -AtVersion $latestZip.Version
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installed that match task wildcard' {
+    AfterEach { Reset }
+    It 'should return latest version' {
+        Init
+        $newestVersion = $allZipVersions | Select-Object -First 1
+        $previousVersion = $allZipVersions | Select-Object -Skip 1 | Select-Object -First 1
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version $newestVersion.Version
+        Install-WhiskeyPowerShellModule -Name 'Zip' -Version $previousVersion.Version
+        ThenModuleInstalled 'Zip' -AtVersion $newestVersion.Version
+        ThenModuleInstalled 'Zip' -AtVersion $previousVersion.Version
+        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
+        $result = Install-WhiskeyPowerShellModule -Name 'Zip' -Version '*'
+        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
+        $Global:Error | Should -BeNullOrEmpty
+        $result.Version | Should -Be $newestVersion.Version
     }
 }
