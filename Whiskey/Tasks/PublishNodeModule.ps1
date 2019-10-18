@@ -1,8 +1,8 @@
 
 function Publish-WhiskeyNodeModule
 {
-    [Whiskey.Task("PublishNodeModule")]
-    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
+    [Whiskey.Task('PublishNodeModule')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

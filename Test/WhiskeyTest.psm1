@@ -85,6 +85,70 @@ function ConvertTo-Yaml
     }
 }
 
+function Import-WhiskeyTestModule
+{
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$Name,
+        
+        [Switch]$Force
+    )
+
+    $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
+    if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
+    {
+        $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
+    }
+
+    foreach( $moduleName in $Name )
+    {
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global
+    }
+}
+
+function Initialize-WhiskeyTestPSModule
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$BuildRoot,
+
+        [string[]]$Name
+    )
+
+    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
+    Write-WhiskeyTestTiming ('Copying Modules  {0}  START' -f $destinationRoot) 
+    if( -not (Test-Path -Path $destinationRoot -PathType Container) )
+    {
+        New-Item -Path $destinationRoot -ItemType 'Directory' | Out-Null
+    }
+
+    $Name = & {
+        # Don't continually download modules.
+        'PackageManagement'
+        'PowerShellGet'
+        $Name
+    }
+    
+    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve) -Directory))
+    {
+        if( $module.Name -notin $Name )
+        {
+            continue
+        }
+        
+        if( (Test-Path -Path (Join-Path -Path $destinationRoot -ChildPath $module.Name) ) )
+        {
+            continue
+        }
+
+        Write-WhiskeyTestTiming -Message ('{0} -> {1}' -f $module.FullName,$destinationRoot)
+        Copy-Item -Path $module.FullName -Destination $destinationRoot -Recurse
+    }
+    
+    Write-WhiskeyTestTiming -Message '                 END' 
+}
+
 function Install-Node
 {
     param(
@@ -93,7 +157,8 @@ function Install-Node
         [string]$BuildRoot
     )
 
-    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node','NodePath'
+    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
+    $toolAttr.PathParameterName = 'NodePath'
     Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
@@ -119,7 +184,9 @@ function Install-Node
             continue
         }
 
-        Install-WhiskeyTool -ToolInfo (New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name),('{0}Path' -f $name)) -InstallRoot $downloadCachePath -TaskParameter @{ }
+        $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name)
+        $toolAttr.PathParameterName = '{0}Path' -f $name
+        Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
     }
 
     if( -not (Test-Path -Path $destinationDir -PathType Container) )
@@ -180,10 +247,6 @@ function Invoke-WhiskeyPrivateCommand
     try
     {
         InModuleScope 'Whiskey' { 
-            if( $Name -eq 'Write-WhiskeyTiming' )
-            {
-                $DebugPreference = 'Continue'
-            }
             & $Name @Parameter 
         }
     }
@@ -328,18 +391,20 @@ function New-WhiskeyTestContext
 
         [Switch]$InInitMode,
 
-        [Switch]$IncludePSModules
+        [string[]]$IncludePSModule
     )
 
     Set-StrictMode -Version 'Latest'
 
     if( -not $ForBuildRoot )
     {
+        Write-Warning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory. Please update usages.')
         $ForBuildRoot = $TestDrive.FullName
     }
 
     if( -not [IO.Path]::IsPathRooted($ForBuildRoot) )
     {
+        Write-Warning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory and will be required to be an absolute path. Please update usages.')
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
@@ -426,12 +491,7 @@ function New-WhiskeyTestContext
     }
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
 
-    if( $IncludePSModules )
-    {
-        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve) `
-                  -Destination $context.BuildRoot `
-                  -Recurse
-    }
+    Initialize-WhiskeyTestPSModule -BuildRoot $context.BuildRoot -Name $IncludePSModule
 
     return $context
 }
@@ -489,6 +549,37 @@ function Remove-DotNet
     Invoke-WhiskeyPrivateCommand 'Remove-WhiskeyFileSystemItem' -Parameter $parameter
 }
 
+function Reset-WhiskeyTestPSModule
+{
+    Get-Module |
+        Where-Object { $_.Path -like ('{0}*' -f $TestDrive.FullName) } |
+        Remove-Module -Force
+}
+
+function ThenModuleInstalled
+{
+    param(
+        [string]$InBuildRoot,
+
+        [string]$Named,
+
+        [string]$AtVersion
+    )
+
+    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
+        Should -Exist
+}
+
+function Write-WhiskeyTestTiming
+{
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message
+    )
+
+    Invoke-WhiskeyPrivateCommand -Name 'Write-WhiskeyTiming' -Parameter @{ Message = $Message } 
+}
+
 $SuccessCommandScriptBlock = { 'exit 0' | sh }
 $FailureCommandScriptBlock = { 'exit 1' | sh }
 if( $IsWindows )
@@ -497,11 +588,15 @@ if( $IsWindows )
     $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
 
+$PSModulesDirectoryName = 'PSModules'
+
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
     'SuccessCommandScriptBlock'
     'FailureCommandScriptBlock'
     'WhiskeyPlatform'
+    'PSModulesDirectoryName'
+    # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
     if( $exportPlatformVars )
     {
         'IsLinux'
@@ -510,5 +605,4 @@ $variablesToExport = & {
     }
 }
 
-# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 Export-ModuleMember -Function '*' -Variable $variablesToExport

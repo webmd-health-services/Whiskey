@@ -2,14 +2,15 @@
 
 namespace Whiskey
 {
-    public sealed class RequiresToolAttribute : Attribute
+    public class RequiresToolAttribute : Attribute
     {
-        public RequiresToolAttribute(string toolName, string toolPathParameterName)
+        public RequiresToolAttribute(string toolName)
         {
             Name = toolName;
-            PathParameterName = toolPathParameterName;
             VersionParameterName = "Version";
         }
+
+        public bool AddToPath { get; set; }
 
         public string Name { get; private set; }
 

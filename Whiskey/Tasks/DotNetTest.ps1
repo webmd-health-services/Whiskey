@@ -3,7 +3,7 @@ function Invoke-WhiskeyDotNetTest
 {
     [CmdletBinding()]
     [Whiskey.Task("DotNetTest",Obsolete,ObsoleteMessage='The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
-    [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
+    [Whiskey.RequiresTool('DotNet',PathParameterName='DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

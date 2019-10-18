@@ -19,7 +19,6 @@ function GivenCleanMode
 function GivenInitializeMode
 {
     $script:initialize = $true
-    Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
 }
 
 function GivenPipeline
@@ -70,7 +69,12 @@ function ThenPowershellModule
     }
     elseif ($Installed)
     {
-        Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $expectedName }
+        Assert-MockCalled -CommandName 'Resolve-WhiskeyPowerShellModule' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { $Name -eq $expectedName }
+        Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { $Name -eq $expectedName }
     }
 }
 
@@ -117,6 +121,10 @@ function WhenRunningTask
         }
         elseif ($initialize)
         {
+            Mock -CommandName 'Resolve-WhiskeyPowerShellModule' `
+                 -ModuleName 'Whiskey' `
+                 -MockWith { [pscustomobject]@{ 'Name' = $Name; 'Version' = $Version } }
+            Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
             Invoke-WhiskeyBuild -Context $context -Initialize
         }
         else

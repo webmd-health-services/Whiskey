@@ -33,6 +33,22 @@ Build:
     Name: Zip
     Version: 0.3.*
 
+# If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+# * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+# * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+# * Whiskey\Tasks\PublishPowerShellModule.ps1
+- GetPowerShellModule:
+    Name: PackageManagement
+    Version: 1.4.5
+
+- GetPowerShellModule:
+    Name: PowerShellGet
+    Version: 2.2.1
+
+- GetPowerShellModule:
+    Name: Pester
+    Version: 3.*
+
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
     OnlyBy: BuildServer

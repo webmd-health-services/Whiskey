@@ -2,7 +2,7 @@
 function New-WhiskeyZipArchive
 {
     [Whiskey.Task("Zip")]
-    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.3.*',VersionParameterName='ZipVersion')]
+    [Whiskey.RequiresPowerShellModule('Zip',Version='0.3.*',VersionParameterName='ZipVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -16,8 +16,6 @@ function New-WhiskeyZipArchive
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Import-WhiskeyPowerShellModule -Name 'Zip'
 
     function Write-CompressionInfo
     {

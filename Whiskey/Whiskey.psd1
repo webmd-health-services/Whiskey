@@ -89,7 +89,6 @@
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
                             'Get-WhiskeyMSBuildConfiguration',
-                            'Import-WhiskeyPowerShellModule',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
                             'Invoke-WhiskeyNpmCommand',
@@ -158,6 +157,13 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Moved Whiskey's documentation to [GitHub](https://github.com/webmd-health-services/Whiskey/wiki).
+* Fixed: Whiskey's assembly wasn't getting its version metadata set.
+* Whiskey no longer ships with PackageManagement and PowerShellGet modules. They are now downloaded from one of your registered PowerShell repositories the first time another PowerShell module is installed.
+* The function `Import-WhiskeyPowerShellModule` is no longer public. If your task uses Whiskey's `RequiresTool` attribute to install a PowerShell module, Whiskey now imports that module for you automatically.
+* Whiskey now automatically imports PowerShell modules tasks use as declared by their `RequiresTool` attribute.
+* Upgraded Whiskey to use PackageManagement 1.4.5 (from 1.4.4).
+* Fixed: Whiskey doesn't install the latest version of a PowerShell module if there's any version already installed.
+* Improved detection of corrupted PowerShell modules that will force a re-install. Whiskey now uses `Test-ModuleManifest` to determine if a module was installed correctly.
 * Added a new built-in Whiskey variable `WHISKEY_SEMVER2_PRERELEASE_ID` which contains the prerelease identifier of the prerelease label on a SemVer2 version string. E.g. Given the version `1.2.3-alpha.47+buildmetata`, this variable would be `alpha`.
 * When publishing a prerelease version of a node module, the `PublishNodeModule` task will now automatically publish the module with the prerelease identifier as the distribution tag.
 * Added a `Tag` property to the `PublishNodeModule` task that controls what distribution tag the module is published with. If specified, this property takes precendence over a tag from a prerelease identifier.

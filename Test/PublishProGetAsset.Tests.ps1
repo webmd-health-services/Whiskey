@@ -1,4 +1,5 @@
-#Requires -Version 4
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
@@ -11,13 +12,13 @@ function GivenContext
 {
     $script:taskParameter = @{ }
     $script:taskParameter['Uri'] = 'TestURI'
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
+    Import-WhiskeyTestModule -Name 'ProGetAutomation'
     $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
     $Global:globalTestSession = $session
     $Script:Context = New-WhiskeyTestContext -ForBuildServer `
                                              -ForTaskName 'PublishProGetAsset' `
                                              -ForBuildRoot $testRoot `
-                                             -IncludePSModules 
+                                             -IncludePSModule 'ProGetAutomation'
     Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
     Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
 }
@@ -89,6 +90,11 @@ function Init
     Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenAssetIsUploaded
 {
     $Global:Error.Clear()
@@ -141,6 +147,7 @@ function ThenTaskSucceeds
 }
 
 Describe 'PublishProGetAsset.when Asset is uploaded' {
+    AfterEach { Reset }
     It 'should upload the asset' {
         Init
         GivenContext
@@ -153,6 +160,7 @@ Describe 'PublishProGetAsset.when Asset is uploaded' {
 }
 
 Describe 'PublishProGetAsset.when Asset is uploaded to a subdirectory' {
+    AfterEach { Reset }
     It 'should upload into the sub-directory' {
         Init
         GivenContext
@@ -165,6 +173,7 @@ Describe 'PublishProGetAsset.when Asset is uploaded to a subdirectory' {
 }
 
 Describe 'PublishProGetAsset.when multiple Assets are uploaded'{
+    AfterEach { Reset }
     It 'should upload all the assets' {
         Init
         GivenContext
@@ -177,6 +186,7 @@ Describe 'PublishProGetAsset.when multiple Assets are uploaded'{
 }
 
 Describe 'PublishProGetAsset.when Asset Name parameter does not exist'{
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenContext
@@ -189,6 +199,7 @@ Describe 'PublishProGetAsset.when Asset Name parameter does not exist'{
 }
 
 Describe 'PublishProGetAsset.when there are less names than paths'{
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenContext
@@ -201,6 +212,7 @@ Describe 'PublishProGetAsset.when there are less names than paths'{
 }
 
 Describe 'PublishProGetAsset.when there are less paths than names'{
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenContext
@@ -213,6 +225,7 @@ Describe 'PublishProGetAsset.when there are less paths than names'{
 }
 
 Describe 'PublishProGetAsset.when credentials are not given'{
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenContext
@@ -224,6 +237,7 @@ Describe 'PublishProGetAsset.when credentials are not given'{
 }
 
 Describe 'PublishProGetAsset.when Asset already exists'{
+    AfterEach { Reset }
     It 'should replace the asset' {
         Init
         GivenContext

@@ -123,6 +123,11 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenCreatingPackage
 {
     [CmdletBinding()]
@@ -147,8 +152,14 @@ function WhenCreatingPackage
     $script:context = New-WhiskeyTestContext -ForVersion $version `
                                              -ForTaskName 'PublishBuildMasterPackage' `
                                              -ForBuildServer `
-                                             -ForBuildRoot $testRoot
-    
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BuildMasterAutomation'
+
+    if( -not (Get-Module 'BuildMasterAutomation') )
+    {
+        Import-WhiskeyTestModule -Name 'BuildMasterAutomation'
+    }
+
     if( $apiKeyID )
     {
         $taskParameter['ApiKeyID'] = $apiKeyID
@@ -178,6 +189,7 @@ function WhenCreatingPackage
     $package = $mockPackage
     $deploy = $mockDeploy
     $release = [pscustomobject]@{ Application = $appName; Name = $releaseName; id = $releaseId  }
+
     if( $releaseId )
     {
         Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release  }.GetNewClosure()
@@ -317,6 +329,7 @@ function ThenTaskFails
 }
 
 Describe 'PublishBuildMasterPackage.when called' {
+    AfterEach { Reset }
     It 'should publish package' {
         Init
         GivenProperty $packageVariable
@@ -327,6 +340,7 @@ Describe 'PublishBuildMasterPackage.when called' {
 }
 
 Describe 'PublishBuildMasterPackage.when creating package with defined name' {
+    AfterEach { Reset }
     It 'should publish that package' {
         $packageNameOverride = 'PackageABCD'
         Init
@@ -339,6 +353,7 @@ Describe 'PublishBuildMasterPackage.when creating package with defined name' {
 }
 
 Describe 'PublishBuildMasterPackage.when deploying release package to specific stage' {
+    AfterEach { Reset }
     It 'should deploy to that stage' {
         $releaseStage = 'Test'
         Init
@@ -351,6 +366,7 @@ Describe 'PublishBuildMasterPackage.when deploying release package to specific s
 }
 
 Describe 'PublishBuildMasterPackage.when creating package without starting deployment' {
+    AfterEach { Reset }
     It 'should not start the deployment' {
         Init
         GivenSkipDeploy
@@ -362,6 +378,7 @@ Describe 'PublishBuildMasterPackage.when creating package without starting deplo
 }
 
 Describe 'PublishBuildMasterPackage.when no application or release in BuildMaster' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoRelease 'release' -ForApplication 'application'
@@ -372,6 +389,7 @@ Describe 'PublishBuildMasterPackage.when no application or release in BuildMaste
 }
 
 Describe ('PublishBuildMasterPackage.when ApplicationName property is missing') {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoApplicationName
@@ -382,6 +400,7 @@ Describe ('PublishBuildMasterPackage.when ApplicationName property is missing') 
 }
 
 Describe ('PublishBuildMasterPackage.when ReleaseName property is missing') {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoReleaseName
@@ -392,6 +411,7 @@ Describe ('PublishBuildMasterPackage.when ReleaseName property is missing') {
 }
 
 Describe ('PublishBuildMasterPackage.when Uri property is missing') {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoUri
@@ -402,6 +422,7 @@ Describe ('PublishBuildMasterPackage.when Uri property is missing') {
 }
 
 Describe ('PublishBuildMasterPackage.when ApiKeyID property is missing') {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoApiKey

@@ -10,5 +10,5 @@ function Write-WhiskeyTiming
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $now = Get-Date
-    Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $buildStartedAt),$Message)
+    Write-Debug -Message ('[{0:HH:mm:ss}]  [{1:hh":"mm":"ss"."ff}]  {2}' -f $now,($now - $buildStartedAt),$Message)
 }

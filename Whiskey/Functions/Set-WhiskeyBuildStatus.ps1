@@ -4,13 +4,12 @@ function Set-WhiskeyBuildStatus
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
-        [object]
-        $Context,
+        [Whiskey.Context]$Context,
 
         [Parameter(Mandatory=$true)]
         [ValidateSet('Started','Completed','Failed')]
         # The build status. Should be one of `Started`, `Completed`, or `Failed`.
-        $Status
+        [string]$Status
     )
 
     Set-StrictMode -Version 'Latest'
@@ -38,8 +37,7 @@ function Set-WhiskeyBuildStatus
         {
             'BitbucketServer'
             {
-                Install-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation' -Version '0.9.*'
-                Import-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation'
+                Install-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation' -Version '0.9.*' -BuildRoot $Context.BuildRoot
 
                 $uri = $reporterConfig['Uri']
                 if( -not $uri )

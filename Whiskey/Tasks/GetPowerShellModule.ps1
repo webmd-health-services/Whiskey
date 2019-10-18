@@ -57,17 +57,24 @@ function Get-WhiskeyPowerShellModule
 
     if( $TaskContext.ShouldClean )
     {
-        Uninstall-WhiskeyPowerShellModule -Name $TaskParameter['Name']
+        Uninstall-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -BuildRoot $TaskContext.BuildRoot
         return
     }
 
-    $module = Resolve-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -Version $TaskParameter['Version'] -ErrorAction Stop
+    $module = Resolve-WhiskeyPowerShellModule -Name $TaskParameter['Name'] `
+                                              -Version $TaskParameter['Version'] `
+                                              -BuildRoot $TaskContext.BuildRoot `
+                                              -ErrorAction Stop
     if( -not $module )
     {
         return
     }
 
     Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}.' -f $TaskParameter['Name'],$module.Version)
-    $moduleRoot = Install-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -Version $module.Version -ErrorAction Stop
+    $moduleRoot = Install-WhiskeyPowerShellModule -Name $TaskParameter['Name'] `
+                                                  -Version $module.Version `
+                                                  -BuildRoot $TaskContext.BuildRoot `
+                                                  -SkipImport `
+                                                  -ErrorAction Stop
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $moduleRoot)
 }

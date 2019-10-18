@@ -100,7 +100,7 @@ function Install-WhiskeyDotNetSdk
                 Write-Verbose ('{0} -InstallDir "{1}" -Version "{2}" -NoPath' -f $dotnetInstall,$InstallDir,$VersionNumber)
                 & $dotnetInstall -InstallDir $InstallDir -Version $VersionNumber -NoPath @Verbose @errorActionParam
             }
-        } | Write-Verbose -Verbose
+        } | Write-Verbose
         if( $installingWithShell -and $LASTEXITCODE )
         {
             Write-Error -Message ('{0} exited with code "{1}". Failed to install .NET Core.' -f $dotnetInstall,$LASTEXITCODE) -ErrorAction Stop
