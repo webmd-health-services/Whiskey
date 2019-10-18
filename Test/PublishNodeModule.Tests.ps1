@@ -50,18 +50,26 @@ function ThenNodeModulePublished
 {
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
-                        -ParameterFilter { $Name -eq 'publish' -and $ErrorActionPreference -eq 'Stop' } `
                         -Times 1 `
-                        -Exactly
+                        -Exactly `
+                        -ParameterFilter {
+                            if( $Name -ne 'publish' )
+                            {
+                                return $false
+                            }
+
+                            $ErrorActionPreference | Should -Be 'Stop' -Because 'Invoke-NpmCommand "publish" should throw a terminating error if it fails'
+                            return $true
+                        }
 }
 
 function ThenNodeModuleIsNotPublished
 {
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
-                        -ParameterFilter { $Name -eq 'publish' } `
                         -Times 0 `
-                        -Exactly
+                        -Exactly `
+                        -ParameterFilter { $Name -eq 'publish' }
 }
 
 function ThenNodeModuleVersionUpdated
@@ -71,33 +79,24 @@ function ThenNodeModuleVersionUpdated
         $Version
     )
 
-    Assert-MockCalled -CommandName 'Invoke-WhiskeyNpmCommand' `
-                      -ModuleName 'Whiskey' `
-                      -Times 1 `
-                      -Exactly `
-                      -ParameterFilter {
-                          if( $Name -ne 'version')
-                          {
-                              return $false
-                          }
+    Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
+                        -ModuleName 'Whiskey' `
+                        -Times 1 `
+                        -Exactly `
+                        -ParameterFilter {
+                            if( $Name -ne 'version')
+                            {
+                                return $false
+                            }
 
-                          # $DebugPreference = 'Continue'
-                          Write-Debug -Message ('NPM Command Name: "{0}"' -f $Name)
+                            $Version | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should be called with expected version'
+                            '--no-git-tag-version' | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should not create a new git commit and tag'
+                            '--allow-same-version' | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should not fail when version in package.json matches given version'
+                            $ArgumentList | Should -HaveCount 3 -Because 'Invoke-NpmCommand "version" shouldn''t be called with extra arguments'
+                            $ErrorActionPreference | Should -Be 'Stop' -Because 'Invoke-NpmCommand "version" should throw a terminating error if it fails'
 
-                          $expectedArguments = @($Version, '--no-git-tag-version', '--allow-same-version')
-                          Write-Debug -Message ('ArgumentList expected "{0}"' -f ($expectedArguments -join '", "'))
-                          Write-Debug -Message ('ArgumentList actual   "{0}"' -f ($ArgumentList -join '", "'))
-
-                          foreach ($argument in $expectedArguments)
-                          {
-                              if( $argument -notin $ArgumentList )
-                              {
-                                  return $false
-                              }
-                          }
-
-                          return $true
-                      }
+                            return $true
+                        }
 }
 
 function ThenNpmPackagesPruned
@@ -107,9 +106,15 @@ function ThenNpmPackagesPruned
                         -Times 1 `
                         -Exactly `
                         -ParameterFilter {
-                            $Name -eq 'prune' -and
-                            $ArgumentList[0] -eq '--production' -and
-                            $ErrorActionPreference -eq 'Stop'
+                            if( $Name -ne 'prune')
+                            {
+                                return $false
+                            }
+
+                            $ArgumentList | Should -HaveCount 1 -Because 'Invoke-NpmCommand "prune" shouldn''t be called with extra arguments'
+                            $ErrorActionPreference | Should -Be 'Stop' -Because 'Invoke-NpmCommand "prune" should throw a terminating error if it fails'
+
+                            return $true
                         }
 }
 
@@ -140,11 +145,14 @@ function ThenNpmrcCreated
     $actualFileContents = Get-Content -Raw -Path $npmrcPath
     $actualFileContents.Trim() | Should -Be $npmrcFileContents.Trim()
 
-    Assert-MockCalled -CommandName 'Remove-Item' `
-                      -ModuleName 'Whiskey' `
-                      -Times 1 `
-                      -Exactly `
-                      -ParameterFilter { $Path -eq $npmRcPath }
+    Assert-MockCalled   -CommandName 'Remove-Item' `
+                        -ModuleName 'Whiskey' `
+                        -Times 1 `
+                        -Exactly `
+                        -ParameterFilter {
+                            $Path | Should -Be $npmRcPath -Because 'it should remove the temporary local .npmrc file'
+                            return $true
+                        }
 }
 
 function ThenPackageJsonVersion
@@ -160,37 +168,42 @@ function ThenPackageJsonVersion
 
 function ThenPublishedWithTag
 {
+    [CmdletBinding(DefaultParameterSetName='ExpectedTag')]
     param(
-        $ExpectedTag
+        [Parameter(Mandatory,Position=0,ParameterSetName='ExpectedTag')]
+        [string]$ExpectedTag,
+
+        [Parameter(ParameterSetName='None')]
+        [switch]$None
     )
+
+    $parameterFilter = {
+        if( $Name -ne 'publish')
+        {
+            return $false
+        }
+
+        if( $ExpectedTag )
+        {
+            '--tag' | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "publish" should be called with "--tag" argument'
+            $ExpectedTag | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "publish" should be called with expected tag argument'
+            $ArgumentList | Should -HaveCount 2 -Because 'Invoke-NpmCommand "publish" shouldn''t be called with extra arguments'
+        }
+        elseif( $None )
+        {
+            $ArgumentList | Should -HaveCount 0 -Because 'Invoke-NpmCommand "publish" shouldn''t be called with any tag arguments'
+        }
+
+        $ErrorActionPreference | Should -Be 'Stop' -Because 'Invoke-NpmCommand "publish" should throw a terminating error if it fails'
+
+        return $true
+    }
 
     Assert-MockCalled   -CommandName 'Invoke-WhiskeyNpmCommand' `
                         -ModuleName 'Whiskey' `
                         -Times 1 `
                         -Exactly `
-                        -ParameterFilter {
-                            if( $Name -ne 'publish')
-                            {
-                                return $false
-                            }
-
-                            # $DebugPreference = 'Continue'
-                            Write-Debug -Message ('NPM Command: "{0}"' -f $Name)
-
-                            $expectedArguments = @('--tag', $ExpectedTag)
-                            Write-Debug -Message ('ArgumentList expected "{0}"' -f ($expectedArguments -join '", "'))
-                            Write-Debug -Message ('ArgumentList actual   "{0}"' -f ($ArgumentList -join '", "'))
-
-                            foreach ($argument in $expectedArguments)
-                            {
-                                if( $argument -notin $ArgumentList )
-                                {
-                                    return $false
-                                }
-                            }
-
-                            return $true
-                        }
+                        -ParameterFilter $parameterFilter
 }
 
 function ThenTaskFailed
@@ -277,6 +290,7 @@ Describe 'PublishNodeModule.when publishing node module' {
         ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
         ThenNpmPackagesPruned
         ThenNodeModulePublished
+        ThenPublishedWithTag -None
     }
 }
 
