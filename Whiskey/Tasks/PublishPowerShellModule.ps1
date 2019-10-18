@@ -1,6 +1,13 @@
+
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task("PublishPowerShellModule")]
+    # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
+    # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+    # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1
+    # * whiskey.yml
+    [Whiskey.RequiresPowerShellModule('PackageManagement',Version='1.4.5',VersionParameterName='PackageManagementVersion')]
+    [Whiskey.RequiresPowerShellModule('PowerShellGet',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -58,8 +65,6 @@ function Publish-WhiskeyPowerShellModule
     $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
     $manifest = $manifest -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifest | Set-Content $manifestPath
-
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
 
     $commonParams = @{}
     if( $VerbosePreference -in @('Continue','Inquire') )

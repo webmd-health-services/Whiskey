@@ -2,7 +2,7 @@
 function Invoke-WhiskeyNpmPrune
 {
     [Whiskey.Task('NpmPrune',Obsolete,ObsoleteMessage='The "NpmPrune" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
-    [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

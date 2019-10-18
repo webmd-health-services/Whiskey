@@ -22,7 +22,7 @@ function Import-WhiskeyTask
     {
         if( $TaskContext.TaskPaths | Where-Object { $_.FullName -eq $path } )
         {
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Already loaded tasks from file "{0}".' -f $path) -Verbose
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Already loaded tasks from file "{0}".' -f $path)
             continue
         }
 

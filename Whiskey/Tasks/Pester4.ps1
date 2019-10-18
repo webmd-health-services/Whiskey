@@ -1,8 +1,8 @@
 
 function Invoke-WhiskeyPester4Task
 {
-    [Whiskey.Task("Pester4")]
-    [Whiskey.RequiresTool('PowerShellModule::Pester','PesterPath',Version='4.*',VersionParameterName='Version')]
+    [Whiskey.Task('Pester4')]
+    [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='4.*',VersionParameterName='Version',SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -63,7 +63,9 @@ function Invoke-WhiskeyPester4Task
 
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
 
-    Write-WhiskeyVerbose -Context $TaskContext -Message $TaskParameter['PesterPath']
+    $moduleInfo = $TaskParameter['PesterModuleInfo']
+    $pesterManifestPath = $moduleInfo.Path
+    Write-WhiskeyVerbose -Context $TaskContext -Message $pesterManifestPath
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Script      {0}' -f ($Path | Select-Object -First 1))
     $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('              {0}' -f $_) }
     Write-Verbose -Message ('  OutputFile  {0}' -f $outputFile)
@@ -76,14 +78,14 @@ function Invoke-WhiskeyPester4Task
         $ErrorActionPreference = $using:ErrorActionPreference
 
         $script = $using:Path
-        $pesterModulePath = $using:TaskParameter['PesterPath']
+        $pesterManifestPath = $using:pesterManifestPath
         $outputFile = $using:outputFile
         [int]$describeCount = $using:describeDurationCount
         [int]$itCount = $using:itDurationCount
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterModulePath
+                                        Import-Module -Name $pesterManifestPath
                                     }
 
         $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru

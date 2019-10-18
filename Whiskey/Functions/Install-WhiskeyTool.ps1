@@ -19,44 +19,37 @@ function Install-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [Whiskey.RequiresToolAttribute]
+        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The attribute that defines what tool is necessary.
-        $ToolInfo,
+        [Whiskey.RequiresToolAttribute]$ToolInfo,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [string]
+        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The directory where you want the tools installed.
-        $InstallRoot,
+        [string]$InstallRoot,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [hashtable]
+        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The task parameters for the currently running task.
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Parameter(ParameterSetName='Tool')]
-        [Switch]
         # Running in clean mode, so don't install the tool if it isn't installed.
-        $InCleanMode,
+        [Switch]$InCleanMode,
 
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
+        [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The name of the NuGet package to download.
-        $NuGetPackageName,
+        [string]$NuGetPackageName,
 
         [Parameter(ParameterSetName='NuGet')]
-        [string]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        $Version,
+        [string]$Version,
 
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
+        [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The root directory where the tools should be downloaded. The default is your build root.
         #
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
         # NuGet packages are saved to `$DownloadRoot\packages`.
-        $DownloadRoot
+        [string]$DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -132,6 +125,21 @@ function Install-WhiskeyTool
                 $version = $ToolInfo.Version
             }
 
+            if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+            {
+                $module = Install-WhiskeyPowerShellModule -Name $name `
+                                                          -Version $version `
+                                                          -BuildRoot $InstallRoot `
+                                                          -SkipImport:$ToolInfo.SkipImport `
+                                                          -ErrorAction Stop
+                if( $ToolInfo.ModuleInfoParameterName )
+                {
+                    $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
+                }
+                return
+            }
+
+            $toolPath = $null
             switch( $provider )
             {
                 'NodeModule'
@@ -142,18 +150,12 @@ function Install-WhiskeyTool
                         Write-Error -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
                         return
                     }
-                    $moduleRoot = Install-WhiskeyNodeModule -Name $name `
-                                                            -BuildRootPath $InstallRoot `
-                                                            -Version $version `
-                                                            -Global `
-                                                            -InCleanMode:$InCleanMode `
-                                                            -ErrorAction Stop
-                    $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
-                }
-                'PowerShellModule'
-                {
-                    $moduleRoot = Install-WhiskeyPowerShellModule -Name $name -Version $version -ErrorAction Stop
-                    $TaskParameter[$ToolInfo.PathParameterName] = $moduleRoot
+                    $toolPath = Install-WhiskeyNodeModule -Name $name `
+                                                          -BuildRootPath $InstallRoot `
+                                                          -Version $version `
+                                                          -Global `
+                                                          -InCleanMode:$InCleanMode `
+                                                          -ErrorAction Stop
                 }
                 default
                 {
@@ -161,18 +163,23 @@ function Install-WhiskeyTool
                     {
                         'Node'
                         {
-                            $TaskParameter[$ToolInfo.PathParameterName] = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode
+                            $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode
                         }
                         'DotNet'
                         {
-                            $TaskParameter[$ToolInfo.PathParameterName] = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot -WorkingDirectory (Get-Location).ProviderPath -Version $version -ErrorAction Stop
+                            $toolPath = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot -WorkingDirectory (Get-Location).ProviderPath -Version $version -ErrorAction Stop
                         }
                         default
                         {
-                            throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $name)
+                            throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                         }
                     }
                 }
+            }
+
+            if( $ToolInfo.PathParameterName )
+            {
+                $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
             }
         }
     }

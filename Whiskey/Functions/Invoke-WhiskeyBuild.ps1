@@ -87,7 +87,7 @@ function Invoke-WhiskeyBuild
     # we have to put the ones that ship with Whiskey first. See
     # https://github.com/PowerShell/PowerShellGet/issues/446 .
     $originalPSModulesPath = $env:PSModulePath
-    $env:PSModulePath = '{0};{1};{2}' -f $whiskeyModulesRoot,(Join-Path -Path $Context.BuildRoot -ChildPath $powerShellModulesDirectoryName),$env:PSModulePath
+    $env:PSModulePath = '{0};{1}' -f (Join-Path -Path $Context.BuildRoot -ChildPath $powerShellModulesDirectoryName),$env:PSModulePath
 
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 

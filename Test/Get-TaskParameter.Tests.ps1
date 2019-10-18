@@ -18,7 +18,7 @@ function Get-DefaultDebugPreference
     return $DebugPreference
 }
 $defaultDebugPreference = Get-DefaultDebugPreference -Debug
-Write-Verbose -Message ('Default DebugPreference: {0}' -f $defaultDebugPreference) -Verbose
+Write-Verbose -Message ('Default DebugPreference: {0}' -f $defaultDebugPreference)
 
 function GivenDirectory
 {

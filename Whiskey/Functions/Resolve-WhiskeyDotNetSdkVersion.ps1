@@ -39,10 +39,31 @@ function Resolve-WhiskeyDotNetSdkVersion
 
     if ($Version)
     {
-        $releasesIndexUri = 'https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json'
+        $urisToTry = @(
+            'https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/releases-index.json',
+            'https://raw.githubusercontent.com/dotnet/core/master/release-notes/releases-index.json'
+        )
+        $releasesIndex = $null
+        foreach( $uri in $urisToTry )
+        {
+            $releasesIndex = 
+                Invoke-RestMethod -Uri $uri -ErrorAction Ignore |
+                Select-Object -ExpandProperty 'releases-index' -ErrorAction Ignore
+
+            if( $releasesIndex )
+            {
+                $releasesIndexUri = $uri
+            }
+        }
+
+        if( -not $releasesIndex )
+        {
+            Write-Error -Message ('Unable to find the .NET Core releases index. We tried each of these URIs:{0} {0}* {1}{0} ' -f [Environment]::NewLine,($urisToTry -join ('{0}* ' -f [Environment]::NewLine)))
+            return
+        }
+
         $releasesIndex =
-            Invoke-RestMethod -Uri $releasesIndexUri -ErrorAction Stop |
-            Select-Object -ExpandProperty 'releases-index' |
+            $releasesIndex |
             Where-Object { [Version]::TryParse($_.'channel-version', [ref]$null) } |
             ForEach-Object {
                 $_.'channel-version' = [Version]$_.'channel-version'

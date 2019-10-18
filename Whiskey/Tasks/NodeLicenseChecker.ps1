@@ -3,8 +3,8 @@ function Invoke-WhiskeyNodeLicenseChecker
 {
     [CmdletBinding()]
     [Whiskey.Task('NodeLicenseChecker')]
-    [Whiskey.RequiresTool('Node', 'NodePath',VersionParameterName='NodeVersion')]
-    [Whiskey.RequiresTool('NodeModule::license-checker', 'LicenseCheckerPath', VersionParameterName='Version')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('NodeModule::license-checker',PathParameterName='LicenseCheckerPath',VersionParameterName='Version')]
     param(
         [Parameter(Mandatory=$true)]
         [Whiskey.Context]

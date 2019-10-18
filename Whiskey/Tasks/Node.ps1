@@ -2,9 +2,9 @@
 function Invoke-WhiskeyNodeTask
 {
     [Whiskey.Task('Node',SupportsClean,SupportsInitialize,Obsolete,ObsoleteMessage='The "Node" task is obsolete and will be removed in a future version of Whiskey. It''s functionality has been broken up into the "Npm" and "NodeLicenseChecker" tasks.')]
-    [Whiskey.RequiresTool('Node','NodePath')]
-    [Whiskey.RequiresTool('NodeModule::license-checker','LicenseCheckerPath',VersionParameterName='LicenseCheckerVersion')]
-    [Whiskey.RequiresTool('NodeModule::nsp','NspPath',VersionParameterName='PINNED_TO_NSP_2_7_0',Version='2.7.0')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath')]
+    [Whiskey.RequiresTool('NodeModule::license-checker',PathParameterName='LicenseCheckerPath',VersionParameterName='LicenseCheckerVersion')]
+    [Whiskey.RequiresTool('NodeModule::nsp',PathParameterName='NspPath',VersionParameterName='PINNED_TO_NSP_2_7_0',Version='2.7.0')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]

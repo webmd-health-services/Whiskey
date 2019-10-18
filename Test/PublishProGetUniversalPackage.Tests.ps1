@@ -128,6 +128,11 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function ThenPackageOverwritten
 {
     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
@@ -255,7 +260,7 @@ function WhenPublishingPackage
     $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' `
                                       -ForBuildServer `
                                       -IgnoreExistingOutputDirectory `
-                                      -IncludePSModules `
+                                      -IncludePSModule 'ProGetAutomation' `
                                       -ForBuildRoot $testRoot
 
     if( $credentialID )
@@ -308,7 +313,7 @@ function WhenPublishingPackage
         $mock = { if( -not $Force ) { Write-Error -Message ('Package already exists!') } }
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation' -Resolve)
+    Import-WhiskeyTestModule -Name 'ProGetAutomation'
     Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
 
     $script:threwException = $false
@@ -325,6 +330,7 @@ function WhenPublishingPackage
 }
 
 Describe 'PublishProGetUniversalPackage.when user publishes default files' {
+    AfterEach { Reset }
     It 'should public files' {
         Init
         GivenUpackFile 'myfile1.upack'
@@ -343,6 +349,7 @@ Describe 'PublishProGetUniversalPackage.when user publishes default files' {
 }
 
 Describe 'PublishProGetUniversalPackage.when user excludes files' {
+    AfterEach { Reset }
     It 'should not package those fils' {
         Init
         GivenUpackFile 'myfile1.upack'
@@ -357,6 +364,7 @@ Describe 'PublishProGetUniversalPackage.when user excludes files' {
 }
 
 Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
+    AfterEach { Reset }
     It 'should package just those files' {
         Init
         GivenUpackFile 'myfile1.upack'
@@ -372,6 +380,7 @@ Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
 }
 
 Describe 'PublishProGetUniversalPackage.when user specifies files to publish and excluding some' {
+    AfterEach { Reset }
     It 'should include the files and not include the excluded files' {
         Init
         GivenUpackFile 'myfile1.upack'
@@ -387,6 +396,7 @@ Describe 'PublishProGetUniversalPackage.when user specifies files to publish and
 }
 
 Describe 'PublishProGetUniversalPackage.when CredentialID property is missing' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoParameters
@@ -396,6 +406,7 @@ Describe 'PublishProGetUniversalPackage.when CredentialID property is missing' {
 }
 
 Describe 'PublishProGetUniversalPackage.when Uri property is missing' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoParameters
@@ -406,6 +417,7 @@ Describe 'PublishProGetUniversalPackage.when Uri property is missing' {
 }
 
 Describe 'PublishProGetUniversalPackage.when FeedName property is missing' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenNoParameters
@@ -417,6 +429,7 @@ Describe 'PublishProGetUniversalPackage.when FeedName property is missing' {
 }
 
 Describe 'PublishProGetUniversalPackage.when there are no upack files' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenProGetIsAt 'my uri'
@@ -428,6 +441,7 @@ Describe 'PublishProGetUniversalPackage.when there are no upack files' {
 }
 
 Describe 'PublishProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
+    AfterEach { Reset }
     It 'should not fail' {
         Init
         GivenProGetIsAt 'my uri'
@@ -441,6 +455,7 @@ Describe 'PublishProGetUniversalPackage.when there are no upack files in the out
 }
 
 Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
+    AfterEach { Reset }
     It 'should not fail' {
         Init
         GivenProGetIsAt 'my uri'
@@ -455,6 +470,7 @@ Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack 
 }
 
 Describe 'PublishProGetUniversalPackage.when user does not have permission' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenProGetIsAt 'my uri'
@@ -467,6 +483,7 @@ Describe 'PublishProGetUniversalPackage.when user does not have permission' {
 }
 
 Describe 'PublishProGetUniversalPackage.when uploading a large package' {
+    AfterEach { Reset }
     It 'should allow custom upload timeout' {
         Init
         GivenUpackFile 'myfile1.upack'
@@ -481,6 +498,7 @@ Describe 'PublishProGetUniversalPackage.when uploading a large package' {
 }
 
 Describe 'PublishProGetUniversalPackage.when package already exists' {
+    AfterEach { Reset }
     It 'shoudl fail' {
         Init
         GivenUpackFile 'my.upack'
@@ -494,6 +512,7 @@ Describe 'PublishProGetUniversalPackage.when package already exists' {
 }
 
 Describe 'PublishProGetUniversalPackage.when replacing existing package' {
+    AfterEach { Reset }
     It 'shouldd overwrite package' {
         Init
         GivenUpackFile 'my.upack'

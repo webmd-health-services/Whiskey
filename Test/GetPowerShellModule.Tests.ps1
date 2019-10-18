@@ -28,7 +28,7 @@ function GivenModule
     )
     $script:taskParameter['Name'] = $Module
 
-    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath 'PSModules'
+    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath $PSModulesDirectoryName
     $script:modulePath = Join-path -Path $modulePath -ChildPath $taskParameter['Name']
 }
 
@@ -50,6 +50,12 @@ function GivenCleanMode
 {
     $script:context.Runmode = 'clean'
 }
+
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenPowershellModuleIsRan
 {
     [CmdletBinding()]
@@ -93,10 +99,11 @@ function ThenErrorShouldBeThrown
         $Message
     )
 
-    $Global:Error | Where-Object { $_ -match $Message } | Should -Not -BeNullOrEmpty
+    $Global:Error | Should -Match $Message
 }
 
 Describe 'GetPowerShellModule.when given a module Name' {
+    AfterEach { Reset }
     It 'should install the lastest version of that module' {
         Init
         GivenModule 'Pester'
@@ -106,6 +113,7 @@ Describe 'GetPowerShellModule.when given a module Name' {
 }
 
 Describe 'GetPowerShellModule.when given a module Name and Version' {
+    AfterEach { Reset }
     It 'should install that version of the module' {
         Init
         GivenModule 'Pester'
@@ -117,6 +125,7 @@ Describe 'GetPowerShellModule.when given a module Name and Version' {
 }
 
 Describe 'GetPowerShellModule.when given a Name and a wildcard Version' {
+    AfterEach { Reset }
     It 'should save the module at latest version that matches the wildcard' {
         Init
         GivenModule 'Pester'
@@ -128,30 +137,33 @@ Describe 'GetPowerShellModule.when given a Name and a wildcard Version' {
 }
 
 Describe 'GetPowerShellModule.when an invalid module Name is requested' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenModule 'bad mod'
         GivenVersion '3.4.0'
         GivenNonExistentModule
         WhenPowershellModuleIsRan  -ErrorAction SilentlyContinue
-        ThenErrorShouldBeThrown 'Failed to find module bad mod'
+        ThenErrorShouldBeThrown 'Failed to find PowerShell module bad mod'
         ThenModuleShouldNotExist
     }
 }
 
 Describe 'GetPowerShellModule.when given an invalid Version' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenModule 'Pester'
         GivenVersion '0.0.0'
         GivenNonExistentModule
         WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
-        ThenErrorShouldBeThrown "Failed to find module Pester at version 0.0.0"
+        ThenErrorShouldBeThrown "Failed to find PowerShell module Pester at version 0.0.0"
         ThenModuleShouldNotExist
     }
 }
 
 Describe 'GetPowerShellModule.when missing Name property' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
@@ -160,6 +172,7 @@ Describe 'GetPowerShellModule.when missing Name property' {
 }
 
 Describe 'GetPowerShellModule.when called with clean mode' {
+    AfterEach { Reset }
     It 'should remove installed modules that match version' {
         Init
         GivenModule 'Rivet'

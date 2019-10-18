@@ -3,23 +3,10 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$powershellModulesDirectoryName = 'PSModules'
-
 $testRoot = $null
 $context = $null
 $taskParameter = @{}
 $failed = $false
-
-$repoRoot = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
-$psmodulesRoot = Join-Path -Path $repoRoot -ChildPath ('{0}' -f $powershellModulesDirectoryName) -Resolve
-if( -not (Test-Path -Path (Join-Path -Path $psmodulesRoot -ChildPath 'Pester\3.*')) )
-{
-    Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter @{
-        'Name' = 'Pester';
-        'Version' = '3.*';
-        'Path' = $repoRoot;
-    }
-}
 
 # So we can mock Whiskey's private function.
 function Publish-WhiskeyPesterTestResult
@@ -29,30 +16,29 @@ function Publish-WhiskeyPesterTestResult
 function GivenTestContext
 {
     param(
-    )
-
-    $script:context = New-WhiskeyPesterTestContext 
-}
-
-function New-WhiskeyPesterTestContext 
-{
-    param(
+        [switch]$SkipCache
     )
 
     $optionalParams = @{}
+    if( -not $SkipCache )
+    {
+        $optionalParams['IncludePSModule'] = 'Pester'
+    }
 
     $script:context = New-WhiskeyTestContext -ForTaskName 'Pester3' `
                                              -ForBuildRoot $testRoot `
-                                             -ForDeveloper
+                                             -ForDeveloper `
+                                             @optionalParams
 
     # Make sure only Pester 3 is included.
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $powershellModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '3.*' } |
         Remove-Item -Recurse -Force
 
     return $context
 }
+
 function GivenVersion
 {
     param(
@@ -93,6 +79,11 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
@@ -105,6 +96,7 @@ function WhenPesterTaskIsInvoked
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+    Mock -CommandName 'Receive-Job' -ModuleName 'Whiskey'
 
     try
     {
@@ -124,7 +116,7 @@ function ThenPesterShouldBeInstalled
         $ExpectedVersion
     )
 
-    $pesterDirectoryName = '{0}\Pester\{1}' -f $powershellModulesDirectoryName,$ExpectedVersion
+    $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
 
@@ -180,7 +172,7 @@ function ThenPesterShouldHaveRun
     {
         $reportPath = $reportPath.FullName
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { 
-            $DebugPreference = 'Continue'
+            #$DebugPreference = 'Continue'
             Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
             $Path -eq $reportPath 
         }
@@ -216,6 +208,7 @@ function ThenTestShouldCreateMultipleReportFiles
 if( -not $IsWindows )
 {
     Describe 'Pester3.when running on non-Windows platform' {
+        AfterEach { Reset }
         It 'should fail' {
             Init
             GivenTestContext
@@ -230,6 +223,7 @@ if( -not $IsWindows )
 }
 
 Describe 'Pester3.when running passing Pester tests' {
+    AfterEach { Reset }
     It 'should not fail' {
         Init
         GivenTestContext
@@ -249,6 +243,7 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester3.when running failing Pester tests' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
@@ -269,6 +264,7 @@ Describe 'FailingTests' {
 }
 
 Describe 'Pester3.when running multiple test scripts' {
+    AfterEach { Reset }
     It 'should run them all' {
         Init
         GivenTestContext
@@ -292,6 +288,7 @@ Describe 'FailingTests' {
 }
 
 Describe 'Pester3.when run multiple times in the same build' {
+    AfterEach { Reset }
     It 'should output separate reports for each run' {
         Init
         GivenTestContext
@@ -310,6 +307,7 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester3.when missing Path Configuration' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
@@ -320,6 +318,7 @@ Describe 'Pester3.when missing Path Configuration' {
 }
 
 Describe 'Pester3.when missing Version configuration' {
+    AfterEach { Reset }
     It 'should install latest version of Pester 3' {
         Init
         GivenTestContext 
@@ -337,10 +336,11 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester3.when customizing version' {
+    AfterEach { Reset }
     It 'should install latest version of Pester 3' {
         Init
         GivenVersion '3.4.5'
-        GivenTestContext 
+        GivenTestContext -SkipCache
         GivenTestFile 'PassingTests.ps1' @'
 Describe 'PassingTests' {
     It 'should pass' {
@@ -355,6 +355,7 @@ Describe 'PassingTests' {
 }
 
 Describe 'Pester3.when a task path is absolute' {
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext

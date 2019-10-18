@@ -190,3 +190,23 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t retur
         ThenReturnedNothing
     }
 }
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when Microsoft changes the index again' {
+    It 'should fail' {
+        Init
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey'
+        WhenResolvingSdkVersion -Version '2.1' -ErrorAction SilentlyContinue
+        ThenError 'releases index'
+        ThenReturnedNothing
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when Microsoft moves the index again' {
+    It 'should fail' {
+        Init
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -MockWith { Write-Error 'I do not exist!' -ErrorAction $ErrorActionPreference }
+        WhenResolvingSdkVersion -Version '2.1' -ErrorAction SilentlyContinue
+        ThenError 'releases index'
+        ThenReturnedNothing
+    }
+}

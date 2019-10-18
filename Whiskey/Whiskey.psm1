@@ -16,7 +16,6 @@ $events = @{ }
 $powerShellModulesDirectoryName = 'PSModules'
 
 $whiskeyScriptRoot = $PSScriptRoot
-$whiskeyModulesRoot = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Modules' -Resolve
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
 $whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
 
@@ -33,10 +32,17 @@ Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorActio
 Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
 
 Write-Timing 'Testing that correct Whiskey assembly is loaded.'
+$oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'Platform') )
 {
-    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
+}
+
+$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
+if( -not $attr )
+{
+    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
 }
 
 function Assert-Member
