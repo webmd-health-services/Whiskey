@@ -403,6 +403,15 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE_ID' {
     }
 }
 
+Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_PRERELEASE_ID when version doesn''t contain a prerelease label' {
+    It 'should resolve' {
+        Init
+        $context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3'
+        WhenResolving '$(WHISKEY_SEMVER2_PRERELEASE_ID)'
+        ThenValueIs ''
+    }
+}
+
 Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER2_BUILD' {
     It 'should resolve' {
         Init
