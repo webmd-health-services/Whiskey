@@ -164,6 +164,7 @@
 * Upgraded Whiskey to use PackageManagement 1.4.5 (from 1.4.4).
 * Fixed: Whiskey doesn't install the latest version of a PowerShell module if there's any version already installed.
 * Improved detection of corrupted PowerShell modules that will force a re-install. Whiskey now uses `Test-ModuleManifest` to determine if a module was installed correctly.
+* Created `AppVeyorWaitForBuildJob` task that will wait for other jobs in an AppVeyor build to complete before continuing.
 '@
         } # End of PSData hashtable
 

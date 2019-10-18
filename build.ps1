@@ -190,13 +190,6 @@ $PSVersionTable | Format-List | Out-String | Write-Verbose
 Write-Verbose -Message '# VARIABLES'
 Get-Variable | Format-Table | Out-String | Write-Verbose
 
-Write-Verbose -Message '# ENVIRONMENT VARIABLES'
-Get-ChildItem 'env:' |
-    Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
-    Format-Table |
-    Out-String |
-    Write-Verbose
-
 Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
 [Environment] |
     Get-Member -Static -MemberType Property |
@@ -225,9 +218,17 @@ if( $PipelineName )
 
 $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
 $apiKeys = @{
-                'PowerShellGallery' = 'POWERSHELL_GALLERY_API_KEY'
-                'github.com' = 'GITHUB_ACCESS_TOKEN'
+                'PowerShellGallery' = 'POWERSHELL_GALLERY_API_KEY';
+                'github.com' = 'GITHUB_ACCESS_TOKEN';
+                'AppVeyor' = 'APPVEYOR_BEARER_TOKEN';
             }
+
+Write-Verbose -Message '# ENVIRONMENT VARIABLES'
+Get-ChildItem 'env:' |
+    Where-Object { $_.Name -notin $apiKeys.Values } |
+    Format-Table |
+    Out-String |
+    Write-Verbose
 
 $apiKeys.Keys |
     Where-Object { Test-Path -Path ('env:{0}' -f $apiKeys[$_]) } |
