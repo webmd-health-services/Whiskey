@@ -41,7 +41,7 @@ function Invoke-WhiskeyPipeline
 
     if( -not $config.ContainsKey($Name) )
     {
-        Stop-Whiskey -Context $Context -Message ('Pipeline ''{0}'' does not exist. Create a pipeline by defining a ''{0}'' property:
+        Stop-Whiskey -Context $Context -Message ('Pipeline "{0}" does not exist. Create a pipeline by defining a "{0}" property:
         
     {0}:
     - TASK_ONE

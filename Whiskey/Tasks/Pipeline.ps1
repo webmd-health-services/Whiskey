@@ -30,7 +30,7 @@
     - TASK
 
 ')
-    return
+        return
     }
 
     $currentPipeline = $TaskContext.PipelineName

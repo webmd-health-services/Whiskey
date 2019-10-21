@@ -9,7 +9,6 @@ $whiskeyYmlPath = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
 [Whiskey.Context]$context = $null
-$warnings = $null
 $preTaskPluginCalled = $false
 $postTaskPluginCalled = $false
 $output = $null
@@ -18,6 +17,8 @@ $scmBranch = $null
 $taskProperties = @{ }
 $taskRun = $false
 $variables = @{ }
+$enablePlugins = $null
+$taskNameForPlugin = $null
 
 function Global::ToolTask
 {
@@ -160,16 +161,12 @@ function GivenPlugins
         [String]$ForSpecificTask
     )
 
-    $taskNameParam = @{ }
+    $script:enablePlugins = $true
+
     if( $ForSpecificTask )
     {
-        $taskNameParam['TaskName'] = $ForSpecificTask
+        $script:taskNameForPlugin = $ForSpecificTask
     }
-
-    Register-WhiskeyEvent -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask @taskNameParam
-    Mock -CommandName 'Invoke-PostTaskPlugin' -ModuleName 'Whiskey'
-    Register-WhiskeyEvent -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask @taskNameParam
-    Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
 }
 
 function GivenDefaults
@@ -242,6 +239,8 @@ function Init
     $script:taskProperties = @{ }
     $script:taskRun = $false
     $script:variables = @{ }
+    $script:enablePlugins = $null
+    $script:taskNameForPlugin = $null
 
     $script:testRoot = New-WhiskeyTestRoot
 }
@@ -333,20 +332,11 @@ function ThenPluginsRan
             }
         }
 
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask -TaskName $ForTaskNamed
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask -TaskName $ForTaskNamed
+        Unregister-WhiskeyEvent -Context $context -CommandName $pluginName -Event AfterTask
+        Unregister-WhiskeyEvent -Context $context -CommandName $pluginName -Event AfterTask -TaskName $ForTaskNamed
+        Unregister-WhiskeyEvent -Context $context -CommandName $pluginName -Event BeforeTask
+        Unregister-WhiskeyEvent -Context $context -CommandName $pluginName -Event BeforeTask -TaskName $ForTaskNamed
     }
-}
-
-function ThenShouldWarn
-{
-    param(
-        $Pattern
-    )
-
-    $warnings | Should -Match $Pattern
 }
 
 function ThenTaskNotRun
@@ -541,9 +531,6 @@ function WhenRunningTask
         [String]$InRunMode
     )
 
-    Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
-    Mock -CommandName 'invoke-PostTaskPlugin' -ModuleName 'Whiskey'
-
     $byItDepends = @{ 'ForDeveloper' = $true }
     if( $runByBuildServer )
     {
@@ -569,6 +556,20 @@ function WhenRunningTask
         $context.BuildMetadata.ScmBranch = $scmBranch
     }
 
+    if( $enablePlugins )
+    {
+        $taskNameParam = @{}
+        if( $taskNameForPlugin )
+        {
+            $taskNameParam['TaskName'] = $taskNameForPlugin
+        }
+
+        Register-WhiskeyEvent -Context $context -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask @taskNameParam
+        Mock -CommandName 'Invoke-PostTaskPlugin' -ModuleName 'Whiskey'
+        Register-WhiskeyEvent -Context $context -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask @taskNameParam
+        Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
+    }
+
     Mock -CommandName 'New-Item' -ModuleName 'Whiskey' -MockWith { [IO.Directory]::CreateDirectory($Path) }
 
     foreach( $variableName in $variables.Keys )
@@ -580,8 +581,7 @@ function WhenRunningTask
     $script:threwException = $false
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter -WarningVariable 'warnings'
-        $script:warnings = $warnings
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Name $Name -Parameter $Parameter 
     }
     catch
     {
@@ -1708,9 +1708,9 @@ Describe ('Invoke-WhiskeyTask.when task wants a warning when someone uses an ali
         try
         {
             Init
-            WhenRunningTask 'OldName' -Parameter @{} -WarningVariable 'warnings'
+            WhenRunningTask 'OldName' -Parameter @{} -InformationVariable 'warnings'
             $warnings | Should -Not -BeNullOrEmpty
-            $warnings | Should -Match 'is\ an\ alias'
+            $warnings | Should -Match '\[WARNING\].*is\ an\ alias'
         }
         finally
         {
@@ -1807,8 +1807,8 @@ Describe ('Invoke-WhiskeyTask.when task is obsolete') {
         try
         {
             Init
-            WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
-            $warnings | Should -Match 'is\ obsolete'
+            WhenRunningTask 'ObsoleteTask' -Parameter @{} -InformationVariable 'warnings'
+            $warnings | Should -Match '\[WARNING\].*is\ obsolete'
         }
         finally
         {
@@ -1830,9 +1830,9 @@ Describe ('Invoke-WhiskeyTask.when task is obsolete and user provides custom obs
         try
         {
             Init
-            WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
-            $warnings | Should -Match 'Use\ the\ NonObsoleteTask\ instead\.'
-            $warnings | Should -Not -Match 'is\ obsolete'
+            WhenRunningTask 'ObsoleteTask' -Parameter @{} -InformationVariable 'warnings'
+            $warnings | Should -Match '\[WARNING\].*Use\ the\ NonObsoleteTask\ instead\.'
+            $warnings | Should -Not -Match '\[WARNING\].*is\ obsolete'
         }
         finally
         {

@@ -33,6 +33,8 @@ function Invoke-WhiskeyTask
             $Property
         )
 
+        $events = $TaskContext.Events
+
         if( -not $events.ContainsKey($EventName) )
         {
             return

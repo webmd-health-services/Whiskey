@@ -11,8 +11,6 @@ function Write-Timing
     Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
 }
 
-$events = @{ }
-
 $powerShellModulesDirectoryName = 'PSModules'
 
 $whiskeyScriptRoot = $PSScriptRoot
