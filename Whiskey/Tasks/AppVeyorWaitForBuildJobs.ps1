@@ -37,27 +37,31 @@ function Wait-WhiskeyAppVeyorBuildJob
 
     $accountName = (Get-Item -Path 'env:APPVEYOR_ACCOUNT_NAME').Value
     $slug = (Get-Item -Path 'env:APPVEYOR_PROJECT_SLUG').Value
-    $projectUri = 'https://ci.appveyor.com/api/projects/{0}/{1}' -f $accountName,$slug
-
     $myBuildId = (Get-Item -Path 'env:APPVEYOR_BUILD_ID').Value
+    $buildUri = 'https://ci.appveyor.com/api/projects/{0}/{1}/builds/{2}' -f $accountName,$slug,$myBuildId
+
     $myJobId =  (Get-Item -Path 'env:APPVEYOR_JOB_ID').Value
 
     $nextOutput = [Diagnostics.StopWatch]::new()
     # Eventually AppVeyor will time us out.
     while( $true )
     {
-        $result = Invoke-RestMethod -Uri $projectUri -Method Get -Headers $headers -Verbose:$false
+        $result = Invoke-RestMethod -Uri $buildUri -Method Get -Headers $headers -Verbose:$false
         $result | ConvertTo-Json -Depth 100 | Write-Debug
-        $build = $result.build
 
-        if( $build.buildId -ne $myBuildId )
+        if( -not $result -or -not $result.build )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to wait for other build jobs. It looks like build {0} is {1}, and it started after this one. The AppVeyor API only returns build information for the most-recently started build. Please re-run this build when no other builds are running.' -f $build.buildNumber,$build.status)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to retrieve current build status from {0}: the request returned no build information:{1} {1}{2}.' -f $buildUri,[Environment]::NewLine,($result | ConvertTo-Json -Depth 100))
             return
         }
 
+        $build = $result.build
+
         # Skip this job.
-        $jobsToCheck = $build.jobs | Where-Object { $_.jobId -ne $myJobId }
+        $jobsToCheck = 
+            $build.jobs | 
+            Where-Object { $_ } |
+            Where-Object { $_.jobId -ne $myJobId }
 
         $unfinishedJobs = 
             $jobsToCheck |

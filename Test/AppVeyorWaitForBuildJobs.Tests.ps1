@@ -12,7 +12,6 @@ $whiskeyYml = $null
 $nextID = 10000000
 $currentJobID = $null
 $runByAppVeyor = $null
-$latestBuildID = $null
 
 function Get-NextID
 {
@@ -78,14 +77,6 @@ function GivenJob
     }
 }
 
-function GivenLatestBuildIDIsNotThisBuild
-{
-    param(
-
-    )
-
-    $script:latestBuildID = Get-NextID
-}
 function GivenRunBy
 {
     param(
@@ -132,7 +123,6 @@ function Init
     $script:jobs = $null
     $script:currentJobID = $null
     $script:runByAppVeyor = $null
-    $script:latestBuildID = $null
     Remove-Item -Path (JOin-Path -Path $testRoot -ChildPath 'whiskey.yml') -ErrorAction Ignore
 }
 
@@ -154,6 +144,7 @@ function ThenCheckedStatus
                                        -Because 'Invoke-RestMethod should be passed authorization header' 
                             $PSBoundParameters['Verbose'] | Should -Not -BeNullOrEmpty -Because 'should not show Invoke-RestMethod verbose output'
                             $PSBoundParameters['Verbose'] | Should -BeFalse -Because 'should not show Invoke-RestMethod verbose output'
+                            $Uri.ToString() | Should -Match '^https://ci\.appveyor\.com/api/projects/.*/.*/builds/\d+$' -Because 'should use api/projects/builds endpoint'
                             return $true
                         } `
                       -Times $Times `
@@ -174,6 +165,8 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
+        [Switch]$AndNothingReturned,
+        [Switch]$AndNoBuildReturned
     )
 
     $Global:Error.Clear()
@@ -211,25 +204,29 @@ function WhenRunningTask
          -ParameterFilter { $Path -eq 'env:APPVEYOR_JOB_ID' } `
          -MockWith { [pscustomobject]@{ Value = $currentJobID } }.GetNewClosure()
 
-    if( -not $latestBuildID )
-    {
-        $latestBuildID = $buildID
-    }
-
     $project = [pscustomobject]@{
         'project' = [pscustomobject]@{};
         'build' = [pscustomobject]@{
-            'buildId' = $latestBuildID;
+            'buildId' = $buildID;
             'buildNumber' = (Get-NextID);
             'status' = 'running';
             'jobs' = $jobs;
         }
     }
 
+    if( $AndNothingReturned )
+    {
+        $project = $null
+    }
+    elseif( $AndNoBuildReturned )
+    {
+        $project.build = $null
+    }
+
     $Global:CheckNum = $null
     Mock -CommandName 'Invoke-RestMethod' `
          -ModuleName 'Whiskey' `
-         -ParameterFilter { $Uri -eq 'https://ci.appveyor.com/api/projects/Fubar-Snafu/Ewwwww' } `
+         -ParameterFilter { $Uri -eq ('https://ci.appveyor.com/api/projects/Fubar-Snafu/Ewwwww/builds/{0}' -f $buildID) } `
          -MockWith { 
 
              function Write-Timing
@@ -452,8 +449,8 @@ Build:
     }
 }
 
-Describe 'AppVeyorWaitForBuildJobs.when another build starts after this one' {
-    It 'should fail current build' {
+Describe 'AppVeyorWaitForBuilds.when nothing is returned' {
+    It 'should fail' {
         Init
         GivenRunBy -AppVeyor
         GivenSecret 'fubarsnafu' -WithID 'AppVeyor'
@@ -461,14 +458,44 @@ Describe 'AppVeyorWaitForBuildJobs.when another build starts after this one' {
 Build:
 - AppVeyorWaitForBuildJobs:
     ApiKeyID: AppVeyor
-    CheckInterval: 00:00:00.1
+    CheckInterval: 00:00:00.01
 '@
-        GivenJob -WithStatus 'queued' -ThatFinishesAtCheck 2 -WithFinalStatus 'failed' -ThatHasFinishedProperty
-        GivenJob -Current 
-        GivenLatestBuildIDIsNotThisBuild
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask -AndNothingReturned -ErrorAction SilentlyContinue
         ThenFails
-        $Global:Error | Should -Match 'unable to wait'
-        ThenCheckedStatus -Times 1 -Exactly
+        $Global:Error | Should -Match 'request returned no build information'
+    }
+}
+
+Describe 'AppVeyorWaitForBuilds.when no builds are returned' {
+    It 'should fail' {
+        Init
+        GivenRunBy -AppVeyor
+        GivenSecret 'fubarsnafu' -WithID 'AppVeyor'
+        GivenWhiskeyYml @'
+Build:
+- AppVeyorWaitForBuildJobs:
+    ApiKeyID: AppVeyor
+    CheckInterval: 00:00:00.01
+'@
+        WhenRunningTask -AndNoBuildReturned -ErrorAction SilentlyContinue
+        ThenFails
+        $Global:Error | Should -Match 'request returned no build information'
+    }
+}
+
+Describe 'AppVeyorWaitForBuilds.when no jobs are returned' {
+    It 'should fail' {
+        Init
+        GivenRunBy -AppVeyor
+        GivenSecret 'fubarsnafu' -WithID 'AppVeyor'
+        GivenWhiskeyYml @'
+Build:
+- AppVeyorWaitForBuildJobs:
+    ApiKeyID: AppVeyor
+    CheckInterval: 00:00:00.01
+'@
+        WhenRunningTask 
+        ThenSucceeds
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
