@@ -7,7 +7,6 @@ function Wait-WhiskeyAppVeyorBuildJob
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
         [string]$ApiKeyID,
 
         [TimeSpan]$CheckInterval = '00:00:10',
@@ -86,7 +85,7 @@ function Wait-WhiskeyAppVeyorBuildJob
 
         if( $failedJobs )
         {
-            $suffix = 's'
+            $suffix = ''
             if( ($failedJobs | Measure-Object).Count -gt 1 )
             {
                 $suffix = 's'
