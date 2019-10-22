@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $clean = $false
 $initialize = $false
 $pipelines = $null
@@ -18,7 +19,6 @@ function GivenCleanMode
 function GivenInitializeMode
 {
     $script:initialize = $true
-    Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
 }
 
 function GivenPipeline
@@ -40,6 +40,8 @@ function Init
     $script:initialize = $false
     $script:pipelines = New-Object 'Collections.Generic.List[string]'
     $script:threwException = $false
+
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function ThenPowershellModule
@@ -61,15 +63,18 @@ function ThenPowershellModule
     $expectedName = $Name
     if ($Cleaned)
     {
-        It 'should run Pipeline tasks when in Clean mode' {
-            Assert-MockCalled -CommandName 'Uninstall-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $expectedName }
-        }
+        Assert-MockCalled -CommandName 'Uninstall-WhiskeyPowerShellModule' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { $Name -eq $expectedName }
     }
     elseif ($Installed)
     {
-        It 'should run Pipeline tasks when in Initialize mode' {
-            Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $expectedName }
-        }
+        Assert-MockCalled -CommandName 'Resolve-WhiskeyPowerShellModule' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { $Name -eq $expectedName }
+        Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' `
+                          -ModuleName 'Whiskey' `
+                          -ParameterFilter { $Name -eq $expectedName }
     }
 }
 
@@ -79,14 +84,8 @@ function ThenPipelineFailed
         $Pattern
     )
 
-    It ('should write a terminating error') {
-        $threwException | Should -Be $true
-    }
-
-
-    It ('should fail with message that matches /{0}/' -f $Pattern) {
-        $Global:Error | Should -Match $Pattern
-    }
+    $threwException | Should -BeTrue
+    $Global:Error | Should -Match $Pattern
 }
 
 function ThenPipelineRun
@@ -97,9 +96,7 @@ function ThenPipelineRun
         $BecauseFileExists
     )
 
-    It ('should run pipeline ''{0}''' -f $Name) {
-        Join-Path -Path $TestDrive.FullName -ChildPath $BecauseFileExists | Should -Exist
-    }
+    Join-Path -Path $testRoot -ChildPath $BecauseFileExists | Should -Exist
 }
 
 function WhenRunningTask
@@ -108,13 +105,13 @@ function WhenRunningTask
     param(
     )
 
-    $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    $whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
     foreach( $pipeline in $pipelines )
     {
         $pipeline | Add-Content -Path $whiskeyYmlPath 
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $whiskeyYmlPath
+    $context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath $whiskeyYmlPath -ForBuildRoot $testRoot
     $Global:Error.Clear()
     try
     {
@@ -124,6 +121,10 @@ function WhenRunningTask
         }
         elseif ($initialize)
         {
+            Mock -CommandName 'Resolve-WhiskeyPowerShellModule' `
+                 -ModuleName 'Whiskey' `
+                 -MockWith { [pscustomobject]@{ 'Name' = $Name; 'Version' = $Version } }
+            Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
             Invoke-WhiskeyBuild -Context $context -Initialize
         }
         else
@@ -139,38 +140,41 @@ function WhenRunningTask
 }
 
 Describe 'Pipeline.when running another pipeline' {
-    Init
-    GivenPipeline 'Fubar' @'
+    It 'it should run' {
+        Init
+        GivenPipeline 'Fubar' @'
 - CopyFile:
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
-    GivenPipeline 'Build' @'
+        GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 - CopyFile:
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
-    WhenRunningTask
-    ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
-    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+        WhenRunningTask
+        ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
+        ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+    }
 }
 
 Describe 'Pipeline.when running multiple pipelines' {
-    Init
-    GivenPipeline 'Fubar' @'
+    It 'should run each pipeline' {
+        Init
+        GivenPipeline 'Fubar' @'
 - CopyFile:
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
-    GivenPipeline 'Snafu' @'
+        GivenPipeline 'Snafu' @'
 - CopyFile:
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
 
-    GivenPipeline 'Build' @'
+        GivenPipeline 'Build' @'
 - Pipeline:
     Name: 
     - Fubar
@@ -179,59 +183,68 @@ Describe 'Pipeline.when running multiple pipelines' {
     Path: whiskey.yml
     DestinationDirectory: $(WHISKEY_PIPELINE_NAME)
 '@
-    WhenRunningTask
-    ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
-    ThenPipelineRun 'Snafu' -BecauseFileExists 'Snafu\whiskey.yml'
-    ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+        WhenRunningTask
+        ThenPipelineRun 'Fubar' -BecauseFileExists 'Fubar\whiskey.yml'
+        ThenPipelineRun 'Snafu' -BecauseFileExists 'Snafu\whiskey.yml'
+        ThenPipelineRun 'Build' -BecauseFileExists 'Build\whiskey.yml'
+    }
 }
 
 Describe 'Pipeline.when Name property is missing' {
-    Init
-    GivenPipeline 'Build' @'
+    It 'should fail' {
+        Init
+        GivenPipeline 'Build' @'
 - Pipeline
 '@
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenPipelineFailed 'mandatory'
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenPipelineFailed 'mandatory'
+    }
 }
 
 Describe 'Pipeline.when Name property doesn''t have a value' {
-    Init
-    GivenPipeline 'Build' @'
+    It 'should fail' {
+        Init
+        GivenPipeline 'Build' @'
 - Pipeline:
     Name: 
 '@
-    WhenRunningTask -ErrorAction SilentlyContinue
-    ThenPipelineFailed 'is missing or doesn''t have a value'
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenPipelineFailed 'is missing or doesn''t have a value'
+    }
 }
 
 Describe 'Pipeline.when running in Clean mode' {
-    Init
-    GivenCleanMode
-    GivenPipeline 'Fubar' @'
+    It 'should still run tasks in pipeline' {
+        Init
+        GivenCleanMode
+        GivenPipeline 'Fubar' @'
 - GetPowerShellModule:
     Name: Rivet
     Version: 0.8.1
 '@
-    GivenPipeline 'Build' @'
+        GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@
-    WhenRunningTask
-    ThenPowershellModule 'Rivet' -Cleaned
+        WhenRunningTask
+        ThenPowershellModule 'Rivet' -Cleaned
+    }
 }
 
 Describe 'Pipeline.when running in Initialize mode' {
-    Init
-    GivenInitializeMode
-    GivenPipeline 'Fubar' @'
+    It 'should still run tasks in pipeline' {
+        Init
+        GivenInitializeMode
+        GivenPipeline 'Fubar' @'
 - GetPowerShellModule:
     Name: Rivet
     Version: 0.8.1
 '@
-    GivenPipeline 'Build' @'
+        GivenPipeline 'Build' @'
 - Pipeline:
     Name: Fubar
 '@
-    WhenRunningTask
-    ThenPowershellModule 'Rivet' -Installed
+        WhenRunningTask
+        ThenPowershellModule 'Rivet' -Installed
+    }
 }

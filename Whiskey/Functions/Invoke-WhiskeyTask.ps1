@@ -240,7 +240,7 @@ function Invoke-WhiskeyTask
         {
             foreach( $requiredTool in $requiredTools )
             {
-                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name -Version $requiredTool.Version
+                Uninstall-WhiskeyTool -BuildRoot $TaskContext.BuildRoot -ToolInfo $requiredTool
             }
         }
 

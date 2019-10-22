@@ -4,12 +4,13 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$Script:taskFailed = $false
-$Script:taskException = $null
+$testRoot = $null
+$taskFailed = $false
+$taskException = $null
 
 function Get-BuildRoot
 {
-    $buildRoot = Join-Path -Path $TestDrive.FullName -ChildPath 'Source'
+    $buildRoot = Join-Path -Path $testRoot -ChildPath 'Source'
     if( -not (Test-Path -Path $buildRoot -PathType Container) )
     {
         New-Item -Path $buildRoot -ItemType 'Directory' | Out-Null
@@ -19,7 +20,7 @@ function Get-BuildRoot
 
 function Get-DestinationRoot
 {
-    Join-Path -Path $TestDrive.FullName -ChildPath 'Destination'
+    Join-Path -Path $testRoot -ChildPath 'Destination'
 }
 
 function GivenFiles
@@ -51,7 +52,7 @@ function GivenDirectories
     {
         if( -not ([IO.Path]::IsPathRooted($item)) )
         {
-            $item = Join-Path -Path $TestDrive.FullName -ChildPath $item
+            $item = Join-Path -Path $testRoot -ChildPath $item
         }
         New-Item -Path $item -ItemType 'Directory' -Force | Out-Null
     }
@@ -73,6 +74,11 @@ function GivenUserCannotCreateDestination
              -MockWith { Write-Error ('Access to the path ''{0}'' is denied.' -f $item) -ErrorAction SilentlyContinue }.GetNewClosure() `
              -ParameterFilter ([scriptblock]::Create("`$Path -eq '$destinationPath'"))
     }
+}
+
+function Init
+{
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function WhenCopyingFiles
@@ -122,14 +128,12 @@ function ThenNothingCopied
     )
 
     $destinationRoot = Get-DestinationRoot
-    It 'should copy nothing' {
-        foreach( $item in $To )
+    foreach( $item in $To )
+    {
+        $fullPath = Join-Path -Path $destinationRoot -ChildPath $item 
+        if( (Test-Path -Path $fullPath -PathType Container) )
         {
-            $fullPath = Join-Path -Path $destinationRoot -ChildPath $item 
-            if( (Test-Path -Path $fullPath -PathType Container) )
-            {
-                Get-ChildItem -Path $fullPath | Should BeNullOrEmpty
-            }
+            Get-ChildItem -Path $fullPath | Should -BeNullOrEmpty
         }
     }
 }
@@ -159,15 +163,13 @@ function ThenFilesCopied
         }
     }
 
-    It 'should copy files' {
-        foreach( $item in $Path )
+    foreach( $item in $Path )
+    {
+        foreach( $destItem in $To )
         {
-            foreach( $destItem in $To )
-            {
-                Join-Path -Path $To -ChildPath $item  |
-                    Get-Item |
-                    Should Not BeNullOrEmpty
-            }
+            Join-Path -Path $To -ChildPath $item  |
+                Get-Item |
+                Should -Not -BeNullOrEmpty
         }
     }
 }
@@ -178,78 +180,105 @@ function ThenTaskFails
         $WithErrorMessage
     )
 
-    It 'should throw an exception' {
-        $Script:taskFailed | Should Be $true
-        $Script:taskException | Should Match $WithErrorMessage
+    $Script:taskFailed | Should -BeTrue
+    $Script:taskException | Should -Match $WithErrorMessage
+}
+
+Describe 'CopyFile.when given a single file' {
+    It 'should copy that file' {
+        Init
+        GivenFiles 'one.txt'
+        WhenCopyingFiles 'one.txt' -To 'Destination'
+        ThenFilesCopied 'one.txt' -To 'Destination'
     }
-
 }
 
-Describe 'CopyFile.when copying a single file' {
-    GivenFiles 'one.txt'
-    WhenCopyingFiles 'one.txt' -To 'Destination'
-    ThenFilesCopied 'one.txt' -To 'Destination'
+Describe 'CopyFile.when given multiple files to a single destination' {
+    It 'should copy multiple files' {
+        Init
+        GivenFiles 'one.txt','two.txt'
+        WhenCopyingFiles 'one.txt','two.txt' -To 'Destination'
+        ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
+    }
 }
 
-Describe 'CopyFile.when copying multiple files to a single destination' {
-    GivenFiles 'one.txt','two.txt'
-    WhenCopyingFiles 'one.txt','two.txt' -To 'Destination'
-    ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
+Describe 'CopyFile.when given files from different directories' {
+    It 'it should copy files from different source directories' {
+        Init
+        GivenFiles 'dir1\one.txt','dir2\two.txt'
+        WhenCopyingFiles 'dir1\one.txt','dir2\two.txt' -To 'Destination'
+        ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
+    }
 }
 
-Describe 'CopyFile.when copying files from different directories' {
-    GivenFiles 'dir1\one.txt','dir2\two.txt'
-    WhenCopyingFiles 'dir1\one.txt','dir2\two.txt' -To 'Destination'
-    ThenFilesCopied 'one.txt','two.txt' -To 'Destination'
+Describe 'CopyFile.when given multiple destinations' {
+    It 'should copy to the multiple destinations' {
+        Init
+        GivenFiles 'one.txt'
+        WhenCopyingFiles 'one.txt' -To 'dir1','dir2'
+        ThenFilesCopied 'one.txt' -To 'dir1','dir2'
+    }
 }
 
-Describe 'CopyFile.when copying to multiple destinations' {
-    GivenFiles 'one.txt'
-    WhenCopyingFiles 'one.txt' -To 'dir1','dir2'
-    ThenFilesCopied 'one.txt' -To 'dir1','dir2'
+Describe 'CopyFile.when user can''t create one of the destination directories' {
+    It 'should fail' {
+        Init
+        GivenFiles 'one.txt'
+        GivenUserCannotCreateDestination 'dir2'
+        WhenCopyingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
+        ThenTaskFails -WithErrorMessage 'Failed to create destination directory'
+        ThenNothingCopied -To 'dir1','dir2'
+    }
 }
 
-Describe 'CopyFile.when copying files and user can''t create one of the destination directories' {
-    GivenFiles 'one.txt'
-    GivenUserCannotCreateDestination 'dir2'
-    WhenCopyingFiles 'one.txt' -To 'dir1','dir2' -ErrorAction SilentlyContinue
-    ThenTaskFails -WithErrorMessage 'Failed to create destination directory'
-    ThenNothingCopied -To 'dir1','dir2'
+Describe 'CopyFile.when given no files' {
+    It 'should fail' {
+        Init
+        GivenNoFilesToCopy
+        WhenCopyingFiles -ErrorAction SilentlyContinue
+        ThenTaskFails -WithErrorMessage '''Path'' property is missing'
+        ThenNothingCopied
+    }
 }
 
-Describe 'CopyFile.when copying nothing' {
-    GivenNoFilesToCopy
-    WhenCopyingFiles -ErrorAction SilentlyContinue
-    ThenTaskFails -WithErrorMessage '''Path'' property is missing'
-    ThenNothingCopied
-}
-
-Describe 'CopyFile.when copying a directory' {
-    GivenFiles 'dir1\file1.txt'
-    WhenCopyingFiles 'dir1' -ErrorAction SilentlyContinue
-    ThenTaskFails 'only copies files'
-    ThenNothingCopied
+Describe 'CopyFile.when given a directory' {
+    It 'it should fail' {
+        Init
+        GivenFiles 'dir1\file1.txt'
+        WhenCopyingFiles 'dir1' -ErrorAction SilentlyContinue
+        ThenTaskFails 'only copies files'
+        ThenNothingCopied
+    }
 }
 
 Describe 'CopyFile.when destination directory contains wildcards' {
-    GivenFiles 'file1.txt'
-    GivenDirectories 'Destination','OtherDestination','Destination2'
-    WhenCopyingFiles 'file1.txt' -To '..\Dest*'
-    ThenFilesCopied 'file1.txt'
-    ThenFilesCopied 'file1.txt' -To '..\Destination2','..\Destination'
-    ThenNothingCopied -To '..\OtherDestination'
+    It 'should copy files to destinations that  match the wildcard' {
+        Init
+        GivenFiles 'file1.txt'
+        GivenDirectories 'Destination','OtherDestination','Destination2'
+        WhenCopyingFiles 'file1.txt' -To '..\Dest*'
+        ThenFilesCopied 'file1.txt'
+        ThenFilesCopied 'file1.txt' -To '..\Destination2','..\Destination'
+        ThenNothingCopied -To '..\OtherDestination'
+    }
 }
 
 Describe 'CopyFile.when destination directory contains wildcards and doesn''t exist' {
-    GivenFiles 'file1.txt'
-    WhenCopyingFiles 'file1.txt' -To '..\Dest*'
-    ThenTaskFails -WithErrorMessage 'Wildcard\ pattern\ "\.\.\\Dest\*"\ doesn''t'
+    It 'should fail' {
+        Init
+        GivenFiles 'file1.txt'
+        WhenCopyingFiles 'file1.txt' -To '..\Dest*'
+        ThenTaskFails -WithErrorMessage 'Wildcard\ pattern\ "\.\.\\Dest\*"\ doesn''t'
+    }
 }
 
-Describe 'CopyFile.when destination directory is an absolute path' {
-    GivenFiles 'file1.txt'
-    $destination = Join-Path -Path $TestDrive.FullName -ChildPath 'Absolute'
-    GivenDirectories $destination
-    WhenCopyingFiles 'file1.txt' -To $destination
-    ThenFilesCopied 'file1.txt' -To $destination
+Describe 'CopyFile.when destination directory is an absolute path inside the build root' {
+    It 'it should still copy the file' {
+        Init
+        GivenFiles 'file1.txt'
+        $destination = Join-Path -Path $testRoot -ChildPath 'Absolute'
+        GivenDirectories $destination
+        WhenCopyingFiles 'file1.txt' -To $destination
+        ThenFilesCopied 'file1.txt' -To $destination
+    }
 }

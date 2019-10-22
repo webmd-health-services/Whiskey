@@ -90,7 +90,7 @@ function Install-WhiskeyNode
         $currentNodeVersion = & $nodePath '--version'
         if( $currentNodeVersion -ne $nodeVersionToInstall.version )
         {
-            Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
+            Uninstall-WhiskeyNode -InstallRoot $InstallRoot
             $installNode = $true
         }
     }

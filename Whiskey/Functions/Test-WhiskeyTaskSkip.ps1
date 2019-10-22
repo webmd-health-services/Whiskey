@@ -146,10 +146,10 @@ function Test-WhiskeyTaskSkip
         $exists = Test-Path -Path $Properties['IfExists']
         if( -not $exists )
         {
-            Write-WhiskeyVerbose -Context $Context -Message ('IfExists  {0}  not exists' -f $Properties['IfExists']) -Verbose
+            Write-WhiskeyVerbose -Context $Context -Message ('IfExists  {0}  not exists' -f $Properties['IfExists'])
             return $true
         }
-        Write-WhiskeyVerbose -Context $Context -Message     ('IfExists  {0}      exists' -f $Properties['IfExists']) -Verbose
+        Write-WhiskeyVerbose -Context $Context -Message     ('IfExists  {0}      exists' -f $Properties['IfExists'])
     }
 
     if( $Properties['UnlessExists'] )
@@ -157,10 +157,10 @@ function Test-WhiskeyTaskSkip
         $exists = Test-Path -Path $Properties['UnlessExists']
         if( $exists )
         {
-            Write-WhiskeyVerbose -Context $Context -Message ('UnlessExists  {0}      exists' -f $Properties['UnlessExists']) -Verbose
+            Write-WhiskeyVerbose -Context $Context -Message ('UnlessExists  {0}      exists' -f $Properties['UnlessExists'])
             return $true
         }
-        Write-WhiskeyVerbose -Context $Context -Message     ('UnlessExists  {0}  not exists' -f $Properties['UnlessExists']) -Verbose
+        Write-WhiskeyVerbose -Context $Context -Message     ('UnlessExists  {0}  not exists' -f $Properties['UnlessExists'])
     }
 
     if( $Properties['OnlyIfBuild'] )

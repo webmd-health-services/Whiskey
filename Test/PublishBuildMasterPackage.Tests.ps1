@@ -1,6 +1,10 @@
 
+#Requires -Version 5.1
+Set-StrictMode -Version 'Latest'
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $mockPackage = [pscustomobject]@{ }
 $mockRelease = [pscustomobject]@{ }
 $mockDeploy = [pscustomobject]@{ }
@@ -116,6 +120,12 @@ function Init
     $script:packageName = $null
     $script:startAtStage = $null
     $script:skipDeploy = 'false'
+    $script:testRoot = New-WhiskeyTestRoot
+}
+
+function Reset
+{
+    Reset-WhiskeyTestPSModule
 }
 
 function WhenCreatingPackage
@@ -139,8 +149,17 @@ function WhenCreatingPackage
         $taskParameter['ReleaseName'] = $releaseName
     }
     
-    $script:context = New-WhiskeyTestContext -ForVersion $version -ForTaskName 'PublishBuildMasterPackage' -ForBuildServer
-    
+    $script:context = New-WhiskeyTestContext -ForVersion $version `
+                                             -ForTaskName 'PublishBuildMasterPackage' `
+                                             -ForBuildServer `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BuildMasterAutomation'
+
+    if( -not (Get-Module 'BuildMasterAutomation') )
+    {
+        Import-WhiskeyTestModule -Name 'BuildMasterAutomation'
+    }
+
     if( $apiKeyID )
     {
         $taskParameter['ApiKeyID'] = $apiKeyID
@@ -170,6 +189,7 @@ function WhenCreatingPackage
     $package = $mockPackage
     $deploy = $mockDeploy
     $release = [pscustomobject]@{ Application = $appName; Name = $releaseName; id = $releaseId  }
+
     if( $releaseId )
     {
         Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release  }.GetNewClosure()
@@ -223,46 +243,28 @@ function ThenCreatedPackage
         $WithVariables
     )
 
-    It ('should create package ''{0}''' -f $Name) {
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
-    }
-
-    It ('should create package in release ''{0}''' -f $InRelease) {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release.id -eq $releaseId }
-    }
-
-    It ('should create package in application ''{0}''' -f $ForApplication) {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Application -eq $ForApplication }
-    }
-    
-    It ('should create package at ''{0}''' -f $AtUri) {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
-    }
-
-    It ('should create package with API key ''{0}''' -f $UsingApiKey) {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-    }
+    Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
+    Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
+    Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release.id -eq $releaseId }
+    Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Application -eq $ForApplication }
+    Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+    Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+    Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+    Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
     
     foreach( $variableName in $WithVariables.Keys )
     {
         $variableValue = $WithVariables[$variableName]
-        It ('should create package variable ''{0}''' -f $variableName) {
-            Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { 
-                #$DebugPreference = 'Continue'
-                Write-Debug ('Expected  {0}' -f $variableValue)
-                Write-Debug ('Actual    {0}' -f $Variable[$variableName])
-                $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
-            }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { 
+            #$DebugPreference = 'Continue'
+            Write-Debug ('Expected  {0}' -f $variableValue)
+            Write-Debug ('Actual    {0}' -f $Variable[$variableName])
+            $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
         }
     }
 
-    It ('should fail the build if BuildMaster calls fail') {
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
-    }
+    Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
+    Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
 }
 
 function ThenPackageDeployed
@@ -282,28 +284,16 @@ function ThenPackageDeployed
     
     if( $AtStage )
     {    
-        It ('should deploy package to stage ''{0}''' -f $AtStage) {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq $AtStage }
-        }
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq $AtStage }
     }
     else
     {
-        It 'should deploy package to first stage of release pipeline' {
-            Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq '' }
-        }
+        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Stage -eq '' }
     }
 
-    It ('should deploy package at ''{0}''' -f $AtUri) {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
-    }
-
-    It ('should deploy package with API key ''{0}''' -f $UsingApiKey) {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-    }
-    
-    It ('should fail the build if BuildMaster calls fail') {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
-    }
+    Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+    Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+    Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -ParameterFilter { $ErrorActionPreference -eq 'stop' }
 }
 
 function ThenPackageNotDeployed
@@ -311,9 +301,7 @@ function ThenPackageNotDeployed
     param(
     )
     
-    It 'should not start deploy' {
-        Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'Publish-BMReleasePackage' -ModuleName 'Whiskey' -Times 0
 }
 
 function ThenPackageNotCreated
@@ -324,9 +312,7 @@ function ThenPackageNotCreated
 
     process
     {
-        It 'should not create release package' {
-            Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -Times 0
-        }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -Times 0
 
         ThenPackageNotDeployed
     }
@@ -338,88 +324,110 @@ function ThenTaskFails
         $Pattern
     )
 
-    It 'should throw an exception' {
-        $threwException | Should -Be $true
-    }
-
-    It 'should write an errors' {
-        $Global:Error | Should -Match $Pattern
-    }
+    $threwException | Should -BeTrue
+    $Global:Error | Should -Match $Pattern
 }
 
 Describe 'PublishBuildMasterPackage.when called' {
-    Init
-    GivenProperty $packageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+    AfterEach { Reset }
+    It 'should publish package' {
+        Init
+        GivenProperty $packageVariable
+        WhenCreatingPackage
+        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+    }
 }
 
 Describe 'PublishBuildMasterPackage.when creating package with defined name' {
-    $packageNameOverride = 'PackageABCD'
-    Init
-    GivenPackageName $packageNameOverride
-    GivenProperty $packageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+    AfterEach { Reset }
+    It 'should publish that package' {
+        $packageNameOverride = 'PackageABCD'
+        Init
+        GivenPackageName $packageNameOverride
+        GivenProperty $packageVariable
+        WhenCreatingPackage
+        ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+    }
 }
 
 Describe 'PublishBuildMasterPackage.when deploying release package to specific stage' {
-    $releaseStage = 'Test'
-    Init
-    GivenStartAtStage $releaseStage
-    GivenProperty $packageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
+    AfterEach { Reset }
+    It 'should deploy to that stage' {
+        $releaseStage = 'Test'
+        Init
+        GivenStartAtStage $releaseStage
+        GivenProperty $packageVariable
+        WhenCreatingPackage
+        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
+    }
 }
 
 Describe 'PublishBuildMasterPackage.when creating package without starting deployment' {
-    Init
-    GivenSkipDeploy
-    GivenProperty $packageVariable
-    WhenCreatingPackage
-    ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-    ThenPackageNotDeployed
+    AfterEach { Reset }
+    It 'should not start the deployment' {
+        Init
+        GivenSkipDeploy
+        GivenProperty $packageVariable
+        WhenCreatingPackage
+        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageNotDeployed
+    }
 }
 
 Describe 'PublishBuildMasterPackage.when no application or release in BuildMaster' {
-    Init
-    GivenNoRelease 'release' -ForApplication 'application'
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails 'unable\ to\ create\ and\ deploy\ a\ release\ package'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenNoRelease 'release' -ForApplication 'application'
+        WhenCreatingPackage -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskFails 'unable\ to\ create\ and\ deploy\ a\ release\ package'
+    }
 }
 
 Describe ('PublishBuildMasterPackage.when ApplicationName property is missing') {
-    Init
-    GivenNoApplicationName
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenNoApplicationName
+        WhenCreatingPackage -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
+    }
 }
 
 Describe ('PublishBuildMasterPackage.when ReleaseName property is missing') {
-    Init
-    GivenNoReleaseName
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenNoReleaseName
+        WhenCreatingPackage -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
+    }
 }
 
 Describe ('PublishBuildMasterPackage.when Uri property is missing') {
-    Init
-    GivenNoUri
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails ('\bUri\b.*\bmandatory\b')
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenNoUri
+        WhenCreatingPackage -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskFails ('\bUri\b.*\bmandatory\b')
+    }
 }
 
 Describe ('PublishBuildMasterPackage.when ApiKeyID property is missing') {
-    Init
-    GivenNoApiKey
-    WhenCreatingPackage -ErrorAction SilentlyContinue
-    ThenPackageNotCreated
-    ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenNoApiKey
+        WhenCreatingPackage -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
+    }
 }

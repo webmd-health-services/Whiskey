@@ -3,11 +3,8 @@
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\BitbucketServerAutomation' -Resolve) -Force
 
 $context = $null
-$byDeveloper = $false
-$byBuildServer = $false
 $failed = $false
 
 function GivenCredential
@@ -33,12 +30,16 @@ function GivenNoReporters
 
 function GivenRunByBuildServer
 {
-    $script:context = New-WhiskeyTestContext -ForBuildServer
+    $script:context = New-WhiskeyTestContext -ForBuildServer `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BitbucketServerAutomation'
 }
 
 function GivenRunByDeveloper
 {
-    $script:context = New-WhiskeyTestContext -ForDeveloper
+    $script:context = New-WhiskeyTestContext -ForDeveloper `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'BitbucketServerAutomation'
 }
 
 function GivenReporter
@@ -52,6 +53,18 @@ function GivenReporter
     $context.Configuration['PublishBuildStatusTo'] = @( $Reporter )
 }
 
+function Init
+{
+    $script:testRoot = New-WhiskeyTestRoot
+    # So we can mock the calls.
+    Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
+}
+
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
+
 function ThenBuildStatusReportedToBitbucketServer
 {
     param(
@@ -62,42 +75,42 @@ function ThenBuildStatusReportedToBitbucketServer
         $WithPassword
     )
 
-    It ('should report {0} to Bitbucket Server' -f $ExpectedStatus) {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Status -eq $ExpectedStatus }
-    }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Status -eq $ExpectedStatus }
 
     $buildInfo = $context.BuildMetadata
-    It ('should set status on commit ''{0}''' -f $buildInfo.ScmCommitID) {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $CommitID -eq $buildInfo.ScmCommitID }
-    }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $CommitID -eq $buildInfo.ScmCommitID }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Key -eq $buildInfo.JobUri }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $BuildUri -eq $buildInfo.BuildUri }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Name -eq $buildInfo.JobName }
+    
+    $expectedUri = $At
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Connection.Uri -eq $expectedUri }
 
-    It ('should set status with key ''{0}''' -f $buildInfo.JobUri) {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Key -eq $buildInfo.JobUri }
-    }
-
-    It ('should set status for build ''{0}''' -f $buildInfo.BuildUri) {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $BuildUri -eq $buildInfo.BuildUri }
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $buildInfo.JobName }
-    }
-
-    It ('should report to Bitbucket Server at {0}' -f $At) {
-        $expectedUri = $At
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Uri -eq $expectedUri }
-    }
-
-    It ('should report to Bitbucket Server as {0}' -f $AsUser) {
-        $expectedUsername = $AsUser
-        $expectedPassword = $WithPassword
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Credential.UserName -eq $expectedUsername }
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword }
-    }
+    $expectedUsername = $AsUser
+    $expectedPassword = $WithPassword
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Connection.Credential.UserName -eq $expectedUsername }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $expectedPassword }
 }
 
 function ThenNoBuildStatusReported
 {
-    It 'should not report build status' {
-        Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -Times 0
-    }
+    Assert-MockCalled -CommandName 'Set-BBServerCommitBuildStatus' -ModuleName 'Whiskey' -Times 0
 }
 
 function WhenReportingBuildStatus
@@ -134,91 +147,125 @@ function ThenReportingFailed
         $Pattern
     )
 
-    It 'should throw an exception' {
-        $failed | Should -Be $true
-        $Global:Error | Should -Match $Pattern
-    }
-
+    $failed | Should -BeTrue
+    $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
 }
 
 Describe 'Set-WhiskeyBuildStatus.when there are no reporters is present' {
+    AfterEach { Reset }
     Context 'by build server' {
-        GivenRunByBuildServer
-        GivenNoReporters
-        WhenReportingBuildStatus Started
-        ThenNoBuildStatusReported
+        It 'should do nothing' {
+            Init
+            GivenRunByBuildServer
+            GivenNoReporters
+            WhenReportingBuildStatus Started
+            ThenNoBuildStatusReported
+        }
     }
 
     Context 'by developer' {
-        GivenRunByDeveloper
-        GivenNoReporters
-        WhenReportingBuildStatus Started
-        ThenNoBuildStatusReported
+        It 'should do nothing' {
+            Init
+            GivenRunByDeveloper
+            GivenNoReporters
+            WhenReportingBuildStatus Started
+            ThenNoBuildStatusReported
+        }
     }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build started to Bitbucket Server' {
+    AfterEach { Reset }
     Context 'by build server' {
-        GivenRunByBuildServer
-        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-        $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
-        GivenCredential 'BBServer1' $credential
-        WhenReportingBuildStatus Started
-        ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+        It 'should report build status' {
+            Init
+            GivenRunByBuildServer
+            GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+            $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+            GivenCredential 'BBServer1' $credential
+            WhenReportingBuildStatus Started
+            ThenBuildStatusReportedToBitbucketServer InProgress -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+        }
     }
 
     Context 'by developer' {
-        GivenRunByDeveloper
-        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'Credential' = 'BBServer' } }
-        WhenReportingBuildStatus Started
-        ThenNoBuildStatusReported
+        It 'should do nothing' {
+            Init
+            GivenRunByDeveloper
+            GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'Credential' = 'BBServer' } }
+            WhenReportingBuildStatus Started
+            ThenNoBuildStatusReported
+        }
     }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build failed to Bitbucket Server' {
-    GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-    $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
-    GivenCredential 'BBServer1' $credential
-    WhenReportingBuildStatus Failed
-    ThenBuildStatusReportedToBitbucketServer Failed -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+        $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+        GivenCredential 'BBServer1' $credential
+        WhenReportingBuildStatus Failed
+        ThenBuildStatusReportedToBitbucketServer Failed -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when reporting build completed to Bitbucket Server' {
-    GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-    $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
-    GivenCredential 'BBServer1' $credential
-    WhenReportingBuildStatus Completed
-    ThenBuildStatusReportedToBitbucketServer Successful -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    AfterEach { Reset }
+    It 'should set status' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+        $credential = New-Object 'Management.Automation.PsCredential' bitbucketserver,(ConvertTo-SecureString -AsPlainText -Force -String 'fubar')
+        GivenCredential 'BBServer1' $credential
+        WhenReportingBuildStatus Completed
+        ThenBuildStatusReportedToBitbucketServer Successful -At 'https://bitbucket.example.com' -AsUser 'bitbucketserver' -WithPassword 'fubar'
+    }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when using an unknown reporter' {
-    GivenRunByBuildServer
-    GivenReporter  @{ 'Nonsense' = @{ } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
-    ThenReportingFailed 'unknown\ build\ status\ reporter'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter  @{ 'Nonsense' = @{ } }
+        WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+        ThenReportingFailed 'unknown\ build\ status\ reporter'
+    }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential' {
-    GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
-    GivenNoCredentials
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
-    ThenReportingFailed 'credential\ "BBServer1"\ does\ not\ exist'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; 'CredentialID' = 'BBServer1' } }
+        GivenNoCredentials
+        WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+        ThenReportingFailed 'credential\ "BBServer1"\ does\ not\ exist'
+    }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing credential ID' {
-    GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
-    ThenReportingFailed 'Property\ ''CredentialID''\ does\ not\ exist'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter @{ 'BitbucketServer' = @{ 'Uri' = 'https://bitbucket.example.com' ; } }
+        WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+        ThenReportingFailed 'Property\ ''CredentialID''\ does\ not\ exist'
+    }
 }
 
 Describe 'Set-WhiskeyBuildStatus.when missing URI' {
-    GivenRunByBuildServer
-    GivenReporter @{ 'BitbucketServer' = @{ 'CredentialID' = 'fubar' ; } }
-    WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
-    ThenReportingFailed 'Property\ ''Uri''\ does\ not\ exist'
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenRunByBuildServer
+        GivenReporter @{ 'BitbucketServer' = @{ 'CredentialID' = 'fubar' ; } }
+        WhenReportingBuildStatus Started -ErrorAction SilentlyContinue
+        ThenReportingFailed 'Property\ ''Uri''\ does\ not\ exist'
+    }
 }
-

@@ -2,7 +2,6 @@
 Test/Assemblies/**/obj/**
 Test/Assemblies/**/bin/**
 Test/Assemblies/**/packages/**
-Test/Pester/whiskey.yml
 Test/Assemblies/**/whiskey.yml
 Test/packages
 PSModules
