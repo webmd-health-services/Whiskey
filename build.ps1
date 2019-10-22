@@ -1,3 +1,5 @@
+#!/usr/bin/env pwsh
+
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
     [Parameter(Mandatory=$true,ParameterSetName='Clean')]
