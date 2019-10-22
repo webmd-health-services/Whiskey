@@ -10,7 +10,7 @@ function Resolve-WhiskeyVariable
     
     You can add variables to replace via the `Add-WhiskeyVariable` function. If a variable doesn't exist, environment variables are used. If a variable has the same name as an environment variable, the variable value is used instead of the environment variable's value. If no variable or environment variable is found, `Resolve-WhiskeyVariable` will write an error and return the origin string.
 
-    See the `about_Whiskey_Variables` help topic for a list of variables.
+    See the [Variables](https://github.com/webmd-health-services/Whiskey/wiki/Variables) page on the [Whiskey wiki](https://github.com/webmd-health-services/Whiskey/wiki) for a list of variables.
 
     .EXAMPLE
     '$(COMPUTERNAME)' | Resolve-WhiskeyVariable
@@ -44,11 +44,10 @@ function Resolve-WhiskeyVariable
             'Integer' = 4;
         }
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='ByPipeline')]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline,ParameterSetName='ByPipeline')]
         [AllowNull()]
-        [object]
         # The object on which to perform variable replacement/substitution. If the value is a string, all variables in the string are replaced with their values.
         #
         # If the value is an array, variable expansion is done on each item in the array. 
@@ -56,9 +55,13 @@ function Resolve-WhiskeyVariable
         # If the value is a hashtable, variable replcement is done on each value of the hashtable. 
         #
         # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
-        $InputObject,
+        [object]$InputObject,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(ParameterSetName='ByName')]
+        # The name of a single Whiskey variable to resolve.
+        [string]$Name,
+
+        [Parameter(Mandatory)]
         [Whiskey.Context]
         # The context of the current build. Necessary to lookup any variables.
         $Context
@@ -69,8 +72,19 @@ function Resolve-WhiskeyVariable
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+        if( $Name )
+        {
+            $InputObject = '$({0})' -f $Name
+        }
+
         $version = $Context.Version
-        $buildInfo = $Context.BuildMetadata;
+        $prereleaseID = ''
+        if( $version.SemVer2.Prerelease -match '^(.*)\..*$' )
+        {
+            $prereleaseID = $Matches[1]
+        }
+        $buildInfo = $Context.BuildMetadata
+
         $sem1Version = ''
         if( $version.SemVer1 )
         {
@@ -84,30 +98,31 @@ function Resolve-WhiskeyVariable
         }
 
         $wellKnownVariables = @{
-                                    'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
-                                    'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
-                                    'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
-                                    'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServer;
-                                    'WHISKEY_BUILD_STARTED_AT' = $Context.StartedAt;
-                                    'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
-                                    'WHISKEY_ENVIRONMENT' = $Context.Environment;
-                                    'WHISKEY_JOB_URI' = $buildInfo.JobUri;
-                                    'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
-                                    'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
-                                    'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
-                                    'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
-                                    'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
-                                    'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
-                                    'WHISKEY_SEMVER1' = $version.SemVer1;
-                                    'WHISKEY_SEMVER1_VERSION' = $sem1Version;
-                                    'WHISKEY_SEMVER2' = $version.SemVer2;
-                                    'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
-                                    'WHISKEY_SEMVER2_VERSION' = $sem2Version;
-                                    'WHISKEY_TASK_NAME' = $Context.TaskName;
-                                    'WHISKEY_TEMP_DIRECTORY' = (Get-Item -Path ([IO.Path]::GetTempPath()));
-                                    'WHISKEY_TASK_TEMP_DIRECTORY' = $Context.Temp;
-                                    'WHISKEY_VERSION' = $version.Version;
-                                }
+            'WHISKEY_BUILD_ID' = $buildInfo.BuildID;
+            'WHISKEY_BUILD_NUMBER' = $buildInfo.BuildNumber;
+            'WHISKEY_BUILD_ROOT' = $Context.BuildRoot;
+            'WHISKEY_BUILD_SERVER_NAME' = $buildInfo.BuildServer;
+            'WHISKEY_BUILD_STARTED_AT' = $Context.StartedAt;
+            'WHISKEY_BUILD_URI' = $buildInfo.BuildUri;
+            'WHISKEY_ENVIRONMENT' = $Context.Environment;
+            'WHISKEY_JOB_URI' = $buildInfo.JobUri;
+            'WHISKEY_MSBUILD_CONFIGURATION' = (Get-WhiskeyMSBuildConfiguration -Context $Context);
+            'WHISKEY_OUTPUT_DIRECTORY' = $Context.OutputDirectory;
+            'WHISKEY_PIPELINE_NAME' = $Context.PipelineName;
+            'WHISKEY_SCM_BRANCH' = $buildInfo.ScmBranch;
+            'WHISKEY_SCM_COMMIT_ID' = $buildInfo.ScmCommitID;
+            'WHISKEY_SCM_URI' = $buildInfo.ScmUri;
+            'WHISKEY_SEMVER1' = $version.SemVer1;
+            'WHISKEY_SEMVER1_VERSION' = $sem1Version;
+            'WHISKEY_SEMVER2' = $version.SemVer2;
+            'WHISKEY_SEMVER2_NO_BUILD_METADATA' = $version.SemVer2NoBuildMetadata;
+            'WHISKEY_SEMVER2_PRERELEASE_ID' = $prereleaseID
+            'WHISKEY_SEMVER2_VERSION' = $sem2Version;
+            'WHISKEY_TASK_NAME' = $Context.TaskName;
+            'WHISKEY_TEMP_DIRECTORY' = (Get-Item -Path ([IO.Path]::GetTempPath()));
+            'WHISKEY_TASK_TEMP_DIRECTORY' = $Context.Temp;
+            'WHISKEY_VERSION' = $version.Version;
+        }
     }
 
     process
