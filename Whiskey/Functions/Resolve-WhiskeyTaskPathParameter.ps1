@@ -56,12 +56,12 @@ function Resolve-WhiskeyTaskPathParameter
 
         $message = 'Resolve {0} ->' -f $result
         $prefix = ' ' * ($message.Length - 3)
-        Write-Debug -Message $message
+        Write-WhiskeyDebug -Context $TaskContext -Message $message
         $result = 
             Resolve-Path -Path $Path @optionalParams | 
             Select-Object -ExpandProperty 'ProviderPath' |
             ForEach-Object { 
-                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
+                Write-WhiskeyDebug -Context $TaskContext -Message ('{0} -> {1}' -f $prefix,$_)
                 $_
             }
 

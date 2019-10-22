@@ -7,7 +7,7 @@ Set-StrictMode -Version 'Latest'
 $testRoot = $null
 $whiskeyYmlPath = $null
 $context = $null
-$infoOutput = $null
+$warnings = $null
 
 # So we can mock Whiskey's internal version.
 function Invoke-WhiskeyPowerShell
@@ -110,7 +110,7 @@ function ThenShouldWarn
         $Pattern
     )
 
-    $infoOutput | Where-Object { $_ -like '*[WARNING]*' } | Should -Match $Pattern
+    $warnings | Should -Match $Pattern
 }
 
 function ThenThrewException
@@ -144,8 +144,8 @@ function WhenRunningPipeline
     $script:threwException = $false
     try
     {
-        Invoke-WhiskeyPipeline -Context $context -Name $Name -InformationVariable 'infoOutput'
-        $script:infoOutput = $infoOutput
+        Invoke-WhiskeyPipeline -Context $context -Name $Name -WarningVariable 'warnings'
+        $script:warnings = $warnings
     }
     catch
     {

@@ -86,7 +86,7 @@ function Get-MSBuild
         $msbuildRoot = Join-Path -Path $instance.InstallationPath -ChildPath 'MSBuild'
         if( -not (Test-Path -Path $msbuildRoot -PathType Container) )
         {
-            Write-Verbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
+            Write-WhiskeyVerbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
             continue
         }
 

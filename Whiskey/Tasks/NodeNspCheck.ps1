@@ -27,7 +27,7 @@ function Invoke-WhiskeyNodeNspCheck
         $formattingArg = '--output'
     }
 
-    Write-WhiskeyTiming -Message 'Running NSP security check'
+    Write-WhiskeyDebug -Context $TaskContext -Message 'Running NSP security check'
     $output = Invoke-Command -NoNewScope -ScriptBlock {
         param(
             $JsonOutputFormat
@@ -37,7 +37,7 @@ function Invoke-WhiskeyNodeNspCheck
             ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
     } -ArgumentList $formattingArg
 
-    Write-WhiskeyTiming -Message 'COMPLETE'
+    Write-WhiskeyDebug -Context $TaskContext -Message 'COMPLETE'
 
     try
     {

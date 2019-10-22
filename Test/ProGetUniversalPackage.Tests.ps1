@@ -511,26 +511,26 @@ function ThenUpackMetadataIs
         # $DebugPreference = 'Continue'
         foreach ($key in $Reference.Keys)
         {
-            Write-Debug $key
+            Write-WhiskeyDebug -Context $context $key
             if ($key -notin $Difference.Keys)
             {
-                Write-Debug -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
-                Write-Debug -Message ('Actual    {0}' -f $Difference.Keys)
+                Write-WhiskeyDebug -Context $context -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
+                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference.Keys)
                 return $false
             }
             elseif ($Reference[$key] | Get-Member -Name 'Keys')
             {
                 if (-not ($Difference[$key] | Get-Member -Name 'Keys') -or (-not (Assert-HashTableEqual -Reference $Reference[$key] -Difference $Difference[$key])))
                 {
-                    Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
-                    Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                    Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
+                    Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
                     return $false
                 }
             }
             elseif (Compare-Object -ReferenceObject $Reference[$key] -DifferenceObject $Difference[$key])
             {
-                Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
-                Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
+                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
                 return $false
             }
         }
@@ -562,10 +562,10 @@ function ThenUpackMetadataIs
     $upackJson = Get-Content -Raw -Path (Join-Path -Path $expandPath -ChildPath 'upack.json' -Resolve) | ConvertFrom-Json
     $upackContent = ConvertTo-Hashtable -PSCustomObject $upackJson
 
-    Write-Debug 'Expected'
-    $ExpectedContent | ConvertTo-Json | Write-Debug
-    Write-Debug 'Actual'
-    $upackContent | ConvertTo-Json | Write-Debug
+    Write-WhiskeyDebug -Context $context 'Expected'
+    $ExpectedContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
+    Write-WhiskeyDebug -Context $context 'Actual'
+    $upackContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
     Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent | Should -BeTrue
 }
 
@@ -583,8 +583,8 @@ function ThenPackageShouldBeCompressed
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
-    $DebugPreference = 'Continue'
-    Write-Debug -Message ('Package size: {0}' -f $packageSize)
+    #$DebugPreference = 'Continue'
+    Write-WhiskeyDebug -Context $context -Message ('Package size: {0}' -f $packageSize)
     if( $GreaterThan )
     {
         $packageSize | Should -BeGreaterThan $GreaterThan

@@ -198,13 +198,13 @@ function WhenRunningTask
     $Global:Error.Clear()
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' 
+        $output | Write-WhiskeyDebug
     }
     catch
     {
-        Write-Error $_
         $script:threwException = $true
-        $Error | Format-List -Force * | Out-String | Write-Verbose
+        Write-Error $_
     }
 }
 

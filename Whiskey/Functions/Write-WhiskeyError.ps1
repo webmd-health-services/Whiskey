@@ -1,13 +1,14 @@
 
-function Write-WhiskeyDebug
+function Write-WhiskeyError
 {
     [CmdletBinding()]
     param(
+        # The context for the current build. If not provided, Whiskey will search up the call stack looking for it.
         [Whiskey.Context]$Context,
 
         [Parameter(Mandatory,ValueFromPipeline,Position=0)]
-        [AllowEmptyString()]
         [AllowNull()]
+        [AllowEmptyString()]
         [String]$Message
     )
 
@@ -15,15 +16,15 @@ function Write-WhiskeyDebug
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-        $write = $DebugPreference -notin @( [Management.Automation.ActionPreference]::Ignore, [Management.Automation.ActionPreference]::SilentlyContinue )
+        
+        $write = $ErrorActionPreference -ne [Management.Automation.ActionPreference]::Ignore
 
         if( -not $write )
         {
             return
         }
-        
-        $messages = $null
+
+        [Collections.ArrayList]$messages = $null
         if( $PSCmdlet.MyInvocation.ExpectingInput )
         {
             $messages = [Collections.ArrayList]::new()
@@ -36,14 +37,14 @@ function Write-WhiskeyDebug
         {
             return
         }
-        
+
         if( $PSCmdlet.MyInvocation.ExpectingInput )
         {
             [Void]$messages.Add($Message)
             return
         }
-       
-        Write-WhiskeyInfo -Context $Context -Message $Message -Level 'Debug'
+
+        Write-WhiskeyInfo -Context $Context -Level Error -Message $Message
     }
 
     end
@@ -52,10 +53,10 @@ function Write-WhiskeyDebug
         {
             return
         }
-        
+
         if( $messages )
         {
-            Write-WhiskeyInfo -Context $Context -Level 'Debug' -Message $messages
+            Write-WhiskeyInfo -Context $Context -Level Error -Message $messages
         }
     }
 }

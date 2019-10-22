@@ -123,7 +123,7 @@ function Invoke-WhiskeyTask
         }
         if( $task -and $task.WarnWhenUsingAlias )
         {
-            Write-Warning -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
+            Write-WhiskeyWarning -Context $TaskContext -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
         }
     }
 
@@ -154,7 +154,9 @@ function Invoke-WhiskeyTask
 
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
-        Write-Error -Message ('Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f $task.Name,$task.Platform,$CurrentPlatform) -ErrorAction Stop
+        $msg = 'Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f `
+                    $task.Name,$task.Platform,$CurrentPlatform
+        Write-WhiskeyError -Message $msg -ErrorAction Stop
         return
     }
 

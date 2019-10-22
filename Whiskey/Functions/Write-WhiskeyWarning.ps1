@@ -19,18 +19,60 @@ function Write-WhiskeyWarning
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         # The current context.
         [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory,ValueFromPipeline)]
+        [Parameter(Mandatory,ValueFromPipeline,Position=0)]
         # The message to write.
-        [String]$Message,
-
-        [int]$Indent = 0
+        [String]$Message
     )
 
-    Set-StrictMode -Version 'Latest'
+    begin
+    {
+        Set-StrictMode -Version 'Latest'
+        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Write-Warning -Message (Format-WhiskeyMessage @PSBoundParameters)
+        $write = $WarningPreference -ne [Management.Automation.ActionPreference]::Ignore 
+
+        if( -not $write )
+        {
+            return
+        }
+
+        $messages = $null
+        if( $PSCmdlet.MyInvocation.ExpectingInput )
+        {
+            $messages = [Collections.ArrayList]::new()
+        }
+    }
+
+    process 
+    {
+        if( -not $write )
+        {
+            return
+        }
+
+        if( $PSCmdlet.MyInvocation.ExpectingInput )
+        {
+            [Void]$messages.Add($Message)
+            return
+        }
+
+        Write-WhiskeyInfo -Context $Context -Level 'Warning' -Message $Message
+    }
+
+    end
+    {
+        if( -not $write )
+        {
+            return 
+        }
+
+        if( $messages )
+        {
+            Write-WhiskeyInfo -Context $Context -Level 'Warning' -Message $messages
+        }
+    }
+
 }

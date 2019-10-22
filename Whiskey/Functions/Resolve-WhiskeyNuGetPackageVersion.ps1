@@ -30,13 +30,13 @@ function Resolve-WhiskeyNuGetPackageVersion
 
         if( -not $Version )
         {
-            Write-Error ("Unable to find latest version of package '{0}'." -f $NuGetPackageName)
+            Write-WhiskeyError -Message ("Unable to find latest version of package '{0}'." -f $NuGetPackageName)
             return
         }
     }
     elseif( [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
     {
-        Write-Error "Wildcards are not allowed for NuGet packages yet because of a bug in the nuget.org search API (https://github.com/NuGet/NuGetGallery/issues/3274)."
+        Write-WhiskeyError -Message "Wildcards are not allowed for NuGet packages yet because of a bug in the nuget.org search API (https://github.com/NuGet/NuGetGallery/issues/3274)."
         return
     }
     return $Version

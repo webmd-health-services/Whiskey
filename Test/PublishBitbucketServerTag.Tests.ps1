@@ -209,8 +209,8 @@ function ThenTheCommitShouldBeTagged
 
     Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Name  expected  {0}' -f $Tag)
-        Write-Debug -Message ('      actual    {0}' -f $Name)
+        Write-WhiskeyDebug -Message ('Name  expected  {0}' -f $Tag)
+        Write-WhiskeyDebug -Message ('      actual    {0}' -f $Name)
         $Name -eq $Tag 
     }
 

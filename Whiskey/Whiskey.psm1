@@ -21,8 +21,6 @@ $buildStartedAt = [DateTime]::MinValue
 
 $PSModuleAutoLoadingPreference = 'None'
 
-$supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
-
 Write-Timing 'Updating serialiazation depths on Whiskey objects.'
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
 Update-TypeData -TypeName 'Whiskey.BuildContext' -SerializationDepth 50 -ErrorAction Ignore
@@ -76,6 +74,13 @@ if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $
 {
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop 
 }
+
+Write-Timing 'Updating formats.'
+$prependFormats = @(
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Management.Automation.ErrorRecord.format.ps1xml'),
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Exception.format.ps1xml')
+                    )
+Update-FormatData -PrependPath $prependFormats
 
 Write-Timing ('Creating internal module variables.')
 

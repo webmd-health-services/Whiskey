@@ -19,24 +19,61 @@ function Write-WhiskeyVerbose
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         # The current context.
         [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory,ValueFromPipeline)]
+        [Parameter(Mandatory,ValueFromPipeline,Position=0)]
         [AllowEmptyString()]
         [AllowNull()]
         # The message to write.
-        [String]$Message,
-
-        [int]$Indent = 0
+        [String]$Message
     )
 
-    process
+    begin
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
-        Write-Verbose -Message (Format-WhiskeyMessage @PSBoundParameters)
+
+        $write = $VerbosePreference -notin @( [Management.Automation.ActionPreference]::Ignore, [Management.Automation.ActionPreference]::SilentlyContinue )
+        
+        if( -not $write )
+        {
+            return
+        }
+        
+        $messages = $null
+        if( $PSCmdlet.MyInvocation.ExpectingInput )
+        {
+            $messages = [Collections.ArrayList]::new()
+        }
+    }
+
+    process
+    {
+        if( -not $write )
+        {
+            return
+        }
+
+        if( $PSCmdlet.MyInvocation.ExpectingInput )
+        {
+            [Void]$messages.Add($Message)
+            return
+        }
+
+        Write-WhiskeyInfo -Context $Context -Message $Message -Level 'Verbose'
+    }
+
+    end
+    {
+        if( -not $write )
+        {
+            return
+        }
+
+        if( $messages )
+        {
+            Write-WhiskeyInfo -Context $Context -Level 'Verbose' -Message $messages
+        }
     }
 }

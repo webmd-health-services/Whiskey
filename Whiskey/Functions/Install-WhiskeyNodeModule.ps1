@@ -72,7 +72,8 @@ function Install-WhiskeyNodeModule
         return
     }
 
-    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -BuildRootPath $BuildRootPath -ForDeveloper:$ForDeveloper | Write-Verbose
+    Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList $npmArgument -BuildRootPath $BuildRootPath -ForDeveloper:$ForDeveloper | 
+        Write-WhiskeyVerbose
     if( $LASTEXITCODE )
     {
         return
@@ -81,7 +82,7 @@ function Install-WhiskeyNodeModule
     $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
     if( -not $modulePath )
     {
-        Write-Error -Message ('NPM executed successfully when attempting to install "{0}" but the module was not found anywhere in the build root "{1}"' -f ($npmArgument -join ' '),$BuildRootPath)
+        Write-WhiskeyError -Message ('NPM executed successfully when attempting to install "{0}" but the module was not found anywhere in the build root "{1}"' -f ($npmArgument -join ' '),$BuildRootPath)
         return
     }
 

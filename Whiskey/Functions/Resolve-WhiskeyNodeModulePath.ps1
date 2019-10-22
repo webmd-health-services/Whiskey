@@ -71,7 +71,7 @@ function Resolve-WhiskeyNodeModulePath
 
     if( -not $nodeModulePath )
     {
-        Write-Error -Message ('Node module "{0}" directory doesn''t exist in "{1}".' -f $Name,$NodeRootPath) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Node module "{0}" directory doesn''t exist in "{1}".' -f $Name,$NodeRootPath) -ErrorAction $ErrorActionPreference
         return
     }
 

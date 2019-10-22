@@ -15,15 +15,17 @@ function Write-CommandOutput
 
         if( $InputObject -match '^WARNING\b' )
         {
-            $InputObject | Write-Warning 
+            $InputObject | Write-WhiskeyWarning 
         }
         elseif( $InputObject -match '^ERROR\b' )
         {
-            $InputObject | Write-Error
+            $InputObject | Write-WhiskeyError 
         }
         else
         {
-            $InputObject | ForEach-Object { Write-Verbose -Message ('[{0}] {1}' -f $Description,$InputObject) }
+            $InputObject | 
+                ForEach-Object { '[{0}] {1}' -f $Description,$_ } | 
+                Write-WhiskeyVerbose 
         }
     }
 }

@@ -310,8 +310,8 @@ function ThenPluginsRan
             Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
             Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter {
                 #$DebugPreference = 'Continue'
-                Write-Debug -Message ('TaskName  expected  {0}' -f $ForTaskNamed)
-                Write-Debug -Message ('          actual    {0}' -f $TaskName)
+                Write-WhiskeyDebug -Message ('TaskName  expected  {0}' -f $ForTaskNamed)
+                Write-WhiskeyDebug -Message ('          actual    {0}' -f $TaskName)
                 $TaskName -eq $ForTaskNamed
             }
             Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter {
@@ -431,14 +431,14 @@ function ThenTempDirectoryCreated
     $expectedTempPathRegex = '^{0}[a-z0-9]{{8}}\.[a-z0-9]{{3}}$' -f [regex]::escape($expectedTempPath)
     Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug ('Path  expected  {0}' -f $expectedTempPathRegex)
-        Write-Debug ('      actual    {0}' -f $Path)
+        Write-WhiskeyDebug ('Path  expected  {0}' -f $expectedTempPathRegex)
+        Write-WhiskeyDebug ('      actual    {0}' -f $Path)
         $Path -match $expectedTempPathRegex }
     Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter { $Force }
     Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug ('ItemType  expected  {0}' -f 'Directory')
-        Write-Debug ('          actual    {0}' -f $ItemType)
+        Write-WhiskeyDebug ('ItemType  expected  {0}' -f 'Directory')
+        Write-WhiskeyDebug ('          actual    {0}' -f $ItemType)
         $ItemType -eq 'Directory' 
     }
 }
@@ -488,8 +488,8 @@ function ThenToolInstalled
     Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
         $expectedInstallRoot = $testRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)
-        Write-Debug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
-        Write-Debug -Message ('             actual    {0}' -f $InstallRoot)
+        Write-WhiskeyDebug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
+        Write-WhiskeyDebug -Message ('             actual    {0}' -f $InstallRoot)
         $InstallRoot -eq $expectedInstallRoot
     }
 }
@@ -873,8 +873,8 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and insta
                 #$DebugPreference = 'Continue'
                 $currentPath = (Get-Location).ProviderPath
                 $expectedPath = Join-Path -Path $testRoot -ChildPath '.output'
-                Write-Debug ('Current  Path   {0}' -f $currentPath)
-                Write-Debug ('Expected Path   {0}' -f $expectedPath)
+                Write-WhiskeyDebug ('Current  Path   {0}' -f $currentPath)
+                Write-WhiskeyDebug ('Expected Path   {0}' -f $expectedPath)
                 if( $currentPath -ne $expectedPath )
                 {
                     throw 'tool installation didn''t happen in the task''s working directory'
@@ -898,8 +898,8 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and clean
                 #$DebugPreference = 'Continue'
                 $currentPath = (Get-Location).ProviderPath
                 $expectedPath = Join-Path -Path $testRoot -ChildPath '.output' 
-                Write-Debug ('Current  Path   {0}' -f $currentPath)
-                Write-Debug ('Expected Path   {0}' -f $expectedPath)
+                Write-WhiskeyDebug ('Current  Path   {0}' -f $currentPath)
+                Write-WhiskeyDebug ('Expected Path   {0}' -f $expectedPath)
                 if( $currentPath -ne $expectedPath )
                 {
                     throw 'tool uninstallation didn''t happen in the task''s working directory'
@@ -917,7 +917,7 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
         GivenRunByDeveloper
         Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
         WhenRunningTask 'PowerShell' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
-        ThenThrewException 'Build.+WorkingDirectory.+does not exist.'
+        ThenThrewException 'WorkingDirectory.+does not exist.'
         ThenTaskNotRun 'Invoke-WhiskeyPowerShell'
     }
 }
@@ -1708,9 +1708,9 @@ Describe ('Invoke-WhiskeyTask.when task wants a warning when someone uses an ali
         try
         {
             Init
-            WhenRunningTask 'OldName' -Parameter @{} -InformationVariable 'warnings'
+            WhenRunningTask 'OldName' -Parameter @{} -WarningVariable 'warnings'
             $warnings | Should -Not -BeNullOrEmpty
-            $warnings | Should -Match '\[WARNING\].*is\ an\ alias'
+            $warnings | Should -Match 'is\ an\ alias'
         }
         finally
         {
@@ -1807,8 +1807,8 @@ Describe ('Invoke-WhiskeyTask.when task is obsolete') {
         try
         {
             Init
-            WhenRunningTask 'ObsoleteTask' -Parameter @{} -InformationVariable 'warnings'
-            $warnings | Should -Match '\[WARNING\].*is\ obsolete'
+            WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+            $warnings | Should -Match 'is\ obsolete'
         }
         finally
         {
@@ -1830,9 +1830,9 @@ Describe ('Invoke-WhiskeyTask.when task is obsolete and user provides custom obs
         try
         {
             Init
-            WhenRunningTask 'ObsoleteTask' -Parameter @{} -InformationVariable 'warnings'
-            $warnings | Should -Match '\[WARNING\].*Use\ the\ NonObsoleteTask\ instead\.'
-            $warnings | Should -Not -Match '\[WARNING\].*is\ obsolete'
+            WhenRunningTask 'ObsoleteTask' -Parameter @{} -WarningVariable 'warnings'
+            $warnings | Should -Match 'Use\ the\ NonObsoleteTask\ instead\.'
+            $warnings | Should -Not -Match 'is\ obsolete'
         }
         finally
         {

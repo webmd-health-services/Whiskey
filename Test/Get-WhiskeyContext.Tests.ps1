@@ -29,7 +29,7 @@ InModuleScope 'Whiskey' {
         It 'should get context from call stack' {
             $fubar = New-Object 'Whiskey.Context'
             $context = MyOtherWhiskeyFunction -InputObject $fubar
-            [object]::ReferenceEquals($fubar,$context) | Should -BeTrue
+            [Object]::ReferenceEquals($fubar,$context) | Should -BeTrue
         }
     }
 

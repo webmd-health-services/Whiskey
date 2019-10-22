@@ -14,14 +14,13 @@ function Write-Timing
         $Message
     )
 
-    $DebugPreference = 'Continue'
     Write-Debug -Message ('[{0:hh":"mm":"ss"."ff}]  {1}' -f $timer.Elapsed,$Message)
 }
 
 function Test-Import
 {
     param(
-        [string]$Name
+        [String]$Name
     )
 
     $module = Get-Module -Name $Name -ErrorAction Ignore

@@ -297,7 +297,7 @@ function Resolve-WhiskeyVariable
             }
             else
             {
-                Write-Error -Message ('Variable ''{0}'' does not exist. We were trying to replace it in the string ''{1}''. You can:
+                Write-WhiskeyError -Context $Context -Message ('Variable ''{0}'' does not exist. We were trying to replace it in the string ''{1}''. You can:
                 
 * Use the `Add-WhiskeyVariable` function to add a variable named ''{0}'', e.g. Add-WhiskeyVariable -Context $context -Name ''{0}'' -Value VALUE.
 * Create an environment variable named ''{0}''.
@@ -316,7 +316,7 @@ function Resolve-WhiskeyVariable
             {
                 if( -not (Get-Member -Name $memberName -InputObject $value ) )
                 {
-                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
+                    Write-WhiskeyError -Context $Context -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
                     return $InputObject
                 }
 
@@ -328,7 +328,7 @@ function Resolve-WhiskeyVariable
                     }
                     catch
                     {
-                        Write-Error -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
+                        Write-WhiskeyError -Context $Context -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
                         return $InputObject
                     }
                 }
@@ -341,7 +341,7 @@ function Resolve-WhiskeyVariable
             $variableNumChars = $needleEnd - $needleStart + 1
             if( $needleStart + $variableNumChars -gt $haystack.Length )
             {
-                Write-Error -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
+                Write-WhiskeyError -Context $Context -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
                 return $InputObject
             }
 

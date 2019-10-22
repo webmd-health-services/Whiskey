@@ -92,7 +92,7 @@ function New-WhiskeyProGetUniversalPackage
             {
                 $compressionLevel = [IO.Compression.CompressionLevel]::Fastest
             }
-            Write-Warning -Message ('The ProGetUniversalPackage task no longer supports integer-style compression levels. Please update your task in your whiskey.yml file to use one of the new values: {0}. We''re converting the number you provided, "{1}", to "{2}".' -f ($expectedValues -join ', '),$TaskParameter['CompressionLevel'],$compressionLevel)
+            Write-WhiskeyWarning -Context $TaskContext -Message ('The ProGetUniversalPackage task no longer supports integer-style compression levels. Please update your task in your whiskey.yml file to use one of the new values: {0}. We''re converting the number you provided, "{1}", to "{2}".' -f ($expectedValues -join ', '),$TaskParameter['CompressionLevel'],$compressionLevel)
         }
     }
 

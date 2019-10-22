@@ -116,7 +116,7 @@ function Initialize-WhiskeyTestPSModule
     )
 
     $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
-    Write-WhiskeyTestTiming ('Copying Modules  {0}  START' -f $destinationRoot) 
+    Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot) 
     if( -not (Test-Path -Path $destinationRoot -PathType Container) )
     {
         New-Item -Path $destinationRoot -ItemType 'Directory' | Out-Null
@@ -141,11 +141,11 @@ function Initialize-WhiskeyTestPSModule
             continue
         }
 
-        Write-WhiskeyTestTiming -Message ('{0} -> {1}' -f $module.FullName,$destinationRoot)
+        Write-WhiskeyDebug -Message ('{0} -> {1}' -f $module.FullName,$destinationRoot)
         Copy-Item -Path $module.FullName -Destination $destinationRoot -Recurse
     }
     
-    Write-WhiskeyTestTiming -Message '                 END' 
+    Write-WhiskeyDebug -Message '                 END' 
 }
 
 function Install-Node
@@ -164,7 +164,7 @@ function Install-Node
 
     if( -not $BuildRoot )
     {
-        Write-Warning -Message ('Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.')
+        Write-WhiskeyWarning -Message ('Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.')
         $BuildRoot = $TestDrive.FullName
     }
 
@@ -193,7 +193,7 @@ function Install-Node
         New-Item -Path $destinationDir -ItemType 'Directory'
     }
 
-    Write-Debug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
+    Write-WhiskeyDebug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
     Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*','lib','node_modules' -Destination $destinationDir -Recurse -ErrorAction Ignore
 
     Get-ChildItem -Path $modulesRoot |
@@ -393,13 +393,13 @@ function New-WhiskeyTestContext
 
     if( -not $ForBuildRoot )
     {
-        Write-Warning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory. Please update usages.')
+        Write-WhiskeyWarning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory. Please update usages.')
         $ForBuildRoot = $TestDrive.FullName
     }
 
     if( -not [IO.Path]::IsPathRooted($ForBuildRoot) )
     {
-        Write-Warning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory and will be required to be an absolute path. Please update usages.')
+        Write-WhiskeyWarning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory and will be required to be an absolute path. Please update usages.')
         $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
     }
 
@@ -438,6 +438,7 @@ function New-WhiskeyTestContext
     $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
+    $context.StartedAt = Get-Date
 
     if( $InCleanMode )
     {
@@ -484,7 +485,7 @@ function New-WhiskeyTestContext
     {
         Remove-Item -Path $context.OutputDirectory -Recurse -Force
     }
-    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-Debug
+    New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-WhiskeyDebug
 
     Initialize-WhiskeyTestPSModule -BuildRoot $context.BuildRoot -Name $IncludePSModule
 
@@ -512,7 +513,7 @@ function Remove-Node
 
     if( -not $BuildRoot )
     {
-        Write-Warning -Message ('Remove-Node''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
+        Write-WhiskeyWarning -Message ('Remove-Node''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
         $BuildRoot = $TestDrive.FullName
     }
 
@@ -528,14 +529,14 @@ function Remove-DotNet
 
     if( -not $BuildRoot )
     {
-        Write-Warning -Message ('Remove-DotNet''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
+        Write-WhiskeyWarning -Message ('Remove-DotNet''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
         $BuildRoot = $TestDrive.FullName
     }
 
     Get-Process -Name 'dotnet' -ErrorAction Ignore |
         Where-Object { $_.Path -like ('{0}\*' -f $BuildRoot) } |
         ForEach-Object { 
-            Write-Debug ('Killing process "{0}" (Id: {1}; Path: {2})' -f $_.Name,$_.Id,$_.Path)
+            Write-WhiskeyDebug ('Killing process "{0}" (Id: {1}; Path: {2})' -f $_.Name,$_.Id,$_.Path)
             Stop-Process -Id $_.Id -Force }
 
     $parameter = @{
@@ -563,16 +564,6 @@ function ThenModuleInstalled
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
         Should -Exist
-}
-
-function Write-WhiskeyTestTiming
-{
-    param(
-        [Parameter(Mandatory)]
-        [String]$Message
-    )
-
-    Invoke-WhiskeyPrivateCommand -Name 'Write-WhiskeyTiming' -Parameter @{ Message = $Message } 
 }
 
 $SuccessCommandScriptBlock = { 'exit 0' | sh }

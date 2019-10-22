@@ -42,7 +42,7 @@ function Invoke-WhiskeyDotNetCommand
     $dotNetExe = $DotNetPath | Resolve-Path -ErrorAction 'Ignore'
     if (-not $dotNetExe)
     {
-        Write-Error -Message ('"{0}" does not exist.' -f $DotNetPath)
+        Write-WhiskeyError -Context $TaskContext -Message ('"{0}" does not exist.' -f $DotNetPath)
         return
     }
 

@@ -53,7 +53,7 @@ function ConvertTo-WhiskeyTask
     $yaml = $yaml -split [regex]::Escape([Environment]::NewLine) |
                 Where-Object { @( '...', '---' ) -notcontains $_ } |
                 ForEach-Object { '    {0}' -f $_ }
-    Write-Error -Message ('Invalid task YAML:{0} {0}{1}{0}A task must have a name followed by optional parameters, e.g.
+    Write-WhiskeyError -Message ('Invalid task YAML:{0} {0}{1}{0}A task must have a name followed by optional parameters, e.g.
  
     Build:
     - Task1

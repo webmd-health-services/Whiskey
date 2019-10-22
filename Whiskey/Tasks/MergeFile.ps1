@@ -87,7 +87,7 @@ function Merge-WhiskeyFile
                 }
                 else 
                 {
-                    Write-Debug -Message ('"{0}" -notlike "{1}"' -f $filePath,$pattern)
+                    Write-WhiskeyDebug -Context $TaskContext -Message ('"{0}" -notlike "{1}"' -f $filePath,$pattern)
                 }
             }
 

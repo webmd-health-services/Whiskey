@@ -12,49 +12,27 @@ function Get-WhiskeyContext
     $timer = New-Object 'Diagnostics.Stopwatch'
     $timer.Start()
 
-    function Write-Timing
+    [Management.Automation.CallStackFrame[]]$callstack = Get-PSCallStack
+    # Skip myself.
+    for( $idx = 1; $idx -lt $callstack.Length; ++$idx )
     {
-        param(
-            [string]$Message
-        )
+        $frame = $callstack[$idx]
+        $invokeInfo = $frame.InvocationInfo
 
-        $DebugPreference = 'Continue'
-        Write-Debug -Message ('[{0:hh":"mm":"ss"."ff}]  {1}' -f $timer.Elapsed,$Message)
-    }
-
-
-    Write-Timing ('Get-WhiskeyContext')
-    try
-    {
-        [Management.Automation.CallStackFrame[]]$callstack = Get-PSCallStack
-        # Skip myself.
-        for( $idx = 1; $idx -lt $callstack.Length; ++$idx )
+        if($invokeInfo.MyCommand.ModuleName -ne 'Whiskey' )
         {
-            $frame = $callstack[$idx]
-            $invokeInfo = $frame.InvocationInfo
+            # Nice try!
+            continue
+        }
 
-            Write-Timing ('    at {0}, {1}' -f $frame.Command,$frame.Location)
-
-            if($invokeInfo.MyCommand.ModuleName -ne 'Whiskey' )
+        $frameParams = $invokeInfo.BoundParameters
+        foreach( $parameterName in $frameParams.Keys )
+        {
+            $value = $frameParams[$parameterName]
+            if( $null -ne $value -and $value -is [Whiskey.Context] )
             {
-                # Nice try!
-                continue
-            }
-
-            $frameParams = $invokeInfo.BoundParameters
-            foreach( $parameterName in $frameParams.Keys )
-            {
-                $value = $frameParams[$parameterName]
-                if( $null -ne $value -and $value -is [Whiskey.Context] )
-                {
-                    Write-Timing ('        {0}' -f $parameterName)
-                    return $value
-                }
+                return $value
             }
         }
-    }
-    finally
-    {
-        Write-Timing ('Get-WhiskeyContext')
     }
 }

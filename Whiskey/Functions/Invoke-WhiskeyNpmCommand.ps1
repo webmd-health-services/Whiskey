@@ -55,7 +55,7 @@ function Invoke-WhiskeyNpmCommand
 
     if( -not $npmPath -or -not (Test-Path -Path $npmPath -PathType Leaf) )
     {
-        Write-Error -Message ('Whiskey failed to install NPM. Something pretty serious has gone wrong.')
+        Write-WhiskeyError -Message ('Whiskey failed to install NPM. Something pretty serious has gone wrong.')
         return
     }
 
@@ -87,18 +87,18 @@ function Invoke-WhiskeyNpmCommand
             }
             try
             {
-                Write-Verbose ('{0} {1} {2} {3}' -f $nodePath,$npmPath,$commandName,($commandArgs -join ' '))
+                Write-WhiskeyVerbose ('{0} {1} {2} {3}' -f $nodePath,$npmPath,$commandName,($commandArgs -join ' '))
                 & $nodePath $npmPath $commandName $commandArgs
             }
             finally
             {
-                Write-Verbose -Message ($LASTEXITCODE)
+                Write-WhiskeyVerbose -Message ($LASTEXITCODE)
                 $ErrorActionPreference = $originalEap
             }
         }
         if( $LASTEXITCODE -ne 0 )
         {
-            Write-Error -Message ('NPM command "{0}" failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
+            Write-WhiskeyError -Message ('NPM command "{0}" failed with exit code {1}. Please see previous output for more details.' -f $npmCommandString,$LASTEXITCODE)
         }
     }
     finally

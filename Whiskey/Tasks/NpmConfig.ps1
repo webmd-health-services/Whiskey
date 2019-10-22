@@ -17,7 +17,7 @@ function Invoke-WhiskeyNpmConfig
     $configuration = $TaskParameter['Configuration']
     if( -not $configuration )
     {
-        Write-Warning -Message ('Your NpmConfig task isn''t doing anything. Its Configuration property is missing. Please update the NpmConfig task in your whiskey.yml file so that it is actually setting configuration, e.g.
+        Write-WhiskeyWarning -Context $TaskContext -Message ('Your NpmConfig task isn''t doing anything. Its Configuration property is missing. Please update the NpmConfig task in your whiskey.yml file so that it is actually setting configuration, e.g.
 
     Build:
     - NpmConfig:

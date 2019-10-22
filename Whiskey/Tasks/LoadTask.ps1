@@ -48,7 +48,7 @@ See about_Whiskey_Writing_Tasks for more information.' -f $path)
         Write-WhiskeyInfo -Context $TaskContext -Message ($path)
         foreach( $task in $newTasks )
         {
-            Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
+            Write-WhiskeyInfo -Context $TaskContext -Message ('  {0}' -f $task.Name)
         }
         $TaskContext.TaskPaths.Add((Get-Item -Path $path))
     }

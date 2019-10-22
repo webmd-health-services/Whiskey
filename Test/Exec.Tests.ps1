@@ -66,8 +66,8 @@ function GivenPowerShellFile
 
     $Content = @"
 #`$DebugPreference = 'Continue'
-Write-Debug `$PWD.Path
-Write-Debug ([IO.Directory]::GetCurrentDirectory())
+Write-WhiskeyDebug `$PWD.Path
+Write-WhiskeyDebug ([IO.Directory]::GetCurrentDirectory())
 'ItRan' | Set-Content 'ItRan.txt'
 `$args | Set-Content 'Arguments.txt'
 `$PWD.Path | Set-Content 'WorkingDirectory.txt'

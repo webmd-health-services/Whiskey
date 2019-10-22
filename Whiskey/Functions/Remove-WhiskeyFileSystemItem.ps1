@@ -38,7 +38,7 @@ function Remove-WhiskeyFileSystemItem
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Write-WhiskeyTiming -Message ('Remove-WhiskeyFileSystemItem  BEGIN  {0}' -f $Path)
+    Write-WhiskeyDebug -Message ('Remove-WhiskeyFileSystemItem  BEGIN  {0}' -f $Path)
     if( (Test-Path -Path $Path -PathType Leaf) )
     {
         Remove-Item -Path $Path -Force
@@ -57,7 +57,7 @@ function Remove-WhiskeyFileSystemItem
                 if( $LASTEXITCODE -ge 8 )
                 {
                     $deleteLog = $false
-                    Write-Error -Message ('Failed to remove directory "{0}". See "{1}" for more information.' -f $Path,$logPath)
+                    Write-WhiskeyError -Message ('Failed to remove directory "{0}". See "{1}" for more information.' -f $Path,$logPath)
                     return
                 }
                 Remove-Item -Path $Path -Recurse -Force
@@ -76,5 +76,5 @@ function Remove-WhiskeyFileSystemItem
             Remove-Item -Path $Path -Recurse -Force
         }
     }
-    Write-WhiskeyTiming -Message ('Remove-WhiskeyFileSystemItem  END')
+    Write-WhiskeyDebug -Message ('Remove-WhiskeyFileSystemItem  END')
 }

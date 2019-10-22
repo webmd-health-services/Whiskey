@@ -41,14 +41,14 @@ function Assert-ContextPassedTo
         }
 
         #$DebugPreference = 'Continue'
-        Write-Debug ('-' * 80)
-        Write-Debug 'TaskContext:'
-        $TaskContext | Out-String | Write-Debug
-        Write-Debug 'Context:'
-        $Context | Out-String | Write-Debug
-        Write-Debug 'Expected Context:'
-        $expectedContext | Out-String | Write-Debug
-        Write-Debug ('-' * 80)
+        Write-WhiskeyDebug ('-' * 80)
+        Write-WhiskeyDebug 'TaskContext:'
+        $TaskContext | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug 'Context:'
+        $Context | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug 'Expected Context:'
+        $expectedContext | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug ('-' * 80)
         [Object]::ReferenceEquals($Context,$expectedContext) }
 }
 
@@ -250,9 +250,9 @@ function WhenRunningBuild
         `$buildPipelineFails = `$$($buildPipelineFails)
         `$publishPipelineFails = `$$($publishPipelineFails)
 
-        Write-Debug ('Name  {0}' -f `$Name)
-        Write-Debug `$buildPipelineFails
-        Write-Debug `$publishPipelineFails
+        Write-WhiskeyDebug ('Name  {0}' -f `$Name)
+        Write-WhiskeyDebug `$buildPipelineFails
+        Write-WhiskeyDebug `$publishPipelineFails
 
         if( `$Name -eq "$buildPipelineName" -and `$buildPipelineFails )
         {

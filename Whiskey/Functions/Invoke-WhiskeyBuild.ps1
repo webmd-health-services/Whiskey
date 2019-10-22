@@ -118,8 +118,8 @@ function Invoke-WhiskeyBuild
                 $publishPipelineName = 'PublishTasks'
             }
 
-            Write-Verbose -Message ('Publish?           {0}' -f $Context.Publish)
-            Write-Verbose -Message ('Publish Pipeline?  {0}' -f $config.ContainsKey($publishPipelineName))
+            Write-WhiskeyVerbose -Context $Context -Message ('Publish?           {0}' -f $Context.Publish)
+            Write-WhiskeyVerbose -Context $Context -Message ('Publish Pipeline?  {0}' -f $config.ContainsKey($publishPipelineName))
             if( $Context.Publish -and $config.ContainsKey($publishPipelineName) )
             {
                 Invoke-WhiskeyPipeline -Context $Context -Name $publishPipelineName
@@ -132,7 +132,7 @@ function Invoke-WhiskeyBuild
     {
         if( $Clean )
         {
-            Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-Verbose
+            Remove-Item -path $Context.OutputDirectory -Recurse -Force | Out-String | Write-WhiskeyVerbose -Context $Context
         }
         Pop-Location
 

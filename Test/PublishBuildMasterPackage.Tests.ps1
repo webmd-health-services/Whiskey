@@ -249,8 +249,8 @@ function ThenCreatedPackage
         $variableValue = $WithVariables[$variableName]
         Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            Write-Debug ('Expected  {0}' -f $variableValue)
-            Write-Debug ('Actual    {0}' -f $Variable[$variableName])
+            Write-WhiskeyDebug ('Expected  {0}' -f $variableValue)
+            Write-WhiskeyDebug ('Actual    {0}' -f $Variable[$variableName])
             $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
         }
     }

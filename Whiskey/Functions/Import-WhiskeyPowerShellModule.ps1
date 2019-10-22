@@ -52,8 +52,8 @@ function Import-WhiskeyPowerShellModule
             $moduleDir = Join-Path -Path $searchDir -ChildPath $moduleName
             if( (Test-Path -Path $moduleDir -PathType Container) )
             {
-                Write-WhiskeyTiming -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-                Write-Verbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
+                Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
+                Write-WhiskeyVerbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
                 $numErrorsBefore = $Global:Error.Count
                 & {
                     $VerbosePreference = 'SilentlyContinue'
@@ -72,7 +72,7 @@ function Import-WhiskeyPowerShellModule
 
         if( -not (Get-Module -Name $moduleName) )
         {
-            Write-Error -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName) -ErrorAction Stop
+            Write-WhiskeyError -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName) -ErrorAction Stop
         }
     }
 }
