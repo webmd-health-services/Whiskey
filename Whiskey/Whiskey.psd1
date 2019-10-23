@@ -175,6 +175,7 @@
 * Added a custom error record display formatter that shows the entire script stack trace for an error instead of PowerShell's weird position message (which isn't entirely accureate).
 * Created a `Write-WhiskeyError` function for displaying build errors to the user.
 * Standardized and improved output of Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug`. Timings and the currently executing task name (if applicable) are added as a prefix to all but error-level messages. Output also no longer contains the current pipeline name or task index/number.
+* Fixed: PowerShell task doesn't show any information to the user about what it's doing.
 '@
         } # End of PSData hashtable
 

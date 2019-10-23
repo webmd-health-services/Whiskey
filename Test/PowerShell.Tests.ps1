@@ -35,7 +35,7 @@ function GivenAScript
         [Parameter(Position=0)]
         [String]$Script,
 
-        [String]$WithParam = 'param([Parameter(Mandatory)][Object]$TaskContext)'
+        [String]$WithParam = 'param([Parameter(Mandatory=$true)][Object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'
@@ -337,8 +337,8 @@ exit 0
 "@ -WithParam @"
 param(
     # Don't remove the [Parameter] attributes. Part of the test!
-    [Parameter(Mandatory=`$true)]
-    `$TaskContext
+    [Parameter(Mandatory)]
+    [Whiskey.Context]`$TaskContext
 )
 
     `$expectedMembers = & {

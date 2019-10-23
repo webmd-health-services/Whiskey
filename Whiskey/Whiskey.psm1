@@ -8,7 +8,7 @@ function Write-Timing
     )
 
     $now = Get-Date
-    Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
+    Write-Debug -Message ('[{0:hh":"mm":"ss"."ff}]  {1}' -f ($now - $startedAt),$Message)
 }
 
 $powerShellModulesDirectoryName = 'PSModules'

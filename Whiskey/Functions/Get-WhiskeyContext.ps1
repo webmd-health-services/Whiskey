@@ -19,7 +19,7 @@ function Get-WhiskeyContext
         $frame = $callstack[$idx]
         $invokeInfo = $frame.InvocationInfo
 
-        if($invokeInfo.MyCommand.ModuleName -ne 'Whiskey' )
+        if( -not $invokeInfo.MyCommand -or $invokeInfo.MyCommand.ModuleName -ne 'Whiskey' )
         {
             # Nice try!
             continue
