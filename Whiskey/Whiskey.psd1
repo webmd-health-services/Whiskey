@@ -167,6 +167,7 @@
 * Added a new built-in Whiskey variable `WHISKEY_SEMVER2_PRERELEASE_ID` which contains the prerelease identifier of the prerelease label on a SemVer2 version string. E.g. Given the version `1.2.3-alpha.47+buildmetata`, this variable would be `alpha`.
 * When publishing a prerelease version of a node module, the `PublishNodeModule` task will now automatically publish the module with the prerelease identifier as the distribution tag.
 * Added a `Tag` property to the `PublishNodeModule` task that controls what distribution tag the module is published with. If specified, this property takes precendence over a tag from a prerelease identifier.
+* Created `AppVeyorWaitForBuildJob` task that will wait for other jobs in an AppVeyor build to complete before continuing.
 '@
         } # End of PSData hashtable
 
