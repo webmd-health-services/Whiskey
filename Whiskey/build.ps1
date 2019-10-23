@@ -1,5 +1,31 @@
 #!/usr/bin/env pwsh
 
+<#
+.SYNOPSIS
+Starts a Whiskey build.
+
+.DESCRIPTION
+The `build.ps1` script starts a Whiskey build in the script's root directory. It will first download the latest `0.*` version of Whiskey from Whiskey's GitHub [Releases](https://github.com/webmd-health-services/Whiskey/releases) and place it into a `PSModules/Whiskey` directory. The script will look for a `whiskey.yml` file in the same directory as itself. If one doesn't exit, it will create a new starter `whiskey.yml` file with empty `Build` and `Publish` pipelines. Finally, `Invoke-WhiskeyBuild` is called to run the build tasks specified in the `whiskey.yml`.
+
+To download all the tools that are required for a build, use the `-Initialize` switch.
+
+To cleanup downloaded build tools and artifacts created from previous builds, use the `-Clean` switch.
+
+.EXAMPLE
+./build.ps1
+
+Starts a Whiskey build.
+
+.EXAMPLE
+./build.ps1 -Clean
+
+Demonstrates how to use Whiskey to clean up any downloaded build tools and previously built artifacts.
+
+.EXAMPLE
+./build.ps1 -Initialize
+
+Demonstrates how to initialize the build root with any tools that are required by tasks in the `whiskey.yml` file.
+#>
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
     [Parameter(Mandatory,ParameterSetName='Clean')]
