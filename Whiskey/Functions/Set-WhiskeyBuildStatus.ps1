@@ -3,10 +3,10 @@ function Set-WhiskeyBuildStatus
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [ValidateSet('Started','Completed','Failed')]
         # The build status. Should be one of `Started`, `Completed`, or `Failed`.
         [string]$Status

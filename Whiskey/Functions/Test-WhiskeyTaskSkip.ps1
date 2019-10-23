@@ -10,15 +10,13 @@ function Test-WhiskeyTaskSkip
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context for the build.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The common task properties defined for the current task.
-        $Properties
+        [hashtable]$Properties
     )
 
     Set-StrictMode -Version 'Latest'

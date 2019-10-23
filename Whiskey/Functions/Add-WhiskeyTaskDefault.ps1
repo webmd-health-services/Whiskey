@@ -24,28 +24,24 @@ function Add-WhiskeyTaskDefault
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [object]
+        [Parameter(Mandatory,ValueFromPipeline)]
         # The current build context. Use `New-WhiskeyContext` to create context objects.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the task that a default parameter value will be set.
-        $TaskName,
+        [string]$TaskName,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the task parameter to set a default value for.
-        $PropertyName,
+        [string]$PropertyName,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The default value for the task parameter.
         $Value,
 
-        [switch]
         # Overwrite an existing task default with a new value.
-        $Force
+        [switch]$Force
     )
 
     Set-StrictMode -Version 'Latest'

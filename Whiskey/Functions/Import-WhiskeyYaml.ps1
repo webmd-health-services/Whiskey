@@ -3,13 +3,11 @@ function Import-WhiskeyYaml
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='FromFile')]
-        [string]
-        $Path,
+        [Parameter(Mandatory,ParameterSetName='FromFile')]
+        [string]$Path,
 
-        [Parameter(Mandatory=$true,ParameterSetName='FromString')]
-        [string]
-        $Yaml
+        [Parameter(Mandatory,ParameterSetName='FromString')]
+        [string]$Yaml
     )
 
     Set-StrictMode -Version 'Latest'

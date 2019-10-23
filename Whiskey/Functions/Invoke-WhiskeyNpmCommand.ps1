@@ -27,22 +27,18 @@ function Invoke-WhiskeyNpmCommand
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The NPM command to execute, e.g. `install`, `prune`, `run-script`, etc.
-        $Name,
+        [string]$Name,
         
-        [string[]]
         # An array of arguments to be given to the NPM command being executed.
-        $ArgumentList,
+        [string[]]$ArgumentList,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $BuildRootPath,
+        [Parameter(Mandatory)]
+        [string]$BuildRootPath,
 
-        [switch]
         # NPM commands are being run on a developer computer.
-        $ForDeveloper
+        [switch]$ForDeveloper
     )
 
     Set-StrictMode -Version 'Latest'

@@ -10,20 +10,17 @@ function Unregister-WhiskeyEvent
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the command to run during the event.
-        $CommandName,
+        [string]$CommandName,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         [ValidateSet('BeforeTask','AfterTask')]
         # When the command should be run; what events does it respond to?
-        $Event,
+        [string]$Event,
 
-        [string]
         # The specific task whose events to unregister.
-        $TaskName
+        [string]$TaskName
     )
 
     Set-StrictMode -Version 'Latest'

@@ -6,18 +6,14 @@ function Restore-WhiskeyNuGetPackage
     param(
         [Parameter(Mandatory)]
         [Whiskey.Tasks.ValidatePath(Mandatory)]
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
-        [string[]]
-        $Argument,
+        [string[]]$Argument,
 
-        [string]
-        $Version,
+        [string]$Version,
 
         [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_BUILD_ROOT')]
-        [IO.DirectoryInfo]
-        $BuildRoot
+        [IO.DirectoryInfo]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'

@@ -10,20 +10,17 @@ function Invoke-WhiskeyTask
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the task.
-        $Name,
+        [string]$Name,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The parameters/configuration to use to run the task.
-        $Parameter
+        [hashtable]$Parameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -71,11 +68,9 @@ function Invoke-WhiskeyTask
     function Merge-Parameter
     {
         param(
-            [hashtable]
-            $SourceParameter,
+            [hashtable]$SourceParameter,
 
-            [hashtable]
-            $TargetParameter
+            [hashtable]$TargetParameter
         )
 
         foreach( $key in $SourceParameter.Keys )

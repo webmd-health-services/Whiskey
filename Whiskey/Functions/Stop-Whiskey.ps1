@@ -3,14 +3,12 @@ function Stop-Whiskey
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # An object
-        $Context,
+        [Whiskey.Context]$Context,
               
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Message
+        [Parameter(Mandatory)]
+        [string]$Message
     )
               
     Set-StrictMode -Version 'Latest'

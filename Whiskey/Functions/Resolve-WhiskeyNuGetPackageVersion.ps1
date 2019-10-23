@@ -3,17 +3,14 @@ function Resolve-WhiskeyNuGetPackageVersion
     [CmdletBinding()]
     param(
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the NuGet package to download.
-        $NuGetPackageName,
+        [string]$NuGetPackageName,
 
-        [string]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        $Version,
+        [string]$Version,
 
-        [string]
-        $NugetPath = ($whiskeyNuGetExePath)
+        [string]$NugetPath = ($whiskeyNuGetExePath)
     )
 
     Set-StrictMode -Version 'Latest'

@@ -21,9 +21,8 @@ function Get-WhiskeyTask
     [CmdLetBinding()]
     [OutputType([Whiskey.TaskAttribute])]
     param(
-        [Switch]
         # Return tasks that are obsolete. Otherwise, no obsolete tasks are returned.
-        $Force
+        [Switch]$Force
     )
 
     Set-StrictMode -Version 'Latest'

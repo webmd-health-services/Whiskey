@@ -20,19 +20,16 @@ function Install-WhiskeyDotNetSdk
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # Directory where the .NET Core SDK will be installed.
-        $InstallRoot,
+        [string]$InstallRoot,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # Version of the .NET Core SDK to install.
-        $Version,
+        [string]$Version,
 
-        [switch]
         # Search for the desired version from existing global installs of the .NET Core SDK. If found, the install is skipped and the path to the global install is returned.
-        $Global
+        [switch]$Global
     )
 
     Set-StrictMode -version 'Latest'

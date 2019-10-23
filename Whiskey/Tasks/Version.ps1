@@ -5,16 +5,13 @@
     [Whiskey.Task("Version")]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [string]
-        $Path
+        [string]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -23,7 +20,7 @@
     function ConvertTo-SemVer
     {
         param(
-            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+            [Parameter(Mandatory,ValueFromPipeline)]
             $InputObject,
             $PropertyName,
             $VersionSource

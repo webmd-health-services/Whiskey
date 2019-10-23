@@ -16,17 +16,14 @@ function Register-WhiskeyEvent
         function Invoke-WhiskeyTaskEvent
         {
             param(
-                [Parameter(Mandatory=$true)]
-                [object]
-                $TaskContext,
+                [Parameter(Mandatory)]
+                [Whiskey.Context]$TaskContext,
 
-                [Parameter(Mandatory=$true)]
-                [string]
-                $TaskName,
+                [Parameter(Mandatory)]
+                [string]$TaskName,
 
-                [Parameter(Mandatory=$true)]
-                [hashtable]
-                $TaskParameter
+                [Parameter(Mandatory)]
+                [hashtable]$TaskParameter
             )
         }
 
@@ -34,20 +31,17 @@ function Register-WhiskeyEvent
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the command to run during the event.
-        $CommandName,
+        [string]$CommandName,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         [ValidateSet('BeforeTask','AfterTask')]
         # When the command should be run; what events does it respond to?
-        $Event,
+        [string]$Event,
 
-        [string]
         # Only fire the event for a specific task.
-        $TaskName
+        [string]$TaskName
     )
 
     Set-StrictMode -Version 'Latest'

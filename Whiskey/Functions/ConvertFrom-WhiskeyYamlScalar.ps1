@@ -26,12 +26,11 @@ function ConvertFrom-WhiskeyYamlScalar
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline)]
         [AllowEmptyString()]
         [AllowNull()]
-        [string]
         # The object to convert.
-        $InputObject
+        [string]$InputObject
     )
 
     process

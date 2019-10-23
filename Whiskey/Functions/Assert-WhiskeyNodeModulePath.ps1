@@ -22,14 +22,12 @@ function Assert-WhiskeyNodeModulePath
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to check.
-        $Path,
+        [string]$Path,
 
-        [string]
         # The path to a command inside the module path.
-        $CommandPath
+        [string]$CommandPath
     )
 
     Set-StrictMode -Version 'Latest'

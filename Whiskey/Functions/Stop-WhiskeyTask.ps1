@@ -3,20 +3,15 @@ function Stop-WhiskeyTask
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        # An object
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Message,
+        [Parameter(Mandatory)]
+        [string]$Message,
 
-        [string]
-        $PropertyName,
+        [string]$PropertyName,
 
-        [string]
-        $PropertyDescription
+        [string]$PropertyDescription
     )
 
     Set-StrictMode -Version 'Latest'

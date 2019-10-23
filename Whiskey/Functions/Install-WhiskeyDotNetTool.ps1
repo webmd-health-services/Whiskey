@@ -25,21 +25,18 @@ function Install-WhiskeyDotNetTool
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # Path where the `.dotnet` directory will be installed containing the .NET Core SDK.
-        $InstallRoot,
+        [string]$InstallRoot,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The working directory of the task requiring the .NET Core SDK tool. This path is used for searching for an existing `global.json` file containing an SDK version value.
-        $WorkingDirectory,
+        [string]$WorkingDirectory,
 
         [AllowEmptyString()]
         [AllowNull()]
-        [string]
         # The version of the .NET Core SDK to install. Accepts wildcards.
-        $Version
+        [string]$Version
     )
 
     Set-StrictMode -Version 'Latest'

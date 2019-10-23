@@ -5,13 +5,11 @@ function Publish-WhiskeyBBServerTag
     [Whiskey.Task('PublishBitbucketServerTag')]
     [Whiskey.RequiresPowerShellModule('BitbucketServerAutomation',Version='0.9.*',VersionParameterName='BitbucketServerAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

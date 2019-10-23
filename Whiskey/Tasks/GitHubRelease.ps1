@@ -4,13 +4,11 @@ function New-WhiskeyGitHubRelease
     [CmdletBinding()]
     [Whiskey.Task('GitHubRelease')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -48,23 +46,19 @@ function New-WhiskeyGitHubRelease
     {
         [CmdletBinding(DefaultParameterSetName='NoBody')]
         param(
-            [Parameter(Mandatory=$true)]
-            [uri]
-            $Uri,
+            [Parameter(Mandatory)]
+            [uri]$Uri,
 
-            [Parameter(Mandatory=$true,ParameterSetName='FileUpload')]
-            [string]
-            $ContentType,
+            [Parameter(Mandatory,ParameterSetName='FileUpload')]
+            [string]$ContentType,
 
-            [Parameter(Mandatory=$true,ParameterSetName='FileUpload')]
-            [string]
-            $InFile,
+            [Parameter(Mandatory,ParameterSetName='FileUpload')]
+            [string]$InFile,
 
-            [Parameter(Mandatory=$true,ParameterSetName='JsonRequest')]
+            [Parameter(Mandatory,ParameterSetName='JsonRequest')]
             $Parameter,
 
-            [Microsoft.PowerShell.Commands.WebRequestMethod]
-            $Method = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
+            [Microsoft.PowerShell.Commands.WebRequestMethod]$Method = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
         )
 
         $optionalParams = @{ }

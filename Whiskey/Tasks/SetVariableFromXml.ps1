@@ -5,16 +5,13 @@ function Set-WhiskeyVariableFromXml
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-        [string]
-        $Path
+        [string]$Path
     )
 
     Set-StrictMode -Version 'Latest'

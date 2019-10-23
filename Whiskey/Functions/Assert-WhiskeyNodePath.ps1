@@ -22,10 +22,9 @@ function Assert-WhiskeyNodePath
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to check.
-        $Path
+        [string]$Path
     )
 
     Set-StrictMode -Version 'Latest'

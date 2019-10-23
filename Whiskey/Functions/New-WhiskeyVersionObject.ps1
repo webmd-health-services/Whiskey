@@ -4,8 +4,7 @@ function New-WhiskeyVersionObject
     [CmdletBinding()]
     [OutputType([Whiskey.BuildVersion])]
     param(
-        [SemVersion.SemanticVersion]
-        $SemVer
+        [SemVersion.SemanticVersion]$SemVer
     )
 
     $whiskeyVersion = New-Object -TypeName 'Whiskey.BuildVersion'

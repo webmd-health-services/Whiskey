@@ -5,13 +5,11 @@ function New-WhiskeyProGetUniversalPackage
     [Whiskey.Task('ProGetUniversalPackage')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -129,12 +127,10 @@ function New-WhiskeyProGetUniversalPackage
     function Copy-ToPackage
     {
         param(
-            [Parameter(Mandatory=$true)]
-            [object[]]
-            $Path,
+            [Parameter(Mandatory)]
+            [object[]]$Path,
 
-            [Switch]
-            $AsThirdPartyItem
+            [Switch]$AsThirdPartyItem
         )
 
         foreach( $item in $Path )

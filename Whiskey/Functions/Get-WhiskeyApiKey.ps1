@@ -18,20 +18,17 @@ function Get-WhiskeyApiKey
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The current build context. Use `New-WhiskeyContext` to create context objects.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The ID of the API key. You make this up.
-        $ID,
+        [string]$ID,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The property name in the task that needs this API key. Used in error messages to help users pinpoint what task and property might be misconfigured.
-        $PropertyName
+        [string]$PropertyName
     )
 
     Set-StrictMode -Version 'Latest'

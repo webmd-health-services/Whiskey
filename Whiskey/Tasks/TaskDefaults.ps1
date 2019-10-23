@@ -2,15 +2,13 @@
 function Set-WhiskeyTaskDefaults
 {
     [CmdletBinding()]
-    [Whiskey.Task("TaskDefaults",SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.Task("TaskDefaults",SupportsClean,SupportsInitialize)]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

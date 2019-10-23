@@ -23,27 +23,22 @@ function Uninstall-WhiskeyNodeModule
     
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the module to uninstall.
-        $Name,
+        [string]$Name,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to the build root directory.
-        $BuildRootPath,
+        [string]$BuildRootPath,
 
-        [switch]
         # Node modules are being uninstalled on a developer computer.
-        $ForDeveloper,
+        [switch]$ForDeveloper,
 
-        [switch]
         # Remove the module manually if NPM fails to uninstall it
-        $Force,
+        [switch]$Force,
 
-        [Switch]
         # Uninstall the module from the global cache.
-        $Global
+        [Switch]$Global
     )
 
     Set-StrictMode -Version 'Latest'

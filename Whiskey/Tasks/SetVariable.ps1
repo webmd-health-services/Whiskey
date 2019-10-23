@@ -2,15 +2,13 @@
 function Set-WhiskeyVariable 
 {
     [CmdletBinding()]
-    [Whiskey.Task("SetVariable",SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.Task("SetVariable",SupportsClean,SupportsInitialize)]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

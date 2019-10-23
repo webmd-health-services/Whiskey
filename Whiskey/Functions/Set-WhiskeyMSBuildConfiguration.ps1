@@ -17,15 +17,13 @@ function Set-WhiskeyMSBuildConfiguration
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context of the build whose MSBuild configuration you want to set. Use `New-WhiskeyContext` to create a context.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The configuration to use.
-        $Value
+        [string]$Value
     )
 
     Set-StrictMode -Version 'Latest'

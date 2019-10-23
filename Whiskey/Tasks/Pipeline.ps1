@@ -1,15 +1,13 @@
  function Invoke-WhiskeyPipelineTask
 {
     [CmdletBinding()]
-    [Whiskey.Task("Pipeline", SupportsClean=$true, SupportsInitialize=$true)]
+    [Whiskey.Task("Pipeline", SupportsClean, SupportsInitialize)]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

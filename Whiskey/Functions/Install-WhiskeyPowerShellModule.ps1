@@ -26,7 +26,7 @@ function Install-WhiskeyPowerShellModule
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The name of the module to install.
         [string]$Name,
 

@@ -6,12 +6,10 @@ function New-WhiskeyZipArchive
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

@@ -23,20 +23,17 @@ function Add-WhiskeyCredential
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The context of the build that needs the API key.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The ID of the credential. This should match the ID given in your `whiskey.yml` of credential ID property of the task that needs it.
-        $ID,
+        [string]$ID,
 
-        [Parameter(Mandatory=$true)]
-        [pscredential]
+        [Parameter(Mandatory)]
         # The value of the credential.
-        $Credential
+        [pscredential]$Credential
     )
 
     Set-StrictMode -Version 'Latest'

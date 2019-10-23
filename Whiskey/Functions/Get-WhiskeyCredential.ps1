@@ -16,24 +16,20 @@ function Get-WhiskeyCredential
     Demonstrates how to get a credential. IN this case, retrieves the credential that was added with the ID `bitbucketserver.example.com`.    #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The current build context. Use `New-WhiskeyContext` to create context objects.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The ID of the credential. You make this up.
-        $ID,
+        [string]$ID,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The property name in the task that needs this credential. Used in error messages to help users pinpoint what task and property might be misconfigured.
-        $PropertyName,
+        [string]$PropertyName,
 
-        [string]
         # INTERNAL. DO NOT USE.
-        $PropertyDescription
+        [string]$PropertyDescription
     )
 
     Set-StrictMode -Version 'Latest'

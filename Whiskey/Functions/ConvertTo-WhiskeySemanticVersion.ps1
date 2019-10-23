@@ -15,10 +15,9 @@ function ConvertTo-WhiskeySemanticVersion
     #>
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline=$true)]
-        [object]
+        [Parameter(ValueFromPipeline)]
         # The object to convert to a semantic version. Can be a version string, number, or date/time.
-        $InputObject
+        [object]$InputObject
     )
 
     process

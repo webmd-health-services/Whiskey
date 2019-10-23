@@ -13,10 +13,9 @@ function ConvertTo-WhiskeyTask
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [AllowNull()]
-        [object]
-        $InputObject
+        [object]$InputObject
     )
 
     Set-StrictMode -Version 'Latest'

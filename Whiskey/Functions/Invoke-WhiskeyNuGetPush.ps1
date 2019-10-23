@@ -3,21 +3,17 @@ function Invoke-WhiskeyNuGetPush
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Path,
+        [Parameter(Mandatory)]
+        [string]$Path,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Uri,
+        [Parameter(Mandatory)]
+        [string]$Uri,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $ApiKey,
+        [Parameter(Mandatory)]
+        [string]$ApiKey,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $NuGetPath
+        [Parameter(Mandatory)]
+        [string]$NuGetPath
     )
 
     Set-StrictMode -Version 'Latest'

@@ -6,13 +6,11 @@ function Invoke-WhiskeyNpm
     [Whiskey.RequiresTool('NodeModule::npm',PathParameterName='NpmPath',VersionParameterName='NpmVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

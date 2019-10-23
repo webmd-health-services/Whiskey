@@ -27,9 +27,8 @@ function ConvertTo-WhiskeyContext
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ValueFromPipeline)]
-        [object]
         # The context to convert. You can pass an existing context via the pipeline.
-        $InputObject
+        [object]$InputObject
     )
 
     process 
@@ -42,16 +41,13 @@ function ConvertTo-WhiskeyContext
             function Sync-ObjectProperty
             {
                 param(
-                    [Parameter(Mandatory=$true)]
-                    [object]
-                    $Source,
+                    [Parameter(Mandatory)]
+                    [object]$Source,
 
-                    [Parameter(Mandatory=$true)]
-                    [object]
-                    $Destination,
+                    [Parameter(Mandatory)]
+                    [object]$Destination,
 
-                    [string[]]
-                    $ExcludeProperty
+                    [string[]]$ExcludeProperty
                 )
 
                 $destinationType = $Destination.GetType()

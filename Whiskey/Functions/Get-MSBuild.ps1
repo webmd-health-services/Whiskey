@@ -33,7 +33,7 @@ function Get-MSBuild
     filter Test-Version
     {
         param(
-            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+            [Parameter(Mandatory,ValueFromPipeline)]
             $InputObject
         )
 

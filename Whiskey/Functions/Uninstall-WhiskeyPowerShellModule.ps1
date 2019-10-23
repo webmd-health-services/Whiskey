@@ -20,7 +20,7 @@ function Uninstall-WhiskeyPowerShellModule
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The name of the module to uninstall.
         [string]$Name,
 

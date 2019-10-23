@@ -17,28 +17,23 @@ function Invoke-WhiskeyDotNetCommand
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The `Whiskey.Context` object for the task running the command.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to the `dotnet` executable to run the SDK command with.
-        $DotNetPath,
+        [string]$DotNetPath,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the .NET Core SDK command to run.
-        $Name,
+        [string]$Name,
 
-        [string[]]
         # A list of arguments to pass to the .NET Core SDK command.
-        $ArgumentList,
+        [string[]]$ArgumentList,
 
-        [string]
         # The path to a .NET Core solution or project file to pass to the .NET Core SDK command.
-        $ProjectPath
+        [string]$ProjectPath
     )
 
     Set-StrictMode -Version 'Latest'

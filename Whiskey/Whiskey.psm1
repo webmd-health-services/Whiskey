@@ -50,12 +50,10 @@ function Assert-Member
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [object]
-        $Object,
+        [object]$Object,
 
         [Parameter(Mandatory)]
-        [string[]]
-        $Property
+        [string[]]$Property
     )
 
     foreach( $propertyToCheck in $Property )

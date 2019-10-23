@@ -62,9 +62,8 @@ function Resolve-WhiskeyVariable
         [string]$Name,
 
         [Parameter(Mandatory)]
-        [Whiskey.Context]
         # The context of the current build. Necessary to lookup any variables.
-        $Context
+        [Whiskey.Context]$Context
     )
 
     begin
