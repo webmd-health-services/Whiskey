@@ -1,3 +1,28 @@
+#!/usr/bin/env pwsh
+
+<#
+.SYNOPSIS
+Builds the Whiskey repository.
+
+.DESCRIPTION
+The `build.ps1` script invokes a build of the Whiskey repository. It will first download the .NET Core SDK into a `.dotnet` directory in the repo root and use that SDK to build the Whiskey assembly. After the Whiskey assembly is built, it is copied into Whiskey's `bin` directory after which the Whiskey PowerShell module is imported. Finally, `Invoke-WhiskeyBuild` is called to run the build tasks specified in the `whiskey.yml` file in the root of the repository.
+
+To download all the tools that are required for a build, use the `-Initialize` switch.
+
+To cleanup downloaded build tools and artifacts created from previous builds, use the `-Clean` switch.
+
+To build the Whiskey assembly with a custom `--configuration` passed to the `dotnet build` command, use the `-MSBuildConfiguration` parameter. By default, `Debug` when run by a developer and `Release` when run by a build server.
+
+.EXAMPLE
+./build.ps1
+
+Starts a build of Whiskey.
+
+.EXAMPLE
+./build.ps1 -MSBuildConfiguration 'Release'
+
+Starts a build and uses "Release" as the build configuration when building the Whiskey assembly.
+#>
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
     [Parameter(Mandatory=$true,ParameterSetName='Clean')]
