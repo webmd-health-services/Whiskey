@@ -210,6 +210,11 @@ Build:
     - "*.orig"
 
 Publish:
+- AppVeyorWaitForBuildJobs:
+    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
+    IfExists: env:APPVEYOR_BEARER_TOKEN
+    OnlyOnPlatform: Windows
+    ApiKeyID: AppVeyor
 - PublishPowerShellModule:
     OnlyOnPlatform: Windows
     UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
