@@ -108,6 +108,11 @@ try
         Import-WhiskeyTestModule -Name $name -Force
     }
 
+    if( (Get-Module -Name 'WhiskeyTestTasks') )
+    {
+        Remove-Module -Name 'WhiskeyTestTasks' -Force -ErrorAction Ignore
+    }
+
     foreach( $name in @('Whiskey','WhiskeyTest','PackageManagement','PowerShellGet') )
     {
         Get-Module -Name $name |

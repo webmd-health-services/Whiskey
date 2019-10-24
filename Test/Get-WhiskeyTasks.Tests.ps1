@@ -4,47 +4,35 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function global:MyTask
-{
-    [Whiskey.Task("TaskOne")]
-    param(
-    )
-}
-
-function global:MyTask2
-{
-    [Whiskey.Task("TaskTwo")]
-    [Whiskey.Task("TaskThree")]
-    param(
-    )
-}
-
-function global:MyObsoleteTask
-{
-    [Whiskey.Task("TaskTwo",Obsolete)]
-    param(
-    )
-}
+Import-WhiskeyTestTaskModule
 
 Describe 'Get-WhiskeyTasks' {
     It 'should return task objects' {
-        $expectedTasks = @{
-                            ProGetUniversalPackage         = 'New-WhiskeyProGetUniversalPackage';
-                            MSBuild                        = 'Invoke-WhiskeyMSBuild';
-                            NUnit2                         = 'Invoke-WhiskeyNUnit2Task';
-                            Node                           = 'Invoke-WhiskeyNodeTask';
-                            Pester3                        = 'Invoke-WhiskeyPester3Task';
-                            Pester4                        = 'Invoke-WhiskeyPester4Task';
-                            PublishFile                    = 'Publish-WhiskeyFile';
-                            PublishNodeModule              = 'Publish-WhiskeyNodeModule';
-                            PublishPowerShellModule        = 'Publish-WhiskeyPowerShellModule';
-                            TaskOne = 'MyTask';
-                            TaskTwo = 'MyTask2';
-                            TaskThree = 'MyTask2';
-                        }
+        
+        $expectedTasks = @{}
+        foreach( $cmd in (Get-Command -Module 'WhiskeyTestTasks') )
+        {
+            if( $cmd.Name -like 'DuplicateTask*' )
+            {
+                continue
+            }
+
+            $taskName = ''
+            foreach( $attr in $cmd.ScriptBlock.Attributes )
+            {
+                if( $attr -is [Whiskey.TaskAttribute] )
+                {
+                    $expectedTasks[$attr.Name] = $attr
+                    break
+                }
+            }
+        }
+
+        $expectedTasks.Keys | Should -Not -BeNullOrEmpty
 
         $Global:error.Clear()
         $failed = $false
+        $tasks = @()
         try
         {
             $tasks = Get-WhiskeyTask
@@ -63,7 +51,22 @@ Describe 'Get-WhiskeyTasks' {
         {
             if( $expectedTasks.ContainsKey($task.Name) )
             {
-                $task.CommandName | should -Be $expectedTasks[$task.Name]
+                $task.CommandName | Should -Be $expectedTasks[$task.Name].CommandName
+            }
+        }
+
+        foreach( $taskName in $expectedTasks.Keys )
+        {
+            $expectedTask = $expectedTasks[$taskName]
+            $actualTask = $tasks | Where-Object { $_.Name -eq $taskName } 
+
+            if( $expectedTask.Obsolete )
+            {
+                $actualTask | Should -BeNullOrEmpty -Because ('should return "{0}" task' -f $taskName)
+            }
+            else
+            {
+                $actualTask | Should -Not -BeNullOrEmpty -Because ('should not return obsolete "{0}" task' -f $taskName)
             }
         }
 
@@ -71,7 +74,12 @@ Describe 'Get-WhiskeyTasks' {
 
         $tasks = Get-WhiskeyTask -Force
         $tasks | Where-Object { $_.Obsolete } | Should -Not -BeNullOrEmpty
+
+
+        foreach( $taskName in $expectedTasks.Keys )
+        {
+            $expectedTask = $expectedTasks[$taskName]
+            $actualTask = $tasks | Where-Object { $_.Name -eq $taskName } | Should -Not -BeNullOrEmpty -Because ('should return all tasks when using the Force')
+        }
     }
 }
-
-Remove-Item -Path 'function:MyTask*'

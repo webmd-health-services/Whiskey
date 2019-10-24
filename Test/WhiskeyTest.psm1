@@ -105,6 +105,16 @@ function Import-WhiskeyTestModule
     }
 }
 
+function Import-WhiskeyTestTaskModule
+{
+    if( (Get-Module -Name 'WhiskeyTestTasks') )
+    {
+        return
+    }
+
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve) -Global
+}
+
 function Initialize-WhiskeyTestPSModule
 {
     [CmdletBinding()]
