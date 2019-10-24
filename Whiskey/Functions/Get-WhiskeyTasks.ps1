@@ -30,7 +30,7 @@ function Get-WhiskeyTask
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
     [Management.Automation.FunctionInfo]$functionInfo = $null;
-    
+
     foreach( $functionInfo in (Get-Command -CommandType Function) )
     {
         $functionInfo.ScriptBlock.Attributes | 

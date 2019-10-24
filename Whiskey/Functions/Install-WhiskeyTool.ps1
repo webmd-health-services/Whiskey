@@ -114,8 +114,8 @@ function Install-WhiskeyTool
             }
             'NuGet'
             {   
-                $nuGetRoot = Install-WhiskeyNuGetPackage -Name $name -Version $version -DownloadRoot $InstallRoot -ErrorAction Stop
-                $TaskParameter[$ToolInfo.PathParameterName] = $nuGetRoot
+                $toolPath = Install-WhiskeyNuGetPackage -Name $name -Version $version -DownloadRoot $InstallRoot -ErrorAction Stop
+                $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
             }
                 default
                 {

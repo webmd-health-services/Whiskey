@@ -83,7 +83,7 @@ function Invoke-NUnitTask
     {
 
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
-        Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
+        Copy-Item -Path $script:packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
 
         if( -not $MockInstallWhiskeyNuGetPackageWith )
         {

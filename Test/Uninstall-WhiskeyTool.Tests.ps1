@@ -23,9 +23,7 @@ function GivenAnInstalledNuGetPackage
 function GivenFile
 {
     param(
-        [String]$WithName,
-
-        [String]$WithVersion
+        [String]$Path
     )
 
     New-Item -Path (Join-Path -Path $testRoot -ChildPath $Path) -ItemType 'File' -Force
@@ -58,6 +56,7 @@ function ThenFile
 
     if( $Not )
     {
+        Write-Verbose 'We should not be here' -Verbose
         Join-Path -Path $testRoot -ChildPath $Path | Should -Not -Exist
     }
     else
@@ -150,6 +149,7 @@ if( $IsWindows )
 
     Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
         It 'Should pass the correct parameters to Uninstall-WhiskeyNuGetPackage' {
+            Init
             Mock 'Uninstall-WhiskeyNuGetPackage' -Module 'Whiskey'
             $toolobject = New-Object 'Whiskey.RequiresToolAttribute' 'NuGet::NUnit.Runners'
             $toolobject.version = '2.6.4'
@@ -200,7 +200,6 @@ Describe 'Uninstall-WhiskeyTool.when uninstalling PowerShell module' {
     It 'should delete PowerShell module' {
         Init
         $mockModulePath = '{0}\Whiskey\0.37.1\Whiskey.psd1' -f $PSModulesDirectoryName
-        Init
         GivenFile $mockModulePath
         WhenUninstallingTool (New-Object 'Whiskey.RequiresPowerShellModuleAttribute' 'Whiskey')
         ThenFile $mockModulePath -Not -Exists

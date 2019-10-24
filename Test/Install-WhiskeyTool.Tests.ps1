@@ -17,117 +17,9 @@ function Init
     $script:taskWorkingDirectory = $testRoot
 }
 
-function Invoke-NuGetInstall
-{
-    [CmdletBinding()]
-    param(
-        $Package,
-        $Version,
-
-        [Switch]
-        $InvalidPackage,
-
-        [string]
-        $ExpectedError
-    )
-
-    $Global:Error.Clear()
-
-    $result = $null
-    try
-    {
-        $result = Install-WhiskeyTool -DownloadRoot $testRoot -NugetPackageName $Package -Version $Version
-    }
-    catch
-    {
-    }
-
-    if( -not $invalidPackage)
-    {
-        $result | Should -Exist
-        $result | Should -BeLike ('{0}\packages\*' -f $testRoot)
-    }
-    else
-    {
-        if( $result )
-        {
-            $result | Should -Not -Exist
-        }
-        # $Error has nuget.exe's STDERR depending on your console. 
-        $Global:Error.Count | Should -BeLessThan 2
-        if( $ExpectedError )
-        {
-            $Global:Error[0] | Should -Match $ExpectedError
-        }
-    }
-}
-
 function Reset
 {
     Remove-Node -BuildRoot $testRoot
-}
-
-if( $IsWindows )
-{
-    Describe 'Install-WhiskeyTool.when given a NuGet Package' {
-        It 'should install the NuGet package' {
-            Init
-            Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when NuGet Pack is bad' {
-        It 'should fail' {
-            Init
-            Invoke-NuGetInstall -package 'BadPackage' -version '1.0.1' -invalidPackage -ErrorAction silentlyContinue
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when NuGet pack Version is bad' {
-        It 'should fail' {
-            Init
-            Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when given a NuGet Package with an empty version string' {
-        It 'should install the latest version' {
-            Init
-            Invoke-NuGetInstall -package 'NUnit.Runners' -version ''
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
-        It 'should do nothing' {
-            Init
-
-            $Global:Error.Clear()
-
-            Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
-            Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
-
-            $Global:Error | Where-Object { $_ -notmatch '\bTestRegistry\b' } | Should -BeNullOrEmpty
-        }
-    }
-
-    Describe 'Install-WhiskeyTool.when install a NuGet package' {
-        It 'should enable NuGet package restore' {
-            Init
-            Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
-            Install-WhiskeyTool -DownloadRoot $testRoot -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
-            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
-        }
-    }
-}
-else
-{
-    Describe 'Install-WhiskeyTool.when run on non-Windows OS' {
-        It 'should fail' {
-            Init
-            Invoke-NuGetInstall -Package 'NUnit.Runners' -Version '2.6.4' -InvalidPackage -ExpectedError 'Only\ supported\ on\ Windows'
-        }
-    }
 }
 
 $threwException = $false
@@ -481,7 +373,7 @@ If ( $IsWindows )
         It 'should pass the correct parameters' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
-            WhenInstallingTool -Name 'NuGet::Nunit.Runners' -Version '2.6.4'
+            WhenInstallingTool -Name 'NuGet::Nunit.Runners' -Version '2.6.4' -PathParameterName 'NUnitPath'
             Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
                 $Version -eq '2.6.4'
@@ -494,7 +386,7 @@ If ( $IsWindows )
         It 'should pass the version passed as parameter to Install-WhiskeyTool as parameter to Install-WhiskeyNuGetPackage' {
             Init
             Mock -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
-            WhenInstallingTool 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' } -Version '2.6.3'
+            WhenInstallingTool 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' } -Version '2.6.3' -PathParameterName 'NUnitPath' 
             Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
                 $DownloadRoot -eq $TestDrive.FullName
@@ -508,7 +400,7 @@ else
     Describe 'Install-WhiskeyTool.when NuGet is the provider and running on non-Windows OS' {
         It 'should not install' {
             Init
-            WhenInstallingTool 'NuGet::TROLOLO' -ErrorAction SilentlyContinue
+            WhenInstallingTool 'NuGet::TROLOLO' -ErrorAction SilentlyContinue 
             ThenDirectory 'packages\TROLOLO' -Not -Exists
             ThenThrewException 'Unable\ to\ install\ NuGet-based\ package'
         }
