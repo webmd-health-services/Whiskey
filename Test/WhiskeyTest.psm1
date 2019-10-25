@@ -29,9 +29,8 @@ function ConvertTo-Yaml
 {
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline)]
         [System.Object]$Data,
-        [Parameter(Mandatory=$false)]
         [string]$OutFile,
         [switch]$JsonCompatible=$false,
         [switch]$Force=$false
@@ -91,7 +90,7 @@ function Import-WhiskeyTestModule
         [Parameter(Mandatory)]
         [string[]]$Name,
         
-        [Switch]$Force
+        [switch]$Force
     )
 
     $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
@@ -259,8 +258,7 @@ function Invoke-WhiskeyPrivateCommand
 function New-AssemblyInfo
 {
     param(
-        [string]
-        $RootPath
+        [string]$RootPath
     )
 
     @'
@@ -306,14 +304,11 @@ using System.Runtime.InteropServices;
 function New-MSBuildProject
 {
     param(
-        [string[]]
-        $FileName,
+        [string[]]$FileName,
 
-        [Switch]
-        $ThatFails,
+        [switch]$ThatFails,
 
-        [string]
-        $BuildRoot
+        [string]$BuildRoot
     )
 
     if( -not $BuildRoot )
@@ -367,13 +362,13 @@ function New-WhiskeyTestContext
 
         [switch]$InReleaseMode,
 
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
+        [Parameter(Mandatory,ParameterSetName='ByBuildServer')]
         [Alias('ByBuildServer')]
-        [Switch]$ForBuildServer,
+        [switch]$ForBuildServer,
 
-        [Parameter(Mandatory=$true,ParameterSetName='ByDeveloper')]
+        [Parameter(Mandatory,ParameterSetName='ByDeveloper')]
         [Alias('ByDeveloper')]
-        [Switch]$ForDeveloper,
+        [switch]$ForDeveloper,
 
         [SemVersion.SemanticVersion]$ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
@@ -385,11 +380,11 @@ function New-WhiskeyTestContext
 
         [string]$DownloadRoot,
 
-        [Switch]$IgnoreExistingOutputDirectory,
+        [switch]$IgnoreExistingOutputDirectory,
 
-        [Switch]$InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]$InInitMode,
+        [switch]$InInitMode,
 
         [string[]]$IncludePSModule
     )

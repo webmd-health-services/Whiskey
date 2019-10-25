@@ -40,7 +40,7 @@ function GivenAssets
 function GivenAssetUpdated
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $To
     )
 
@@ -52,7 +52,7 @@ function GivenAssetUpdated
 function GivenAssetUploaded
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $To
     )
 
@@ -163,14 +163,13 @@ function ThenNoApiCalled
 function ThenRequest
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $Should,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $ToUri,
 
-        [Microsoft.PowerShell.Commands.WebRequestMethod]
-        $UsedMethod,
+        [Microsoft.PowerShell.Commands.WebRequestMethod]$UsedMethod,
 
         $WithBody,
 

@@ -16,12 +16,10 @@ function GivenFile
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $Name,
+        [string]$Name,
 
         [Parameter(Mandatory)]
-        [string]
-        $Content
+        [string]$Content
     )
 
     $path = Join-Path -Path $TestDrive.FullName -ChildPath $Name
@@ -31,42 +29,35 @@ function GivenFile
 function Invoke-PreTaskPlugin
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [object]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $TaskName,
+        [Parameter(Mandatory)]
+        [string]$TaskName,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 }
 
 function Invoke-PostTaskPlugin
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [object]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $TaskName,
+        [Parameter(Mandatory)]
+        [string]$TaskName,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 }
 
 function GivenPlugins
 {
     param(
-        [string]
-        $ForSpecificTask
+        [string]$ForSpecificTask
     )
 
     $taskNameParam = @{ }
@@ -85,8 +76,7 @@ function GivenWhiskeyYmlBuildFile
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Yaml
+        [string]$Yaml
     )
 
     $config = $null
@@ -100,19 +90,15 @@ function ThenFile
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $Named,
+        [string]$Named,
 
-        [Switch]
-        $Not,
+        [switch]$Not,
 
         [Parameter(Mandatory)]
-        [Switch]
-        $Exists,
+        [switch]$Exists,
 
         [Parameter(Mandatory)]
-        [string]
-        $Because
+        [string]$Because
     )
 
     Join-Path -Path $TestDrive.FullName -ChildPath $Named | Should -Not:$Not -Exist
@@ -136,11 +122,9 @@ function ThenPipelineSucceeded
 function ThenDotNetProjectsCompilationFailed
 {
     param(
-        [string]
-        $ConfigurationPath,
+        [string]$ConfigurationPath,
 
-        [string[]]
-        $ProjectName
+        [string[]]$ProjectName
     )
 
     $root = Split-Path -Path $ConfigurationPath -Parent
@@ -166,8 +150,7 @@ function ThenPluginsRan
 
         $WithParameter,
 
-        [int]
-        $Times = 1
+        [int]$Times = 1
     )
 
     foreach( $pluginName in @( 'Invoke-PreTaskPlugin', 'Invoke-PostTaskPlugin' ) )
@@ -228,8 +211,7 @@ function WhenRunningPipeline
 {
     [CmdletBinding()]
     param(
-        [string]
-        $Name
+        [string]$Name
     )
 
     $environment = $PSCmdlet.ParameterSetName

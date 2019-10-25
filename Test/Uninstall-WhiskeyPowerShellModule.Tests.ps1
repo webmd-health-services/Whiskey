@@ -9,9 +9,9 @@ function GivenAnInstalledPowerShellModule
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '0.37.1',
+        [string]$WithVersion = '0.37.1',
 
-        [String]$WithName = 'SomeModule'
+        [string]$WithName = 'SomeModule'
     )
 
     $moduleRoot = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
@@ -40,11 +40,9 @@ function WhenUninstallingPowerShellModule
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '0.37.1',
+        [string]$WithVersion = '0.37.1',
 
-        [String]
-        $WithName = 'SomeModule'
+        [string]$WithName = 'SomeModule'
     )
 
     $Global:Error.Clear()
@@ -67,9 +65,9 @@ function ThenPowerShellModuleUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '0.37.1',
+        [string]$WithVersion = '0.37.1',
 
-        [String]$WithName = 'SomeModule'
+        [string]$WithName = 'SomeModule'
     )
 
     $Name = '{0}\{1}' -f $WithName, $WithVersion

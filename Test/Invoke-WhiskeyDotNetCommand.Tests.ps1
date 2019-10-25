@@ -18,8 +18,7 @@ function Write-WhiskeyCommand
 function Init
 {
     param(
-        [Switch]
-        $SkipDotNetMock
+        [switch]$SkipDotNetMock
     )
     $script:argumentList = $null
     $script:commandName = $null
@@ -130,8 +129,7 @@ function ThenRanCommand
 function ThenRanWithArguments
 {
     param(
-        [string[]]
-        $ExpectedArguments
+        [string[]]$ExpectedArguments
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {

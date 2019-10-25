@@ -63,10 +63,10 @@ function GivenProGetIsAt
 function GivenCredential
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Credential,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $WithID
     )
 

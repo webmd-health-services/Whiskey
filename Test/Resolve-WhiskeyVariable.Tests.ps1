@@ -11,9 +11,8 @@ $result = $null
 function GivenEnvironmentVariable
 {
     param(
-        [string]
         [ValidatePattern('^ResolveWhiskey')]
-        $Named,
+        [string]$Named,
         $WithValue
     )
 

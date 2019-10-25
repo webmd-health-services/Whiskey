@@ -12,11 +12,9 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [string]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [string]$WithName = 'NUnit.Runners'
 
     )
     $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
@@ -57,10 +55,8 @@ function ThenFile
 {
     param(
         $Path,
-        [Switch]
-        $Not,
-        [Switch]
-        $Exists
+        [switch]$Not,
+        [switch]$Exists
     )
 
     if( $Not )
@@ -82,11 +78,9 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [string]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [string]$WithName = 'NUnit.Runners'
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -102,9 +96,9 @@ function ThenNuGetPackageNotUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [string]$WithVersion = '2.6.4',
 
-        [String]$WithName = 'NUnit.Runners',
+        [string]$WithName = 'NUnit.Runners',
 
         [switch]$PackageShouldExist,
 
@@ -142,11 +136,9 @@ function WhenUninstallingNuGetPackage
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '2.6.4',
+        [string]$WithVersion = '2.6.4',
 
-        [String]
-        $WithName = 'NUnit.Runners'
+        [string]$WithName = 'NUnit.Runners'
     )
 
     $Global:Error.Clear()

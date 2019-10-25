@@ -233,11 +233,11 @@ Describe ('Get-TaskParameter.when passing typed parameters') {
         {
             [Whiskey.Task('Task')]
             param(
-                [Switch]$SwitchOne,
+                [switch]$SwitchOne,
 
-                [Switch]$SwitchTwo,
+                [switch]$SwitchTwo,
 
-                [Switch]$SwitchThree,
+                [switch]$SwitchThree,
 
                 [bool]$Bool,
 

@@ -24,11 +24,9 @@ function Invoke-NuGetInstall
         $Package,
         $Version,
 
-        [Switch]
-        $InvalidPackage,
+        [switch]$InvalidPackage,
 
-        [string]
-        $ExpectedError
+        [string]$ExpectedError
     )
 
     $Global:Error.Clear()
@@ -172,7 +170,7 @@ function ThenNodeInstalled
 
         [string]$NpmVersion,
 
-        [Switch]$AtLatestVersion,
+        [switch]$AtLatestVersion,
 
         [string]$AndPathParameterIs
     )
@@ -413,10 +411,8 @@ function ThenDirectory
 {
     param(
         $Path,
-        [Switch]
-        $Not,
-        [Switch]
-        $Exists
+        [switch]$Not,
+        [switch]$Exists
     )
 
     if( $Not )

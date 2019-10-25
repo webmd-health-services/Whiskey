@@ -11,8 +11,7 @@ function Get-MSBuild
     function Resolve-MSBuildToolsPath
     {
         param(
-            [Microsoft.Win32.RegistryKey]
-            $Key
+            [Microsoft.Win32.RegistryKey]$Key
         )
 
         $toolsPath = Get-ItemProperty -Path $Key.PSPath -Name 'MSBuildToolsPath' -ErrorAction Ignore | Select-Object -ExpandProperty 'MSBuildToolsPath' -ErrorAction Ignore

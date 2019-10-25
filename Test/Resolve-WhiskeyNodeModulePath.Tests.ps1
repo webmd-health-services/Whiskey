@@ -17,8 +17,7 @@ function GivenNodeModuleInstalled
     param(
         $Name,
 
-        [Switch]
-        $Global
+        [switch]$Global
     )
 
     $nodeModulesPath = $TestDrive.FullName
@@ -40,8 +39,7 @@ function GivenNodeModuleInstalled
 function ThenError
 {
     param(
-        [string]
-        $Matches
+        [string]$Matches
     )
 
     It ('should write an error') {
@@ -63,8 +61,7 @@ function ThenPathIsGlobal
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $Name
+        [string]$Name
     )
 
     $nodeRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.node'
@@ -89,8 +86,7 @@ function ThenPathIsLocal
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $Name
+        [string]$Name
     )
 
     It ('should resolve path') {
@@ -103,20 +99,16 @@ function WhenResolving
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,Position=0)]
-        [string]
-        $Name,
+        [string]$Name,
 
         [Parameter(Mandatory,ParameterSetName='WithBuildRoot')]
-        [string]
-        $BuildRootPath,
+        [string]$BuildRootPath,
 
         [Parameter(ParameterSetName='WithBuildRoot')]
-        [Switch]
-        $Global,
+        [switch]$Global,
 
         [Parameter(Mandatory,ParameterSetName='WithNodeRoot')]
-        [string]
-        $NodeRootPath
+        [string]$NodeRootPath
     )
 
     if( $BuildRootPath )

@@ -69,8 +69,7 @@ function GivenCurrentVersion
 function ThenSemVer2Is
 {
     param(
-        [SemVersion.SemanticVersion]
-        $ExpectedVersion
+        [SemVersion.SemanticVersion]$ExpectedVersion
     )
 
     It ('should set SemVer2') {
@@ -86,8 +85,7 @@ function ThenSemVer2Is
 function ThenSemVer1Is
 {
     param(
-        [SemVersion.SemanticVersion]
-        $ExpectedVersion
+        [SemVersion.SemanticVersion]$ExpectedVersion
     )
 
     It ('should set SemVer1') {
@@ -105,8 +103,7 @@ function ThenTaskFailed
 function ThenVersionIs
 {
     param(
-        [version]
-        $ExpectedVersion
+        [version]$ExpectedVersion
     )
 
     It ('should set Version') {
@@ -118,11 +115,9 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $AsDeveloper,
+        [switch]$AsDeveloper,
 
-        [string]
-        $WithYaml
+        [string]$WithYaml
     )
 
     $forParam = @{ ForBuildServer = $true }

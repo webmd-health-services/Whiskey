@@ -195,8 +195,7 @@ function ThenBuildRunInMode
 function ThenBuildStatusSetTo
 {
     param(
-        [string]
-        $ExpectedStatus
+        [string]$ExpectedStatus
     )
 
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
@@ -236,14 +235,11 @@ function WhenRunningBuild
 {
     [CmdletBinding()]
     param(
-        [string[]]
-        $PipelineName,
+        [string[]]$PipelineName,
 
-        [Switch]
-        $WithCleanSwitch,
+        [switch]$WithCleanSwitch,
 
-        [Switch]
-        $WithInitializeSwitch
+        [switch]$WithInitializeSwitch
     )
 
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'

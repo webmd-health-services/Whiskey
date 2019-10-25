@@ -27,7 +27,7 @@ function Install-WhiskeyPowerShellModule
     param(
         $Name,
         $Version,
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     $parameter = $PSBoundParameters
@@ -42,7 +42,7 @@ function Invoke-PowershellInstall
         $ForModule,
         $Version,
         $ActualVersion,
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     if( -not $ActualVersion )

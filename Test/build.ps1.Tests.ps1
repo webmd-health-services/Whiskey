@@ -32,7 +32,7 @@ function ThenModule
         [switch]$Not,
 
         [Parameter(Mandatory)]
-        [Switch]$Loaded
+        [switch]$Loaded
     )
 
     if( $Not )

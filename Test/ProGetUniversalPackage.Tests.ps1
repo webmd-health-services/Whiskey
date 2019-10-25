@@ -34,8 +34,7 @@ function Get-PackageSize
 function GivenBuildVersion
 {
     param(
-        [SemVersion.SemanticVersion]
-        $Version
+        [SemVersion.SemanticVersion]$Version
     )
 
     $script:buildVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject'
@@ -57,8 +56,7 @@ function GivenPackageVersion
 function GivenManifestProperties
 {
     param(
-        [hashtable]
-        $Content
+        [hashtable]$Content
     )
     $script:manifestProperties = $Content
 }
@@ -85,8 +83,7 @@ function Reset
 function ThenTaskFails
 {
     Param(
-        [String]
-        $error
+        [string]$error
     )
 
     $Global:Error | Should -Match $error
@@ -149,9 +146,9 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
         [string]$ShouldFailWithErrorMessage,
 
-        [Switch]$ShouldWriteNoErrors,
+        [switch]$ShouldWriteNoErrors,
 
-        [Switch]$ShouldReturnNothing,
+        [switch]$ShouldReturnNothing,
 
         [string[]]$HasThirdPartyRootItem,
 
@@ -163,9 +160,9 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
         [string[]]$MissingRootItems,
 
-        [Switch]$WhenCleaning,
+        [switch]$WhenCleaning,
 
-        [Switch]$withInitialize
+        [switch]$withInitialize
     )
 
     if( -not $Version )
@@ -351,21 +348,21 @@ function Initialize-Test
 
         [string[]]$RootFileName,
 
-        [Switch]$WhenUploadFails,
+        [switch]$WhenUploadFails,
 
-        [Switch]$OnFeatureBranch,
+        [switch]$OnFeatureBranch,
 
-        [Switch]$OnMasterBranch,
+        [switch]$OnMasterBranch,
 
-        [Switch]$OnReleaseBranch,
+        [switch]$OnReleaseBranch,
 
-        [Switch]$OnPermanentReleaseBranch,
+        [switch]$OnPermanentReleaseBranch,
 
-        [Switch]$OnDevelopBranch,
+        [switch]$OnDevelopBranch,
 
-        [Switch]$OnHotFixBranch,
+        [switch]$OnHotFixBranch,
 
-        [Switch]$OnBugFixBranch,
+        [switch]$OnBugFixBranch,
 
         [string]$SourceRoot
     )
@@ -419,8 +416,7 @@ function Get-BuildRoot
 function GivenARepositoryWithItems
 {
     param(
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
         $ItemType = 'File'
     )
@@ -443,11 +439,9 @@ function GivenARepositoryWithItems
 function ThenPackageArchive
 {
     param(
-        [string]
-        $PackageName,
+        [string]$PackageName,
 
-        [string[]]
-        $ContainsPath
+        [string[]]$ContainsPath
     )
 
     $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath '.output'
@@ -474,8 +468,7 @@ function ThenPackageShouldInclude
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     $Path += @( 'version.json' )
@@ -490,8 +483,7 @@ function ThenPackageShouldInclude
 function ThenPackageShouldNotInclude
 {
     param(
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
@@ -505,18 +497,15 @@ function ThenPackageShouldNotInclude
 function ThenUpackMetadataIs
 {
     param(
-        [hashtable]
-        $ExpectedContent
+        [hashtable]$ExpectedContent
     )
 
     function Assert-HashTableEqual
     {
         param(
-            [hashtable]
-            $Reference,
+            [hashtable]$Reference,
 
-            [hashtable]
-            $Difference
+            [hashtable]$Difference
         )
 
         # $DebugPreference = 'Continue'
@@ -586,14 +575,11 @@ function ThenPackageShouldBeCompressed
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
-        [Int]
-        $GreaterThan,
+        [int]$GreaterThan,
 
-        [int]
-        $LessThanOrEqualTo
+        [int]$LessThanOrEqualTo
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
@@ -622,23 +608,19 @@ function WhenPackaging
         $WithDescription = $defaultDescription,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $Paths,
+        [object[]]$Paths,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $WithWhitelist,
+        [object[]]$WithWhitelist,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $ThatExcludes,
+        [object[]]$ThatExcludes,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $FromSourceRoot,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $WithThirdPartyPath,
+        [object[]]$WithThirdPartyPath,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithVersion = $defaultVersion,
@@ -650,8 +632,7 @@ function WhenPackaging
         $CompressionLevel,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [Switch]
-        $SkipExpand,
+        [switch]$SkipExpand,
 
         [Parameter(Mandatory,ParameterSetName='WithYaml')]
         $WithYaml

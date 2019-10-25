@@ -10,11 +10,9 @@ $failed = $false
 function GivenCredential
 {
     param(
-        [string]
-        $ID,
+        [string]$ID,
 
-        [pscredential]
-        $Credential
+        [pscredential]$Credential
     )
 
     Add-WhiskeyCredential -Context $context -ID $ID -Credential $Credential
@@ -46,8 +44,7 @@ function GivenReporter
 {
     param(
         [Parameter(Position=0)]
-        [object]
-        $Reporter
+        [object]$Reporter
     )
 
     $context.Configuration['PublishBuildStatusTo'] = @( $Reporter )

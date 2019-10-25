@@ -23,8 +23,7 @@ function Init
 function GivenModule
 {
     Param(
-        [string]
-        $Module
+        [string]$Module
     )
     $script:taskParameter['Name'] = $Module
 
@@ -35,8 +34,7 @@ function GivenModule
 function GivenVersion
 {
     param(
-        [string]
-        $Version
+        [string]$Version
     )
     $script:taskParameter['Version'] = $Version
 }
@@ -95,8 +93,7 @@ function ThenModuleShouldNotExist
 function ThenErrorShouldBeThrown
 {
     param(
-        [string]
-        $Message
+        [string]$Message
     )
 
     $Global:Error | Should -Match $Message

@@ -133,8 +133,7 @@ function ThenDotNetNotLocallyInstalled
 function ThenDotNetSdkVersion
 {
     param(
-        [string]
-        $Version
+        [string]$Version
     )
 
     Push-Location -Path $workingDirectory

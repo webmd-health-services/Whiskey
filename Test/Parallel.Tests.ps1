@@ -254,8 +254,7 @@ Describe 'Parallel.when API keys, variables, credentials, and task defaults are 
         Init
         GivenFile 'one.ps1' -Content @'
 param(
-    [object]
-    $TaskContext
+    [object]$TaskContext
 )
 
 if( $TaskContext.Variables['Fubar'] -ne 'Snafu' )

@@ -22,7 +22,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
             $Environment,
 
-            [Switch] $ByBuildServer,
+            [switch] $ByBuildServer,
 
             [string]$DownloadRoot
         )
@@ -73,18 +73,14 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function GivenConfiguration
     {
         param(
-            [Switch]
-            $ForBuildServer,
+            [switch]$ForBuildServer,
 
-            [String]
-            $OnBranch = 'develop',
+            [string]$OnBranch = 'develop',
 
-            [string[]]
-            $PublishingOn,
+            [string[]]$PublishingOn,
 
             [Parameter(Position=0)]
-            [Collections.IDictionary]
-            $Configuration,
+            [Collections.IDictionary]$Configuration,
 
             $BuildNumber = '1'
         )
@@ -154,8 +150,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function ThenSemVer1Is
     {
         param(
-            [SemVersion.SemanticVersion]
-            $SemanticVersion
+            [SemVersion.SemanticVersion]$SemanticVersion
         )
 
         $script:context.Version.SemVer1.ToString() | Should -Be $SemanticVersion.ToString()
@@ -165,8 +160,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function ThenSemVer2Is
     {
         param(
-            [SemVersion.SemanticVersion]
-            $SemanticVersion
+            [SemVersion.SemanticVersion]$SemanticVersion
         )
         $script:context.Version.SemVer2.ToString() | Should -Be $SemanticVersion.ToString()
         $script:context.Version.SemVer2 | Should -BeOfType ([SemVersion.SemanticVersion])
@@ -175,8 +169,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function ThenSemVer2NoBuildMetadataIs
     {
         param(
-            [SemVersion.SemanticVersion]
-            $SemanticVersion
+            [SemVersion.SemanticVersion]$SemanticVersion
         )
 
         $script:Context.Version.SemVer2NoBuildMetadata.ToString() | Should -Be $SemanticVersion.ToString()
@@ -186,8 +179,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function ThenVersionIs
     {
         param(
-            [Version]
-            $ExpectedVersion
+            [Version]$ExpectedVersion
         )
 
         $script:Context.Version.Version.ToString() | Should -Be $expectedVersion.ToString()
@@ -261,8 +253,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     {
         [CmdletBinding()]
         param(
-            [string]
-            $Environment = 'developer',
+            [string]$Environment = 'developer',
 
             $WithDownloadRoot
         )
@@ -291,8 +282,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     {
         [CmdletBinding()]
         param(
-            [string]
-            $Environment = 'developer'
+            [string]$Environment = 'developer'
         )
 
         begin
@@ -344,8 +334,7 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     function ThenVersionMatches
     {
         param(
-            [string]
-            $Version
+            [string]$Version
         )
 
         $script:context.Version.SemVer2 | Should -Match $Version

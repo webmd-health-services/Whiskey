@@ -88,8 +88,7 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $WithClean
+        [switch]$WithClean
     )
 
     $failed = $false
@@ -112,8 +111,7 @@ function WhenPesterTaskIsInvoked
 function ThenPesterShouldBeInstalled
 {
     param(
-        [string]
-        $ExpectedVersion
+        [string]$ExpectedVersion
     )
 
     $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
@@ -130,13 +128,11 @@ function ThenPesterShouldBeInstalled
 function ThenPesterShouldHaveRun
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
+        [Parameter(Mandatory)]
+        [int]$FailureCount,
             
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
+        [Parameter(Mandatory)]
+        [int]$PassingCount
     )
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
@@ -181,8 +177,7 @@ function ThenPesterShouldHaveRun
 function ThenTestShouldFail
 {
     param(
-        [string]
-        $failureMessage
+        [string]$failureMessage
     )
     $Script:failed | Should -BeTrue
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty

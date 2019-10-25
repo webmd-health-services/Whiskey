@@ -34,26 +34,25 @@ InModuleScope 'Whiskey' {
     {
         [CmdletBinding()]
         param(
-            [Parameter(Mandatory=$true)]
-            [int]
-            $BuildNumber,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
+            [int]$BuildNumber,
+            [Parameter(Mandatory)]
             $BuildID,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ProjectName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ProjectSlug,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ScmProvider,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ScmRepoName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ScmBranch,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ScmCommit,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $AccountName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $BuildVersion
         )
 
@@ -74,22 +73,21 @@ InModuleScope 'Whiskey' {
     {
         [CmdletBinding()]
         param(
-            [Parameter(Mandatory=$true)]
-            [int]
-            $BuildNumber,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
+            [int]$BuildNumber,
+            [Parameter(Mandatory)]
             $BuildID,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $JobName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $JobUri,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $BuildUri,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $GitUri,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $GitCommit,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $GitBranch
         )
 
@@ -116,22 +114,21 @@ InModuleScope 'Whiskey' {
     function GivenTeamCityEnvironment
     {
         param(
-            [Parameter(Mandatory=$true)]
-            [int]
-            $BuildNumber,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
+            [int]$BuildNumber,
+            [Parameter(Mandatory)]
             $VcsNumber,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ProjectName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $VcsBranch,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $VcsUri,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $ServerUri,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $BuildTypeID,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $BuildID
         )
 
@@ -175,28 +172,24 @@ InModuleScope 'Whiskey' {
     {
         [CmdletBinding()]
         param(
-            [Parameter(Mandatory=$true)]
-            [int]
-            $BuildNumber,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
+            [int]$BuildNumber,
+            [Parameter(Mandatory)]
             $BuildID,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             $JobName,
-            [Parameter(Mandatory=$true)]
+            [Parameter(Mandatory)]
             [AllowNull()]
-            [uri]
-            $JobUri,
-            [Parameter(Mandatory=$true)]
+            [uri]$JobUri,
+            [Parameter(Mandatory)]
             [AllowNull()]
-            [uri]
-            $BuildUri,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [uri]$BuildUri,
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             [AllowNull()]
-            [uri]
-            $ScmUri,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [uri]$ScmUri,
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $ScmCommit,
-            [Parameter(Mandatory=$true,ParameterSetName='WithGitScm')]
+            [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $ScmBranch
         )
 

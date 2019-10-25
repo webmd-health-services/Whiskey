@@ -33,11 +33,9 @@ function GivenAScript
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Script,
+        [string]$Script,
 
-        [string]
-        $WithParam = 'param([Parameter(Mandatory=$true)][object]$TaskContext)'
+        [string]$WithParam = 'param([Parameter(Mandatory)][object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'
@@ -69,11 +67,9 @@ function GivenNoWorkingDirectory
 function GivenWorkingDirectory
 {
     param(
-        [string]
-        $Path,
+        [string]$Path,
 
-        [Switch]
-        $ThatDoesNotExist
+        [switch]$ThatDoesNotExist
     )
 
     $script:workingDirectory = $Path
@@ -151,14 +147,11 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [object]
-        $WithArgument,
+        [object]$WithArgument,
 
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]
-        $InInitMode
+        [switch]$InInitMode
     )
 
     $taskParameter = @{
@@ -390,11 +383,9 @@ if( -not `$SomeBool -or `$SomeOtherBool )
 }
 "@ -WithParam @"
 param(
-    [Switch]
-    `$SomeBool,
+    [switch]`$SomeBool,
 
-    [Switch]
-    `$SomeOtherBool
+    [switch]`$SomeOtherBool
 )
 "@
         WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }

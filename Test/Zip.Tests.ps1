@@ -31,8 +31,7 @@ function Init
 function GivenARepositoryWithItems
 {
     param(
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
         $ItemType = 'File'
     )
@@ -70,8 +69,7 @@ function ThenArchiveShouldInclude
         $ArchivePath,
 
         [Parameter(Position=0)]
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     if( -not $Path )
@@ -92,11 +90,9 @@ function ThenArchiveShouldBeCompressed
     param(
         $Path,
 
-        [Int]
-        $GreaterThan,
+        [int]$GreaterThan,
 
-        [int]
-        $LessThanOrEqualTo
+        [int]$LessThanOrEqualTo
     )
 
     $archivePath = Join-Path -Path (Get-BuildRoot) -ChildPath $Path
@@ -118,8 +114,7 @@ function ThenArchiveShouldBeCompressed
 function ThenArchiveShouldNotInclude
 {
     param(
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     foreach( $item in $Path )
@@ -131,8 +126,7 @@ function ThenArchiveShouldNotInclude
 function ThenTaskFails
 {
     Param(
-        [String]
-        $error
+        [string]$error
     )
 
     $threwException | Should -BeTrue

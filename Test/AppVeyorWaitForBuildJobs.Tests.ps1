@@ -32,7 +32,7 @@ function GivenJob
         [int]$ThatFinishesAtCheck,
 
         [Parameter(Mandatory,ParameterSetName='CurrentJob')]
-        [Switch]$Current,
+        [switch]$Current,
 
         [Parameter(Mandatory,ParameterSetName='ForNotCurrentJob')]
         [string]$WithFinalStatus,
@@ -176,8 +176,8 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [Switch]$AndNothingReturned,
-        [Switch]$AndNoBuildReturned
+        [switch]$AndNothingReturned,
+        [switch]$AndNoBuildReturned
     )
 
     $Global:Error.Clear()
@@ -281,13 +281,13 @@ function WhenRunningTask
 
     $parameter = @{}
     $task = $context.Configuration['Build'][0]
-    $checkInterval = [timespan]'00:00:10'
+    $checkInterval = [TimeSpan]'00:00:10'
     if( $task -isnot [string] )
     {
         $parameter = $task['AppVeyorWaitForBuildJobs']
         if( $parameter.ContainsKey('CheckInterval') )
         {
-            $checkInterval = [timespan]$parameter['CheckInterval']
+            $checkInterval = [TimeSpan]$parameter['CheckInterval']
         }
     }
     

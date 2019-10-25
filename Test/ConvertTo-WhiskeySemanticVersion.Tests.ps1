@@ -13,12 +13,11 @@ $developerBuildMetadata = '{0}.{1}' -f [Environment]::UserName,[Environment]::Ma
 function Assert-ConvertsTo
 {
     param(
-        [Parameter(ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline)]
         $InputObject,
 
-        [Parameter(Mandatory=$true,Position=0)]
-        [SemVersion.SemanticVersion]
-        $ExpectedVersion
+        [Parameter(Mandatory,Position=0)]
+        [SemVersion.SemanticVersion]$ExpectedVersion
     )
 
     process
@@ -36,8 +35,8 @@ function Assert-ConvertsTo
     }
 }
 
-[datetime]'1/2/3'  | Assert-ConvertsTo '1.2.2003'
-[datetime]'1/2/99' | Assert-ConvertsTo '1.2.1999'
+[DateTime]'1/2/3'  | Assert-ConvertsTo '1.2.2003'
+[DateTime]'1/2/99' | Assert-ConvertsTo '1.2.1999'
 '3.2.1+build.info' | Assert-ConvertsTo '3.2.1'
 '3.2.1+build.info' | Assert-ConvertsTo '3.2.1+build.info'
 2.0                | Assert-ConvertsTo '2.0.0'

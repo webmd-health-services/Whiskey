@@ -58,8 +58,7 @@ function ThenPipelineSucceeded
 function ThenTaskCalled
 {
     param(
-        [hashtable]
-        $WithParameter
+        [hashtable]$WithParameter
     )
     $taskCalled | should -BeTrue
     $taskParameters | Should -Not -BeNullOrEmpty
@@ -94,14 +93,11 @@ function WhenRunningTask
 {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [string]
-        $Name,
+        [string]$Name,
 
-        [hashtable]
-        $Parameter,
+        [hashtable]$Parameter,
 
-        [string]
-        $BuildRoot
+        [string]$BuildRoot
     )
 
     $optionalParams = @{}

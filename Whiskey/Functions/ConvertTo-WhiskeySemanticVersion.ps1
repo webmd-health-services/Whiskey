@@ -50,7 +50,7 @@ function ConvertTo-WhiskeySemanticVersion
         {
             return $InputObject
         }
-        elseif( $InputObject -is [datetime] )
+        elseif( $InputObject -is [DateTime] )
         {
             $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$InputObject.Year
         }

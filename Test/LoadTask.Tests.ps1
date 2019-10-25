@@ -44,8 +44,7 @@ function ThenFile
 {
     param(
         $Name,
-        [Switch]
-        $Exists
+        [switch]$Exists
     )
 
     It ('should create file') {
@@ -57,8 +56,7 @@ function ThenTask
 {
     param(
         $Name,
-        [Switch]
-        $Exists
+        [switch]$Exists
     )
 
     It ('should load task') {
@@ -93,13 +91,11 @@ function script:MyTask
 {
     [Whiskey.Task('Fubar')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter        
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter        
     )
 }
 '@
@@ -119,13 +115,11 @@ function MyTask
 {
     [Whiskey.Task('Fubar')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter        
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter        
     )
 }
 '@
@@ -146,13 +140,11 @@ function script:MyTask
 {
     [Whiskey.Task('Fubar')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter        
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter        
     )
 
     New-Item -Path 'fubar' -ItemType 'File'
@@ -179,13 +171,11 @@ function script:MyTask
 {
     [Whiskey.Task('Fubar')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter        
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter        
     )
 }
 '@

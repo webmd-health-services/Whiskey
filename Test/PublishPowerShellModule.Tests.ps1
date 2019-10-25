@@ -96,23 +96,23 @@ function Invoke-Publish
 {
     [CmdletBinding()]
     param(
-        [Switch]$withoutRegisteredRepo,
+        [switch]$withoutRegisteredRepo,
 
-        [String]$ForRepositoryNamed,
+        [string]$ForRepositoryNamed,
 
         [string]$RepoAtUri,
 
-        [String]$ForManifestPath,
+        [string]$ForManifestPath,
 
-        [Switch]$WithNoRepositoryName,
+        [switch]$WithNoRepositoryName,
 
-        [Switch]$withNoProgetURI,
+        [switch]$withNoProgetURI,
 
-        [Switch]$WithInvalidPath,
+        [switch]$WithInvalidPath,
 
-        [Switch]$WithNonExistentPath,
+        [switch]$WithNonExistentPath,
 
-        [Switch]$WithoutPathParameter,
+        [switch]$WithoutPathParameter,
 
         [string]$WithCredentialID
     )
@@ -196,7 +196,7 @@ function Invoke-Publish
                         $NuGetApiKey,
                         $Repository,
                         $Path,
-                        [Switch]$Force
+                        [switch]$Force
                     ) 
                     Write-Error -Message $message
                 }.GetNewClosure()

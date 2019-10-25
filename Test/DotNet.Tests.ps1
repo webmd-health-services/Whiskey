@@ -18,8 +18,7 @@ $verbosity = $null
 function GivenDotNetCoreProject
 {
     param(
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
         $Targeting
     )
@@ -63,10 +62,8 @@ function ThenLogFile
 {
     param(
         $Name,
-        [Switch]
-        $Not,
-        [Switch]
-        $Exists
+        [switch]$Not,
+        [switch]$Exists
     )
 
     $fullPath = Join-Path -Path $testRoot -ChildPath '.output'
@@ -90,8 +87,7 @@ function ThenLogFile
 function ThenProjectBuilt
 {
     param(
-        [string]
-        $AssemblyPath
+        [string]$AssemblyPath
     )
 
     $AssemblyPath = Join-Path -Path $testRoot -ChildPath $AssemblyPath

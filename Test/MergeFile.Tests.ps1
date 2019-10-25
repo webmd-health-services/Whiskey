@@ -71,7 +71,7 @@ function ThenFile
         [string]$Path,
 
         [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
-        [Switch]$DoesNotExist,
+        [switch]$DoesNotExist,
 
         [Parameter(ParameterSetName='Exists')]
         [switch]$Exists,

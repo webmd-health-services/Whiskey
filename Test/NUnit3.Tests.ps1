@@ -219,8 +219,7 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode
+        [switch]$InCleanMode
     )
 
     $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory

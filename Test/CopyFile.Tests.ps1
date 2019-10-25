@@ -26,8 +26,7 @@ function Get-DestinationRoot
 function GivenFiles
 {
     param(
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     $sourceRoot = Get-BuildRoot
@@ -44,8 +43,7 @@ function GivenNoFilesToCopy
 function GivenDirectories
 {
     param(
-        [string[]]
-        $Path
+        [string[]]$Path
     )
 
     foreach( $item in $Path )
@@ -61,8 +59,7 @@ function GivenDirectories
 function GivenUserCannotCreateDestination
 {
     param(
-        [string[]]
-        $To
+        [string[]]$To
     )
 
     $destinationRoot = Get-BuildRoot
@@ -86,11 +83,9 @@ function WhenCopyingFiles
     [CmdletBinding()]
     param(
         [Parameter(Position=0)]
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
-        [string[]]
-        $To
+        [string[]]$To
     )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer
@@ -123,8 +118,7 @@ function WhenCopyingFiles
 function ThenNothingCopied
 {
     param(
-        [string[]]
-        $To
+        [string[]]$To
     )
 
     $destinationRoot = Get-DestinationRoot
@@ -141,11 +135,9 @@ function ThenNothingCopied
 function ThenFilesCopied
 {
     param(
-        [string[]]
-        $Path,
+        [string[]]$Path,
 
-        [string[]]
-        $To
+        [string[]]$To
     )
 
     if( -not $To )

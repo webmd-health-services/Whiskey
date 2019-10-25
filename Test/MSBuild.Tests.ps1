@@ -38,8 +38,7 @@ function GivenCustomMSBuildScriptWithMultipleTargets
 function GivenAProjectThatCompiles
 {
     param(
-        [string]
-        $ProjectName = 'NUnit2PassingTest'
+        [string]$ProjectName = 'NUnit2PassingTest'
     )
 
     $source = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $ProjectName)
@@ -136,25 +135,19 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [hashtable]
-        $WithParameter = @{},
+        [hashtable]$WithParameter = @{},
 
-        [Parameter(Mandatory=$true,ParameterSetName='AsDeveloper')]
-        [Switch]
-        $AsDeveloper,
+        [Parameter(Mandatory,ParameterSetName='AsDeveloper')]
+        [switch]$AsDeveloper,
 
-        [Parameter(Mandatory=$true,ParameterSetName='AsBuildServer')]
-        [Switch]
-        $AsBuildServer,
+        [Parameter(Mandatory,ParameterSetName='AsBuildServer')]
+        [switch]$AsBuildServer,
 
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [SemVersion.SemanticVersion]
-        $AtVersion,
+        [SemVersion.SemanticVersion]$AtVersion,
 
-        [Switch]
-        $WithNoPath
+        [switch]$WithNoPath
     )
 
     $optionalParams = @{ }
@@ -218,11 +211,9 @@ function WhenRunningTask
 function ThenAssembliesAreVersioned
 {
     param(
-        [string]
-        $ProductVersion,
+        [string]$ProductVersion,
 
-        [string]
-        $FileVersion
+        [string]$FileVersion
     )
 
     Get-ChildItem -Path (Get-BuildRoot) -Filter $assembly -File -Recurse |
@@ -290,8 +281,7 @@ function ThenOutputNotLogged
 function ThenProjectsCompiled
 {
     param(
-        [string]
-        $To
+        [string]$To
     )
 
     if( $To )
@@ -325,14 +315,11 @@ function ThenProjectsNotCompiled
 function ThenOutput
 {
     param(
-        [string[]]
-        $Contains,
+        [string[]]$Contains,
 
-        [string[]]
-        $DoesNotContain,
+        [string[]]$DoesNotContain,
 
-        [string]
-        $Is
+        [string]$Is
     )
 
     # remove the NuGet output
