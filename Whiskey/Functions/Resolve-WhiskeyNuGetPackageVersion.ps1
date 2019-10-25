@@ -5,12 +5,12 @@ function Resolve-WhiskeyNuGetPackageVersion
 
         [Parameter(Mandatory)]
         # The name of the NuGet package to download.
-        [string]$NuGetPackageName,
+        [String]$NuGetPackageName,
 
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [string]$Version,
+        [String]$Version,
 
-        [string]$NugetPath = ($whiskeyNuGetExePath)
+        [String]$NugetPath = ($whiskeyNuGetExePath)
     )
 
     Set-StrictMode -Version 'Latest'

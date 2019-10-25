@@ -15,10 +15,10 @@ function ThenApiKey
 {
     param(
         [Parameter(Mandatory)]
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
-        [string]$WithValue,
+        [String]$WithValue,
 
         [Parameter(Mandatory)]
         [switch]$Exists
@@ -34,10 +34,10 @@ function WhenAddingApiKey
 {
     param(
         [Parameter(Mandatory)]
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
-        [string]$WithValue
+        [String]$WithValue
     )
 
     $script:context = New-WhiskeyTestContext -ForDeveloper

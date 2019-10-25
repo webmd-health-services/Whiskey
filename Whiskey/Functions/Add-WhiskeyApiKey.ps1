@@ -29,7 +29,7 @@ function Add-WhiskeyApiKey
 
         [Parameter(Mandatory)]
         # The ID of the API key. This should match the ID given in your `whiskey.yml` for the API key ID property of the task that needs it.
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
         # The value of the API key. Can be a string or a SecureString.

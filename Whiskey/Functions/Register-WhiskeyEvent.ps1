@@ -20,7 +20,7 @@ function Register-WhiskeyEvent
                 [Whiskey.Context]$TaskContext,
 
                 [Parameter(Mandatory)]
-                [string]$TaskName,
+                [String]$TaskName,
 
                 [Parameter(Mandatory)]
                 [hashtable]$TaskParameter
@@ -33,15 +33,15 @@ function Register-WhiskeyEvent
     param(
         [Parameter(Mandatory)]
         # The name of the command to run during the event.
-        [string]$CommandName,
+        [String]$CommandName,
 
         [Parameter(Mandatory)]
         [ValidateSet('BeforeTask','AfterTask')]
         # When the command should be run; what events does it respond to?
-        [string]$Event,
+        [String]$Event,
 
         # Only fire the event for a specific task.
-        [string]$TaskName
+        [String]$TaskName
     )
 
     Set-StrictMode -Version 'Latest'
@@ -55,7 +55,7 @@ function Register-WhiskeyEvent
 
     if( -not $events[$eventName] )
     {
-        $events[$eventName] = New-Object -TypeName 'Collections.Generic.List[string]'
+        $events[$eventName] = New-Object -TypeName 'Collections.Generic.List[String]'
     }
 
     $events[$eventName].Add( $CommandName )

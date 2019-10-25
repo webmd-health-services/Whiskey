@@ -36,8 +36,8 @@ function Get-MSBuild
             $InputObject
         )
 
-        [version]$version = $null
-        [version]::TryParse($InputObject,[ref]$version)
+        [Version]$version = $null
+        [Version]::TryParse($InputObject,[ref]$version)
 
     }
 
@@ -75,7 +75,7 @@ function Get-MSBuild
 
         [pscustomobject]@{
             Name = $name;
-            Version = [version]$name;
+            Version = [Version]$name;
             Path = $msbuildPath;
             Path32 = $msbuildPath32;
         }
@@ -114,7 +114,7 @@ function Get-MSBuild
 
             [pscustomobject]@{
                                 Name =  $versionRoot.Name;
-                                Version = [version]$versionRoot.Name;
+                                Version = [Version]$versionRoot.Name;
                                 Path = $path;
                                 Path32 = $path32;
                             }

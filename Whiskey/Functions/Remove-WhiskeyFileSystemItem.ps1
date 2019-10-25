@@ -32,7 +32,7 @@ function Remove-WhiskeyFileSystemItem
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'

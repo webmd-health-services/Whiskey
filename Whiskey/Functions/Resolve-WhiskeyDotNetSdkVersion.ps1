@@ -31,7 +31,7 @@ function Resolve-WhiskeyDotNetSdkVersion
 
         [Parameter(Mandatory, ParameterSetName='Version')]
         # Version of the .NET Core SDK to search for and resolve. Accepts wildcards.
-        [string]$Version
+        [String]$Version
     )
 
     Set-StrictMode -version 'Latest'

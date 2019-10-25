@@ -7,11 +7,11 @@ function Stop-WhiskeyTask
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [string]$Message,
+        [String]$Message,
 
-        [string]$PropertyName,
+        [String]$PropertyName,
 
-        [string]$PropertyDescription
+        [String]$PropertyDescription
     )
 
     Set-StrictMode -Version 'Latest'

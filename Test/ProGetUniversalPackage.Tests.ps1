@@ -83,7 +83,7 @@ function Reset
 function ThenTaskFails
 {
     Param(
-        [string]$error
+        [String]$error
     )
 
     $Global:Error | Should -Match $error
@@ -108,17 +108,17 @@ function ThenVersionIs
     $versionJsonPath = Join-Path -Path $expandPath -ChildPath 'package\version.json'
 
     $versionJson = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
-    $versionJson.Version | Should -BeOfType ([string])
+    $versionJson.Version | Should -BeOfType ([String])
     $versionJson.Version | Should -Be $Version
-    $versionJson.PrereleaseMetadata | Should -BeOfType ([string])
+    $versionJson.PrereleaseMetadata | Should -BeOfType ([String])
     $versionJson.PrereleaseMetadata | Should -Be $PrereleaseMetadata
-    $versionJson.BuildMetadata | Should -BeOfType ([string])
+    $versionJson.BuildMetadata | Should -BeOfType ([String])
     $versionJson.BuildMetadata | Should -Be $BuildMetadata
-    $versionJson.SemVer2 | Should -BeOfType ([string])
+    $versionJson.SemVer2 | Should -BeOfType ([String])
     $versionJson.SemVer2 | Should -Be $SemVer2
-    $versionJson.SemVer1 | Should -BeOfType ([string])
+    $versionJson.SemVer1 | Should -BeOfType ([String])
     $versionJson.SemVer1 | Should -Be $SemVer1
-    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([string])
+    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([String])
     $versionJson.SemVer2NoBuildMetadata | Should -Be $SemVer2NoBuildMetadata
 }
 
@@ -126,39 +126,39 @@ function Assert-NewWhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     param(
-        [object[]]$ForPath,
+        [Object[]]$ForPath,
 
-        [string[]]$ThatIncludes,
+        [String[]]$ThatIncludes,
 
-        [string[]]$ThatExcludes,
+        [String[]]$ThatExcludes,
 
-        [string]$Name = $defaultPackageName,
+        [String]$Name = $defaultPackageName,
 
-        [string]$Description = $defaultDescription,
+        [String]$Description = $defaultDescription,
 
-        [string]$Version,
+        [String]$Version,
 
-        [string[]]$HasRootItems,
+        [String[]]$HasRootItems,
 
-        [string[]]$HasFiles,
+        [String[]]$HasFiles,
 
-        [string[]]$NotHasFiles,
+        [String[]]$NotHasFiles,
 
-        [string]$ShouldFailWithErrorMessage,
+        [String]$ShouldFailWithErrorMessage,
 
         [switch]$ShouldWriteNoErrors,
 
         [switch]$ShouldReturnNothing,
 
-        [string[]]$HasThirdPartyRootItem,
+        [String[]]$HasThirdPartyRootItem,
 
-        [object[]]$WithThirdPartyRootItem,
+        [Object[]]$WithThirdPartyRootItem,
 
-        [string[]]$HasThirdPartyFile,
+        [String[]]$HasThirdPartyFile,
 
-        [string]$FromSourceRoot,
+        [String]$FromSourceRoot,
 
-        [string[]]$MissingRootItems,
+        [String[]]$MissingRootItems,
 
         [switch]$WhenCleaning,
 
@@ -199,7 +199,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
-    $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
+    $taskContext.Version.Version = [Version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
     $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}.{1}.{2}' -f $semVer2.Major,$semVer2.Minor,$semVer2.Patch)
     if( $taskContext.Version.SemVer2.Prerelease )
     {
@@ -297,17 +297,17 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $versionJsonPath | Should -Exist
 
     $versionJson = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
-    $versionJson.Version | Should -BeOfType ([string])
+    $versionJson.Version | Should -BeOfType ([String])
     $versionJson.Version | Should -Be $taskContext.Version.Version.ToString()
-    $versionJson.PrereleaseMetadata | Should -BeOfType ([string])
+    $versionJson.PrereleaseMetadata | Should -BeOfType ([String])
     $versionJson.PrereleaseMetadata | Should -Be $taskContext.Version.SemVer2.Prerelease.ToString()
-    $versionJson.BuildMetadata | Should -BeOfType ([string])
+    $versionJson.BuildMetadata | Should -BeOfType ([String])
     $versionJson.BuildMetadata | Should -Be $taskContext.Version.SemVer2.Build.ToString()
-    $versionJson.SemVer2 | Should -BeOfType ([string])
+    $versionJson.SemVer2 | Should -BeOfType ([String])
     $versionJson.SemVer2 | Should -Be $taskContext.Version.SemVer2.ToString()
-    $versionJson.SemVer1 | Should -BeOfType ([string])
+    $versionJson.SemVer1 | Should -BeOfType ([String])
     $versionJson.SemVer1 | Should -Be $taskContext.Version.SemVer1.ToString()
-    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([string])
+    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([String])
     $versionJson.SemVer2NoBuildMetadata | Should -Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
 
     if( $NotHasFiles )
@@ -342,11 +342,11 @@ function Assert-NewWhiskeyProGetUniversalPackage
 function Initialize-Test
 {
     param(
-        [string[]]$DirectoryName,
+        [String[]]$DirectoryName,
 
-        [string[]]$FileName,
+        [String[]]$FileName,
 
-        [string[]]$RootFileName,
+        [String[]]$RootFileName,
 
         [switch]$WhenUploadFails,
 
@@ -364,7 +364,7 @@ function Initialize-Test
 
         [switch]$OnBugFixBranch,
 
-        [string]$SourceRoot
+        [String]$SourceRoot
     )
 
     $repoRoot = Get-BuildRoot
@@ -416,7 +416,7 @@ function Get-BuildRoot
 function GivenARepositoryWithItems
 {
     param(
-        [string[]]$Path,
+        [String[]]$Path,
 
         $ItemType = 'File'
     )
@@ -439,9 +439,9 @@ function GivenARepositoryWithItems
 function ThenPackageArchive
 {
     param(
-        [string]$PackageName,
+        [String]$PackageName,
 
-        [string[]]$ContainsPath
+        [String[]]$ContainsPath
     )
 
     $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath '.output'
@@ -468,7 +468,7 @@ function ThenPackageShouldInclude
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]$Path
+        [String[]]$Path
     )
 
     $Path += @( 'version.json' )
@@ -483,7 +483,7 @@ function ThenPackageShouldInclude
 function ThenPackageShouldNotInclude
 {
     param(
-        [string[]]$Path
+        [String[]]$Path
     )
 
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
@@ -575,7 +575,7 @@ function ThenPackageShouldBeCompressed
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]$Path,
+        [String[]]$Path,
 
         [int]$GreaterThan,
 
@@ -608,19 +608,19 @@ function WhenPackaging
         $WithDescription = $defaultDescription,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]$Paths,
+        [Object[]]$Paths,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]$WithWhitelist,
+        [Object[]]$WithWhitelist,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]$ThatExcludes,
+        [Object[]]$ThatExcludes,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $FromSourceRoot,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]$WithThirdPartyPath,
+        [Object[]]$WithThirdPartyPath,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithVersion = $defaultVersion,

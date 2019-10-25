@@ -25,11 +25,11 @@ function Uninstall-WhiskeyNodeModule
     param(
         [Parameter(Mandatory)]
         # The name of the module to uninstall.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
         # The path to the build root directory.
-        [string]$BuildRootPath,
+        [String]$BuildRootPath,
 
         # Node modules are being uninstalled on a developer computer.
         [switch]$ForDeveloper,

@@ -37,10 +37,10 @@ function Invoke-PreTaskPlugin
 {
     param(
         [Parameter(Mandatory)]
-        [object]$TaskContext,
+        [Object]$TaskContext,
 
         [Parameter(Mandatory)]
-        [string]$TaskName,
+        [String]$TaskName,
 
         [Parameter(Mandatory)]
         [hashtable]$TaskParameter
@@ -52,10 +52,10 @@ function Invoke-PostTaskPlugin
 {
     param(
         [Parameter(Mandatory)]
-        [object]$TaskContext,
+        [Object]$TaskContext,
 
         [Parameter(Mandatory)]
-        [string]$TaskName,
+        [String]$TaskName,
 
         [Parameter(Mandatory)]
         [hashtable]$TaskParameter
@@ -157,7 +157,7 @@ function GivenRunByDeveloper
 function GivenPlugins
 {
     param(
-        [string]$ForSpecificTask
+        [String]$ForSpecificTask
     )
 
     $taskNameParam = @{ }
@@ -177,7 +177,7 @@ function GivenDefaults
     param(
         [hashtable]$Default,
 
-        [string]$ForTask
+        [String]$ForTask
     )
 
     $script:taskDefaults[$ForTask] = $Default
@@ -186,7 +186,7 @@ function GivenDefaults
 function GivenScmBranch
 {
     param(
-        [string]$Branch
+        [String]$Branch
     )
     $script:scmBranch = $Branch
 }
@@ -205,7 +205,7 @@ function GivenWhiskeyYmlBuildFile
 {
     param(
         [Parameter(Position=0)]
-        [string]$Yaml
+        [String]$Yaml
     )
 
     $config = $null
@@ -217,7 +217,7 @@ function GivenWhiskeyYmlBuildFile
 function GivenWorkingDirectory
 {
     param(
-        [string]$Directory,
+        [String]$Directory,
 
         [switch]$SkipMock
     )
@@ -265,9 +265,9 @@ function ThenPipelineSucceeded
 function ThenDotNetProjectsCompilationFailed
 {
     param(
-        [string]$ConfigurationPath,
+        [String]$ConfigurationPath,
 
-        [string[]]$ProjectName
+        [String[]]$ProjectName
     )
 
     $root = Split-Path -Path $ConfigurationPath -Parent
@@ -422,7 +422,7 @@ function ThenTaskRanWithoutParameter
 {
     param(
         $CommandName,
-        [string[]]$ParameterName
+        [String[]]$ParameterName
     )
 
     foreach( $name in $ParameterName )
@@ -534,11 +534,11 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [string]$Name,
+        [String]$Name,
 
         [hashtable]$Parameter,
 
-        [string]$InRunMode
+        [String]$InRunMode
     )
 
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'

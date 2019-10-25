@@ -29,13 +29,13 @@ function Invoke-WhiskeyNpmCommand
     param(
         [Parameter(Mandatory)]
         # The NPM command to execute, e.g. `install`, `prune`, `run-script`, etc.
-        [string]$Name,
+        [String]$Name,
         
         # An array of arguments to be given to the NPM command being executed.
-        [string[]]$ArgumentList,
+        [String[]]$ArgumentList,
 
         [Parameter(Mandatory)]
-        [string]$BuildRootPath,
+        [String]$BuildRootPath,
 
         # NPM commands are being run on a developer computer.
         [switch]$ForDeveloper

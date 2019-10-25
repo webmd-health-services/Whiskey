@@ -25,17 +25,17 @@ function Install-WhiskeyNodeModule
     param(
         [Parameter(Mandatory)]
         # The name of the module to install.
-        [string]$Name,
+        [String]$Name,
 
         # The version of the module to install.
-        [string]$Version,
+        [String]$Version,
 
         # Node modules are being installed on a developer computer.
         [switch]$ForDeveloper,
 
         [Parameter(Mandatory)]
         # The path to the build root.
-        [string]$BuildRootPath,
+        [String]$BuildRootPath,
 
         # Whether or not to install the module globally.
         [switch]$Global,

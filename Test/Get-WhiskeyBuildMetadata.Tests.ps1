@@ -180,13 +180,13 @@ InModuleScope 'Whiskey' {
             $JobName,
             [Parameter(Mandatory)]
             [AllowNull()]
-            [uri]$JobUri,
+            [Uri]$JobUri,
             [Parameter(Mandatory)]
             [AllowNull()]
-            [uri]$BuildUri,
+            [Uri]$BuildUri,
             [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             [AllowNull()]
-            [uri]$ScmUri,
+            [Uri]$ScmUri,
             [Parameter(Mandatory,ParameterSetName='WithGitScm')]
             $ScmCommit,
             [Parameter(Mandatory,ParameterSetName='WithGitScm')]

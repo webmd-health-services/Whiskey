@@ -21,11 +21,11 @@ function Add-WhiskeyVariable
 
         [Parameter(Mandatory)]
         # The name of the variable.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
         [AllowEmptyString()]
-        [object]$Value
+        [Object]$Value
     )
 
     Set-StrictMode -Version 'Latest'

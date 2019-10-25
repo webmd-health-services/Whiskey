@@ -11,7 +11,7 @@ function Set-WhiskeyVariableFromXml
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-        [string]$Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [string[]]$Path
+    [String[]]$Path
 )
 
 Get-Item -Path $Path |

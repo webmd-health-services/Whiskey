@@ -32,7 +32,7 @@ function Write-WhiskeyInfo
         [AllowEmptyString()]
         [AllowNull()]
         # The message to write.
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )

@@ -108,14 +108,14 @@ $testCases = @(
                 },
                 @{
                     Name = 'double';
-                    Result = [double]::NegativeInfinity
+                    Result = [Double]::NegativeInfinity
                     Values = @(
                                     '-.Inf'
                                 )
                 },
                 @{
                     Name = 'double';
-                    Result = [double]::PositiveInfinity
+                    Result = [Double]::PositiveInfinity
                     Values = @(
                                     '.Inf'
                                 )
@@ -135,8 +135,8 @@ foreach( $testCase in $testCases )
 }
 
 Describe ('ConvertFrom-WhiskeyYamlScalar.when converting ''NaN''') {
-    It ('should return [double]NaN') {
-        '.NaN' | ConvertFrom-WhiskeyYamlScalar | ForEach-Object { [double]::IsNaN($_) } | Should -Be $true
+    It ('should return [Double]NaN') {
+        '.NaN' | ConvertFrom-WhiskeyYamlScalar | ForEach-Object { [Double]::IsNaN($_) } | Should -Be $true
     }
 }
 

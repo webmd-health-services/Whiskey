@@ -28,7 +28,7 @@ function ConvertTo-WhiskeyContext
     param(
         [Parameter(Mandatory,ValueFromPipeline)]
         # The context to convert. You can pass an existing context via the pipeline.
-        [object]$InputObject
+        [Object]$InputObject
     )
 
     process 
@@ -42,12 +42,12 @@ function ConvertTo-WhiskeyContext
             {
                 param(
                     [Parameter(Mandatory)]
-                    [object]$Source,
+                    [Object]$Source,
 
                     [Parameter(Mandatory)]
-                    [object]$Destination,
+                    [Object]$Destination,
 
-                    [string[]]$ExcludeProperty
+                    [String[]]$ExcludeProperty
                 )
 
                 $destinationType = $Destination.GetType()

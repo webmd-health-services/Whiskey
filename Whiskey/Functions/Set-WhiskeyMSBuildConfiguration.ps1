@@ -23,7 +23,7 @@ function Set-WhiskeyMSBuildConfiguration
 
         [Parameter(Mandatory)]
         # The configuration to use.
-        [string]$Value
+        [String]$Value
     )
 
     Set-StrictMode -Version 'Latest'

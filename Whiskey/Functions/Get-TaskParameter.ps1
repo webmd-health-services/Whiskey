@@ -5,7 +5,7 @@ function Get-TaskParameter
     param(
         # The name of the command.
         [Parameter(Mandatory)]
-        [string]$Name,
+        [String]$Name,
 
         # The properties from the tasks's YAML.
         [Parameter(Mandatory)]

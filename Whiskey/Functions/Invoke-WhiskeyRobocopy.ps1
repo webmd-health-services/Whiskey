@@ -4,16 +4,16 @@ function Invoke-WhiskeyRobocopy
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Source,
+        [String]$Source,
 
         [Parameter(Mandatory)]
-        [string]$Destination,
+        [String]$Destination,
 
-        [string[]]$WhiteList,
+        [String[]]$WhiteList,
 
-        [string[]]$Exclude,
+        [String[]]$Exclude,
 
-        [string]$LogPath
+        [String]$LogPath
     )
 
     Set-StrictMode -Version 'Latest'

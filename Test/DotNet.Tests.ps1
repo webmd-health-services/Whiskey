@@ -18,7 +18,7 @@ $verbosity = $null
 function GivenDotNetCoreProject
 {
     param(
-        [string[]]$Path,
+        [String[]]$Path,
 
         $Targeting
     )
@@ -87,7 +87,7 @@ function ThenLogFile
 function ThenProjectBuilt
 {
     param(
-        [string]$AssemblyPath
+        [String]$AssemblyPath
     )
 
     $AssemblyPath = Join-Path -Path $testRoot -ChildPath $AssemblyPath

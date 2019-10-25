@@ -23,17 +23,17 @@ function Invoke-WhiskeyDotNetCommand
 
         [Parameter(Mandatory)]
         # The path to the `dotnet` executable to run the SDK command with.
-        [string]$DotNetPath,
+        [String]$DotNetPath,
 
         [Parameter(Mandatory)]
         # The name of the .NET Core SDK command to run.
-        [string]$Name,
+        [String]$Name,
 
         # A list of arguments to pass to the .NET Core SDK command.
-        [string[]]$ArgumentList,
+        [String[]]$ArgumentList,
 
         # The path to a .NET Core solution or project file to pass to the .NET Core SDK command.
-        [string]$ProjectPath
+        [String]$ProjectPath
     )
 
     Set-StrictMode -Version 'Latest'

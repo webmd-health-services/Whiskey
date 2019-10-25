@@ -21,7 +21,7 @@ function GivenCredential
         [pscredential]$Credential,
 
         [Parameter(Mandatory)]
-        [string]$WithID
+        [String]$WithID
     )
 
     $credentials[$WithID] = $Credential
@@ -46,7 +46,7 @@ function GivenPublishingFails
 {
     param(
         [Parameter(Mandatory)]
-        [string]$WithError
+        [String]$WithError
     )
 
     $script:publishError = $WithError
@@ -56,7 +56,7 @@ function GivenRegisteringFails
 {
     param(
         [Parameter(Mandatory)]
-        [string]$WithError
+        [String]$WithError
     )
 
     $script:registerError = $WithError
@@ -98,11 +98,11 @@ function Invoke-Publish
     param(
         [switch]$withoutRegisteredRepo,
 
-        [string]$ForRepositoryNamed,
+        [String]$ForRepositoryNamed,
 
-        [string]$RepoAtUri,
+        [String]$RepoAtUri,
 
-        [string]$ForManifestPath,
+        [String]$ForManifestPath,
 
         [switch]$WithNoRepositoryName,
 
@@ -114,7 +114,7 @@ function Invoke-Publish
 
         [switch]$WithoutPathParameter,
 
-        [string]$WithCredentialID
+        [String]$WithCredentialID
     )
     
     $version = '1.2.3'
@@ -296,10 +296,10 @@ function ThenRepositoryRegistered
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Named,
+        [String]$Named,
 
         [Parameter(Mandatory)]
-        [string]$AtUri,
+        [String]$AtUri,
 
         [pscredential]$WithCredential
     )
@@ -336,9 +336,9 @@ function ThenModulePublished
 {
     param(
         [Parameter(Mandatory)]
-        [string]$ToRepositoryNamed,
+        [String]$ToRepositoryNamed,
 
-        [string]$ExpectedPathName = (Join-Path -Path $testRoot -ChildPath 'MyModule'),
+        [String]$ExpectedPathName = (Join-Path -Path $testRoot -ChildPath 'MyModule'),
 
         [switch]$WithNoRepositoryName
     )
@@ -371,11 +371,11 @@ function ThenModulePublished
 function ThenManifest
 {
     param(
-        [string]$ManifestPath = (Join-Path -Path $testRoot -ChildPath 'MyModule\MyModule.psd1'),
+        [String]$ManifestPath = (Join-Path -Path $testRoot -ChildPath 'MyModule\MyModule.psd1'),
 
-        [string]$AtVersion,
+        [String]$AtVersion,
 
-        [string]$HasPrerelease
+        [String]$HasPrerelease
     )
 
     if( -not $AtVersion )

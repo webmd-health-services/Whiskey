@@ -195,7 +195,7 @@ function ThenBuildRunInMode
 function ThenBuildStatusSetTo
 {
     param(
-        [string]$ExpectedStatus
+        [String]$ExpectedStatus
     )
 
     It ('should set commmit build status to ''{0}''' -f $ExpectedStatus) {
@@ -235,7 +235,7 @@ function WhenRunningBuild
 {
     [CmdletBinding()]
     param(
-        [string[]]$PipelineName,
+        [String[]]$PipelineName,
 
         [switch]$WithCleanSwitch,
 

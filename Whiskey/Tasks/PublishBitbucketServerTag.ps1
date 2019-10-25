@@ -54,7 +54,7 @@ function Publish-WhiskeyBBServerTag
     }
     elseif( $TaskContext.BuildMetadata.ScmUri -and $TaskContext.BuildMetadata.ScmUri.Segments )
     {
-        $uri = [uri]$TaskContext.BuildMetadata.ScmUri
+        $uri = [Uri]$TaskContext.BuildMetadata.ScmUri
         $projectKey = $uri.Segments[-2].Trim('/')
         $repoKey = $uri.Segments[-1] -replace '\.git$',''
     }

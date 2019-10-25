@@ -9,7 +9,7 @@ function Set-WhiskeyBuildStatus
         [Parameter(Mandatory)]
         [ValidateSet('Started','Completed','Failed')]
         # The build status. Should be one of `Started`, `Completed`, or `Failed`.
-        [string]$Status
+        [String]$Status
     )
 
     Set-StrictMode -Version 'Latest'

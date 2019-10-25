@@ -8,7 +8,7 @@ function Stop-Whiskey
         [Whiskey.Context]$Context,
               
         [Parameter(Mandatory)]
-        [string]$Message
+        [String]$Message
     )
               
     Set-StrictMode -Version 'Latest'

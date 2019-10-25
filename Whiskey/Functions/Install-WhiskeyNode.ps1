@@ -5,13 +5,13 @@ function Install-WhiskeyNode
     param(
         [Parameter(Mandatory)]
         # The directory where Node should be installed. Will actually be installed into `Join-Path -Path $InstallRoot -ChildPath '.node'`.
-        [string]$InstallRoot,
+        [String]$InstallRoot,
 
         # Are we running in clean mode? If so, don't re-install the tool.
         [switch]$InCleanMode,
 
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
-        [string]$Version
+        [String]$Version
     )
 
     Set-StrictMode -Version 'Latest'

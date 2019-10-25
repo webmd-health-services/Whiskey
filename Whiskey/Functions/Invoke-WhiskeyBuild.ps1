@@ -61,7 +61,7 @@ function Invoke-WhiskeyBuild
         # The name(s) of any pipelines to run. Default behavior is to run the `Build` pipeline and, if on a publishing branch, the `Publish` pipeline.
         #
         # If you pass a value to this parameter, the `Publish` pipeline is *not* run implicitly. You must pass its name to run it.
-        [string[]]$PipelineName,
+        [String[]]$PipelineName,
 
         [Parameter(Mandatory,ParameterSetName='Clean')]
         # Runs the build in clean mode. In clean mode, tasks delete any artifacts they create, including downloaded tools and dependencies. This is opt-in, so if a task is not deleting its artifacts, it needs to be updated to support clean mode.

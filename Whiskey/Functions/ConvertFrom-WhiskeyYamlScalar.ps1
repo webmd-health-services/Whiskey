@@ -30,7 +30,7 @@ function ConvertFrom-WhiskeyYamlScalar
         [AllowEmptyString()]
         [AllowNull()]
         # The object to convert.
-        [string]$InputObject
+        [String]$InputObject
     )
 
     process
@@ -38,7 +38,7 @@ function ConvertFrom-WhiskeyYamlScalar
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        if( [string]::IsNullOrEmpty($InputObject)  -or $InputObject -match '^(~|null)' )
+        if( [String]::IsNullOrEmpty($InputObject)  -or $InputObject -match '^(~|null)' )
         {
             return $null
         }
@@ -98,23 +98,23 @@ function ConvertFrom-WhiskeyYamlScalar
         if( [Text.RegularExpressions.Regex]::IsMatch($InputObject, $regex, [Text.RegularExpressions.RegexOptions]::IgnorePatternWhitespace) ) 
         {
             $value = $InputObject -replace '_',''
-            [double]$double = 0.0
+            [Double]$double = 0.0
             if( $value -eq '.NaN' )
             {
-                return [double]::NaN
+                return [Double]::NaN
             }
 
             if( $value -match '-\.inf' )
             {
-                return [double]::NegativeInfinity
+                return [Double]::NegativeInfinity
             }
 
             if( $value -match '\+?.inf' )
             {
-                return [double]::PositiveInfinity
+                return [Double]::PositiveInfinity
             }
 
-            if( [double]::TryParse($value,[ref]$double) )
+            if( [Double]::TryParse($value,[ref]$double) )
             {
                 return $double
             }

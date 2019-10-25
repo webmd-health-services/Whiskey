@@ -9,7 +9,7 @@ function Format-WhiskeyMessage
         [Parameter(Mandatory,ValueFromPipeline)]
         [AllowEmptyString()]
         [AllowNull()]
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )

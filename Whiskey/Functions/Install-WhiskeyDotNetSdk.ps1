@@ -22,11 +22,11 @@ function Install-WhiskeyDotNetSdk
     param(
         [Parameter(Mandatory)]
         # Directory where the .NET Core SDK will be installed.
-        [string]$InstallRoot,
+        [String]$InstallRoot,
 
         [Parameter(Mandatory)]
         # Version of the .NET Core SDK to install.
-        [string]$Version,
+        [String]$Version,
 
         # Search for the desired version from existing global installs of the .NET Core SDK. If found, the install is skipped and the path to the global install is returned.
         [switch]$Global

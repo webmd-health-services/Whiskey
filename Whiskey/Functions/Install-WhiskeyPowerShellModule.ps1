@@ -28,14 +28,14 @@ function Install-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The name of the module to install.
-        [string]$Name,
+        [String]$Name,
 
         # The version of the module to install.
-        [string]$Version,
+        [String]$Version,
 
         [Parameter(Mandatory)]
         # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
-        [string]$BuildRoot,
+        [String]$BuildRoot,
 
         # Don't import the module.
         [switch]$SkipImport

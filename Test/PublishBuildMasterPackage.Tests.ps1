@@ -52,9 +52,9 @@ function GivenNoRelease
 {
     param(
         [Parameter(Mandatory,Position=0)]
-        [string]$Name,
+        [String]$Name,
         [Parameter(Mandatory)]
-        [string]$ForApplication
+        [String]$ForApplication
     )
 
     $script:appName = $ForApplication
@@ -217,19 +217,19 @@ function ThenCreatedPackage
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,Position=0)]
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
-        [string]$InRelease,
+        [String]$InRelease,
 
         [Parameter(Mandatory)]
-        [string]$ForApplication,
+        [String]$ForApplication,
 
         [Parameter(Mandatory)]
-        [string]$AtUri,
+        [String]$AtUri,
 
         [Parameter(Mandatory)]
-        [string]$UsingApiKey,
+        [String]$UsingApiKey,
 
         [Parameter(Mandatory)]
         [hashtable]$WithVariables
@@ -263,12 +263,12 @@ function ThenPackageDeployed
 {
     param(
         [Parameter(Mandatory)]
-        [string]$AtUri,
+        [String]$AtUri,
 
         [Parameter(Mandatory)]
-        [string]$UsingApiKey,
+        [String]$UsingApiKey,
         
-        [string]$AtStage
+        [String]$AtStage
     )
     
     if( $AtStage )

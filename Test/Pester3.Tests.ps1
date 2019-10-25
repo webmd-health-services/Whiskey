@@ -42,7 +42,7 @@ function GivenTestContext
 function GivenVersion
 {
     param(
-        [string]$Version
+        [String]$Version
     )
 
     $taskParameter['Version'] = $Version
@@ -51,8 +51,8 @@ function GivenVersion
 function GivenTestFile
 {
     param(
-        [string]$Path,
-        [string]$Content
+        [String]$Path,
+        [String]$Content
     )
 
     $taskParameter['Path'] = & {
@@ -111,7 +111,7 @@ function WhenPesterTaskIsInvoked
 function ThenPesterShouldBeInstalled
 {
     param(
-        [string]$ExpectedVersion
+        [String]$ExpectedVersion
     )
 
     $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
@@ -177,7 +177,7 @@ function ThenPesterShouldHaveRun
 function ThenTestShouldFail
 {
     param(
-        [string]$failureMessage
+        [String]$failureMessage
     )
     $Script:failed | Should -BeTrue
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty

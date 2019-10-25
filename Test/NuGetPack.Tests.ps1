@@ -144,7 +144,7 @@ function GivenRunByBuildServer
 function GivenPath
 {
     param(
-        [string[]]$Path
+        [String[]]$Path
     )
 
     $script:path = $Path

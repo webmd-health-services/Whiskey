@@ -24,11 +24,11 @@ function Get-WhiskeyApiKey
 
         [Parameter(Mandatory)]
         # The ID of the API key. You make this up.
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
         # The property name in the task that needs this API key. Used in error messages to help users pinpoint what task and property might be misconfigured.
-        [string]$PropertyName
+        [String]$PropertyName
     )
 
     Set-StrictMode -Version 'Latest'

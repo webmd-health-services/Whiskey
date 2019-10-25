@@ -55,11 +55,11 @@ function Resolve-WhiskeyVariable
         # If the value is a hashtable, variable replcement is done on each value of the hashtable. 
         #
         # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
-        [object]$InputObject,
+        [Object]$InputObject,
 
         [Parameter(ParameterSetName='ByName')]
         # The name of a single Whiskey variable to resolve.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
         # The context of the current build. Necessary to lookup any variables.
@@ -137,7 +137,7 @@ function Resolve-WhiskeyVariable
         if( (Get-Member -Name 'Keys' -InputObject $InputObject) )
         {
             $newValues = @{ }
-            $toRemove = New-Object 'Collections.Generic.List[string]'
+            $toRemove = New-Object 'Collections.Generic.List[String]'
             # Can't modify a collection while enumerating it.
             foreach( $key in $InputObject.Keys )
             {
@@ -248,7 +248,7 @@ function Resolve-WhiskeyVariable
                                             {
                                                 if( $nextChar -eq $currentChar )
                                                 {
-                                                    [void]$currentArg.Append($currentChar)
+                                                    [Void]$currentArg.Append($currentChar)
                                                     $idx++
                                                     continue
                                                 }
@@ -261,13 +261,13 @@ function Resolve-WhiskeyVariable
                                         if( $currentChar -eq ',' -and -not $inString )
                                         {
                                             $currentArg.ToString()
-                                            [void]$currentArg.Clear()
+                                            [Void]$currentArg.Clear()
                                             continue
                                         }
 
-                                        if( $inString -or -not [string]::IsNullOrWhiteSpace($currentChar) )
+                                        if( $inString -or -not [String]::IsNullOrWhiteSpace($currentChar) )
                                         {
-                                            [void]$currentArg.Append($currentChar)
+                                            [Void]$currentArg.Append($currentChar)
                                         }
                                     }
                                     if( $currentArg.Length )

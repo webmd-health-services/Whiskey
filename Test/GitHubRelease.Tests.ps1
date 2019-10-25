@@ -137,7 +137,7 @@ function ThenAssetNotUploadedTo
             #$DebugPreference = 'Continue'
             Write-Debug ('Uri   expected  {0}' -f $toUri)
             Write-Debug ('      actual    {0}' -f $Uri)
-            $Uri -eq [uri]$toUri
+            $Uri -eq [Uri]$toUri
         }
     }
 }
@@ -186,7 +186,7 @@ function ThenRequest
                 Write-Debug ('')
                 Write-Debug ('Uri   expected  {0}' -f $ToUri)
                 Write-Debug ('      actual    {0}' -f $Uri)
-                $uriEqual = $Uri -eq [uri]$ToUri
+                $uriEqual = $Uri -eq [Uri]$ToUri
                 Write-Debug ('                {0}' -f $uriEqual)
                 Write-Debug ('Body  expected  {0}' -f $WithBody)
                 Write-Debug ('      actual    {0}' -f $Body)
@@ -219,7 +219,7 @@ function ThenRequest
                 Write-Debug ('        actual    {0}' -f $Uri)
                 Write-Debug ('Method  expected  {0}' -f $UsedMethod)
                 Write-Debug ('        actual    {0}' -f $Method)
-                $Uri -eq [uri]$ToUri -and $Method -eq $UsedMethod 
+                $Uri -eq [Uri]$ToUri -and $Method -eq $UsedMethod 
             }
         }
 
@@ -231,7 +231,7 @@ function ThenRequest
                 Write-Debug ('             actual    {0}' -f $Uri)
                 Write-Debug ('ContentType  expected  {0}' -f $AsContentType)
                 Write-Debug ('             actual    {0}' -f $ContentType)
-                $Uri -eq [uri]$ToUri -and $ContentType -eq $AsContentType 
+                $Uri -eq [Uri]$ToUri -and $ContentType -eq $AsContentType 
             }
         }
 
@@ -244,7 +244,7 @@ function ThenRequest
                 $WithFile = Join-Path -Path $TestDrive.FullName -ChildPath $WithFile
                 Write-Debug ('InFile  expected  {0}' -f $WithFile)
                 Write-Debug ('        actual    {0}' -f $InFile)
-                $Uri -eq [uri]$ToUri -and $InFile -eq $WithFile 
+                $Uri -eq [Uri]$ToUri -and $InFile -eq $WithFile 
             }
         }
     }

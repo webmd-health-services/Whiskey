@@ -35,9 +35,9 @@ function GivenCredentials
 function GivenAsset
 {
     param(
-        [string[]]$Name,
-        [string]$directory,
-        [string[]]$FilePath
+        [String[]]$Name,
+        [String]$directory,
+        [String[]]$FilePath
     )
     $script:taskParameter['AssetPath'] = $name
     $script:taskParameter['AssetDirectory'] = $directory
@@ -51,9 +51,9 @@ function GivenAsset
 function GivenAssetWithInvalidDirectory
 {
     param(
-        [string]$Name,
-        [string]$directory,
-        [string]$FilePath
+        [String]$Name,
+        [String]$directory,
+        [String]$FilePath
     )
     # $script:taskParameter['Name'] = $name
     $script:taskParameter['AssetDirectory'] = $directory
@@ -65,9 +65,9 @@ function GivenAssetWithInvalidDirectory
 function GivenAssetThatDoesntExist
 {
     param(
-        [string]$Name,
-        [string]$directory,
-        [string]$FilePath
+        [String]$Name,
+        [String]$directory,
+        [String]$FilePath
 
     )
     $script:taskParameter['AssetPath'] = $name
@@ -104,7 +104,7 @@ function WhenAssetIsUploaded
 function ThenTaskFails 
 {
     Param(
-        [string]$ExpectedError
+        [String]$ExpectedError
     )
     $Global:Error | Where-Object {$_ -match $ExpectedError } |  Should -Not -BeNullOrEmpty
 }
@@ -112,7 +112,7 @@ function ThenTaskFails
 function ThenAssetShouldExist
 {
     param(
-        [string[]]$AssetName
+        [String[]]$AssetName
     )
     foreach( $file in $AssetName ){
         Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $file }.getNewClosure()
@@ -122,7 +122,7 @@ function ThenAssetShouldExist
 function ThenAssetShouldNotExist
 {
     param(
-        [string[]]$AssetName
+        [String[]]$AssetName
     )
     foreach( $file in $AssetName ){
         Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file } -Times 0

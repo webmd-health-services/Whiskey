@@ -27,7 +27,7 @@ function Write-WhiskeyVerbose
         [AllowEmptyString()]
         [AllowNull()]
         # The message to write.
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )

@@ -16,7 +16,7 @@ function Invoke-WhiskeyTask
 
         [Parameter(Mandatory)]
         # The name of the task.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
         # The parameters/configuration to use to run the task.

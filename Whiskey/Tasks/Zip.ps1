@@ -20,9 +20,9 @@ function New-WhiskeyZipArchive
         param(
             [Parameter(Mandatory)]
             [ValidateSet('file','directory','filtered directory')]
-            [string]$What,
-            [string]$Source,
-            [string]$Destination
+            [String]$What,
+            [String]$Source,
+            [String]$Destination
         )
 
         if( $Destination )
@@ -57,7 +57,7 @@ function New-WhiskeyZipArchive
         [IO.Compression.CompressionLevel]$compressionLevel = [IO.Compression.CompressionLevel]::NoCompression
         if( -not [Enum]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'CompressionLevel' -Message ('Value "{0}" is an invalid compression level. Must be one of: {1}.' -f $TaskParameter['CompressionLevel'],([enum]::GetValues([IO.Compression.CompressionLevel]) -join ', '))
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'CompressionLevel' -Message ('Value "{0}" is an invalid compression level. Must be one of: {1}.' -f $TaskParameter['CompressionLevel'],([Enum]::GetValues([IO.Compression.CompressionLevel]) -join ', '))
             return
         }
         $behaviorParams['CompressionLevel'] = $compressionLevel

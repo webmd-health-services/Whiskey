@@ -35,7 +35,7 @@ function Init
 function Invoke-ImportWhiskeyYaml
 {
     param(
-        [string]$Yaml
+        [String]$Yaml
     )
 
     Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $Yaml }
@@ -136,7 +136,7 @@ Queues:
     - PowerShell:
         Path: two.ps1
 '@
-        [object[]]$result = WhenRunningTask $task -ErrorAction SilentlyContinue
+        [Object[]]$result = WhenRunningTask $task -ErrorAction SilentlyContinue
         ThenFailed
         ThenErrorIs 'Queue\[1\]:\ Property\ "Tasks"\ is\ mandatory'
         $result | Should -BeNullOrEmpty
@@ -199,7 +199,7 @@ Queues:
     - PowerShell:
         Path: two.ps1
 '@
-        [object[]]$output = WhenRunningTask $task #-ErrorAction SilentlyContinue
+        [Object[]]$output = WhenRunningTask $task #-ErrorAction SilentlyContinue
         ThenCompleted
         $output.Count | Should -Be 2
         $output[0] | Should -Be 2
@@ -225,7 +225,7 @@ Queues:
     - PowerShell:
         Path: three.ps1
 '@
-        [object[]]$output = WhenRunningTask $task
+        [Object[]]$output = WhenRunningTask $task
         ThenCompleted
         $output.Count | Should -Be 3
         $output -contains 1 | Should -Be $true
@@ -254,7 +254,7 @@ Describe 'Parallel.when API keys, variables, credentials, and task defaults are 
         Init
         GivenFile 'one.ps1' -Content @'
 param(
-    [object]$TaskContext
+    [Object]$TaskContext
 )
 
 if( $TaskContext.Variables['Fubar'] -ne 'Snafu' )

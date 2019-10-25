@@ -6,11 +6,11 @@ function Restore-WhiskeyNuGetPackage
     param(
         [Parameter(Mandatory)]
         [Whiskey.Tasks.ValidatePath(Mandatory)]
-        [string[]]$Path,
+        [String[]]$Path,
 
-        [string[]]$Argument,
+        [String[]]$Argument,
 
-        [string]$Version,
+        [String]$Version,
 
         [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_BUILD_ROOT')]
         [IO.DirectoryInfo]$BuildRoot

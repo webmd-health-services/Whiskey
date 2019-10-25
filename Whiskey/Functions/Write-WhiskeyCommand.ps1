@@ -6,9 +6,9 @@ function Write-WhiskeyCommand
         [Parameter(Mandatory)]
         [Whiskey.Context]$Context,
 
-        [string]$Path,
+        [String]$Path,
 
-        [string[]]$ArgumentList
+        [String[]]$ArgumentList
     )
 
     Set-StrictMode -Version 'Latest'

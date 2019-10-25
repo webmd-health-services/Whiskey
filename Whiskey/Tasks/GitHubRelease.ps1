@@ -38,7 +38,7 @@ function New-WhiskeyGitHubRelease
         return
     }
 
-    $baseUri = [uri]'https://api.github.com/repos/{0}' -f $repositoryName
+    $baseUri = [Uri]'https://api.github.com/repos/{0}' -f $repositoryName
 
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 
@@ -47,13 +47,13 @@ function New-WhiskeyGitHubRelease
         [CmdletBinding(DefaultParameterSetName='NoBody')]
         param(
             [Parameter(Mandatory)]
-            [uri]$Uri,
+            [Uri]$Uri,
 
             [Parameter(Mandatory,ParameterSetName='FileUpload')]
-            [string]$ContentType,
+            [String]$ContentType,
 
             [Parameter(Mandatory,ParameterSetName='FileUpload')]
-            [string]$InFile,
+            [String]$InFile,
 
             [Parameter(Mandatory,ParameterSetName='JsonRequest')]
             $Parameter,
@@ -97,7 +97,7 @@ function New-WhiskeyGitHubRelease
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Tag" is mandatory. It should be the tag to create in your repository for this release. This is usually a version number. We recommend using the `$(WHISKEY_SEMVER2_NO_BUILD_METADATA)` variable to use the version number of the current build.')
         return
     }
-    $release = Invoke-GitHubApi -Uri ('{0}/releases/tags/{1}' -f $baseUri,[uri]::EscapeUriString($tag)) -Method Get -ErrorAction Ignore
+    $release = Invoke-GitHubApi -Uri ('{0}/releases/tags/{1}' -f $baseUri,[Uri]::EscapeUriString($tag)) -Method Get -ErrorAction Ignore
 
     $createOrEditMethod = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
     $actionDescription = 'Creating'
@@ -162,10 +162,10 @@ function New-WhiskeyGitHubRelease
             else
             {
                 $uri = $release.upload_url -replace '{[^}]+}$'
-                $uri = '{0}?name={1}' -f $uri,[uri]::EscapeDataString($assetName)
+                $uri = '{0}?name={1}' -f $uri,[Uri]::EscapeDataString($assetName)
                 if( $assetLabel )
                 {
-                    $uri = '{0}&label={1}' -f $uri,[uri]::EscapeDataString($assetLabel)
+                    $uri = '{0}&label={1}' -f $uri,[Uri]::EscapeDataString($assetLabel)
                 }
                 Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading file "{0}".' -f $assetPath)
                 $contentType = $asset['ContentType']

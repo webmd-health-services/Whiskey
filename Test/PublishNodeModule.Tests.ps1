@@ -121,8 +121,8 @@ function ThenNpmPackagesPruned
 function ThenNpmrcCreated
 {
     param(
-        [string]$WithEmail,
-        [uri]$WithRegistry
+        [String]$WithEmail,
+        [Uri]$WithRegistry
     )
 
     $buildRoot = $context.BuildRoot
@@ -171,7 +171,7 @@ function ThenPublishedWithTag
     [CmdletBinding(DefaultParameterSetName='ExpectedTag')]
     param(
         [Parameter(Mandatory,Position=0,ParameterSetName='ExpectedTag')]
-        [string]$ExpectedTag,
+        [String]$ExpectedTag,
 
         [Parameter(ParameterSetName='None')]
         [switch]$None
@@ -221,10 +221,10 @@ function WhenPublishingNodeModule
 {
     [CmdletBinding()]
     param(
-        [string]$WithCredentialID,
-        [string]$WithEmailAddress,
-        [string]$WithNpmRegistryUri,
-        [string]$WithTag
+        [String]$WithCredentialID,
+        [String]$WithEmailAddress,
+        [String]$WithNpmRegistryUri,
+        [String]$WithTag
     )
 
     Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -ne 'version' }

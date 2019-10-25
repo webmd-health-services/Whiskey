@@ -11,7 +11,7 @@
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [string]$Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -147,7 +147,7 @@
     }
 
     $prerelease = $TaskParameter['Prerelease']
-    if( $prerelease -isnot [string] )
+    if( $prerelease -isnot [String] )
     {
         $foundLabel = $false
         foreach( $object in $prerelease )
@@ -247,7 +247,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
 
     $buildVersion.SemVer2 = $semver
     Write-WhiskeyInfo -Context $TaskContext -Message ('Building version {0}' -f $semver)
-    $buildVersion.Version = [version]('{0}.{1}.{2}' -f $semver.Major,$semver.Minor,$semver.Patch)
+    $buildVersion.Version = [Version]('{0}.{1}.{2}' -f $semver.Major,$semver.Minor,$semver.Patch)
     Write-WhiskeyVerbose -Context $TaskContext -Message ('Version                 {0}' -f $buildVersion.Version)
     $buildVersion.SemVer2NoBuildMetadata = New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver.Prerelease)
     Write-WhiskeyVerbose -Context $TaskContext -Message ('SemVer2NoBuildMetadata  {0}' -f $buildVersion.SemVer2NoBuildMetadata)

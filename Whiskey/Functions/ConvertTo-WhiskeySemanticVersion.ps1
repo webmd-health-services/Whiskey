@@ -17,7 +17,7 @@ function ConvertTo-WhiskeySemanticVersion
     param(
         [Parameter(ValueFromPipeline)]
         # The object to convert to a semantic version. Can be a version string, number, or date/time.
-        [object]$InputObject
+        [Object]$InputObject
     )
 
     process
@@ -25,18 +25,18 @@ function ConvertTo-WhiskeySemanticVersion
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        [version]$asVersion = $null
-        if( $InputObject -is [string] )
+        [Version]$asVersion = $null
+        if( $InputObject -is [String] )
         {
             [int]$asInt = 0
-            [double]$asDouble = 0.0
+            [Double]$asDouble = 0.0
             [SemVersion.SemanticVersion]$semVersion = $null
             if( [SemVersion.SemanticVersion]::TryParse($InputObject,[ref]$semVersion) )
             {
                 return $semVersion
             }
 
-            if( [version]::TryParse($InputObject,[ref]$asVersion) )
+            if( [Version]::TryParse($InputObject,[ref]$asVersion) )
             {
                 $InputObject = $asVersion
             }
@@ -54,7 +54,7 @@ function ConvertTo-WhiskeySemanticVersion
         {
             $InputObject = '{0}.{1}.{2}' -f $InputObject.Month,$InputObject.Day,$InputObject.Year
         }
-        elseif( $InputObject -is [double] )
+        elseif( $InputObject -is [Double] )
         {
             $major,$minor = $InputObject.ToString('g') -split '\.'
             if( -not $minor )
@@ -67,7 +67,7 @@ function ConvertTo-WhiskeySemanticVersion
         {
             $InputObject = '{0}.0.0' -f $InputObject
         }
-        elseif( $InputObject -is [version] )
+        elseif( $InputObject -is [Version] )
         {
             if( $InputObject.Build -le -1 )
             {

@@ -8,20 +8,20 @@ function Resolve-WhiskeyTaskPath
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory,ValueFromPipeline)]
-        [string]$Path,
+        [String]$Path,
 
         [Parameter(Mandatory)]
-        [string]$PropertyName,
+        [String]$PropertyName,
 
         # The root directory to use when resolving paths. The default is to use the `$TaskContext.BuildRoot` directory. Each path must be relative to this path.
-        [string]$ParentPath,
+        [String]$ParentPath,
 
         # Create the path if it doesn't exist. By default, the path will be created as a directory. To create the path as a file, pass `File` to the `PathType` parameter.
         [switch]$Force,
 
         [ValidateSet('Directory','File')]
         # The type of item to create when using the `Force` parameter to create paths that don't exist. The default is to create the path as a directory. Pass `File` to create the path as a file.
-        [string]$PathType = 'Directory'
+        [String]$PathType = 'Directory'
     )
 
     begin

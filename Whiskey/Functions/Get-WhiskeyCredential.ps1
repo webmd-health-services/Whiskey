@@ -22,14 +22,14 @@ function Get-WhiskeyCredential
 
         [Parameter(Mandatory)]
         # The ID of the credential. You make this up.
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
         # The property name in the task that needs this credential. Used in error messages to help users pinpoint what task and property might be misconfigured.
-        [string]$PropertyName,
+        [String]$PropertyName,
 
         # INTERNAL. DO NOT USE.
-        [string]$PropertyDescription
+        [String]$PropertyDescription
     )
 
     Set-StrictMode -Version 'Latest'

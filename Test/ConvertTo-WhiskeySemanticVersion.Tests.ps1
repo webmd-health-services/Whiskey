@@ -48,5 +48,5 @@ function Assert-ConvertsTo
 '1.32'             | Assert-ConvertsTo '1.32.0'
 '1.32.4'           | Assert-ConvertsTo '1.32.4'
 '1.0130'           | Assert-ConvertsTo '1.130.0'
-[version]'1.2.3'   | Assert-ConvertsTo '1.2.3'
+[Version]'1.2.3'   | Assert-ConvertsTo '1.2.3'
 [SemVersion.SemanticVersion]'1.2.3-rc.4+build' | Assert-ConvertsTo '1.2.3-rc.4+build'

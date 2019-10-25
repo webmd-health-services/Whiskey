@@ -24,7 +24,7 @@ function Assert-WhiskeyNodePath
     param(
         [Parameter(Mandatory)]
         # The path to check.
-        [string]$Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'

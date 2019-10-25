@@ -50,10 +50,10 @@ function Assert-Member
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [object]$Object,
+        [Object]$Object,
 
         [Parameter(Mandatory)]
-        [string[]]$Property
+        [String[]]$Property
     )
 
     foreach( $propertyToCheck in $Property )
@@ -74,7 +74,7 @@ Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
-if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [SecureString].FullName )
+if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [securestring].FullName )
 {
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop 
 }

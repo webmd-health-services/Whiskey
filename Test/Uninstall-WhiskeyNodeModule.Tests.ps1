@@ -118,7 +118,7 @@ function ThenModule
 {
     param(
         [Parameter(Position=0)]
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory,ParameterSetName='Exists')]
         [switch]$Exists,

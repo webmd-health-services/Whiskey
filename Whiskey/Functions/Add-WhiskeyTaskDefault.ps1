@@ -30,11 +30,11 @@ function Add-WhiskeyTaskDefault
 
         [Parameter(Mandatory)]
         # The name of the task that a default parameter value will be set.
-        [string]$TaskName,
+        [String]$TaskName,
 
         [Parameter(Mandatory)]
         # The name of the task parameter to set a default value for.
-        [string]$PropertyName,
+        [String]$PropertyName,
 
         [Parameter(Mandatory)]
         # The default value for the task parameter.

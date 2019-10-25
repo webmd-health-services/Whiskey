@@ -25,7 +25,7 @@ function Write-WhiskeyWarning
 
         [Parameter(Mandatory,ValueFromPipeline)]
         # The message to write.
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )

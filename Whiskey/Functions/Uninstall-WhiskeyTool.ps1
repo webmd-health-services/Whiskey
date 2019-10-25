@@ -54,13 +54,13 @@ function Uninstall-WhiskeyTool
 
         [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The name of the NuGet package to uninstall.
-        [string]$NuGetPackageName,
+        [String]$NuGetPackageName,
 
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [string]$Version,
+        [String]$Version,
 
         # The build root where the build is currently running. Tools are installed here.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'

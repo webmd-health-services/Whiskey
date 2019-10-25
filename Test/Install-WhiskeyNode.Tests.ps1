@@ -38,9 +38,9 @@ function Init
 function ThenNodeInstalled
 {
     param(
-        [string]$NodeVersion,
+        [String]$NodeVersion,
 
-        [string]$NpmVersion,
+        [String]$NpmVersion,
 
         [switch]$AtLatestVersion
     )

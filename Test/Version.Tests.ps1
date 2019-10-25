@@ -103,7 +103,7 @@ function ThenTaskFailed
 function ThenVersionIs
 {
     param(
-        [version]$ExpectedVersion
+        [Version]$ExpectedVersion
     )
 
     It ('should set Version') {
@@ -117,7 +117,7 @@ function WhenRunningTask
     param(
         [switch]$AsDeveloper,
 
-        [string]$WithYaml
+        [String]$WithYaml
     )
 
     $forParam = @{ ForBuildServer = $true }
@@ -535,5 +535,5 @@ description 'Installs/Configures cookbook_name'
     GivenProperty @{ Path = 'metadata.rb' }
     WhenRunningTask -ErrorAction SilentlyContinue
     ThenTaskFailed
-    ThenErrorIs ([Regex]::Escape('Unable to locate property "version ''x.x.x''" in metadata.rb file'))
+    ThenErrorIs ([regex]::Escape('Unable to locate property "version ''x.x.x''" in metadata.rb file'))
 }

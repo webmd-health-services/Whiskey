@@ -24,10 +24,10 @@ function Assert-WhiskeyNodeModulePath
     param(
         [Parameter(Mandatory)]
         # The path to check.
-        [string]$Path,
+        [String]$Path,
 
         # The path to a command inside the module path.
-        [string]$CommandPath
+        [String]$CommandPath
     )
 
     Set-StrictMode -Version 'Latest'

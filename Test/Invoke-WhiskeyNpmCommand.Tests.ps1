@@ -52,7 +52,7 @@ function GivenArgument
 function GivenDependency 
 {
     param(
-        [object[]]$Dependency 
+        [Object[]]$Dependency 
     )
     $script:dependency = $Dependency
 }
@@ -60,7 +60,7 @@ function GivenDependency
 function GivenDevDependency 
 {
     param(
-        [object[]]$DevDependency 
+        [Object[]]$DevDependency 
     )
     $script:devDependency = $DevDependency
 }
@@ -103,7 +103,7 @@ function ThenPackage
 {
     param(
         [Parameter(Position=0)]
-        [string]$PackageName,
+        [String]$PackageName,
         
         [Parameter(Mandatory,ParameterSetName='Exists')]
         [switch]$Exists,

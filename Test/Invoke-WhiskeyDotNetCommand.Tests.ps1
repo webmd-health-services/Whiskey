@@ -129,7 +129,7 @@ function ThenRanCommand
 function ThenRanWithArguments
 {
     param(
-        [string[]]$ExpectedArguments
+        [String[]]$ExpectedArguments
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {

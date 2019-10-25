@@ -4,10 +4,10 @@ function Import-WhiskeyYaml
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromFile')]
-        [string]$Path,
+        [String]$Path,
 
         [Parameter(Mandatory,ParameterSetName='FromString')]
-        [string]$Yaml
+        [String]$Yaml
     )
 
     Set-StrictMode -Version 'Latest'
@@ -37,7 +37,7 @@ function Import-WhiskeyYaml
         $config = @{} 
     }
 
-    if( $config -is [string] )
+    if( $config -is [String] )
     {
         $config = @{ $config = '' }
     }

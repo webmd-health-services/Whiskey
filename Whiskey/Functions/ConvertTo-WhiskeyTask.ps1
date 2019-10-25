@@ -15,13 +15,13 @@ function ConvertTo-WhiskeyTask
     param(
         [Parameter(Mandatory)]
         [AllowNull()]
-        [object]$InputObject
+        [Object]$InputObject
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    if( $InputObject -is [string] )
+    if( $InputObject -is [String] )
     {
         $InputObject
         @{ }

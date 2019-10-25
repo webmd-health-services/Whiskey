@@ -33,9 +33,9 @@ param(
     # Initializes the repository.
     [switch]$Initialize,
 
-    [string]$PipelineName,
+    [String]$PipelineName,
 
-    [string]$MSBuildConfiguration = 'Debug'
+    [String]$MSBuildConfiguration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -75,7 +75,7 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-$minDotNetVersion = [version]'2.1.503'
+$minDotNetVersion = [Version]'2.1.503'
 $dotnetVersion = $null
 $dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
 $dotnetExeName = 'dotnet.exe'
@@ -93,7 +93,7 @@ $dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath $dotnetExeName
 
 if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
-    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [Version]$_ }
     Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
 }
 
@@ -170,7 +170,7 @@ $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
 $whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
 $whiskeyAssemblyPath = Get-Item -Path (Join-Path -Path $whiskeyOutBinPath -ChildPath 'Whiskey.dll')
 $whiskeyAssemblyVersion = $whiskeyAssemblyPath.VersionInfo
-$fileVersion = [version]('{0}.0' -f $version)
+$fileVersion = [Version]('{0}.0' -f $version)
 if( $whiskeyAssemblyVersion.FileVersion -ne $fileVersion )
 {
     Write-Error -Message ('{0}: file version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$fileVersion,$whiskeyAssemblyVersion.FileVersion) 

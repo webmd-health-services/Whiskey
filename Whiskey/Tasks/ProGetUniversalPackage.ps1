@@ -73,7 +73,7 @@ function New-WhiskeyProGetUniversalPackage
     $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
     if( $TaskParameter['CompressionLevel'] )
     {
-        $expectedValues = [enum]::GetValues([IO.Compression.CompressionLevel])
+        $expectedValues = [Enum]::GetValues([IO.Compression.CompressionLevel])
         $compressionLevel = $TaskParameter['CompressionLevel']
         if( $compressionLevel -notin $expectedValues )
         {
@@ -128,7 +128,7 @@ function New-WhiskeyProGetUniversalPackage
     {
         param(
             [Parameter(Mandatory)]
-            [object[]]$Path,
+            [Object[]]$Path,
 
             [switch]$AsThirdPartyItem
         )

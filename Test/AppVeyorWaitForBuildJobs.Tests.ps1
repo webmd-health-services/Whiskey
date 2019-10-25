@@ -8,7 +8,7 @@ $failed = $false
 $secret = $null
 $secretID = $null
 $whiskeyYml = $null
-[object[]]$jobs = $null
+[Object[]]$jobs = $null
 $nextID = 10000000
 $currentJobID = $null
 $runByAppVeyor = $null
@@ -26,7 +26,7 @@ function GivenJob
         [int]$WithID,
 
         [Parameter(Mandatory,ParameterSetName='ForNotCurrentJob')]
-        [string]$WithStatus,
+        [String]$WithStatus,
 
         [Parameter(Mandatory,ParameterSetName='ForNotCurrentJob')]
         [int]$ThatFinishesAtCheck,
@@ -35,7 +35,7 @@ function GivenJob
         [switch]$Current,
 
         [Parameter(Mandatory,ParameterSetName='ForNotCurrentJob')]
-        [string]$WithFinalStatus,
+        [String]$WithFinalStatus,
 
         [Parameter(ParameterSetName='ForNotCurrentJob')]
         [switch]$ThatHasFinishedProperty
@@ -94,10 +94,10 @@ function GivenSecret
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Secret,
+        [String]$Secret,
 
         [Parameter(Mandatory)]
-        [string]$WithID
+        [String]$WithID
     )
 
     $script:secret = $Secret
@@ -282,7 +282,7 @@ function WhenRunningTask
     $parameter = @{}
     $task = $context.Configuration['Build'][0]
     $checkInterval = [TimeSpan]'00:00:10'
-    if( $task -isnot [string] )
+    if( $task -isnot [String] )
     {
         $parameter = $task['AppVeyorWaitForBuildJobs']
         if( $parameter.ContainsKey('CheckInterval') )

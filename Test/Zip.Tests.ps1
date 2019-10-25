@@ -31,7 +31,7 @@ function Init
 function GivenARepositoryWithItems
 {
     param(
-        [string[]]$Path,
+        [String[]]$Path,
 
         $ItemType = 'File'
     )
@@ -69,7 +69,7 @@ function ThenArchiveShouldInclude
         $ArchivePath,
 
         [Parameter(Position=0)]
-        [string[]]$Path
+        [String[]]$Path
     )
 
     if( -not $Path )
@@ -114,7 +114,7 @@ function ThenArchiveShouldBeCompressed
 function ThenArchiveShouldNotInclude
 {
     param(
-        [string[]]$Path
+        [String[]]$Path
     )
 
     foreach( $item in $Path )
@@ -126,7 +126,7 @@ function ThenArchiveShouldNotInclude
 function ThenTaskFails
 {
     Param(
-        [string]$error
+        [String]$error
     )
 
     $threwException | Should -BeTrue
@@ -144,9 +144,9 @@ function WhenPackaging
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$WithYaml,
+        [String]$WithYaml,
 
-        [string]$ToFile,
+        [String]$ToFile,
 
         [switch]$AndModuleNotInstalled
     )

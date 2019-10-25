@@ -17,11 +17,11 @@ function Set-WhiskeyDotNetGlobalJson
     param(
         [Parameter(Mandatory)]
         # The directory where the `global.json` will be created/modified.
-        [string]$Directory,
+        [String]$Directory,
 
         [Parameter(Mandatory)]
         # The version of the SDK to set within the `global.json` file.
-        [string]$SdkVersion
+        [String]$SdkVersion
     )
 
     Set-StrictMode -version 'Latest'

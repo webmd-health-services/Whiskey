@@ -11,7 +11,7 @@ function Publish-WhiskeyNuGetPackage
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [string[]]$Path
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'

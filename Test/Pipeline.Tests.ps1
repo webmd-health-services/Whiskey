@@ -16,10 +16,10 @@ function GivenFile
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
-        [string]$Content
+        [String]$Content
     )
 
     $path = Join-Path -Path $TestDrive.FullName -ChildPath $Name
@@ -30,10 +30,10 @@ function Invoke-PreTaskPlugin
 {
     param(
         [Parameter(Mandatory)]
-        [object]$TaskContext,
+        [Object]$TaskContext,
 
         [Parameter(Mandatory)]
-        [string]$TaskName,
+        [String]$TaskName,
 
         [Parameter(Mandatory)]
         [hashtable]$TaskParameter
@@ -44,10 +44,10 @@ function Invoke-PostTaskPlugin
 {
     param(
         [Parameter(Mandatory)]
-        [object]$TaskContext,
+        [Object]$TaskContext,
 
         [Parameter(Mandatory)]
-        [string]$TaskName,
+        [String]$TaskName,
 
         [Parameter(Mandatory)]
         [hashtable]$TaskParameter
@@ -57,7 +57,7 @@ function Invoke-PostTaskPlugin
 function GivenPlugins
 {
     param(
-        [string]$ForSpecificTask
+        [String]$ForSpecificTask
     )
 
     $taskNameParam = @{ }
@@ -76,7 +76,7 @@ function GivenWhiskeyYmlBuildFile
 {
     param(
         [Parameter(Position=0)]
-        [string]$Yaml
+        [String]$Yaml
     )
 
     $config = $null
@@ -90,7 +90,7 @@ function ThenFile
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Named,
+        [String]$Named,
 
         [switch]$Not,
 
@@ -98,7 +98,7 @@ function ThenFile
         [switch]$Exists,
 
         [Parameter(Mandatory)]
-        [string]$Because
+        [String]$Because
     )
 
     Join-Path -Path $TestDrive.FullName -ChildPath $Named | Should -Not:$Not -Exist
@@ -122,9 +122,9 @@ function ThenPipelineSucceeded
 function ThenDotNetProjectsCompilationFailed
 {
     param(
-        [string]$ConfigurationPath,
+        [String]$ConfigurationPath,
 
-        [string[]]$ProjectName
+        [String[]]$ProjectName
     )
 
     $root = Split-Path -Path $ConfigurationPath -Parent
@@ -211,7 +211,7 @@ function WhenRunningPipeline
 {
     [CmdletBinding()]
     param(
-        [string]$Name
+        [String]$Name
     )
 
     $environment = $PSCmdlet.ParameterSetName

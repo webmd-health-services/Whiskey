@@ -22,13 +22,13 @@ function Uninstall-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The name of the module to uninstall.
-        [string]$Name,
+        [String]$Name,
 
-        [string]$Version = '*.*.*',
+        [String]$Version = '*.*.*',
 
         [Parameter(Mandatory)]
         # Modules are saved into a PSModules directory. This is the path where the PSModules directory was created and should be the same path passed to `Install-WhiskeyPowerShellModule`.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'

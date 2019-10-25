@@ -12,7 +12,7 @@ $latestNUnit2Version = '2.6.4'
 function Assert-NUnitTestsRun
 {
     param(
-        [string]$ReportPath
+        [String]$ReportPath
     )
     $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml'
     $reports | Should -Not -BeNullOrEmpty
@@ -23,7 +23,7 @@ function Assert-NUnitTestsRun
 function Assert-NUnitTestsNotRun
 {
     param(
-        [string]$ReportPath
+        [String]$ReportPath
     )
     $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
 }
@@ -31,7 +31,7 @@ function Assert-NUnitTestsNotRun
 function Assert-OpenCoverRuns
 {
     param(
-        [string]$OpenCoverDirectoryPath
+        [String]$OpenCoverDirectoryPath
     )
     $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
     $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
@@ -42,7 +42,7 @@ function Assert-OpenCoverRuns
 function Assert-OpenCoverNotRun
 {
     param(
-        [string]$OpenCoverDirectoryPath
+        [String]$OpenCoverDirectoryPath
     )
     $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
     $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
@@ -67,7 +67,7 @@ function Invoke-NUnitTask
 
         [switch]$WithRunningTests,
 
-        [string]$WithError,
+        [String]$WithError,
 
         [switch]$WhenRunningClean,
 
@@ -312,7 +312,7 @@ function GivenVersion
 function GivenCoverageFilter
 {
     Param(
-        [string]$Filter
+        [String]$Filter
     )
     $script:CoverageFilter = $Filter
 }
@@ -406,7 +406,7 @@ function Get-TestCaseResult
 {
     [OutputType([System.Xml.XmlElement])]
     param(
-        [string]$TestName
+        [String]$TestName
     )
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
@@ -420,9 +420,9 @@ function Get-TestCaseResult
 function ThenOutput
 {
     param(
-        [string[]]$Contains,
+        [String[]]$Contains,
 
-        [string[]]$DoesNotContain
+        [String[]]$DoesNotContain
     )
 
     foreach( $regex in $Contains )
@@ -439,7 +439,7 @@ function ThenOutput
 function ThenTestsNotRun
 {
     param(
-        [string[]]$TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -451,7 +451,7 @@ function ThenTestsNotRun
 function ThenTestsPassed
 {
     param(
-        [string[]]$TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -470,7 +470,7 @@ function ThenItShouldNotRunTests {
 
 function ThenItInstalled {
     param (
-        [string]$Name,
+        [String]$Name,
 
         [Version]$Version
     )

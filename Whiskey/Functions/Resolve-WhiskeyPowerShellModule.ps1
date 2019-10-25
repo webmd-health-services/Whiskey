@@ -25,14 +25,14 @@ function Resolve-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The name of the PowerShell module.
-        [string]$Name,
+        [String]$Name,
 
         # The version of the PowerShell module to search for. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [string]$Version,
+        [String]$Version,
 
         [Parameter(Mandatory)]
         # The path to the directory where the PSModules directory should be created.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -73,7 +73,7 @@ function Resolve-WhiskeyPowerShellModule
         {
             Write-WhiskeyTiming -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
             $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
-            [void]$modulesToInstall.Add($module)
+            [Void]$modulesToInstall.Add($module)
         }
     }
 
@@ -116,7 +116,7 @@ function Resolve-WhiskeyPowerShellModule
             $tempVersion = [Version]$Version
             if( $TempVersion -and ($TempVersion.Build -lt 0) )
             {
-                $Version = [version]('{0}.{1}.0' -f $TempVersion.Major, $TempVersion.Minor)
+                $Version = [Version]('{0}.{1}.0' -f $TempVersion.Major, $TempVersion.Minor)
             }
         }
 

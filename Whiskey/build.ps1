@@ -59,7 +59,7 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
             {
                 return $true
             }
-            [version]::TryParse($_.name,[ref]$null)
+            [Version]::TryParse($_.name,[ref]$null)
         } |
         Sort-Object -Property 'created_at' -Descending |
         Select-Object -First 1

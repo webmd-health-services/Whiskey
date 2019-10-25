@@ -2,10 +2,10 @@ function Write-CommandOutput
 {
     param(
         [Parameter(ValueFromPipeline)]
-        [string]$InputObject,
+        [String]$InputObject,
 
         [Parameter(Mandatory)]
-        [string]$Description
+        [String]$Description
     )
 
     process

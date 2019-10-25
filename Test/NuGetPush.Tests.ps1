@@ -37,7 +37,7 @@ function Init
 function GivenANuGetPackage
 {
     param(
-        [string[]]
+        [String[]]
         [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?(\.symbols)?\.nupkg')]
         $Path
     )

@@ -225,7 +225,7 @@ function ThenTheCommitShouldBeTagged
 function ThenTheCommitShouldNotBeTagged
 {
     param(
-        [string]$WithError
+        [String]$WithError
     )
 
     Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0

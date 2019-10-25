@@ -7,7 +7,7 @@ function Resolve-WhiskeyTaskPathParameter
         [Whiskey.Context]$TaskContext,
 
         [Parameter(ValueFromPipeline)]
-        [string]$Path,
+        [String]$Path,
 
         [Parameter(Mandatory)]
         [Management.Automation.ParameterMetadata]$CmdParameter,
@@ -130,12 +130,12 @@ Found {1} paths that should be to a {0}, but aren''t:
         }
 
         $pathCount = $result | Measure-Object | Select-Object -ExpandProperty 'Count'
-        if( $CmdParameter.ParameterType -ne ([string[]]) -and $pathCount -gt 1 )
+        if( $CmdParameter.ParameterType -ne ([String[]]) -and $pathCount -gt 1 )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $CmdParameter.Name -Message (@'
 The value "{1}" resolved to {2} paths [1] but this task requires a single path. Please change "{1}" to a value that resolves to a single item.
 
-If you are this task''s author, and you want this property to accept multiple paths, please update the "{3}" command''s "{0}" property so it''s type is "[string[]]".
+If you are this task''s author, and you want this property to accept multiple paths, please update the "{3}" command''s "{0}" property so it''s type is "[String[]]".
 
 [1] The {1} path resolved to:
 

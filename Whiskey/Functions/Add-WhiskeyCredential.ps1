@@ -29,7 +29,7 @@ function Add-WhiskeyCredential
 
         [Parameter(Mandatory)]
         # The ID of the credential. This should match the ID given in your `whiskey.yml` of credential ID property of the task that needs it.
-        [string]$ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
         # The value of the credential.

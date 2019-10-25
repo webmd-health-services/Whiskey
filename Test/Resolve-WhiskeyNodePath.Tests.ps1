@@ -20,7 +20,7 @@ function GivenNodeInstalled
 function ThenError
 {
     param(
-        [string]$Matches
+        [String]$Matches
     )
 
     It ('should write an error') {
@@ -63,10 +63,10 @@ function WhenResolving
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='WithBuildRoot')]
-        [string]$BuildRootPath,
+        [String]$BuildRootPath,
 
         [Parameter(Mandatory,ParameterSetName='WithNodeRoot')]
-        [string]$NodeRootPath
+        [String]$NodeRootPath
     )
 
     if( $BuildRootPath )

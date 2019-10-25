@@ -5,7 +5,7 @@ function Uninstall-WhiskeyNode
     param(
         [Parameter(Mandatory)]
         # The directory where node is installed and from which it should be removed.
-        [string]$InstallRoot
+        [String]$InstallRoot
     )
 
     Set-StrictMode -Version 'Latest'
