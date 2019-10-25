@@ -8,7 +8,7 @@ function Install-WhiskeyNode
         [string]$InstallRoot,
 
         # Are we running in clean mode? If so, don't re-install the tool.
-        [Switch]$InCleanMode,
+        [switch]$InCleanMode,
 
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
         [string]$Version

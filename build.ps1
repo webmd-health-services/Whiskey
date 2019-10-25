@@ -25,13 +25,13 @@ Starts a build and uses "Release" as the build configuration when building the W
 #>
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
-    [Parameter(Mandatory=$true,ParameterSetName='Clean')]
+    [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    [Switch]$Clean,
+    [switch]$Clean,
 
-    [Parameter(Mandatory=$true,ParameterSetName='Initialize')]
+    [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [Switch]$Initialize,
+    [switch]$Initialize,
 
     [string]$PipelineName,
 

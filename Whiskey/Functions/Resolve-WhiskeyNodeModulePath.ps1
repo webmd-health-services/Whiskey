@@ -39,7 +39,7 @@ function Resolve-WhiskeyNodeModulePath
 
         [Parameter(ParameterSetName='FromBuildRoot')]
         # Get the path to a Node module in the global "node_modules" directory. The default is to get the path to the copy in the local node_modules directory.
-        [Switch]$Global,
+        [switch]$Global,
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]
         # The path to the root of a Node package, as downloaded and expanded from the Node.js project.

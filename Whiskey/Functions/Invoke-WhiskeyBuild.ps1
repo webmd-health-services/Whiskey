@@ -65,11 +65,11 @@ function Invoke-WhiskeyBuild
 
         [Parameter(Mandatory,ParameterSetName='Clean')]
         # Runs the build in clean mode. In clean mode, tasks delete any artifacts they create, including downloaded tools and dependencies. This is opt-in, so if a task is not deleting its artifacts, it needs to be updated to support clean mode.
-        [Switch]$Clean,
+        [switch]$Clean,
 
         [Parameter(Mandatory,ParameterSetName='Initialize')]
         # Runs the build in initialize mode. In initialize mode, tasks download/install/configure any tools/dependencies they use/need during the build. Initialize mode is intended to be used by developers so that any tools/dependencies they need can be downloaded/installe/configured without needing to run an entire build, which can sometimes take a long time.
-        [Switch]$Initialize
+        [switch]$Initialize
     )
 
     Set-StrictMode -Version 'Latest'

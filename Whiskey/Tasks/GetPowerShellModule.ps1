@@ -1,7 +1,7 @@
 function Get-WhiskeyPowerShellModule
 {
     [CmdletBinding()]
-    [Whiskey.Task("GetPowerShellModule",SupportsClean, SupportsInitialize)]
+    [Whiskey.Task('GetPowerShellModule',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

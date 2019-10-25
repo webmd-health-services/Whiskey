@@ -1,7 +1,7 @@
 function Invoke-WhiskeyExec
 {
     [CmdletBinding()]
-    [Whiskey.Task("Exec",SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('Exec',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

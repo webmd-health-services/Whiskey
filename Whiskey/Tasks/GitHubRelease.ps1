@@ -58,7 +58,7 @@ function New-WhiskeyGitHubRelease
             [Parameter(Mandatory,ParameterSetName='JsonRequest')]
             $Parameter,
 
-            [Microsoft.PowerShell.Commands.WebRequestMethod]$Method = [Microsoft.PowerShell.Commands.WebRequestMethod]::Post
+            [Microsoft.PowerShell.Commands.WebRequestMethod]$Method = 'Post'
         )
 
         $optionalParams = @{ }

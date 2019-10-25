@@ -2,7 +2,7 @@
 function Set-WhiskeyTaskDefaults
 {
     [CmdletBinding()]
-    [Whiskey.Task("TaskDefaults",SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('TaskDefaults',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

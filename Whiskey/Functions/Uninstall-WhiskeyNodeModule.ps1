@@ -38,7 +38,7 @@ function Uninstall-WhiskeyNodeModule
         [switch]$Force,
 
         # Uninstall the module from the global cache.
-        [Switch]$Global
+        [switch]$Global
     )
 
     Set-StrictMode -Version 'Latest'

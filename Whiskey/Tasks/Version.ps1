@@ -2,7 +2,7 @@
  function Set-WhiskeyVersion
 {
     [CmdletBinding()]
-    [Whiskey.Task("Version")]
+    [Whiskey.Task('Version')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

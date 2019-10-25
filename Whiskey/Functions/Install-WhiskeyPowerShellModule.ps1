@@ -38,7 +38,7 @@ function Install-WhiskeyPowerShellModule
         [string]$BuildRoot,
 
         # Don't import the module.
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     Set-StrictMode -Version 'Latest'

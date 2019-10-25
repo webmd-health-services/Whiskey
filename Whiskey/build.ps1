@@ -30,11 +30,11 @@ Demonstrates how to initialize the build root with any tools that are required b
 param(
     [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    [Switch]$Clean,
+    [switch]$Clean,
 
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [Switch]$Initialize
+    [switch]$Initialize
 )
 
 #Requires -Version 5.1

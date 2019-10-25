@@ -17,7 +17,7 @@ function Resolve-WhiskeyTaskPath
         [string]$ParentPath,
 
         # Create the path if it doesn't exist. By default, the path will be created as a directory. To create the path as a file, pass `File` to the `PathType` parameter.
-        [Switch]$Force,
+        [switch]$Force,
 
         [ValidateSet('Directory','File')]
         # The type of item to create when using the `Force` parameter to create paths that don't exist. The default is to create the path as a directory. Pass `File` to create the path as a file.

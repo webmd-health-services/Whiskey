@@ -33,7 +33,7 @@ function Install-WhiskeyTool
 
         [Parameter(ParameterSetName='Tool')]
         # Running in clean mode, so don't install the tool if it isn't installed.
-        [Switch]$InCleanMode,
+        [switch]$InCleanMode,
 
         [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The name of the NuGet package to download.

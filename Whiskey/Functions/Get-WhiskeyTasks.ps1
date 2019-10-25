@@ -22,7 +22,7 @@ function Get-WhiskeyTask
     [OutputType([Whiskey.TaskAttribute])]
     param(
         # Return tasks that are obsolete. Otherwise, no obsolete tasks are returned.
-        [Switch]$Force
+        [switch]$Force
     )
 
     Set-StrictMode -Version 'Latest'

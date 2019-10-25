@@ -38,10 +38,10 @@ function Install-WhiskeyNodeModule
         [string]$BuildRootPath,
 
         # Whether or not to install the module globally.
-        [Switch]$Global,
+        [switch]$Global,
 
         # Are we running in clean mode?
-        [Switch]$InCleanMode
+        [switch]$InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'

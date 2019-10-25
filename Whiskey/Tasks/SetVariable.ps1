@@ -2,7 +2,7 @@
 function Set-WhiskeyVariable 
 {
     [CmdletBinding()]
-    [Whiskey.Task("SetVariable",SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('SetVariable',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

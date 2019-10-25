@@ -130,7 +130,7 @@ function New-WhiskeyProGetUniversalPackage
             [Parameter(Mandatory)]
             [object[]]$Path,
 
-            [Switch]$AsThirdPartyItem
+            [switch]$AsThirdPartyItem
         )
 
         foreach( $item in $Path )

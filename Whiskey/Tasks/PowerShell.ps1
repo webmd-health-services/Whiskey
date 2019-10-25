@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyPowerShell
 {
-    [Whiskey.Task("PowerShell",SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('PowerShell',SupportsClean,SupportsInitialize)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

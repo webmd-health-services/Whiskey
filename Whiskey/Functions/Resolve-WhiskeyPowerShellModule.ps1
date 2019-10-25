@@ -23,7 +23,7 @@ function Resolve-WhiskeyPowerShellModule
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         # The name of the PowerShell module.
         [string]$Name,
 
