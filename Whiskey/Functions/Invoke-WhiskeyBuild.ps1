@@ -75,6 +75,12 @@ function Invoke-WhiskeyBuild
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if( -not $PSBoundParameters.ContainsKey('InformationAction') )
+    {
+        # Whiskey logs to the information stream so make sure it is enabled. Unless the user wants it off.
+        $InformationPreference = 'Continue'
+    }
+
     $Context.StartedAt = $script:buildStartedAt = Get-Date
 
     # If there are older versions of the PackageManagement and/or PowerShellGet

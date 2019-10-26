@@ -177,6 +177,7 @@
 * Standardized and improved output of Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug`. Timings and the currently executing task name (if applicable) are added as a prefix to all but error-level messages. Output also no longer contains the current pipeline name or task index/number.
 * Fixed: PowerShell task doesn't show any information to the user about what it's doing.
 * Created `Log` task for writing logging messages. messages can be written at different levels: Error, Warning, Info (the default), Verbose, or Debug.
+* Whiskey now enables information messages during a build. To disable them, pass `-InformationAction Ignore` to `Invoke-WhiskeyBuild` in your build script.
 '@
         } # End of PSData hashtable
 
