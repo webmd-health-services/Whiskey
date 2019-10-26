@@ -35,7 +35,7 @@ function GivenAScript
         [Parameter(Position=0)]
         [String]$Script,
 
-        [String]$WithParam = 'param([Parameter(Mandatory=$true)][Object]$TaskContext)'
+        [String]$WithParam = 'param([Parameter(Mandatory)][Object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'
@@ -175,18 +175,20 @@ function WhenTheTaskRuns
                                       -InInitMode:$InInitMode `
                                       -ForBuildRoot $testRoot
     
+    Get-Content -Path (Join-Path -Path $testRoot -ChildPath $scriptName) -Raw |
+        Write-WhiskeyDebug -Context $context
+
     $failed = $false
 
     $Global:Error.Clear()
     $script:failed = $false
     try
     {
-
-        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter -ErrorAction Continue
+        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter 
     }
     catch
     {
-        Write-Error -ErrorRecord $_
+        Write-CaughtError -ErrorRecord $_
         $script:failed = $true
     }
 }
@@ -260,7 +262,9 @@ Describe 'PowerShell.when script''s error action preference is Stop and script d
     It 'should fail' {
         Init
         GivenAScript @'
+Set-StrictMode -Version 'Latest'
 $ErrorActionPreference = 'Stop'
+Write-WhiskeyDebug ('ErrorActionPreference  {0}' -f $ErrorActionPreference)
 Non-ExistingCmdlet -Name 'Test'
 throw 'fubar'
 '@ 

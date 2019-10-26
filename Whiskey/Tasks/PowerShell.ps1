@@ -112,14 +112,25 @@ function Invoke-WhiskeyPowerShell
 
             $Global:LASTEXITCODE = 0
 
-            Set-StrictMode -Off
-            & $scriptPath @contextArgument @argument
+            $result = [pscustomobject]@{
+                'ExitCode'   = $Global:LASTEXITCODE
+                'Successful' = $false
+            }
+            $result | ConvertTo-Json | Set-Content -Path $resultPath
+
+            try
+            {
+                Set-StrictMode -Off
+                & $scriptPath @contextArgument @argument
+                $result.ExitCode = $Global:LASTEXITCODE
+                $result.Successful = $?
+            }
+            catch
+            {
+                $_ | Out-String | Write-WhiskeyError 
+            }
 
             Set-StrictMode -Version 'Latest'
-            $result = @{
-                'ExitCode'   = $Global:LASTEXITCODE
-                'Successful' = $?
-            }
 
             Write-WhiskeyVerbose -Context $context -Message ('Exit Code  {0}' -f $result.ExitCode)
             Write-WhiskeyVerbose -Context $context -Message ('$?         {0}' -f $result.Successful)
@@ -149,7 +160,7 @@ function Invoke-WhiskeyPowerShell
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
             return
         }
-        elseif( $runResult.Successful -eq $false )
+        elseif( -not $runResult.Successful )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" threw a terminating exception.' -F $scriptPath)
             return
