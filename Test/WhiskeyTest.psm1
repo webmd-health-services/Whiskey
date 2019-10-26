@@ -576,6 +576,92 @@ function ThenModuleInstalled
         Should -Exist
 }
 
+function Use-CallerPreference
+{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        #[Management.Automation.PSScriptCmdlet]
+        # The module function's `$PSCmdlet` object. Requires the function be decorated with the `[CmdletBinding()]` attribute.
+        $Cmdlet,
+
+        [Parameter(Mandatory = $true)]
+        [Management.Automation.SessionState]
+        # The module function's `$ExecutionContext.SessionState` object.  Requires the function be decorated with the `[CmdletBinding()]` attribute. 
+        #
+        # Used to set variables in its callers' scope, even if that caller is in a different script module.
+        $SessionState
+    )
+
+    Set-StrictMode -Version 'Latest'
+
+    # List of preference variables taken from the about_Preference_Variables and their common parameter name (taken from about_CommonParameters).
+    $commonPreferences = @{
+                              'ErrorActionPreference' = 'ErrorAction';
+                              'DebugPreference' = 'Debug';
+                              'ConfirmPreference' = 'Confirm';
+                              'InformationPreference' = 'InformationAction';
+                              'VerbosePreference' = 'Verbose';
+                              'WarningPreference' = 'WarningAction';
+                              'WhatIfPreference' = 'WhatIf';
+                          }
+
+    foreach( $prefName in $commonPreferences.Keys )
+    {
+        $parameterName = $commonPreferences[$prefName]
+
+        # Don't do anything if the parameter was passed in.
+        if( $Cmdlet.MyInvocation.BoundParameters.ContainsKey($parameterName) )
+        {
+            continue
+        }
+
+        $variable = $Cmdlet.SessionState.PSVariable.Get($prefName)
+        # Don't do anything if caller didn't use a common parameter.
+        if( -not $variable )
+        {
+            continue
+        }
+
+        if( $SessionState -eq $ExecutionContext.SessionState )
+        {
+            Set-Variable -Scope 1 -Name $variable.Name -Value $variable.Value -Force -Confirm:$false -WhatIf:$false
+        }
+        else
+        {
+            $SessionState.PSVariable.Set($variable.Name, $variable.Value)
+        }
+    }
+}
+
+function Write-CaughtError
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [Management.Automation.ErrorRecord]$ErrorRecord
+    )
+
+    Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    $doNotWritePrefs = @(
+        [Management.Automation.ActionPreference]::Ignore, 
+        [Management.Automation.ActionPreference]::SilentlyContinue
+    )
+
+    if( $ErrorActionPreference -in $doNotWritePrefs )
+    {
+        return
+    }
+
+    $message = [Management.Automation.HostInformationMessage]::new()
+    $message.Message = $ErrorRecord | Out-String
+    $message.ForegroundColor = $Host.PrivateData.ErrorForegroundColor
+    $message.BackgroundColor = $Host.PrivateData.ErrorBackgroundColor
+    Write-Information $message -InformationAction Continue
+}
+
 $SuccessCommandScriptBlock = { 'exit 0' | sh }
 $FailureCommandScriptBlock = { 'exit 1' | sh }
 if( $IsWindows )

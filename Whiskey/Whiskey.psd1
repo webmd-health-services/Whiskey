@@ -176,6 +176,7 @@
 * Created a `Write-WhiskeyError` function for displaying build errors to the user.
 * Standardized and improved output of Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug`. Timings and the currently executing task name (if applicable) are added as a prefix to all but error-level messages. Output also no longer contains the current pipeline name or task index/number.
 * Fixed: PowerShell task doesn't show any information to the user about what it's doing.
+* Created `Log` task for writing logging messages. messages can be written at different levels: Error, Warning, Info (the default), Verbose, or Debug.
 '@
         } # End of PSData hashtable
 
