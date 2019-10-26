@@ -26,11 +26,11 @@ function Import-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The module names to import.
-        [string[]]$Name,
+        [String[]]$Name,
 
         [Parameter(Mandatory)]
         # The path to the build root, where the PSModules directory can be found.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'

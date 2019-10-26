@@ -1,16 +1,14 @@
 
 function Invoke-WhiskeyPowerShell
 {
-    [Whiskey.Task("PowerShell",SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.Task('PowerShell',SupportsClean,SupportsInitialize)]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

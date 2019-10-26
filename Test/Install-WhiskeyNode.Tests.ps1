@@ -38,14 +38,11 @@ function Init
 function ThenNodeInstalled
 {
     param(
-        [string]
-        $NodeVersion,
+        [String]$NodeVersion,
 
-        [string]
-        $NpmVersion,
+        [String]$NpmVersion,
 
-        [Switch]
-        $AtLatestVersion
+        [switch]$AtLatestVersion
     )
 
     $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName
@@ -126,7 +123,7 @@ function WhenInstallingTool
     param(
         $Version,
 
-        [Switch]$InCleanMode
+        [switch]$InCleanMode
     )
 
     $Global:Error.Clear()

@@ -74,7 +74,7 @@ function ThenResolvedLatestLTSVersion
 function ThenResolvedVersion
 {
     param(
-        [version]$Version
+        [Version]$Version
     )
 
     $resolvedVersion | Should -HaveCount 1 -Because 'it should only return one version'
@@ -91,7 +91,7 @@ function WhenResolvingSdkVersion
     [CmdletBinding()]
     param(
         [switch]$LatestLTS,
-        [string]$Version
+        [String]$Version
     )
 
     $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' `

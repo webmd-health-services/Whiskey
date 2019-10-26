@@ -6,13 +6,11 @@ function Publish-WhiskeyProGetAsset
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     [CmdletBinding()]
     param(
-        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [hashtable]
         # The parameters/configuration to use to run the task.
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
 

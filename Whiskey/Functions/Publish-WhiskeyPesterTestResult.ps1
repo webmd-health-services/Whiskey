@@ -3,10 +3,9 @@ function Publish-WhiskeyPesterTestResult
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to the Pester test resut.
-        $Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'

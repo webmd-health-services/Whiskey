@@ -29,8 +29,7 @@ function GivenRunMode
 function GivenTaskDefaults
 {
     param(
-        [hashtable]
-        $Defaults,
+        [hashtable]$Defaults,
         $ForTask
     )
 

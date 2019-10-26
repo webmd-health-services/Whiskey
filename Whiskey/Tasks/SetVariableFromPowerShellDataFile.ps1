@@ -5,16 +5,13 @@ function Set-WhiskeyVariableFromPowerShellDataFile
     [Whiskey.Task('SetVariableFromPowerShellDataFile')]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-        [string]
-        $Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -30,14 +27,11 @@ function Set-WhiskeyVariableFromPowerShellDataFile
     function Set-VariableFromData
     {
         param(
-            [object]
-            $Variable,
+            [Object]$Variable,
 
-            [hashtable]
-            $Data,
+            [hashtable]$Data,
             
-            [string]
-            $ParentPropertyName = ''
+            [String]$ParentPropertyName = ''
         )
 
         foreach( $propertyName in $Variable.Keys )

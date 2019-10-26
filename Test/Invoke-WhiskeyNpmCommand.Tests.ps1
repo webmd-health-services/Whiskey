@@ -52,8 +52,7 @@ function GivenArgument
 function GivenDependency 
 {
     param(
-        [object[]]
-        $Dependency 
+        [Object[]]$Dependency 
     )
     $script:dependency = $Dependency
 }
@@ -61,8 +60,7 @@ function GivenDependency
 function GivenDevDependency 
 {
     param(
-        [object[]]
-        $DevDependency 
+        [Object[]]$DevDependency 
     )
     $script:devDependency = $DevDependency
 }
@@ -105,16 +103,13 @@ function ThenPackage
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $PackageName,
+        [String]$PackageName,
         
-        [Parameter(Mandatory=$true,ParameterSetName='Exists')]
-        [switch]
-        $Exists,
+        [Parameter(Mandatory,ParameterSetName='Exists')]
+        [switch]$Exists,
 
-        [Parameter(Mandatory=$true,ParameterSetName='DoesNotExist')]
-        [switch]
-        $DoesNotExist
+        [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
+        [switch]$DoesNotExist
     )
 
     $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $testRoot -ErrorAction Ignore

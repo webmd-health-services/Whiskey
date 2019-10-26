@@ -29,15 +29,14 @@ function ConvertTo-Yaml
 {
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [Parameter(ValueFromPipeline)]
         [System.Object]$Data,
-        [Parameter(Mandatory=$false)]
-        [string]$OutFile,
+        [String]$OutFile,
         [switch]$JsonCompatible=$false,
         [switch]$Force=$false
     )
     BEGIN {
-        $d = [System.Collections.Generic.List[object]](New-Object "System.Collections.Generic.List[object]")
+        $d = [System.Collections.Generic.List[Object]](New-Object "System.Collections.Generic.List[Object]")
     }
     PROCESS {
         if($data -ne $null) {
@@ -89,9 +88,9 @@ function Import-WhiskeyTestModule
 {
     param(
         [Parameter(Mandatory)]
-        [string[]]$Name,
+        [String[]]$Name,
         
-        [Switch]$Force
+        [switch]$Force
     )
 
     $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
@@ -111,9 +110,9 @@ function Initialize-WhiskeyTestPSModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$BuildRoot,
+        [String]$BuildRoot,
 
-        [string[]]$Name
+        [String[]]$Name
     )
 
     $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
@@ -152,9 +151,9 @@ function Initialize-WhiskeyTestPSModule
 function Install-Node
 {
     param(
-        [string[]]$WithModule,
+        [String[]]$WithModule,
 
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
@@ -230,7 +229,7 @@ function Invoke-WhiskeyPrivateCommand
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Name,
+        [String]$Name,
         [hashtable]$Parameter = @{}
     )
 
@@ -259,8 +258,7 @@ function Invoke-WhiskeyPrivateCommand
 function New-AssemblyInfo
 {
     param(
-        [string]
-        $RootPath
+        [String]$RootPath
     )
 
     @'
@@ -306,14 +304,11 @@ using System.Runtime.InteropServices;
 function New-MSBuildProject
 {
     param(
-        [string[]]
-        $FileName,
+        [String[]]$FileName,
 
-        [Switch]
-        $ThatFails,
+        [switch]$ThatFails,
 
-        [string]
-        $BuildRoot
+        [String]$BuildRoot
     )
 
     if( -not $BuildRoot )
@@ -359,39 +354,39 @@ function New-MSBuildProject
 function New-WhiskeyTestContext
 {
     param(
-        [string]$ForBuildRoot,
+        [String]$ForBuildRoot,
 
-        [string]$ForTaskName,
+        [String]$ForTaskName,
 
-        [string]$ForOutputDirectory,
+        [String]$ForOutputDirectory,
 
         [switch]$InReleaseMode,
 
-        [Parameter(Mandatory=$true,ParameterSetName='ByBuildServer')]
+        [Parameter(Mandatory,ParameterSetName='ByBuildServer')]
         [Alias('ByBuildServer')]
-        [Switch]$ForBuildServer,
+        [switch]$ForBuildServer,
 
-        [Parameter(Mandatory=$true,ParameterSetName='ByDeveloper')]
+        [Parameter(Mandatory,ParameterSetName='ByDeveloper')]
         [Alias('ByDeveloper')]
-        [Switch]$ForDeveloper,
+        [switch]$ForDeveloper,
 
         [SemVersion.SemanticVersion]$ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
-        [string]$ConfigurationPath,
+        [String]$ConfigurationPath,
 
-        [string]$ForYaml,
+        [String]$ForYaml,
 
         [hashtable]$TaskParameter = @{},
 
-        [string]$DownloadRoot,
+        [String]$DownloadRoot,
 
-        [Switch]$IgnoreExistingOutputDirectory,
+        [switch]$IgnoreExistingOutputDirectory,
 
-        [Switch]$InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]$InInitMode,
+        [switch]$InInitMode,
 
-        [string[]]$IncludePSModule
+        [String[]]$IncludePSModule
     )
 
     Set-StrictMode -Version 'Latest'
@@ -482,7 +477,7 @@ function New-WhiskeyTestContext
         $context.Version.SemVer2 = $ForVersion
         $context.Version.SemVer2NoBuildMetadata = New-Object 'SemVersion.SemanticVersion' $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch,$ForVersion.Prerelease,$null
         $context.Version.SemVer1 = New-Object 'SemVersion.SemanticVersion' $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch,($ForVersion.Prerelease -replace '[^A-Za-z0-9]',''),$null
-        $context.Version.Version = [version]('{0}.{1}.{2}' -f $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch)
+        $context.Version.Version = [Version]('{0}.{1}.{2}' -f $ForVersion.Major,$ForVersion.Minor,$ForVersion.Patch)
     }
 
     if( -not $IgnoreExistingOutputDirectory -and (Test-Path -Path $context.OutputDirectory) )
@@ -512,7 +507,7 @@ function New-WhiskeyTestRoot
 function Remove-Node
 {
     param(
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     if( -not $BuildRoot )
@@ -528,7 +523,7 @@ function Remove-Node
 function Remove-DotNet
 {
     param(
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     if( -not $BuildRoot )
@@ -559,11 +554,11 @@ function Reset-WhiskeyTestPSModule
 function ThenModuleInstalled
 {
     param(
-        [string]$InBuildRoot,
+        [String]$InBuildRoot,
 
-        [string]$Named,
+        [String]$Named,
 
-        [string]$AtVersion
+        [String]$AtVersion
     )
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
@@ -574,7 +569,7 @@ function Write-WhiskeyTestTiming
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Message
+        [String]$Message
     )
 
     Invoke-WhiskeyPrivateCommand -Name 'Write-WhiskeyTiming' -Parameter @{ Message = $Message } 

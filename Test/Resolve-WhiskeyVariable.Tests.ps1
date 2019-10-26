@@ -11,9 +11,8 @@ $result = $null
 function GivenEnvironmentVariable
 {
     param(
-        [string]
         [ValidatePattern('^ResolveWhiskey')]
-        $Named,
+        [String]$Named,
         $WithValue
     )
 
@@ -229,7 +228,7 @@ Describe 'Resolve-WhiskeyVariable.when passed a List object' {
     It 'should resolve variables in each item' {
         Init
         GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '010'
-        $list = New-Object 'Collections.Generic.List[string]'
+        $list = New-Object 'Collections.Generic.List[String]'
         $list.Add( '$(ResolveWhiskeyVariable)' )
         $list.Add( 'fubar' )
         $list.Add( 'snafu' )

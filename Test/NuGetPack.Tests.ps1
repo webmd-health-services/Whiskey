@@ -35,11 +35,9 @@ function InitTest
 function GivenABuiltLibrary
 {
     param(
-        [Switch]
-        $ThatDoesNotExist,
+        [switch]$ThatDoesNotExist,
 
-        [Switch]
-        $InReleaseMode
+        [switch]$InReleaseMode
     )
 
     @'
@@ -146,8 +144,7 @@ function GivenRunByBuildServer
 function GivenPath
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     $script:path = $Path
@@ -171,8 +168,7 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $Symbols,
+        [switch]$Symbols,
 
         $Property,
 
@@ -291,8 +287,7 @@ function ThenPackageCreated
 
         $Version = $context.Version.SemVer1,
 
-        [Switch]
-        $Symbols
+        [switch]$Symbols
     )
 
     $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Version)

@@ -33,11 +33,9 @@ function GivenAScript
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Script,
+        [String]$Script,
 
-        [string]
-        $WithParam = 'param([Parameter(Mandatory=$true)][object]$TaskContext)'
+        [String]$WithParam = 'param([Parameter(Mandatory)][Object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'
@@ -69,11 +67,9 @@ function GivenNoWorkingDirectory
 function GivenWorkingDirectory
 {
     param(
-        [string]
-        $Path,
+        [String]$Path,
 
-        [Switch]
-        $ThatDoesNotExist
+        [switch]$ThatDoesNotExist
     )
 
     $script:workingDirectory = $Path
@@ -151,14 +147,11 @@ function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [object]
-        $WithArgument,
+        [Object]$WithArgument,
 
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]
-        $InInitMode
+        [switch]$InInitMode
     )
 
     $taskParameter = @{
@@ -365,12 +358,12 @@ $(
         }
     }
 
-    if( `$TaskContext.Version -is [string] )
+    if( `$TaskContext.Version -is [String] )
     {
         throw ('TaskContext.Version is a string instead of a [Whiskey.BuildVersion].')
     }
 
-    if( `$TaskContext.BuildMetadata -is [string] )
+    if( `$TaskContext.BuildMetadata -is [String] )
     {
         throw ('TaskContext.BuildMetadata is a string instead of a [Whiskey.BuildInfo].')
     }
@@ -390,11 +383,9 @@ if( -not `$SomeBool -or `$SomeOtherBool )
 }
 "@ -WithParam @"
 param(
-    [Switch]
-    `$SomeBool,
+    [switch]`$SomeBool,
 
-    [Switch]
-    `$SomeOtherBool
+    [switch]`$SomeOtherBool
 )
 "@
         WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }

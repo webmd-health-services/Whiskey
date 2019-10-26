@@ -27,12 +27,12 @@ function ThenModule
 {
     param(
         [Parameter(Mandatory)]
-        [string[]]$Named,
+        [String[]]$Named,
 
         [switch]$Not,
 
         [Parameter(Mandatory)]
-        [Switch]$Loaded
+        [switch]$Loaded
     )
 
     if( $Not )

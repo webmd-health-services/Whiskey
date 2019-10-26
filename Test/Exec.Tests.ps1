@@ -117,11 +117,9 @@ function WhenRunningExecutable
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]
-        $InInitializeMode
+        [switch]$InInitializeMode
     )
 
     $TaskParameter = @{}
@@ -183,11 +181,10 @@ function ThenExecutableRan
 function ThenSpecifiedArgumentsWerePassed
 {
     param(
-        [string[]]
-        $Arguments = @()
+        [String[]]$Arguments = @()
     )
 
-    [string[]]$argumentsResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'Arguments.txt' -Recurse | Get-Content
+    [String[]]$argumentsResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'Arguments.txt' -Recurse | Get-Content
     if( -not $argumentsResult )
     {
         $argumentsResult = @()

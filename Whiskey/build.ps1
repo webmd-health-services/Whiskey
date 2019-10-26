@@ -30,11 +30,11 @@ Demonstrates how to initialize the build root with any tools that are required b
 param(
     [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    [Switch]$Clean,
+    [switch]$Clean,
 
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [Switch]$Initialize
+    [switch]$Initialize
 )
 
 #Requires -Version 5.1
@@ -59,7 +59,7 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
             {
                 return $true
             }
-            [version]::TryParse($_.name,[ref]$null)
+            [Version]::TryParse($_.name,[ref]$null)
         } |
         Sort-Object -Property 'created_at' -Descending |
         Select-Object -First 1

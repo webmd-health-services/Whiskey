@@ -23,31 +23,25 @@ function Install-WhiskeyNodeModule
     
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the module to install.
-        $Name,
+        [String]$Name,
 
-        [string]
         # The version of the module to install.
-        $Version,
+        [String]$Version,
 
-        [switch]
         # Node modules are being installed on a developer computer.
-        $ForDeveloper,
+        [switch]$ForDeveloper,
 
         [Parameter(Mandatory)]
-        [string]
         # The path to the build root.
-        $BuildRootPath,
+        [String]$BuildRootPath,
 
-        [Switch]
         # Whether or not to install the module globally.
-        $Global,
+        [switch]$Global,
 
-        [Switch]
         # Are we running in clean mode?
-        $InCleanMode
+        [switch]$InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'

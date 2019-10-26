@@ -100,11 +100,11 @@ function WhenRunningTask
 {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [string]$Name,
+        [String]$Name,
 
         [hashtable]$Parameter,
 
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     $optionalParams = @{}
@@ -196,7 +196,7 @@ Describe ('Get-TaskParameter.when task parameter should come from a Whiskey vari
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT')]
-                [string]$Environment
+                [String]$Environment
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -215,7 +215,7 @@ Describe ('Get-TaskParameter.when task parameter value uses a Whiskey variable m
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ParameterValueFromVariable('WHISKEY_ENVIRONMENT.Length')]
-                [string]$Environment
+                [String]$Environment
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -233,11 +233,11 @@ Describe ('Get-TaskParameter.when passing typed parameters') {
         {
             [Whiskey.Task('Task')]
             param(
-                [Switch]$SwitchOne,
+                [switch]$SwitchOne,
 
-                [Switch]$SwitchTwo,
+                [switch]$SwitchTwo,
 
-                [Switch]$SwitchThree,
+                [switch]$SwitchThree,
 
                 [bool]$Bool,
 

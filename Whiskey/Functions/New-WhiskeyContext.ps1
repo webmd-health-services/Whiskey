@@ -55,19 +55,16 @@ function New-WhiskeyContext
     [CmdletBinding()]
     [OutputType([Whiskey.Context])]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The environment you're building in.
-        $Environment,
+        [String]$Environment,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to the `whiskey.yml` file that defines build settings and tasks.
-        $ConfigurationPath,
+        [String]$ConfigurationPath,
 
-        [string]
         # The place where downloaded tools should be cached. The default is the build root.
-        $DownloadRoot
+        [String]$DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'

@@ -5,13 +5,11 @@ function New-WhiskeyProGetUniversalPackage
     [Whiskey.Task('ProGetUniversalPackage')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -75,7 +73,7 @@ function New-WhiskeyProGetUniversalPackage
     $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
     if( $TaskParameter['CompressionLevel'] )
     {
-        $expectedValues = [enum]::GetValues([IO.Compression.CompressionLevel])
+        $expectedValues = [Enum]::GetValues([IO.Compression.CompressionLevel])
         $compressionLevel = $TaskParameter['CompressionLevel']
         if( $compressionLevel -notin $expectedValues )
         {
@@ -129,12 +127,10 @@ function New-WhiskeyProGetUniversalPackage
     function Copy-ToPackage
     {
         param(
-            [Parameter(Mandatory=$true)]
-            [object[]]
-            $Path,
+            [Parameter(Mandatory)]
+            [Object[]]$Path,
 
-            [Switch]
-            $AsThirdPartyItem
+            [switch]$AsThirdPartyItem
         )
 
         foreach( $item in $Path )

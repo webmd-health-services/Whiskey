@@ -58,8 +58,7 @@ function ThenPipelineSucceeded
 function ThenTaskCalled
 {
     param(
-        [hashtable]
-        $WithParameter
+        [hashtable]$WithParameter
     )
     $taskCalled | should -BeTrue
     $taskParameters | Should -Not -BeNullOrEmpty
@@ -94,14 +93,11 @@ function WhenRunningTask
 {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [string]
-        $Name,
+        [String]$Name,
 
-        [hashtable]
-        $Parameter,
+        [hashtable]$Parameter,
 
-        [string]
-        $BuildRoot
+        [String]$BuildRoot
     )
 
     $optionalParams = @{}
@@ -134,7 +130,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path')
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -153,7 +149,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path b
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -172,7 +168,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path with wildca
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string[]]$Path
+                [String[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -195,7 +191,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path that the us
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string[]]$Path
+                [String[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -215,7 +211,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path parameter wants to be reso
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -236,7 +232,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -255,7 +251,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file but it''s
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -275,7 +271,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a directory but 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -295,7 +291,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when all paths should be files but o
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -316,7 +312,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when an optional path that doesn''t 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -334,7 +330,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is mandatory and missing')
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory)]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -354,7 +350,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root a
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,AllowOutsideBuildRoot)]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -373,7 +369,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root a
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent)]
-                [string]$Path
+                [String]$Path
                 
             )
             $global:taskCalled = $true
@@ -393,7 +389,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -413,7 +409,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does not') 
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -432,7 +428,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is absolute') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -451,7 +447,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path doesn''t exist but has a w
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -478,7 +474,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside build root') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -500,7 +496,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when multiple paths contain wildcard
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath()]
-                [string[]]$Path
+                [String[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -530,7 +526,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths') {
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [string[]]$Path
+                [String[]]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters
@@ -556,7 +552,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to t
             [Whiskey.Task('Task')]
             param(
                 [Whiskey.Tasks.ValidatePath(AllowNonexistent)]
-                [string]$Path
+                [String]$Path
             )
             $global:taskCalled = $true
             $global:taskParameters = $PSBoundParameters

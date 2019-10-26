@@ -3,13 +3,13 @@ function Format-WhiskeyMessage
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline)]
         [AllowEmptyString()]
         [AllowNull()]
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )

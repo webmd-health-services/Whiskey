@@ -27,7 +27,7 @@ function Install-WhiskeyPowerShellModule
     param(
         $Name,
         $Version,
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     $parameter = $PSBoundParameters
@@ -42,7 +42,7 @@ function Invoke-PowershellInstall
         $ForModule,
         $Version,
         $ActualVersion,
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     if( -not $ActualVersion )
@@ -147,7 +147,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module us
     AfterEach { Reset }
     It 'should resolve to the latest version that matches the wildcard' {
         Init
-        $version = [version]($latestZip.Version)
+        $version = [Version]($latestZip.Version)
         Invoke-PowershellInstall -ForModule 'Zip' -Version ('{0}.*' -f $version.Major) -ActualVersion $latestZip.Version
         ThenModuleImported 'Zip' -AtVersion $latestZip.Version
     }

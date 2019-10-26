@@ -36,17 +36,14 @@ function Global::ToolTask
 function Invoke-PreTaskPlugin
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Object]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $TaskName,
+        [Parameter(Mandatory)]
+        [String]$TaskName,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
 }
@@ -54,17 +51,14 @@ function Invoke-PreTaskPlugin
 function Invoke-PostTaskPlugin
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Object]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $TaskName,
+        [Parameter(Mandatory)]
+        [String]$TaskName,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 }
 
@@ -98,10 +92,8 @@ function GivenFile
 function GivenMockTask
 {
     param(
-        [switch]
-        $SupportsClean,
-        [switch]
-        $SupportsInitialize
+        [switch]$SupportsClean,
+        [switch]$SupportsInitialize
     )
 
     if ($SupportsClean -and $SupportsInitialize)
@@ -165,8 +157,7 @@ function GivenRunByDeveloper
 function GivenPlugins
 {
     param(
-        [string]
-        $ForSpecificTask
+        [String]$ForSpecificTask
     )
 
     $taskNameParam = @{ }
@@ -184,11 +175,9 @@ function GivenPlugins
 function GivenDefaults
 {
     param(
-        [hashtable]
-        $Default,
+        [hashtable]$Default,
 
-        [string]
-        $ForTask
+        [String]$ForTask
     )
 
     $script:taskDefaults[$ForTask] = $Default
@@ -197,8 +186,7 @@ function GivenDefaults
 function GivenScmBranch
 {
     param(
-        [string]
-        $Branch
+        [String]$Branch
     )
     $script:scmBranch = $Branch
 }
@@ -217,8 +205,7 @@ function GivenWhiskeyYmlBuildFile
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Yaml
+        [String]$Yaml
     )
 
     $config = $null
@@ -230,11 +217,9 @@ function GivenWhiskeyYmlBuildFile
 function GivenWorkingDirectory
 {
     param(
-        [string]
-        $Directory,
+        [String]$Directory,
 
-        [Switch]
-        $SkipMock
+        [switch]$SkipMock
     )
 
     $wd = Join-Path -Path $testRoot -ChildPath $Directory
@@ -280,11 +265,9 @@ function ThenPipelineSucceeded
 function ThenDotNetProjectsCompilationFailed
 {
     param(
-        [string]
-        $ConfigurationPath,
+        [String]$ConfigurationPath,
 
-        [string[]]
-        $ProjectName
+        [String[]]$ProjectName
     )
 
     $root = Split-Path -Path $ConfigurationPath -Parent
@@ -314,8 +297,7 @@ function ThenPluginsRan
 
         $WithParameter,
 
-        [int]
-        $Times = 1
+        [int]$Times = 1
     )
 
     foreach( $pluginName in @( 'Invoke-PreTaskPlugin', 'Invoke-PostTaskPlugin' ) )
@@ -387,10 +369,8 @@ function ThenTaskRanWithParameter
 {
     param(
         $CommandName,
-        [hashtable]
-        $ExpectedParameter,
-        [int]
-        $Times
+        [hashtable]$ExpectedParameter,
+        [int]$Times
     )
 
     $TimesParam = @{}
@@ -442,8 +422,7 @@ function ThenTaskRanWithoutParameter
 {
     param(
         $CommandName,
-        [string[]]
-        $ParameterName
+        [String[]]$ParameterName
     )
 
     foreach( $name in $ParameterName )
@@ -555,14 +534,11 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [string]
-        $Name,
+        [String]$Name,
 
-        [hashtable]
-        $Parameter,
+        [hashtable]$Parameter,
 
-        [string]
-        $InRunMode
+        [String]$InRunMode
     )
 
     Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'

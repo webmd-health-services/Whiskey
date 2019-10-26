@@ -135,18 +135,6 @@ function ThenTaskDefaultsContains
     $script:context.TaskDefaults[$TaskName][$Property] | Should -Be $Value
 }
 
-Describe 'Add-WhiskeyTaskDefault.when context object is missing TaskDefaults property' {
-    It 'should fail' {
-        Init
-        GivenContext [pscustomobject]@{ RunMode = 'Build' }
-        GiventaskName 'MSBuild'
-        GivenPropertyName 'Version'
-        GivenValue 12.0
-        WhenAddingTaskDefault -ErrorAction SilentlyContinue
-        ThenFailedWithError 'does not contain a ''TaskDefaults'' property'
-    }
-}
-
 Describe 'Add-WhiskeyTaskDefault.when given an invalid task name' {
     It 'should fail' {
         Init

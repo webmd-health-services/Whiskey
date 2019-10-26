@@ -3,22 +3,17 @@ function Invoke-WhiskeyRobocopy
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Source,
+        [Parameter(Mandatory)]
+        [String]$Source,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Destination,
+        [Parameter(Mandatory)]
+        [String]$Destination,
 
-        [string[]]
-        $WhiteList,
+        [String[]]$WhiteList,
 
-        [string[]]
-        $Exclude,
+        [String[]]$Exclude,
 
-        [string]
-        $LogPath
+        [String]$LogPath
     )
 
     Set-StrictMode -Version 'Latest'

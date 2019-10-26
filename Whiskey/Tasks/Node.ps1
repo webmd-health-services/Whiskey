@@ -7,18 +7,16 @@ function Invoke-WhiskeyNodeTask
     [Whiskey.RequiresTool('NodeModule::nsp',PathParameterName='NspPath',VersionParameterName='PINNED_TO_NSP_2_7_0',Version='2.7.0')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context the task is running under.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The task parameters, which are:
         #
         # * `NpmScript`: a list of one or more NPM scripts to run, e.g. `npm run $SCRIPT_NAME`. Each script is run indepently.
         # * `WorkingDirectory`: the directory where all the build commands should be run. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -43,12 +41,10 @@ function Invoke-WhiskeyNodeTask
     function Update-Progress
     {
         param(
-            [Parameter(Mandatory=$true)]
-            [string]
-            $Status,
+            [Parameter(Mandatory)]
+            [String]$Status,
 
-            [int]
-            $Step
+            [int]$Step
         )
 
         Write-Progress -Activity $activity -Status $Status.TrimEnd('.') -PercentComplete ($Step/$numSteps*100)
@@ -128,10 +124,11 @@ Build:
         Write-WhiskeyTiming -Message ('Converting license report.')
         # The default license checker report has a crazy format. It is an object with properties for each module.
         # Let's transform it to a more sane format: an array of objects.
-        [object[]]$newReport = $report |
-                                    Get-Member -MemberType NoteProperty |
-                                    Select-Object -ExpandProperty 'Name' |
-                                    ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+        [Object[]]$newReport = 
+            $report |
+            Get-Member -MemberType NoteProperty |
+            Select-Object -ExpandProperty 'Name' |
+            ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
         # show the report
         $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-WhiskeyVerbose -Context $TaskContext

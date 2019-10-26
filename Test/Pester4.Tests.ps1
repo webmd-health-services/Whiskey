@@ -67,8 +67,7 @@ function GivenExclude
 function GivenVersion
 {
     param(
-        [string]
-        $Version
+        [String]$Version
     )
     $Script:taskParameter['Version'] = $Version
 }
@@ -85,8 +84,8 @@ function GivenInvalidVersion
 function GivenTestFile
 {
     param(
-        [string]$Path,
-        [string]$Content
+        [String]$Path,
+        [String]$Content
     )
 
     $taskParameter['Path'] = & {
@@ -107,7 +106,7 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [Switch]$WithClean,
+        [switch]$WithClean,
 
         [switch]$CaptureOutput
     )
@@ -184,13 +183,11 @@ function ThenItDurationReportHasRows
 function ThenPesterShouldHaveRun
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
+        [Parameter(Mandatory)]
+        [int]$FailureCount,
             
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
+        [Parameter(Mandatory)]
+        [int]$PassingCount
     )
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
@@ -240,8 +237,7 @@ function ThenPesterShouldHaveRun
 function ThenTestShouldFail
 {
     param(
-        [string]
-        $failureMessage
+        [String]$failureMessage
     )
     $Script:failed | Should -BeTrue
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty

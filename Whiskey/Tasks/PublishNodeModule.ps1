@@ -8,13 +8,13 @@ function Publish-WhiskeyNodeModule
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [string]$CredentialID,
+        [String]$CredentialID,
 
-        [string]$EmailAddress,
+        [String]$EmailAddress,
 
-        [uri]$NpmRegistryUri,
+        [Uri]$NpmRegistryUri,
 
-        [string]$Tag
+        [String]$Tag
     )
 
     Set-StrictMode -Version 'Latest'

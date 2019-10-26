@@ -55,8 +55,7 @@ function GivenBadJson
 function GivenDependency 
 {
     param(
-        [object[]]
-        $Dependency 
+        [Object[]]$Dependency 
     )
     $script:dependency = $Dependency
 }
@@ -64,8 +63,7 @@ function GivenDependency
 function GivenDevDependency 
 {
     param(
-        [object[]]
-        $DevDependency 
+        [Object[]]$DevDependency 
     )
     $script:devDependency = $DevDependency
 }

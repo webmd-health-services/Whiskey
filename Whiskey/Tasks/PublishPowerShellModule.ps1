@@ -17,7 +17,7 @@ function Publish-WhiskeyPowerShellModule
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-        [string]$Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'

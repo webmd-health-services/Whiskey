@@ -12,8 +12,7 @@ $latestNUnit2Version = '2.6.4'
 function Assert-NUnitTestsRun
 {
     param(
-        [string]
-        $ReportPath
+        [String]$ReportPath
     )
     $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml'
     $reports | Should -Not -BeNullOrEmpty
@@ -24,8 +23,7 @@ function Assert-NUnitTestsRun
 function Assert-NUnitTestsNotRun
 {
     param(
-        [string]
-        $ReportPath
+        [String]$ReportPath
     )
     $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
 }
@@ -33,8 +31,7 @@ function Assert-NUnitTestsNotRun
 function Assert-OpenCoverRuns
 {
     param(
-        [String]
-        $OpenCoverDirectoryPath
+        [String]$OpenCoverDirectoryPath
     )
     $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
     $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
@@ -45,8 +42,7 @@ function Assert-OpenCoverRuns
 function Assert-OpenCoverNotRun
 {
     param(
-        [String]
-        $OpenCoverDirectoryPath
+        [String]$OpenCoverDirectoryPath
     )
     $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
     $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
@@ -59,41 +55,29 @@ function Invoke-NUnitTask
 
     [CmdletBinding()]
     param(
-        [Switch]
-        $ThatFails,
+        [switch]$ThatFails,
 
-        [Switch]
-        $WithNoPath,
+        [switch]$WithNoPath,
 
-        [Switch]
-        $WithInvalidPath,
+        [switch]$WithInvalidPath,
 
-        [Switch]
-        $WhenJoinPathResolveFails,
+        [switch]$WhenJoinPathResolveFails,
 
-        [switch]
-        $WithFailingTests,
+        [switch]$WithFailingTests,
 
-        [switch]
-        $WithRunningTests,
+        [switch]$WithRunningTests,
 
-        [String]
-        $WithError,
+        [String]$WithError,
 
-        [Switch]
-        $WhenRunningClean,
+        [switch]$WhenRunningClean,
 
-        [Switch]
-        $WhenRunningInitialize,
+        [switch]$WhenRunningInitialize,
 
-        [Switch]
-        $WithDisabledCodeCoverage,
+        [switch]$WithDisabledCodeCoverage,
 
-        [String[]]
-        $CoverageFilter,
+        [String[]]$CoverageFilter,
 
-        [ScriptBlock]
-        $MockInstallWhiskeyToolWith
+        [scriptblock]$MockInstallWhiskeyToolWith
     )
 
     process
@@ -285,8 +269,7 @@ function GivenCodeCoverageIsDisabled
 function GivenExclude
 {
     param(
-        [String[]]
-        $Value
+        [String[]]$Value
     )
     $script:exclude = $value
 }
@@ -294,8 +277,7 @@ function GivenExclude
 function GivenInclude
 {
     param(
-        [String[]]
-        $Value
+        [String[]]$Value
     )
     $script:include = $value
 }
@@ -330,8 +312,7 @@ function GivenVersion
 function GivenCoverageFilter
 {
     Param(
-        [String]
-        $Filter
+        [String]$Filter
     )
     $script:CoverageFilter = $Filter
 }
@@ -358,11 +339,9 @@ function Init
 function WhenRunningTask
 {
     param(
-        [hashtable]
-        $WithParameters = @{ },
+        [hashtable]$WithParameters = @{ },
 
-        [Switch]
-        $WhenRunningInitialize
+        [switch]$WhenRunningInitialize
     )
 
     $Global:Error.Clear()
@@ -427,8 +406,7 @@ function Get-TestCaseResult
 {
     [OutputType([System.Xml.XmlElement])]
     param(
-        [string]
-        $TestName
+        [String]$TestName
     )
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
@@ -442,11 +420,9 @@ function Get-TestCaseResult
 function ThenOutput
 {
     param(
-        [string[]]
-        $Contains,
+        [String[]]$Contains,
 
-        [string[]]
-        $DoesNotContain
+        [String[]]$DoesNotContain
     )
 
     foreach( $regex in $Contains )
@@ -463,8 +439,7 @@ function ThenOutput
 function ThenTestsNotRun
 {
     param(
-        [string[]]
-        $TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -476,8 +451,7 @@ function ThenTestsNotRun
 function ThenTestsPassed
 {
     param(
-        [string[]]
-        $TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -496,11 +470,9 @@ function ThenItShouldNotRunTests {
 
 function ThenItInstalled {
     param (
-        [string]
-        $Name,
+        [String]$Name,
 
-        [Version]
-        $Version
+        [Version]$Version
     )
 
     $expectedVersion = $Version

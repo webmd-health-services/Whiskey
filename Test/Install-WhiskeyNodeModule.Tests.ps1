@@ -97,20 +97,16 @@ function ThenModule
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Name,
+        [String]$Name,
 
-        [Parameter(Mandatory=$false,ParameterSetName='Exists')]
-        [string]
-        $Version,
+        [Parameter(ParameterSetName='Exists')]
+        [String]$Version,
         
-        [Parameter(Mandatory=$true,ParameterSetName='Exists')]
-        [switch]
-        $Exists,
+        [Parameter(Mandatory,ParameterSetName='Exists')]
+        [switch]$Exists,
 
-        [Parameter(Mandatory=$true,ParameterSetName='DoesNotExist')]
-        [switch]
-        $DoesNotExist
+        [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
+        [switch]$DoesNotExist
     )
 
     $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $TestDrive.FullName

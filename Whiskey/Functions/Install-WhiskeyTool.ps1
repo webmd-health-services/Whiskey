@@ -25,7 +25,7 @@ function Install-WhiskeyTool
 
         [Parameter(Mandatory,ParameterSetName='Tool')]
         # The directory where you want the tools installed.
-        [string]$InstallRoot,
+        [String]$InstallRoot,
 
         [Parameter(Mandatory,ParameterSetName='Tool')]
         # The task parameters for the currently running task.
@@ -33,15 +33,15 @@ function Install-WhiskeyTool
 
         [Parameter(ParameterSetName='Tool')]
         # Running in clean mode, so don't install the tool if it isn't installed.
-        [Switch]$InCleanMode,
+        [switch]$InCleanMode,
 
         [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The name of the NuGet package to download.
-        [string]$NuGetPackageName,
+        [String]$NuGetPackageName,
 
         [Parameter(ParameterSetName='NuGet')]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [string]$Version,
+        [String]$Version,
 
         [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The root directory where the tools should be downloaded. The default is your build root.
@@ -49,7 +49,7 @@ function Install-WhiskeyTool
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
         # NuGet packages are saved to `$DownloadRoot\packages`.
-        [string]$DownloadRoot
+        [String]$DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -74,7 +74,7 @@ function Install-WhiskeyTool
     {
         try
         {
-            [void]$installLock.WaitOne()
+            [Void]$installLock.WaitOne()
         }
         catch [Threading.AbandonedMutexException]
         {

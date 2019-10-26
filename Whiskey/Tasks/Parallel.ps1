@@ -4,13 +4,11 @@ function Invoke-WhiskeyParallelTask
     [CmdletBinding()]
     [Whiskey.Task('Parallel')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -112,7 +110,7 @@ function Invoke-WhiskeyParallelTask
                 $job |
                     Add-Member -MemberType NoteProperty -Name 'QueueIndex' -Value $queueIdx -PassThru |
                     Add-Member -MemberType NoteProperty -Name 'Completed' -Value $false
-                [void]$jobs.Add($job)
+                [Void]$jobs.Add($job)
         }
 
         $lastNotice = (Get-Date).AddSeconds(-61)

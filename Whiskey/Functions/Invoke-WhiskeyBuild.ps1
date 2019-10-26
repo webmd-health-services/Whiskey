@@ -54,26 +54,22 @@ function Invoke-WhiskeyBuild
     #>
     [CmdletBinding(DefaultParameterSetName='Build')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context for the build. Use `New-WhiskeyContext` to create context objects.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [string[]]
         # The name(s) of any pipelines to run. Default behavior is to run the `Build` pipeline and, if on a publishing branch, the `Publish` pipeline.
         #
         # If you pass a value to this parameter, the `Publish` pipeline is *not* run implicitly. You must pass its name to run it.
-        $PipelineName,
+        [String[]]$PipelineName,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Clean')]
-        [Switch]
+        [Parameter(Mandatory,ParameterSetName='Clean')]
         # Runs the build in clean mode. In clean mode, tasks delete any artifacts they create, including downloaded tools and dependencies. This is opt-in, so if a task is not deleting its artifacts, it needs to be updated to support clean mode.
-        $Clean,
+        [switch]$Clean,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Initialize')]
-        [Switch]
+        [Parameter(Mandatory,ParameterSetName='Initialize')]
         # Runs the build in initialize mode. In initialize mode, tasks download/install/configure any tools/dependencies they use/need during the build. Initialize mode is intended to be used by developers so that any tools/dependencies they need can be downloaded/installe/configured without needing to run an entire build, which can sometimes take a long time.
-        $Initialize
+        [switch]$Initialize
     )
 
     Set-StrictMode -Version 'Latest'

@@ -51,12 +51,10 @@ function GivenNoReleaseName
 function GivenNoRelease
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
-        [string]
-        $Name,
-        [Parameter(Mandatory=$true)]
-        [string]
-        $ForApplication
+        [Parameter(Mandatory,Position=0)]
+        [String]$Name,
+        [Parameter(Mandatory)]
+        [String]$ForApplication
     )
 
     $script:appName = $ForApplication
@@ -71,7 +69,7 @@ function GivenNoUri
 function GivenProperty
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Property
     )
 
@@ -81,7 +79,7 @@ function GivenProperty
 function GivenPackageName
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Name
     )
     
@@ -91,7 +89,7 @@ function GivenPackageName
 function GivenStartAtStage
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Stage
     )
     
@@ -218,29 +216,23 @@ function ThenCreatedPackage
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,Position=0)]
-        [string]
-        $Name,
+        [Parameter(Mandatory,Position=0)]
+        [String]$Name,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $InRelease,
+        [Parameter(Mandatory)]
+        [String]$InRelease,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $ForApplication,
+        [Parameter(Mandatory)]
+        [String]$ForApplication,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $AtUri,
+        [Parameter(Mandatory)]
+        [String]$AtUri,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $UsingApiKey,
+        [Parameter(Mandatory)]
+        [String]$UsingApiKey,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $WithVariables
+        [Parameter(Mandatory)]
+        [hashtable]$WithVariables
     )
 
     Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $PackageNumber -eq $Name }
@@ -270,16 +262,13 @@ function ThenCreatedPackage
 function ThenPackageDeployed
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        $AtUri,
+        [Parameter(Mandatory)]
+        [String]$AtUri,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $UsingApiKey,
+        [Parameter(Mandatory)]
+        [String]$UsingApiKey,
         
-        [string]
-        $AtStage
+        [String]$AtStage
     )
     
     if( $AtStage )

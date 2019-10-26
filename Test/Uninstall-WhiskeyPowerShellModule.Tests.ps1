@@ -40,11 +40,9 @@ function WhenUninstallingPowerShellModule
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '0.37.1',
+        [String]$WithVersion = '0.37.1',
 
-        [String]
-        $WithName = 'SomeModule'
+        [String]$WithName = 'SomeModule'
     )
 
     $Global:Error.Clear()

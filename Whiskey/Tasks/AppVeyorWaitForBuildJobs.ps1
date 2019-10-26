@@ -7,15 +7,15 @@ function Wait-WhiskeyAppVeyorBuildJob
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [string]$ApiKeyID,
+        [String]$ApiKeyID,
 
         [TimeSpan]$CheckInterval = '00:00:10',
 
         [TimeSpan]$ReportInterval = '00:01:00',
 
-        [string[]]$InProgressStatus = @('running','queued'),
+        [String[]]$InProgressStatus = @('running','queued'),
 
-        [string[]]$SuccessStatus = @('success')
+        [String[]]$SuccessStatus = @('success')
     )
 
     Set-StrictMode -Version 'Latest'
@@ -92,7 +92,7 @@ function Wait-WhiskeyAppVeyorBuildJob
             }
             $jobDescriptions = $failedJobs | ForEach-Object { '{0} (status: {1})' -f $_.name,$_.status}
             $jobDescriptions = $jobDescriptions -join ('{0} * ' -f [Environment]::NewLine)
-            $errorMsg = 'This build''s other job{0} did not succeed.{1} {1} * {2} {1} ' -f $suffix, [environment]::NewLine, $jobDescriptions
+            $errorMsg = 'This build''s other job{0} did not succeed.{1} {1} * {2} {1} ' -f $suffix, [Environment]::NewLine, $jobDescriptions
             Stop-WhiskeyTask -TaskContext $TaskContext -Message $errorMsg
             return
         }

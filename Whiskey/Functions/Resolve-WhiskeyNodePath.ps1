@@ -25,14 +25,12 @@ function Resolve-WhiskeyNodePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromBuildRoot')]
-        [string]
         # The path to the build root. This will return the path to Node where Whiskey installs a local copy.
-        $BuildRootPath,
+        [String]$BuildRootPath,
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]
-        [string]
         # The path to the root of an Node package, as downloaded and expanded from the Node.js download page.
-        $NodeRootPath
+        [String]$NodeRootPath
     )
 
     Set-StrictMode -Version 'Latest'

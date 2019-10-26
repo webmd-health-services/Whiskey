@@ -6,13 +6,11 @@ function Invoke-WhiskeyNodeLicenseChecker
     [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [Whiskey.RequiresTool('NodeModule::license-checker',PathParameterName='LicenseCheckerPath',VersionParameterName='Version')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -40,10 +38,11 @@ function Invoke-WhiskeyNodeLicenseChecker
     Write-WhiskeyTiming -Message 'Converting license report.'
     # The default license checker report has a crazy format. It is an object with properties for each module.
     # Let's transform it to a more sane format: an array of objects.
-    [object[]]$newReport = $report |
-                                Get-Member -MemberType NoteProperty |
-                                Select-Object -ExpandProperty 'Name' |
-                                ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
+    [Object[]]$newReport = 
+        $report |
+        Get-Member -MemberType NoteProperty |
+        Select-Object -ExpandProperty 'Name' |
+        ForEach-Object { $report.$_ | Add-Member -MemberType NoteProperty -Name 'name' -Value $_ -PassThru }
 
     # show the report
     $newReport | Sort-Object -Property 'licenses','name' | Format-Table -Property 'licenses','name' -AutoSize | Out-String | Write-WhiskeyVerbose -Context $TaskContext

@@ -10,15 +10,13 @@ function Test-WhiskeyTaskSkip
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context for the build.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The common task properties defined for the current task.
-        $Properties
+        [hashtable]$Properties
     )
 
     Set-StrictMode -Version 'Latest'
@@ -32,9 +30,9 @@ function Test-WhiskeyTaskSkip
     elseif( $Properties['OnlyBy'] )
     {
         [Whiskey.RunBy]$onlyBy = [Whiskey.RunBy]::Developer
-        if( -not ([enum]::TryParse($Properties['OnlyBy'], [ref]$onlyBy)) )
+        if( -not ([Enum]::TryParse($Properties['OnlyBy'], [ref]$onlyBy)) )
         {
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['OnlyBy'],([enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['OnlyBy'],([Enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
             return
         }
 
@@ -47,9 +45,9 @@ function Test-WhiskeyTaskSkip
     elseif( $Properties['ExceptBy'] )
     {
         [Whiskey.RunBy]$exceptBy = [Whiskey.RunBy]::Developer
-        if( -not ([enum]::TryParse($Properties['ExceptBy'], [ref]$exceptBy)) )
+        if( -not ([Enum]::TryParse($Properties['ExceptBy'], [ref]$exceptBy)) )
         {
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['ExceptBy'],([enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptBy' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['ExceptBy'],([Enum]::GetValues([Whiskey.RunBy]) -join ''', '''))
             return
         }
 
@@ -166,9 +164,9 @@ function Test-WhiskeyTaskSkip
     if( $Properties['OnlyIfBuild'] )
     {
         [Whiskey.BuildStatus]$buildStatus = [Whiskey.BuildStatus]::Succeeded
-        if( -not ([enum]::TryParse($Properties['OnlyIfBuild'], [ref]$buildStatus)) )
+        if( -not ([Enum]::TryParse($Properties['OnlyIfBuild'], [ref]$buildStatus)) )
         {
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyIfBuild' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['OnlyIfBuild'],([enum]::GetValues([Whiskey.BuildStatus]) -join ''', '''))
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyIfBuild' -Message ('invalid value: ''{0}''. Valid values are ''{1}''.' -f $Properties['OnlyIfBuild'],([Enum]::GetValues([Whiskey.BuildStatus]) -join ''', '''))
             return
         }
 
@@ -185,7 +183,7 @@ function Test-WhiskeyTaskSkip
         [Whiskey.Platform]$platform = [Whiskey.Platform]::Unknown
         foreach( $item in $Properties['OnlyOnPlatform'] )
         {
-            if( -not [enum]::TryParse($item,[ref]$platform) )
+            if( -not [Enum]::TryParse($item,[ref]$platform) )
             {
                 $validValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
                 Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyOnPlatform' -Message ('Invalid platform "{0}". Valid values are "{1}".' -f $item,($validValues -join '", "'))
@@ -213,7 +211,7 @@ function Test-WhiskeyTaskSkip
         [Whiskey.Platform]$platform = [Whiskey.Platform]::Unknown
         foreach( $item in $Properties['ExceptOnPlatform'] )
         {
-            if( -not [enum]::TryParse($item,[ref]$platform) )
+            if( -not [Enum]::TryParse($item,[ref]$platform) )
             {
                 $validValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
                 Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptOnPlatform' -Message ('Invalid platform "{0}". Valid values are "{1}".' -f $item,($validValues -join '", "'))

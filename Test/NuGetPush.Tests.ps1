@@ -37,7 +37,7 @@ function Init
 function GivenANuGetPackage
 {
     param(
-        [string[]]
+        [String[]]
         [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?(\.symbols)?\.nupkg')]
         $Path
     )
@@ -107,17 +107,13 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $ForProjectThatDoesNotExist,
+        [switch]$ForProjectThatDoesNotExist,
 
-        [Switch]
-        $ForMultiplePackages,
+        [switch]$ForMultiplePackages,
 
-        [Switch]
-        $Symbols,
+        [switch]$Symbols,
 
-        [Switch]
-        $SkipUploadedCheck
+        [switch]$SkipUploadedCheck
     )
 
     $script:context = New-WhiskeyTestContext -ForVersion $packageVersion `

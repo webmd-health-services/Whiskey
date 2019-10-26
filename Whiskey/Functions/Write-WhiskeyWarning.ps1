@@ -19,13 +19,13 @@ function Write-WhiskeyWarning
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The current context.
         [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline)]
         # The message to write.
-        [string]$Message,
+        [String]$Message,
 
         [int]$Indent = 0
     )
