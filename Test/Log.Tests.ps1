@@ -87,16 +87,16 @@ function WhenLogging
         [Parameter(Mandatory)]
         [String]$Message,
 
-        [String]$AtLevel
+        [String]$AtLevel,
+
+        [hashtable]$WithParameter = @{ }
     )
 
-    $parameter = @{
-        'Message' = $Message
-    }
+    $WithParameter['Message'] = $Message
 
     if( $AtLevel )
     {
-        $parameter['Level'] = $AtLevel
+        $WithParameter['Level'] = $AtLevel
     }
 
     $script:failed = $false
@@ -105,7 +105,7 @@ function WhenLogging
     {
         $script:output = Invoke-WhiskeyTask -Name 'Log' `
                                             -TaskContext $context `
-                                            -Parameter $parameter `
+                                            -Parameter $WithParameter `
                                             -ErrorVariable 'errors' `
                                             -WarningVariable 'warnings' `
                                             -InformationVariable 'infos' `
@@ -176,5 +176,31 @@ Describe 'Log.when using invalid level' {
         Init
         WhenLogging 'does not matter' -AtLevel 'HumDiggity' -ErrorAction SilentlyContinue
         ThenFailed 'Property "Level" has an invalid value'
+    }
+}
+
+Describe 'Log.when user specifies ErrorAction = Stop' {
+    It 'should fail' {
+        Init
+        WhenLogging 'STOP!' -AtLevel 'Error' -WithParameter @{ 'ErrorAction' = 'Stop' } -ErrorAction SilentlyContinue
+        ThenFailed -ExpectedErrorMessage 'STOP!'
+    }
+}
+
+Describe 'Log.when user specifies Verbose property' {
+    It 'should write verbose' {
+        Init
+        $VerbosePreference = 'Ignore'
+        WhenLogging 'VERBOSE!' -AtLevel 'Verbose' -WithParameter @{ 'Verbose' = $true }
+        ThenWroteVerbose 'VERBOSE!'
+    }
+}
+
+Describe 'Log.when user specifies Debug property' {
+    It 'should write debug' {
+        Init
+        $DebugPreference = 'Ignore'
+        WhenLogging 'DEBUG!' -AtLevel 'Debug' -WithParameter @{ 'Debug' = $true }
+        ThenWroteDebug 'DEBUG!'
     }
 }

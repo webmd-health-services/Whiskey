@@ -178,6 +178,7 @@
 * Fixed: PowerShell task doesn't show any information to the user about what it's doing.
 * Created `Log` task for writing logging messages. messages can be written at different levels: Error, Warning, Info (the default), Verbose, or Debug.
 * Whiskey now enables information messages during a build. To disable them, pass `-InformationAction Ignore` to `Invoke-WhiskeyBuild` in your build script.
+* Added official support for enabling a task's debug output setting the `Debug` property to `true`.
 '@
         } # End of PSData hashtable
 
