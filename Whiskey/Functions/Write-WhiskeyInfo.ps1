@@ -4,34 +4,46 @@ function Write-WhiskeyInfo
 {
     <#
     .SYNOPSIS
-    Writes Whiskey messages.
+    Logs informational messages.
 
     .DESCRIPTION
-    The `Write-WhiskeyInfo` function writes messages during a build. It prefixes each message with the amount of time since the build started, the message level, and the name of the current task. 
-    
-    Whiskey has five levels of messages: `Error`, `Warning`, `Info`, `Verbose`, and `Debug`. Messages at each level or only shown if their corresponding PowerShell preference variable is set to `Continue` or `Inquire`, e.g.
+    The `Write-WhiskeyInfo` function writes informational messages during a build using PowerShell's `Write-Information` cmdlet. Pass the current build's context object to the `Context` parameter and the message to write to the `Message` parameter. By default, Whiskey sets the `InformationPreference` to `Continue` for all builds so all information messages will typically be visible. To hide information messages, you must call `Invoke-WhiskeyBuild` with `-InformationAction` set to `Ignore`.
 
-    * `Error`: `$ErrorActionPreference`
-    * `Warning`: `$WarningPreference`
-    * `Info`: `$InformationPreference`
-    * `Verbose`: `$VerbosePreference`
-    * `Debug`: `$DebugPreference`
+    Messages are prefixed with the duration of the current build and the current task's name (if any) e.g.
 
-    By default, this function writes at the `Info` level. To write at specific levels, we recommend using these functions:
+         [00:00:10.45]  [Task]  My message!
 
-    * `Write-WhiskeyError`
-    * `Write-WhiskeyWarning`
-    * `Write-WhiskeyVerbose`
-    * `Write-WhiskeyDebug`
+    If the duration of the current build can't be determined, the current time is written instead.
 
-    No matter the level, *all* messages are written to PowerShell's information stream using PowerShell's `Write-Information` preference.
+    If you pass in multiple messages to the `Message` parameter or pipe multiple messages in, the timestamp and task name are written, then each messages (indented four spaces), followed by another line with the duration and task name.
 
-    Pass the `Whiskey.Context` object to the `Context` parameter and the message to write to the `Message` parameter. If you don't pass a context object, this function will look up the call stack to find the context for the currently executing build.
+         [00:00:10.45]  [Task]
+             My first message.
+             My second message.
+         [00:00:10.45]  [Task]
+
+    If `$InformationPrefernce` is `Ignore`, Whiskey drops all messages as quickly as possible. It tries to do as little work so that logging has minimal affect. For all other information preference values, each message is processed and written. 
+
+    You can also log error, warning, verbose, and debug messages with Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug` functions.
+
+    You can use Whiskey's `Log` task to log messages at different levels.
 
     .EXAMPLE
     Write-WhiskeyInfo -Context $context -Message 'An info message'
 
-    Demonstrates how write an `Info` message.
+    Demonstrates how write an `Info` message. In this case, something like this would be written:
+
+        [00:00:20:93]  [Log]  An info message
+
+    .EXAMPLE
+    $output | Write-WhiskeyInfo -Context $context
+
+    Demonstrates that you can pipe messages to `Write-WhiskeyInfo`. If multiple messages are piped, the are grouped together like this:
+
+        [00:00:16.39]  [Log]
+            My first info message.
+            My second info message.
+        [00:00:16.58]  [Log]
     #>
     [CmdletBinding()]
     param(
@@ -39,13 +51,15 @@ function Write-WhiskeyInfo
         [Whiskey.Context]$Context,
 
         [ValidateSet('Error','Warning','Info','Verbose','Debug')]
-        # The log level.
+        # INTERNAL. DO NOT USE. To log at different levels, use `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyVerbose`, or `Write-WhiskeyDebug`
         [String]$Level = 'Info',
 
         [Parameter(Mandatory,ValueFromPipeline,Position=0)]
         [AllowNull()]
         [AllowEmptyString()]
-        # The message to log.
+        # The message to write. Before being written, the message will be prefixed with the duration of the current build and the current task name (if any). If the current duration can't be determined, then the current time is used.
+        #
+        # If you pipe multiple messages, they are grouped together.
         [String[]]$Message
     )
 
