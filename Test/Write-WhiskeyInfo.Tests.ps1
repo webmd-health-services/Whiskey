@@ -126,9 +126,9 @@ Describe 'Write-WhiskeyInfo' {
         Write-WhiskeyInfo -Message @('One','Two','Three') -InformationVariable 'output'
         $output | Should -HaveCount 5
         $output[0],$output[4] | Should -CMatch '^\[\d\d:\d\d:\d\d\.\d\d\]$' 
-        $output[1] | Should -CMatch ('^    One$')
-        $output[2] | Should -CMatch ('^    Two$')
-        $output[3] | Should -CMatch ('^    Three$')
+        $output[1] | Should -CMatch ('^\ {4}One$')
+        $output[2] | Should -CMatch ('^\ {4}Two$')
+        $output[3] | Should -CMatch ('^\ {4}Three$')
     }
 
     It ('should write all messages when passed multiple messages and a context') {

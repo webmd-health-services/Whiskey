@@ -62,11 +62,11 @@ Describe 'Get-WhiskeyTasks' {
 
             if( $expectedTask.Obsolete )
             {
-                $actualTask | Should -BeNullOrEmpty -Because ('should return "{0}" task' -f $taskName)
+                $actualTask | Should -BeNullOrEmpty -Because ('should not return "{0}" obsolete task' -f $taskName)
             }
             else
             {
-                $actualTask | Should -Not -BeNullOrEmpty -Because ('should not return obsolete "{0}" task' -f $taskName)
+                $actualTask | Should -Not -BeNullOrEmpty -Because ('should return "{0}" task' -f $taskName)
             }
         }
 
