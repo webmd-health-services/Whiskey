@@ -89,7 +89,11 @@ function WhenLogging
 
         [String]$AtLevel,
 
-        [hashtable]$WithParameter = @{ }
+        [hashtable]$WithParameter = @{ },
+
+        [switch]$InCleanMode,
+
+        [switch]$InInitializeMode
     )
 
     $WithParameter['Message'] = $Message
@@ -100,7 +104,10 @@ function WhenLogging
     }
 
     $script:failed = $false
-    $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
+    $context = New-WhiskeyTestContext -ForDeveloper `
+                                      -ForBuildRoot $TestDrive.FullName `
+                                      -InCleanMode:$InCleanMOde `
+                                      -InInitMode:$InInitializeMode
     try
     {
         $script:output = Invoke-WhiskeyTask -Name 'Log' `
@@ -215,5 +222,21 @@ Describe 'Log.when logging multiple messages' {
         $infos[2] | Should -Match '^\ {4}line 2$'
         $infos[3] | Should -Match '^\ {4}line 3$'
         $infos[4] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
+    }
+}
+
+Describe 'Log.when run in Clean mode' {
+    It 'should write messages' {
+        Init
+        WhenLogging 'message' -InCleanMode
+        ThenWroteInfo 'message'
+    }
+}
+
+Describe 'Log.when run in Initialize mode' {
+    It 'should write messages' {
+        Init
+        WhenLogging 'message' -InInitializeMode
+        ThenWroteInfo 'message'
     }
 }
