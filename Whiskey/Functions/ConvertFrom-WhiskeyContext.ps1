@@ -29,9 +29,8 @@ function ConvertFrom-WhiskeyContext
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ValueFromPipeline)]
-        [Whiskey.Context]
         # The context to convert. You can pass an existing context via the pipeline.
-        $Context
+        [Whiskey.Context]$Context
     )
 
     begin 

@@ -2,15 +2,13 @@
 function Invoke-WhiskeyNUnit3Task
 {
     [CmdletBinding()]
-    [Whiskey.Task("NUnit3",SupportsClean,SupportsInitialize,Platform='Windows')]
+    [Whiskey.Task('NUnit3',SupportsClean,SupportsInitialize,Platform='Windows')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

@@ -30,24 +30,20 @@ function Resolve-WhiskeyNodeModulePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]
         # The name of the Node module whose path to get.
-        $Name,
+        [String]$Name,
 
         [Parameter(Mandatory,ParameterSetName='FromBuildRoot')]
-        [string]
         # The path to the build root. This will return the path to Node modules's directory from the "node_modules" directory in the build root. If you want the path to a global node module, installed in the local Node directory Whiskey installs in the repository, use the `-Global` switch.
-        $BuildRootPath,
+        [String]$BuildRootPath,
 
         [Parameter(ParameterSetName='FromBuildRoot')]
-        [Switch]
         # Get the path to a Node module in the global "node_modules" directory. The default is to get the path to the copy in the local node_modules directory.
-        $Global,
+        [switch]$Global,
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]
-        [string]
         # The path to the root of a Node package, as downloaded and expanded from the Node.js project.
-        $NodeRootPath
+        [String]$NodeRootPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -75,7 +71,7 @@ function Resolve-WhiskeyNodeModulePath
 
     if( -not $nodeModulePath )
     {
-        Write-Error -Message ('Node module "{0}" directory doesn''t exist in "{1}".' -f $Name,$NodeRootPath) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Node module "{0}" directory doesn''t exist in "{1}".' -f $Name,$NodeRootPath) -ErrorAction $ErrorActionPreference
         return
     }
 

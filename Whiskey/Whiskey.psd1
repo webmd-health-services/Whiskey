@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.42.0'
+    ModuleVersion = '0.43.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -64,6 +64,7 @@
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
                             'Formats\System.Exception.format.ps1xml',
+                            'Formats\System.Management.Automation.ErrorRecord.format.ps1xml',
                             'Formats\Whiskey.BuildInfo.format.ps1xml',
                             'Formats\Whiskey.BuildVersion.format.ps1xml',
                             'Formats\Whiskey.Context.format.ps1xml',
@@ -89,7 +90,6 @@
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
                             'Get-WhiskeyMSBuildConfiguration',
-                            'Import-WhiskeyPowerShellModule',
                             'Install-WhiskeyTool',
                             'Invoke-WhiskeyNodeTask',
                             'Invoke-WhiskeyNpmCommand',
@@ -112,6 +112,8 @@
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
                             'Unregister-WhiskeyEvent',
+                            'Write-WhiskeyDebug',
+                            'Write-WhiskeyError',
                             'Write-WhiskeyInfo',
                             'Write-WhiskeyVerbose',
                             'Write-WhiskeyWarning'
@@ -157,15 +159,25 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: `Version` task uses the last matching item in the prerelease label branch map instead of the first match.
-* NUnit3 task supports running NUnit2 tests and uses version 3.10 of ConsoleRunner.
-* Task authors can now define task aliases. Use the `Aliases` property on your task's `TaskAttribute` attribute. Build scripts can then use your task using its name or one of its aliases. See `about_Whiskey_Writing_Tasks` for more information.
-* Whiskey tasks can now have named parameters and Whiskey will pass task properties from the build YAML file that match a parameter on a task's function. See about_Whiskey_Writing_Tasks for more information.
-* Task authors can now deprecate tasks. Set the `Obsolete` property on the task's `Whiskey.Task` attribute. See `about_Whiskey_Writing_Tasks` for more information.
-* Fixed: `DotNet` task fails to resolve recent version of the .NET Core SDK.
-* You no longer need to commit Whiskey into your repository. Whiskey's default build.ps1 script will bootstrap Whiskey from GitHub.
-* Created `MergeFile` task for merging files together, with optional text/binary separators. The task will also optionally delete the source files.
-* Exported Whiskey's message writing functions: `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyWarning`.
+* Moved Whiskey's documentation to [GitHub](https://github.com/webmd-health-services/Whiskey/wiki).
+* Fixed: Whiskey's assembly wasn't getting its version metadata set.
+* Whiskey no longer ships with PackageManagement and PowerShellGet modules. They are now downloaded from one of your registered PowerShell repositories the first time another PowerShell module is installed.
+* The function `Import-WhiskeyPowerShellModule` is no longer public. If your task uses Whiskey's `RequiresTool` attribute to install a PowerShell module, Whiskey now imports that module for you automatically.
+* Whiskey now automatically imports PowerShell modules tasks use as declared by their `RequiresTool` attribute.
+* Upgraded Whiskey to use PackageManagement 1.4.5 (from 1.4.4).
+* Fixed: Whiskey doesn't install the latest version of a PowerShell module if there's any version already installed.
+* Improved detection of corrupted PowerShell modules that will force a re-install. Whiskey now uses `Test-ModuleManifest` to determine if a module was installed correctly.
+* Added a new built-in Whiskey variable `WHISKEY_SEMVER2_PRERELEASE_ID` which contains the prerelease identifier of the prerelease label on a SemVer2 version string. E.g. Given the version `1.2.3-alpha.47+buildmetata`, this variable would be `alpha`.
+* When publishing a prerelease version of a node module, the `PublishNodeModule` task will now automatically publish the module with the prerelease identifier as the distribution tag.
+* Added a `Tag` property to the `PublishNodeModule` task that controls what distribution tag the module is published with. If specified, this property takes precendence over a tag from a prerelease identifier.
+* Created `AppVeyorWaitForBuildJob` task that will wait for other jobs in an AppVeyor build to complete before continuing.
+* Fixed: plug-ins are global to all builds instead of tied to specific builds. This is a backwards-incompatible change. `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` now require the context of the build on which the events should run. Please update usages.
+* Added a custom error record display formatter that shows the entire script stack trace for an error instead of PowerShell's weird position message (which isn't entirely accureate).
+* Created a `Write-WhiskeyError` function for displaying build errors to the user.
+* Standardized and improved output of Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug`. Timings and the currently executing task name (if applicable) are added as a prefix to all but error-level messages. Output also no longer contains the current pipeline name or task index/number.
+* Fixed: PowerShell task doesn't show any information to the user about what it's doing.
+* Created `Log` task for writing logging messages. messages can be written at different levels: Error, Warning, Info (the default), Verbose, or Debug.
+* Whiskey now enables information messages during a build. To disable them, pass `-InformationAction Ignore` to `Invoke-WhiskeyBuild` in your build script.
 '@
         } # End of PSData hashtable
 

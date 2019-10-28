@@ -25,6 +25,7 @@ namespace Whiskey
             TaskName = "";
             TaskPaths = new List<FileInfo>();
             MSBuildConfiguration = "";
+            Events = new Hashtable(StringComparer.InvariantCultureIgnoreCase);
         }
 
         public IDictionary ApiKeys { get; private set; }
@@ -46,6 +47,8 @@ namespace Whiskey
         public DirectoryInfo DownloadRoot { get; set; }
 
         public string Environment { get; set; }
+
+        public Hashtable Events { get; private set; }
 
         public string MSBuildConfiguration { get; set; }
 

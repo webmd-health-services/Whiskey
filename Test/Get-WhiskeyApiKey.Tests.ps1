@@ -11,7 +11,7 @@ function WhenGettingApiKey
 {
     [CmdletBinding()]
     param(
-        [parameter(Mandatory=$true)]
+        [parameter(Mandatory)]
         $PropertyName
     )
 

@@ -32,45 +32,35 @@ function Uninstall-WhiskeyTool
     Demonstrates how to remove a Pester module from a DownloadRoot. In this case, Pester would be removed from `$Root\Modules`.
 
     .EXAMPLE
-    Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $TaskContext.BuildRoot
+    Uninstall-WhiskeyTool -Name 'Node' -BuildRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall Node from the `.node` directory in your build root.
 
     .EXAMPLE
-    Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -InstallRoot $TaskContext.BuildRoot
+    Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -BuildRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall the `rimraf` Node module from the `node_modules` directory in the Node directory in your build root.
 
     .EXAMPLE
-    Uninstall-WhiskeyTool -Name 'DotNet' -InstallRoot $TaskContext.BuildRoot
+    Uninstall-WhiskeyTool -Name 'DotNet' -BuildRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall the .NET Core SDK from the `.dotnet` directory in your build root.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [string]
-        # The name of the tool to uninstall. Currently only Node is supported.
-        $Name,
+        [Parameter(Mandatory,ParameterSetName='Tool')]
+        # The tool attribute that defines what tool to uninstall.
+        [Whiskey.RequiresToolAttribute]$ToolInfo,
 
-        [Parameter(Mandatory=$true,ParameterSetName='Tool')]
-        [string]
-        # The directory where the tool should be uninstalled from.
-        $InstallRoot,
-
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
+        [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The name of the NuGet package to uninstall.
-        $NuGetPackageName,
+        [String]$NuGetPackageName,
 
-        [String]
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        $Version,
+        [String]$Version,
 
-        [Parameter(Mandatory=$true,ParameterSetName='NuGet')]
-        [string]
         # The build root where the build is currently running. Tools are installed here.
-        $BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -94,11 +84,16 @@ function Uninstall-WhiskeyTool
     }
     elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
     {
-        $provider,$Name = $Name -split '::'
-        if( -not $Name )
+        $provider,$name = $ToolInfo.Name -split '::'
+        if( -not $name )
         {
-            $Name = $provider
+            $name = $provider
             $provider = ''
+        }
+
+        if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+        {
+            $provider = 'PowerShellModule'
         }
 
         switch( $provider )
@@ -109,25 +104,24 @@ function Uninstall-WhiskeyTool
             }
             'PowerShellModule'
             {
-                Uninstall-WhiskeyPowerShellModule -Name $Name
+                Uninstall-WhiskeyPowerShellModule -Name $name -BuildRoot $BuildRoot
             }
             default
             {
-                switch( $Name )
+                switch( $name )
                 {
                     'Node'
                     {
-                        $dirToRemove = Join-Path -Path $InstallRoot -ChildPath '.node'
-                        Remove-WhiskeyFileSystemItem -Path $dirToRemove
+                        Uninstall-WhiskeyNode -InstallRoot $BuildRoot
                     }
                     'DotNet'
                     {
-                        $dotnetToolRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+                        $dotnetToolRoot = Join-Path -Path $BuildRoot -ChildPath '.dotnet'
                         Remove-WhiskeyFileSystemItem -Path $dotnetToolRoot
                     }
                     default
                     {
-                        throw ('Unknown tool ''{0}''. The only supported tools are ''Node'' and ''DotNet''.' -f $Name)
+                        throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                     }
                 }
             }

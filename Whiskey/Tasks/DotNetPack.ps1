@@ -2,16 +2,14 @@
 function Invoke-WhiskeyDotNetPack
 {
     [CmdletBinding()]
-    [Whiskey.Task("DotNetPack",Obsolete,ObsoleteMessage='The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
-    [Whiskey.RequiresTool('DotNet','DotNetPath',VersionParameterName='SdkVersion')]
+    [Whiskey.Task('DotNetPack',Obsolete,ObsoleteMessage='The "DotNetTest" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
+    [Whiskey.RequiresTool('DotNet',PathParameterName='DotNetPath',VersionParameterName='SdkVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

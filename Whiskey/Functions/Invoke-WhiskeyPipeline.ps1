@@ -24,15 +24,13 @@ function Invoke-WhiskeyPipeline
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The current build context. Use the `New-WhiskeyContext` function to create a context object.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of pipeline to run, e.g. `Build` would run all the tasks under a property named `Build`. Pipelines are properties in your `whiskey.yml` file that are lists of Whiskey tasks to run.
-        $Name
+        [String]$Name
     )
 
     Set-StrictMode -Version 'Latest'
@@ -43,7 +41,7 @@ function Invoke-WhiskeyPipeline
 
     if( -not $config.ContainsKey($Name) )
     {
-        Stop-Whiskey -Context $Context -Message ('Pipeline ''{0}'' does not exist. Create a pipeline by defining a ''{0}'' property:
+        Stop-Whiskey -Context $Context -Message ('Pipeline "{0}" does not exist. Create a pipeline by defining a "{0}" property:
         
     {0}:
     - TASK_ONE
@@ -56,7 +54,7 @@ function Invoke-WhiskeyPipeline
     $taskIdx = -1
     if( -not $config[$Name] )
     {
-        Write-Warning -Message ('It looks like pipeline ''{0}'' doesn''t have any tasks.' -f $Context.ConfigurationPath)
+        Write-WhiskeyWarning -Context $Context -Message ('It looks like pipeline "{0}" doesn''t have any tasks.' -f $Name)
         $config[$Name] = @()
     }
 

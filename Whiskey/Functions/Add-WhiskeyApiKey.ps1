@@ -23,17 +23,15 @@ function Add-WhiskeyApiKey
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The context of the build that needs the API key.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The ID of the API key. This should match the ID given in your `whiskey.yml` for the API key ID property of the task that needs it.
-        $ID,
+        [String]$ID,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The value of the API key. Can be a string or a SecureString.
         $Value
     )

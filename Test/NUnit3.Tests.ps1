@@ -219,8 +219,7 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $InCleanMode
+        [switch]$InCleanMode
     )
 
     $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
@@ -328,8 +327,8 @@ function ThenPackageInstalled
 
     Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
-        Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $PackageName)
-        Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
+        Write-WhiskeyDebug -Message ('NuGetPackageName  expected  {0}' -f $PackageName)
+        Write-WhiskeyDebug -Message ('                  actual    {0}' -f $NuGetPackageName)
         $NuGetPackageName -eq $PackageName
     }
     if( $Version )

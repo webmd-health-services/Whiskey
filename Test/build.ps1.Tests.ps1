@@ -2,10 +2,14 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+$testRoot = $null
 $buildPs1Path = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\build.ps1' -Resolve
+
 function Init
 {
     Get-Module 'PowerShellGet','Whiskey','PackageManagement' | Remove-Module -Force -ErrorAction Ignore
+    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
 }
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
@@ -15,6 +19,7 @@ $releases =
 
 $latestRelease = 
     $releases |
+    Where-Object { $_.name -notlike '*-*' } |
     Sort-Object -Property 'created_at' -Descending |
     Select-Object -First 1
 
@@ -22,12 +27,12 @@ function ThenModule
 {
     param(
         [Parameter(Mandatory)]
-        [string[]]$Named,
+        [String[]]$Named,
 
         [switch]$Not,
 
         [Parameter(Mandatory)]
-        [Switch]$Loaded
+        [switch]$Loaded
     )
 
     if( $Not )
@@ -48,22 +53,48 @@ function ThenNoErrors
 function ThenWhiskeyInstalled
 {
     $moduleDirName = $latestRelease.name -replace '-.*$',''
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
+    $path = Join-Path -Path $testRoot -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
+    $manifest = Test-ModuleManifest -Path ($path -replace '\.ps\*1','.psd1')
+    Assert-MockCalled -CommandName 'Invoke-WebRequest' -ParameterFilter { $Uri -notlike 'Whiskey-*.*.*-*.zip' }
+    Write-Verbose $manifest.PrivateData.PSData.Prerelease
+    $manifest.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
 }
 
 function WhenBootstrapping
 {
     $Global:Error.Clear()
 
-    Copy-Item -Path $buildPs1Path -Destination $TestDrive.FullName
+    Copy-Item -Path $buildPs1Path -Destination $testRoot
 
-    & (Join-Path -Path $TestDrive.FullName -ChildPath 'build.ps1' -Resolve)
+    Mock -CommandName 'Invoke-WebRequest' -ParameterFilter {
+        # Only mock out the first call. We just want to capture what parameters the function was called with.
+        $nestedCount = 
+            Get-PSCallStack | 
+            Where-Object { $_.Command -like 'PesterMock_*' } |
+            Measure-Object |
+            Select-Object -ExpandProperty 'Count'
+        return $nestedCount -eq 1
+    } -MockWith { 
+        $parameters = @{}
+        $cmdParameters = Get-Command 'invoke-WebRequest' | Select-Object -Expand 'Parameters' 
+        foreach( $name in $cmdParameters.Keys )
+        {
+            $value = Get-Variable -Name $name -ValueOnly -ErrorAction Ignore
+            if( $value )
+            {
+                $parameters[$name] = $value
+            }
+        }
+        $parameters | ConvertTo-Json | Write-Verbose
+        Microsoft.PowerShell.Utility\Invoke-WebRequest @parameters }
+
+    & (Join-Path -Path $testRoot -ChildPath 'build.ps1' -Resolve)
 }
 
 Describe 'buildPs1.when repo isn''t bootstrapped' {
-    It 'should download latest version of Whiskey' {
+    It 'should download latest non-prerelease version of Whiskey' {
         Init
         WhenBootstrapping
         ThenWhiskeyInstalled

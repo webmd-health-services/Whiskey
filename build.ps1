@@ -1,35 +1,59 @@
+#!/usr/bin/env pwsh
+
+<#
+.SYNOPSIS
+Builds the Whiskey repository.
+
+.DESCRIPTION
+The `build.ps1` script invokes a build of the Whiskey repository. It will first download the .NET Core SDK into a `.dotnet` directory in the repo root and use that SDK to build the Whiskey assembly. After the Whiskey assembly is built, it is copied into Whiskey's `bin` directory after which the Whiskey PowerShell module is imported. Finally, `Invoke-WhiskeyBuild` is called to run the build tasks specified in the `whiskey.yml` file in the root of the repository.
+
+To download all the tools that are required for a build, use the `-Initialize` switch.
+
+To cleanup downloaded build tools and artifacts created from previous builds, use the `-Clean` switch.
+
+To build the Whiskey assembly with a custom `--configuration` passed to the `dotnet build` command, use the `-MSBuildConfiguration` parameter. By default, `Debug` when run by a developer and `Release` when run by a build server.
+
+.EXAMPLE
+./build.ps1
+
+Starts a build of Whiskey.
+
+.EXAMPLE
+./build.ps1 -MSBuildConfiguration 'Release'
+
+Starts a build and uses "Release" as the build configuration when building the Whiskey assembly.
+#>
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
-    [Parameter(Mandatory=$true,ParameterSetName='Clean')]
-    [Switch]
+    [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    $Clean,
+    [switch]$Clean,
 
-    [Parameter(Mandatory=$true,ParameterSetName='Initialize')]
-    [Switch]
+    [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    $Initialize,
+    [switch]$Initialize,
 
-    [string]
-    $PipelineName,
+    [String]$PipelineName,
 
-    [string]
-    $MSBuildConfiguration = 'Debug'
+    [String]$MSBuildConfiguration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version Latest
 
-# We can't use Whiskey to build Whiskey's assembly because we need Whiskey's assembly to use Whiskey.
-$manifest = Get-Content -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -Raw
-if( $manifest -notmatch '\bModuleVersion\b\s*=\s*(''|")([^''"]+)' )
+# ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
+$manifest = Test-ModuleManifest -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -ErrorAction Ignore
+if( -not $manifest )
 {
-    Write-Error -Message 'Unable to find the module version in the Whiskey manifest.'
+    Write-Error -Message ('Unable to load Whiskey''s module manifest.')
+    exit 1
 }
-$version = $Matches[2]
+
+$version = $manifest.Version
 
 $buildInfo = ''
+$prereleaseInfo = ''
 if( Test-Path -Path ('env:APPVEYOR') )
 {
     $commitID = $env:APPVEYOR_REPO_COMMIT
@@ -39,12 +63,19 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $branch = $branch -replace '[^A-Za-z0-9-]','-'
 
     $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+
+    if( $branch -eq 'prerelease' )
+    {
+        $prereleaseInfo = '-beta.{0}' -f $env:APPVEYOR_BUILD_NUMBER
+        $buildInfo = '+{0}.{1}' -f $branch,$commitID
+    }
+
     $MSBuildConfiguration = 'Release'
 
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-$minDotNetVersion = [version]'2.1.503'
+$minDotNetVersion = [Version]'2.1.503'
 $dotnetVersion = $null
 $dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
 $dotnetExeName = 'dotnet.exe'
@@ -62,7 +93,7 @@ $dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath $dotnetExeName
 
 if( (Test-Path -Path $dotnetPath -PathType Leaf) )
 {
-    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [version]$_ }
+    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [Version]$_ }
     Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
 }
 
@@ -96,6 +127,8 @@ if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
     }
 }
 
+$versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
+$productVersion = '{0}{1}' -f $version,$versionSuffix
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
 try
 {
@@ -106,11 +139,11 @@ try
     }
 
     $params = & {
-                            '/p:Version={0}{1}' -f $version,$buildInfo
+                            '/p:Version={0}' -f $productVersion
                             '/p:VersionPrefix={0}' -f $version
-                            if( $buildInfo )
+                            if( $versionSuffix )
                             {
-                                '/p:VersionSuffix={0}' -f $buildInfo
+                                '/p:VersionSuffix={0}' -f $versionSuffix
                             }
                             if( $VerbosePreference -eq 'Continue' )
                             {
@@ -122,7 +155,7 @@ try
     Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
     & $dotnetPath build --configuration=$MSBuildConfiguration $params
 
-    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx
+    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
@@ -135,6 +168,21 @@ finally
 
 $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
 $whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
+$whiskeyAssemblyPath = Get-Item -Path (Join-Path -Path $whiskeyOutBinPath -ChildPath 'Whiskey.dll')
+$whiskeyAssemblyVersion = $whiskeyAssemblyPath.VersionInfo
+$fileVersion = [Version]('{0}.0' -f $version)
+if( $whiskeyAssemblyVersion.FileVersion -ne $fileVersion )
+{
+    Write-Error -Message ('{0}: file version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$fileVersion,$whiskeyAssemblyVersion.FileVersion) 
+    exit 1
+}
+
+if( $whiskeyAssemblyVersion.ProductVersion -ne $productVersion )
+{
+    Write-Error -Message ('{0}: product version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$productVersion,$whiskeyAssemblyVersion.ProductVersion) 
+    exit 1
+}
+
 foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
 {
     $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name
@@ -151,38 +199,6 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
     Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
 
-# TODO: Once https://github.com/PowerShell/PowerShellGet/issues/399 is 
-# fixed, change version numbers to wildcards on the patch version.
-$nestedModules = @{
-                        'PackageManagement' = '1.4.3';
-                        'PowerShellGet' = '2.2.1';
-                 }
-$privateModulesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Modules'
-if( -not (Test-Path -Path $privateModulesRoot -PathType 'Container') )
-{
-    New-Item -Path $privateModulesRoot -ItemType 'Directory'
-}
-foreach( $nestedModuleName in $nestedModules.Keys )
-{
-    $moduleRoot = Join-Path -Path $privateModulesRoot -ChildPath $nestedModuleName
-    if( -not (Test-Path -Path $moduleRoot -PathType Container) )
-    {
-        $nestedModuleVersion = $nestedModules[$nestedModuleName]
-        # Run in a background job otherwise the default global 
-        # PackageManagement module assembly remains loaded.
-        Start-Job -ScriptBlock {
-            $module = 
-                Find-Module -Name $using:nestedModuleName -RequiredVersion $using:nestedModuleVersion |
-                Select-Object -First 1 
-            $module | Format-List | Out-String | Write-Verbose 
-            Save-Module -Path $using:privateModulesRoot `
-                        -Name $module.Name `
-                        -RequiredVersion $module.Version `
-                        -Repository $module.Repository
-        } | Wait-Job | Receive-Job | Remove-Job
-    }
-}
-
 $ErrorActionPreference = 'Continue'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
@@ -194,13 +210,6 @@ $PSVersionTable | Format-List | Out-String | Write-Verbose
 
 Write-Verbose -Message '# VARIABLES'
 Get-Variable | Format-Table | Out-String | Write-Verbose
-
-Write-Verbose -Message '# ENVIRONMENT VARIABLES'
-Get-ChildItem 'env:' |
-    Where-Object { $_.Name -notin @( 'POWERSHELL_GALLERY_API_KEY', 'GITHUB_ACCESS_TOKEN' ) } |
-    Format-Table |
-    Out-String |
-    Write-Verbose
 
 Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
 [Environment] |
@@ -230,9 +239,17 @@ if( $PipelineName )
 
 $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
 $apiKeys = @{
-                'PowerShellGallery' = 'POWERSHELL_GALLERY_API_KEY'
-                'github.com' = 'GITHUB_ACCESS_TOKEN'
+                'PowerShellGallery' = 'POWERSHELL_GALLERY_API_KEY';
+                'github.com' = 'GITHUB_ACCESS_TOKEN';
+                'AppVeyor' = 'APPVEYOR_BEARER_TOKEN';
             }
+
+Write-Verbose -Message '# ENVIRONMENT VARIABLES'
+Get-ChildItem 'env:' |
+    Where-Object { $_.Name -notin $apiKeys.Values } |
+    Format-Table |
+    Out-String |
+    Write-Verbose
 
 $apiKeys.Keys |
     Where-Object { Test-Path -Path ('env:{0}' -f $apiKeys[$_]) } |

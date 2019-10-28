@@ -2,16 +2,14 @@
 function Invoke-WhiskeyNpmRunScript
 {
     [Whiskey.Task('NpmRunScript',Obsolete,ObsoleteMessage='The "NpmRunScriptTask" is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
-    [Whiskey.RequiresTool('Node','NodePath',VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -34,8 +32,8 @@ function Invoke-WhiskeyNpmRunScript
 
     foreach ($script in $npmScripts)
     {
-        Write-WhiskeyTiming -Message ('Running script ''{0}''.' -f $script)
+        Write-WhiskeyDebug -Context $TaskContext -Message ('Running script ''{0}''.' -f $script)
         Invoke-WhiskeyNpmCommand -Name 'run-script' -ArgumentList $script -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
-        Write-WhiskeyTiming -Message ('COMPLETE')
+        Write-WhiskeyDebug -Context $TaskContext -Message ('COMPLETE')
     }
 }

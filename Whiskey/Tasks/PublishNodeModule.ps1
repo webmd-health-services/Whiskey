@@ -1,30 +1,26 @@
 
 function Publish-WhiskeyNodeModule
 {
-    [Whiskey.Task("PublishNodeModule")]
-    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
+    [Whiskey.Task('PublishNodeModule')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        # The context the task is running under.
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item:
-        #
-        # * `WorkingDirectory` (Optional): Provides the default root directory for the NPM `publish` task. Defaults to the directory where the build's `whiskey.yml` file was found. Must be relative to the `whiskey.yml` file.                     
-        $TaskParameter
+        [String]$CredentialID,
+
+        [String]$EmailAddress,
+
+        [Uri]$NpmRegistryUri,
+
+        [String]$Tag
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $workingDirectory = (Get-Location).ProviderPath
-
-    $npmRegistryUri = [uri]$TaskParameter['NpmRegistryUri']
-    if (-not $npmRegistryUri) 
+    if (-not $NpmRegistryUri) 
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory and must be a URI. It should be the URI to the registry where the module should be published. E.g.,
         
@@ -35,15 +31,7 @@ function Publish-WhiskeyNodeModule
         return
     }
 
-    if (!$TaskContext.Publish)
-    {
-        return
-    }
-    
-    $npmConfigPrefix = '//{0}{1}:' -f $npmregistryUri.Authority,$npmRegistryUri.LocalPath
-
-    $credentialID = $TaskParameter['CredentialID']
-    if( -not $credentialID )
+    if( -not $CredentialID )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
     
@@ -53,13 +41,13 @@ function Publish-WhiskeyNodeModule
         CredentialID: NpmCredential
     
     Use the `Add-WhiskeyCredential` function to add the credential to the build.
-    ' -f $npmRegistryUri)
+    ' -f $NpmRegistryUri)
         return
     }
-    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
+
+    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $CredentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
-    $npmEmail = $TaskParameter['EmailAddress']
-    if( -not $npmEmail )
+    if( -not $EmailAddress )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
     
@@ -68,20 +56,25 @@ function Publish-WhiskeyNodeModule
         NpmRegistryUri: {0}
         CredentialID: {1}
         EmailAddress: somebody@example.com
-    ' -f $npmRegistryUri,$credentialID)
+    ' -f $NpmRegistryUri,$CredentialID)
         return
     }
+
+    $npmConfigPrefix = '//{0}{1}:' -f $NpmRegistryUri.Authority,$NpmRegistryUri.LocalPath
     $npmCredPassword = $credential.GetNetworkCredential().Password
     $npmBytesPassword  = [System.Text.Encoding]::UTF8.GetBytes($npmCredPassword)
     $npmPassword = [System.Convert]::ToBase64String($npmBytesPassword)
+
+    $originalPackageJsonPath = Resolve-Path -Path 'package.json' | Select-Object -ExpandProperty 'ProviderPath'
+    $backupPackageJsonPath = Join-Path -Path $TaskContext.Temp -ChildPath 'package.json'
 
     try
     {
         $packageNpmrc = New-Item -Path '.npmrc' -ItemType File -Force
         Add-Content -Path $packageNpmrc -Value ('{0}_password="{1}"' -f $npmConfigPrefix, $npmPassword)
         Add-Content -Path $packageNpmrc -Value ('{0}username={1}' -f $npmConfigPrefix, $npmUserName)
-        Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $npmEmail)
-        Add-Content -Path $packageNpmrc -Value ('registry={0}' -f $npmRegistryUri)
+        Add-Content -Path $packageNpmrc -Value ('{0}email={1}' -f $npmConfigPrefix, $EmailAddress)
+        Add-Content -Path $packageNpmrc -Value ('registry={0}' -f $NpmRegistryUri)
         Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
         Get-Content -Path $packageNpmrc |
             ForEach-Object {
@@ -93,15 +86,41 @@ function Publish-WhiskeyNodeModule
             } |
             Write-WhiskeyVerbose -Context $TaskContext
 
+
+        Copy-Item -Path $originalPackageJsonPath -Destination $backupPackageJsonPath
+        Invoke-WhiskeyNpmCommand -Name 'version' `
+                                -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version', '--allow-same-version' `
+                                -BuildRootPath $TaskContext.BuildRoot `
+                                -ErrorAction Stop
+
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
-        Invoke-WhiskeyNpmCommand -Name 'publish' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
+
+        $publishArgumentList = @(
+            if( $Tag )
+            {
+                '--tag'
+                $Tag
+            }
+            elseif( $TaskContext.Version.SemVer2.Prerelease )
+            {
+                '--tag'
+                Resolve-WhiskeyVariable -Context $TaskContext -Name 'WHISKEY_SEMVER2_PRERELEASE_ID'
+            }
+        )
+
+        Invoke-WhiskeyNpmCommand -Name 'publish' -ArgumentList $publishArgumentList -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
     }
     finally
     {
-        if (Test-Path $packageNpmrc)
+        if (Test-Path -Path $packageNpmrc -PathType Leaf)
         {
             Write-WhiskeyVerbose -Context $TaskContext -Message ('Removing .npmrc at {0}.' -f $packageNpmrc)
             Remove-Item -Path $packageNpmrc
+        }
+
+        if (Test-Path -Path $backupPackageJsonPath -PathType Leaf)
+        {
+            Copy-Item -Path $backupPackageJsonPath -Destination $originalPackageJsonPath -Force
         }
     }
 }

@@ -74,7 +74,7 @@ function ThenResolvedLatestLTSVersion
 function ThenResolvedVersion
 {
     param(
-        [version]$Version
+        [Version]$Version
     )
 
     $resolvedVersion | Should -HaveCount 1 -Because 'it should only return one version'
@@ -91,7 +91,7 @@ function WhenResolvingSdkVersion
     [CmdletBinding()]
     param(
         [switch]$LatestLTS,
-        [string]$Version
+        [String]$Version
     )
 
     $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' `
@@ -187,6 +187,26 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when latest version API doesn''t retur
         Mock -CommandName Invoke-RestMethod -ModuleName 'Whiskey' -MockWith { '1' }
         WhenResolvingSdkVersion -LatestLTS -ErrorAction SilentlyContinue
         ThenError 'Could\ not\ retrieve\ the\ latest\ LTS\ version'
+        ThenReturnedNothing
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when Microsoft changes the index again' {
+    It 'should fail' {
+        Init
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey'
+        WhenResolvingSdkVersion -Version '2.1' -ErrorAction SilentlyContinue
+        ThenError 'releases index'
+        ThenReturnedNothing
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when Microsoft moves the index again' {
+    It 'should fail' {
+        Init
+        Mock -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -MockWith { Write-Error 'I do not exist!' -ErrorAction $ErrorActionPreference }
+        WhenResolvingSdkVersion -Version '2.1' -ErrorAction SilentlyContinue
+        ThenError 'releases index'
         ThenReturnedNothing
     }
 }

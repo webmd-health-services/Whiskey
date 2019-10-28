@@ -2,22 +2,18 @@
 function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("ProGetUniversalPackage")]
-    [Whiskey.RequiresTool('PowerShellModule::ProGetAutomation','ProGetAutomationPath',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.Task('ProGetUniversalPackage')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Import-WhiskeyPowerShellModule -Name 'ProGetAutomation'
 
     $manifestProperties = @{}
     if( $TaskParameter.ContainsKey('ManifestProperties') )
@@ -77,7 +73,7 @@ function New-WhiskeyProGetUniversalPackage
     $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
     if( $TaskParameter['CompressionLevel'] )
     {
-        $expectedValues = [enum]::GetValues([IO.Compression.CompressionLevel])
+        $expectedValues = [Enum]::GetValues([IO.Compression.CompressionLevel])
         $compressionLevel = $TaskParameter['CompressionLevel']
         if( $compressionLevel -notin $expectedValues )
         {
@@ -96,7 +92,7 @@ function New-WhiskeyProGetUniversalPackage
             {
                 $compressionLevel = [IO.Compression.CompressionLevel]::Fastest
             }
-            Write-Warning -Message ('The ProGetUniversalPackage task no longer supports integer-style compression levels. Please update your task in your whiskey.yml file to use one of the new values: {0}. We''re converting the number you provided, "{1}", to "{2}".' -f ($expectedValues -join ', '),$TaskParameter['CompressionLevel'],$compressionLevel)
+            Write-WhiskeyWarning -Context $TaskContext -Message ('The ProGetUniversalPackage task no longer supports integer-style compression levels. Please update your task in your whiskey.yml file to use one of the new values: {0}. We''re converting the number you provided, "{1}", to "{2}".' -f ($expectedValues -join ', '),$TaskParameter['CompressionLevel'],$compressionLevel)
         }
     }
 
@@ -131,12 +127,10 @@ function New-WhiskeyProGetUniversalPackage
     function Copy-ToPackage
     {
         param(
-            [Parameter(Mandatory=$true)]
-            [object[]]
-            $Path,
+            [Parameter(Mandatory)]
+            [Object[]]$Path,
 
-            [Switch]
-            $AsThirdPartyItem
+            [switch]$AsThirdPartyItem
         )
 
         foreach( $item in $Path )

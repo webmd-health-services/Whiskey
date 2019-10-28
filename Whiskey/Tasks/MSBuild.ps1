@@ -2,24 +2,20 @@
 function Invoke-WhiskeyMSBuild
 {
     [Whiskey.Task('MSBuild',SupportsClean,Platform='Windows')]
-    [Whiskey.RequiresTool('PowerShellModule::VSSetup','VSSetupPath',Version='2.*',VersionParameterName='VSSetupVersion')]
+    [Whiskey.RequiresPowerShellModule('VSSetup',Version='2.*',VersionParameterName='VSSetupVersion')]
     [CmdletBinding()]
     param(
-        [Whiskey.Context]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [hashtable]
         # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
         #
         # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whiskey.yml file they were taken from.
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Import-WhiskeyPowerShellModule -Name 'VSSetup'
 
     #setup
     $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']

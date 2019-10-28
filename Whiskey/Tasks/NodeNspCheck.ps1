@@ -2,17 +2,15 @@
 function Invoke-WhiskeyNodeNspCheck
 {
     [Whiskey.Task('NodeNspCheck',Obsolete,ObsoleteMessage='The "NodeNspCheck" task is obsolete and will be removed in a future version of Whiskey. Please use the "Npm" task instead. The NSP project shut down in September 2018 and was replaced with the `npm audit` command.')]
-    [Whiskey.RequiresTool('Node', 'NodePath', VersionParameterName='NodeVersion')]
-    [Whiskey.RequiresTool('NodeModule::nsp', 'NspPath', VersionParameterName='Version')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('NodeModule::nsp',PathParameterName='NspPath',VersionParameterName='Version')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -29,7 +27,7 @@ function Invoke-WhiskeyNodeNspCheck
         $formattingArg = '--output'
     }
 
-    Write-WhiskeyTiming -Message 'Running NSP security check'
+    Write-WhiskeyDebug -Context $TaskContext -Message 'Running NSP security check'
     $output = Invoke-Command -NoNewScope -ScriptBlock {
         param(
             $JsonOutputFormat
@@ -39,7 +37,7 @@ function Invoke-WhiskeyNodeNspCheck
             ForEach-Object { if( $_ -is [Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } }
     } -ArgumentList $formattingArg
 
-    Write-WhiskeyTiming -Message 'COMPLETE'
+    Write-WhiskeyDebug -Context $TaskContext -Message 'COMPLETE'
 
     try
     {

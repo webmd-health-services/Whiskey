@@ -1,37 +1,21 @@
 
-$powerShellModulesDirectoryName = 'PSModules'
 $PSModuleAutoLoadingPreference = 'None'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
+$testRoot = $null
 
 function GivenAnInstalledPowerShellModule
 {
     [CmdLetBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell5')]
-        [Switch]
-        $LikePowerShell5,
+        [String]$WithVersion = '0.37.1',
 
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
-        [Switch]
-        $LikePowerShell4,
-
-        [String]
-        $WithVersion = '0.37.1',
-
-        [String]
-        $WithName = 'SomeModule'
+        [String]$WithName = 'SomeModule'
     )
 
-    $moduleRoot = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
-    if( $LikePowerShell4 )
-    {
-        $Name = '{0}' -f $WithName
-    }
-    elseif( $LikePowerShell5 )
-    {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion
-    }
+    $moduleRoot = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
+    $Name = '{0}\{1}' -f $WithName, $WithVersion
     $importRoot = Join-Path -Path $moduleRoot -ChildPath $WithName
     $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $Name
 
@@ -47,15 +31,18 @@ function GivenAnInstalledPowerShellModule
     Import-Module -Name $importRoot -Force
 }
 
+function Init
+{
+    $script:testRoot = New-WhiskeyTestRoot
+}
+
 function WhenUninstallingPowerShellModule
 {
     [CmdletBinding()]
     param(
-        [String]
-        $WithVersion = '0.37.1',
+        [String]$WithVersion = '0.37.1',
 
-        [String]
-        $WithName = 'SomeModule'
+        [String]$WithName = 'SomeModule'
     )
 
     $Global:Error.Clear()
@@ -63,6 +50,7 @@ function WhenUninstallingPowerShellModule
     $Global:Parameter = @{ 
         'Name' = $WithName;
         'Version' = $WithVersion;
+        'BuildRoot' = $testRoot;
     }
 
     if( $PSBoundParameters.ContainsKey('ErrorAction') )
@@ -70,46 +58,21 @@ function WhenUninstallingPowerShellModule
         $Parameter['ErrorAction'] = $ErrorActionPreference
     }
 
-    Push-Location $TestDrive.FullName
-    try
-    {
-        Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyPowerShellModule' -Parameter $Parameter
-    }
-    finally
-    {
-        Pop-Location
-    }
+    Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyPowerShellModule' -Parameter $Parameter
 }
 
 function ThenPowerShellModuleUninstalled
 {
     [CmdLetBinding()]
     param(
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell5')]
-        [Switch]
-        $LikePowerShell5,
+        [String]$WithVersion = '0.37.1',
 
-        [Parameter(Mandatory=$true,ParameterSetName='LikePowerShell4')]
-        [Switch]
-        $LikePowerShell4,
-
-        [String]
-        $WithVersion = '0.37.1',
-
-        [String]
-        $WithName = 'SomeModule'
+        [String]$WithName = 'SomeModule'
     )
 
-    if( $LikePowerShell4 )
-    {
-        $Name = '{0}' -f $WithName
-    }
-    elseif( $LikePowerShell5 )
-    {
-        $Name = '{0}\{1}' -f $WithName, $WithVersion
-    }
+    $Name = '{0}\{1}' -f $WithName, $WithVersion
 
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
+    $path = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
     $modulePath = Join-Path -Path $path -ChildPath $Name
 
     Test-Path -Path $modulePath -PathType Container | Should -BeFalse
@@ -119,52 +82,48 @@ function ThenPowerShellModuleUninstalled
 
 function ThenRemovedPSModulesDirectory
 {
-    Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName | Should -Not -Exist
+    Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName | Should -Not -Exist
 }
 
-Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 4' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module' {
     It 'should uninstall it' {
-        GivenAnInstalledPowerShellModule -LikePowerShell4
+        Init
+        GivenAnInstalledPowerShellModule 
         WhenUninstallingPowerShellModule
-        ThenPowerShellModuleUninstalled -LikePowerShell4
+        ThenPowerShellModuleUninstalled 
     }
 }
 
-Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5' {
-    It 'should uninstall it' {
-        GivenAnInstalledPowerShellModule -LikePowerShell5
-        WhenUninstallingPowerShellModule
-        ThenPowerShellModuleUninstalled -LikePowerShell5
-    }
-}
-
-Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5 with an empty Version' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module with an empty Version' {
     It 'should uninstall' {
-        GivenAnInstalledPowerShellModule -LikePowerShell5
+        Init
+        GivenAnInstalledPowerShellModule
         WhenUninstallingPowerShellModule -WithVersion ''
-        ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion ''
+        ThenPowerShellModuleUninstalled -WithVersion ''
     }
 }
 
-Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module under PowerShell 5 with a wildcard Version' {
+Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module with a wildcard Version' {
     It 'should uninstall just versions that match the wildcard' {
-        GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '0.37.0'
-        GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '0.37.1'
-        GivenAnInstalledPowerShellModule -LikePowerShell5 -WithVersion '0.38.2'
+        Init
+        GivenAnInstalledPowerShellModule -WithVersion '0.37.0'
+        GivenAnInstalledPowerShellModule -WithVersion '0.37.1'
+        GivenAnInstalledPowerShellModule -WithVersion '0.38.2'
         WhenUninstallingPowerShellModule -WithVersion '0.37.*'
-        ThenPowerShellModuleUninstalled -LikePowerShell5 -WithVersion '0.37.*'
+        ThenPowerShellModuleUninstalled -WithVersion '0.37.*'
 
-        $psmodulesRoot = Join-Path -Path $TestDrive.FullName -ChildPath $powerShellModulesDirectoryName
+        $psmodulesRoot = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
         $modulePath = Join-Path -Path $psmodulesRoot -ChildPath 'SomeModule\0.38.2\SomeModule.psd1'
         $modulePath | Should -Exist
     }
 }
 
-Describe 'Uninstall-WhiskeyPowerShellModule.when PSModules directory is empty after module uninstall' {
-    It 'should delete the PSModules directory' {
-        GivenAnInstalledPowerShellModule -LikePowerShell5
+Describe ('Uninstall-WhiskeyPowerShellModule.when {0} directory is empty after module uninstall' -f $PSModulesDirectoryName) {
+    It ('should delete the {0} directory' -f $PSModulesDirectoryName) {
+        Init
+        GivenAnInstalledPowerShellModule
         WhenUninstallingPowerShellModule
-        ThenPowerShellModuleUninstalled -LikePowerShell5
+        ThenPowerShellModuleUninstalled
         ThenRemovedPSModulesDirectory
     }
 }

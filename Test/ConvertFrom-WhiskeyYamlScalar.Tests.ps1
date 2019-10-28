@@ -59,7 +59,7 @@ $testCases = @(
                 },
                 @{
                     Name = 'datetime';
-                    Result = [datetime]'2001-12-15T02:59:43.1Z';
+                    Result = [DateTime]'2001-12-15T02:59:43.1Z';
                     Values = @(
                         '2001-12-15T02:59:43.1Z'
                         '2001-12-15 02:59:43.1Z'
@@ -67,7 +67,7 @@ $testCases = @(
                 },
                 @{
                     Name = 'datetime';
-                    Result = [datetime]'2001-12-14t21:59:43.10-05:00';
+                    Result = [DateTime]'2001-12-14t21:59:43.10-05:00';
                     Values = @(
                         '2001-12-14t21:59:43.10-05:00',
                         '2001-12-14t21:59:43.10 -5'
@@ -77,7 +77,7 @@ $testCases = @(
                 },
                 @{
                     Name = 'datetime';
-                    Result = [datetime]'2001-12-15 2:59:43.10';
+                    Result = [DateTime]'2001-12-15 2:59:43.10';
                     Values = @(
                         '2001-12-15T2:59:43.10',
                         '2001-12-15 02:59:43.10'
@@ -85,7 +85,7 @@ $testCases = @(
                 },
                 @{
                     Name = 'datetime';
-                    Result = [datetime]'2002-12-14';
+                    Result = [DateTime]'2002-12-14';
                     Values = @(
                         '2002-12-14'
                     )
@@ -108,14 +108,14 @@ $testCases = @(
                 },
                 @{
                     Name = 'double';
-                    Result = [double]::NegativeInfinity
+                    Result = [Double]::NegativeInfinity
                     Values = @(
                                     '-.Inf'
                                 )
                 },
                 @{
                     Name = 'double';
-                    Result = [double]::PositiveInfinity
+                    Result = [Double]::PositiveInfinity
                     Values = @(
                                     '.Inf'
                                 )
@@ -135,8 +135,8 @@ foreach( $testCase in $testCases )
 }
 
 Describe ('ConvertFrom-WhiskeyYamlScalar.when converting ''NaN''') {
-    It ('should return [double]NaN') {
-        '.NaN' | ConvertFrom-WhiskeyYamlScalar | ForEach-Object { [double]::IsNaN($_) } | Should -Be $true
+    It ('should return [Double]NaN') {
+        '.NaN' | ConvertFrom-WhiskeyYamlScalar | ForEach-Object { [Double]::IsNaN($_) } | Should -Be $true
     }
 }
 

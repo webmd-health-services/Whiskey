@@ -68,7 +68,7 @@ function Get-WhiskeyBuildMetadata
             }
             default
             {
-                Write-Error -Message ('Unsupported AppVeyor source control provider ''{0}''. If you''d like us to add support for this provider, please submit a new issue at https://github.com/webmd-health-services/Whiskey/issues. Copy/paste your environment variables from this build''s output into your issue.' -f $_)
+                Write-WhiskeyError -Message ('Unsupported AppVeyor source control provider ''{0}''. If you''d like us to add support for this provider, please submit a new issue at https://github.com/webmd-health-services/Whiskey/issues. Copy/paste your environment variables from this build''s output into your issue.' -f $_)
             }
         }
         $repoName = Get-EnvironmentVariable 'APPVEYOR_REPO_NAME'

@@ -2,22 +2,18 @@
 function Publish-WhiskeyBuildMasterPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("PublishBuildMasterPackage")]
-    [Whiskey.RequiresTool('PowerShellModule::BuildMasterAutomation','BuildMasterAutomationPath',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
+    [Whiskey.Task('PublishBuildMasterPackage')]
+    [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomation'
 
     $applicationName = $TaskParameter['ApplicationName']
     if( -not $applicationName )

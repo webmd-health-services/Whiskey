@@ -4,17 +4,14 @@ function Install-WhiskeyNode
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]
         # The directory where Node should be installed. Will actually be installed into `Join-Path -Path $InstallRoot -ChildPath '.node'`.
-        $InstallRoot,
+        [String]$InstallRoot,
 
-        [Switch]
         # Are we running in clean mode? If so, don't re-install the tool.
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [string]
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
-        $Version
+        [String]$Version
     )
 
     Set-StrictMode -Version 'Latest'
@@ -52,7 +49,7 @@ function Install-WhiskeyNode
 
         if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
         {
-            Write-Verbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
+            Write-WhiskeyVerbose -Message ('Reading ''{0}'' to determine Node and NPM versions to use.' -f $packageJsonPath)
             $packageJson = Get-Content -Raw -Path $packageJsonPath | ConvertFrom-Json
             if( $packageJson -and ($packageJson | Get-Member 'engines') )
             {
@@ -90,7 +87,7 @@ function Install-WhiskeyNode
         $currentNodeVersion = & $nodePath '--version'
         if( $currentNodeVersion -ne $nodeVersionToInstall.version )
         {
-            Uninstall-WhiskeyTool -Name 'Node' -InstallRoot $InstallRoot
+            Uninstall-WhiskeyNode -InstallRoot $InstallRoot
             $installNode = $true
         }
     }
@@ -147,8 +144,8 @@ function Install-WhiskeyNode
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
             $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
-            Write-Verbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
-            & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-Verbose
+            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
+            & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-WhiskeyVerbose
 
             Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
                 Get-ChildItem |
@@ -156,11 +153,11 @@ function Install-WhiskeyNode
         }
         else
         {
-            Write-Verbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
-            tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-Verbose
+            Write-WhiskeyVerbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
+            tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-WhiskeyVerbose
             if( $LASTEXITCODE )
             {
-                Write-Error -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFile,$nodeRoot)
+                Write-WhiskeyError -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFile,$nodeRoot)
                 return
             }
         }
@@ -173,10 +170,10 @@ function Install-WhiskeyNode
     $npmVersion = & $nodePath $npmPath '--version'
     if( $npmVersion -ne $npmVersionToInstall )
     {
-        Write-Verbose ('Installing npm@{0}.' -f $npmVersionToInstall)
+        Write-WhiskeyVerbose ('Installing npm@{0}.' -f $npmVersionToInstall)
         # Bug in NPM 5 that won't delete these files in the node home directory.
         Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include 'npm.cmd','npm','npx.cmd','npx' | Remove-Item
-        & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g' | Write-Verbose
+        & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g' | Write-WhiskeyVerbose
         if( $LASTEXITCODE )
         {
             throw ('Failed to update to NPM {0}. Please see previous output for details.' -f $npmVersionToInstall)
