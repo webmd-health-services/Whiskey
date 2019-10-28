@@ -9,9 +9,6 @@ function Get-WhiskeyContext
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    $timer = New-Object 'Diagnostics.Stopwatch'
-    $timer.Start()
-
     [Management.Automation.CallStackFrame[]]$callstack = Get-PSCallStack
     # Skip myself.
     for( $idx = 1; $idx -lt $callstack.Length; ++$idx )

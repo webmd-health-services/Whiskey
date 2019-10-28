@@ -61,15 +61,6 @@ function Invoke-PostTaskPlugin
     )
 }
 
-function GivenFailingMSBuildProject
-{
-    param(
-        $Project
-    )
-
-    New-MSBuildProject -FileName $project -ThatFails
-}
-
 function GivenEnvironmentVariable
 {
     param(
@@ -85,7 +76,6 @@ function GivenFile
         $Name
     )
 
-    # Don't use New-Item since it gets mocked.
     New-Item -Path (Join-Path -Path $testRoot -ChildPath $Name)
 }
 
@@ -114,29 +104,6 @@ function GivenMockedTask
     }
 
     Mock -CommandName $CommandName -ModuleName 'Whiskey' @optionalParams
-}
-
-function GivenNoOpTask
-{
-    param(
-        [switch]$SupportsClean,
-        [switch]$SupportsInitialize
-    )
-
-}
-
-function RemoveNoOpTask
-{
-    Remove-Item -Path 'function:NoOpTask'
-}
-
-function GivenMSBuildProject
-{
-    param(
-        $Project
-    )
-
-    New-MSBuildProject -FileName $project -ThatFails
 }
 
 function GivenRunByBuildServer
@@ -194,18 +161,6 @@ function GivenVariable
     $variables[$Name] = $Value
 }
 
-function GivenWhiskeyYmlBuildFile
-{
-    param(
-        [Parameter(Position=0)]
-        [String]$Yaml
-    )
-
-    $script:whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
-    $Yaml | Set-Content -Path $whiskeyYmlPath
-    return $whiskeyymlpath
-}
-
 function GivenWorkingDirectory
 {
     param(
@@ -237,43 +192,15 @@ function ThenPipelineFailed
     $threwException | Should -BeTrue
 }
 
-function ThenBuildOutputRemoved
-{
-    Join-Path -Path ($whiskeyYmlPath | Split-Path) -ChildPath '.output' | Should -Not -Exist
-}
-
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
     $threwException | Should -BeFalse
 }
 
-function ThenDotNetProjectsCompilationFailed
-{
-    param(
-        [String]$ConfigurationPath,
-
-        [String[]]$ProjectName
-    )
-
-    $root = Split-Path -Path $ConfigurationPath -Parent
-    foreach( $name in $ProjectName )
-    {
-        (Join-Path -Path $root -ChildPath ('{0}.clean' -f $ProjectName)) | Should -Not -Exist
-        (Join-Path -Path $root -ChildPath ('{0}.build' -f $ProjectName)) | Should -Not -Exist
-    }
-}
-
 function ThenNoOutput
 {
     $output | Should -BeNullOrEmpty
-}
-function ThenNUnitTestsNotRun
-{
-    param(
-    )
-
-    $context.OutputDirectory | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
 }
 
 function ThenPluginsRan
@@ -416,7 +343,7 @@ function ThenTempDirectoryCreated
 
     $expectedTempPath = Join-Path -Path $context.OutputDirectory -ChildPath ('Temp.{0}.' -f $TaskName)
     $expectedTempPathRegex = '^{0}[a-z0-9]{{8}}\.[a-z0-9]{{3}}$' -f [regex]::escape($expectedTempPath)
-Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter {
+    Assert-MockCalled -CommandName 'New-Item' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
         $PSBoundParameters | ConvertTo-Json | Out-String | Write-WhiskeyDebug
         if( $Path -notmatch $expectedTempPathRegex )
