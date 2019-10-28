@@ -7,7 +7,7 @@ function Write-WhiskeyLog
         [Parameter(Mandatory)]
         [Whiskey.Context]$Context,
 
-        [String]$Message,
+        [String[]]$Message,
 
         [String]$Level = 'Info'
     )

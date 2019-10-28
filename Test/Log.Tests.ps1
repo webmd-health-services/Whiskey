@@ -85,7 +85,7 @@ function WhenLogging
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [String]$Message,
+        [String[]]$Message,
 
         [String]$AtLevel,
 
@@ -202,5 +202,18 @@ Describe 'Log.when user specifies Debug property' {
         $DebugPreference = 'Ignore'
         WhenLogging 'DEBUG!' -AtLevel 'Debug' -WithParameter @{ 'Debug' = $true }
         ThenWroteDebug 'DEBUG!'
+    }
+}
+
+Describe 'Log.when logging multiple messages' {
+    It 'should group all the messages' {
+        Init
+        WhenLogging 'line 1', 'line 2', 'line 3' 
+        $infos | Should -HaveCount 5
+        $infos[0] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
+        $infos[1] | Should -Match '^\ {4}line 1$'
+        $infos[2] | Should -Match '^\ {4}line 2$'
+        $infos[3] | Should -Match '^\ {4}line 3$'
+        $infos[4] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
     }
 }
