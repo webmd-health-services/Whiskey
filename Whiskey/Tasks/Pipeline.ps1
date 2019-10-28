@@ -2,7 +2,7 @@
  function Invoke-WhiskeyPipelineTask
 {
     [CmdletBinding()]
-    [Whiskey.Task("Pipeline",SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('Pipeline',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

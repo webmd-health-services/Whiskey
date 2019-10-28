@@ -1,7 +1,7 @@
 
 function Import-WhiskeyTask
 {
-    [Whiskey.Task("LoadTask")]
+    [Whiskey.Task('LoadTask')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -38,7 +38,7 @@ function Import-WhiskeyTask
 
 * the file contains a function
 * the function is scoped correctly (e.g. `function script:MyTask`)
-* the function has a `[Whiskey.Task("MyTask")]` attribute that declares the task''s name
+* the function has a `[Whiskey.Task(''MyTask'')]` attribute that declares the task''s name
 * a task with the same name hasn''t already been loaded
 
 See about_Whiskey_Writing_Tasks for more information.' -f $path)

@@ -1,7 +1,7 @@
 
 function Copy-WhiskeyFile
 {
-    [Whiskey.Task("CopyFile")]
+    [Whiskey.Task('CopyFile')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

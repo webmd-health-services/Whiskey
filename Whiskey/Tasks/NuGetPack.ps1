@@ -1,7 +1,7 @@
 
 function New-WhiskeyNuGetPackage
 {
-    [Whiskey.Task("NuGetPack",Platform='Windows')]
+    [Whiskey.Task('NuGetPack',Platform='Windows')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
