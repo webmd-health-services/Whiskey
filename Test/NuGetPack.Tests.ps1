@@ -120,9 +120,7 @@ Build:
     {
         $context.RunBy = [Whiskey.RunBy]::Developer
     }
-    Invoke-WhiskeyBuild -Context $context |
-        Out-String |
-        Write-Verbose
+    Invoke-WhiskeyBuild -Context $context | Out-String | Write-WhiskeyVerbose
     Reset-WhiskeyTestPSModule
 }
 

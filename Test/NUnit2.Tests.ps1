@@ -391,7 +391,8 @@ function WhenRunningTask
         {
             $WithParameters['Version'] = $nunitVersion
         }
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' | ForEach-Object { Write-Verbose -Message $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' 
+        $output | Write-WhiskeyVerbose -Context $context
         $script:threwException = $false
         $script:thrownError = $null
     }
@@ -478,8 +479,8 @@ function ThenItInstalled {
     $expectedVersion = $Version
     Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $Name)
-        Write-Debug -Message ('                  actual    {0}' -f $NuGetPackageName)
+        Write-WhiskeyDebug -Message ('NuGetPackageName  expected  {0}' -f $Name)
+        Write-WhiskeyDebug -Message ('                  actual    {0}' -f $NuGetPackageName)
         $NuGetPackageName -eq $Name
     }
     Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $ExpectedVersion }

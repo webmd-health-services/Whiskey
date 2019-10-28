@@ -27,28 +27,28 @@ function Set-WhiskeyDotNetGlobalJson
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Write-Verbose -Message ('[{0}] Setting global.json properties: ''sdk.version'' => ''{1}''' -f $MyInvocation.MyCommand,$SdkVersion)
+    Write-WhiskeyVerbose -Message ('[{0}] Setting global.json properties: ''sdk.version'' => ''{1}''' -f $MyInvocation.MyCommand,$SdkVersion)
 
     if (-not (Test-Path -Path $Directory -PathType Container))
     {
-        Write-Error -Message ('The directory ''{0}'' does not exist.' -f $Directory)
+        Write-WhiskeyError -Message ('The directory ''{0}'' does not exist.' -f $Directory)
         return
     }
 
     $globalJsonPath = Join-Path -Path $Directory -ChildPath 'global.json'
-    Write-Verbose -Message ('[{0}] Looking for global.json at ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
+    Write-WhiskeyVerbose -Message ('[{0}] Looking for global.json at ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
 
     if (Test-Path -Path $globalJsonPath -PathType Leaf)
     {
-        Write-Verbose -Message ('[{0}] Found existing global.json' -f $MyInvocation.MyCommand)
-        Write-Verbose -Message ('[{0}] Updating ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
+        Write-WhiskeyVerbose -Message ('[{0}] Found existing global.json' -f $MyInvocation.MyCommand)
+        Write-WhiskeyVerbose -Message ('[{0}] Updating ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
         try
         {
             $globalJson = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json
         }
         catch
         {
-            Write-Error -Message ('global.json file ''{0}'' contains invalid JSON.' -f $globalJsonPath)
+            Write-WhiskeyError -Message ('global.json file ''{0}'' contains invalid JSON.' -f $globalJsonPath)
             return
         }
 
@@ -66,8 +66,8 @@ function Set-WhiskeyDotNetGlobalJson
     }
     else
     {
-        Write-Verbose -Message ('[{0}] global.json does not exist at ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
-        Write-Verbose -Message ('[{0}] Creating ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
+        Write-WhiskeyVerbose -Message ('[{0}] global.json does not exist at ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
+        Write-WhiskeyVerbose -Message ('[{0}] Creating ''{1}''' -f $MyInvocation.MyCommand,$globalJsonPath)
         $globalJson = @{
                             'sdk' = @{
                                 'version' = $SdkVersion
@@ -76,5 +76,5 @@ function Set-WhiskeyDotNetGlobalJson
     }
 
     $globalJson | ConvertTo-Json -Depth 100 | Set-Content -Path $globalJsonPath -Force
-    Write-Verbose -Message ('[{0}] global.json update finished.' -f $MyInvocation.MyCommand)
+    Write-WhiskeyVerbose -Message ('[{0}] global.json update finished.' -f $MyInvocation.MyCommand)
 }

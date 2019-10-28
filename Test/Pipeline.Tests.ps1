@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $whiskeyYmlPath = $null
 $context = $null
 $warnings = $null
@@ -12,6 +13,7 @@ $warnings = $null
 function Invoke-WhiskeyPowerShell
 {
 }
+
 function GivenFile
 {
     param(
@@ -22,54 +24,13 @@ function GivenFile
         [String]$Content
     )
 
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath $Name
+    $path = Join-Path -Path $testRoot -ChildPath $Name
     $Content | Set-Content -Path $path
 }
 
-function Invoke-PreTaskPlugin
+function Init
 {
-    param(
-        [Parameter(Mandatory)]
-        [Object]$TaskContext,
-
-        [Parameter(Mandatory)]
-        [String]$TaskName,
-
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
-    )
-}
-
-function Invoke-PostTaskPlugin
-{
-    param(
-        [Parameter(Mandatory)]
-        [Object]$TaskContext,
-
-        [Parameter(Mandatory)]
-        [String]$TaskName,
-
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
-    )
-}
-
-function GivenPlugins
-{
-    param(
-        [String]$ForSpecificTask
-    )
-
-    $taskNameParam = @{ }
-    if( $ForSpecificTask )
-    {
-        $taskNameParam['TaskName'] = $ForSpecificTask
-    }
-
-    Register-WhiskeyEvent -CommandName 'Invoke-PostTaskPlugin' -Event AfterTask @taskNameParam
-    Mock -CommandName 'Invoke-PostTaskPlugin' -ModuleName 'Whiskey'
-    Register-WhiskeyEvent -CommandName 'Invoke-PreTaskPlugin' -Event BeforeTask @taskNameParam
-    Mock -CommandName 'Invoke-PreTaskPlugin' -ModuleName 'Whiskey'
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function GivenWhiskeyYmlBuildFile
@@ -80,7 +41,7 @@ function GivenWhiskeyYmlBuildFile
     )
 
     $config = $null
-    $root = (Get-Item -Path 'TestDrive:').FullName
+    $root = $testRoot
     $script:whiskeyYmlPath = Join-Path -Path $root -ChildPath 'whiskey.yml'
     $Yaml | Set-Content -Path $whiskeyYmlPath
     return $whiskeyymlpath
@@ -101,7 +62,7 @@ function ThenFile
         [String]$Because
     )
 
-    Join-Path -Path $TestDrive.FullName -ChildPath $Named | Should -Not:$Not -Exist
+    Join-Path -Path $testRoot -ChildPath $Named | Should -Not:$Not -Exist
 }
 function ThenPipelineFailed
 {
@@ -143,51 +104,6 @@ function ThenNUnitTestsNotRun
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
 }
 
-function ThenPluginsRan
-{
-    param(
-        $ForTaskNamed,
-
-        $WithParameter,
-
-        [int]$Times = 1
-    )
-
-    foreach( $pluginName in @( 'Invoke-PreTaskPlugin', 'Invoke-PostTaskPlugin' ) )
-    {
-        if( $Times -eq 0 )
-        {
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times 0 -ParameterFilter { $TaskName -eq $ForTaskNamed }
-        }
-        else
-        {
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskContext -ne $null }
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { $TaskName -eq $ForTaskNamed }
-            Assert-MockCalled -CommandName $pluginName -ModuleName 'Whiskey' -Times $Times -ParameterFilter { 
-                if( $TaskParameter.Count -ne $WithParameter.Count )
-                {
-                    return $false
-                }
-
-                foreach( $key in $WithParameter.Keys )
-                {
-                    if( $TaskParameter[$key] -ne $WithParameter[$key] )
-                    {
-                        return $false
-                    }
-                }
-
-                return $true
-            }
-        }
-
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event AfterTask -TaskName $ForTaskNamed
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask
-        Unregister-WhiskeyEvent -CommandName $pluginName -Event BeforeTask -TaskName $ForTaskNamed
-    }
-}
-
 function ThenShouldWarn
 {
     param(
@@ -220,7 +136,10 @@ function WhenRunningPipeline
 
     [SemVersion.SemanticVersion]$version = '5.4.1-prerelease+build'    
 
-    $script:context = New-WhiskeyTestContext -ConfigurationPath $whiskeyYmlPath -ForBuildServer -ForVersion $version
+    $script:context = New-WhiskeyTestContext -ConfigurationPath $whiskeyYmlPath `
+                                             -ForBuildServer `
+                                             -ForVersion $version `
+                                             -ForBuildRoot $testRoot
     $Global:Error.Clear()
     $script:threwException = $false
     try
@@ -237,6 +156,7 @@ function WhenRunningPipeline
 
 Describe 'Pipeline.when running an unknown task' {
     It 'should fail' {
+        Init
         GivenWhiskeyYmlBuildFile -Yaml @'
 Build:
     - FubarSnafu:
@@ -250,6 +170,7 @@ Build:
 
 Describe 'Pipeline.when a task fails' {
     It 'should fail' {
+        Init
         GivenFile 'ishouldnotrun.ps1' @'
 New-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'iran.txt')
 '@
@@ -268,6 +189,7 @@ Build:
 
 Describe 'Pipeline.when task has no properties' {
     It 'should run tasks' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build:
 - PublishNodeModule
@@ -282,6 +204,7 @@ Build:
 
 Describe 'Pipeline.when task has a default property' {
     It 'should pass default property' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: This is a default property
@@ -295,6 +218,7 @@ Build:
 
 Describe 'Pipeline.when task has a default property with quoted arguments' {
     It 'should pass default property' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: someexec somearg
@@ -308,6 +232,7 @@ Build:
 
 Describe 'Pipeline.when task has a default property when entire string is quoted' {
     It 'should pass default property' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build:
 - Exec: 'someexec "some arg"'
@@ -321,66 +246,35 @@ Build:
 
 Describe 'Pipeline.when pipeline does not exist' {
     It 'should fail' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 "@
         WhenRunningPipeline 'Build' -ErrorAction SilentlyContinue
         ThenPipelineFailed
-        ThenThrewException 'Pipeline\ ''Build''\ does\ not\ exist'
+        ThenThrewException 'Pipeline\ "Build"\ does\ not\ exist'
     }
 }
 
 Describe 'Pipeline.when pipeline is empty and not a YAML object' {
     It 'should write warning and succeed' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build
 "@
         WhenRunningPipeline 'Build' 
         ThenPipelineSucceeded
-        ThenShouldWarn 'doesn''t\ have\ any\ tasks'
+        ThenShouldWarn 'pipeline\ "Build"\ doesn''t\ have\ any\ tasks'
     }
 }
 
 Describe 'Pipeline.when pipeline is empty and is a YAML object' {
     It 'should write warning and succeed' {
+        Init
         GivenWhiskeyYmlBuildFile @"
 Build:
 "@
         WhenRunningPipeline 'Build' 
         ThenPipelineSucceeded
-        ThenShouldWarn 'doesn''t\ have\ any\ tasks'
-    }
-}
-
-Describe 'Pipeline.when there are registered event handlers' {
-    It 'should run plugins' {
-        GivenWhiskeyYmlBuildFile @"
-Build:
-- PowerShell:
-    Path: somefile.ps1
-"@
-        GivenPlugins
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-        WhenRunningPipeline 'Build'
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-    }
-}
-
-Describe 'Pipeline.when there are task-specific registered event handlers' {
-    It 'should run task plug-ins' {
-        GivenWhiskeyYmlBuildFile @"
-Build:
-- PowerShell:
-    Path: somefile.ps1
-- Version:
-    Version: 0.0.0
-"@
-        GivenPlugins -ForSpecificTask 'PowerShell'
-        Mock -CommandName 'Invoke-WhiskeyPowerShell' -ModuleName 'Whiskey'
-        Mock -CommandName 'Set-WhiskeyVersion' -ModuleName 'Whiskey'
-        WhenRunningPipeline 'Build'
-        ThenPipelineSucceeded
-        ThenPluginsRan -ForTaskNamed 'PowerShell' -WithParameter @{ 'Path' = 'somefile.ps1' }
-        ThenPluginsRan -ForTaskNamed 'Version' -Times 0
+        ThenShouldWarn 'pipeline\ "Build"\ doesn''t\ have\ any\ tasks'
     }
 }

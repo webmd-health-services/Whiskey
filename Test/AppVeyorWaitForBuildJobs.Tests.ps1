@@ -246,7 +246,7 @@ function WhenRunningTask
                 )
                 #$DebugPreference = 'Continue'
                 $now = (Get-Date).ToString('HH:mm:ss.ff')
-                Write-Debug ('[{0,2}]  [{1}]  {2}' -f $CheckNum,$now,$Message)
+                Write-WhiskeyDebug ('[{0,2}]  [{1}]  {2}' -f $CheckNum,$now,$Message)
              }
 
              Write-Timing ('Invoke-RestMethod')
@@ -296,7 +296,7 @@ function WhenRunningTask
          -ModuleName 'Whiskey' `
          -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            Write-Debug ('{0} -eq {1}' -f $Milliseconds,$checkInterval.TotalMilliseconds)
+            Write-WhiskeyDebug ('{0} -eq {1}' -f $Milliseconds,$checkInterval.TotalMilliseconds)
             $Milliseconds -eq $checkInterval.TotalMilliseconds } `
          -MockWith { $Global:CheckNum++ }
 

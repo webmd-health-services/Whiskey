@@ -306,20 +306,20 @@ function ThenRepositoryRegistered
 
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Repository Name                 expected {0}' -f $Named)
-        Write-Debug -Message ('                                actual   {0}' -f $Name)
+        Write-WhiskeyDebug -Message ('Repository Name                 expected {0}' -f $Named)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $Name)
         $Name -eq $Named
     }
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Source Location                 expected {0}' -f $AtUri)
-        Write-Debug -Message ('                                actual   {0}' -f $SourceLocation)
+        Write-WhiskeyDebug -Message ('Source Location                 expected {0}' -f $AtUri)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $SourceLocation)
         $AtUri -eq $SourceLocation
     }
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Publish Location                expected {0}' -f $AtUri)
-        Write-Debug -Message ('                                actual   {0}' -f $PublishLocation)
+        Write-WhiskeyDebug -Message ('Publish Location                expected {0}' -f $AtUri)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $PublishLocation)
         $AtUri -eq $PublishLocation
     }
     Assert-MockCalled -CommandName 'Register-PSRepository' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $InstallationPolicy -eq 'Trusted' }
@@ -348,21 +348,21 @@ function ThenModulePublished
     $expectedApiKey = $apikey
     Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
-        Write-Debug -Message ('                                actual   {0}' -f $Path)
+        Write-WhiskeyDebug -Message ('Path Name                       expected {0}' -f $ExpectedPathName)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $Path)
         
         $Path -eq $ExpectedPathName
     }
     Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Repository Name                 expected {0}' -f $ToRepositoryNamed)
-        Write-Debug -Message ('                                actual   {0}' -f $Repository)
+        Write-WhiskeyDebug -Message ('Repository Name                 expected {0}' -f $ToRepositoryNamed)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $Repository)
         $Repository -eq $ToRepositoryNamed
     }
     Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
-        Write-Debug -Message ('                                actual   {0}' -f $NuGetApiKey)
+        Write-WhiskeyDebug -Message ('ApiKey                          expected {0}' -f $expectedApiKey)
+        Write-WhiskeyDebug -Message ('                                actual   {0}' -f $NuGetApiKey)
         $NuGetApiKey -eq $expectedApiKey
     }
     Assert-MockCalled -CommandName 'Publish-Module' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Force }

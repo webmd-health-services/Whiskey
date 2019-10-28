@@ -37,7 +37,7 @@ function Assert-WhiskeyNodeModulePath
     
     if( -not (Test-Path -Path $Path -PathType Container) )
     {
-        Write-Error -Message ('Node module ''{0}'' does not exist at ''{1}''. Whiskey or NPM maybe failed to install this module correctly. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$Path)        
+        Write-WhiskeyError -Message ('Node module ''{0}'' does not exist at ''{1}''. Whiskey or NPM maybe failed to install this module correctly. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$Path)
         return
     }
 
@@ -51,7 +51,7 @@ function Assert-WhiskeyNodeModulePath
     $fullCommandPath = Join-Path -Path $Path -ChildPath $CommandPath
     if( -not (Test-Path -Path $fullCommandPath -PathType Leaf) )
     {
-        Write-Error -Message ('Node module ''{0}'' does not contain command ''{1}'' at ''{2}''. Whiskey or NPM maybe failed to install this module correctly or that command doesn''t exist in this version of the module. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$commandName,$fullCommandPath)
+        Write-WhiskeyError -Message ('Node module ''{0}'' does not contain command ''{1}'' at ''{2}''. Whiskey or NPM maybe failed to install this module correctly or that command doesn''t exist in this version of the module. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $moduleName,$commandName,$fullCommandPath)
         return
     }
 

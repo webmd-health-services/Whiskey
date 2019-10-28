@@ -2,7 +2,7 @@
 function Invoke-WhiskeyDotNetPublish
 {
     [CmdletBinding()]
-    [Whiskey.Task("DotNetPublish",Obsolete,ObsoleteMessage='The "DotNetPublish" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
+    [Whiskey.Task('DotNetPublish',Obsolete,ObsoleteMessage='The "DotNetPublish" task is obsolete and will be removed in a future version of Whiskey. Please use the "DotNet" task instead.')]
     [Whiskey.RequiresTool('DotNet',PathParameterName='DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory)]

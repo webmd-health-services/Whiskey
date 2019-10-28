@@ -130,7 +130,7 @@ function ConvertFrom-WhiskeyYamlScalar
             }
         }
 
-        Write-Error -Message ('Unable to convert scalar value ''{0}''. See http://yaml.org/type/ for documentation on YAML''s scalars.' -f $InputObject) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Unable to convert scalar value ''{0}''. See http://yaml.org/type/ for documentation on YAML''s scalars.' -f $InputObject)
     }
 
 }

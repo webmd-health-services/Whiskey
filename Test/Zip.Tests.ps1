@@ -97,8 +97,7 @@ function ThenArchiveShouldBeCompressed
 
     $archivePath = Join-Path -Path (Get-BuildRoot) -ChildPath $Path
     $archiveSize = (Get-Item $archivePath).Length
-    $DebugPreference = 'Continue'
-    Write-Debug -Message ('Archive size: {0}' -f $archiveSize)
+    Write-WhiskeyDebug -Context $context -Message ('Archive size: {0}' -f $archiveSize)
     if( $GreaterThan )
     {
         $archiveSize | Should -BeGreaterThan $GreaterThan

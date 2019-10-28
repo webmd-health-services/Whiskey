@@ -1,3 +1,4 @@
+
  function Invoke-WhiskeyPipelineTask
 {
     [CmdletBinding()]
@@ -30,7 +31,7 @@
     - TASK
 
 ')
-    return
+        return
     }
 
     $currentPipeline = $TaskContext.PipelineName

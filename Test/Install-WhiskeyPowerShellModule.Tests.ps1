@@ -166,7 +166,8 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     AfterEach { Reset }
     It 'should fail' {
         Init
-        $result = Install-WhiskeyPowerShellModule -Name 'Zip' -Version '0.0.1' -ErrorAction SilentlyContinue
+        $InformationPreference = 'Continue'
+        $result = Install-WhiskeyPowerShellModule -Name 'Zip' -Version '0.0.1' #-ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
         $Global:Error | Where-Object { $_ -match 'failed to find' } | Should -Not -BeNullOrEmpty
@@ -204,7 +205,7 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     It 'should still install the module' {
         Init
         $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Zip' -f $PSModulesDirectoryName)
-        New-Item -Path $moduleRootDir -ItemType Directory | Write-Debug
+        New-Item -Path $moduleRootDir -ItemType Directory | Write-WhiskeyDebug
         Invoke-PowershellInstall -ForModule 'Zip' -Version $latestZip.Version
     }
 }

@@ -1,7 +1,7 @@
 
 function Set-WhiskeyVariableFromXml
 {
-    [Whiskey.Task("SetVariableFromXml")]
+    [Whiskey.Task('SetVariableFromXml')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

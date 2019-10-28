@@ -2,7 +2,7 @@
 
 function Publish-WhiskeyProGetAsset
 {
-    [Whiskey.Task("PublishProGetAsset")]
+    [Whiskey.Task('PublishProGetAsset')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     [CmdletBinding()]
     param(

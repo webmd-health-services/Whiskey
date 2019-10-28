@@ -51,7 +51,7 @@ function Install-WhiskeyDotNetTool
     $sdkVersion = $null
     if ($Version)
     {
-        Write-Verbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in whiskey.yml' -f $MyInvocation.MyCommand,$Version)
+        Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in whiskey.yml' -f $MyInvocation.MyCommand,$Version)
         $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
     }
     elseif (Test-Path -Path $globalJsonPath -PathType Leaf)
@@ -62,7 +62,7 @@ function Install-WhiskeyDotNetTool
         }
         catch
         {
-            Write-Error -Message ('global.json file ''{0}'' contains invalid JSON.' -f $globalJsonPath)
+            Write-WhiskeyError -Message ('global.json file ''{0}'' contains invalid JSON.' -f $globalJsonPath)
             return
         }
 
@@ -72,14 +72,14 @@ function Install-WhiskeyDotNetTool
         
         if ($globalJsonVersion)
         {
-            Write-Verbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in ''{2}''' -f $MyInvocation.MyCommand,$globalJsonVersion,$globalJsonPath)
+            Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in ''{2}''' -f $MyInvocation.MyCommand,$globalJsonVersion,$globalJsonPath)
             $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion
         }
     }
 
     if (-not $sdkVersion)
     {
-        Write-Verbose -Message ('[{0}] No specific .NET Core SDK version found in whiskey.yml or global.json. Using latest LTS version.' -f $MyInvocation.MyCommand)
+        Write-WhiskeyVerbose -Message ('[{0}] No specific .NET Core SDK version found in whiskey.yml or global.json. Using latest LTS version.' -f $MyInvocation.MyCommand)
         $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
     }
 

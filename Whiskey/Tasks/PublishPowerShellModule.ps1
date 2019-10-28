@@ -1,7 +1,7 @@
 
 function Publish-WhiskeyPowerShellModule
 {
-    [Whiskey.Task("PublishPowerShellModule")]
+    [Whiskey.Task('PublishPowerShellModule')]
     # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
     # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
     # * Whiskey\Functions\Resolve-WhiskeyPowerShellModule.ps1

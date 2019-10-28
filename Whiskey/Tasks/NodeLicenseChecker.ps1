@@ -20,11 +20,11 @@ function Invoke-WhiskeyNodeLicenseChecker
 
     $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
 
-    Write-WhiskeyTiming -Message ('Generating license report')
+    Write-WhiskeyDebug -Context $TaskContext -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
         & $nodePath $licenseCheckerPath '--json'
     }
-    Write-WhiskeyTiming -Message ('COMPLETE')
+    Write-WhiskeyDebug -Context $TaskContext -Message ('COMPLETE')
 
     $report = Invoke-Command -NoNewScope -ScriptBlock {
         ($reportJson -join [Environment]::NewLine) | ConvertFrom-Json
@@ -35,7 +35,7 @@ function Invoke-WhiskeyNodeLicenseChecker
         return
     }
 
-    Write-WhiskeyTiming -Message 'Converting license report.'
+    Write-WhiskeyDebug -Context $TaskContext -Message 'Converting license report.'
     # The default license checker report has a crazy format. It is an object with properties for each module.
     # Let's transform it to a more sane format: an array of objects.
     [Object[]]$newReport = 
@@ -50,5 +50,5 @@ function Invoke-WhiskeyNodeLicenseChecker
     $licensePath = 'node-license-checker-report.json'
     $licensePath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath $licensePath
     ConvertTo-Json -InputObject $newReport -Depth 100 | Set-Content -Path $licensePath
-    Write-WhiskeyTiming -Message ('COMPLETE')
+    Write-WhiskeyDebug -Context $TaskContext -Message ('COMPLETE')
 }

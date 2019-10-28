@@ -54,7 +54,7 @@ function Resolve-WhiskeyTaskPath
         {
             if( $Force )
             {
-                New-Item -Path $Path -ItemType $PathType -Force | Out-String | Write-Debug
+                New-Item -Path $Path -ItemType $PathType -Force | Out-String | Write-WhiskeyDebug -Context $TaskContext
             }
             else
             {
@@ -68,11 +68,11 @@ function Resolve-WhiskeyTaskPath
 
         $message = 'Resolve {0} ->' -f $originalPath
         $prefix = ' ' * ($message.Length - 3)
-        Write-Debug -Message $message
+        Write-WhiskeyDebug -Context $TaskContext -Message $message
         Resolve-Path -Path $Path | 
             Select-Object -ExpandProperty 'ProviderPath' |
             ForEach-Object { 
-                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
+                Write-WhiskeyDebug -Context $TaskContext -Message ('{0} -> {1}' -f $prefix,$_)
                 $_
             }
     }

@@ -3,10 +3,11 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+Import-WhiskeyTestTaskModule
+
 [Whiskey.Context]$context = $null
-$global:taskCalled = $false
-$global:taskParameters = $null
 $fsCaseSensitive = $false
+$testRoot = $null
 
 function GivenDirectory
 {
@@ -14,7 +15,7 @@ function GivenDirectory
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Name) -ItemType 'Directory'
+    New-Item -Path (Join-Path -Path $testRoot -ChildPath $Name) -ItemType 'Directory'
 }
 
 function GivenFile
@@ -25,7 +26,7 @@ function GivenFile
 
     if( -not [IO.Path]::IsPathRooted($Name) )
     {
-        $Name = Join-Path -Path $TestDrive.FullName -ChildPath $Name
+        $Name = Join-Path -Path $testRoot -ChildPath $Name
     }
     New-Item -Path $Name -ItemType 'File' -Force
 }
@@ -33,20 +34,9 @@ function GivenFile
 function Init
 {
     $script:context = $null
-    $global:taskCalled = $false
-    $global:taskParameters = $null
     $script:fsCaseSensitive = -not (Test-Path -Path ($PSScriptRoot.ToUpperInvariant()))
-}
-
-function Remove-GlobalTestItem
-{
-    foreach( $path in @( 'function:Task', 'variable:taskCalled', 'variable:taskParameters' ) )
-    {
-        if( (Test-Path -Path $path) )
-        {
-            Remove-Item -Path $path
-        }
-    }
+    $script:testRoot = New-WhiskeyTestRoot
+    Clear-LastTaskBoundParameter
 }
 
 function ThenPipelineSucceeded
@@ -60,8 +50,10 @@ function ThenTaskCalled
     param(
         [hashtable]$WithParameter
     )
-    $taskCalled | should -BeTrue
-    $taskParameters | Should -Not -BeNullOrEmpty
+
+    $taskParameters = Get-LastTaskBoundParameter
+
+    $null -eq $taskParameters | Should -BeFalse
 
     if( $WithParameter )
     {
@@ -75,8 +67,8 @@ function ThenTaskCalled
 
 function ThenTaskNotCalled
 {
-    $taskCalled | Should -BeFalse
-    $taskParameters | Should -BeNullOrEmpty
+    $taskParameters = Get-LastTaskBoundParameter
+    $null -eq $taskParameters | Should -BeTrue
 }
 
 function ThenThrewException
@@ -97,15 +89,10 @@ function WhenRunningTask
 
         [hashtable]$Parameter,
 
-        [String]$BuildRoot
+        [String]$BuildRoot = $testRoot
     )
 
-    $optionalParams = @{}
-    if( $BuildRoot )
-    {
-        $optionalParams['ForBuildRoot'] = $BuildRoot
-    }
-    $script:context = New-WhiskeyTestContext -ForDeveloper @optionalParams
+    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot
     $context.PipelineName = 'Build'
     $context.TaskName = $null
     $context.TaskIndex = 1
@@ -125,18 +112,8 @@ function WhenRunningTask
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path') {
     It 'should resolve the parameter to a full path' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'whiskey.yml' } 
+        WhenRunningTask 'ValidateOptionalPathTask' -Parameter @{ 'Path' = 'whiskey.yml' } 
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameter @{ 'Path' = $context.ConfigurationPath.FullName }
     }
@@ -144,18 +121,8 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path')
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path but it doesn''t exist') {
     It 'should return a full path' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'somefile.txt' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateOptionalPathTask' -Parameter @{ 'Path' = 'somefile.txt' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException 'does\ not\ exist'
     }
@@ -163,21 +130,12 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path b
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path with wildcards') {
     It 'should resolve path to actual paths' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String[]]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml' } 
+        WhenRunningTask 'ValidateOptionalPathsTask' -Parameter @{ 'Path' = '*.yml' } 
         ThenPipelineSucceeded
         ThenTaskCalled
+        $taskParameters = Get-LastTaskBoundParameter
         $taskParameters['Path'] | Should -HaveCount 2
         $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml')
         $taskParameters['Path'] | Should -Contain $context.ConfigurationPath.FullName
@@ -186,19 +144,9 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path with wildca
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path that the user wants resolved with a wildcard but doesn''t exist') {
     It 'should fail' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String[]]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.fubar' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateOptionalPathsTask' -Parameter @{ 'Path' = '*.fubar' } -ErrorAction SilentlyContinue
         ThenThrewException 'does\ not\ exist'
         ThenTaskNotCalled
     }
@@ -206,20 +154,10 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path that the us
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path parameter wants to be resolved but parameter type isn''t a string array') {
     It 'should fail' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.txt' 
         GivenFile 'xyz.txt' 
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.txt' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateOptionalPathTask' -Parameter @{ 'Path' = '*.txt' } -ErrorAction SilentlyContinue
         ThenThrewException -Pattern 'requires\ a\ single\ path'
         ThenTaskNotCalled
     }
@@ -227,38 +165,18 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path parameter wants to be reso
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file') {
     It ('should pass full path to file') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml' }
+        WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' }
         ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $context.BuildRoot -ChildPath 'abc.yml') }
     }
 }
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file but it''s a directory') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenDirectory 'abc.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException 'should\ be\ to\ a\ file'
     }
@@ -266,19 +184,9 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file but it''s
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a directory but it''s a file') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryDirectoryTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException 'should\ be\ to\ a\ directory'
     }
@@ -286,20 +194,10 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a directory but 
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when all paths should be files but one is a directory') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml'
         GivenDirectory 'def.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException 'should\ be\ to\ a\ file'
     }
@@ -307,37 +205,17 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when all paths should be files but o
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when an optional path that doesn''t exist should be a specific type') {
     It ('should pass nothing') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ }
+        WhenRunningTask 'ValidateOptionalFileTask' -Parameter @{ }
         ThenTaskCalled -WithParameter @{ }
     }
 }
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path is mandatory and missing') {
     It 'should fail' {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory)]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml' 
-        WhenRunningTask 'Task' -Parameter @{ } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryPathTask' -Parameter @{ } -ErrorAction SilentlyContinue
         ThenThrewException -Pattern 'is\ mandatory'
         ThenTaskNotCalled
     }
@@ -345,38 +223,17 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is mandatory and missing')
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root and can be') {
     It ('should succeed') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,AllowOutsideBuildRoot)]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '..\YOLO.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $TestDrive.FullName -Childpath '..\YOLO.yml'))  }
+        WhenRunningTask 'ValidateMandatoryNonexistentOutsideBuildRootFileTask' -Parameter @{ 'Path' = '..\YOLO.yml' }
+        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath '..\YOLO.yml'))  }
         ThenPipelineSucceeded
     }
 }
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root and should not be') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent)]
-                [String]$Path
-                
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '../YOLO.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = '../YOLO.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException 'outside\ the\ build\ root'
     }
@@ -384,38 +241,18 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root a
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does') {
     It ('should pass full path to file') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $TestDrive.FullName -Childpath 'abc.yml' ) }
+        WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $testRoot -Childpath 'abc.yml' ) }
         ThenPipelineSucceeded
     }
 }
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does not') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
         ThenThrewException -Pattern 'does\ not\ exist'
     }
@@ -423,37 +260,17 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does not') 
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path is absolute') {
     It ('should succeed') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $TestDrive.FullName -Childpath 'abc.yml' )) }
-        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $TestDrive.FullName -Childpath 'abc.yml' )) }
+        WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath 'abc.yml' )) }
+        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath 'abc.yml' )) }
         ThenPipelineSucceeded
     }
 }
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path doesn''t exist but has a wildcard') {
     It ('shouldn''t pass anything') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'packages\tool\*.yolo' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = 'packages\tool\*.yolo' } -ErrorAction SilentlyContinue
         if ($PSVersionTable.PSVersion.Major -lt 6)
         {            
             ThenTaskNotCalled
@@ -469,20 +286,10 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path doesn''t exist but has a w
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside build root') {
     It ('should fail') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,PathType='File')]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        WhenRunningTask -Name 'Task' `
-                        -Parameter @{ 'Path' = ('..\' + (Split-Path -Path $TestDrive.FullName -Leaf) + '!\abc.yml') } `
-                        -BuildRoot ($TestDrive.FullName + '///') `
+        WhenRunningTask -Name 'ValidateMandatoryNonexistentFileTask' `
+                        -Parameter @{ 'Path' = ('..\' + (Split-Path -Path $testRoot -Leaf) + '!\abc.yml') } `
+                        -BuildRoot ($testRoot + '///') `
                         -ErrorAction SilentlyContinue
         ThenTaskNotCalled 
         ThenThrewException -Pattern 'outside\ the\ build\ root'
@@ -491,24 +298,16 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside build root') {
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when multiple paths contain wildcards') {
     It ('should resolve wildcards to existing paths') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath()]
-                [String[]]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml' 
         GivenFile 'xyz.yml' 
         GivenFile 'trolololo.txt'
         GivenFile 'yayaya.txt'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = '*.yml', '*.txt' } 
+        WhenRunningTask 'ValidateOptionalPathsTask' -Parameter @{ 'Path' = '*.yml', '*.txt' } 
         ThenPipelineSucceeded
         ThenTaskCalled
+        $taskParameters = Get-LastTaskBoundParameter
+        $taskParameters | Should -Not -BeNullOrEmpty
         $taskParameters['Path'] | Should -HaveCount 5
         $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml' -Resolve)
         $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'xyz.yml' -Resolve)
@@ -521,22 +320,14 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when multiple paths contain wildcard
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths') {
     It ('should succeed') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-                [String[]]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
         GivenFile 'abc.yml'
         GivenFile 'xyz.yml'
         GivenFile 'hjk.yml'
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = 'abc.yml', 'xyz.yml', 'hjk.yml' } -ErrorAction SilentlyContinue
+        WhenRunningTask 'ValidateMandatoryFilesTask' -Parameter @{ 'Path' = 'abc.yml', 'xyz.yml', 'hjk.yml' } -ErrorAction SilentlyContinue
         ThenTaskCalled
+        $taskParameters = Get-LastTaskBoundParameter
+        $taskParameters | Should -Not -BeNullOrEmpty
         $taskParameters['Path'] | Should -HaveCount 3
         $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml' -Resolve)
         $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'xyz.yml' -Resolve)
@@ -547,19 +338,9 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths') {
 
 Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to try to reach outside its build root') {
     It ('should fail on case-sensitive platforms and succeed on case-insensitive platforms') {
-        function global:Task
-        {
-            [Whiskey.Task('Task')]
-            param(
-                [Whiskey.Tasks.ValidatePath(AllowNonexistent)]
-                [String]$Path
-            )
-            $global:taskCalled = $true
-            $global:taskParameters = $PSBoundParameters
-        }
         Init
-        $tempDir = $TestDrive.FullName | Split-Path -Parent
-        $buildDirName = $TestDrive.FullName | Split-Path -Leaf
+        $tempDir = $testRoot | Split-Path -Parent
+        $buildDirName = $testRoot | Split-Path -Leaf
         $attackersBuildDirName = $buildDirName.ToUpper()
         $attackersBuildDir = Join-Path -Path $tempDir -ChildPath $attackersBuildDirName
         $attackersFile = Join-Path -Path $attackersBuildDir -ChildPath 'abc.yml'
@@ -569,7 +350,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to t
         {
             $optionalParam['ErrorAction'] = 'SilentlyContinue'
         }
-        WhenRunningTask 'Task' -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } @optionalParam
+        WhenRunningTask 'ValidateOptionalNonexistentPathTask' -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } @optionalParam
         if( $fsCaseSensitive )
         {
             ThenTaskNotCalled 
@@ -577,7 +358,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to t
         }
         else
         {
-            ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path ($TestDrive.FullName) -ChildPath 'abc.yml')}
+            ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $testRoot -ChildPath 'abc.yml')}
             ThenPipelineSucceeded
         }
     }

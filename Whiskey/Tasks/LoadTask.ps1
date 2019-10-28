@@ -1,7 +1,7 @@
 
 function Import-WhiskeyTask
 {
-    [Whiskey.Task("LoadTask")]
+    [Whiskey.Task('LoadTask')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -38,7 +38,7 @@ function Import-WhiskeyTask
 
 * the file contains a function
 * the function is scoped correctly (e.g. `function script:MyTask`)
-* the function has a `[Whiskey.Task("MyTask")]` attribute that declares the task''s name
+* the function has a `[Whiskey.Task(''MyTask'')]` attribute that declares the task''s name
 * a task with the same name hasn''t already been loaded
 
 See about_Whiskey_Writing_Tasks for more information.' -f $path)
@@ -48,7 +48,7 @@ See about_Whiskey_Writing_Tasks for more information.' -f $path)
         Write-WhiskeyInfo -Context $TaskContext -Message ($path)
         foreach( $task in $newTasks )
         {
-            Write-WhiskeyInfo -Context $TaskContext -Message $task.Name -Indent 1
+            Write-WhiskeyInfo -Context $TaskContext -Message ('  {0}' -f $task.Name)
         }
         $TaskContext.TaskPaths.Add((Get-Item -Path $path))
     }

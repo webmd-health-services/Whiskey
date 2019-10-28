@@ -1,8 +1,10 @@
-#Requires -Version 4
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 [Whiskey.Context]$context = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
@@ -24,6 +26,7 @@ function Init
     $script:buildPipelineName = 'Build'
     $script:publishPipelineFails = $false
     $script:publishPipelineName = 'Publish'
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function Assert-ContextPassedTo
@@ -41,14 +44,14 @@ function Assert-ContextPassedTo
         }
 
         #$DebugPreference = 'Continue'
-        Write-Debug ('-' * 80)
-        Write-Debug 'TaskContext:'
-        $TaskContext | Out-String | Write-Debug
-        Write-Debug 'Context:'
-        $Context | Out-String | Write-Debug
-        Write-Debug 'Expected Context:'
-        $expectedContext | Out-String | Write-Debug
-        Write-Debug ('-' * 80)
+        Write-WhiskeyDebug ('-' * 80)
+        Write-WhiskeyDebug 'TaskContext:'
+        $TaskContext | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug 'Context:'
+        $Context | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug 'Expected Context:'
+        $expectedContext | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug ('-' * 80)
         [Object]::ReferenceEquals($Context,$expectedContext) }
 }
 
@@ -73,7 +76,7 @@ function GivenBuildPipelineName
 
 function GivenPreviousBuildOutput
 {
-    New-Item -Path (Join-Path -Path $TestDrive.FullName -ChildPath '.output\file.txt') -ItemType 'File' -Force
+    New-Item -Path (Join-Path -Path $testRoot -ChildPath '.output\file.txt') -ItemType 'File' -Force
 }
 
 function GivenNotPublishing
@@ -128,6 +131,15 @@ function GivenThereArePublishingTasks
     $script:publishingTasks = @( @{ 'TaskOne' = @{ } } )
 }
 
+function GivenWhiskeyYml
+{
+    param(
+        [Parameter(Mandatory)]
+        [String]$Content
+    )
+
+    $Content | Set-Content -Path (Join-Path $testRoot -ChildPath 'whiskey.yml')
+}
 function ThenBuildOutputRemoved
 {
     It ('should remove .output directory') {
@@ -170,14 +182,14 @@ function ThenBuildPipelineRan
 function ThenBuildOutputNotRemoved
 {
     It ('should not remove .output directory') {
-        Join-Path -Path $TestDrive.FullName -ChildPath '.output\file.txt' | Should -Exist
+        Join-Path -Path $testRoot -ChildPath '.output\file.txt' | Should -Exist
     }
 }
 
 function ThenBuildOutputRemoved
 {
     It ('should remove .output directory') {
-        Join-Path -Path $TestDrive.FullName -ChildPath '.output' | Should -Not -Exist
+        Join-Path -Path $testRoot -ChildPath '.output' | Should -Not -Exist
     }
 }
 
@@ -239,55 +251,75 @@ function WhenRunningBuild
 
         [switch]$WithCleanSwitch,
 
-        [switch]$WithInitializeSwitch
+        [switch]$WithInitializeSwitch,
+
+        [hashtable]$WithParameter = @{}
     )
 
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
 
-    Mock -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
-        #`$DebugPreference = 'Continue'
-
-        `$buildPipelineFails = `$$($buildPipelineFails)
-        `$publishPipelineFails = `$$($publishPipelineFails)
-
-        Write-Debug ('Name  {0}' -f `$Name)
-        Write-Debug `$buildPipelineFails
-        Write-Debug `$publishPipelineFails
-
-        if( `$Name -eq "$buildPipelineName" -and `$buildPipelineFails )
+    $whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
+    if( (Test-Path -Path $whiskeyYmlPath) )
+    {
+        $forParam = @{}
+        if( $runByDeveloper )
         {
-            throw ('Build pipeline fails!')
+            $forParam['ForDeveloper'] = $true
         }
-
-        if( `$Name -eq "$publishPipelineName" -and `$publishPipelineFails )
+        else
         {
-            throw ('Publish pipeline fails!')
+            $forParam['ForBuildServer'] = $true
         }
+        $script:context = New-WhiskeyTestContext -ForBuildRoot $testRoot `
+                                                 -ConfigurationPath $whiskeyYmlPath `
+                                                 @forParam
+    }
+    else
+    {
+        Mock -CommandName 'Invoke-WhiskeyPipeline' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
+            #`$DebugPreference = 'Continue'
+
+            `$buildPipelineFails = `$$($buildPipelineFails)
+            `$publishPipelineFails = `$$($publishPipelineFails)
+
+            Write-WhiskeyDebug ('Name  {0}' -f `$Name)
+            Write-WhiskeyDebug `$buildPipelineFails
+            Write-WhiskeyDebug `$publishPipelineFails
+
+            if( `$Name -eq "$buildPipelineName" -and `$buildPipelineFails )
+            {
+                throw ('Build pipeline fails!')
+            }
+
+            if( `$Name -eq "$publishPipelineName" -and `$publishPipelineFails )
+            {
+                throw ('Publish pipeline fails!')
+            }
 "@))
+        $config = @{
+            $buildPipelineName = @();
+        }
 
-    $config = @{
-        $buildPipelineName = @();
-    }
+        if( $publishingTasks )
+        {
+            $config[$publishPipelineName] = $publishingTasks
+        }
 
-    if( $publishingTasks )
-    {
-        $config[$publishPipelineName] = $publishingTasks
+        $script:context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
+        $context.BuildRoot = $testRoot
+        $context.Configuration = $config
+        $context.OutputDirectory = (Join-Path -Path $testRoot -ChildPath '.output');
+        if( $runByDeveloper )
+        {
+            $context.RunBy = [Whiskey.RunBy]::Developer
+        }
+        if( $runByBuildServer )
+        {
+            $context.RunBy = [Whiskey.RunBy]::BuildServer
+        }
+        $context.Publish = $publish;
+        $context.RunMode = [Whiskey.RunMode]::Build
     }
-
-    $script:context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
-    $context.BuildRoot = $TestDrive.FullName;
-    $context.Configuration = $config;
-    $context.OutputDirectory = (Join-Path -Path $TestDrive.FullName -ChildPath '.output');
-    if( $runByDeveloper )
-    {
-        $context.RunBy = [Whiskey.RunBy]::Developer
-    }
-    if( $runByBuildServer )
-    {
-        $context.RunBy = [Whiskey.RunBy]::BuildServer
-    }
-    $context.Publish = $publish;
-    $context.RunMode = [Whiskey.RunMode]::build
 
     $Global:Error.Clear()
     $script:threwException = $false
@@ -312,7 +344,7 @@ function WhenRunningBuild
         Start-Sleep -Milliseconds 1
         $context.StartedAt = [DateTime]::MinValue
         $modulePath = $env:PSModulePath
-        Invoke-WhiskeyBuild -Context $context @optionalParams
+        Invoke-WhiskeyBuild -Context $context @optionalParams @WithParameter
         It ('should set build start time') {
             $context.StartedAt | Should -BeGreaterThan $startedAt
         }
@@ -477,4 +509,37 @@ Describe 'Invoke-WhiskeyBuild.when running legacy pipelines' {
     ThenBuildPipelineRan
     ThenPublishPipelineRan
     ThenBuildStatusMarkedAsCompleted
+}
+
+Describe 'Invoke-WhiskeyBuild.when no InformationAction given' {
+    Init
+    GivenRunByDeveloper
+    GivenWhiskeyYml @'
+Build:
+- Log:
+    Message: InformationPreference enabled!
+'@
+    $InformationPreference = 'Ignore'
+    $infos = $null
+    WhenRunningBuild -InformationVariable 'infos'
+    It 'should show information messages' {
+        $infos | Where-Object { $_ -match 'InformationPreference\ enabled!' } | Should -Not -BeNullOrEmpty
+    }
+}
+
+
+Describe 'Invoke-WhiskeyBuild.when user wants to hide information output' {
+    Init
+    GivenRunByDeveloper
+    GivenWhiskeyYml @'
+Build:
+- Log:
+    Message: InformationPreference enabled!
+'@
+    $InformationPreference = 'Continue'
+    $infos = $null
+    WhenRunningBuild -InformationVariable 'infos' -WithParameter @{ 'InformationAction' = 'Ignore' }
+    It 'should respect user''s information action' {
+        $infos | Where-Object { $_ -match 'InformationPreference\ enabled!' } | Should -BeNullOrEmpty
+    }
 }

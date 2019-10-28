@@ -95,14 +95,14 @@ function Invoke-WhiskeyParallelTask
                     # Load third-party tasks.
                     foreach( $info in $context.TaskPaths )
                     {
-                        Write-Verbose ('Loading tasks from "{0}".' -f $info.FullName)
+                        Write-WhiskeyVerbose -Context $context -Message ('Loading tasks from "{0}".' -f $info.FullName)
                         . $info.FullName
                     }
 
                     foreach( $task in $using:tasks )
                     {
-                        Write-Debug -Message ($task.Name)
-                        $task.Parameter | ConvertTo-Json -Depth 50 | Write-Debug
+                        Write-WhiskeyDebug -Context $context -Message ($task.Name)
+                        $task.Parameter | ConvertTo-Json -Depth 50 | Write-WhiskeyDebug -Context $context
                         Invoke-WhiskeyTask -TaskContext $context -Name $task.Name -Parameter $task.Parameter
                     }
                 }

@@ -11,6 +11,10 @@ function Unregister-WhiskeyEvent
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        # The context where the event should fire.
+        [Whiskey.Context]$Context,
+	
+        [Parameter(Mandatory)]
         # The name of the command to run during the event.
         [String]$CommandName,
 
@@ -31,6 +35,8 @@ function Unregister-WhiskeyEvent
         $eventType = $Event -replace 'Task$',''
         $eventName = '{0}{1}Task' -f $eventType,$TaskName
     }
+
+    $events = $Context.Events
 
     if( -not $events[$eventName] )
     {

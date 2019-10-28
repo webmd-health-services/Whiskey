@@ -2,7 +2,7 @@
 function Invoke-WhiskeyDotNet
 {
     [CmdletBinding()]
-    [Whiskey.Task("DotNet")]
+    [Whiskey.Task('DotNet')]
     [Whiskey.RequiresTool('DotNet',PathParameterName='DotNetPath',VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory)]

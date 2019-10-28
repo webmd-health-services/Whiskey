@@ -80,7 +80,7 @@ function ConvertTo-WhiskeySemanticVersion
         }
         else
         {
-            Write-Error -Message ('Unable to convert ''{0}'' to a semantic version. We tried parsing it as a version, date, double, and integer. Sorry. But we''re giving up.' -f $PSBoundParameters['InputObject']) -ErrorAction $ErrorActionPreference
+            Write-WhiskeyError -Message ('Unable to convert ''{0}'' to a semantic version. We tried parsing it as a version, date, double, and integer. Sorry. But we''re giving up.' -f $PSBoundParameters['InputObject'])
             return
         }
 
@@ -90,7 +90,7 @@ function ConvertTo-WhiskeySemanticVersion
             return $semVersion
         }
 
-        Write-Error -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName)
     }
 }
 
