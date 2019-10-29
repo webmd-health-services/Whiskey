@@ -26,12 +26,11 @@ function ConvertFrom-WhiskeyYamlScalar
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [Parameter(Mandatory,ValueFromPipeline)]
         [AllowEmptyString()]
         [AllowNull()]
-        [string]
         # The object to convert.
-        $InputObject
+        [String]$InputObject
     )
 
     process
@@ -39,7 +38,7 @@ function ConvertFrom-WhiskeyYamlScalar
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        if( [string]::IsNullOrEmpty($InputObject)  -or $InputObject -match '^(~|null)' )
+        if( [String]::IsNullOrEmpty($InputObject)  -or $InputObject -match '^(~|null)' )
         {
             return $null
         }
@@ -99,23 +98,23 @@ function ConvertFrom-WhiskeyYamlScalar
         if( [Text.RegularExpressions.Regex]::IsMatch($InputObject, $regex, [Text.RegularExpressions.RegexOptions]::IgnorePatternWhitespace) ) 
         {
             $value = $InputObject -replace '_',''
-            [double]$double = 0.0
+            [Double]$double = 0.0
             if( $value -eq '.NaN' )
             {
-                return [double]::NaN
+                return [Double]::NaN
             }
 
             if( $value -match '-\.inf' )
             {
-                return [double]::NegativeInfinity
+                return [Double]::NegativeInfinity
             }
 
             if( $value -match '\+?.inf' )
             {
-                return [double]::PositiveInfinity
+                return [Double]::PositiveInfinity
             }
 
-            if( [double]::TryParse($value,[ref]$double) )
+            if( [Double]::TryParse($value,[ref]$double) )
             {
                 return $double
             }
@@ -131,7 +130,7 @@ function ConvertFrom-WhiskeyYamlScalar
             }
         }
 
-        Write-Error -Message ('Unable to convert scalar value ''{0}''. See http://yaml.org/type/ for documentation on YAML''s scalars.' -f $InputObject) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Unable to convert scalar value ''{0}''. See http://yaml.org/type/ for documentation on YAML''s scalars.' -f $InputObject)
     }
 
 }

@@ -11,7 +11,7 @@ $latestNUnit2Version = '2.6.4'
 function Assert-NUnitTestsRun
 {
     param(
-        [string]$ReportPath
+        [String]$ReportPath
     )
     $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml'
     $reports | Should -Not -BeNullOrEmpty
@@ -22,7 +22,7 @@ function Assert-NUnitTestsRun
 function Assert-NUnitTestsNotRun
 {
     param(
-        [string]$ReportPath
+        [String]$ReportPath
     )
     $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
 }
@@ -54,13 +54,14 @@ function Invoke-NUnitTask
 
     [CmdletBinding()]
     param(
-        [Switch]$ThatFails,
 
-        [Switch]$WithNoPath,
+        [switch]$ThatFails,
 
-        [Switch]$WithInvalidPath,
+        [switch]$WithNoPath,
 
-        [Switch]$WhenJoinPathResolveFails,
+        [switch]$WithInvalidPath,
+
+        [switch]$WhenJoinPathResolveFails,
 
         [switch]$WithFailingTests,
 
@@ -68,15 +69,15 @@ function Invoke-NUnitTask
 
         [String]$WithError,
 
-        [Switch]$WhenRunningClean,
+        [switch]$WhenRunningClean,
 
-        [Switch]$WhenRunningInitialize,
+        [switch]$WhenRunningInitialize,
 
-        [Switch]$WithDisabledCodeCoverage,
+        [switch]$WithDisabledCodeCoverage,
 
         [String[]]$CoverageFilter,
 
-        [ScriptBlock]$MockInstallWhiskeyNuGetPackageWith
+        [scriptblock]$MockInstallWhiskeyToolWith
     )
 
     process
@@ -325,7 +326,7 @@ function WhenRunningTask
     param(
         [hashtable]$WithParameters = @{ },
 
-        [Switch]$WhenRunningInitialize
+        [switch]$WhenRunningInitialize
     )
 
     $Global:Error.Clear()
@@ -375,7 +376,8 @@ function WhenRunningTask
         {
             $WithParameters['Version'] = $nunitVersion
         }
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' | ForEach-Object { Write-Verbose -Message $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' 
+        $output | Write-WhiskeyVerbose -Context $context
         $script:threwException = $false
         $script:thrownError = $null
     }
@@ -390,7 +392,7 @@ function Get-TestCaseResult
 {
     [OutputType([System.Xml.XmlElement])]
     param(
-        [string]$TestName
+        [String]$TestName
     )
 
     Get-ChildItem -Path $context.OutputDirectory -Filter 'nunit2*.xml' |
@@ -423,8 +425,7 @@ function ThenOutput
 function ThenTestsNotRun
 {
     param(
-        [string[]]
-        $TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -436,7 +437,7 @@ function ThenTestsNotRun
 function ThenTestsPassed
 {
     param(
-        [string[]]$TestName
+        [String[]]$TestName
     )
 
     foreach( $name in $TestName )
@@ -455,7 +456,7 @@ function ThenItShouldNotRunTests {
 
 function ThenItInstalled {
     param (
-        [string]$NuGetPackageName,
+        [String]$Name,
 
         [Version]$Version
     )

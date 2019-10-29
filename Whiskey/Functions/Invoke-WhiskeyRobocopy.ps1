@@ -3,22 +3,17 @@ function Invoke-WhiskeyRobocopy
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Source,
+        [Parameter(Mandatory)]
+        [String]$Source,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $Destination,
+        [Parameter(Mandatory)]
+        [String]$Destination,
 
-        [string[]]
-        $WhiteList,
+        [String[]]$WhiteList,
 
-        [string[]]
-        $Exclude,
+        [String[]]$Exclude,
 
-        [string]
-        $LogPath
+        [String]$LogPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -34,7 +29,7 @@ function Invoke-WhiskeyRobocopy
     }
 
     $excludeParam = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-    Write-WhiskeyTiming ('robocopy  BEGIN  {0} -> {1}' -f $Source,$Destination)
+    Write-WhiskeyDebug ('robocopy  BEGIN  {0} -> {1}' -f $Source,$Destination)
     robocopy $Source $Destination '/PURGE' '/S' '/NP' '/R:0' '/NDL' '/NFL' '/NS' ('/MT:{0}' -f $numRobocopyThreads) $WhiteList $excludeParam $logParam
-    Write-WhiskeyTiming ('robocopy  END')
+    Write-WhiskeyDebug ('robocopy  END')
 }

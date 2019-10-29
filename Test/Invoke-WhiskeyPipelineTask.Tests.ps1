@@ -38,7 +38,7 @@ function Init
 {
     $script:clean = $false
     $script:initialize = $false
-    $script:pipelines = New-Object 'Collections.Generic.List[string]'
+    $script:pipelines = New-Object 'Collections.Generic.List[String]'
     $script:threwException = $false
 
     $script:testRoot = New-WhiskeyTestRoot
@@ -48,16 +48,13 @@ function ThenPowershellModule
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Name,
+        [String]$Name,
 
         [Parameter(ParameterSetName='Cleaned')]
-        [switch]
-        $Cleaned,
+        [switch]$Cleaned,
 
         [Parameter(ParameterSetName='Installed')]
-        [switch]
-        $Installed
+        [switch]$Installed
     )
 
     $expectedName = $Name
@@ -92,8 +89,7 @@ function ThenPipelineRun
 {
     param(
         $Name,
-        [string]
-        $BecauseFileExists
+        [String]$BecauseFileExists
     )
 
     Join-Path -Path $testRoot -ChildPath $BecauseFileExists | Should -Exist

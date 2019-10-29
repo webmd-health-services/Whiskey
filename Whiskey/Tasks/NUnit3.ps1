@@ -10,10 +10,10 @@ function Invoke-WhiskeyNUnit3Task
     [Whiskey.RequiresTool('NuGet::OpenCover',PathParameterName='OpenCoverPath',VersionParameterName='OpenCoverVersion')]
     [Whiskey.RequiresTool('NuGet::ReportGenerator',PathParameterName='ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]$TaskParameter
     )
 

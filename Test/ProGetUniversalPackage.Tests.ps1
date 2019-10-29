@@ -34,8 +34,7 @@ function Get-PackageSize
 function GivenBuildVersion
 {
     param(
-        [SemVersion.SemanticVersion]
-        $Version
+        [SemVersion.SemanticVersion]$Version
     )
 
     $script:buildVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject'
@@ -57,8 +56,7 @@ function GivenPackageVersion
 function GivenManifestProperties
 {
     param(
-        [hashtable]
-        $Content
+        [hashtable]$Content
     )
     $script:manifestProperties = $Content
 }
@@ -85,8 +83,7 @@ function Reset
 function ThenTaskFails
 {
     Param(
-        [String]
-        $error
+        [String]$error
     )
 
     $Global:Error | Should -Match $error
@@ -111,17 +108,17 @@ function ThenVersionIs
     $versionJsonPath = Join-Path -Path $expandPath -ChildPath 'package\version.json'
 
     $versionJson = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
-    $versionJson.Version | Should -BeOfType ([string])
+    $versionJson.Version | Should -BeOfType ([String])
     $versionJson.Version | Should -Be $Version
-    $versionJson.PrereleaseMetadata | Should -BeOfType ([string])
+    $versionJson.PrereleaseMetadata | Should -BeOfType ([String])
     $versionJson.PrereleaseMetadata | Should -Be $PrereleaseMetadata
-    $versionJson.BuildMetadata | Should -BeOfType ([string])
+    $versionJson.BuildMetadata | Should -BeOfType ([String])
     $versionJson.BuildMetadata | Should -Be $BuildMetadata
-    $versionJson.SemVer2 | Should -BeOfType ([string])
+    $versionJson.SemVer2 | Should -BeOfType ([String])
     $versionJson.SemVer2 | Should -Be $SemVer2
-    $versionJson.SemVer1 | Should -BeOfType ([string])
+    $versionJson.SemVer1 | Should -BeOfType ([String])
     $versionJson.SemVer1 | Should -Be $SemVer1
-    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([string])
+    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([String])
     $versionJson.SemVer2NoBuildMetadata | Should -Be $SemVer2NoBuildMetadata
 }
 
@@ -129,43 +126,43 @@ function Assert-NewWhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     param(
-        [object[]]$ForPath,
+        [Object[]]$ForPath,
 
-        [string[]]$ThatIncludes,
+        [String[]]$ThatIncludes,
 
-        [string[]]$ThatExcludes,
+        [String[]]$ThatExcludes,
 
-        [string]$Name = $defaultPackageName,
+        [String]$Name = $defaultPackageName,
 
-        [string]$Description = $defaultDescription,
+        [String]$Description = $defaultDescription,
 
-        [string]$Version,
+        [String]$Version,
 
-        [string[]]$HasRootItems,
+        [String[]]$HasRootItems,
 
-        [string[]]$HasFiles,
+        [String[]]$HasFiles,
 
-        [string[]]$NotHasFiles,
+        [String[]]$NotHasFiles,
 
-        [string]$ShouldFailWithErrorMessage,
+        [String]$ShouldFailWithErrorMessage,
 
-        [Switch]$ShouldWriteNoErrors,
+        [switch]$ShouldWriteNoErrors,
 
-        [Switch]$ShouldReturnNothing,
+        [switch]$ShouldReturnNothing,
 
-        [string[]]$HasThirdPartyRootItem,
+        [String[]]$HasThirdPartyRootItem,
 
-        [object[]]$WithThirdPartyRootItem,
+        [Object[]]$WithThirdPartyRootItem,
 
-        [string[]]$HasThirdPartyFile,
+        [String[]]$HasThirdPartyFile,
 
-        [string]$FromSourceRoot,
+        [String]$FromSourceRoot,
 
-        [string[]]$MissingRootItems,
+        [String[]]$MissingRootItems,
 
-        [Switch]$WhenCleaning,
+        [switch]$WhenCleaning,
 
-        [Switch]$withInitialize
+        [switch]$withInitialize
     )
 
     if( -not $Version )
@@ -202,7 +199,7 @@ function Assert-NewWhiskeyProGetUniversalPackage
 
     $semVer2 = [SemVersion.SemanticVersion]$Version
     $taskContext.Version.SemVer2 = $semVer2
-    $taskContext.Version.Version = [version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
+    $taskContext.Version.Version = [Version]('{0}.{1}.{2}' -f $taskContext.Version.SemVer2.Major,$taskContext.Version.SemVer2.Minor,$taskContext.Version.SemVer2.Patch)
     $taskContext.Version.SemVer2NoBuildMetadata = [SemVersion.SemanticVersion]('{0}.{1}.{2}' -f $semVer2.Major,$semVer2.Minor,$semVer2.Patch)
     if( $taskContext.Version.SemVer2.Prerelease )
     {
@@ -300,17 +297,17 @@ function Assert-NewWhiskeyProGetUniversalPackage
     $versionJsonPath | Should -Exist
 
     $versionJson = Get-Content -Path $versionJsonPath -Raw | ConvertFrom-Json
-    $versionJson.Version | Should -BeOfType ([string])
+    $versionJson.Version | Should -BeOfType ([String])
     $versionJson.Version | Should -Be $taskContext.Version.Version.ToString()
-    $versionJson.PrereleaseMetadata | Should -BeOfType ([string])
+    $versionJson.PrereleaseMetadata | Should -BeOfType ([String])
     $versionJson.PrereleaseMetadata | Should -Be $taskContext.Version.SemVer2.Prerelease.ToString()
-    $versionJson.BuildMetadata | Should -BeOfType ([string])
+    $versionJson.BuildMetadata | Should -BeOfType ([String])
     $versionJson.BuildMetadata | Should -Be $taskContext.Version.SemVer2.Build.ToString()
-    $versionJson.SemVer2 | Should -BeOfType ([string])
+    $versionJson.SemVer2 | Should -BeOfType ([String])
     $versionJson.SemVer2 | Should -Be $taskContext.Version.SemVer2.ToString()
-    $versionJson.SemVer1 | Should -BeOfType ([string])
+    $versionJson.SemVer1 | Should -BeOfType ([String])
     $versionJson.SemVer1 | Should -Be $taskContext.Version.SemVer1.ToString()
-    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([string])
+    $versionJson.SemVer2NoBuildMetadata | Should -BeOfType ([String])
     $versionJson.SemVer2NoBuildMetadata | Should -Be $taskContext.Version.SemVer2NoBuildMetadata.ToString()
 
     if( $NotHasFiles )
@@ -345,29 +342,29 @@ function Assert-NewWhiskeyProGetUniversalPackage
 function Initialize-Test
 {
     param(
-        [string[]]$DirectoryName,
+        [String[]]$DirectoryName,
 
-        [string[]]$FileName,
+        [String[]]$FileName,
 
-        [string[]]$RootFileName,
+        [String[]]$RootFileName,
 
-        [Switch]$WhenUploadFails,
+        [switch]$WhenUploadFails,
 
-        [Switch]$OnFeatureBranch,
+        [switch]$OnFeatureBranch,
 
-        [Switch]$OnMasterBranch,
+        [switch]$OnMasterBranch,
 
-        [Switch]$OnReleaseBranch,
+        [switch]$OnReleaseBranch,
 
-        [Switch]$OnPermanentReleaseBranch,
+        [switch]$OnPermanentReleaseBranch,
 
-        [Switch]$OnDevelopBranch,
+        [switch]$OnDevelopBranch,
 
-        [Switch]$OnHotFixBranch,
+        [switch]$OnHotFixBranch,
 
-        [Switch]$OnBugFixBranch,
+        [switch]$OnBugFixBranch,
 
-        [string]$SourceRoot
+        [String]$SourceRoot
     )
 
     $repoRoot = Get-BuildRoot
@@ -419,8 +416,7 @@ function Get-BuildRoot
 function GivenARepositoryWithItems
 {
     param(
-        [string[]]
-        $Path,
+        [String[]]$Path,
 
         $ItemType = 'File'
     )
@@ -443,11 +439,9 @@ function GivenARepositoryWithItems
 function ThenPackageArchive
 {
     param(
-        [string]
-        $PackageName,
+        [String]$PackageName,
 
-        [string[]]
-        $ContainsPath
+        [String[]]$ContainsPath
     )
 
     $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath '.output'
@@ -474,8 +468,7 @@ function ThenPackageShouldInclude
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     $Path += @( 'version.json' )
@@ -490,8 +483,7 @@ function ThenPackageShouldInclude
 function ThenPackageShouldNotInclude
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     $packageRoot = Join-Path -Path $expandPath -ChildPath 'package'
@@ -505,43 +497,40 @@ function ThenPackageShouldNotInclude
 function ThenUpackMetadataIs
 {
     param(
-        [hashtable]
-        $ExpectedContent
+        [hashtable]$ExpectedContent
     )
 
     function Assert-HashTableEqual
     {
         param(
-            [hashtable]
-            $Reference,
+            [hashtable]$Reference,
 
-            [hashtable]
-            $Difference
+            [hashtable]$Difference
         )
 
         # $DebugPreference = 'Continue'
         foreach ($key in $Reference.Keys)
         {
-            Write-Debug $key
+            Write-WhiskeyDebug -Context $context $key
             if ($key -notin $Difference.Keys)
             {
-                Write-Debug -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
-                Write-Debug -Message ('Actual    {0}' -f $Difference.Keys)
+                Write-WhiskeyDebug -Context $context -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
+                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference.Keys)
                 return $false
             }
             elseif ($Reference[$key] | Get-Member -Name 'Keys')
             {
                 if (-not ($Difference[$key] | Get-Member -Name 'Keys') -or (-not (Assert-HashTableEqual -Reference $Reference[$key] -Difference $Difference[$key])))
                 {
-                    Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
-                    Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                    Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
+                    Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
                     return $false
                 }
             }
             elseif (Compare-Object -ReferenceObject $Reference[$key] -DifferenceObject $Difference[$key])
             {
-                Write-Debug -Message ('Expected  {0}' -f $Reference[$key])
-                Write-Debug -Message ('Actual    {0}' -f $Difference[$key])
+                Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
+                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
                 return $false
             }
         }
@@ -573,10 +562,10 @@ function ThenUpackMetadataIs
     $upackJson = Get-Content -Raw -Path (Join-Path -Path $expandPath -ChildPath 'upack.json' -Resolve) | ConvertFrom-Json
     $upackContent = ConvertTo-Hashtable -PSCustomObject $upackJson
 
-    Write-Debug 'Expected'
-    $ExpectedContent | ConvertTo-Json | Write-Debug
-    Write-Debug 'Actual'
-    $upackContent | ConvertTo-Json | Write-Debug
+    Write-WhiskeyDebug -Context $context 'Expected'
+    $ExpectedContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
+    Write-WhiskeyDebug -Context $context 'Actual'
+    $upackContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
     Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent | Should -BeTrue
 }
 
@@ -586,19 +575,16 @@ function ThenPackageShouldBeCompressed
         $PackageName = $defaultPackageName,
         $PackageVersion = $defaultVersion,
         [Parameter(Position=0)]
-        [string[]]
-        $Path,
+        [String[]]$Path,
 
-        [Int]
-        $GreaterThan,
+        [int]$GreaterThan,
 
-        [int]
-        $LessThanOrEqualTo
+        [int]$LessThanOrEqualTo
     )
 
     $packageSize = Get-PackageSize -PackageName $PackageName -PackageVersion $PackageVersion
-    $DebugPreference = 'Continue'
-    Write-Debug -Message ('Package size: {0}' -f $packageSize)
+    #$DebugPreference = 'Continue'
+    Write-WhiskeyDebug -Context $context -Message ('Package size: {0}' -f $packageSize)
     if( $GreaterThan )
     {
         $packageSize | Should -BeGreaterThan $GreaterThan
@@ -622,23 +608,19 @@ function WhenPackaging
         $WithDescription = $defaultDescription,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $Paths,
+        [Object[]]$Paths,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $WithWhitelist,
+        [Object[]]$WithWhitelist,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $ThatExcludes,
+        [Object[]]$ThatExcludes,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $FromSourceRoot,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [object[]]
-        $WithThirdPartyPath,
+        [Object[]]$WithThirdPartyPath,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
         $WithVersion = $defaultVersion,
@@ -650,8 +632,7 @@ function WhenPackaging
         $CompressionLevel,
 
         [Parameter(ParameterSetName='WithTaskParameter')]
-        [Switch]
-        $SkipExpand,
+        [switch]$SkipExpand,
 
         [Parameter(Mandatory,ParameterSetName='WithYaml')]
         $WithYaml

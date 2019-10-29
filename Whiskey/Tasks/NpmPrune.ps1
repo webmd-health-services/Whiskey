@@ -5,15 +5,13 @@ function Invoke-WhiskeyNpmPrune
     [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context the task is running under.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The parameters/configuration to use to run the task.
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

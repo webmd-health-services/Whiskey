@@ -34,8 +34,7 @@ function GivenNuGetPackageName
 function GivenNugetReturnsMultipleVersions
 {
     param(
-        [string[]]
-        $PackageVersions
+        [String[]]$PackageVersions
     )
 
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'list' } -MockWith { $PackageVersions }.GetNewClosure()

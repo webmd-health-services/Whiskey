@@ -15,20 +15,17 @@ function Add-WhiskeyVariable
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # The context of the build here you want to add a variable.
-        $Context,
+        [Whiskey.Context]$Context,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the variable.
-        $Name,
+        [String]$Name,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [AllowEmptyString()]
-        [object]
-        $Value
+        [Object]$Value
     )
 
     Set-StrictMode -Version 'Latest'

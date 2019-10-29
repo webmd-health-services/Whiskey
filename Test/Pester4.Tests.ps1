@@ -67,8 +67,7 @@ function GivenExclude
 function GivenVersion
 {
     param(
-        [string]
-        $Version
+        [String]$Version
     )
     $Script:taskParameter['Version'] = $Version
 }
@@ -85,8 +84,8 @@ function GivenInvalidVersion
 function GivenTestFile
 {
     param(
-        [string]$Path,
-        [string]$Content
+        [String]$Path,
+        [String]$Content
     )
 
     $taskParameter['Path'] = & {
@@ -107,7 +106,7 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [Switch]$WithClean,
+        [switch]$WithClean,
 
         [switch]$CaptureOutput
     )
@@ -184,15 +183,13 @@ function ThenItDurationReportHasRows
 function ThenPesterShouldHaveRun
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
+        [Parameter(Mandatory)]
+        [int]$FailureCount,
             
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
+        [Parameter(Mandatory)]
+        [int]$PassingCount
     )
-    $reportsIn =  $script:context.outputDirectory
+    $reportsIn =  $context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
                         Where-Object { $_.Name -match '^pester\+.{8}\..{3}\.xml$' }
     #check to see if we were supposed to run any tests.
@@ -222,16 +219,16 @@ function ThenPesterShouldHaveRun
 
     foreach( $reportPath in $testReports )
     {
-        Write-Debug ('ReportsIn:  {0}' -f $ReportsIn)
-        Write-Debug ('reportPath: {0}' -f $reportPath)
+        Write-WhiskeyDebug -Context $context ('ReportsIn:  {0}' -f $ReportsIn)
+        Write-WhiskeyDebug -Context $context ('reportPath: {0}' -f $reportPath)
         $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
-        Write-Debug ('reportPath: {0}' -f $reportPath)
+        Write-WhiskeyDebug -Context $context ('reportPath: {0}' -f $reportPath)
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
                           -ModuleName 'Whiskey' `
                           -ParameterFilter { 
-                                Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
+                                Write-WhiskeyDebug ('{0}  -eq  {1}' -f $Path,$reportPath) 
                                 $result = $Path -eq $reportPath 
-                                Write-Debug ('  {0}' -f $result) 
+                                Write-WhiskeyDebug ('  {0}' -f $result) 
                                 return $result
                           }
     }
@@ -240,8 +237,7 @@ function ThenPesterShouldHaveRun
 function ThenTestShouldFail
 {
     param(
-        [string]
-        $failureMessage
+        [String]$failureMessage
     )
     $Script:failed | Should -BeTrue
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty

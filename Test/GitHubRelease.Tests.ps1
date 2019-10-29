@@ -28,10 +28,10 @@ function GivenAssets
          -ModuleName 'Whiskey' `
          -ParameterFilter { 
              #$DebugPreference = 'Continue'
-             Write-Debug ('Uri  {0}' -f $Uri)
-             Write-Debug ('     */releases/*/assets')
+             Write-WhiskeyDebug ('Uri  {0}' -f $Uri)
+             Write-WhiskeyDebug ('     */releases/*/assets')
              $result = $Uri -like '*/releases/*/assets' 
-             Write-Debug ('     {0}' -f $result)
+             Write-WhiskeyDebug ('     {0}' -f $result)
              return $result
             } `
          -MockWith ([scriptblock]::Create("'$assetJson' | ConvertFrom-Json"))
@@ -40,7 +40,7 @@ function GivenAssets
 function GivenAssetUpdated
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $To
     )
 
@@ -52,7 +52,7 @@ function GivenAssetUpdated
 function GivenAssetUploaded
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $To
     )
 
@@ -135,9 +135,9 @@ function ThenAssetNotUploadedTo
         $toUri = $Uri
         Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            Write-Debug ('Uri   expected  {0}' -f $toUri)
-            Write-Debug ('      actual    {0}' -f $Uri)
-            $Uri -eq [uri]$toUri
+            Write-WhiskeyDebug ('Uri   expected  {0}' -f $toUri)
+            Write-WhiskeyDebug ('      actual    {0}' -f $Uri)
+            $Uri -eq [Uri]$toUri
         }
     }
 }
@@ -163,14 +163,13 @@ function ThenNoApiCalled
 function ThenRequest
 {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $Should,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $ToUri,
 
-        [Microsoft.PowerShell.Commands.WebRequestMethod]
-        $UsedMethod,
+        [Microsoft.PowerShell.Commands.WebRequestMethod]$UsedMethod,
 
         $WithBody,
 
@@ -184,13 +183,13 @@ function ThenRequest
         {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
-                Write-Debug ('')
-                Write-Debug ('Uri   expected  {0}' -f $ToUri)
-                Write-Debug ('      actual    {0}' -f $Uri)
-                $uriEqual = $Uri -eq [uri]$ToUri
-                Write-Debug ('                {0}' -f $uriEqual)
-                Write-Debug ('Body  expected  {0}' -f $WithBody)
-                Write-Debug ('      actual    {0}' -f $Body)
+                Write-WhiskeyDebug ('')
+                Write-WhiskeyDebug ('Uri   expected  {0}' -f $ToUri)
+                Write-WhiskeyDebug ('      actual    {0}' -f $Uri)
+                $uriEqual = $Uri -eq [Uri]$ToUri
+                Write-WhiskeyDebug ('                {0}' -f $uriEqual)
+                Write-WhiskeyDebug ('Body  expected  {0}' -f $WithBody)
+                Write-WhiskeyDebug ('      actual    {0}' -f $Body)
                 $bodyEqual = $Body -eq $WithBody 
                 $WithBody = $WithBody | ConvertFrom-Json
                 $expectedProps = $WithBody | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
@@ -201,13 +200,13 @@ function ThenRequest
                     $actualProps = $Body | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty 'Name' | Sort-Object
                 }
                 $bodyPropsEqual = ($expectedProps -join '|') -eq ($actualProps -join '|')
-                Write-Debug ('                {0}' -f $bodyPropsEqual)
+                Write-WhiskeyDebug ('                {0}' -f $bodyPropsEqual)
                 
                 $expectedValues = $expectedProps | ForEach-Object { $WithBody.$_ }
                 $actualValues = $actualProps | ForEach-Object { $Body.$_ }
                 $bodyValuesEqual = ($expectedValues -join '|') -eq ($actualValues -join '|')
-                Write-Debug ('                {0}' -f $bodyValuesEqual)
-                Write-Debug ('')
+                Write-WhiskeyDebug ('                {0}' -f $bodyValuesEqual)
+                Write-WhiskeyDebug ('')
                 $uriEqual -and $bodyPropsEqual -and $bodyValuesEqual
             }
         }
@@ -216,11 +215,11 @@ function ThenRequest
         {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
-                Write-Debug ('Uri     expected  {0}' -f $ToUri)
-                Write-Debug ('        actual    {0}' -f $Uri)
-                Write-Debug ('Method  expected  {0}' -f $UsedMethod)
-                Write-Debug ('        actual    {0}' -f $Method)
-                $Uri -eq [uri]$ToUri -and $Method -eq $UsedMethod 
+                Write-WhiskeyDebug ('Uri     expected  {0}' -f $ToUri)
+                Write-WhiskeyDebug ('        actual    {0}' -f $Uri)
+                Write-WhiskeyDebug ('Method  expected  {0}' -f $UsedMethod)
+                Write-WhiskeyDebug ('        actual    {0}' -f $Method)
+                $Uri -eq [Uri]$ToUri -and $Method -eq $UsedMethod 
             }
         }
 
@@ -228,11 +227,11 @@ function ThenRequest
         {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
-                Write-Debug ('Uri          expected  {0}' -f $ToUri)
-                Write-Debug ('             actual    {0}' -f $Uri)
-                Write-Debug ('ContentType  expected  {0}' -f $AsContentType)
-                Write-Debug ('             actual    {0}' -f $ContentType)
-                $Uri -eq [uri]$ToUri -and $ContentType -eq $AsContentType 
+                Write-WhiskeyDebug ('Uri          expected  {0}' -f $ToUri)
+                Write-WhiskeyDebug ('             actual    {0}' -f $Uri)
+                Write-WhiskeyDebug ('ContentType  expected  {0}' -f $AsContentType)
+                Write-WhiskeyDebug ('             actual    {0}' -f $ContentType)
+                $Uri -eq [Uri]$ToUri -and $ContentType -eq $AsContentType 
             }
         }
 
@@ -240,12 +239,12 @@ function ThenRequest
         {
             Assert-MockCalled -CommandName 'Invoke-RestMethod' -ModuleName 'Whiskey' -ParameterFilter { 
                 #$DebugPreference = 'Continue'
-                Write-Debug ('Uri     expected  {0}' -f $ToUri)
-                Write-Debug ('        actual    {0}' -f $Uri)
+                Write-WhiskeyDebug ('Uri     expected  {0}' -f $ToUri)
+                Write-WhiskeyDebug ('        actual    {0}' -f $Uri)
                 $WithFile = Join-Path -Path $TestDrive.FullName -ChildPath $WithFile
-                Write-Debug ('InFile  expected  {0}' -f $WithFile)
-                Write-Debug ('        actual    {0}' -f $InFile)
-                $Uri -eq [uri]$ToUri -and $InFile -eq $WithFile 
+                Write-WhiskeyDebug ('InFile  expected  {0}' -f $WithFile)
+                Write-WhiskeyDebug ('        actual    {0}' -f $InFile)
+                $Uri -eq [Uri]$ToUri -and $InFile -eq $WithFile 
             }
         }
     }

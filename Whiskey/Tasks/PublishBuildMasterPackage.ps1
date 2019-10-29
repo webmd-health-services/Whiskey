@@ -5,13 +5,11 @@ function Publish-WhiskeyBuildMasterPackage
     [Whiskey.Task('PublishBuildMasterPackage')]
     [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

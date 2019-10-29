@@ -5,13 +5,11 @@ function Publish-WhiskeyBBServerTag
     [Whiskey.Task('PublishBitbucketServerTag')]
     [Whiskey.RequiresPowerShellModule('BitbucketServerAutomation',Version='0.9.*',VersionParameterName='BitbucketServerAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -56,7 +54,7 @@ function Publish-WhiskeyBBServerTag
     }
     elseif( $TaskContext.BuildMetadata.ScmUri -and $TaskContext.BuildMetadata.ScmUri.Segments )
     {
-        $uri = [uri]$TaskContext.BuildMetadata.ScmUri
+        $uri = [Uri]$TaskContext.BuildMetadata.ScmUri
         $projectKey = $uri.Segments[-2].Trim('/')
         $repoKey = $uri.Segments[-1] -replace '\.git$',''
     }

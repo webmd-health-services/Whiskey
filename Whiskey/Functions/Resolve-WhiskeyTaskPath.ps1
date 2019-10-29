@@ -3,31 +3,25 @@ function Resolve-WhiskeyTaskPath
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [object]
+        [Parameter(Mandatory)]
         # An object that holds context about the current build and executing task.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [string]
-        $Path,
+        [Parameter(Mandatory,ValueFromPipeline)]
+        [String]$Path,
 
-        [Parameter(Mandatory=$true)]
-        [string]
-        $PropertyName,
+        [Parameter(Mandatory)]
+        [String]$PropertyName,
 
-        [string]
         # The root directory to use when resolving paths. The default is to use the `$TaskContext.BuildRoot` directory. Each path must be relative to this path.
-        $ParentPath,
+        [String]$ParentPath,
 
-        [Switch]
         # Create the path if it doesn't exist. By default, the path will be created as a directory. To create the path as a file, pass `File` to the `PathType` parameter.
-        $Force,
+        [switch]$Force,
 
-        [string]
         [ValidateSet('Directory','File')]
         # The type of item to create when using the `Force` parameter to create paths that don't exist. The default is to create the path as a directory. Pass `File` to create the path as a file.
-        $PathType = 'Directory'
+        [String]$PathType = 'Directory'
     )
 
     begin
@@ -60,7 +54,7 @@ function Resolve-WhiskeyTaskPath
         {
             if( $Force )
             {
-                New-Item -Path $Path -ItemType $PathType -Force | Out-String | Write-Debug
+                New-Item -Path $Path -ItemType $PathType -Force | Out-String | Write-WhiskeyDebug -Context $TaskContext
             }
             else
             {
@@ -74,11 +68,11 @@ function Resolve-WhiskeyTaskPath
 
         $message = 'Resolve {0} ->' -f $originalPath
         $prefix = ' ' * ($message.Length - 3)
-        Write-Debug -Message $message
+        Write-WhiskeyDebug -Context $TaskContext -Message $message
         Resolve-Path -Path $Path | 
             Select-Object -ExpandProperty 'ProviderPath' |
             ForEach-Object { 
-                Write-Debug -Message ('{0} -> {1}' -f $prefix,$_)
+                Write-WhiskeyDebug -Context $TaskContext -Message ('{0} -> {1}' -f $prefix,$_)
                 $_
             }
     }

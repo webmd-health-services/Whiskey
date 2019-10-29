@@ -63,10 +63,10 @@ function GivenProGetIsAt
 function GivenCredential
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Credential,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $WithID
     )
 
@@ -139,8 +139,8 @@ function ThenPackageOverwritten
                       -ModuleName 'Whiskey' `
                       -ParameterFilter { 
                           #$DebugPreference = 'continue'
-                          Write-Debug -Message ('Force  expected  true')
-                          Write-Debug -Message ('       actual    false' -f $Force)
+                          Write-WhiskeyDebug -Message ('Force  expected  true')
+                          Write-WhiskeyDebug -Message ('       actual    false' -f $Force)
                           $Force.ToBool()
                       }
 }
@@ -191,9 +191,9 @@ function ThenPackagePublishedAt
 
     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Uri  expected  {0}' -f $Uri)
-        Write-Debug -Message ('     actual    {0}' -f $Session.Uri)
-        $session | Format-List | Out-String | Write-Debug
+        Write-WhiskeyDebug -Message ('Uri  expected  {0}' -f $Uri)
+        Write-WhiskeyDebug -Message ('     actual    {0}' -f $Session.Uri)
+        $session | Format-List | Out-String | Write-WhiskeyDebug
         $Session.Uri -eq $Uri
     }
 }
@@ -217,8 +217,8 @@ function ThenPackagePublishedWithTimeout
 
     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Timeout  expected  {0}' -f $Timeout)
-        Write-Debug -Message ('         actual    {0}' -f $ExpectedTimeout)
+        Write-WhiskeyDebug -Message ('Timeout  expected  {0}' -f $Timeout)
+        Write-WhiskeyDebug -Message ('         actual    {0}' -f $ExpectedTimeout)
         $Timeout -eq $ExpectedTimeout 
     }
 }

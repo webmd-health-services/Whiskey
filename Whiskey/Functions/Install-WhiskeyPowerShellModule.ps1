@@ -26,19 +26,19 @@ function Install-WhiskeyPowerShellModule
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         # The name of the module to install.
-        [string]$Name,
+        [String]$Name,
 
         # The version of the module to install.
-        [string]$Version,
+        [String]$Version,
 
         [Parameter(Mandatory)]
         # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
-        [string]$BuildRoot,
+        [String]$BuildRoot,
 
         # Don't import the module.
-        [Switch]$SkipImport
+        [switch]$SkipImport
     )
 
     Set-StrictMode -Version 'Latest'
@@ -91,14 +91,14 @@ function Install-WhiskeyPowerShellModule
             }
         }
 
-        Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
+        Write-WhiskeyVerbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
         Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
 
         $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $module.Version,$Name)
         $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
         if( -not $manifest )
         {
-            Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+            Write-WhiskeyError -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
             return
         }
         $manifest

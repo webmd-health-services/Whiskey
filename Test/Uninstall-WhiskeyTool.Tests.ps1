@@ -11,9 +11,9 @@ function GivenAnInstalledNuGetPackage
 {
     [CmdLetBinding()]
     param(
-        [String]$WithName,
+        [String]$WithVersion = '2.6.4',
 
-        [String]$WithVersion
+        [String]$WithName = 'NUnit.Runners'
     )
     $dirName = '{0}.{1}' -f $WithName, $WithVersion
     $installRoot = Join-Path -Path $testRoot -ChildPath 'packages'
@@ -48,10 +48,8 @@ function ThenFile
 {
     param(
         $Path,
-        [Switch]
-        $Not,
-        [Switch]
-        $Exists
+        [switch]$Not,
+        [switch]$Exists
     )
 
     if( $Not )
@@ -74,9 +72,10 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithName,
 
-        [String]$WithVersion
+        [String]$WithVersion = '2.6.4',
+
+        [String]$WithName = 'NUnit.Runners'
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -96,7 +95,7 @@ function ThenNuGetPackageNotUninstalled
 
         [String]$WithVersion,
 
-        [string]$WithError
+        [String]$WithError
     )
 
     $Name = '{0}.{1}' -f $WithName, $WithVersion
@@ -124,6 +123,19 @@ function ThenUninstalledDotNet
 function ThenUninstalledNode
 {
     Join-Path -Path $testRoot -ChildPath '.node' | Should -Not -Exist
+}
+
+function WhenUninstallingNuGetPackage
+{
+    [CmdletBinding()]
+    param(
+        [String]$WithVersion = '2.6.4',
+
+        [String]$WithName = 'NUnit.Runners'
+    )
+
+    $Global:Error.Clear()
+    Uninstall-WhiskeyTool -NuGetPackageName $WithName -Version $WithVersion -BuildRoot $testRoot
 }
 
 function WhenUninstallingTool

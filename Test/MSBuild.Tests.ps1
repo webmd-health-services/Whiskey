@@ -38,8 +38,7 @@ function GivenCustomMSBuildScriptWithMultipleTargets
 function GivenAProjectThatCompiles
 {
     param(
-        [string]
-        $ProjectName = 'NUnit2PassingTest'
+        [String]$ProjectName = 'NUnit2PassingTest'
     )
 
     $source = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $ProjectName)
@@ -136,25 +135,19 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [hashtable]
-        $WithParameter = @{},
+        [hashtable]$WithParameter = @{},
 
-        [Parameter(Mandatory=$true,ParameterSetName='AsDeveloper')]
-        [Switch]
-        $AsDeveloper,
+        [Parameter(Mandatory,ParameterSetName='AsDeveloper')]
+        [switch]$AsDeveloper,
 
-        [Parameter(Mandatory=$true,ParameterSetName='AsBuildServer')]
-        [Switch]
-        $AsBuildServer,
+        [Parameter(Mandatory,ParameterSetName='AsBuildServer')]
+        [switch]$AsBuildServer,
 
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [SemVersion.SemanticVersion]
-        $AtVersion,
+        [SemVersion.SemanticVersion]$AtVersion,
 
-        [Switch]
-        $WithNoPath
+        [switch]$WithNoPath
     )
 
     $optionalParams = @{ }
@@ -205,24 +198,22 @@ function WhenRunningTask
     $Global:Error.Clear()
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' | ForEach-Object { Write-Debug $_ ; $_ }
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' 
+        $output | Write-WhiskeyDebug
     }
     catch
     {
-        Write-Error $_
         $script:threwException = $true
-        $Error | Format-List -Force * | Out-String | Write-Verbose
+        Write-Error $_
     }
 }
 
 function ThenAssembliesAreVersioned
 {
     param(
-        [string]
-        $ProductVersion,
+        [String]$ProductVersion,
 
-        [string]
-        $FileVersion
+        [String]$FileVersion
     )
 
     Get-ChildItem -Path (Get-BuildRoot) -Filter $assembly -File -Recurse |
@@ -290,8 +281,7 @@ function ThenOutputNotLogged
 function ThenProjectsCompiled
 {
     param(
-        [string]
-        $To
+        [String]$To
     )
 
     if( $To )
@@ -325,14 +315,11 @@ function ThenProjectsNotCompiled
 function ThenOutput
 {
     param(
-        [string[]]
-        $Contains,
+        [String[]]$Contains,
 
-        [string[]]
-        $DoesNotContain,
+        [String[]]$DoesNotContain,
 
-        [string]
-        $Is
+        [String]$Is
     )
 
     # remove the NuGet output
@@ -660,7 +647,7 @@ Describe 'MSBuild.when customizing version of MSBuild' {
 </Project>
 "@
         $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [Version]$_ } -Descending | Select -Last 1
         $expectedPath = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
         GivenVersion $version
         WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
@@ -681,14 +668,14 @@ Describe 'MSBuild.when customizing version of MSBuild and multiple installs for 
 </Project>
 "@
         $toolsVersionsRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [version]$_ } -Descending | Select -Last 1
+        $version = Get-ChildItem -Path $toolsVersionsRegPath | Select-Object -ExpandProperty 'Name' | Split-Path -Leaf | Sort-Object -Property { [Version]$_ } -Descending | Select -Last 1
         $msbuildRoot = Get-ItemProperty -Path (Join-Path -Path $toolsVersionsRegPath -ChildPath $version) -Name 'MSBuildToolsPath' | Select-Object -ExpandProperty 'MSBuildToolsPath'
         $msbuildPath = Join-Path -Path $msbuildRoot -ChildPath 'MSBuild.exe' -Resolve
         Mock -CommandName 'Get-MSBuild' -ModuleName 'Whiskey' -MockWith {
             1..2 | ForEach-Object {
                 [pscustomobject]@{
                                     Name =  $version;
-                                    Version = [version]$version;
+                                    Version = [Version]$version;
                                     Path = $msbuildPath;
                                     Path32 = $msbuildPath;
                                 }

@@ -51,7 +51,7 @@ function ThenDotNetPathAddedToTaskParameter
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Named
+        [String]$Named
     )
 
     $taskParameter[$Named] | Should -Match '[\\/]dotnet(\.exe)$'
@@ -60,13 +60,13 @@ function ThenDotNetPathAddedToTaskParameter
 function ThenNodeInstalled
 {
     param(
-        [string]$NodeVersion,
+        [String]$NodeVersion,
 
-        [string]$NpmVersion,
+        [String]$NpmVersion,
 
-        [Switch]$AtLatestVersion,
+        [switch]$AtLatestVersion,
 
-        [string]$AndPathParameterIs
+        [String]$AndPathParameterIs
     )
 
     $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $testRoot
@@ -171,7 +171,7 @@ function WhenInstallingTool
         $Version,
 
         [Parameter(ParameterSetName='HandleAttributeForMe')]
-        [string]$PathParameterName
+        [String]$PathParameterName
     )
 
     $Global:Error.Clear()
@@ -305,10 +305,8 @@ function ThenDirectory
 {
     param(
         $Path,
-
-        [Switch]$Not,
-        
-        [Switch]$Exists
+        [switch]$Not,
+        [switch]$Exists
     )
 
     if( $Not )
@@ -365,6 +363,7 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and task doesn
         $taskParameter.Values | Should -Not -BeOfType ([Management.Automation.PSModuleInfo])
     }
 }
+
 
 If ( $IsWindows )
 {

@@ -17,10 +17,9 @@ function Get-WhiskeyMSBuildConfiguration
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context of the current build.
-        $Context
+        [Whiskey.Context]$Context
     )
 
     Set-StrictMode -Version 'Latest'

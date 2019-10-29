@@ -25,14 +25,12 @@ function Resolve-WhiskeyNodePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromBuildRoot')]
-        [string]
         # The path to the build root. This will return the path to Node where Whiskey installs a local copy.
-        $BuildRootPath,
+        [String]$BuildRootPath,
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]
-        [string]
         # The path to the root of an Node package, as downloaded and expanded from the Node.js download page.
-        $NodeRootPath
+        [String]$NodeRootPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -48,7 +46,7 @@ function Resolve-WhiskeyNodePath
                         Join-Path -Path $NodeRootPath -ChildPath 'node.exe'
                 } |
                 ForEach-Object {
-                    Write-Debug -Message ('Looking for Node executable at "{0}".' -f $_)
+                    Write-WhiskeyDebug -Message ('Looking for Node executable at "{0}".' -f $_)
                     $_
                 } |
                 Where-Object { Test-Path -Path $_ -PathType Leaf } |
@@ -58,10 +56,10 @@ function Resolve-WhiskeyNodePath
 
     if( -not $nodePath )
     {
-        Write-Error -Message ('Node executable doesn''t exist in "{0}".' -f $NodeRootPath) -ErrorAction $ErrorActionPreference
+        Write-WhiskeyError -Message ('Node executable doesn''t exist in "{0}".' -f $NodeRootPath) -ErrorAction $ErrorActionPreference
         return
     }
 
-    Write-Debug -Message ('Found Node executable at "{0}".' -f $nodePath)
+    Write-WhiskeyDebug -Message ('Found Node executable at "{0}".' -f $nodePath)
     return $nodePath
 }

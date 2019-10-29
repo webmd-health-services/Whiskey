@@ -23,16 +23,16 @@ function Resolve-WhiskeyPowerShellModule
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         # The name of the PowerShell module.
-        [string]$Name,
+        [String]$Name,
 
         # The version of the PowerShell module to search for. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [string]$Version,
+        [String]$Version,
 
         [Parameter(Mandatory)]
         # The path to the directory where the PSModules directory should be created.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -71,15 +71,15 @@ function Resolve-WhiskeyPowerShellModule
 
         if( -not $manifestOk -or -not $manifest )
         {
-            Write-WhiskeyTiming -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
+            Write-WhiskeyDebug -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
             $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
-            [void]$modulesToInstall.Add($module)
+            [Void]$modulesToInstall.Add($module)
         }
     }
 
     if( $modulesToInstall.Count )
     {
-        Write-WhiskeyTiming -Message ('Installing package management modules to {0}.  BEGIN' -f $modulesRoot)
+        Write-WhiskeyDebug -Message ('Installing package management modules to {0}.  BEGIN' -f $modulesRoot)
         # Install Package Management modules in the background so we can load the new versions. These modules use 
         # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
         Start-Job -ScriptBlock {
@@ -101,12 +101,12 @@ function Resolve-WhiskeyPowerShellModule
                 Save-Module -Name $module.Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
             }
         } | Receive-Job -Wait -AutoRemoveJob | Out-Null
-        Write-WhiskeyTiming -Message ('                                               END')
+        Write-WhiskeyDebug -Message ('                                               END')
     }
 
     Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' -BuildRoot $BuildRoot
 
-    Write-WhiskeyTiming -Message ('{0}  {1} ->' -f $Name,$Version)
+    Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )
     {
         $atVersionString = ' at version {0}' -f $Version
@@ -116,7 +116,7 @@ function Resolve-WhiskeyPowerShellModule
             $tempVersion = [Version]$Version
             if( $TempVersion -and ($TempVersion.Build -lt 0) )
             {
-                $Version = [version]('{0}.{1}.0' -f $TempVersion.Major, $TempVersion.Minor)
+                $Version = [Version]('{0}.{1}.0' -f $TempVersion.Major, $TempVersion.Minor)
             }
         }
 
@@ -135,11 +135,11 @@ function Resolve-WhiskeyPowerShellModule
     {
         $registeredRepositories = Get-PSRepository | ForEach-Object { ('{0} ({1})' -f $_.Name,$_.SourceLocation) }
         $registeredRepositories = $registeredRepositories -join ('{0} * ' -f [Environment]::NewLine)
-        Write-Error -Message ('Failed to find PowerShell module {0}{1} in any of the registered PowerShell repositories:{2} {2} * {3} {2}' -f $Name, $atVersionString, [Environment]::NewLine, $registeredRepositories)
+        Write-WhiskeyError -Message ('Failed to find PowerShell module {0}{1} in any of the registered PowerShell repositories:{2} {2} * {3} {2}' -f $Name, $atVersionString, [Environment]::NewLine, $registeredRepositories)
         return
     }
 
     $module = $module | Select-Object -First 1
-    Write-WhiskeyTiming -Message ('{0}  {1}    {2}' -f (' ' * $Name.Length),(' ' * $Version.Length),$module.Version)
+    Write-WhiskeyDebug -Message ('{0}  {1}    {2}' -f (' ' * $Name.Length),(' ' * $Version.Length),$module.Version)
     return $module
 }

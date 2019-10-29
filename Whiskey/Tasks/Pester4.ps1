@@ -5,13 +5,11 @@ function Invoke-WhiskeyPester4Task
     [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='4.*',VersionParameterName='Version',SkipImport)]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -68,7 +66,7 @@ function Invoke-WhiskeyPester4Task
     Write-WhiskeyVerbose -Context $TaskContext -Message $pesterManifestPath
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Script      {0}' -f ($Path | Select-Object -First 1))
     $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('              {0}' -f $_) }
-    Write-Verbose -Message ('  OutputFile  {0}' -f $outputFile)
+    Write-WhiskeyVerbose -Message ('  OutputFile  {0}' -f $outputFile)
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $VerbosePreference = $using:VerbosePreference

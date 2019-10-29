@@ -9,8 +9,7 @@ $failed = $false
 function Init
 {
     param(
-        [Switch]
-        $SkipInstall
+        [switch]$SkipInstall
     )
 
     $script:failed = $false

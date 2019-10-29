@@ -48,13 +48,12 @@ function Uninstall-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
-
         [Parameter(Mandatory)]
         # The tool attribute that defines what tool to uninstall.
-
         [Whiskey.RequiresToolAttribute]$ToolInfo,
+
         # The build root where the build is currently running. Tools are installed here.
-        [string]$BuildRoot
+        [String]$BuildRoot
     )
 
     Set-StrictMode -Version 'Latest'

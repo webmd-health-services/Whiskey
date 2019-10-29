@@ -2,16 +2,14 @@
 function Publish-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
-    [Whiskey.Task("PublishProGetUniversalPackage")]
+    [Whiskey.Task('PublishProGetUniversalPackage')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

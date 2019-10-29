@@ -18,8 +18,7 @@ $gitUri = $null
 function GivenACommit
 {
     param(
-        [Switch]
-        $ThatIsInvalid
+        [switch]$ThatIsInvalid
     )
 
     if( -not $ThatIsInvalid )
@@ -116,8 +115,7 @@ function WhenTaggingACommit
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $ThatWillFail
+        [switch]$ThatWillFail
     )
 
     $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' `
@@ -190,29 +188,29 @@ function ThenTaskSucceeds
 function ThenTheCommitShouldBeTagged
 {
     param(
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory,Position=0)]
         $Tag,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $InProject,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $InRepository,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $AtUri,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $AsUser,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $WithPassword
     )
 
     Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
         #$DebugPreference = 'Continue'
-        Write-Debug -Message ('Name  expected  {0}' -f $Tag)
-        Write-Debug -Message ('      actual    {0}' -f $Name)
+        Write-WhiskeyDebug -Message ('Name  expected  {0}' -f $Tag)
+        Write-WhiskeyDebug -Message ('      actual    {0}' -f $Name)
         $Name -eq $Tag 
     }
 
@@ -227,8 +225,7 @@ function ThenTheCommitShouldBeTagged
 function ThenTheCommitShouldNotBeTagged
 {
     param(
-        [String]
-        $WithError
+        [String]$WithError
     )
 
     Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0

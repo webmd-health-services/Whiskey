@@ -8,19 +8,19 @@ function Merge-WhiskeyFile
         [Whiskey.Context]$TaskContext,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-        [string[]]$Path,
+        [String[]]$Path,
 
-        [string]$DestinationPath,
+        [String]$DestinationPath,
 
         [switch]$DeleteSourceFiles,
 
-        [string]$TextSeparator,
+        [String]$TextSeparator,
 
-        [byte[]]$BinarySeparator,
+        [Byte[]]$BinarySeparator,
 
         [switch]$Clear,
 
-        [string[]]$Exclude
+        [String[]]$Exclude
     )
 
     Set-StrictMode -Version 'Latest'
@@ -52,7 +52,7 @@ function Merge-WhiskeyFile
         return
     }
 
-    [byte[]]$separatorBytes = $BinarySeparator
+    [Byte[]]$separatorBytes = $BinarySeparator
     if( $TextSeparator )
     {
         $separatorBytes = [Text.Encoding]::UTF8.GetBytes($TextSeparator)
@@ -87,7 +87,7 @@ function Merge-WhiskeyFile
                 }
                 else 
                 {
-                    Write-Debug -Message ('"{0}" -notlike "{1}"' -f $filePath,$pattern)
+                    Write-WhiskeyDebug -Context $TaskContext -Message ('"{0}" -notlike "{1}"' -f $filePath,$pattern)
                 }
             }
 
@@ -109,7 +109,7 @@ function Merge-WhiskeyFile
             try
             {
                 $bufferSize = 4kb
-                [byte[]]$buffer = New-Object 'byte[]' ($bufferSize)
+                [Byte[]]$buffer = New-Object 'byte[]' ($bufferSize)
                 while( $bytesRead = $reader.Read($buffer,0,$bufferSize) )
                 {
                     $writer.Write($buffer,0,$bytesRead)

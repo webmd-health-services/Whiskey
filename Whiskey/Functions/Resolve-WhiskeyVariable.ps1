@@ -55,16 +55,15 @@ function Resolve-WhiskeyVariable
         # If the value is a hashtable, variable replcement is done on each value of the hashtable. 
         #
         # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
-        [object]$InputObject,
+        [Object]$InputObject,
 
         [Parameter(ParameterSetName='ByName')]
         # The name of a single Whiskey variable to resolve.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
-        [Whiskey.Context]
         # The context of the current build. Necessary to lookup any variables.
-        $Context
+        [Whiskey.Context]$Context
     )
 
     begin
@@ -138,7 +137,7 @@ function Resolve-WhiskeyVariable
         if( (Get-Member -Name 'Keys' -InputObject $InputObject) )
         {
             $newValues = @{ }
-            $toRemove = New-Object 'Collections.Generic.List[string]'
+            $toRemove = New-Object 'Collections.Generic.List[String]'
             # Can't modify a collection while enumerating it.
             foreach( $key in $InputObject.Keys )
             {
@@ -249,7 +248,7 @@ function Resolve-WhiskeyVariable
                                             {
                                                 if( $nextChar -eq $currentChar )
                                                 {
-                                                    [void]$currentArg.Append($currentChar)
+                                                    [Void]$currentArg.Append($currentChar)
                                                     $idx++
                                                     continue
                                                 }
@@ -262,13 +261,13 @@ function Resolve-WhiskeyVariable
                                         if( $currentChar -eq ',' -and -not $inString )
                                         {
                                             $currentArg.ToString()
-                                            [void]$currentArg.Clear()
+                                            [Void]$currentArg.Clear()
                                             continue
                                         }
 
-                                        if( $inString -or -not [string]::IsNullOrWhiteSpace($currentChar) )
+                                        if( $inString -or -not [String]::IsNullOrWhiteSpace($currentChar) )
                                         {
-                                            [void]$currentArg.Append($currentChar)
+                                            [Void]$currentArg.Append($currentChar)
                                         }
                                     }
                                     if( $currentArg.Length )
@@ -298,7 +297,7 @@ function Resolve-WhiskeyVariable
             }
             else
             {
-                Write-Error -Message ('Variable ''{0}'' does not exist. We were trying to replace it in the string ''{1}''. You can:
+                Write-WhiskeyError -Context $Context -Message ('Variable ''{0}'' does not exist. We were trying to replace it in the string ''{1}''. You can:
                 
 * Use the `Add-WhiskeyVariable` function to add a variable named ''{0}'', e.g. Add-WhiskeyVariable -Context $context -Name ''{0}'' -Value VALUE.
 * Create an environment variable named ''{0}''.
@@ -317,7 +316,7 @@ function Resolve-WhiskeyVariable
             {
                 if( -not (Get-Member -Name $memberName -InputObject $value ) )
                 {
-                    Write-Error -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
+                    Write-WhiskeyError -Context $Context -Message ('Variable ''{0}'' does not have a ''{1}'' member. Here are the available members:{2}    {2}{3}{2}    ' -f $variableName,$memberName,[Environment]::NewLine,($value | Get-Member | Out-String))
                     return $InputObject
                 }
 
@@ -329,7 +328,7 @@ function Resolve-WhiskeyVariable
                     }
                     catch
                     {
-                        Write-Error -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
+                        Write-WhiskeyError -Context $Context -Message ('Failed to call ([{0}]{1}).{2}(''{3}''): {4}.' -f $value.GetType().FullName,$value,$memberName,($arguments -join ''','''),$_)
                         return $InputObject
                     }
                 }
@@ -342,7 +341,7 @@ function Resolve-WhiskeyVariable
             $variableNumChars = $needleEnd - $needleStart + 1
             if( $needleStart + $variableNumChars -gt $haystack.Length )
             {
-                Write-Error -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
+                Write-WhiskeyError -Context $Context -Message ('Unclosed variable expression ''{0}'' in value ''{1}''. Add a '')'' to the end of this value or escape the variable expression with a double dollar sign, e.g. ''${1}''.' -f $haystack.Substring($needleStart),$haystack)
                 return $InputObject
             }
 

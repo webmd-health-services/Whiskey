@@ -42,7 +42,7 @@ function GivenTestContext
 function GivenVersion
 {
     param(
-        [string]$Version
+        [String]$Version
     )
 
     $taskParameter['Version'] = $Version
@@ -51,8 +51,8 @@ function GivenVersion
 function GivenTestFile
 {
     param(
-        [string]$Path,
-        [string]$Content
+        [String]$Path,
+        [String]$Content
     )
 
     $taskParameter['Path'] = & {
@@ -88,8 +88,7 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $WithClean
+        [switch]$WithClean
     )
 
     $failed = $false
@@ -112,8 +111,7 @@ function WhenPesterTaskIsInvoked
 function ThenPesterShouldBeInstalled
 {
     param(
-        [string]
-        $ExpectedVersion
+        [String]$ExpectedVersion
     )
 
     $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
@@ -130,13 +128,11 @@ function ThenPesterShouldBeInstalled
 function ThenPesterShouldHaveRun
 {
     param(
-        [Parameter(Mandatory=$true)]
-        [int]
-        $FailureCount,
+        [Parameter(Mandatory)]
+        [int]$FailureCount,
             
-        [Parameter(Mandatory=$true)]
-        [int]
-        $PassingCount
+        [Parameter(Mandatory)]
+        [int]$PassingCount
     )
     $reportsIn =  $script:context.outputDirectory
     $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
@@ -173,7 +169,7 @@ function ThenPesterShouldHaveRun
         $reportPath = $reportPath.FullName
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            Write-Debug ('{0}  -eq  {1}' -f $Path,$reportPath) 
+            Write-WhiskeyDebug ('{0}  -eq  {1}' -f $Path,$reportPath) 
             $Path -eq $reportPath 
         }
     }
@@ -181,8 +177,7 @@ function ThenPesterShouldHaveRun
 function ThenTestShouldFail
 {
     param(
-        [string]
-        $failureMessage
+        [String]$failureMessage
     )
     $Script:failed | Should -BeTrue
     $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty

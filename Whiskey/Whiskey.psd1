@@ -64,6 +64,7 @@
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
                             'Formats\System.Exception.format.ps1xml',
+                            'Formats\System.Management.Automation.ErrorRecord.format.ps1xml',
                             'Formats\Whiskey.BuildInfo.format.ps1xml',
                             'Formats\Whiskey.BuildVersion.format.ps1xml',
                             'Formats\Whiskey.Context.format.ps1xml',
@@ -111,6 +112,8 @@
                             'Stop-WhiskeyTask',
                             'Uninstall-WhiskeyTool',
                             'Unregister-WhiskeyEvent',
+                            'Write-WhiskeyDebug',
+                            'Write-WhiskeyError',
                             'Write-WhiskeyInfo',
                             'Write-WhiskeyVerbose',
                             'Write-WhiskeyWarning'
@@ -169,6 +172,13 @@
 * Added a `Tag` property to the `PublishNodeModule` task that controls what distribution tag the module is published with. If specified, this property takes precendence over a tag from a prerelease identifier.
 * Created `AppVeyorWaitForBuildJob` task that will wait for other jobs in an AppVeyor build to complete before continuing.
 * Added: NuGet support for the `RequiresTool` task attribute.
+* Fixed: plug-ins are global to all builds instead of tied to specific builds. This is a backwards-incompatible change. `Register-WhiskeyEvent` and `Unregister-WhiskeyEvent` now require the context of the build on which the events should run. Please update usages.
+* Added a custom error record display formatter that shows the entire script stack trace for an error instead of PowerShell's weird position message (which isn't entirely accureate).
+* Created a `Write-WhiskeyError` function for displaying build errors to the user.
+* Standardized and improved output of Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug`. Timings and the currently executing task name (if applicable) are added as a prefix to all but error-level messages. Output also no longer contains the current pipeline name or task index/number.
+* Fixed: PowerShell task doesn't show any information to the user about what it's doing.
+* Created `Log` task for writing logging messages. messages can be written at different levels: Error, Warning, Info (the default), Verbose, or Debug.
+* Whiskey now enables information messages during a build. To disable them, pass `-InformationAction Ignore` to `Invoke-WhiskeyBuild` in your build script.
 '@
         } # End of PSData hashtable
 

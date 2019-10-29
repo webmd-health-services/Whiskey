@@ -37,9 +37,8 @@ function Init
 function GivenANuGetPackage
 {
     param(
-        [string[]]
         [ValidatePattern('\.\d+\.\d+\.\d+(-.*)?(\.symbols)?\.nupkg')]
-        $Path
+        [String[]]$Path
     )
 
     $outputRoot = Join-Path -Path $testRoot -ChildPath '.output'
@@ -107,17 +106,13 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $ForProjectThatDoesNotExist,
+        [switch]$ForProjectThatDoesNotExist,
 
-        [Switch]
-        $ForMultiplePackages,
+        [switch]$ForMultiplePackages,
 
-        [Switch]
-        $Symbols,
+        [switch]$Symbols,
 
-        [Switch]
-        $SkipUploadedCheck
+        [switch]$SkipUploadedCheck
     )
 
     $script:context = New-WhiskeyTestContext -ForVersion $packageVersion `
@@ -165,14 +160,14 @@ function WhenRunningNuGetPackTask
     elseif( $publishFails )
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-            Write-Debug -Message 'http://httpstat.us/404'
+            Write-WhiskeyDebug -Message 'http://httpstat.us/404'
             Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
     elseif( $packageExistsCheckFails )
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
-            Write-Debug -Message 'http://httpstat.us/500'
+            Write-WhiskeyDebug -Message 'http://httpstat.us/500'
             Invoke-WebRequest -Uri 'http://httpstat.us/500' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
@@ -181,16 +176,16 @@ function WhenRunningNuGetPackTask
         $global:counter = 0
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
             #$DebugPreference = 'Continue'
-            Write-Debug $global:counter
+            Write-WhiskeyDebug $global:counter
             if($global:counter -eq 0)
             {
                 $global:counter++    
-                Write-Debug $global:counter
-                Write-Debug -Message 'http://httpstat.us/404'
+                Write-WhiskeyDebug $global:counter
+                Write-WhiskeyDebug -Message 'http://httpstat.us/404'
                 Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
             }
             $global:counter = 0
-            Write-Debug -Message 'http://httpstat.us/200'
+            Write-WhiskeyDebug -Message 'http://httpstat.us/200'
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
 
@@ -255,9 +250,9 @@ function ThenPackagePublished
         Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
             $expectedPath = Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $item)
-            Write-Debug -Message ('Path  expected  {0}' -f $expectedPath)
+            Write-WhiskeyDebug -Message ('Path  expected  {0}' -f $expectedPath)
             $Path | Where-Object { 
-                                    Write-Debug -Message ('      actual    {0}' -f $_)
+                                    Write-WhiskeyDebug -Message ('      actual    {0}' -f $_)
                                     $_ -eq $expectedPath 
                                     } 
         }.GetNewClosure()
@@ -265,8 +260,8 @@ function ThenPackagePublished
         $expectedUriWildcard = '*/{0}/{1}' -f $Name,$PackageVersion
         Assert-MockCalled -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            Write-Debug -Message ('Uri   expected   {0}' -f $expectedUriWildcard)
-            Write-Debug -Message ('      actual     {0}' -f $Uri)
+            Write-WhiskeyDebug -Message ('Uri   expected   {0}' -f $expectedUriWildcard)
+            Write-WhiskeyDebug -Message ('      actual     {0}' -f $Uri)
             $Uri -like $expectedUriWildcard
             }.GetNewClosure()
     }
@@ -289,12 +284,12 @@ function ThenPackageNotPublished
 
         if( -not $expectedPath )
         {
-            Write-Debug 'No Path'
+            Write-WhiskeyDebug 'No Path'
             return $True
         }
 
-        Write-Debug ('Path  expected  *\{0}' -f $expectedPath)
-        Write-Debug ('      actual    {0}' -f $Path)
+        Write-WhiskeyDebug ('Path  expected  *\{0}' -f $expectedPath)
+        Write-WhiskeyDebug ('      actual    {0}' -f $Path)
         return $Path -like ('*\{0}' -f $expectedPath)
     }
 }

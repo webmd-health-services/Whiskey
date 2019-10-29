@@ -65,7 +65,7 @@ function WhenResolvingPowerShellModule
 {
     [CmdletBinding()]
     param(
-        [Switch]$SkipCaching
+        [switch]$SkipCaching
     )
 
     $parameter = @{

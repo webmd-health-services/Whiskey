@@ -24,14 +24,14 @@ function Install-WhiskeyTool
 
         [Parameter(Mandatory)]
         # The directory where you want the tools installed.
-        [string]$InstallRoot,
+        [String]$InstallRoot,
 
         [Parameter(Mandatory)]
         # The task parameters for the currently running task.
         [hashtable]$TaskParameter,
         
         # Running in clean mode, so don't install the tool if it isn't installed.
-        [Switch]$InCleanMode
+        [switch]$InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'
@@ -44,25 +44,25 @@ function Install-WhiskeyTool
     $mutexName = $mutexName -replace '/','-'
     $startedWaitingAt = Get-Date
     $startedUsingAt = Get-Date
-    Write-Debug -Message ('Creating mutex "{0}".' -f $mutexName)
+    Write-WhiskeyDebug -Message ('Creating mutex "{0}".' -f $mutexName)
     $installLock = New-Object 'Threading.Mutex' $false,$mutexName
     #$DebugPreference = 'Continue'
-    Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
+    Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
 
     try
     {
         try
         {
-            [void]$installLock.WaitOne()
+            [Void]$installLock.WaitOne()
         }
         catch [Threading.AbandonedMutexException]
         {
-            Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
+            Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
             $Global:Error.RemoveAt(0)
         }
 
         $waitedFor = (Get-Date) - $startedWaitingAt
-        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" obtained mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$waitedFor)
+        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" obtained mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$waitedFor)
         #$DebugPreference = 'SilentlyContinue'
         $startedUsingAt = Get-Date
 
@@ -102,7 +102,7 @@ function Install-WhiskeyTool
                 $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
                     if( -not $nodePath )
                     {
-                        Write-Error -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
+                        Write-WhiskeyError -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
                         return
                     }
                     $toolPath = Install-WhiskeyNodeModule -Name $name `
@@ -146,14 +146,14 @@ function Install-WhiskeyTool
     {
         #$DebugPreference = 'Continue'
         $usedFor = (Get-Date) - $startedUsingAt
-        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" releasing mutex "{2}" after using it for {3}.' -f (Get-Date),$PID,$mutexName,$usedFor)
+        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" releasing mutex "{2}" after using it for {3}.' -f (Get-Date),$PID,$mutexName,$usedFor)
         $startedReleasingAt = Get-Date
         $installLock.ReleaseMutex();
         $installLock.Dispose()
         $installLock.Close()
         $installLock = $null
         $releasedDuration = (Get-Date) - $startedReleasingAt
-        Write-Debug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" released mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$releasedDuration)
+        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" released mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$releasedDuration)
         #$DebugPreference = 'SilentlyContinue'
     }
 }

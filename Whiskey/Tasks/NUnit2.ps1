@@ -6,10 +6,10 @@ function Invoke-WhiskeyNUnit2Task
     [Whiskey.RequiresTool('NuGet::ReportGenerator',PathParameterName='ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [hashtable]$TaskParameter
     )
 
@@ -62,6 +62,7 @@ function Invoke-WhiskeyNUnit2Task
     Write-WhiskeyTiming -Message ('Installing NUnit.')
     $nunitRoot = $TaskParameter['NUnitPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
+
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package {0} {1} failed to install!' -f $package,$version)
@@ -80,6 +81,7 @@ function Invoke-WhiskeyNUnit2Task
     $openCoverRoot = $TaskParameter['OpenCoverPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $openCoverRoot -PathType Container) )
+
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package OpenCover {0}.' -f $version)
         return
@@ -97,6 +99,7 @@ function Invoke-WhiskeyNUnit2Task
     $reportGeneratorRoot = $TaskParameter['ReportGeneratorPath']
     Write-WhiskeyTiming -Message ('COMPLETE')
     if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container) )
+
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failed to install NuGet package ReportGenerator.' -f $version)
         return
@@ -161,13 +164,13 @@ function Invoke-WhiskeyNUnit2Task
         $pathsArg = ($path -join '" "')
         $nunitArgs = '"{0}" /noshadow {1} /xml="{2}" {3} {4} {5}' -f $pathsArg,$frameworkParam,$reportPath,$includeParam,$excludeParam,$extraArgString
         $nunitArgs = $nunitArgs -replace '"', '\"'
-        Write-WhiskeyTiming -Message ('Running OpenCover')
+        Write-WhiskeyDebug -Message ('Running OpenCover')
         & $openCoverPath "-target:${nunitConsolePath}" "-targetargs:${nunitArgs}" "-filter:${coverageFilterString}" '-register:user' "-output:${openCoverReport}" '-returntargetcode' $openCoverArgs
-        Write-WhiskeyTiming -Message ('COMPLETE')
+        Write-WhiskeyDebug -Message ('COMPLETE')
         $testsFailed = $LastExitCode;
-        Write-WhiskeyTiming -Message ('Running ReportGenerator')
+        Write-WhiskeyDebug -Message ('Running ReportGenerator')
         & $reportGeneratorPath "-reports:${openCoverReport}" "-targetdir:$coverageReportDir" $reportGeneratorArgs
-        Write-WhiskeyTiming -Message ('COMPLETE')
+        Write-WhiskeyDebug -Message ('COMPLETE')
         if( $LastExitCode -or $testsFailed )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $openCoverPath,$LastExitCode)
@@ -176,9 +179,9 @@ function Invoke-WhiskeyNUnit2Task
     }
     else
     {
-        Write-WhiskeyTiming -Message ('Running NUnit')
+        Write-WhiskeyDebug -Message ('Running NUnit')
         & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
-        Write-WhiskeyTiming -Message ('COMPLETE')
+        Write-WhiskeyDebug -Message ('COMPLETE')
         if( $LastExitCode )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit2 tests failed. {0} returned exit code {1}.' -f $nunitConsolePath,$LastExitCode)
