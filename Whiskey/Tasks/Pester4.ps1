@@ -107,21 +107,16 @@ function Invoke-WhiskeyPester4Task
             Format-Table -AutoSize -Property 'Describe','Name','Time'
     }
 
-    # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
-    # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
-    $informationActionParameter = @{ }
-    if( (Get-Command -Name 'Receive-Job' -ParameterName 'InformationAction') )
-    {
-        $informationActionParameter['InformationAction'] = 'SilentlyContinue'
-    }
 
     do
     {
-        $job | Receive-Job @informationActionParameter
+        # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+        # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
+        $job | Receive-Job -InformationAction SilentlyContinue
     }
     while( -not ($job | Wait-Job -Timeout 1) )
 
-    $job | Receive-Job @informationActionParameter
+    $job | Receive-Job -InformationAction SilentlyContinue
 
     Publish-WhiskeyPesterTestResult -Path $outputFile
 
