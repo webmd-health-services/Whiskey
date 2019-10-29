@@ -127,13 +127,30 @@ function Install-WhiskeyNode
         }
         catch
         {
-            $responseStatus = $_.Exception.Response.StatusCode
-            $errorMsg = 'Failed to download Node {0}. Received a {1} ({2}) response when retreiving URI {3}.' -f $nodeVersionToInstall.version,$responseStatus,[int]$responseStatus,$uri
-            if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+            $responseInfo = ''
+            $notFound = $false
+            if( $_.Exception | Get-Member -Name 'Response' )
+            {
+                $responseStatus = $_.Exception.Response.StatusCode
+                $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
+                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+                {
+                    $notFound = $true
+                }
+            }
+            else
+            {
+                Write-WhiskeyError -ErrorRecord $_
+                $responseInfo = 'Please see previous error for more information.'
+            }
+
+            $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
+            if( $notFound )
             {
                 $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
             }
-            throw $errorMsg
+            Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
+            return
         }
     }
 
