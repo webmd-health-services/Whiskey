@@ -11,8 +11,7 @@ function Get-MSBuild
     function Resolve-MSBuildToolsPath
     {
         param(
-            [Microsoft.Win32.RegistryKey]
-            $Key
+            [Microsoft.Win32.RegistryKey]$Key
         )
 
         $toolsPath = Get-ItemProperty -Path $Key.PSPath -Name 'MSBuildToolsPath' -ErrorAction Ignore | Select-Object -ExpandProperty 'MSBuildToolsPath' -ErrorAction Ignore
@@ -33,12 +32,12 @@ function Get-MSBuild
     filter Test-Version
     {
         param(
-            [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+            [Parameter(Mandatory,ValueFromPipeline)]
             $InputObject
         )
 
-        [version]$version = $null
-        [version]::TryParse($InputObject,[ref]$version)
+        [Version]$version = $null
+        [Version]::TryParse($InputObject,[ref]$version)
 
     }
 
@@ -76,7 +75,7 @@ function Get-MSBuild
 
         [pscustomobject]@{
             Name = $name;
-            Version = [version]$name;
+            Version = [Version]$name;
             Path = $msbuildPath;
             Path32 = $msbuildPath32;
         }
@@ -87,7 +86,7 @@ function Get-MSBuild
         $msbuildRoot = Join-Path -Path $instance.InstallationPath -ChildPath 'MSBuild'
         if( -not (Test-Path -Path $msbuildRoot -PathType Container) )
         {
-            Write-Verbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
+            Write-WhiskeyVerbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
             continue
         }
 
@@ -115,7 +114,7 @@ function Get-MSBuild
 
             [pscustomobject]@{
                                 Name =  $versionRoot.Name;
-                                Version = [version]$versionRoot.Name;
+                                Version = [Version]$versionRoot.Name;
                                 Path = $path;
                                 Path32 = $path32;
                             }

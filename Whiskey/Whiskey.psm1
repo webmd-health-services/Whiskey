@@ -8,23 +8,18 @@ function Write-Timing
     )
 
     $now = Get-Date
-    Write-Debug -Message ('[{0}]  [{1}]  {2}' -f $now,($now - $startedAt),$Message)
+    Write-Debug -Message ('[{0:hh":"mm":"ss"."ff}]  {1}' -f ($now - $startedAt),$Message)
 }
-
-$events = @{ }
 
 $powerShellModulesDirectoryName = 'PSModules'
 
 $whiskeyScriptRoot = $PSScriptRoot
-$whiskeyModulesRoot = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Modules' -Resolve
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
 $whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
 
 $buildStartedAt = [DateTime]::MinValue
 
 $PSModuleAutoLoadingPreference = 'None'
-
-$supportsWriteInformation = Get-Command -Name 'Write-Information' -ErrorAction Ignore
 
 Write-Timing 'Updating serialiazation depths on Whiskey objects.'
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
@@ -33,10 +28,17 @@ Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorActio
 Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
 
 Write-Timing 'Testing that correct Whiskey assembly is loaded.'
+$oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
 $attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
 if( -not ($attr | Get-Member 'Platform') )
 {
-    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
+}
+
+$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
+if( -not $attr )
+{
+    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
 }
 
 function Assert-Member
@@ -44,12 +46,10 @@ function Assert-Member
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [object]
-        $Object,
+        [Object]$Object,
 
         [Parameter(Mandatory)]
-        [string[]]
-        $Property
+        [String[]]$Property
     )
 
     foreach( $propertyToCheck in $Property )
@@ -70,10 +70,17 @@ Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
-if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [SecureString].FullName )
+if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [securestring].FullName )
 {
     Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop 
 }
+
+Write-Timing 'Updating formats.'
+$prependFormats = @(
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Management.Automation.ErrorRecord.format.ps1xml'),
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Exception.format.ps1xml')
+                    )
+Update-FormatData -PrependPath $prependFormats
 
 Write-Timing ('Creating internal module variables.')
 

@@ -138,8 +138,7 @@ function ThenNotInstalledDotNet
 function ThenReturnedPathToDotNet
 {
     param(
-        [switch]
-        $Global
+        [switch]$Global
     )
 
     If ($Global)
@@ -167,8 +166,7 @@ function WhenInstallingDotNet
     param(
         $Version,
 
-        [switch]
-        $Global
+        [switch]$Global
     )
 
     $parameter = $PSBoundParameters

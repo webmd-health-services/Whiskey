@@ -3,6 +3,9 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+Import-WhiskeyTestModule 'VSSetup'
+
+$testRoot = $null
 $projectName = 'NuGetPack.csproj'
 $context = $null
 $nugetUri = $null
@@ -25,16 +28,16 @@ function InitTest
     $script:path = $projectName
     $script:byBuildServer = $false
     $script:version = $null
+
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function GivenABuiltLibrary
 {
     param(
-        [Switch]
-        $ThatDoesNotExist,
+        [switch]$ThatDoesNotExist,
 
-        [Switch]
-        $InReleaseMode
+        [switch]$InReleaseMode
     )
 
     @'
@@ -80,7 +83,7 @@ function GivenABuiltLibrary
   </Target>
   -->
 </Project>
-'@ | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $projectName)
+'@ | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $projectName)
 
     @'
 namespace NuGetPack
@@ -89,10 +92,10 @@ namespace NuGetPack
     {
     }
 }
-'@ | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'NoOp.cs')
+'@ | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'NoOp.cs')
 
     # Make sure output directory gets created by the task
-    $whiskeyYmlPath = Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml'
+    $whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
     @'
 Build:
 - Version:
@@ -107,7 +110,8 @@ Build:
         $propertyArg['Property'] = 'Configuration=Release'
     }
 
-    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
+    Initialize-WhiskeyTestPSModule -Name 'VSSetup' -BuildRoot $testRoot
+    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath 
     if( $InReleaseMode )
     {
         $context.RunBy = [Whiskey.RunBy]::BuildServer
@@ -116,9 +120,8 @@ Build:
     {
         $context.RunBy = [Whiskey.RunBy]::Developer
     }
-    Invoke-WhiskeyBuild -Context $context |
-        Out-String |
-        Write-Verbose -Verbose
+    Invoke-WhiskeyBuild -Context $context | Out-String | Write-WhiskeyVerbose
+    Reset-WhiskeyTestPSModule
 }
 
 function GivenFile
@@ -128,7 +131,7 @@ function GivenFile
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Name) 
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Name) 
 }
 
 function GivenRunByBuildServer
@@ -139,8 +142,7 @@ function GivenRunByBuildServer
 function GivenPath
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     $script:path = $Path
@@ -164,8 +166,7 @@ function WhenRunningNuGetPackTask
 {
     [CmdletBinding()]
     param(
-        [Switch]
-        $Symbols,
+        [switch]$Symbols,
 
         $Property,
 
@@ -184,7 +185,7 @@ function WhenRunningNuGetPackTask
         $byItDepends['ForDeveloper'] = $true
     }
             
-    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' @byItDepends
+    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForBuildRoot $testRoot @byItDepends
     
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 
@@ -242,10 +243,10 @@ function ThenFile
         $Is
     )
 
-    $packagePath = Join-Path -Path $TestDrive.FullName -ChildPath '.output'
+    $packagePath = Join-Path -Path $testRoot -ChildPath '.output'
     $packagePath = Join-Path -Path $packagePath -ChildPath $InPackage
 
-    $extractDir = Join-Path -Path $TestDrive.FullName -ChildPath '.output\extracted'
+    $extractDir = Join-Path -Path $testRoot -ChildPath '.output\extracted'
     [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractDir)
 
     Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
@@ -284,8 +285,7 @@ function ThenPackageCreated
 
         $Version = $context.Version.SemVer1,
 
-        [Switch]
-        $Symbols
+        [switch]$Symbols
     )
 
     $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Version)

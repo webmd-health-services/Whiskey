@@ -4,13 +4,11 @@ function Invoke-WhiskeyParallelTask
     [CmdletBinding()]
     [Whiskey.Task('Parallel')]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -97,14 +95,14 @@ function Invoke-WhiskeyParallelTask
                     # Load third-party tasks.
                     foreach( $info in $context.TaskPaths )
                     {
-                        Write-Verbose ('Loading tasks from "{0}".' -f $info.FullName)
+                        Write-WhiskeyVerbose -Context $context -Message ('Loading tasks from "{0}".' -f $info.FullName)
                         . $info.FullName
                     }
 
                     foreach( $task in $using:tasks )
                     {
-                        Write-Debug -Message ($task.Name)
-                        $task.Parameter | ConvertTo-Json -Depth 50 | Write-Debug
+                        Write-WhiskeyDebug -Context $context -Message ($task.Name)
+                        $task.Parameter | ConvertTo-Json -Depth 50 | Write-WhiskeyDebug -Context $context
                         Invoke-WhiskeyTask -TaskContext $context -Name $task.Name -Parameter $task.Parameter
                     }
                 }
@@ -112,7 +110,7 @@ function Invoke-WhiskeyParallelTask
                 $job |
                     Add-Member -MemberType NoteProperty -Name 'QueueIndex' -Value $queueIdx -PassThru |
                     Add-Member -MemberType NoteProperty -Name 'Completed' -Value $false
-                [void]$jobs.Add($job)
+                [Void]$jobs.Add($job)
         }
 
         $lastNotice = (Get-Date).AddSeconds(-61)
@@ -135,7 +133,9 @@ function Invoke-WhiskeyParallelTask
                 if( $completedJob )
                 {
                     $job.Completed = $true
-                    $completedJob | Receive-Job
+                    # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+                    # Since some things use Write-Host, this is a workaround to avoid seeing duplicate host output.
+                    $completedJob | Receive-Job -InformationAction SilentlyContinue
                     $duration = $job.PSEndTime - $job.PSBeginTime
                     Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  {2} in {3}' -f $job.QueueIndex,$job.Name,$job.State.ToString().ToUpperInvariant(),$duration)
                     if( $job.JobStateInfo.State -eq [Management.Automation.JobState]::Failed )

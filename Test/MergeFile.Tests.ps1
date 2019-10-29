@@ -10,19 +10,19 @@ function GivenFile
 {
     param(
         [Parameter(Mandatory)]
-        [string]$Path,
+        [String]$Path,
 
-        [object]$WithContent
+        [Object]$WithContent
     )
 
     $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
     if( $WithContent )
     {
-        if( $WithContent -is [string] )
+        if( $WithContent -is [String] )
         {
             [IO.File]::WriteAllText($fullPath,$WithContent)
         }
-        elseif( $WithContent -is [byte[]] )
+        elseif( $WithContent -is [Byte[]] )
         {
             [IO.File]::WriteAllBytes($fullPath,$WithContent)
         }
@@ -40,7 +40,7 @@ function GivenFile
 function Get-RandomByte
 {
     [CmdletBinding()]
-    [OutputType([byte[]])]
+    [OutputType([Byte[]])]
     param(
     )
 
@@ -56,7 +56,7 @@ function ThenFailed
 {
     param(
         [Parameter(Mandatory)]
-        [string]$WithError
+        [String]$WithError
     )
 
     $Global:Error | Should -Not -BeNullOrEmpty
@@ -68,16 +68,16 @@ function ThenFile
     [CmdletBinding(DefaultParameterSetName='Exists')]
     param(
         [Parameter(Mandatory,Position=0)]
-        [string]$Path,
+        [String]$Path,
 
         [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
-        [Switch]$DoesNotExist,
+        [switch]$DoesNotExist,
 
         [Parameter(ParameterSetName='Exists')]
         [switch]$Exists,
 
         [Parameter(ParameterSetName='Exists')]
-        [object]$HasContent
+        [Object]$HasContent
     )
 
     $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
@@ -86,18 +86,18 @@ function ThenFile
         $fullPath | Should -Exist
         if( $PSBoundParameters.ContainsKey('HasContent') )
         {
-            if( $HasContent -is [string] )
+            if( $HasContent -is [String] )
             {
                 [IO.File]::ReadAllText($fullPath) | Should -Be $HasContent
             }
-            elseif( $HasContent -is [byte[]] )
+            elseif( $HasContent -is [Byte[]] )
             {
-                [byte[]]$content = [IO.File]::ReadAllBytes($fullPath)
+                [Byte[]]$content = [IO.File]::ReadAllBytes($fullPath)
                 $content | Should -Be $HasContent
             }
             else
             {
-                throw ('ThenFile: parameter "HasContent" must be a [string] or [byte[]] but got a [{0}]' -f $HasContent.GetType().FullName)
+                throw ('ThenFile: parameter "HasContent" must be a [String] or [Byte[]] but got a [{0}]' -f $HasContent.GetType().FullName)
             }
         }
     }
@@ -112,20 +112,20 @@ function WhenMerging
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string[]]$Path,
+        [String[]]$Path,
 
         [Parameter(Mandatory)]
-        [string]$Into,
+        [String]$Into,
 
         [switch]$AndDeletingSourceFiles,
 
-        [string]$WithTextSeparator,
+        [String]$WithTextSeparator,
 
-        [byte[]]$WithBinarySeparator,
+        [Byte[]]$WithBinarySeparator,
 
         [switch]$Clear,
 
-        [string[]]$Excluding
+        [String[]]$Excluding
     )
 
     $context = New-WhiskeyTestContext -ForBuildServer
@@ -288,24 +288,24 @@ Describe 'MergeFile.when files are empty' {
 Describe 'MergeFile.when files are binary' {
     It 'should concatenate files' {
         Init
-        [byte[]]$content = Get-RandomByte
+        [Byte[]]$content = Get-RandomByte
         GivenFile 'one.txt' -WithContent $content 
-        [byte[]]$content2 = Get-RandomByte
+        [Byte[]]$content2 = Get-RandomByte
         GivenFile 'two.txt' -WithContent ($content2)
         WhenMerging 'one.txt','two.txt' -Into 'merged.txt'
-        ThenFile 'merged.txt' -HasContent ([byte[]]($content + $content2))
+        ThenFile 'merged.txt' -HasContent ([Byte[]]($content + $content2))
     }
 }
 
 Describe 'MergeFile.when separator and files are binary' {
     It 'should concatenate files with separator' {
         Init
-        [byte[]]$content = Get-RandomByte
+        [Byte[]]$content = Get-RandomByte
         GivenFile 'one.txt' -WithContent $content 
-        [byte[]]$content2 = Get-RandomByte
+        [Byte[]]$content2 = Get-RandomByte
         GivenFile 'two.txt' -WithContent ($content2)
-        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithBinarySeparator ([byte[]]@( 28 ))
-        ThenFile 'merged.txt' -HasContent ([byte[]]($content + 28 + $content2))
+        WhenMerging 'one.txt','two.txt' -Into 'merged.txt' -WithBinarySeparator ([Byte[]]@( 28 ))
+        ThenFile 'merged.txt' -HasContent ([Byte[]]($content + 28 + $content2))
     }
 }
 

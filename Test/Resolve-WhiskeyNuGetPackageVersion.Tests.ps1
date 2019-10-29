@@ -34,8 +34,7 @@ function GivenNuGetPackageName
 function GivenNugetReturnsMultipleVersions
 {
     param(
-        [string[]]
-        $PackageVersions
+        [String[]]$PackageVersions
     )
 
     Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'list' } -MockWith { $PackageVersions }.GetNewClosure()
@@ -65,23 +64,17 @@ function ThenErrorMessage
         $Message
     )
 
-    It ('should write error message /{0}/' -f $Message) {
-        $Global:Error | Should -Match $Message
-    }
+    $Global:Error | Should -Match $Message
 }
 
 function ThenNoErrorsWritten
 {
-    It 'should not write any errors' {
-        $Global:Error | Should -BeNullOrEmpty
-    }
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 function ThenReturnedNothing
 {
-    It 'should not return anything' {
-        $output | Should -BeNullOrEmpty
-    }
+    $output | Should -BeNullOrEmpty
 }
 
 function ThenReturnedVersion
@@ -90,75 +83,81 @@ function ThenReturnedVersion
         $Version
     )
 
-    It ('should return version number ''{0}''' -f $Version) {
-        $output | Should -Be $Version
-    }
+    $output | Should -Be $Version
 }
 
 function ThenReturnedValidSemanticVersion
 {
-    It 'should return a valid semantic version number' {
-        $output | Should -Match '^\d+\.\d+\.\d+.*'
-    }
+    $output | Should -Match '^\d+\.\d+\.\d+.*'
 }
 
 function ThenShouldNotRunNuget
 {
-    It 'should not run Nuget' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'list' } -Times 0
-    }
+    Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'list' } -Times 0
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when given only a package name' {
-    Init
-    GivenNuGetPackageName 'NuGet.CommandLine'
-    WhenResolvingNuGetPackageVersion
-    ThenReturnedValidSemanticVersion
-    ThenNoErrorsWritten
+    It 'should get the latest version of that package' {
+        Init
+        GivenNuGetPackageName 'NuGet.CommandLine'
+        WhenResolvingNuGetPackageVersion
+        ThenReturnedValidSemanticVersion
+        ThenNoErrorsWritten
+    }
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when given a package name and Version number 1.2.3' {
-    Init
-    GivenNuGetPackageName 'NuGet.CommandLine'
-    GivenVersion '1.2.3'
-    WhenResolvingNuGetPackageVersion
-    ThenShouldNotRunNuget
-    ThenReturnedVersion '1.2.3'
-    ThenNoErrorsWritten
+    It 'should resolve that version of the pacakge' {
+        Init
+        GivenNuGetPackageName 'NuGet.CommandLine'
+        GivenVersion '1.2.3'
+        WhenResolvingNuGetPackageVersion
+        ThenShouldNotRunNuget
+        ThenReturnedVersion '1.2.3'
+        ThenNoErrorsWritten
+    }
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when given a package name and Version number that contains a wildcard' {
-    Init
-    GivenNuGetPackageName 'NuGet.CommandLine'
-    GivenVersion '1.*'
-    WhenResolvingNuGetPackageVersion -ErrorAction SilentlyContinue
-    ThenShouldNotRunNuget
-    ThenErrorMessage 'Wildcards are not allowed for NuGet packages yet because of a bug'
-    ThenReturnedNothing
+    It 'should fail' {
+        Init
+        GivenNuGetPackageName 'NuGet.CommandLine'
+        GivenVersion '1.*'
+        WhenResolvingNuGetPackageVersion -ErrorAction SilentlyContinue
+        ThenShouldNotRunNuget
+        ThenErrorMessage 'Wildcards are not allowed for NuGet packages yet because of a bug'
+        ThenReturnedNothing
+    }
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when package does not exist' {
-    Init
-    GivenNuGetPackageName 'somenonexistentpackage'
-    WhenResolvingNuGetPackageVersion -ErrorAction SilentlyContinue
-    ThenErrorMessage 'Unable to find latest version of package'
-    ThenReturnedNothing
+    It 'should fail' {
+        Init
+        GivenNuGetPackageName 'somenonexistentpackage'
+        WhenResolvingNuGetPackageVersion -ErrorAction SilentlyContinue
+        ThenErrorMessage 'Unable to find latest version of package'
+        ThenReturnedNothing
+    }
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when NuGet returns multiple versions' {
-    Init
-    GivenNuGetPackageName 'NuGet.CommandLine'
-    GivenNugetReturnsMultipleVersions 'NuGet.CommandLine 1.2.3', 'NuGet.CommandLine 2.3.4'
-    WhenResolvingNuGetPackageVersion
-    ThenReturnedVersion '1.2.3'
-    ThenNoErrorsWritten
+    It 'should return first' {
+        Init
+        GivenNuGetPackageName 'NuGet.CommandLine'
+        GivenNugetReturnsMultipleVersions 'NuGet.CommandLine 1.2.3', 'NuGet.CommandLine 2.3.4'
+        WhenResolvingNuGetPackageVersion
+        ThenReturnedVersion '1.2.3'
+        ThenNoErrorsWritten
+    }
 }
 
 Describe 'Resolve-WhiskeyNuGetPackageVersion.when NuGet returns multiple different packages' {
-    Init
-    GivenNuGetPackageName 'NuGet.CommandLine'
-    GivenNugetReturnsMultipleVersions 'NuGet.Command 1.0.0', 'NuGet.CommandLine', 'NuGet.CommandLine 4.3.0', 'NuGet.Core 2.1.0'
-    WhenResolvingNuGetPackageVersion
-    ThenReturnedVersion '4.3.0'
-    ThenNoErrorsWritten
+    It 'should return latest' {
+        Init
+        GivenNuGetPackageName 'NuGet.CommandLine'
+        GivenNugetReturnsMultipleVersions 'NuGet.Command 1.0.0', 'NuGet.CommandLine', 'NuGet.CommandLine 4.3.0', 'NuGet.Core 2.1.0'
+        WhenResolvingNuGetPackageVersion
+        ThenReturnedVersion '4.3.0'
+        ThenNoErrorsWritten
+    }
 }

@@ -1,57 +1,30 @@
 
 function Invoke-WhiskeyPowerShell
 {
-    [Whiskey.Task("PowerShell",SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.Task('PowerShell',SupportsClean,SupportsInitialize)]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [String[]]$Path,
+
+        [Object]$Argument = @()
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not ($TaskParameter.ContainsKey('Path')) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths, which should be a list of PowerShell Scripts to run, e.g.
-
-        Build:
-        - PowerShell:
-            Path:
-            - myscript.ps1
-            - myotherscript.ps1
-            WorkingDirectory: bin')
-        return
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-
     $workingDirectory = (Get-Location).ProviderPath
-
-    $argument = $TaskParameter['Argument']
-    if( -not $argument )
-    {
-        $argument = @{ }
-    }
 
     foreach( $scriptPath in $path )
     {
 
-        if( -not (Test-Path -Path $WorkingDirectory -PathType Container) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': working directory ''{1}'' doesn''t exist.' -f $scriptPath,$WorkingDirectory)
-            continue
-        }
-
         $scriptCommand = Get-Command -Name $scriptPath -ErrorAction Ignore
         if( -not $scriptCommand )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script ''{0}'': it has a syntax error.' -f $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script "{0}": it has a syntax error.' -f $scriptPath)
             continue
         }
 
@@ -68,11 +41,15 @@ function Invoke-WhiskeyPowerShell
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-RunResult-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
         $job = Start-Job -ScriptBlock {
+
+            Set-StrictMode -Version 'Latest'
+
             $VerbosePreference = $using:VerbosePreference
             $DebugPreference = $using:DebugPreference
             $ProgressPreference = $using:ProgressPreference
             $WarningPreference = $using:WarningPreference
             $ErrorActionPreference = $using:ErrorActionPreference
+            $InformationPreference = $using:InformationPreference
 
             $workingDirectory = $using:WorkingDirectory
             $scriptPath = $using:ScriptPath
@@ -88,32 +65,87 @@ function Invoke-WhiskeyPowerShell
                                         }
             [Whiskey.Context]$context = $serializedContext | ConvertTo-WhiskeyContext
 
+            Set-Location $workingDirectory
+
+            $message = Resolve-Path -Path $scriptPath -Relative
+            if( $message.Contains(' ') )
+            {
+                $message = '& "{0}"' -f $message
+            }
+
             $contextArgument = @{ }
             if( $passTaskContext )
             {
                 $contextArgument['TaskContext'] = $context
+                $message = '{0} -TaskContext $context' -f $message
             }
 
-            Set-Location $workingDirectory
+            if( $argument )
+            {
+                $argumentDesc = 
+                    & {
+                        if( ($argument | Get-Member -Name 'Keys') )
+                        {
+                            foreach( $parameterName in $argument.Keys )
+                            {
+                                Write-Output ('-{0}' -f $parameterName)
+                                Write-Output $argument[$parameterName]
+                            }
+                        }
+                        else
+                        {
+                            Write-Output $argument
+                        }
+                    } |
+                    ForEach-Object {
+                        if( $_.ToString().Contains(' ') )
+                        {
+                            Write-Output ("{0}" -f $_)
+                            return
+                        }
+                        Write-Output $_
+                    }
+                $message = '{0} {1}' -f $message,($argumentDesc -join ' ')
+            }
+
+            Write-WhiskeyInfo -Context $context -Message $message
+
             $Global:LASTEXITCODE = 0
 
-            & $scriptPath @contextArgument @argument
-
-            $result = @{
+            $result = [pscustomobject]@{
                 'ExitCode'   = $Global:LASTEXITCODE
-                'Successful' = $?
+                'Successful' = $false
+            }
+            $result | ConvertTo-Json | Set-Content -Path $resultPath
+
+            try
+            {
+                Set-StrictMode -Off
+                & $scriptPath @contextArgument @argument
+                $result.ExitCode = $Global:LASTEXITCODE
+                $result.Successful = $?
+            }
+            catch
+            {
+                $_ | Out-String | Write-WhiskeyError 
             }
 
+            Set-StrictMode -Version 'Latest'
+
+            Write-WhiskeyVerbose -Context $context -Message ('Exit Code  {0}' -f $result.ExitCode)
+            Write-WhiskeyVerbose -Context $context -Message ('$?         {0}' -f $result.Successful)
             $result | ConvertTo-Json | Set-Content -Path $resultPath
         }
 
         do
         {
-            $job | Receive-Job
+            # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+            # Since some things use Write-Host, this is a workaround to avoid seeing duplicate host output.
+            $job | Receive-Job -InformationAction SilentlyContinue
         }
         while( -not ($job | Wait-Job -Timeout 1) )
 
-        $job | Receive-Job
+        $job | Receive-Job -InformationAction SilentlyContinue
 
         if( (Test-Path -Path $resultPath -PathType Leaf) )
         {
@@ -121,18 +153,18 @@ function Invoke-WhiskeyPowerShell
         }
         else
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" threw a terminating exception.' -F $scriptPath)
             return
         }
 
         if( $runResult.ExitCode -ne 0 )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
             return
         }
-        elseif( $runResult.Successful -eq $false )
+        elseif( -not $runResult.Successful )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script ''{0}'' threw a terminating exception.' -F $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" threw a terminating exception.' -F $scriptPath)
             return
         }
 

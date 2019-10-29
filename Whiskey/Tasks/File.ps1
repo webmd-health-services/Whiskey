@@ -7,9 +7,9 @@ function New-WhiskeyFile
         [Whiskey.Context]$TaskContext,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent)]
-        [string[]]$Path,
+        [String[]]$Path,
 
-        [string]$Content,
+        [String]$Content,
 
         [switch]$Touch
     )

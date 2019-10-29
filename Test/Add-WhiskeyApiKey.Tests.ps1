@@ -15,16 +15,13 @@ function ThenApiKey
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
-        [string]
-        $WithValue,
+        [String]$WithValue,
 
         [Parameter(Mandatory)]
-        [Switch]
-        $Exists
+        [switch]$Exists
     )
 
     It ('should add API key') {
@@ -37,12 +34,10 @@ function WhenAddingApiKey
 {
     param(
         [Parameter(Mandatory)]
-        [string]
-        $ID,
+        [String]$ID,
 
         [Parameter(Mandatory)]
-        [string]
-        $WithValue
+        [String]$WithValue
     )
 
     $script:context = New-WhiskeyTestContext -ForDeveloper

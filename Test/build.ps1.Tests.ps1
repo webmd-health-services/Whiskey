@@ -2,10 +2,14 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+$testRoot = $null
 $buildPs1Path = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\build.ps1' -Resolve
+
 function Init
 {
     Get-Module 'PowerShellGet','Whiskey','PackageManagement' | Remove-Module -Force -ErrorAction Ignore
+    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
 }
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
@@ -23,12 +27,12 @@ function ThenModule
 {
     param(
         [Parameter(Mandatory)]
-        [string[]]$Named,
+        [String[]]$Named,
 
         [switch]$Not,
 
         [Parameter(Mandatory)]
-        [Switch]$Loaded
+        [switch]$Loaded
     )
 
     if( $Not )
@@ -49,12 +53,12 @@ function ThenNoErrors
 function ThenWhiskeyInstalled
 {
     $moduleDirName = $latestRelease.name -replace '-.*$',''
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
+    $path = Join-Path -Path $testRoot -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
     $manifest = Test-ModuleManifest -Path ($path -replace '\.ps\*1','.psd1')
     Assert-MockCalled -CommandName 'Invoke-WebRequest' -ParameterFilter { $Uri -notlike 'Whiskey-*.*.*-*.zip' }
-    Write-Verbose $manifest.PrivateData.PSData.Prerelease -Verbose
+    Write-Verbose $manifest.PrivateData.PSData.Prerelease
     $manifest.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
 }
 
@@ -62,7 +66,7 @@ function WhenBootstrapping
 {
     $Global:Error.Clear()
 
-    Copy-Item -Path $buildPs1Path -Destination $TestDrive.FullName
+    Copy-Item -Path $buildPs1Path -Destination $testRoot
 
     Mock -CommandName 'Invoke-WebRequest' -ParameterFilter {
         # Only mock out the first call. We just want to capture what parameters the function was called with.
@@ -86,7 +90,7 @@ function WhenBootstrapping
         $parameters | ConvertTo-Json | Write-Verbose
         Microsoft.PowerShell.Utility\Invoke-WebRequest @parameters }
 
-    & (Join-Path -Path $TestDrive.FullName -ChildPath 'build.ps1' -Resolve)
+    & (Join-Path -Path $testRoot -ChildPath 'build.ps1' -Resolve)
 }
 
 Describe 'buildPs1.when repo isn''t bootstrapped' {

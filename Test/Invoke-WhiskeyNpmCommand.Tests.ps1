@@ -3,6 +3,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $argument = @{}
 $dependency = $null
 $devDependency = $null
@@ -15,12 +16,15 @@ function Init
     $script:command = $null
     $script:dependency = $null
     $script:devDependency = $null
-    Install-Node
+
+    $script:testRoot = New-WhiskeyTestRoot
+
+    Install-Node -BuildRoot $testRoot
 }
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $testRoot -ChildPath 'package.json'
 
     @"
 {
@@ -48,8 +52,7 @@ function GivenArgument
 function GivenDependency 
 {
     param(
-        [object[]]
-        $Dependency 
+        [Object[]]$Dependency 
     )
     $script:dependency = $Dependency
 }
@@ -57,8 +60,7 @@ function GivenDependency
 function GivenDevDependency 
 {
     param(
-        [object[]]
-        $DevDependency 
+        [Object[]]$DevDependency 
     )
     $script:devDependency = $DevDependency
 }
@@ -76,21 +78,9 @@ function GivenMissingGlobalNPM
     Mock -CommandName 'Join-Path' -ParameterFilter { $ChildPath -eq 'bin\npm-cli.js' }
 }
 
-function WhenRunningNpmCommand
+function Reset
 {
-    [CmdletBinding()]
-    param()
-
-    CreatePackageJson
-    Push-Location $TestDrive.FullName
-    try
-    {
-        Invoke-WhiskeyNpmCommand -Name $npmCommand @argument -BuildRootPath $TestDrive.FullName
-    }
-    finally
-    {
-        Pop-Location
-    }
+    Remove-Node -BuildRoot $testRoot
 }
 
 function ThenErrorMessage
@@ -99,50 +89,39 @@ function ThenErrorMessage
         $ErrorMessage
     )
 
-    It ('should write error message [{0}]' -f $ErrorMessage) {
-        $Global:Error[0] | Should -Match $ErrorMessage
-    }
+    $Global:Error[0] | Should -Match $ErrorMessage
 }
 
 function ThenNoErrorsWritten
 {
-    It 'should not write any errors' {
-        $Global:Error | 
-            Where-Object { $_ -notmatch '\bnpm\ (notice|warn)\b' } | 
-            Should -BeNullOrEmpty
-    }
+    $Global:Error | 
+        Where-Object { $_ -notmatch '\bnpm\ (notice|warn)\b' } | 
+        Should -BeNullOrEmpty
 }
 
 function ThenPackage
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $PackageName,
+        [String]$PackageName,
         
-        [Parameter(Mandatory=$true,ParameterSetName='Exists')]
-        [switch]
-        $Exists,
+        [Parameter(Mandatory,ParameterSetName='Exists')]
+        [switch]$Exists,
 
-        [Parameter(Mandatory=$true,ParameterSetName='DoesNotExist')]
-        [switch]
-        $DoesNotExist
+        [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
+        [switch]$DoesNotExist
     )
 
-    $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $TestDrive.FullName -ErrorAction Ignore
+    $packagePath = Resolve-WhiskeyNodeModulePath -Name $PackageName -BuildRootPath $testRoot -ErrorAction Ignore
 
     If ($Exists)
     {
-        It ('should install package "{0}"' -f $PackageName) {
-            $packagePath | Should -Not -BeNullOrEmpty
-            $packagePath | Should -Exist
-        }
+        $packagePath | Should -Not -BeNullOrEmpty
+        $packagePath | Should -Exist
     }
     else
     {
-        It ('should not install package "{0}"' -f $PackageName) {
-            $packagePath | Should -BeNullOrEmpty
-        }
+        $packagePath | Should -BeNullOrEmpty
     }
 }
 
@@ -152,22 +131,34 @@ function ThenExitCode
         $ExitCode
     )
 
-    It ('should return exit code "{0}"' -f $ExitCode) {
-        $Global:LASTEXITCODE | Should -Be $ExitCode
-    }
+    $Global:LASTEXITCODE | Should -Be $ExitCode
 }
 
 function ThenNpmNotRun
 {
-    It 'should not run npm' {
-        Assert-MockCalled -CommandName 'Invoke-Command' -Times 0
+    Assert-MockCalled -CommandName 'Invoke-Command' -Times 0
+}
+
+function WhenRunningNpmCommand
+{
+    [CmdletBinding()]
+    param()
+
+    CreatePackageJson
+    Push-Location $testRoot
+    try
+    {
+        Invoke-WhiskeyNpmCommand -Name $npmCommand @argument -BuildRootPath $testRoot
+    }
+    finally
+    {
+        Pop-Location
     }
 }
 
-
 Describe 'Invoke-WhiskeyNpmCommand.when running successful NPM command' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should pass build' {
         Init
         GivenDependency '"wrappy": "^1.0.2"'
         GivenDevDependency '"pify": "^3.0.0"'
@@ -179,28 +170,18 @@ Describe 'Invoke-WhiskeyNpmCommand.when running successful NPM command' {
         ThenExitCode 0
         ThenNoErrorsWritten
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Invoke-WhiskeyNpmCommand.when NPM command with argument that fails' {
-    try
-    {
+    AfterEach { Reset }
+    It 'should fail build' {
         Init
         GivenNpmCommand 'install'
         GivenArgument 'thisisanonexistentpackage'
         WhenRunningNpmCommand
         ThenExitCode 1
-        It ('should not stop because of NPM STDERR') {
-            $Global:Error | 
-                Where-Object { $_ -match 'failed\ with\ exit\ code' } | 
-                Should -Not -BeNullOrEmpty
-        }
-    }
-    finally
-    {
-        Remove-Node
+        $Global:Error | 
+            Where-Object { $_ -match 'failed\ with\ exit\ code' } | 
+            Should -Not -BeNullOrEmpty
     }
 }

@@ -26,54 +26,86 @@ function Install-WhiskeyPowerShellModule
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the module to install.
-        $Name,
+        [String]$Name,
 
-        [string]
         # The version of the module to install.
-        $Version,
+        [String]$Version,
 
-        [string]
-        # Modules are saved into a PSModules directory. The "Path" parameter is the path where this PSModules directory should be, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
-        $Path = (Get-Location).ProviderPath
+        [Parameter(Mandatory)]
+        # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
+        [String]$BuildRoot,
+
+        # Don't import the module.
+        [switch]$SkipImport
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet'
-
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-
-    $modulesRoot = Join-Path -Path $Path -ChildPath $powerShellModulesDirectoryName
-    if( -not (Test-Path -Path $modulesRoot -PathType Container) )
+    $module = $null
+    if( -not $Version )
     {
-        New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Stop | Out-Null
+        $module = Resolve-WhiskeyPowerShellModule -Name $Name -BuildRoot $BuildRoot
+        if( -not $module )
+        {
+            return
+        }
+        $Version = $module.Version
     }
 
-    $expectedPath = Join-Path -Path $modulesRoot -ChildPath $Name
+    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
+    $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $Version,$Name)
 
-    if( (Test-Path -Path $expectedPath -PathType Container) -and (Get-ChildItem -Path $expectedPath -File -Filter ('{0}.psd1' -f $Name) -Recurse))
+    $manifest = $null
+    $manifestOk = $false
+    try
     {
-        Resolve-Path -Path $expectedPath | Select-Object -ExpandProperty 'ProviderPath'
-        return
+        $manifest =
+            Get-Item -Path $moduleManifestPath -ErrorAction Ignore |
+            Test-ModuleManifest -ErrorAction Ignore |
+            Sort-Object -Property 'Version' -Descending |
+            Select-Object -First 1
+        $manifestOk = $true
+    }
+    catch
+    {
+        $Global:Error.RemoveAt(0)
     }
 
-    $module = Resolve-WhiskeyPowerShellModule -Name $Name -Version $Version
-    if( -not $module )
+    if( $manifestOk -and $manifest )
     {
-        return
+        $manifest
+    }
+    else
+    {
+        $module = $null
+        if( -not $manifest )
+        {
+            $module = Resolve-WhiskeyPowerShellModule -Name $Name -Version $Version -BuildRoot $BuildRoot
+            if( -not $module )
+            {
+                return
+            }
+        }
+
+        Write-WhiskeyVerbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
+        Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
+
+        $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $module.Version,$Name)
+        $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
+        if( -not $manifest )
+        {
+            Write-WhiskeyError -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+            return
+        }
+        $manifest
     }
 
-    Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
-    Save-Module -Name $Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
-
-    if( -not (Test-Path -Path $expectedPath -PathType Container) )
+    if( -not $SkipImport )
     {
-        Write-Error -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist. Browse the PowerShell Gallery at https://www.powershellgallery.com/' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+        Import-WhiskeyPowerShellModule -Name $Name -BuildRoot $BuildRoot
     }
-
-    return $expectedPath
 }

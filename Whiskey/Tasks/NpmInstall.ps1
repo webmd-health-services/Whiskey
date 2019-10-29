@@ -2,16 +2,14 @@
 function Invoke-WhiskeyNpmInstall
 {
     [Whiskey.Task('NpmInstall',SupportsClean,Obsolete,ObsoleteMessage='The "NpmInstall" task is obsolete. It will be removed in a future version of Whiskey. Please use the "Npm" task instead.')]
-    [Whiskey.RequiresTool('Node', 'NodePath',VersionParameterName='NodeVersion')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -23,15 +21,15 @@ function Invoke-WhiskeyNpmInstall
     {
         if( $TaskContext.ShouldClean )
         {
-            Write-WhiskeyTiming -Message 'Removing project node_modules'
+            Write-WhiskeyDebug -Context $TaskContext -Message 'Removing project node_modules'
             Remove-WhiskeyFileSystemItem -Path 'node_modules' -ErrorAction Stop
         }
         else
         {
-            Write-WhiskeyTiming -Message 'Installing Node modules'
+            Write-WhiskeyDebug -Context $TaskContext -Message 'Installing Node modules'
             Invoke-WhiskeyNpmCommand -Name 'install' -ArgumentList '--production=false' -BuildRootPath $TaskContext.BuildRoot -ForDeveloper:$TaskContext.ByDeveloper -ErrorAction Stop
         }
-        Write-WhiskeyTiming -Message 'COMPLETE'
+        Write-WhiskeyDebug -Context $TaskContext -Message 'COMPLETE'
     }
     else
     {
@@ -58,7 +56,7 @@ function Invoke-WhiskeyNpmInstall
             {
                 if( $TaskParameter.ContainsKey('NodePath') -and (Test-Path -Path $TaskParameter['NodePath'] -PathType Leaf) )
                 {
-                    Write-WhiskeyTiming -Message ('Uninstalling {0}' -f $packageName)
+                    Write-WhiskeyDebug -Context $TaskContext -Message ('Uninstalling {0}' -f $packageName)
                     Uninstall-WhiskeyNodeModule -BuildRootPath $TaskContext.BuildRoot `
                                                 -Name $packageName `
                                                 -ForDeveloper:$TaskContext.ByDeveloper `
@@ -68,7 +66,7 @@ function Invoke-WhiskeyNpmInstall
             }
             else
             {
-                Write-WhiskeyTiming -Message ('Installing {0}' -f $packageName)
+                Write-WhiskeyDebug -Context $TaskContext -Message ('Installing {0}' -f $packageName)
                 Install-WhiskeyNodeModule -BuildRootPath $TaskContext.BuildRoot `
                                           -Name $packageName `
                                           -Version $packageVersion `
@@ -76,7 +74,7 @@ function Invoke-WhiskeyNpmInstall
                                           -Global:$installGlobally `
                                           -ErrorAction Stop
             }
-            Write-WhiskeyTiming -Message 'COMPLETE'
+            Write-WhiskeyDebug -Context $TaskContext -Message 'COMPLETE'
         }
     }
 }

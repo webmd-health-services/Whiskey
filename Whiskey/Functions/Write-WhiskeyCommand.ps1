@@ -3,15 +3,12 @@ function Write-WhiskeyCommand
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $Context,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$Context,
 
-        [string]
-        $Path,
+        [String]$Path,
 
-        [string[]]
-        $ArgumentList
+        [String[]]$ArgumentList
     )
 
     Set-StrictMode -Version 'Latest'

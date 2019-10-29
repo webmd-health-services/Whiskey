@@ -1,15 +1,13 @@
 function Invoke-WhiskeyExec
 {
     [CmdletBinding()]
-    [Whiskey.Task("Exec",SupportsClean=$true,SupportsInitialize=$true)]
+    [Whiskey.Task('Exec',SupportsClean,SupportsInitialize)]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'

@@ -10,20 +10,17 @@ function Invoke-WhiskeyTask
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
+        [Parameter(Mandatory)]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the task.
-        $Name,
+        [String]$Name,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
+        [Parameter(Mandatory)]
         # The parameters/configuration to use to run the task.
-        $Parameter
+        [hashtable]$Parameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -35,6 +32,8 @@ function Invoke-WhiskeyTask
             $EventName,
             $Property
         )
+
+        $events = $TaskContext.Events
 
         if( -not $events.ContainsKey($EventName) )
         {
@@ -71,11 +70,9 @@ function Invoke-WhiskeyTask
     function Merge-Parameter
     {
         param(
-            [hashtable]
-            $SourceParameter,
+            [hashtable]$SourceParameter,
 
-            [hashtable]
-            $TargetParameter
+            [hashtable]$TargetParameter
         )
 
         foreach( $key in $SourceParameter.Keys )
@@ -126,7 +123,7 @@ function Invoke-WhiskeyTask
         }
         if( $task -and $task.WarnWhenUsingAlias )
         {
-            Write-Warning -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
+            Write-WhiskeyWarning -Context $TaskContext -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
         }
     }
 
@@ -157,7 +154,9 @@ function Invoke-WhiskeyTask
 
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
-        Write-Error -Message ('Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f $task.Name,$task.Platform,$CurrentPlatform) -ErrorAction Stop
+        $msg = 'Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f `
+                    $task.Name,$task.Platform,$CurrentPlatform
+        Write-WhiskeyError -Message $msg -ErrorAction Stop
         return
     }
 
@@ -192,6 +191,7 @@ function Invoke-WhiskeyTask
     $currentDirectory = [IO.Directory]::GetCurrentDirectory()
     Push-Location -Path $workingDirectory
     [IO.Directory]::SetCurrentDirectory($workingDirectory)
+    $originalDebugPreference = $DebugPreference
     try
     {
         if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
@@ -240,17 +240,28 @@ function Invoke-WhiskeyTask
         }
 
         $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+
+        # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a build
+        # to hang, so let's set it to Continue so users can see debug output.
+        if( $parameter['Debug'] )
+        {
+            $DebugPreference = 'Continue'
+            $parameter.Remove('Debug')
+        }
+
         & $task.CommandName @parameter
         $result = 'COMPLETED'
     }
     finally
     {
+        $DebugPreference = $originalDebugPreference
+
         # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
         if( $TaskContext.ShouldClean )
         {
             foreach( $requiredTool in $requiredTools )
             {
-                Uninstall-WhiskeyTool -InstallRoot $TaskContext.BuildRoot -Name $requiredTool.Name
+                Uninstall-WhiskeyTool -BuildRoot $TaskContext.BuildRoot -ToolInfo $requiredTool
             }
         }
 

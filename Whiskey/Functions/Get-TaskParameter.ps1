@@ -5,7 +5,7 @@ function Get-TaskParameter
     param(
         # The name of the command.
         [Parameter(Mandatory)]
-        [string]$Name,
+        [String]$Name,
 
         # The properties from the tasks's YAML.
         [Parameter(Mandatory)]
@@ -36,7 +36,7 @@ function Get-TaskParameter
         $value = $TaskProperty[$propertyName]
 
         # PowerShell can't implicitly convert strings to bool/switch values so we have to do it.
-        if( $cmdParameter.ParameterType -eq [Switch] -or $cmdParameter.ParameterType -eq [bool] )
+        if( $cmdParameter.ParameterType -eq [switch] -or $cmdParameter.ParameterType -eq [bool] )
         {
             $value = $value | ConvertFrom-WhiskeyYamlScalar
         }

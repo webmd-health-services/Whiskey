@@ -1,32 +1,28 @@
 
 function New-WhiskeyZipArchive
 {
-    [Whiskey.Task("Zip")]
-    [Whiskey.RequiresTool('PowerShellModule::Zip','ZipPath',Version='0.3.*',VersionParameterName='ZipVersion')]
+    [Whiskey.Task('Zip')]
+    [Whiskey.RequiresPowerShellModule('Zip',Version='0.3.*',VersionParameterName='ZipVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    Import-WhiskeyPowerShellModule -Name 'Zip'
 
     function Write-CompressionInfo
     {
         param(
             [Parameter(Mandatory)]
             [ValidateSet('file','directory','filtered directory')]
-            [string]$What,
-            [string]$Source,
-            [string]$Destination
+            [String]$What,
+            [String]$Source,
+            [String]$Destination
         )
 
         if( $Destination )
@@ -61,7 +57,7 @@ function New-WhiskeyZipArchive
         [IO.Compression.CompressionLevel]$compressionLevel = [IO.Compression.CompressionLevel]::NoCompression
         if( -not [Enum]::TryParse($TaskParameter['CompressionLevel'], [ref]$compressionLevel) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'CompressionLevel' -Message ('Value "{0}" is an invalid compression level. Must be one of: {1}.' -f $TaskParameter['CompressionLevel'],([enum]::GetValues([IO.Compression.CompressionLevel]) -join ', '))
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'CompressionLevel' -Message ('Value "{0}" is an invalid compression level. Must be one of: {1}.' -f $TaskParameter['CompressionLevel'],([Enum]::GetValues([IO.Compression.CompressionLevel]) -join ', '))
             return
         }
         $behaviorParams['CompressionLevel'] = $compressionLevel

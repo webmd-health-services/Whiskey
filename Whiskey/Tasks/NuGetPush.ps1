@@ -1,20 +1,17 @@
 
 function Publish-WhiskeyNuGetPackage
 {
-    [Whiskey.Task("NuGetPush",Platform='Windows',Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),WarnWhenUsingAlias=$true)]
+    [Whiskey.Task('NuGetPush',Platform='Windows',Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),WarnWhenUsingAlias=$true)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]
-        $TaskParameter,
+        [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'

@@ -22,10 +22,9 @@ function Assert-WhiskeyNodePath
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to check.
-        $Path
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -33,7 +32,7 @@ function Assert-WhiskeyNodePath
     
     if( -not (Test-Path -Path $Path -PathType Leaf) )
     {
-        Write-Error -Message ('Node executable ''{0}'' does not exist. Whiskey maybe failed to install Node correctly. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $Path)        
+        Write-WhiskeyError -Message ('Node executable ''{0}'' does not exist. Whiskey maybe failed to install Node correctly. Clean your build then re-run your build normally. If the problem persists, it might be a task authoring error. Please see the `about_Whiskey_Writing_Tasks` help topic for more information.' -f $Path)
         return
     }
 

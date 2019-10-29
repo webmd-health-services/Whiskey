@@ -2,16 +2,14 @@
 function Invoke-WhiskeyPester3Task
 {
     [Whiskey.Task('Pester3',Platform='Windows')]
-    [Whiskey.RequiresTool('PowerShellModule::Pester','PesterPath',Version='3.*',VersionParameterName='Version')]
+    [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='3.*',VersionParameterName='Version',SkipImport)]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [Whiskey.Context]
-        $TaskContext,
+        [Parameter(Mandatory)]
+        [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $TaskParameter
+        [Parameter(Mandatory)]
+        [hashtable]$TaskParameter
     )
 
     Set-StrictMode -Version 'Latest'
@@ -34,6 +32,9 @@ function Invoke-WhiskeyPester3Task
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
     $outputFile = [IO.Path]::GetFullPath($outputFile)
 
+    $moduleInfo = $TaskParameter['PesterModuleInfo']
+    $pesterManifestPath = $moduleInfo.Path
+
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
         $VerbosePreference = $using:VerbosePreference
@@ -43,32 +44,27 @@ function Invoke-WhiskeyPester3Task
         $ErrorActionPreference = $using:ErrorActionPreference
 
         $script = $using:Path
-        $pesterModulePath = $using:TaskParameter['PesterPath']
+        $pesterManifestPath = $using:pesterManifestPath
         $outputFile = $using:outputFile
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterModulePath
+                                        Import-Module -Name $pesterManifestPath
                                     }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
     }
 
+
     # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
     # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
-    $informationActionParameter = @{ }
-    if( (Get-Command -Name 'Receive-Job' -ParameterName 'InformationAction') )
-    {
-        $informationActionParameter['InformationAction'] = 'SilentlyContinue'
-    }
-
     do
     {
-        $job | Receive-Job @informationActionParameter
+        $job | Receive-Job -InformationAction SilentlyContinue
     }
     while( -not ($job | Wait-Job -Timeout 1) )
 
-    $job | Receive-Job @informationActionParameter
+    $job | Receive-Job -InformationAction SilentlyContinue
 
     Publish-WhiskeyPesterTestResult -Path $outputFile
 

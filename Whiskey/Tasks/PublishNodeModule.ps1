@@ -1,18 +1,20 @@
 
 function Publish-WhiskeyNodeModule
 {
-    [Whiskey.Task("PublishNodeModule")]
-    [Whiskey.RequiresTool("Node", "NodePath", VersionParameterName='NodeVersion')]
+    [Whiskey.Task('PublishNodeModule')]
+    [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [string]$CredentialID,
+        [String]$CredentialID,
 
-        [string]$EmailAddress,
+        [String]$EmailAddress,
 
-        [uri]$NpmRegistryUri
+        [Uri]$NpmRegistryUri,
+
+        [String]$Tag
     )
 
     Set-StrictMode -Version 'Latest'
@@ -92,7 +94,21 @@ function Publish-WhiskeyNodeModule
                                 -ErrorAction Stop
 
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
-        Invoke-WhiskeyNpmCommand -Name 'publish' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
+
+        $publishArgumentList = @(
+            if( $Tag )
+            {
+                '--tag'
+                $Tag
+            }
+            elseif( $TaskContext.Version.SemVer2.Prerelease )
+            {
+                '--tag'
+                Resolve-WhiskeyVariable -Context $TaskContext -Name 'WHISKEY_SEMVER2_PRERELEASE_ID'
+            }
+        )
+
+        Invoke-WhiskeyNpmCommand -Name 'publish' -ArgumentList $publishArgumentList -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
     }
     finally
     {

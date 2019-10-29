@@ -15,14 +15,12 @@ function GivenClean
 function GivenItem
 {
     param(
-        [string[]]
-        $Path,
+        [String[]]$Path,
         
         [ValidateSet('File','Directory')]
         $ItemType,
 
-        [Switch]
-        $ReadOnly
+        [switch]$ReadOnly
     )
 
     foreach( $item in $Path )
@@ -39,8 +37,7 @@ function GivenItem
 function GivenPath
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     $script:path = $Path
@@ -55,8 +52,7 @@ function Init
 function ThenItemDoesNotExist
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
     
     foreach( $item in $Path )
@@ -70,8 +66,7 @@ function ThenItemDoesNotExist
 function ThenItemExists
 {
     param(
-        [string[]]
-        $Path
+        [String[]]$Path
     )
 
     foreach( $item in $Path )

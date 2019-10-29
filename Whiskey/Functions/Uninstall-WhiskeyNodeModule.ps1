@@ -23,27 +23,22 @@ function Uninstall-WhiskeyNodeModule
     
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The name of the module to uninstall.
-        $Name,
+        [String]$Name,
 
-        [Parameter(Mandatory=$true)]
-        [string]
+        [Parameter(Mandatory)]
         # The path to the build root directory.
-        $BuildRootPath,
+        [String]$BuildRootPath,
 
-        [switch]
         # Node modules are being uninstalled on a developer computer.
-        $ForDeveloper,
+        [switch]$ForDeveloper,
 
-        [switch]
         # Remove the module manually if NPM fails to uninstall it
-        $Force,
+        [switch]$Force,
 
-        [Switch]
         # Uninstall the module from the global cache.
-        $Global
+        [switch]$Global
     )
 
     Set-StrictMode -Version 'Latest'
@@ -72,14 +67,14 @@ function Uninstall-WhiskeyNodeModule
         }
         else
         {
-            Write-Error -Message ('Failed to remove Node module "{0}" from "{1}". See previous errors for more details.' -f $Name,$modulePath)
+            Write-WhiskeyError -Message ('Failed to remove Node module "{0}" from "{1}". See previous errors for more details.' -f $Name,$modulePath)
             return
         }
     }
 
     if( $modulePath -and (Test-Path -Path $modulePath -PathType Container) )
     {
-        Write-Error -Message ('Failed to remove Node module "{0}" from "{1}" using both "npm prune" and manual removal. See previous errors for more details.' -f $Name,$modulePath)
+        Write-WhiskeyError -Message ('Failed to remove Node module "{0}" from "{1}" using both "npm prune" and manual removal. See previous errors for more details.' -f $Name,$modulePath)
         return
     }
 }

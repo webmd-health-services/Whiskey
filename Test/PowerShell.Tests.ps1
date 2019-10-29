@@ -1,19 +1,20 @@
  
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $workingDirectory = $null
 $failed = $false
 $scriptName = $null
 
 function Get-OutputFilePath
 {
-    $path = (Join-Path -Path ($TestDrive.FullName) -ChildPath ('{0}\run' -f $workingDirectory))
+    $path = (Join-Path -Path $testRoot -ChildPath ('{0}\run' -f $workingDirectory))
     if( -not [IO.Path]::IsPathRooted($path) )
     {
-        $path = Join-Path -Path $TestDrive.FullName -ChildPath $path
+        $path = Join-Path -Path $testRoot -ChildPath $path
     }
     return $path
 }
@@ -32,15 +33,13 @@ function GivenAScript
 {
     param(
         [Parameter(Position=0)]
-        [string]
-        $Script,
+        [String]$Script,
 
-        [string]
-        $WithParam = 'param([Parameter(Mandatory=$true)][object]$TaskContext)'
+        [String]$WithParam = 'param([Parameter(Mandatory)][Object]$TaskContext)'
     )
 
     $script:scriptName = 'myscript.ps1'
-    $scriptPath = Join-Path -Path $TestDrive.FullName -ChildPath $scriptName
+    $scriptPath = Join-Path -Path $testRoot -ChildPath $scriptName
         
     @"
 $($WithParam)
@@ -68,11 +67,9 @@ function GivenNoWorkingDirectory
 function GivenWorkingDirectory
 {
     param(
-        [string]
-        $Path,
+        [String]$Path,
 
-        [Switch]
-        $ThatDoesNotExist
+        [switch]$ThatDoesNotExist
     )
 
     $script:workingDirectory = $Path
@@ -80,7 +77,7 @@ function GivenWorkingDirectory
     $absoluteWorkingDir = $workingDirectory
     if( -not [IO.Path]::IsPathRooted($absoluteWorkingDir) )
     {
-        $absoluteWorkingDir = Join-Path -Path $TestDrive.FullName -ChildPath $absoluteWorkingDir
+        $absoluteWorkingDir = Join-Path -Path $testRoot -ChildPath $absoluteWorkingDir
     }
 
     if( -not $ThatDoesNotExist -and -not (Test-Path -Path $absoluteWorkingDir -PathType Container) )
@@ -90,18 +87,71 @@ function GivenWorkingDirectory
 
 }
 
+function Init
+{
+    $script:testRoot = New-WhiskeyTestRoot
+}
+function ThenFile
+{
+    param(
+        $Path,
+        $HasContent
+    )
+
+    $fullpath = Join-Path -Path $testRoot -ChildPath $Path 
+    $fullpath | Should -Exist
+    Get-Content -Path $fullpath | Should -Be $HasContent
+}
+
+function ThenTheLastErrorMatches
+{
+    param(
+        $Pattern
+    )
+
+    $Global:Error[0] | Should -Match $Pattern
+}
+
+function ThenTheLastErrorDoesNotMatch
+{
+    param(
+        $Pattern
+    )
+
+    $Global:Error[0] | Should -Not -Match $Pattern
+}
+
+function ThenTheScriptRan
+{
+    Get-OutputFilePath | Should -Exist
+}
+
+function ThenTheScriptDidNotRun
+{
+    Get-OutputFilePath | Should -Not -Exist
+}
+
+function ThenTheTaskFails
+{
+    $failed | Should -BeTrue
+}
+
+function ThenTheTaskPasses
+{
+    $failed | Should -BeFalse
+    $Global:Error | Should -BeNullOrEmpty
+}
+
+
 function WhenTheTaskRuns
 {
     [CmdletBinding()]
     param(
-        [object]
-        $WithArgument,
+        [Object]$WithArgument,
 
-        [Switch]
-        $InCleanMode,
+        [switch]$InCleanMode,
 
-        [Switch]
-        $InInitMode
+        [switch]$InInitMode
     )
 
     $taskParameter = @{
@@ -120,163 +170,128 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper -InCleanMode:$InCleanMode -InInitMode:$InInitMode
+    $context = New-WhiskeyTestContext -ForDeveloper `
+                                      -InCleanMode:$InCleanMode `
+                                      -InInitMode:$InInitMode `
+                                      -ForBuildRoot $testRoot
     
+    Get-Content -Path (Join-Path -Path $testRoot -ChildPath $scriptName) -Raw |
+        Write-WhiskeyDebug -Context $context
+
     $failed = $false
 
     $Global:Error.Clear()
     $script:failed = $false
     try
     {
-
-        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter -ErrorAction Continue
+        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter 
     }
     catch
     {
-        Write-Error -ErrorRecord $_
+        Write-CaughtError -ErrorRecord $_
         $script:failed = $true
     }
 }
 
-function ThenTheLastErrorMatches
-{
-    param(
-        $Pattern
-    )
-
-    It ("last error message should match /{0}/" -f $Pattern)  {
-        $Global:Error[0] | Should -Match $Pattern
-    }
-}
-
-function ThenTheLastErrorDoesNotMatch
-{
-    param(
-        $Pattern
-    )
-
-    It ("last error message should not match /{0}/" -f $Pattern)  {
-        $Global:Error[0] | Should -Not -Match $Pattern
-    }
-}
-
-function ThenTheScriptRan
-{
-    It 'the script should run' {
-        Get-OutputFilePath | Should -Exist
-    }
-}
-
-function ThenTheScriptDidNotRun
-{
-    It 'the script should not run' {
-        Get-OutputFilePath | Should -Not -Exist
-    }
-}
-
-function ThenTheTaskFails
-{
-    It 'the task should fail' {
-        $failed | Should -Be $true
-    }
-}
-
-function ThenTheTaskPasses
-{
-    It 'the task should pass' {
-        $failed | Should -Be $false
-    }
-    It ('should write no errors') {
-        $Global:Error | Should -BeNullOrEmpty
-    }
-}
-
 Describe 'PowerShell.when script passes' {
-    GivenAPassingScript
-    GivenNoWorkingDirectory
-    WhenTheTaskRuns
-    ThenTheScriptRan
-    ThenTheTaskPasses
+    It 'should pass build' {
+        Init
+        GivenAPassingScript
+        GivenNoWorkingDirectory
+        WhenTheTaskRuns
+        ThenTheScriptRan
+        ThenTheTaskPasses
+    }
 }
 
 Describe 'PowerShell.when script fails due to non-zero exit code' {
-    GivenNoWorkingDirectory
-    GivenAFailingScript
-    WhenTheTaskRuns -ErrorAction SilentlyContinue
-    ThenTheScriptRan
-    ThenTheTaskFails
-    ThenTheLastErrorMatches 'failed, exited with code'
+    It 'should fail build' {
+        Init
+        GivenNoWorkingDirectory
+        GivenAFailingScript
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheScriptRan
+        ThenTheTaskFails
+        ThenTheLastErrorMatches 'failed, exited with code'
+    }
 }
 
 Describe 'PowerShell.when script passes after a previous command fails' {
-    GivenNoWorkingDirectory
-    GivenAPassingScript
-    GivenLastExitCode 1
-    WhenTheTaskRuns
-    ThenTheScriptRan
-    ThenTheTaskPasses
+    It 'should pass' {
+        Init
+        GivenNoWorkingDirectory
+        GivenAPassingScript
+        GivenLastExitCode 1
+        WhenTheTaskRuns
+        ThenTheScriptRan
+        ThenTheTaskPasses
+    }
 }
 
 Describe 'PowerShell.when script throws a terminating exception' {
-    GivenAScript @'
+    It 'should fail build' {
+        Init
+        GivenAScript @'
 throw 'fubar!'
 '@ 
-    WhenTheTaskRuns -ErrorAction SilentlyContinue
-    ThenTheTaskFails
-    ThenTheScriptRan
-    ThenTheLastErrorMatches 'threw a terminating exception'
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheScriptRan
+        ThenTheLastErrorMatches 'threw a terminating exception'
+    }
 }
 
 Describe 'PowerShell.when script''s error action preference is Stop' {
-    GivenAScript @'
+    It 'should fail build' {
+        Init
+        GivenAScript @'
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
 throw 'fubar'
 '@ 
-    WhenTheTaskRuns -ErrorAction SilentlyContinue
-    ThenTheTaskFails
-    ThenTheScriptRan
-    ThenTheLastErrorMatches 'threw a terminating exception'
-    ThenTheLastErrorDoesNotMatch 'fubar'
-    ThenTheLastErrorDoesNotMatch 'failed, exited with code'
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheScriptRan
+        ThenTheLastErrorMatches 'threw a terminating exception'
+        ThenTheLastErrorDoesNotMatch 'fubar'
+        ThenTheLastErrorDoesNotMatch 'failed, exited with code'
+    }
 }
 
 Describe 'PowerShell.when script''s error action preference is Stop and script doesn''t complete successfully' {
-    GivenAScript @'
+    It 'should fail' {
+        Init
+        GivenAScript @'
+Set-StrictMode -Version 'Latest'
 $ErrorActionPreference = 'Stop'
+Write-WhiskeyDebug ('ErrorActionPreference  {0}' -f $ErrorActionPreference)
 Non-ExistingCmdlet -Name 'Test'
 throw 'fubar'
 '@ 
-    WhenTheTaskRuns -ErrorAction SilentlyContinue
-    ThenTheTaskFails
-    ThenTheScriptRan
-    ThenTheLastErrorMatches 'threw a terminating exception'
-    ThenTheLastErrorDoesNotMatch 'fubar'
-    ThenTheLastErrorDoesNotMatch 'failed, exited with code'
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheScriptRan
+        ThenTheLastErrorMatches 'threw a terminating exception'
+        ThenTheLastErrorDoesNotMatch 'fubar'
+        ThenTheLastErrorDoesNotMatch 'failed, exited with code'
+    }
 }
 
 Describe 'PowerShell.when working directory does not exist' {
-    GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
-    GivenAPassingScript
-    WhenTheTaskRuns  -ErrorAction SilentlyContinue
-    ThenTheTaskFails
-}
-
-function ThenFile
-{
-    param(
-        $Path,
-        $HasContent
-    )
-
-    $fullpath = Join-Path -Path ($TestDrive.FullName) -ChildPath $Path 
-    $fullpath | Should -Exist
-    Get-Content -Path $fullpath | Should -Be $HasContent
+    It 'should fail' {
+        Init
+        GivenWorkingDirectory 'C:\I\Do\Not\Exist' -ThatDoesNotExist
+        GivenAPassingScript
+        WhenTheTaskRuns  -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+    }
 }
 
 Describe 'PowerShell.when passing positional parameters' {
-    GivenNoWorkingDirectory
-    GivenAScript @"
+    It 'should pass parameters' {
+        Init
+        GivenNoWorkingDirectory
+        GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
 `$Two | Set-Content -Path 'two.txt'
 "@ -WithParam @"
@@ -285,18 +300,19 @@ param(
     `$Two
 )
 "@
-    WhenTheTaskRuns -WithArgument (@( 'fubar', 'snafu' ))
-    ThenTheTaskPasses
-    ThenTheScriptRan
-    It 'should pass parameters to script' {
+        WhenTheTaskRuns -WithArgument (@( 'fubar', 'snafu' ))
+        ThenTheTaskPasses
+        ThenTheScriptRan
         ThenFile 'one.txt' -HasContent 'fubar'
         ThenFile 'two.txt' -HasContent 'snafu'
     }
 }
 
 Describe 'PowerShell.when passing named parameters' {
-    GivenNoWorkingDirectory
-    GivenAScript @"
+    It 'should pass named parameters' {
+        Init
+        GivenNoWorkingDirectory
+        GivenAScript @"
 `$One | Set-Content -Path 'one.txt'
 `$Two | Set-Content -Path 'two.txt'
 "@ -WithParam @"
@@ -308,24 +324,25 @@ param(
     `$Two
 )
 "@
-    WhenTheTaskRuns -WithArgument @{ 'Two' = 'fubar'; 'One' = 'snafu' }
-    ThenTheTaskPasses
-    ThenTheScriptRan
-    It 'should pass parameters to script' {
+        WhenTheTaskRuns -WithArgument @{ 'Two' = 'fubar'; 'One' = 'snafu' }
+        ThenTheTaskPasses
+        ThenTheScriptRan
         ThenFile 'one.txt' -HasContent 'snafu'
         ThenFile 'two.txt' -HasContent 'fubar'
     }
 }
 
 Describe 'PowerShell.when script has TaskContext parameter' {
-    $emptyContext = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
-    GivenAScript @"
+    It 'should pass context to script' {
+        Init
+        $emptyContext = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
+        GivenAScript @"
 exit 0
 "@ -WithParam @"
 param(
     # Don't remove the [Parameter] attributes. Part of the test!
-    [Parameter(Mandatory=`$true)]
-    `$TaskContext
+    [Parameter(Mandatory)]
+    [Whiskey.Context]`$TaskContext
 )
 
     `$expectedMembers = & {
@@ -341,85 +358,99 @@ $(
     {
         if( -not (`$TaskContext | Get-Member -Name `$expectedMember) )
         {
-            throw ('TaskContext missing member ''{0}''.' -f `$expectedMember)
+            throw ('TaskContext missing member "{0}".' -f `$expectedMember)
         }
     }
 
-    if( `$TaskContext.Version -is [string] )
+    if( `$TaskContext.Version -is [String] )
     {
         throw ('TaskContext.Version is a string instead of a [Whiskey.BuildVersion].')
     }
 
-    if( `$TaskContext.BuildMetadata -is [string] )
+    if( `$TaskContext.BuildMetadata -is [String] )
     {
         throw ('TaskContext.BuildMetadata is a string instead of a [Whiskey.BuildInfo].')
     }
 "@
-    WhenTheTaskRuns 
-    ThenTheTaskPasses
+        WhenTheTaskRuns 
+        ThenTheTaskPasses
+    }
 }
 
 Describe 'PowerShell.when script has Switch parameter' {
-    GivenAScript @"
+    It 'should pass as boolean' {
+        Init
+        GivenAScript @"
 if( -not `$SomeBool -or `$SomeOtherBool )
 {
     throw
 }
 "@ -WithParam @"
 param(
-    [Switch]
-    `$SomeBool,
+    [switch]`$SomeBool,
 
-    [Switch]
-    `$SomeOtherBool
+    [switch]`$SomeOtherBool
 )
 "@
-    WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }
-    ThenTheTaskPasses
+        WhenTheTaskRuns -WithArgument @{ 'SomeBool' = 'true' ; 'SomeOtherBool' = 'false' }
+        ThenTheTaskPasses
+    }
+
 }
 
-
 Describe 'PowerShell.when script has a common parameter that isn''t an argument' {
-    GivenAScript @"
+    It 'should pass' {
+        Init
+        GivenAScript @"
 Write-Debug 'Fubar'
 "@ -WithParam @"
 [CmdletBinding()]
 param(
 )
 "@
-    WhenTheTaskRuns -WithArgument @{ }
-    ThenTheTaskPasses
+        WhenTheTaskRuns -WithArgument @{ }
+        ThenTheTaskPasses
+    }
 }
 
 Describe 'PowerShell.when run in Clean mode' {
-    GivenAScript
-    WhenTheTaskRuns -InCleanMode
-    ThenTheTaskPasses
-    ThenTheScriptRan
-}
-
-Describe 'PowerShell.when run in Initialize mode' {
-    GivenAScript 
-    WhenTheTaskRuns -InInitMode
-    ThenTheTaskPasses
-    ThenTheScriptRan
-}
-
-Describe 'PowerShell.when Whiskey stored in a directory that doesn''t match module name' {
-    $whiskeyRoot = Join-Path -Path $TestDrive.FullName -ChildPath '.whiskey'
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve) `
-              -Recurse `
-              -Destination $whiskeyRoot
-    & (Join-Path -Path $whiskeyRoot -ChildPath 'Import-Whiskey.ps1' -Resolve)
-    try
-    {
+   It 'should run' {
+       Init
         GivenAScript
-        WhenTheTaskRuns
+        WhenTheTaskRuns -InCleanMode
         ThenTheTaskPasses
         ThenTheScriptRan
     }
-    finally
-    {
-        Remove-Module -Name 'Whiskey' -Force
+}
+
+Describe 'PowerShell.when run in Initialize mode' {
+    It 'should run' {
+        Init
+        GivenAScript 
+        WhenTheTaskRuns -InInitMode
+        ThenTheTaskPasses
+        ThenTheScriptRan
+    }
+}
+
+Describe 'PowerShell.when Whiskey stored in a directory that doesn''t match module name' {
+    It 'should import Whiskey correctly' {
+        Init
+        $whiskeyRoot = Join-Path -Path $testRoot -ChildPath '.whiskey'
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve) `
+                -Recurse `
+                -Destination $whiskeyRoot
+        & (Join-Path -Path $whiskeyRoot -ChildPath 'Import-Whiskey.ps1' -Resolve)
+        try
+        {
+            GivenAScript
+            WhenTheTaskRuns
+            ThenTheTaskPasses
+            ThenTheScriptRan
+        }
+        finally
+        {
+            Remove-Module -Name 'Whiskey' -Force
+        }
     }
 }

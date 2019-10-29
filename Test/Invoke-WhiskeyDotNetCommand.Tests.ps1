@@ -18,8 +18,7 @@ function Write-WhiskeyCommand
 function Init
 {
     param(
-        [Switch]
-        $SkipDotNetMock
+        [switch]$SkipDotNetMock
     )
     $script:argumentList = $null
     $script:commandName = $null
@@ -101,8 +100,8 @@ function ThenLogFileName
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualLoggerArg = $ArgumentList[3] -join ' '
-        Write-Debug ('LoggerArg  EXPECTED  {0}' -f $expectedLoggerArg)
-        Write-Debug ('           ACTUAL    {0}' -f $actualLoggerArg)
+        Write-WhiskeyDebug ('LoggerArg  EXPECTED  {0}' -f $expectedLoggerArg)
+        Write-WhiskeyDebug ('           ACTUAL    {0}' -f $actualLoggerArg)
         $actualLoggerArg -eq $expectedLoggerArg
     }
 }
@@ -121,8 +120,8 @@ function ThenRanCommand
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualCommand = $ArgumentList[1]
-        Write-Debug ('Name  EXPECTED  {0}' -f $ExpectedCommand)
-        Write-Debug ('      ACTUAL    {0}' -f $actualCommand)
+        Write-WhiskeyDebug ('Name  EXPECTED  {0}' -f $ExpectedCommand)
+        Write-WhiskeyDebug ('      ACTUAL    {0}' -f $actualCommand)
         $actualCommand -eq $ExpectedCommand
     }
 }
@@ -130,16 +129,15 @@ function ThenRanCommand
 function ThenRanWithArguments
 {
     param(
-        [string[]]
-        $ExpectedArguments
+        [String[]]$ExpectedArguments
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $ExpectedArguments = $ExpectedArguments -join ','
         $actualArguments = $ArgumentList[2] -join ','
-        Write-Debug ('ArgumentList  EXPECTED  {0}' -f $ExpectedArguments)
-        Write-Debug ('              ACTUAL    {0}' -f $actualArguments)
+        Write-WhiskeyDebug ('ArgumentList  EXPECTED  {0}' -f $ExpectedArguments)
+        Write-WhiskeyDebug ('              ACTUAL    {0}' -f $actualArguments)
         $actualArguments -eq $ExpectedArguments
     }
 }
@@ -153,8 +151,8 @@ function ThenRanWithPath
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualDotNetPath = $ArgumentList[0]
-        Write-Debug ('DotNetPath  EXPECTED  {0}' -f $ExpectedPath)
-        Write-Debug ('            ACTUAL    {0}' -f $actualDotNetPath)
+        Write-WhiskeyDebug ('DotNetPath  EXPECTED  {0}' -f $ExpectedPath)
+        Write-WhiskeyDebug ('            ACTUAL    {0}' -f $actualDotNetPath)
         $actualDotNetPath -eq $ExpectedPath
     }
 }
@@ -168,8 +166,8 @@ function ThenRanWithProject
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
         # $DebugPreference = 'Continue'
         $actualProjectPath = $ArgumentList[4]
-        Write-Debug ('ProjectPath  EXPECTED  {0}' -f $ExpectedProjectPath)
-        Write-Debug ('             ACTUAL    {0}' -f $actualProjectPath)
+        Write-WhiskeyDebug ('ProjectPath  EXPECTED  {0}' -f $ExpectedProjectPath)
+        Write-WhiskeyDebug ('             ACTUAL    {0}' -f $actualProjectPath)
         $actualProjectPath -eq $ExpectedProjectPath
     }
 }
