@@ -191,6 +191,7 @@ function Invoke-WhiskeyTask
     $currentDirectory = [IO.Directory]::GetCurrentDirectory()
     Push-Location -Path $workingDirectory
     [IO.Directory]::SetCurrentDirectory($workingDirectory)
+    $originalDebugPreference = $DebugPreference
     try
     {
         if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
@@ -239,11 +240,22 @@ function Invoke-WhiskeyTask
         }
 
         $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+
+        # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a build
+        # to hang, so let's set it to Continue so users can see debug output.
+        if( $parameter['Debug'] )
+        {
+            $DebugPreference = 'Continue'
+            $parameter.Remove('Debug')
+        }
+
         & $task.CommandName @parameter
         $result = 'COMPLETED'
     }
     finally
     {
+        $DebugPreference = $originalDebugPreference
+
         # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
         if( $TaskContext.ShouldClean )
         {

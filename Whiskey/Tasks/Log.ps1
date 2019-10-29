@@ -2,12 +2,12 @@
 function Write-WhiskeyLog
 {
     [CmdletBinding()]
-    [Whiskey.Task('Log')]
+    [Whiskey.Task('Log',SupportsClean,SupportsInitialize)]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$Context,
 
-        [String]$Message,
+        [String[]]$Message,
 
         [String]$Level = 'Info'
     )

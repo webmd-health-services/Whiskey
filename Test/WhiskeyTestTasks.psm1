@@ -37,6 +37,8 @@ function CapturesCommonPreferencesTask
     param(
     )
 
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
     $script:lastTaskBoundParameters = $PSBoundParameters
     foreach( $prefName in @( 'VerbosePreference', 'WhatIfPreference', 'DebugPreference', 'InformationPreference', 'ErrorActionPreference' ) )
     {
