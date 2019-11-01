@@ -77,7 +77,7 @@ function Invoke-NUnitTask
 
         [String[]]$CoverageFilter,
 
-        [scriptblock]$MockInstallWhiskeyToolWith
+        [scriptblock]$MockInstallWhiskeyNuGetPackageWith
     )
 
     process
@@ -456,7 +456,7 @@ function ThenItShouldNotRunTests {
 
 function ThenItInstalled {
     param (
-        [String]$Name,
+        [String]$NuGetPackageName,
 
         [Version]$Version
     )
@@ -466,7 +466,7 @@ function ThenItInstalled {
         #$DebugPreference = 'Continue'
         Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $NuGetPackageName)
         Write-Debug -Message ('                  actual    {0}' -f $Name)
-        $Name -eq $NuGetPackageName
+        $NuGetPackageName -eq $Name
     }
     
     if( $Version )

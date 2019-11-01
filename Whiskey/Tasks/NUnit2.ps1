@@ -59,9 +59,9 @@ function Invoke-WhiskeyNUnit2Task
     }
     $frameworkParam = '/framework={0}' -f $frameworkParam
 
-    Write-WhiskeyTiming -Message ('Installing NUnit.')
+    Write-WhiskeyDebug -Message ('Installing NUnit.')
     $nunitRoot = $TaskParameter['NUnitPath']
-    Write-WhiskeyTiming -Message ('COMPLETE')
+    Write-WhiskeyDebug -Message ('COMPLETE')
 
     if( -not (Test-Path -Path $nunitRoot -PathType Container) )
     {
@@ -77,9 +77,9 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
-    Write-WhiskeyTiming -Message ('Installing OpenCover.')
+    Write-WhiskeyDebug -Message ('Installing OpenCover.')
     $openCoverRoot = $TaskParameter['OpenCoverPath']
-    Write-WhiskeyTiming -Message ('COMPLETE')
+    Write-WhiskeyDebug -Message ('COMPLETE')
     if( -not (Test-Path -Path $openCoverRoot -PathType Container) )
 
     {
@@ -95,9 +95,9 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
-    Write-WhiskeyTiming -Message ('Installing ReportGenerator.')
+    Write-WhiskeyDebug -Message ('Installing ReportGenerator.')
     $reportGeneratorRoot = $TaskParameter['ReportGeneratorPath']
-    Write-WhiskeyTiming -Message ('COMPLETE')
+    Write-WhiskeyDebug -Message ('COMPLETE')
     if( -not (Test-Path -Path $reportGeneratorRoot -PathType Container) )
 
     {
