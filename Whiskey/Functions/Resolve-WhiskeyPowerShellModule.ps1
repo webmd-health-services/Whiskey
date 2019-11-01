@@ -100,7 +100,7 @@ function Resolve-WhiskeyPowerShellModule
                 Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $module.Name,$module.Version,$modulesRoot,$module.Repository)
                 Save-Module -Name $module.Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
             }
-        } | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        } | Receive-Job -Wait -AutoRemoveJob -InformationAction SilentlyContinue | Out-Null
         Write-WhiskeyDebug -Message ('                                               END')
     }
 

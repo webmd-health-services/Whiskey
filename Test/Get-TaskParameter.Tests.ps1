@@ -9,18 +9,6 @@ Import-WhiskeyTestTaskModule
 [Whiskey.Context]$context = $null
 $testRoot = $null
 
-# The default DebugPreference when using the -Debug switch changed in PowerShell Core 6.2. 
-# This function exists to get the default.
-function Get-DefaultDebugPreference
-{
-    [CmdletBinding()]
-    param(
-    )
-    return $DebugPreference
-}
-$defaultDebugPreference = Get-DefaultDebugPreference -Debug
-Write-WhiskeyVerbose -Message ('Default DebugPreference: {0}' -f $defaultDebugPreference)
-
 function GivenDirectory
 {
     param(
@@ -201,8 +189,7 @@ Describe ('Get-TaskParameter.when passing common parameters that map to preferen
         ThenTaskCalled -WithParameter @{ 
             'Verbose' = $true ; 
             'VerbosePreference' = 'Continue'
-            'Debug' = $true;
-            'DebugPreference' = $defaultDebugPreference;
+            'DebugPreference' = 'Continue'
             'WhatIf' = $true;
             'WhatIfPreference' = $true;
             'InformationAction' = 'Continue';
