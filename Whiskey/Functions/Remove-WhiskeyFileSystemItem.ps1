@@ -32,8 +32,7 @@ function Remove-WhiskeyFileSystemItem
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ValueFromPipeline)]
-        [String]
-        $Path
+        [String]$Path
     )
 
     begin

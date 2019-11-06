@@ -48,7 +48,7 @@ function Init
     $script:nunitVersion = $null
     $script:supportNUnit2 = $false
 
-    $script:buildRoot = $TestDrive.FullName
+    $script:buildRoot = New-WhiskeyTestRoot
 
     $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
 

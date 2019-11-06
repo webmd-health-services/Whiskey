@@ -376,7 +376,7 @@ If ( $IsWindows )
             Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
                 $Version -eq '2.6.4'
-                $DownloadRoot -eq $TestDrive.FullName
+                $DownloadRoot -eq $testRoot
             }
         }
     }
@@ -388,7 +388,7 @@ If ( $IsWindows )
             WhenInstallingTool 'NuGet::Nunit.Runners' -Parameter @{ 'Version' = '2.6.4' } -Version '2.6.3' -PathParameterName 'NUnitPath' 
             Assert-MockCalled 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
-                $DownloadRoot -eq $TestDrive.FullName
+                $DownloadRoot -eq $testRoot
                 $Version -eq '2.6.4'
             }
         }

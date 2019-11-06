@@ -54,7 +54,6 @@ function ThenFile
 
     if( $Not )
     {
-        Write-Verbose 'We should not be here' -Verbose
         Join-Path -Path $testRoot -ChildPath $Path | Should -Not -Exist
     }
     else
@@ -168,7 +167,7 @@ if( $IsWindows )
             WhenUninstallingTool $toolobject
             Assert-MockCalled 'Uninstall-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
                 $Name -eq 'NUnit.Runners'
-                $DownloadRoot -eq $TestDrive.FullName
+                $DownloadRoot -eq $testRoot
                 $Version -eq '2.6.4'
             }
         }

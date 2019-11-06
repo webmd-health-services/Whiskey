@@ -10,19 +10,27 @@ function Uninstall-WhiskeyNuGetPackage
     .EXAMPLE
     Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners -DownloadRoot 'C:\Rootdir\packages'
 
+    Demonstrates how to call function to removed all versions.
+
+    .EXAMPLE
     Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners' -DownloadRoot 'C:\Rootdir\packages' -Version '2.6.4'
 
+    Demonstrates how to call function to remove a specific versions.
+
+    .EXAMPLE
     Uninstall-WhiskeyNuGetPackage -Name 'NUnit.Runners -DownloadRoot 'C:\Rootdir\packages' -Version '2.*'
+
+    Demonstrates how to call function to remove a pinned version.
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
         # The name of the NuGet package to uninstall.
-        [string]$Name,
+        [String]$Name,
 
         [Parameter(Mandatory)]
         # The build root where the build is currently running. Tools are installed here.
-        [string]$BuildRoot,
+        [String]$BuildRoot,
 
         # The version of the package to uninstall. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
         [String]$Version

@@ -8,6 +8,11 @@ $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 
 $latestNUnit2Version = '2.6.4'
 
+function InitTestRoot
+{
+    $script:testRoot = New-WhiskeyTestRoot
+}
+
 function Assert-NUnitTestsRun
 {
     param(
@@ -83,8 +88,8 @@ function Invoke-NUnitTask
     process
     {
 
-        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
-        Copy-Item -Path $script:packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $testRoot
+        Copy-Item -Path $packagesRoot -Destination $testRoot -Recurse -ErrorAction Ignore
 
         if( -not $MockInstallWhiskeyNuGetPackageWith )
         {
@@ -141,7 +146,7 @@ function Invoke-NUnitTask
             #$optionalParams['CoverageFilter'] = $CoverageFilter
             $taskParameter.Add('CoverageFilter', $CoverageFilter)
         }
-        $script:context = New-WhiskeyTestContext -ForBuildRoot $TestDrive.FullName -ForBuildServer
+        $script:context = New-WhiskeyTestContext -ForBuildRoot $testRoot -ForBuildServer
         if( $WhenRunningClean )
         {
             $context.RunMode = 'Clean'
@@ -216,7 +221,7 @@ function GivenNuGetPackageInstalled
         $AtVersion
     )
 
-    & $nugetPath install $Name -Version $AtVersion -OutputDirectory (Join-Path -Path $TestDrive.FullName -ChildPath 'packages')
+    & $nugetPath install $Name -Version $AtVersion -OutputDirectory (Join-Path -Path $testRoot -ChildPath 'packages')
 }
 
 $solutionToBuild = $null
@@ -313,12 +318,12 @@ function Init
 
     if( (Test-Path -Path $packagesRoot -PathType Container) )
     {
-        Copy-Item -Path $packagesRoot -Destination (Join-Path -Path $TestDrive.FullName -ChildPath 'packages') -Recurse
+        Copy-Item -Path $packagesRoot -Destination (Join-Path -Path $testRoot -ChildPath 'packages') -Recurse
     }
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $testRoot
 
-    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
-    Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
+    Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $testRoot
+    Copy-Item -Path $packagesRoot -Destination $testRoot -Recurse -ErrorAction Ignore
 }
 
 function WhenRunningTask
@@ -330,7 +335,7 @@ function WhenRunningTask
     )
 
     $Global:Error.Clear()
-    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
+    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
 
     if( $WhenRunningInitialize )
     {
@@ -406,9 +411,9 @@ function Get-TestCaseResult
 function ThenOutput
 {
     param(
-        [string[]]$Contains,
+        [String[]]$Contains,
 
-        [string[]]$DoesNotContain
+        [String[]]$DoesNotContain
     )
 
     foreach( $regex in $Contains )
@@ -508,6 +513,7 @@ if( -not $IsWindows )
 {
     Describe 'NUnit2.when run on non-Windows platform' {
         It 'should fail to run' {
+            InitTestRoot
             Init
             GivenPassingTests
             WhenRunningTask
@@ -517,7 +523,6 @@ if( -not $IsWindows )
     return
 }
 
-#list 
 $latestOpenCoverVersion,$latestReportGeneratorVersion = & {
                                                                 & $nugetPath list packageid:OpenCover -Source https://www.nuget.org/api/v2/
                                                                 & $nugetPath list packageid:ReportGenerator -Source https://www.nuget.org/api/v2/
@@ -542,36 +547,42 @@ Invoke-WhiskeyBuild -Context $taskContext
 
 Describe 'NUnit2.when running NUnit tests with no code coverage' {
     It 'should run NUnit2 directly' {
+        InitTestRoot
         Invoke-NUnitTask -WithRunningTests -WithDisabledCodeCoverage
     }
 }
 
 Describe 'NUnit2.when running NUnit tests with code coverage' {
     It 'should run NUnit through OpenCover' {
+        InitTestRoot
         Invoke-NUnitTask -WithRunningTests
     }
 }
 
 Describe 'NUnit2.when running failing NUnit2 tests with no code coverage' {
     It 'should run NUnit directly' {
+        InitTestRoot
         Invoke-NUnitTask -WithFailingTests -ThatFails -WithError 'NUnit2\ tests\ failed' -WithDisabledCodeCoverage
     }
 }
 
 Describe 'NUnit2.when running failing NUnit2 tests with code coverage' {
     It 'should run NUnit through OpenCover' {
+        InitTestRoot
         Invoke-NUnitTask -WithFailingTests -ThatFails -WithError 'NUnit2\ tests\ failed'
     }
 }
 
 Describe 'NUnit2.when Install-WhiskeyNuGetPackage fails' {
     It 'should fail the build' {
+        InitTestRoot
         Invoke-NUnitTask -ThatFails -MockInstallWhiskeyNuGetPackageWith { return $false }
     }
 }
 
 Describe 'NUnit2.when Path Parameter is not included' {
     It 'should fail the build' {
+        InitTestRoot
         $withError = [regex]::Escape('Element ''Path'' is mandatory')
         Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
     }
@@ -579,6 +590,7 @@ Describe 'NUnit2.when Path Parameter is not included' {
 
 Describe 'NUnit2.when Path Parameter is invalid' {
     It 'should fail the build' {
+        InitTestRoot
         $withError = [regex]::Escape('does not exist.')
         Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
     }
@@ -586,6 +598,7 @@ Describe 'NUnit2.when Path Parameter is invalid' {
 
 Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails' {
     It 'should fail the build' {
+        InitTestRoot
         Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -MockWith { Write-Error 'Path does not exist!' } -ParameterFilter { $ChildPath -eq 'nunit-console.exe' }
         $withError = [regex]::Escape('was installed, but couldn''t find nunit-console.exe')
         Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError -ErrorAction SilentlyContinue
@@ -594,6 +607,7 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
 
 Describe 'NUnit2.when running NUnit tests with coverage filters' {
     It 'should pass coverage filters to OpenCover' {
+        InitTestRoot
         $coverageFilter = (
                         '-[NUnit2FailingTest]*',
                         '+[NUnit2PassingTest]*'
@@ -604,6 +618,7 @@ Describe 'NUnit2.when running NUnit tests with coverage filters' {
 
 Describe 'NUnit2.when including tests by category' {
     It 'should pass categories to NUnit' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
@@ -614,6 +629,7 @@ Describe 'NUnit2.when including tests by category' {
 
 Describe 'NUnit2.when code coverage is disabled and using category filters with spaces' {
     It 'should pass categories to NUnit' {
+        InitTestRoot
         Init
         GivenCodeCoverageIsDisabled
         GivenPassingTests
@@ -627,6 +643,7 @@ Describe 'NUnit2.when code coverage is disabled and using category filters with 
 
 Describe 'NUnit2.when excluding tests by category' {
     It 'should not run excluded tests' {
+        InitTestRoot
         Init
         GivenPassingTests
         GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
@@ -638,6 +655,7 @@ Describe 'NUnit2.when excluding tests by category' {
 
 Describe 'NUnit2.when running with custom arguments' {
     It 'should pass arguments' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
@@ -647,6 +665,7 @@ Describe 'NUnit2.when running with custom arguments' {
 
 Describe 'NUnit2.when running under a custom dotNET framework' {
     It 'should use custom framework' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask @{ 'Framework' = 'net-4.5' }
@@ -656,6 +675,7 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
 
 Describe 'NUnit2.when running with custom OpenCover arguments' {
     It 'should pass custom OpenCover arguments' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
@@ -665,6 +685,7 @@ Describe 'NUnit2.when running with custom OpenCover arguments' {
 
 Describe 'NUnit2.when running with custom ReportGenerator arguments' {
     It 'should pass ReportGenerator arguments' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
@@ -675,6 +696,7 @@ Describe 'NUnit2.when running with custom ReportGenerator arguments' {
 
 Describe 'NUnit2.when the Initialize Switch is active' {
     It 'should install dependencies' {
+        InitTestRoot
         Init
         GivenPassingTests
         WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
@@ -687,6 +709,7 @@ Describe 'NUnit2.when the Initialize Switch is active' {
 
 Describe 'NUnit2.when using custom tool versions' {
     It 'should use those tool versions' {
+        InitTestRoot
         Init
         GivenPassingTests
         GivenOpenCoverVersion '4.0.1229'
@@ -701,6 +724,7 @@ Describe 'NUnit2.when using custom tool versions' {
 
 Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
     It 'should fail' {
+        InitTestRoot
         Init
         GivenPassingTests
         GivenInvalidPath
@@ -715,6 +739,7 @@ Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
 
 Describe 'NUnit2.when using version of NUnit that isn''t 2' {
     It 'should fail' {
+        InitTestRoot
         Init
         GivenPassingTests
         GivenVersion '3.7.0'
