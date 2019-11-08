@@ -29,16 +29,24 @@ Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAc
 
 Write-Timing 'Testing that correct Whiskey assembly is loaded.'
 $oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
-$attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
-if( -not ($attr | Get-Member 'Platform') )
-{
-    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
-}
 
-$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
-if( -not $attr )
+function New-WhiskeyObject
 {
-    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
+    param(
+        [Parameter(Mandatory)]
+        [String]$TypeName,
+
+        [Object[]]$ArgumentList
+    )
+
+    try
+    {
+        return (New-Object -TypeName $TypeName -ArgumentList $ArgumentList -ErrorAction Ignore)
+    }
+    catch
+    {
+        Write-Error -Message ('Unable to find type "{0}". {1}' -f $TypeName,$oldVersionLoadedMsg) -ErrorAction Stop
+    }
 }
 
 function Assert-Member
@@ -56,23 +64,28 @@ function Assert-Member
     {
         if( -not ($Object | Get-Member $propertyToCheck) )
         {
-            Write-Debug -Message ('Object "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck)
-            Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+            $msg = 'Class "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck
+            Write-Error -Message ('{0} {1}' -f $msg,$oldVersionLoadedMsg) -ErrorAction Stop
         }
     }
 }
 
-$context = New-Object -TypeName 'Whiskey.Context'
-Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
+Write-Timing 'Checking Whiskey.TaskAttribute class.'
+$attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' 
+Assert-Member -Object $attr -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage', 'Platform' )
 
-$taskAttribute = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Fubar'
-Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage' )
+Write-Timing 'Checking for Whiskey.RequiresPowerShellModuleAttribute class.'
+New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') | Out-Null
+
+Write-Timing 'Checking Whiskey.Context class.'
+$context = New-WhiskeyObject -TypeName 'Whiskey.Context'
+Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
 if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [securestring].FullName )
 {
-    Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop 
+    Write-Error -Message  $oldVersionLoadedMsg -ErrorAction Stop 
 }
 
 Write-Timing 'Updating formats.'
