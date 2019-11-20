@@ -613,7 +613,7 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
 }
 
 Describe 'NUnit2.when running NUnit tests with coverage filters' {
-    It 'should pass coverage filters to OpenCover' {
+    It 'should pass coverage filters to OpenCover' -Skip {
         $coverageFilter = (
                         '-[NUnit2FailingTest]*',
                         '+[NUnit2PassingTest]*'
@@ -675,7 +675,7 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
 }
 
 Describe 'NUnit2.when running with custom OpenCover arguments' {
-    It 'should pass custom OpenCover arguments' {
+    It 'should pass custom OpenCover arguments' -Skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
