@@ -151,4 +151,13 @@ function Invoke-WhiskeyBuild
 
         $env:PSModulePath = $originalPSModulesPath
     }
+
+    # There are some errors (strict mode validation failures, command not found errors, etc.) that stop a build, but 
+    # even though ErrorActionPreference is Stop, it doesn't stop the current process, which is what causes a build to 
+    # fail the build. If we get here, and the build didn't succeed, we've encountered one of those errors. Throw a 
+    # guaranteed terminating error.
+    if( -not $succeeded )
+    {
+        Write-Error -Message ('Build failed. See previous error output for more information.') -ErrorAction Stop
+    }
 }

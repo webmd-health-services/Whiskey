@@ -17,6 +17,8 @@ $publishPipelineName = 'Publish'
 
 function Init
 {
+    $Global:Error.Clear()
+
     [Whiskey.Context]$script:context = $null
     $script:runByDeveloper = $false
     $script:runByBuildServer = $false
@@ -140,6 +142,20 @@ function GivenWhiskeyYml
 
     $Content | Set-Content -Path (Join-Path $testRoot -ChildPath 'whiskey.yml')
 }
+
+function ThenBuildFailed
+{
+    param(
+        $WithErrorMessage
+    )
+
+    $threwException | Should -BeTrue
+    if( $WithErrorMessage )
+    {
+        $Global:Error | Select-Object -First 1 | Should -Match $WithErrorMessage
+    }
+}
+
 function ThenBuildOutputRemoved
 {
     It ('should remove .output directory') {
@@ -359,6 +375,35 @@ function WhenRunningBuild
     }
 }
 
+function WhenRunningBuildFromBuildPs1
+{
+    [CmdletBinding()]
+    param(
+    )
+
+    $script:threwException = $false
+    $buildPs1Path = Join-Path $testRoot -ChildPath 'build.ps1'
+        @"
+Set-Location -Path "$($testRoot)"
+Import-Module -Name "$(Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve)"
+Import-Module -Name "$(Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve)"
+`$context = New-WhiskeyContext -Environment Verification -ConfigurationPath '.\whiskey.yml'
+Invoke-WhiskeyBuild -Context `$context
+New-Item -Path 'passed'
+"@ | Set-Content -Path $buildPs1Path
+
+    # PowerShell's error handling is very different between starting a build from a build.ps1 script vs. a Pester test
+    # calling Invoke-WhiskeyBuild.
+    Start-Job -ScriptBlock {
+        & $using:buildPs1Path
+    } | Receive-Job -Wait -AutoRemoveJob
+
+    if( -not (Test-Path -Path (Join-Path -Path $testRoot -ChildPath 'passed') ) )
+    {
+        $script:threwException = $true
+    }
+}
+
 Describe 'Invoke-WhiskeyBuild.when build passes' {
     Context 'By Developer' {
         Init
@@ -541,5 +586,67 @@ Build:
     WhenRunningBuild -InformationVariable 'infos' -WithParameter @{ 'InformationAction' = 'Ignore' }
     It 'should respect user''s information action' {
         $infos | Where-Object { $_ -match 'InformationPreference\ enabled!' } | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Invoke-WhiskeyBuild.when task violates a strict mode rule' {
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @'
+Build:
+- Version:
+    Version: 0.0.0
+- SetStrictModeViolationTask
+'@ 
+        WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
+        ThenBuildFailed -WithErrorMessage 'Build\ failed\.'
+        $Global:Error[1] | Should -Match 'has\ not\ been\ set'
+    }
+}
+
+Describe 'Invoke-WhiskeyBuild.when task invokes a command that doesn''t exist' {
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @'
+Build:
+- Version:
+    Version: 0.0.0
+- CommandNotFoundTask
+'@
+        WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
+        ThenBuildFailed -WithErrorMessage 'Build\ failed.'
+        $Global:Error[1] | Should -Match 'is\ not\ recognized'
+    }
+}
+
+Describe 'Invoke-WhiskeyBuild.when task fails' {
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @'
+Build:
+- Version:
+    Version: 0.0.0
+- FailingTask:
+    Message: fdsafjkfsdafjdsf
+'@
+        WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
+        ThenBuildFailed -WithErrorMessage '\bfdsafjkfsdafjdsf\b'
+        $Global:Error | Should -Not -Match 'Build\ failed\.'
+    }
+}
+
+Describe 'Invoke-WhiskeyBuild.when cmdlet fails because ErrorAction is Stop' {
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @'
+Build:
+- Version:
+    Version: 0.0.0
+- CmdletErrorActionStopTask:
+    Path: ruirwemdsfirewmk
+'@
+        WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
+        ThenBuildFailed -WithErrorMessage '\bruirwemdsfirewmk\b'
+        $Global:Error | Should -Not -Match 'Build\ failed\.'
     }
 }

@@ -1,4 +1,6 @@
 
+$PSModulesDirectoryName = 'PSModules'
+
 $exportPlatformVars = $false
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
@@ -669,8 +671,6 @@ if( $IsWindows )
     $SuccessCommandScriptBlock = { cmd /c exit 0 }
     $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
-
-$PSModulesDirectoryName = 'PSModules'
 
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
