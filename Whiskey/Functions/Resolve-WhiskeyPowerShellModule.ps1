@@ -94,6 +94,12 @@ function Resolve-WhiskeyPowerShellModule
         # Install Package Management modules in the background so we can load the new versions. These modules use 
         # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
         Start-Job -ScriptBlock {
+            $ErrorActionPreference = $using:ErrorActionPreference
+            $VerbosePreference = $using:VerbosePreference
+            $InformationPreference = $using:InformationPreference
+            $DebugPreference = $using:DebugPreference
+            $ProgressPreference = $using:ProgressPreference
+
             $modulesToInstall = $using:modulesToInstall
             $modulesRoot = $using:modulesRoot
 
