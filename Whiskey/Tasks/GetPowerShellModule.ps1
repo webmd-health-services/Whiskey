@@ -44,7 +44,7 @@ function Get-WhiskeyPowerShellModule
         return
     }
 
-    $destination = Join-Path -Path $TaskContext.BuildRoot -ChildPath $psModulesDirectoryName
+    $destination = Join-Path -Path $TaskContext.BuildRoot -ChildPath $powershellModulesDirectoryName
     if( $Path )
     {
         $destination = $Path

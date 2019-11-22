@@ -122,7 +122,7 @@ function Resolve-WhiskeyPowerShellModule
     }
 
     Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' `
-                                   -PSModulesRoot (Join-Path -Path $BuildRoot -ChildPath $psModulesDirectoryName)
+                                   -PSModulesRoot (Join-Path -Path $BuildRoot -ChildPath $powershellModulesDirectoryName)
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )
