@@ -199,8 +199,6 @@ foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
     Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
 
-$ErrorActionPreference = 'Continue'
-
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' -Resolve
