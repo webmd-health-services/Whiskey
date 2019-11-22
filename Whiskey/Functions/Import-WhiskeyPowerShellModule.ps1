@@ -30,7 +30,7 @@ function Import-WhiskeyPowerShellModule
 
         [Parameter(Mandatory)]
         # The path to the build root, where the PSModules directory can be found.
-        [String]$BuildRoot
+        [String]$PSModulesRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -41,33 +41,28 @@ function Import-WhiskeyPowerShellModule
         Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
     }
 
-    $searchPaths = & {
-        Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
-    }
+    $relativePSModulesRoot = Resolve-Path -Path $PSModulesRoot -Relative -ErrorAction Ignore
 
     foreach( $moduleName in $Name )
     {
-        foreach( $searchDir in  $searchPaths )
+        $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $moduleName
+        if( (Test-Path -Path $moduleDir -PathType Container) )
         {
-            $moduleDir = Join-Path -Path $searchDir -ChildPath $moduleName
-            if( (Test-Path -Path $moduleDir -PathType Container) )
+            Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
+            Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $moduleName,$relativePSModulesRoot)
+            $numErrorsBefore = $Global:Error.Count
+            & {
+                $VerbosePreference = 'SilentlyContinue'
+                Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop -Verbose:$false
+            } 4> $null
+            # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our tests
+            # to fail. I know this is a little extreme.
+            $numErrorsAfter = $Global:Error.Count - $numErrorsBefore
+            for( $idx = 0; $idx -lt $numErrorsAfter; ++$idx )
             {
-                Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-                Write-WhiskeyVerbose -Message ('Import PowerShell module "{0}" from "{1}".' -f $moduleName,$searchDir)
-                $numErrorsBefore = $Global:Error.Count
-                & {
-                    $VerbosePreference = 'SilentlyContinue'
-                    Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop
-                } 4> $null
-                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our tests
-                # to fail. I know this is a little extreme.
-                $numErrorsAfter = $Global:Error.Count - $numErrorsBefore
-                for( $idx = 0; $idx -lt $numErrorsAfter; ++$idx )
-                {
-                    $Global:Error.RemoveAt(0)
-                }
-                break
+                $Global:Error.RemoveAt(0)
             }
+            break
         }
 
         if( -not (Get-Module -Name $moduleName) )

@@ -6,14 +6,22 @@ function Get-WhiskeyPowerShellModule
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [String]$Name,
+
+        [String]$Version,
+
+        [switch]$AllowPrerelease,
+
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent)]
+        [String]$Path,
+
+        [switch]$Import
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not $TaskParameter['Name'] )
+    if( -not $Name )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property "Name" is mandatory. It should be set to the name of the PowerShell module you want installed.'
         return
@@ -21,24 +29,35 @@ function Get-WhiskeyPowerShellModule
 
     if( $TaskContext.ShouldClean )
     {
-        Uninstall-WhiskeyPowerShellModule -Name $TaskParameter['Name'] -BuildRoot $TaskContext.BuildRoot
+        Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $TaskContext.BuildRoot -Path $Path
         return
     }
-
-    $module = Resolve-WhiskeyPowerShellModule -Name $TaskParameter['Name'] `
-                                              -Version $TaskParameter['Version'] `
+    
+    $module = Resolve-WhiskeyPowerShellModule -Name $Name `
+                                              -Version $Version `
                                               -BuildRoot $TaskContext.BuildRoot `
+                                              -AllowPrerelease:$AllowPrerelease `
+                                              -Path $Path `
                                               -ErrorAction Stop
     if( -not $module )
     {
         return
     }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}.' -f $TaskParameter['Name'],$module.Version)
-    $moduleRoot = Install-WhiskeyPowerShellModule -Name $TaskParameter['Name'] `
+    $destination = Join-Path -Path $TaskContext.BuildRoot -ChildPath $psModulesDirectoryName
+    if( $Path )
+    {
+        $destination = $Path
+    }
+    $destination = Resolve-Path -Path $destination -Relative -ErrorAction Ignore
+
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$destination)
+    $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
                                                   -Version $module.Version `
                                                   -BuildRoot $TaskContext.BuildRoot `
-                                                  -SkipImport `
+                                                  -SkipImport:(-not $Import) `
+                                                  -AllowPrerelease:$AllowPrerelease `
+                                                  -Path $Path `
                                                   -ErrorAction Stop
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $moduleRoot)
 }

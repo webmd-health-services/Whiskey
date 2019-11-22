@@ -20,15 +20,18 @@ function Init
     $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
 }
 
+function GivenImport
+{
+    $taskParameter['Import'] = 'true'
+}
+
 function GivenModule
 {
     Param(
         [String]$Module
     )
-    $script:taskParameter['Name'] = $Module
 
-    $script:modulePath = Join-path -Path $context.BuildRoot -ChildPath $PSModulesDirectoryName
-    $script:modulePath = Join-path -Path $modulePath -ChildPath $taskParameter['Name']
+    $taskParameter['Name'] = $Module
 }
 
 function GivenVersion
@@ -36,7 +39,21 @@ function GivenVersion
     param(
         [String]$Version
     )
-    $script:taskParameter['Version'] = $Version
+    $taskParameter['Version'] = $Version
+}
+
+function GivenPath
+{
+    param(
+        $Path
+    )
+
+    $taskParameter['Path'] = $Path
+}
+
+function GivenPrereleaseAllowed
+{
+    $taskParameter['AllowPrerelease'] = 'true'
 }
 
 function GivenNonExistentModule
@@ -54,10 +71,19 @@ function Reset
     Reset-WhiskeyTestPSModule
 }
 
-function WhenPowershellModuleIsRan
+function WhenTaskRun
 {
     [CmdletBinding()]
     param()
+
+
+    $script:modulePath = Join-Path -Path $context.BuildRoot -ChildPath $PSModulesDirectoryName
+    if( $taskParameter['Path'] )
+    {
+        $script:modulePath = Join-Path $context.BuildRoot -ChildPath $taskParameter['Path']
+    }
+    $script:modulePath = Join-Path -Path $modulePath -ChildPath $taskParameter['Name']
+    $script:modulePath = [IO.Path]::GetFullPath($modulePath)
 
     try
     {
@@ -71,22 +97,68 @@ function WhenPowershellModuleIsRan
 
 function ThenModuleInstalled
 {
-    $modulePath | Should -Exist
-}
-
-function ThenModuleInstalledAtVersion
-{
     param(
-        $Version
+        $AtVersion,
+        $InDirectory = $PSModulesDirectoryName
     )
 
-    $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $Version
+    $version = '*.*.*'
+    $prerelease = ''
+    if( $AtVersion -match '^(\d+\.\d+\.\d+)(-(.*))?$' )
+    {
+        $version = $Matches[1]
+        $prerelease = $Matches[3]
+    }
 
-    $moduleVersionPath | Should -Exist
+    $modulePath = Join-Path -Path $testRoot -ChildPath $InDirectory
+    $modulePath = Join-Path -Path $modulePath -ChildPath $taskParameter['Name']
+    $modulePath = Join-Path -Path $modulePath -ChildPath $version
+    $modulePath = Join-Path -Path $modulePath -ChildPath ('{0}.psd1' -f $taskParameter['Name'])
+    $modulePath | Should -Exist
+
+    $module = Test-ModuleManifest -Path $modulePath
+    if( $prerelease )
+    {
+        $module.PrivateData.PSData.Prerelease | Should -Be $prerelease
+    }
+    else
+    {
+        if( ($module.PrivateData.PSData | Get-Member 'Prerelease') )
+        {
+            $module.PrivateData.PSData.Prerelease | Should -BeNullOrEmpty
+        }
+    }
 }
 
-function ThenModuleShouldNotExist
+function ThenModuleImported
 {
+    param(
+        [Parameter(Mandatory)]
+        [String]$Name
+    )
+
+    Get-Module -Name $Name | Should -Not -BeNullOrEmpty
+}
+
+function ThenModuleNotImported
+{
+    param(
+        [Parameter(Mandatory)]
+        [String]$Name
+    )
+
+    Get-Module -Name $Name | Should -BeNullOrEmpty
+}
+
+function ThenModuleNotInstalled
+{
+    param(
+        $InDirectory = $PSModulesDirectoryName
+    )
+
+    $modulePath = Join-Path -Path $testRoot -ChildPath $InDirectory
+    $modulePath = Join-Path -Path $modulePath -ChildPath $taskParameter['Name']
+    $modulePath = Join-Path -Path $modulePath -ChildPath ('*.*.*\{0}.psd1' -f $taskParameter['Name'])
     $modulePath | Should -Not -Exist
 }
 
@@ -103,9 +175,11 @@ Describe 'GetPowerShellModule.when given a module Name' {
     AfterEach { Reset }
     It 'should install the lastest version of that module' {
         Init
-        GivenModule 'Pester'
-        WhenPowershellModuleIsRan
+        Get-Module 'Zip' | Remove-Module -Force
+        GivenModule 'Zip'
+        WhenTaskRun
         ThenModuleInstalled
+        ThenModuleNotImported 'Zip'
     }
 }
 
@@ -115,9 +189,8 @@ Describe 'GetPowerShellModule.when given a module Name and Version' {
         Init
         GivenModule 'Pester'
         GivenVersion '3.4.0'
-        WhenPowershellModuleIsRan
-        ThenModuleInstalled
-        ThenModuleInstalledAtVersion '3.4.0'
+        WhenTaskRun
+        ThenModuleInstalled -AtVersion '3.4.0'
     }
 }
 
@@ -127,9 +200,8 @@ Describe 'GetPowerShellModule.when given a Name and a wildcard Version' {
         Init
         GivenModule 'Pester'
         GivenVersion '3.3.*'
-        WhenPowershellModuleIsRan
-        ThenModuleInstalled
-        ThenModuleInstalledAtVersion '3.3.9'
+        WhenTaskRun
+        ThenModuleInstalled -AtVersion '3.3.9'
     }
 }
 
@@ -140,9 +212,9 @@ Describe 'GetPowerShellModule.when an invalid module Name is requested' {
         GivenModule 'bad mod'
         GivenVersion '3.4.0'
         GivenNonExistentModule
-        WhenPowershellModuleIsRan  -ErrorAction SilentlyContinue
+        WhenTaskRun  -ErrorAction SilentlyContinue
         ThenErrorShouldBeThrown 'Failed to find PowerShell module bad mod'
-        ThenModuleShouldNotExist
+        ThenModuleNotInstalled
     }
 }
 
@@ -153,9 +225,9 @@ Describe 'GetPowerShellModule.when given an invalid Version' {
         GivenModule 'Pester'
         GivenVersion '0.0.0'
         GivenNonExistentModule
-        WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
+        WhenTaskRun -ErrorAction SilentlyContinue
         ThenErrorShouldBeThrown "Failed to find PowerShell module Pester at version 0.0.0"
-        ThenModuleShouldNotExist
+        ThenModuleNotInstalled
     }
 }
 
@@ -163,7 +235,7 @@ Describe 'GetPowerShellModule.when missing Name property' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenPowershellModuleIsRan -ErrorAction SilentlyContinue
+        WhenTaskRun -ErrorAction SilentlyContinue
         ThenErrorShouldBeThrown 'Property\ "Name"\ is mandatory'
     }
 }
@@ -174,7 +246,46 @@ Describe 'GetPowerShellModule.when called with clean mode' {
         Init
         GivenModule 'Rivet'
         GivenCleanMode
-        WhenPowershellModuleIsRan
-        ThenModuleShouldNotExist
+        WhenTaskRun
+        ThenModuleNotInstalled
+    }
+}
+
+Describe 'GetPowerShellModule.when allowing prerelease versions' {
+    AfterEach { Reset }
+    It 'should install a prelease version' {
+        Init
+        GivenModule 'Whiskey'
+        GivenVersion '0.43.*-*'
+        GivenPrereleaseAllowed
+        WhenTaskRun
+        ThenModuleInstalled -AtVersion '0.43.0-beta1416'
+    }
+}
+
+Describe 'GetPowerShellModule.when installing to custom directory' {
+    AfterEach { Reset }
+    It 'should install to a custom directory' {
+        Init
+        GivenModule 'Zip'
+        GivenPath 'FubarSnafu'
+        WhenTaskRun
+        ThenModuleInstalled -InDirectory 'FubarSnafu'
+        GivenCleanMode
+        WhenTaskRun
+        ThenModuleNotInstalled -InDirectory 'FubarSnafu'
+    }
+}
+
+Describe 'GetPowerShellModule.when importing module after installation' {
+    AfterEach { Reset }
+    It 'should import module into global scope' {
+        Init
+        Get-Module -Name 'Glob' | Remove-Module -Force
+        GivenImport
+        GivenModule 'Glob'
+        WhenTaskRun
+        ThenModuleInstalled
+        ThenModuleImported 'Glob'
     }
 }
