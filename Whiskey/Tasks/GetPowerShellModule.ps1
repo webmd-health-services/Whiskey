@@ -50,8 +50,12 @@ function Get-WhiskeyPowerShellModule
         $destination = $Path
     }
     $destination = Resolve-Path -Path $destination -Relative -ErrorAction Ignore
+    if( $destination )
+    {
+        $destination = ' to {0}' -f $destination
+    }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$destination)
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}{2}.' -f $Name,$module.Version,$destination)
     $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
                                                   -Version $module.Version `
                                                   -BuildRoot $TaskContext.BuildRoot `
