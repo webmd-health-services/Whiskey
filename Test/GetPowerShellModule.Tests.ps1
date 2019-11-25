@@ -137,7 +137,9 @@ function ThenModuleImported
         [String]$Name
     )
 
-    Get-Module -Name $Name | Should -Not -BeNullOrEmpty
+    $module = Get-Module -Name $Name 
+    $module | Should -Not -BeNullOrEmpty
+    $module.Path | Should -BeLike ('{0}\{1}\{2}\*' -f $testRoot,$PSModulesDirectoryName,$Name)
 }
 
 function ThenModuleNotImported
@@ -281,7 +283,7 @@ Describe 'GetPowerShellModule.when importing module after installation' {
     AfterEach { Reset }
     It 'should import module into global scope' {
         Init
-        Get-Module -Name 'Glob' | Remove-Module -Force
+        Import-Module -Name (Join-Path $PSScriptRoot -ChildPath ('..\{0}\Glob' -f $PSModulesDirectoryName) -Resolve) -Force
         GivenImport
         GivenModule 'Glob'
         WhenTaskRun

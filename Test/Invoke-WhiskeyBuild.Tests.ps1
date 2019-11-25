@@ -383,7 +383,7 @@ function WhenRunningBuildFromBuildPs1
 
     $script:threwException = $false
     $buildPs1Path = Join-Path $testRoot -ChildPath 'build.ps1'
-        @"
+    @"
 Set-Location -Path "$($testRoot)"
 Import-Module -Name "$(Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve)"
 Import-Module -Name "$(Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve)"
@@ -594,8 +594,6 @@ Describe 'Invoke-WhiskeyBuild.when task violates a strict mode rule' {
         Init
         GivenWhiskeyYml @'
 Build:
-- Version:
-    Version: 0.0.0
 - SetStrictModeViolationTask
 '@ 
         WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
@@ -609,12 +607,10 @@ Describe 'Invoke-WhiskeyBuild.when task invokes a command that doesn''t exist' {
         Init
         GivenWhiskeyYml @'
 Build:
-- Version:
-    Version: 0.0.0
 - CommandNotFoundTask
 '@
         WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
-        ThenBuildFailed -WithErrorMessage 'Build\ failed.'
+        ThenBuildFailed -WithErrorMessage 'Build\ failed\.'
         $Global:Error[1] | Should -Match 'is\ not\ recognized'
     }
 }
@@ -624,13 +620,11 @@ Describe 'Invoke-WhiskeyBuild.when task fails' {
         Init
         GivenWhiskeyYml @'
 Build:
-- Version:
-    Version: 0.0.0
 - FailingTask:
-    Message: fdsafjkfsdafjdsf
+    Message: Some custom message to ensure it gets thrown correctly. 
 '@
         WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
-        ThenBuildFailed -WithErrorMessage '\bfdsafjkfsdafjdsf\b'
+        ThenBuildFailed -WithErrorMessage 'Some\ custom\ message\ to\ ensure\ it\ gets\ thrown\ correctly\.'
         $Global:Error | Should -Not -Match 'Build\ failed\.'
     }
 }
@@ -640,13 +634,11 @@ Describe 'Invoke-WhiskeyBuild.when cmdlet fails because ErrorAction is Stop' {
         Init
         GivenWhiskeyYml @'
 Build:
-- Version:
-    Version: 0.0.0
 - CmdletErrorActionStopTask:
-    Path: ruirwemdsfirewmk
+    Path: PathThatDoesNotExist
 '@
         WhenRunningBuildFromBuildPs1 -ErrorAction SilentlyContinue
-        ThenBuildFailed -WithErrorMessage '\bruirwemdsfirewmk\b'
+        ThenBuildFailed -WithErrorMessage '\bPathThatDoesNotExist\b'
         $Global:Error | Should -Not -Match 'Build\ failed\.'
     }
 }

@@ -50,17 +50,21 @@ function Import-WhiskeyPowerShellModule
         {
             Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
             Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $moduleName,$relativePSModulesRoot)
-            $numErrorsBefore = $Global:Error.Count
-            & {
-                $VerbosePreference = 'SilentlyContinue'
-                Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop -Verbose:$false
-            } 4> $null
-            # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our tests
-            # to fail. I know this is a little extreme.
-            $numErrorsAfter = $Global:Error.Count - $numErrorsBefore
-            for( $idx = 0; $idx -lt $numErrorsAfter; ++$idx )
+            $errorsBefore = $Global:Error.Clone()
+            $Global:Error.Clear()
+            try
             {
-                $Global:Error.RemoveAt(0)
+                & {
+                    $VerbosePreference = 'SilentlyContinue'
+                    Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop -Verbose:$false
+                } 4> $null
+            }
+            finally
+            {
+                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
+                # tests to fail. I know this is a little extreme.
+                $Global:Error.Clear()
+                $Global:Error.AddRange($errorsBefore)
             }
             break
         }
