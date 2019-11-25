@@ -50,6 +50,7 @@ function Clear-LastTaskBoundParameter
 {
     $script:lastTaskBoundParameters = $null
 }
+
 function DuplicateAliasTask1
 {
     [Whiskey.Task('DuplicateAliasTask1',Aliases=('DuplicateAliasTask'),WarnWhenUsingAlias)]
@@ -91,10 +92,11 @@ function FailingTask
     [Whiskey.Task('FailingTask')]
     param(
         [Whiskey.Context]$TaskContext,
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+        $Message = 'Failed!'
     )
 
-    Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Failed!'
+    Stop-WhiskeyTask -TaskContext $TaskContext -Message $Message
 }
 
 function Get-LastTaskBoundParameter
@@ -398,4 +400,41 @@ function WrapsNoOpTask
     )
 
     Invoke-WhiskeyTask -TaskContext $TaskContext -Parameter $TaskParameter -Name 'NoOpTask'
+}
+
+function SetStrictModeViolationTask
+{
+    [Whiskey.Task('SetStrictModeViolationTask')]
+    [CmdletBinding()]
+    param(
+    )
+
+    Set-StrictMode -Version 'Latest'
+    $ErrorActionPreference = 'Stop'
+
+    Write-Verbose ($fdsocvxkljewqrjfdslk)
+}
+
+function CommandNotFoundTask
+{
+    [Whiskey.Task('CommandNotFoundTask')]
+    [CmdletBinding()]
+    param(
+    )
+
+    Set-StrictMode -Version 'Latest'
+    $ErrorActionPreference = 'Stop'
+
+    Invoke-SomeCommandfdfdsjkfsdaourewfsdrewmkl
+}
+
+function CmdletErrorActionStopTask
+{
+    [Whiskey.Task('CmdletErrorActionStopTask')]
+    [CmdletBinding()]
+    param(
+        $Path = '4lkdfmlfu9jdsfkj09'
+    )
+
+    Resolve-Path $Path -ErrorAction Stop
 }

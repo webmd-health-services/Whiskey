@@ -28,7 +28,10 @@ function Uninstall-WhiskeyPowerShellModule
 
         [Parameter(Mandatory)]
         # Modules are saved into a PSModules directory. This is the path where the PSModules directory was created and should be the same path passed to `Install-WhiskeyPowerShellModule`.
-        [String]$BuildRoot
+        [String]$BuildRoot,
+
+        # The directory where the module is installed. If this parameter is provided, the BuildRoot parameter is ignored.
+        [String]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -37,6 +40,11 @@ function Uninstall-WhiskeyPowerShellModule
     Get-Module -Name $Name | Remove-Module -Force
 
     $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    if( $Path )
+    {
+        $modulesRoot = $Path
+    }
+
     # Remove modules saved by either PowerShell4 or PowerShell5
     $moduleRoots = @( ('{0}\{1}' -f $Name, $Version) )
     foreach ($item in $moduleRoots)

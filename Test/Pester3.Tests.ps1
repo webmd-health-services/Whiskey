@@ -31,7 +31,7 @@ function GivenTestContext
                                              @optionalParams
 
     # Make sure only Pester 3 is included.
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '3.*' } |
         Remove-Item -Recurse -Force
@@ -114,7 +114,7 @@ function ThenPesterShouldBeInstalled
         [String]$ExpectedVersion
     )
 
-    $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
+    $pesterDirectoryName = '{0}\Pester\{1}' -f $TestPSModulesDirectoryName,$ExpectedVersion
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
 

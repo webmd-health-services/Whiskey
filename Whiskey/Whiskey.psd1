@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.43.1'
+    ModuleVersion = '0.44.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -159,7 +159,10 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Whiskey's error view displays too much information sometimes.
+* The `GetPowerShellModule` task now supports installing prerelease versions of modules. Set the `AllowPrerelease` property to `true`.
+* The `GetPowerShellModule` task can now install a module into a custom directory instead of the PSModules directory. Pass the path to the `Path` parameter.
+* The `GetPowerShellModule` task can now import the module being installed. Set the `Import` property to `true`.
+* Fixed: Whiskey fails to fail a build when certain PowerShell terminating errors are thrown (i.e. strict mode violations, command not found error, etc.).
 '@
         } # End of PSData hashtable
 

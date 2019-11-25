@@ -49,6 +49,9 @@ Build:
     Name: Pester
     Version: 3.*
 
+- GetPowerShellModule:
+    Name: Glob
+
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
     OnlyBy: BuildServer
