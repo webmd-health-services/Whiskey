@@ -139,7 +139,11 @@ function ThenModuleImported
 
     $module = Get-Module -Name $Name 
     $module | Should -Not -BeNullOrEmpty
-    $module.Path | Should -BeLike ('{0}\{1}\{2}\*' -f $testRoot,$TestPSModulesDirectoryName,$Name)
+    # Cross-platform path generation
+    $expectedPath = Join-Path -Path $testRoot -ChildPath $TestPSModulesDirectoryName
+    $expectedPath = Join-Path -Path $expectedPath -ChildPath $Name
+    $expectedPath = Join-Path -Path $expectedPath -ChildPath '*'
+    $module.Path | Should -BeLike $expectedPath
 }
 
 function ThenModuleNotImported
@@ -175,7 +179,7 @@ function ThenErrorShouldBeThrown
 
 Describe 'GetPowerShellModule.when given a module Name' {
     AfterEach { Reset }
-    It 'should install the lastest version of that module' {
+    W''
         Init
         Get-Module 'Zip' | Remove-Module -Force
         GivenModule 'Zip'
