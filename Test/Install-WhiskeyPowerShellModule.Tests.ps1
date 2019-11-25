@@ -102,7 +102,7 @@ function ThenModuleInstalled
         $AtVersion
     )
     
-    Join-Path -Path $testRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Name,$AtVersion) | Should -Exist
+    Join-Path -Path $testRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Name,$AtVersion) | Should -Exist
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a PowerShell module' {
@@ -204,7 +204,7 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     AfterEach { Reset }
     It 'should still install the module' {
         Init
-        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Zip' -f $PSModulesDirectoryName)
+        $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Zip' -f $TestPSModulesDirectoryName)
         New-Item -Path $moduleRootDir -ItemType Directory | Write-WhiskeyDebug
         Invoke-PowershellInstall -ForModule 'Zip' -Version $latestZip.Version
     }
@@ -215,7 +215,7 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module can''t be impor
     It 'should re-download the module' {
         Init
         Install-WhiskeyPowerShellModule -Name 'Zip' -Version $latestZip.Version
-        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Zip\{1}\Zip.psd1' -f $PSModulesDirectoryName,$latestZip.Version) -Resolve
+        $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Zip\{1}\Zip.psd1' -f $TestPSModulesDirectoryName,$latestZip.Version) -Resolve
         '@{ }' | Set-Content -Path $moduleManifest
         { Test-ModuleManifest -Path $moduleManifest -ErrorAction Ignore } | Should -Throw
         $Global:Error.Clear()

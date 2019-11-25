@@ -77,7 +77,7 @@ function WhenTaskRun
     param()
 
 
-    $script:modulePath = Join-Path -Path $context.BuildRoot -ChildPath $PSModulesDirectoryName
+    $script:modulePath = Join-Path -Path $context.BuildRoot -ChildPath $TestPSModulesDirectoryName
     if( $taskParameter['Path'] )
     {
         $script:modulePath = Join-Path $context.BuildRoot -ChildPath $taskParameter['Path']
@@ -99,7 +99,7 @@ function ThenModuleInstalled
 {
     param(
         $AtVersion,
-        $InDirectory = $PSModulesDirectoryName
+        $InDirectory = $TestPSModulesDirectoryName
     )
 
     $version = '*.*.*'
@@ -139,7 +139,7 @@ function ThenModuleImported
 
     $module = Get-Module -Name $Name 
     $module | Should -Not -BeNullOrEmpty
-    $module.Path | Should -BeLike ('{0}\{1}\{2}\*' -f $testRoot,$PSModulesDirectoryName,$Name)
+    $module.Path | Should -BeLike ('{0}\{1}\{2}\*' -f $testRoot,$TestPSModulesDirectoryName,$Name)
 }
 
 function ThenModuleNotImported
@@ -155,7 +155,7 @@ function ThenModuleNotImported
 function ThenModuleNotInstalled
 {
     param(
-        $InDirectory = $PSModulesDirectoryName
+        $InDirectory = $TestPSModulesDirectoryName
     )
 
     $modulePath = Join-Path -Path $testRoot -ChildPath $InDirectory
@@ -283,7 +283,7 @@ Describe 'GetPowerShellModule.when importing module after installation' {
     AfterEach { Reset }
     It 'should import module into global scope' {
         Init
-        Import-Module -Name (Join-Path $PSScriptRoot -ChildPath ('..\{0}\Glob' -f $PSModulesDirectoryName) -Resolve) -Force
+        Import-Module -Name (Join-Path $PSScriptRoot -ChildPath ('..\{0}\Glob' -f $TestPSModulesDirectoryName) -Resolve) -Force
         GivenImport
         GivenModule 'Glob'
         WhenTaskRun
