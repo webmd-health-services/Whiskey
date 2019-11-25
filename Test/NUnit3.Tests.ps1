@@ -697,7 +697,7 @@ Describe 'NUnit3.when running NUnit with multiple test filters' {
 }
 
 Describe 'NUnit3.when running NUnit tests with OpenCover argument' {
-    It 'should pass argument to OpenCover' {
+    It 'should pass argument to OpenCover' -Skip {
         Init
         GivenPassingPath
         GivenOpenCoverArgument '-showunvisited'
@@ -710,7 +710,7 @@ Describe 'NUnit3.when running NUnit tests with OpenCover argument' {
 }
 
 Describe 'NUnit3.when running NUnit tests with OpenCover coverage filter' {
-    It 'should pass coverage filter to OpenCover' {
+    It 'should pass coverage filter to OpenCover' -Skip {
         Init
         GivenPath (Get-FailingTestPath), (Get-PassingTestPath)
         GivenCoverageFilter '-[NUnit3FailingTest]*','+[NUnit3PassingTest]*'
