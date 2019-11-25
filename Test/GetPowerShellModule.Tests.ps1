@@ -179,7 +179,7 @@ function ThenErrorShouldBeThrown
 
 Describe 'GetPowerShellModule.when given a module Name' {
     AfterEach { Reset }
-    W''
+    It 'should install the lastest version of that module' {
         Init
         Get-Module 'Zip' | Remove-Module -Force
         GivenModule 'Zip'
