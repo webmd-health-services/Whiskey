@@ -163,6 +163,8 @@
 * The `GetPowerShellModule` task can now install a module into a custom directory instead of the PSModules directory. Pass the path to the `Path` parameter.
 * The `GetPowerShellModule` task can now import the module being installed. Set the `Import` property to `true`.
 * Fixed: Whiskey fails to fail a build when certain PowerShell terminating errors are thrown (i.e. strict mode violations, command not found error, etc.).
+* Breaking change: Whiskey's default version number is now `0.0.0` instead of using the current date. If you care about your version number, make sure you have a `Version` task defined in your whiskey.yml file.
+* Removed all support for old "VersionFrom", "PrereleaseMap", and "Version" properties in the root of your whiskey.yml file. Use Whiskey's `Version` task instead.
 '@
         } # End of PSData hashtable
 
