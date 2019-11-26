@@ -115,6 +115,7 @@
                             'Write-WhiskeyDebug',
                             'Write-WhiskeyError',
                             'Write-WhiskeyInfo',
+                            'Write-WhiskeyObject',
                             'Write-WhiskeyVerbose',
                             'Write-WhiskeyWarning'
                          );
@@ -165,6 +166,8 @@
 * Fixed: Whiskey fails to fail a build when certain PowerShell terminating errors are thrown (i.e. strict mode violations, command not found error, etc.).
 * Breaking change: Whiskey's default version number is now `0.0.0` instead of using the current date. If you care about your version number, make sure you have a `Version` task defined in your whiskey.yml file.
 * Removed all support for old "VersionFrom", "PrereleaseMap", and "Version" properties in the root of your whiskey.yml file. Use Whiskey's `Version` task instead.
+* Added support to the `Pester4` task for passing arbitrary parameters to Invoke-Pester. Pass the parameters as named properties via the new `Argument` property.
+* Created `Write-WhiskeyObject` function for writing objects in sensible ways. Currently, only hashtables/dictionaries are supported. Keys/values are printed so they align and are recognizable. Other objects are passed to PowerShell's `Out-String` for formatting.
 '@
         } # End of PSData hashtable
 

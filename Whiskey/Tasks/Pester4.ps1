@@ -8,32 +8,30 @@ function Invoke-WhiskeyPester4Task
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [Whiskey.Tasks.ValidatePath(Mandatory)]
+        [String[]]$Path,
+
+        [String[]]$Exclude,
+
+        [int]$DescribeDurationReportCount = 0,
+
+        [int]$ItDurationReportCount = 0,
+
+        [Management.Automation.PSModuleInfo]$PesterModuleInfo,
+
+        [Object]$Argument = @{},
+
+        [switch]$NoJob
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of Pester test scripts (e.g. Invoke-WhiskeyPester4Task.Tests.ps1) or directories that contain Pester test scripts, e.g.
-
-        Build:
-        - Pester4:
-            Path:
-            - My.Tests.ps1
-            - Tests')
-        return
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-
-    if( $TaskParameter['Exclude'] )
+    if( $Exclude )
     {
         $path = $path |
                     Where-Object {
-                        foreach( $exclusion in $TaskParameter['Exclude'] )
+                        foreach( $exclusion in $Exclude )
                         {
                             if( $_ -like $exclusion )
                             {
@@ -54,81 +52,109 @@ function Invoke-WhiskeyPester4Task
         }
     }
 
-    [int]$describeDurationCount = 0
-    $describeDurationCount = $TaskParameter['DescribeDurationReportCount']
-    [int]$itDurationCount = 0
-    $itDurationCount = $TaskParameter['ItDurationReportCount']
 
-    $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
+    $pesterManifestPath = $PesterModuleInfo.Path
 
-    $moduleInfo = $TaskParameter['PesterModuleInfo']
-    $pesterManifestPath = $moduleInfo.Path
-    Write-WhiskeyVerbose -Context $TaskContext -Message $pesterManifestPath
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('  Script      {0}' -f ($Path | Select-Object -First 1))
-    $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('              {0}' -f $_) }
-    Write-WhiskeyVerbose -Message ('  OutputFile  {0}' -f $outputFile)
-    # We do this in the background so we can test this with Pester.
-    $job = Start-Job -ScriptBlock {
-        $VerbosePreference = $using:VerbosePreference
-        $DebugPreference = $using:DebugPreference
-        $ProgressPreference = $using:ProgressPreference
-        $WarningPreference = $using:WarningPreference
-        $ErrorActionPreference = $using:ErrorActionPreference
+    $Argument['Script'] = $Path | Resolve-Path -Relative
+    $Argument['PassThru'] = $true
 
-        $script = $using:Path
-        $pesterManifestPath = $using:pesterManifestPath
-        $outputFile = $using:outputFile
-        [int]$describeCount = $using:describeDurationCount
-        [int]$itCount = $using:itDurationCount
-
-        Invoke-Command -ScriptBlock {
-                                        $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterManifestPath
-                                    }
-
-        $result = Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
-
-        $result.TestResult |
-            Group-Object 'Describe' |
-            ForEach-Object {
-                $totalTime = [TimeSpan]::Zero
-                $_.Group | ForEach-Object { $totalTime += $_.Time }
-                [pscustomobject]@{
-                                    Describe = $_.Name;
-                                    Duration = $totalTime
-                                }
-            } | Sort-Object -Property 'Duration' -Descending |
-            Select-Object -First $describeCount |
-            Format-Table -AutoSize
-
-        $result.TestResult |
-            Sort-Object -Property 'Time' -Descending |
-            Select-Object -First $itCount |
-            Format-Table -AutoSize -Property 'Describe','Name','Time'
-    }
-
-
-    do
+    if( $Argument.ContainsKey('OutputFile') )
     {
-        # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
-        # Since Pester uses Write-Host, this is a workaround to avoid seeing duplicate Pester output.
-        $job | Receive-Job -InformationAction SilentlyContinue
+        $outputFile = $Argument['OutputFile']
     }
-    while( -not ($job | Wait-Job -Timeout 1) )
+    else
+    {
+        $outputFileRoot = Resolve-Path -Path $TaskContext.OutputDirectory -Relative
+        $outputFile = Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
+        $Argument['OutputFile'] = $outputFile
+    }
 
-    $job | Receive-Job -InformationAction SilentlyContinue
+    if( -not $Argument.ContainsKey('OutputFormat') )
+    {
+        $Argument['OutputFormat'] = 'NUnitXml'
+    }
+
+    $Argument | Write-WhiskeyObject -Context $context -Level Verbose -Verbose
+
+    $args = @(
+        (Get-Location).Path,
+        $pesterManifestPath,
+        $Argument,
+        @{
+            'VerbosePreference' = $VerbosePreference;
+            'DebugPreference' = $DebugPreference;
+            'ProgressPreference' = $ProgressPreference;
+            'WarningPreference' = $WarningPreference;
+            'ErrorActionPreference' = $ErrorActionPreference;
+        }
+    )
+
+    $cmdName = 'Start-Job'
+    if( $NoJob )
+    {
+        $cmdName = 'Invoke-Command'
+    }
+
+    $result = & $cmdName -ArgumentList $args -ScriptBlock {
+        param(
+            [String]$WorkingDirectory,
+            [String]$PesterManifestPath,
+            [hashtable]$Parameter,
+            [hashtable]$Preference
+        )
+
+        Set-Location -Path $WorkingDirectory
+
+        $VerbosePreference = 'SilentlyContinue'
+        Import-Module -Name $PesterManifestPath -Verbose:$false -WarningAction Ignore
+
+        $VerbosePreference = $Preference['VerbosePreference']
+        $DebugPreference = $Preference['DebugPreference']
+        $ProgressPreference = $Preference['ProgressPreference']
+        $WarningPreference = $Preference['WarningPreference']
+        $ErrorActionPreference = $Preference['ErrorActionPreference']
+
+        Invoke-Pester @Parameter
+    }
+    
+    if( -not $NoJob )
+    {
+        $result = $result | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
+    }
+
+    $result.TestResult |
+        Group-Object 'Describe' |
+        ForEach-Object {
+            $totalTime = [TimeSpan]::Zero
+            $_.Group | ForEach-Object { $totalTime += $_.Time }
+            [pscustomobject]@{
+                                Describe = $_.Name;
+                                Duration = $totalTime
+                            }
+        } | Sort-Object -Property 'Duration' -Descending |
+        Select-Object -First $DescribeDurationReportCount |
+        Format-Table -AutoSize
+
+    $result.TestResult |
+        Sort-Object -Property 'Time' -Descending |
+        Select-Object -First $ItDurationReportCount |
+        Format-Table -AutoSize -Property 'Describe','Name','Time'
 
     Publish-WhiskeyPesterTestResult -Path $outputFile
 
-    $result = [xml](Get-Content -Path $outputFile -Raw)
+    $outputFileContent = Get-Content -Path $outputFile -Raw
+    $outputFileContent | Write-WhiskeyDebug
+    $result = [xml]$outputFileContent
 
     if( -not $result )
     {
-        throw ('Unable to parse Pester output XML report ''{0}''.' -f $outputFile)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to parse Pester output XML report "{0}".' -f $outputFile)
+        return
     }
 
-    if( $result.'test-results'.errors -ne '0' -or $result.'test-results'.failures -ne '0' )
+    if( $result.DocumentElement.errors -ne '0' -or $result.DocumentElement.failures -ne '0' )
     {
-        throw ('Pester tests failed.')
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Pester tests failed.')
+        return
     }
 }

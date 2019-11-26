@@ -432,25 +432,3 @@ Describe 'PowerShell.when run in Initialize mode' {
         ThenTheScriptRan
     }
 }
-
-Describe 'PowerShell.when Whiskey stored in a directory that doesn''t match module name' {
-    It 'should import Whiskey correctly' {
-        Init
-        $whiskeyRoot = Join-Path -Path $testRoot -ChildPath '.whiskey'
-        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey' -Resolve) `
-                -Recurse `
-                -Destination $whiskeyRoot
-        & (Join-Path -Path $whiskeyRoot -ChildPath 'Import-Whiskey.ps1' -Resolve)
-        try
-        {
-            GivenAScript
-            WhenTheTaskRuns
-            ThenTheTaskPasses
-            ThenTheScriptRan
-        }
-        finally
-        {
-            Remove-Module -Name 'Whiskey' -Force
-        }
-    }
-}
