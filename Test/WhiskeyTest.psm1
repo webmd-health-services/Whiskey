@@ -245,8 +245,8 @@ function Invoke-WhiskeyPrivateCommand
         [hashtable]$Parameter = @{}
     )
 
-    $Global:Name = $Name
-    $Global:Parameter = $Parameter
+    $Global:WTName = $Name
+    $Global:WTParameter = $Parameter
 
     if( $VerbosePreference -eq 'Continue' )
     {
@@ -258,13 +258,13 @@ function Invoke-WhiskeyPrivateCommand
     try
     {
         InModuleScope 'Whiskey' { 
-            & $Name @Parameter 
+            & $WTName @WTParameter 
         }
     }
     finally
     {
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
-        Remove-Variable -Name 'Name' -Scope 'Global'
+        Remove-Variable -Name 'WTParameter' -Scope 'Global'
+        Remove-Variable -Name 'WTName' -Scope 'Global'
     }
 }
 function New-AssemblyInfo

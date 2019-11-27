@@ -7,12 +7,13 @@ Set-StrictMode -Version 'Latest'
 $threwException = $false
 $taskWorkingDirectory = $null
 $nodePath = $null
+$testRoot = $null
 
 function GivenPackageJson
 {
     param(
         $InputObject,
-        $InDirectory = $TestDrive.FullName
+        $InDirectory = $testRoot
     )
 
     $InputObject | Set-Content -Path (Join-Path -Path $InDirectory -ChildPath 'package.json')
@@ -24,7 +25,7 @@ function GivenWorkingDirectory
         $Directory
     )
 
-    $script:taskWorkingDirectory = Join-Path -Path $TestDrive.FullName -ChildPath $Directory
+    $script:taskWorkingDirectory = Join-Path -Path $testRoot -ChildPath $Directory
     New-Item -Path $taskWorkingDirectory -ItemType Directory -Force | Out-Null
 }
 
@@ -32,7 +33,13 @@ function Init
 {
     $script:nodePath = $null
     $script:threwException = $false
-    $script:taskWorkingDirectory = $TestDrive.FullName
+    $script:testRoot = New-WhiskeyTestRoot
+    $script:taskWorkingDirectory = $testRoot
+}
+
+function Reset 
+{
+    Remove-Node -BuildRoot $testRoot
 }
 
 function ThenNodeInstalled
@@ -45,7 +52,7 @@ function ThenNodeInstalled
         [switch]$AtLatestVersion
     )
 
-    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $testRoot
     if( $AtLatestVersion )
     {
         $expectedVersion = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
@@ -74,27 +81,27 @@ function ThenNodeInstalled
         $platformID = 'darwin'
         $extension = 'tar.gz'
     }
-    Join-Path -Path $TestDrive.FullName -ChildPath ('.node\node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
+    Join-Path -Path $testRoot -ChildPath ('.node\node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
 
     $nodePath | Should -Exist
     & $nodePath '--version' | Should -Be $NodeVersion
 
-    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TestDrive.FullName -Global
+    $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $testRoot -Global
     $npmPath = Join-Path -Path $npmPath -ChildPath 'bin\npm-cli.js'
     $npmPath | Should -Exist
     & $nodePath $npmPath '--version' | Should -Be $NpmVersion
-    $nodePath | Should -Be (Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName)
+    $nodePath | Should -Be (Resolve-WhiskeyNodePath -BuildRootPath $testRoot)
 }
 
 function ThenNodeNotInstalled
 {
-    Resolve-WhiskeyNodePath -BuildRootPath $TestDrive.FullName -ErrorAction Ignore | Should -BeNullOrEmpty
-    Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TestDrive.FullName -Global -ErrorAction Ignore | Should -BeNullOrEmpty
+    Resolve-WhiskeyNodePath -BuildRootPath $testRoot -ErrorAction Ignore | Should -BeNullOrEmpty
+    Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $testRoot -Global -ErrorAction Ignore | Should -BeNullOrEmpty
 }
 
 function ThenNodePackageNotFound
 {
-    $Error[0] | Should -Match 'NotFound'
+    $Global:Error | Select-Object -First 1 | Should -Match 'NotFound'
 }
 
 function ThenNoError
@@ -129,7 +136,7 @@ function WhenInstallingTool
     $Global:Error.Clear()
 
     $parameter = $PSBoundParameters
-    $parameter['InstallRoot'] = $TestDrive.FullName
+    $parameter['InstallRoot'] = $testRoot
 
     Push-Location -path $taskWorkingDirectory
     try
@@ -148,7 +155,7 @@ function WhenInstallingTool
 }
 
 Describe 'Install-WhiskeyNode.when installing' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should install Node.js' {
         Init
         WhenInstallingTool
@@ -157,7 +164,7 @@ Describe 'Install-WhiskeyNode.when installing' {
 }
 
 Describe 'Install-WhiskeyNode.when installing old version' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should fail' {
         $oldVersion = '4.4.7'
         if( -not $IsWindows )
@@ -180,7 +187,7 @@ Describe 'Install-WhiskeyNode.when installing old version' {
 }
 
 Describe 'Install-WhiskeyNode.when installing specific version' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should install that version' {
         Init
         GivenPackageJson @'
@@ -196,7 +203,7 @@ Describe 'Install-WhiskeyNode.when installing specific version' {
 }
 
 Describe 'Install-WhiskeyNode.when upgrading to a new version' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should upgrade to the new version' {
         Init
         GivenPackageJson @'
@@ -223,7 +230,7 @@ Describe 'Install-WhiskeyNode.when upgrading to a new version' {
 }
 
 Describe 'Install-WhiskeyNode.when user specifies version in whiskey.yml and uses wildcard' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should download the latest version that matches the wildcard' {
         Init
         GivenPackageJson @'
@@ -240,7 +247,7 @@ Describe 'Install-WhiskeyNode.when user specifies version in whiskey.yml and use
 }
 
 Describe 'Install-WhiskeyNode.when using custom version of NPM' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should update NPM' {
         Init
         GivenPackageJson @'
@@ -256,14 +263,14 @@ Describe 'Install-WhiskeyNode.when using custom version of NPM' {
 }
 
 Describe 'Install-WhiskeyNode.when already installed' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should use version of Node already there' {
         Init
         WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion
 
         Mock -CommandName 'Invoke-WebRequest' -Module 'Whiskey'
-        $nodeUnzipPath = Join-Path -Path $TestDrive.FullName -ChildPath '.node\node-*-win-x64'
+        $nodeUnzipPath = Join-Path -Path $testRoot -ChildPath '.node\node-*-win-x64'
         Get-ChildItem -Path $nodeUnzipPath -Directory | Remove-Item
         WhenInstallingTool
         $nodeUnzipPath | Should -Not -Exist
@@ -272,7 +279,7 @@ Describe 'Install-WhiskeyNode.when already installed' {
 }
 
 Describe 'Install-WhiskeyNode.when packageJson is in working directory' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should install Node.js' {
         Init
         GivenWorkingDirectory 'app'
@@ -300,7 +307,7 @@ Describe 'Install-WhiskeyNode.when packageJson is in working directory' {
 }
 
 Describe 'Install-WhiskeyNode.when run in clean mode' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should remove Node.js' {
         Init
         WhenInstallingTool -InCleanMode
@@ -312,10 +319,10 @@ Describe 'Install-WhiskeyNode.when run in clean mode' {
 
 
 Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should uninstall Node.js' {
         Init
-        Install-Node
+        Install-Node -BuildRoot $testRoot
         WhenInstallingTool -InCleanMode
         ThenNodeInstalled -AtLatestVersion
         ThenNoError

@@ -38,7 +38,7 @@ function Test-Import
     if( -not ($module | Get-Member 'ImportedAt') )
     {
         Write-Timing ('Module "{0}" not loaded by WhiskeyTest.' -f $Name)
-        return $true
+        $module | Add-Member -Name 'ImportedAt' -MemberType NoteProperty -Value (Get-Date)
     }
 
     $moduleRoot = $module.Path
@@ -74,7 +74,7 @@ try
 {
     $Global:VerbosePreference = 'SilentlyContinue'
 
-    Write-Timing ('Initialize-WhiskeyTest.ps1')
+    Write-Timing ('Initialize-WhiskeyTest.ps1  Start')
     # Some tests load ProGetAutomation from a Pester test drive. Forcibly remove the module if it is loaded to avoid errors.
 
     if( Test-Import -Name 'Whiskey' )
@@ -121,6 +121,6 @@ try
 }
 finally
 {
-    Write-Timing ('Initialize-WhiskeyTest.ps1')
+    Write-Timing ('Initialize-WhiskeyTest.ps1  End')
     $Global:VerbosePreference = $originalVerbosePreference
 }
