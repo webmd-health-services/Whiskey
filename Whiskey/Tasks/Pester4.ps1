@@ -74,7 +74,7 @@ function Invoke-WhiskeyPester4Task
         $Argument['OutputFormat'] = 'NUnitXml'
     }
 
-    $Argument | Write-WhiskeyObject -Context $context -Level Verbose -Verbose
+    $Argument | Write-WhiskeyObject -Context $context -Level Verbose
 
     $args = @(
         (Get-Location).Path,

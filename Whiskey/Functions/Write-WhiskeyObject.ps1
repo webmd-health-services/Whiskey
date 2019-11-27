@@ -34,7 +34,7 @@ function Write-WhiskeyObject
         [Whiskey.Context]$Context,
 
         [ValidateSet('Error','Warning','Info','Verbose','Debug')]
-        # INTERNAL. DO NOT USE. To log at different levels, use `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyVerbose`, or `Write-WhiskeyDebug`
+        # The level at which to write the object. The default is `Info`.
         [String]$Level = 'Info',
 
         [Parameter(Mandatory,ValueFromPipeline,Position=0)]
