@@ -6,24 +6,20 @@ function Remove-WhiskeyItem
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent)]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    foreach( $path in $TaskParameter['Path'] )
+    foreach( $pathItem in $Path )
     {
-        $path = $path | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -ErrorAction Ignore
-        if( -not $path )
+        if( -not (Test-Path -Path $pathItem) )
         {
             continue
         }
 
-        foreach( $pathItem in $path )
-        {
-            Remove-WhiskeyFileSystemItem -Path $pathitem -ErrorAction Stop
-        }
+        Remove-WhiskeyFileSystemItem -Path $pathitem -ErrorAction Stop
     }
 }

@@ -51,6 +51,7 @@ Build:
 
 - GetPowerShellModule:
     Name: Glob
+    Version: 0.1.*
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
@@ -63,75 +64,87 @@ Build:
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
+# This needs to build in its own process since it downloads and installs an old version of Whiskey.
+- Pester4:
+    ExceptOnPlatform: Windows
+    Path: Test\build.ps1.Tests.ps1
+
+- Pester4:
+    ExceptOnPlatform: Windows
+    Path: Test\*.Tests.ps1
+    Exclude:
+    - "*\\Test\\build.ps1.Tests.ps1"
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs.
-- Parallel:
-    ExceptOnPlatform: Windows
-    Queues:
-    - Tasks:
-        Pester4:
-            Path:
-            - Test\Install-WhiskeyNode.Tests.ps1
-            - Test\Install-WhiskeyPowerShellModule.Tests.ps1
-            - Test\Parallel.Tests.ps1
-            - Test\Pester4.Tests.ps1
-    - Tasks:
-        Pester4:
-            Path:
-            - Test\DotNet.Tests.ps1
-            - Test\Install-WhiskeyDotNetTool.Tests.ps1
-            - Test\Invoke-WhiskeyTask.Tests.ps1
-            - Test\PowerShell.Tests.ps1
-            - Test\ProGetUniversalPackage.Tests.ps1
-            - Test\PublishBuildMasterPackage.Tests.ps1
-    - Tasks:
-        Pester4:
-            Path:
-            - Test\GetPowerShellModule.Tests.ps1
-            - Test\Install-WhiskeyDotNetSdk.Tests.ps1
-            - Test\Install-WhiskeyTool.Tests.ps1
-            - Test\New-WhiskeyContext.Tests.ps1
-            - Test\Npm.Tests.ps1
-            - Test\PublishBitbucketServerTag.Tests.ps1
-            - Test\PublishNodeModule.Tests.ps1
-            - Test\PublishProGetUniversalPackage.Tests.ps1
-            - Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
-            - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
-            - Test\Version.Tests.ps1
-            - Test\Zip.Tests.ps1
-    - Tasks:
-        # This test needs to run in its own instance since it loads an old version
-        # of Whiskey.
-        - Pester4:
-            Path: Test\build.ps1.Tests.ps1
-        - Pester4:
-            Path:
-            - "Test\\*.Tests.ps1"
-            Exclude:
-            - "*/Test/build.ps1.Tests.ps1"
-            - "*/Test/DotNet.Tests.ps1"
-            - "*/Test/GetPowerShellModule.Tests.ps1"
-            - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
-            - "*/Test/Install-WhiskeyDotNetTool.Tests.ps1"
-            - "*/Test/Install-WhiskeyNode.Tests.ps1"
-            - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
-            - "*/Test/Install-WhiskeyTool.Tests.ps1"
-            - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
-            - "*/Test/New-WhiskeyContext.Tests.ps1"
-            - "*/Test/Npm.Tests.ps1"
-            - "*/Test/Parallel.Tests.ps1"
-            - "*/Test/Pester4.Tests.ps1"
-            - "*/Test/PowerShell.Tests.ps1"
-            - "*/Test/ProGetUniversalPackage.Tests.ps1"
-            - "*/Test/PublishBitbucketServerTag.Tests.ps1"
-            - "*/Test/PublishBuildMasterPackage.Tests.ps1"
-            - "*/Test/PublishNodeModule.Tests.ps1"
-            - "*/Test/PublishProGetUniversalPackage.Tests.ps1"
-            - "*/Test/Resolve-WhiskeyPowerShellModule.Tests.ps1"
-            - "*/Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
-            - "*/Test/Version.Tests.ps1"
-            - "*/Test/Zip.Tests.ps1"
+#- Parallel:
+#   ExceptOnPlatform: Windows
+#    Queues:
+#    - Tasks:
+#        Pester4:
+#            Path:
+#            - Test\Install-WhiskeyNode.Tests.ps1
+#            - Test\Install-WhiskeyPowerShellModule.Tests.ps1
+#            - Test\Parallel.Tests.ps1
+#            - Test\Pester4.Tests.ps1
+#    - Tasks:
+#        Pester4:
+#            Path:
+#            - Test\DotNet.Tests.ps1
+#            - Test\Install-WhiskeyDotNetTool.Tests.ps1
+#            - Test\Invoke-WhiskeyTask.Tests.ps1
+#            - Test\PowerShell.Tests.ps1
+#            - Test\ProGetUniversalPackage.Tests.ps1
+#            - Test\PublishBuildMasterPackage.Tests.ps1
+#    - Tasks:
+#        Pester4:
+#            Path:
+#            - Test\GetPowerShellModule.Tests.ps1
+#            - Test\Install-WhiskeyDotNetSdk.Tests.ps1
+#            - Test\Install-WhiskeyTool.Tests.ps1
+#            - Test\New-WhiskeyContext.Tests.ps1
+#            - Test\Npm.Tests.ps1
+#            - Test\PublishBitbucketServerTag.Tests.ps1
+#            - Test\PublishNodeModule.Tests.ps1
+#            - Test\PublishProGetUniversalPackage.Tests.ps1
+#            - Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+#            - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
+#            - Test\Version.Tests.ps1
+#            - Test\Zip.Tests.ps1
+#    - Tasks:
+#        # This test needs to run in its own instance since it loads an old version
+#        # of Whiskey.
+#        - Pester4:
+#            Path: Test\build.ps1.Tests.ps1
+#    - Tasks:
+#        - Pester4:
+#            Path:
+#            - "Test\\*.Tests.ps1"
+#            Exclude:
+#            - "*\\Test\\build.ps1.Tests.ps1"
+#            - "*/Test/DotNet.Tests.ps1"
+#            - "*/Test/GetPowerShellModule.Tests.ps1"
+#            - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
+#            - "*/Test/Install-WhiskeyDotNetTool.Tests.ps1"
+#            - "*/Test/Install-WhiskeyNode.Tests.ps1"
+#            - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
+#            - "*/Test/Install-WhiskeyTool.Tests.ps1"
+#            - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
+#            - "*/Test/New-WhiskeyContext.Tests.ps1"
+#            - "*/Test/Npm.Tests.ps1"
+#            - "*/Test/Parallel.Tests.ps1"
+#            - "*/Test/Pester4.Tests.ps1"
+#            - "*/Test/PowerShell.Tests.ps1"
+#            - "*/Test/ProGetUniversalPackage.Tests.ps1"
+#            - "*/Test/PublishBitbucketServerTag.Tests.ps1"
+#            - "*/Test/PublishBuildMasterPackage.Tests.ps1"
+#            - "*/Test/PublishNodeModule.Tests.ps1"
+#            - "*/Test/PublishProGetUniversalPackage.Tests.ps1"
+#            - "*/Test/Resolve-WhiskeyPowerShellModule.Tests.ps1"
+#            - "*/Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
+#            - "*/Test/Version.Tests.ps1"
+#            - "*/Test/Zip.Tests.ps1"
 
 - Parallel:
     OnlyOnPlatform: Windows

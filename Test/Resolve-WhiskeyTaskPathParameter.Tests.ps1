@@ -3,11 +3,43 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-Import-WhiskeyTestTaskModule
+Import-WhiskeyTestTaskModule -Name 'Glob'
 
 [Whiskey.Context]$context = $null
 $fsCaseSensitive = $false
 $testRoot = $null
+
+# Don't let Carbon's alias interfere with our function.
+if( (Test-Path -Path 'alias:Resolve-RelativePath') )
+{
+    Remove-Item -Path 'alias:Resolve-RelativePath'
+}
+
+function Resolve-RelativePath
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory,Position=0)]
+        [String[]]$Path
+    )
+
+    $outsideBuildRootIdentifier = '..{0}' -f [IO.Path]::DirectorySeparatorChar
+    foreach( $item in $Path )
+    {
+        # Normalize separators
+        $item = Join-Path -Path $item -ChildPath '.'
+        $item = $item.TrimEnd('.', [IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+
+        if( $item.StartsWith($outsideBuildRootIdentifier) )
+        {
+            Write-Output $item
+        } 
+        else
+        {
+            Write-Output (Join-Path -Path '.' -ChildPath $item)
+        }
+    }
+}
 
 function GivenDirectory
 {
@@ -21,14 +53,22 @@ function GivenDirectory
 function GivenFile
 {
     param(
-        $Name
+        [String[]]$Name,
+        [Switch]$Hidden
     )
 
-    if( -not [IO.Path]::IsPathRooted($Name) )
+    foreach( $path in $Name )
     {
-        $Name = Join-Path -Path $testRoot -ChildPath $Name
+        if( -not [IO.Path]::IsPathRooted($path) )
+        {
+            $path = Join-Path -Path $testRoot -ChildPath $path
+        }
+        $item = New-Item -Path $path -Force
+        if( $Hidden )
+        {
+            $item.Attributes = $item.Attributes -bor [IO.FileAttributes]::Hidden
+        }
     }
-    New-Item -Path $Name -ItemType 'File' -Force
 }
 
 function Init
@@ -39,6 +79,10 @@ function Init
     Clear-LastTaskBoundParameter
 }
 
+function Reset
+{
+    Reset-WhiskeyTestPSModule
+}
 function ThenPipelineSucceeded
 {
     $Global:Error | Should -BeNullOrEmpty
@@ -60,7 +104,7 @@ function ThenTaskCalled
         $taskParameters.Count | Should -Be $WithParameter.Count
         foreach( $key in $WithParameter.Keys )
         {
-            $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
+            $taskParameters[$key] | Sort-Object | Should -Be ($WithParameter[$key] | Sort-Object) -Because $key
         }
     }
 }
@@ -83,7 +127,7 @@ function ThenThrewException
 
 function WhenRunningTask
 {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding()]
     param(
         [String]$Name,
 
@@ -92,7 +136,7 @@ function WhenRunningTask
         [String]$BuildRoot = $testRoot
     )
 
-    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot
+    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot -IncludePSModule 'Glob'
     $context.PipelineName = 'Build'
     $context.TaskName = $null
     $context.TaskIndex = 1
@@ -106,21 +150,21 @@ function WhenRunningTask
     catch
     {
         $script:threwException = $true
-        Write-Error $_
+        Write-CaughtError $_
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path') {
-    It 'should resolve the parameter to a full path' {
+Describe ('Resolve-WhiskeyTaskPath.when parameter is an optional path') {
+    It 'should resolve the parameter to a relative path' {
         Init
         WhenRunningTask 'ValidateOptionalPathTask' -Parameter @{ 'Path' = 'whiskey.yml' } 
         ThenPipelineSucceeded
-        ThenTaskCalled -WithParameter @{ 'Path' = $context.ConfigurationPath.FullName }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath -Path 'whiskey.yml') }
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path but it doesn''t exist') {
-    It 'should return a full path' {
+Describe ('Resolve-WhiskeyTaskPath.when parameter is an optional path but it doesn''t exist') {
+    It 'should return relative path' {
         Init
         WhenRunningTask 'ValidateOptionalPathTask' -Parameter @{ 'Path' = 'somefile.txt' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
@@ -128,21 +172,35 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is an optional path b
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path with wildcards') {
+Describe ('Resolve-WhiskeyTaskPath.when parameter is a path with wildcards') {
     It 'should resolve path to actual paths' {
         Init
-        GivenFile 'abc.yml' 
+        GivenFile 'abc.yml'
         WhenRunningTask 'ValidateOptionalPathsTask' -Parameter @{ 'Path' = '*.yml' } 
         ThenPipelineSucceeded
         ThenTaskCalled
         $taskParameters = Get-LastTaskBoundParameter
         $taskParameters['Path'] | Should -HaveCount 2
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml')
-        $taskParameters['Path'] | Should -Contain $context.ConfigurationPath.FullName
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'abc.yml')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'whiskey.yml')
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path that the user wants resolved with a wildcard but doesn''t exist') {
+Describe ('Resolve-WhiskeyTaskPath.when parameter is a hidden path') {
+    It 'should resolve path to actual paths' {
+        Init
+        GivenFile '.hidden.yml' -Hidden
+        WhenRunningTask 'ValidateOptionalPathsTask' -Parameter @{ 'Path' = '*.yml' } 
+        ThenPipelineSucceeded
+        $expectedPaths = @(
+            (Resolve-RelativePath '.hidden.yml')
+            (Resolve-RelativePath 'whiskey.yml')
+        )
+        ThenTaskCalled -WithParameter @{ 'Path' = $expectedPaths }
+    }
+}
+
+Describe ('Resolve-WhiskeyTaskPath.when parameter is a path that the user wants resolved with a wildcard but doesn''t exist') {
     It 'should fail' {
         Init
         GivenFile 'abc.yml' 
@@ -152,7 +210,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when parameter is a path that the us
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path parameter wants to be resolved but parameter type isn''t a string array') {
+Describe ('Resolve-WhiskeyTaskPath.when path parameter wants to be resolved but parameter type isn''t a string array') {
     It 'should fail' {
         Init
         GivenFile 'abc.txt' 
@@ -163,16 +221,16 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path parameter wants to be reso
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file') {
+Describe ('Resolve-WhiskeyTaskPath.when path should be a file') {
     It ('should pass full path to file') {
         Init
         GivenFile 'abc.yml'
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $context.BuildRoot -ChildPath 'abc.yml') }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'abc.yml') }
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file but it''s a directory') {
+Describe ('Resolve-WhiskeyTaskPath.when path should be a file but it''s a directory') {
     It ('should fail') {
         Init
         GivenDirectory 'abc.yml'
@@ -182,7 +240,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a file but it''s
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a directory but it''s a file') {
+Describe ('Resolve-WhiskeyTaskPath.when path should be a directory but it''s a file') {
     It ('should fail') {
         Init
         GivenFile 'abc.yml'
@@ -192,7 +250,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path should be a directory but 
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when all paths should be files but one is a directory') {
+Describe ('Resolve-WhiskeyTaskPath.when all paths should be files but one is a directory') {
     It ('should fail') {
         Init
         GivenFile 'abc.yml'
@@ -203,7 +261,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when all paths should be files but o
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when an optional path that doesn''t exist should be a specific type') {
+Describe ('Resolve-WhiskeyTaskPath.when an optional path that doesn''t exist should be a specific type') {
     It ('should pass nothing') {
         Init
         WhenRunningTask 'ValidateOptionalFileTask' -Parameter @{ }
@@ -211,7 +269,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when an optional path that doesn''t 
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path is mandatory and missing') {
+Describe ('Resolve-WhiskeyTaskPath.when path is mandatory and missing') {
     It 'should fail' {
         Init
         GivenFile 'abc.yml' 
@@ -221,16 +279,16 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is mandatory and missing')
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root and can be') {
+Describe ('Resolve-WhiskeyTaskPath.when path is outside of build root and can be') {
     It ('should succeed') {
         Init
         WhenRunningTask 'ValidateMandatoryNonexistentOutsideBuildRootFileTask' -Parameter @{ 'Path' = '..\YOLO.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath '..\YOLO.yml'))  }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path '..' -ChildPath 'YOLO.yml') }
         ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root and should not be') {
+Describe ('Resolve-WhiskeyTaskPath.when path is outside of build root and should not be') {
     It ('should fail') {
         Init
         WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = '../YOLO.yml' } -ErrorAction SilentlyContinue
@@ -239,17 +297,17 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside of build root a
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does') {
-    It ('should pass full path to file') {
+Describe ('Resolve-WhiskeyTaskPath.when path must exist and does') {
+    It ('should pass relative path to file') {
         Init
         GivenFile 'abc.yml'
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $testRoot -Childpath 'abc.yml' ) }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'abc.yml') }
         ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does not') {
+Describe ('Resolve-WhiskeyTaskPath.when path must exist and does not') {
     It ('should fail') {
         Init
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
@@ -258,33 +316,25 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path must exist and does not') 
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path is absolute') {
+Describe ('Resolve-WhiskeyTaskPath.when path is absolute') {
     It ('should succeed') {
         Init
         WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath 'abc.yml' )) }
-        ThenTaskCalled -WithParameter @{ 'Path' = [IO.Path]::GetFullPath((Join-Path -Path $testRoot -Childpath 'abc.yml' )) }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'abc.yml') }
         ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path doesn''t exist but has a wildcard') {
+Describe ('Resolve-WhiskeyTaskPath.when path doesn''t exist but has a wildcard') {
     It ('shouldn''t pass anything') {
         Init
         WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = 'packages\tool\*.yolo' } -ErrorAction SilentlyContinue
-        if ($PSVersionTable.PSVersion.Major -lt 6)
-        {            
-            ThenTaskNotCalled
-            ThenThrewException -Pattern 'Illegal\ characters\ in\ path.'
-        }
-        else
-        {
-            ThenTaskCalled -WithParameter @{ 'Path' = '' }
-            ThenPipelineSucceeded
-        }
+        ThenTaskCalled -WithParameter @{ 'Path' = '' }
+        ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside build root') {
+Describe ('Resolve-WhiskeyTaskPath.when path is outside build root') {
     It ('should fail') {
         Init
         WhenRunningTask -Name 'ValidateMandatoryNonexistentFileTask' `
@@ -296,7 +346,7 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when path is outside build root') {
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when multiple paths contain wildcards') {
+Describe ('Resolve-WhiskeyTaskPath.when multiple paths contain wildcards') {
     It ('should resolve wildcards to existing paths') {
         Init
         GivenFile 'abc.yml' 
@@ -309,16 +359,16 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when multiple paths contain wildcard
         $taskParameters = Get-LastTaskBoundParameter
         $taskParameters | Should -Not -BeNullOrEmpty
         $taskParameters['Path'] | Should -HaveCount 5
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml' -Resolve)
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'xyz.yml' -Resolve)
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'trolololo.txt' -Resolve)
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'yayaya.txt' -Resolve)
-        $taskParameters['Path'] | Should -Contain $context.ConfigurationPath.FullName
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'abc.yml')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'xyz.yml')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'trolololo.txt')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'yayaya.txt')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'whiskey.yml')
         ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths') {
+Describe ('Resolve-WhiskeyTaskPath.when given multipe paths') {
     It ('should succeed') {
         Init
         GivenFile 'abc.yml'
@@ -329,14 +379,14 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when given multipe paths') {
         $taskParameters = Get-LastTaskBoundParameter
         $taskParameters | Should -Not -BeNullOrEmpty
         $taskParameters['Path'] | Should -HaveCount 3
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'abc.yml' -Resolve)
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'xyz.yml' -Resolve)
-        $taskParameters['Path'] | Should -Contain (Join-Path -Path $Context.BuildRoot -ChildPath 'hjk.yml' -Resolve)   
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'abc.yml')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'xyz.yml')
+        $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'hjk.yml')
         ThenPipelineSucceeded
     }
 }
 
-Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to try to reach outside its build root') {
+Describe ('Resolve-WhiskeyTaskPath.when a path uses different case to try to reach outside its build root') {
     It ('should fail on case-sensitive platforms and succeed on case-insensitive platforms') {
         Init
         $tempDir = $testRoot | Split-Path -Parent
@@ -358,8 +408,188 @@ Describe ('Resolve-WhiskeyTaskPathParameter.when a path uses different case to t
         }
         else
         {
-            ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path $testRoot -ChildPath 'abc.yml')}
+            ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'abc.yml') }
             ThenPipelineSucceeded
         }
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when working directory isn''t build root and using a non-existent relative path inside the build root' {
+    It 'should allow the path' {
+        Init
+        GivenDirectory 'subdir'
+        WhenRunningTask 'ValidateOptionalNonExistentPathTask' -Parameter @{ 'Path' = '..\NewFile.txt'; 'WorkingDirectory' = 'subdir' }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath '..\Newfile.txt') }
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPathParamter.when file should get created' {
+    It 'should create the item' {
+        Init
+        # We use a directory since `New-Item` defaults to creating files.
+        WhenRunningTask 'CreateMissingFileTask' -Parameter @{ 'Path' = 'dir\One.txt','Two.txt' }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'dir\One.txt','Two.txt') }
+        Join-Path -Path $testRoot -ChildPath 'dir\One.txt' | Should -Exist
+        Join-Path -Path $testRoot -ChildPath 'Two.txt' | Should -Exist
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPathParamter.when directory should get created' {
+    It 'should create the item' {
+        Init
+        # We use a directory since `New-Item` defaults to creating files.
+        WhenRunningTask 'CreateMissingDirectoryTask' -Parameter @{ 'Path' = 'One','Two' }
+        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'One','Two') }
+        Join-Path -Path $testRoot -ChildPath 'One' | Should -Exist
+        Join-Path -Path $testRoot -ChildPath 'Two' | Should -Exist
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when item should get created but path type not given' {
+    It 'should fail' {
+        Init
+        WhenRunningTask 'CreateMissingItemwithPathTypeMissingTask' -Parameter @{ 'Path' = 'One.txt' } -ErrorAction SilentlyContinue
+        ThenTaskNotCalled
+        ThenThrewException -Pattern 'add a PathType property'
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when path is current directory' {
+    It 'should pass' {
+        Init
+        WhenRunningTask 'ValidateMandatoryDirectoryTask' -Parameter @{ 'Path' = '.' }
+        ThenTaskCalled -WithParameter @{ 'Path' = ('.{0}' -f [IO.Path]::DirectorySeparatorChar) }
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when path does not exist and some paths use wildcards and others do not' {
+    It 'should normalize directory separators' {
+        Init
+        WhenRunningTask 'ValidateMandatoryNonexistentFilesTask' -Parameter @{ 'Path' = @( 'file.txt','*.json','anotherfile.txt') }
+        $expectedPaths = & {
+            Resolve-RelativePath 'file.txt'
+            Resolve-RelativePath 'anotherfile.txt'
+        }
+        ThenTaskCalled -WithParameter @{ 'Path' = $expectedPaths }
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when path does not exist and user is using directory separator from another OS' {
+    It 'should normalize directory separators' {
+        if( $IsWindows )
+        {
+            $separator = '/'
+        }
+        else
+        {
+            $separator = '\'
+        }
+        Init
+        $paths = @(
+            ((Join-Path -Path $testRoot -ChildPath 'some\custom\path.zip') -replace ([regex]::Escape([IO.Path]::DirectorySeparatorChar)),$separator),
+            ('some{0}other{0}path.zip' -f $separator)
+            # Make sure on Windows, separator gets switched to backslash.
+            'another{0}path.txt' -f [IO.Path]::AltDirectorySeparatorChar
+        )
+        WhenRunningTask 'ValidateMandatoryNonexistentFilesTask' -Parameter @{ 'Path' = $paths }
+        $expectedPaths = & {
+            Resolve-RelativePath ('some{0}custom{0}path.zip' -f [IO.Path]::DirectorySeparatorChar)
+            Resolve-RelativePath ('some{0}other{0}path.zip' -f [IO.Path]::DirectorySeparatorChar)
+            Resolve-RelativePath ('another{0}path.txt' -f [IO.Path]::DirectorySeparatorChar)
+        }
+        ThenTaskCalled -WithParameter @{ 'Path' = $expectedPaths }
+    }
+}
+
+Describe 'Resolve-WhiskeyTaskPath.when using glob syntax' {
+    AfterEach { Reset }
+    It 'should return files matching globs' {
+        Init
+        GivenFile 'absolute','abc.yml', 'cdf.yml', 'root.txt','root.txt.orig', 'dir\file.txt', 'dir\whiskey.yml', 'dir1\file.txt.orig', 'dir2\dir3\anotherfile.txt', 'dir2\dir3\anotherfile.txt.fubar'
+        # These files test that we search hidden places
+        GivenFile '.hidden.yml' -Hidden
+        GivenDirectory '.hidden' -Hidden
+        GivenFile '.hidden\config.txt'
+        # These files test that we're doing a case-senstive search on Linux.
+        GivenFile 'uppercase.TXT'
+
+        WhenRunningTask 'ValidatePathWithGlobTask' -Parameter @{ 
+            'Path' = @( '*.yml', '**\*.txt', '**\*.txt.*', (Join-Path -Path $testRoot -ChildPath 'absolute')); 
+            'Exclude' = @( 'PSModules\**', '**\*.orig', 'whiskey.yml' ) }
+        $expectedPaths = & {
+            Resolve-RelativePath 'absolute'
+            Resolve-RelativePath 'abc.yml'
+            Resolve-RelativePath 'cdf.yml'
+            Resolve-RelativePath 'root.txt'
+            Resolve-RelativePath 'dir\file.txt'
+            Resolve-RelativePath 'dir2\dir3\anotherfile.txt'
+            Resolve-RelativePath 'dir2\dir3\anotherfile.txt.fubar'
+            Resolve-RelativePath '.hidden.yml'
+            Resolve-RelativePath '.hidden\config.txt'
+            
+            # If we're not on a case-sensitive file sytem, make sure results use the correct case sensitivity.
+            if( (Test-Path -Path $testRoot.ToUpperInvariant()) )
+            {
+                Resolve-RelativePath 'uppercase.TXT'
+            }
+        }
+        ThenTaskCalled -WithParameter @{ 'Path' = $expectedPaths }
+    }
+}
+
+if( -not (Get-ChildItem -Path ([IO.Path]::DirectorySeparatorChar) -File) )
+{
+    Write-Warning -Message ('Unable to test if globbing works from the root directory.')
+}
+else
+{
+    # Whiskey detects the case-sensitivity of the file system and calls Find-GlobFile with matching case-sensitivity.
+    # This detection needs to handle when resolving paths from the root directory.
+    Describe 'Resolve-WhiskeyTaskPath.when globbing in the root directory' {
+        AfterEach { Reset }
+        It 'should correctly detect case-sensitivity' {
+            Init
+            $rootPath = Resolve-Path -Path ([IO.Path]::DirectorySeparatorChar) | Select-Object -ExpandProperty 'ProviderPath'
+            Push-Location $rootPath
+            try
+            {
+                $paths = 
+                    Get-ChildItem -Path $rootPath -File |
+                    Split-Path -Leaf
+
+                $changedCasePaths = 
+                    $paths |
+                    ForEach-Object {
+                        Write-Output ($_.ToUpperInvariant())
+                    }
+
+                $exclude = 
+                    Get-ChildItem -Path $rootPath -Directory -Force |
+                        ForEach-Object { '**/{0}/**' -f $_.Name }
+
+                Mock -CommandName 'Install-WhiskeyPowerShellModule' -Module 'Whiskey'
+                $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
+                $context.BuildRoot = $rootPath
+                $resolvedPaths = 
+                    $changedCasePaths | 
+                    Resolve-WhiskeyTaskPath -TaskContext $context -UseGlob -PropertyName 'Path' -Exclude $exclude -ErrorAction Ignore
+                $expectedPaths = & {
+                    foreach( $changedCasePath in $changedCasePaths )
+                    {
+                        $fullPath = Join-Path -Path $rootPath -ChildPath $changedCasePath
+                        # Case-insensitive ?
+                        if( (Test-Path -Path $fullPath) )
+                        {
+                            Write-Output (Resolve-RelativePath -Path $changedCasePath)
+                        }
+                    }
+                }
+                $resolvedPaths | Sort-Object | Should -Be ($expectedPaths | Sort-Object)
+            }
+            finally
+            {
+                Pop-Location
+            }
+        } 
     }
 }

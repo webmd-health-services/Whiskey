@@ -890,7 +890,7 @@ Describe 'ProGetUniversalPackage.when path to package does not exist' {
 
         { Invoke-WhiskeyTask -TaskContext $context -Parameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = 'fubar' } -Name 'ProGetUniversalPackage' } | Should -Throw
 
-        $Global:Error | Should -BeLike ('* Path`[0`] "{0}*" does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Should -Match '\bPath\b.*\bfubar\b.*\ does\ not\ exist'
     }
 }
 
@@ -903,7 +903,7 @@ Describe 'ProGetUniversalPackage.when path to third-party item does not exist' {
         $Global:Error.Clear()
 
         { Invoke-WhiskeyTask -TaskContext $context -Parameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' } -Name 'ProGetUniversalPackage' } | Should -Throw
-        $Global:Error | Should -BeLike ('* ThirdPartyPath`[0`] "{0}*" does not exist.' -f (Join-Path -Path $context.BuildRoot -ChildPath 'fubar'))
+        $Global:Error | Select-Object -First 1 | Should -Match '\bThirdPartyPath\b.*\bfubar\b.*\ does\ not\ exist' 
     }
 }
 
@@ -949,7 +949,7 @@ Describe 'ProGetUniversalPackage.when custom application root does not exist' {
 
         { Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'ProGetUniversalPackage' } | Should -Throw
 
-        ThenTaskFails 'SourceRoot\b.*\bapp\b.*\bdoes not exist'
+        ThenTaskFails '\bapp\b.*\bdoes not exist'
     }
 }
 

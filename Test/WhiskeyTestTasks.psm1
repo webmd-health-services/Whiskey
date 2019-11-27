@@ -315,6 +315,17 @@ function ValidateMandatoryNonexistentFileTask
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
 
+function ValidateMandatoryNonexistentFilesTask
+{
+    [Whiskey.Task('ValidateMandatoryNonexistentFilesTask')]
+    param(
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent)]
+        [String[]]$Path
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}
+
 function ValidateMandatoryNonexistentOutsideBuildRootFileTask
 {
     [Whiskey.Task('ValidateMandatoryNonexistentOutsideBuildRootFileTask')]
@@ -437,4 +448,81 @@ function CmdletErrorActionStopTask
     )
 
     Resolve-Path $Path -ErrorAction Stop
+}
+
+function CreateMissingFileTask
+{
+    [Whiskey.Task('CreateMissingFileTask')]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,Create,PathType='File')]
+        [String[]]$Path
+    )
+
+    $script:lastTaskBoundParameters = @{ 'Path' = $Path }
+    foreach( $item in $Path )
+    {
+        if( -not (Test-Path -Path $item -PathType Leaf) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('File "{0}" was not created by Whiskey.' -f $item)
+        }
+    }
+}
+
+
+function CreateMissingDirectoryTask
+{
+    [Whiskey.Task('CreateMissingDirectoryTask')]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,Create,PathType='Directory')]
+        [String[]]$Path
+    )
+
+    $script:lastTaskBoundParameters = @{ 'Path' = $Path }
+    foreach( $item in $Path )
+    {
+        if( -not (Test-Path -Path $item -PathType Container) )
+        {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Directory "{0}" was not created by Whiskey.' -f $item)
+        }
+    }
+}
+
+function CreateMissingItemwithPathTypeMissingTask
+{
+    [Whiskey.Task('CreateMissingItemwithPathTypeMissingTask')]
+    [CmdletBinding()]
+    param(
+        [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,Create)]
+        [String[]]$Path
+    )
+}
+
+function ValidatePathWithGlobTask
+{
+    [Whiskey.Task('ValidatePathWithGlobTask')]
+    [CmdletBinding()]
+    param(
+        [Whiskey.Tasks.ValidatePath(UseGlob,GlobExcludeParameter='Exclude')]
+        [String[]]$Path
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}
+
+function ValidatePathWithGlobOutsideBuildRootTask
+{
+    [Whiskey.Task('ValidatePathWithGlobOutsideBuildRootTask')]
+    [CmdletBinding()]
+    param(
+        [Whiskey.Tasks.ValidatePath(UseGlob,GlobExcludeParameter='Exclude',AllowOutsideBuildRoot)]
+        [String[]]$Path
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
 }

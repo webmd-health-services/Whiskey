@@ -592,14 +592,14 @@ Describe 'NUnit2.when Install-WhiskeyTool fails' {
 
 Describe 'NUnit2.when Path Parameter is not included' {
     It 'should fail the build' {
-        $withError = [regex]::Escape('Element ''Path'' is mandatory')
+        $withError = [regex]::Escape('Property "Path" is mandatory')
         Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
     }
 }
 
 Describe 'NUnit2.when Path Parameter is invalid' {
     It 'should fail the build' {
-        $withError = [regex]::Escape('does not exist.')
+        $withError = [regex]::Escape('do not exist.')
         Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
     }
 }
@@ -719,7 +719,7 @@ Describe 'NUnit2.when using custom tool versions' {
     }
 }
 
-Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
+Describe 'NUnit2.when initializing and no path is included' {
     It 'should fail' {
         Init
         GivenPassingTests
@@ -729,7 +729,7 @@ Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
         ThenItInstalled 'OpenCover' $latestOpenCoverVersion
         ThenItInstalled 'ReportGenerator' $latestReportGeneratorVersion
         ThenItShouldNotRunTests
-        ThenErrorShouldNotBeThrown -ErrorMessage 'does not exist.'
+        ThenErrorShouldNotBeThrown -ErrorMessage 'do not exist.'
     }
 }
 

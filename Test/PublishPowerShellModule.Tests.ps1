@@ -338,7 +338,7 @@ function ThenModulePublished
         [Parameter(Mandatory)]
         [String]$ToRepositoryNamed,
 
-        [String]$ExpectedPathName = (Join-Path -Path $testRoot -ChildPath 'MyModule'),
+        [String]$ExpectedPathName = (Join-Path -Path '.' -ChildPath 'MyModule'),
 
         [switch]$WithNoRepositoryName
     )

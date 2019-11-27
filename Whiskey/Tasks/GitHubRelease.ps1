@@ -140,7 +140,13 @@ function New-WhiskeyGitHubRelease
         foreach( $asset in $TaskParameter['Assets'] )
         {
             $basePropertyName = 'Assets[{0}]' -f $assetIdx++
-            $assetPath = $asset['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName ('{0}.Path:' -f $basePropertyName) -PathType File
+            $assetPath = 
+                $asset['Path'] | 
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext `
+                                        -PropertyName ('{0}.Path:' -f $basePropertyName) `
+                                        -PathType File `
+                                        -Mandatory `
+                                        -OnlySinglePath
             if( -not $assetPath )
             {
                 continue
