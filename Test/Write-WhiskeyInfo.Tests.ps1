@@ -43,10 +43,10 @@ Describe 'Write-WhiskeyInfo' {
                     $debug = Write-WhiskeyDebug 'Debug!' 5>&1
 
                     $errors | Should -CMatch 'Error!'
-                    $warnings | Should -CMatch ('\[00:00:00\.\d\d\]  \[{0}\]  Warning!' -f $Context.TaskName)
-                    $info | Should -CMatch ('\[00:00:00\.\d\d\]  \[{0}\]  Info!' -f $Context.TaskName)
-                    $verbose | Should -CMatch ('\[00:00:00\.\d\d\]  \[{0}\]  Verbose!' -f $Context.TaskName)
-                    $debug | Should -CMatch ('\[00:00:00\.\d\d\]  \[{0}\]  Debug!' -f $Context.TaskName)
+                    $warnings | Should -CMatch ('\[00:00:\d\d\.\d\d\]  \[{0}\]  Warning!' -f $Context.TaskName)
+                    $info | Should -CMatch ('\[00:00:\d\d\.\d\d\]  \[{0}\]  Info!' -f $Context.TaskName)
+                    $verbose | Should -CMatch ('\[00:00:\d\d\.\d\d\]  \[{0}\]  Verbose!' -f $Context.TaskName)
+                    $debug | Should -CMatch ('\[00:00:\d\d\.\d\d\]  \[{0}\]  Debug!' -f $Context.TaskName)
                 }
 
                 $context = New-Object 'Whiskey.Context'
@@ -106,7 +106,7 @@ Describe 'Write-WhiskeyInfo' {
 
         $InformationPreference = 'Continue'
         Write-WhiskeyInfo -Context $context -Message 'Message!' -InformationVariable 'output'
-        $output | Should -CMatch '\[00:00:00.\d\d\]  Message!' 
+        $output | Should -CMatch '\[00:00:\d\d.\d\d\]  Message!' 
     }
 
     It 'should still write when passed null message' {
@@ -161,7 +161,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 param(
                     [String[]]$Output
                 )
-                $output[0],$output[4] | Should -CMatch ('^\[00:00:00\.\d\d\]  \[Fubar\]$' -f $level.ToUpperInvariant())
+                $output[0],$output[4] | Should -CMatch ('^\[00:00:\d\d\.\d\d\]  \[Fubar\]$' -f $level.ToUpperInvariant())
                 $output[1] | Should -CMatch ('^    1$')
                 $output[2] | Should -CMatch ('^    2$')
                 $output[3] | Should -CMatch ('^    3$')
