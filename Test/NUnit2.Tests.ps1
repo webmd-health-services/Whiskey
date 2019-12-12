@@ -613,6 +613,7 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
 }
 
 Describe 'NUnit2.when running NUnit tests with coverage filters' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
     It 'should pass coverage filters to OpenCover' -Skip {
         $coverageFilter = (
                         '-[NUnit2FailingTest]*',
@@ -675,6 +676,7 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
 }
 
 Describe 'NUnit2.when running with custom OpenCover arguments' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
     It 'should pass custom OpenCover arguments' -Skip {
         Init
         GivenPassingTests
@@ -684,7 +686,8 @@ Describe 'NUnit2.when running with custom OpenCover arguments' {
 }
 
 Describe 'NUnit2.when running with custom ReportGenerator arguments' {
-    It 'should pass ReportGenerator arguments' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
+    It 'should pass ReportGenerator arguments' -Skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
