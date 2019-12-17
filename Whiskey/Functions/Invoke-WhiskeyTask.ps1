@@ -180,7 +180,7 @@ function Invoke-WhiskeyTask
 
     # Start every task in the BuildRoot.
     Push-Location $TaskContext.BuildRoot
-    $currentDirectory = [IO.Directory]::GetCurrentDirectory()
+    $originalDirectory = [IO.Directory]::GetCurrentDirectory()
     [IO.Directory]::SetCurrentDirectory($TaskContext.BuildRoot)
     try
     {
@@ -290,7 +290,7 @@ function Invoke-WhiskeyTask
     }
     finally
     {
-        [IO.Directory]::SetCurrentDirectory($currentDirectory)
+        [IO.Directory]::SetCurrentDirectory($originalDirectory)
         Pop-Location
     }
 }

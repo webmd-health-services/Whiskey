@@ -166,8 +166,7 @@ function ThenPackagePublished
     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
                       -ModuleName 'Whiskey' `
                       -ParameterFilter { 
-                          $expectedPath = (Join-Path -Path '.output' -ChildPath $FileName)
-                          $expectedPath = Join-Path '.' -ChildPath $expectedPath
+                          $expectedPath = Join-Path -Path '.\.output' -ChildPath $FileName
                           Write-Debug ('PackagePath  expected  {0}' -f $expectedPath)
                           Write-Debug ('             actual    {0}' -f $PackagePath)
                           $PackagePath -eq $expectedPath

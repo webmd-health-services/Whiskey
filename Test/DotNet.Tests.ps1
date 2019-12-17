@@ -220,11 +220,12 @@ Describe 'DotNet.when passing paths to the command and working directory isn''t 
         Init
         GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         GivenDotNetCoreProject 'DotNetCore\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithPath 'DotNetCore\*.csproj' -WithSdkVersion '2.*' -InWorkingDirectory 'DotNetCore'
+        WhenRunningDotNet 'build' -WithPath 'DotNetCore\*.csproj' -WithSdkVersion '2.*' -InWorkingDirectory 'DotNetCore' -WarningVariable 'warnings'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore2.dll'
         ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
         ThenLogFile 'dotnet.build.DotNetCore2.csproj.log' -Exists
         ThenTaskSuccess
+        $warnings | Should -Match 'are now resolved relative'
     }
 }

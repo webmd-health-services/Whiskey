@@ -903,7 +903,7 @@ Describe 'ProGetUniversalPackage.when path to third-party item does not exist' {
         $Global:Error.Clear()
 
         { Invoke-WhiskeyTask -TaskContext $context -Parameter @{ Name = 'fubar' ; Description = 'fubar'; Include = 'fubar'; Path = '.'; ThirdPartyPath = 'fubar' } -Name 'ProGetUniversalPackage' } | Should -Throw
-        $Global:Error | Select-Object -First 1 | Should -Match '\bThirdPartyPath\b.*\bfubar\b.*\ does\ not\ exist' 
+        $Global:Error | Select-Object -First 1 | Should -Match '\bThirdPartyPath\b.*\bfubar\b.* does not exist' 
     }
 }
 

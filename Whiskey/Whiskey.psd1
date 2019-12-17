@@ -86,6 +86,7 @@
                             'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeyContext',
                             'ConvertTo-WhiskeySemanticVersion',
+                            'Convert-WhiskeyPathDirectorySeparator',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
                             'Get-WhiskeyCredential',
@@ -176,6 +177,7 @@
 * The `SourceRoot` property on the `ProGetUniversalPackage` and `Zip` tasks is deprecated. Use `WorkingDirectory` instead.
 * Added support to the `Pester4` task for passing arbitrary parameters to Invoke-Pester. Pass the parameters as named properties via the new `Argument` property.
 * Created `Write-WhiskeyObject` function for writing objects in sensible ways. Currently, only hashtables/dictionaries are supported. Keys/values are printed so they align and are recognizable. Other objects are passed to PowerShell's `Out-String` for formatting.
+* Created `Convert-WhiskeyPathDirectorySeparator` for converting the directory separators in a path to the separator for the current platform.
 '@
         } # End of PSData hashtable
 

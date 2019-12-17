@@ -198,7 +198,7 @@ Describe 'CopyFile.when given a directory' {
         Init
         GivenFiles 'dir1\file1.txt'
         WhenCopyingFiles 'dir1' -ErrorAction SilentlyContinue
-        ThenTaskFails 'should be to a file'
+        ThenTaskFails 'should resolve to a file'
         ThenNothingCopied
     }
 }

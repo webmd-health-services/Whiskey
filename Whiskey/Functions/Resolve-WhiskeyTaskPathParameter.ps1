@@ -25,6 +25,11 @@ function Resolve-WhiskeyTaskPath
 
     If paths don't exist, Whiskey will stop and fail the current build. To allow paths to not exist, use the `AllowNonexistent` switch. 
 
+    You can use glob patterns (e.g. `**`) to find files. Pass your patterns to the `Path` parameter and use the `UseGlob` switch. The function installs and uses the [Glob](https://www.powershellgallery.com/packages/Glob) PowerShell module to resolve the patterns to files.
+
+    .LINK
+    https://www.powershellgallery.com/packages/Glob
+
     .EXAMPLE
     $paths | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path'
 
@@ -92,13 +97,13 @@ function Resolve-WhiskeyTaskPath
         [String]$PropertyName,
 
         [Parameter(ParameterSetName='FromParameters')]
-        # Fail if the path resolves to a single path.
-        [Switch]$OnlySinglePath,
+        # Fail if the path does not resolve to a single path.
+        [switch]$OnlySinglePath,
 
         [Parameter(ParameterSetName='FromParameters')]
         [Parameter(ParameterSetName='FromParametersUsingGlob')]
         # The `Path` parameter must have at least one value.
-        [Switch]$Mandatory,
+        [switch]$Mandatory,
 
         [Parameter(ParameterSetName='FromParameters')]
         [ValidateSet('File','Directory')]
@@ -107,18 +112,18 @@ function Resolve-WhiskeyTaskPath
 
         [Parameter(ParameterSetName='FromParameters')]
         # Allow the paths to not exist.
-        [Switch]$AllowNonexistent,
+        [switch]$AllowNonexistent,
 
         [Parameter(ParameterSetName='FromParameters')]
         # Allow the path to point to something outside the build root.
-        [Switch]$AllowOutsideBuildRoot,
+        [switch]$AllowOutsideBuildRoot,
 
         [Parameter(ParameterSetName='FromParameters')]
         # Create the path if it doesn't exist. Requires the `PathType` parameter.
-        [Switch]$Create,
+        [switch]$Create,
 
         [Parameter(Mandatory,ParameterSetName='FromParametersUsingGlob')]
-        # Whether or not to use glob syntax to find files.
+        # Whether or not to use glob syntax to find files. Install and uses the [Glob](https://www.powershellgallery.com/packages/Glob) PowerShell module to perform the search.
         [switch]$UseGlob,
 
         [Parameter(ParameterSetName='FromParametersUsingGlob')]
@@ -153,7 +158,7 @@ function Resolve-WhiskeyTaskPath
             {
                 if( $OnlySinglePath )
                 {
-                    Stop-WhiskeyTask -Context $Context -Message ('The "{0}" property is configured to use glob syntax to find matching paths, but the parameter''s type is not [String[]]. This is a task authoring error. If you are the task''s author, please change the "{0}" parameter''s type to be [String[]]. If you are not the task''s author, please contact them to request this change.' -f $PropertyName)
+                    Stop-WhiskeyTask -TaskContext $Context -Message ('The "{0}" property is configured to use glob syntax to find matching paths, but the parameter''s type is not [String[]]. This is a task authoring error. If you are the task''s author, please change the "{0}" parameter''s type to be [String[]]. If you are not the task''s author, please contact them to request this change.' -f $PropertyName)
                     return
                 }
             }
@@ -261,8 +266,7 @@ function Resolve-WhiskeyTaskPath
         
         # Normalize the directory separators, otherwise, if a path begins with '\', on Linux (and probably macOS), 
         # `IsPathRooted` doesn't think the path is rooted.
-        $normalizedPath = Join-Path -Path $result -ChildPath '.'
-        $normalizedPath = $normalizedPath.TrimEnd('.', [IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $normalizedPath = $result | Convert-WhiskeyPathDirectorySeparator
 
         if( $UseGlob )
         {
@@ -304,7 +308,7 @@ function Resolve-WhiskeyTaskPath
                 if( -not $AllowNonexistent )
                 {
                     Stop-WhiskeyTask -TaskContext $TaskContext `
-                                    -Message ('{0}[{1}] "{2}" does not exist.' -f $PropertyName,$pathIdx,$Path)
+                                     -Message ('{0}[{1}] "{2}" does not exist.' -f $PropertyName,$pathIdx,$Path)
                     return
                 }
 
@@ -315,21 +319,20 @@ function Resolve-WhiskeyTaskPath
                 {
                     return
                 }
-
             }
             
             if( -not $AllowOutsideBuildRoot )
             {
                 $fsCaseSensitive = -not (Test-Path -Path ($TaskContext.BuildRoot.FullName.ToUpperInvariant()))
-                $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-                $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
-
                 $comparer = [System.StringComparison]::OrdinalIgnoreCase
                 if( $fsCaseSensitive )
                 {
                     $comparer = [System.StringComparison]::Ordinal
                 }
                 
+                $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+                $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
+
                 $invalidPaths =
                     $resolvedPaths |
                     Where-Object { -not ( $_.StartsWith($normalizedBuildRoot, $comparer) ) } |
@@ -356,11 +359,11 @@ function Resolve-WhiskeyTaskPath
                 if( $invalidPaths )
                 {
                     Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $PropertyName -Message (@'
-    Found {1} paths that should be to a {0}, but aren''t:
+Found {0} paths that should resolve to a {1}, but don''t:
 
-    * {2}
+* {2}
 
-'@ -f $expectedPathType.ToLowerInvariant(),($invalidPaths | Measure-Object).Count,($invalidPaths -join ('{0}* ' -f [Environment]::NewLine)))
+'@ -f ($invalidPaths | Measure-Object).Count,$expectedPathType.ToLowerInvariant(),($invalidPaths -join ('{0}* ' -f [Environment]::NewLine)))
                     return
                 }
             }
@@ -426,7 +429,8 @@ function Resolve-WhiskeyTaskPath
             Write-WhiskeyDebug -Context $TaskContext -Message ($messageFormat -f $globPath)
         } 
 
-        # Do a case-sensitive search if current directory is on a case-sensitive file system.
+        # Detect the case-sensitivity of the current directory so we can do a case-sensitive search if current directory
+        # is on a case-sensitive file system.
         $parentPath = ''
         # Split-Path throws an exception if passed / in PowerShell Core.
         if( $currentDir -ne [IO.Path]::DirectorySeparatorChar -and $currentDir -ne [IO.Path]::AltDirectorySeparatorChar )

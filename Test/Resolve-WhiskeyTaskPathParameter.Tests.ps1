@@ -27,8 +27,7 @@ function Resolve-RelativePath
     foreach( $item in $Path )
     {
         # Normalize separators
-        $item = Join-Path -Path $item -ChildPath '.'
-        $item = $item.TrimEnd('.', [IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $item = $item | Convert-WhiskeyPathDirectorySeparator
 
         if( $item.StartsWith($outsideBuildRootIdentifier) )
         {
@@ -104,7 +103,7 @@ function ThenTaskCalled
         $taskParameters.Count | Should -Be $WithParameter.Count
         foreach( $key in $WithParameter.Keys )
         {
-            $taskParameters[$key] | Sort-Object | Should -Be ($WithParameter[$key] | Sort-Object) -Because $key
+            ($taskParameters[$key] | Sort-Object) | Should -Be ($WithParameter[$key] | Sort-Object) -Because $key
         }
     }
 }
@@ -236,7 +235,7 @@ Describe ('Resolve-WhiskeyTaskPath.when path should be a file but it''s a direct
         GivenDirectory 'abc.yml'
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
-        ThenThrewException 'should\ be\ to\ a\ file'
+        ThenThrewException 'should resolve to a file'
     }
 }
 
@@ -246,7 +245,7 @@ Describe ('Resolve-WhiskeyTaskPath.when path should be a directory but it''s a f
         GivenFile 'abc.yml'
         WhenRunningTask 'ValidateMandatoryDirectoryTask' -Parameter @{ 'Path' = 'abc.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
-        ThenThrewException 'should\ be\ to\ a\ directory'
+        ThenThrewException 'should resolve to a directory'
     }
 }
 
@@ -257,7 +256,7 @@ Describe ('Resolve-WhiskeyTaskPath.when all paths should be files but one is a d
         GivenDirectory 'def.yml'
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = '*.yml' } -ErrorAction SilentlyContinue
         ThenTaskNotCalled
-        ThenThrewException 'should\ be\ to\ a\ file'
+        ThenThrewException 'should resolve to a file'
     }
 }
 
@@ -476,7 +475,7 @@ Describe 'Resolve-WhiskeyTaskPath.when path does not exist and some paths use wi
 
 Describe 'Resolve-WhiskeyTaskPath.when path does not exist and user is using directory separator from another OS' {
     It 'should normalize directory separators' {
-        if( $IsWindows )
+        if( [IO.Path]::DirectorySeparatorChar -eq '\' )
         {
             $separator = '/'
         }
@@ -537,6 +536,17 @@ Describe 'Resolve-WhiskeyTaskPath.when using glob syntax' {
     }
 }
 
+Describe 'Resolve-WhiskeyTaskPath.when task uses glob syntax but path property only accepts a single path' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenFile 'abc.yml'
+        WhenRunningTask 'ValidateSinglePathWithGlobTask' -Parameter @{ 'Path' = '**/*.yml' } -ErrorAction SilentlyContinue
+        ThenTaskNotCalled
+        ThenThrewException -Pattern 'use glob.*type is not.*task authoring error'
+    }
+}
+
 if( -not (Get-ChildItem -Path ([IO.Path]::DirectorySeparatorChar) -File) )
 {
     Write-Warning -Message ('Unable to test if globbing works from the root directory.')
@@ -565,7 +575,7 @@ else
 
                 $exclude = 
                     Get-ChildItem -Path $rootPath -Directory -Force |
-                        ForEach-Object { '**/{0}/**' -f $_.Name }
+                        ForEach-Object { '**\{0}\**' -f $_.Name }
 
                 Mock -CommandName 'Install-WhiskeyPowerShellModule' -Module 'Whiskey'
                 $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot

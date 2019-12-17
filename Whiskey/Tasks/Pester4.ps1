@@ -29,15 +29,7 @@ function Invoke-WhiskeyPester4Task
 
     if( $Exclude )
     {
-        $Exclude = & {
-            foreach( $pattern in $Exclude )
-            {
-                # Convert to the proper directory separator for the current platform.
-                $item = Join-Path -Path $Exclude -ChildPath '.'
-                $item = $item.TrimEnd('.',[IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)
-                Write-Output $item
-            }
-        }
+        $Exclude = $Exclude | Convert-WhiskeyPathDirectorySeparator 
         $path = $path |
                     Where-Object {
                         foreach( $exclusion in $Exclude )

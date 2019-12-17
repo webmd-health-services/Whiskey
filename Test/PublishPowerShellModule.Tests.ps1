@@ -565,7 +565,7 @@ Describe 'PublishPowerShellModule.when non-directory path parameter' {
         Initialize-Test
         GivenRepository 'Fubar'
         Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'should\ be\ to\ a\ directory'
+        ThenFailed -WithError 'should resolve to a directory'
         ThenModuleNotPublished
     }
 }

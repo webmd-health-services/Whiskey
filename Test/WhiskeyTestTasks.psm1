@@ -526,3 +526,15 @@ function ValidatePathWithGlobOutsideBuildRootTask
 
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
+
+function ValidateSinglePathWithGlobTask
+{
+    [Whiskey.Task('ValidateSinglePathWithGlobTask')]
+    [CmdletBinding()]
+    param(
+        [Whiskey.Tasks.ValidatePath(UseGlob,GlobExcludeParameter='Exclude')]
+        [String]$Path
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}
