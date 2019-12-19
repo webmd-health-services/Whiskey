@@ -1,4 +1,6 @@
 
+$TestPSModulesDirectoryName = 'PSModules'
+
 $exportPlatformVars = $false
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
@@ -93,7 +95,7 @@ function Import-WhiskeyTestModule
         [switch]$Force
     )
 
-    $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
+    $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve
     if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
     {
         $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
@@ -125,7 +127,7 @@ function Initialize-WhiskeyTestPSModule
         [String[]]$Name
     )
 
-    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
+    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $TestPSModulesDirectoryName
     Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot) 
     if( -not (Test-Path -Path $destinationRoot -PathType Container) )
     {
@@ -139,7 +141,7 @@ function Initialize-WhiskeyTestPSModule
         $Name
     }
     
-    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve) -Directory))
+    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve) -Directory))
     {
         if( $module.Name -notin $Name )
         {
@@ -243,8 +245,8 @@ function Invoke-WhiskeyPrivateCommand
         [hashtable]$Parameter = @{}
     )
 
-    $Global:Name = $Name
-    $Global:Parameter = $Parameter
+    $Global:WTName = $Name
+    $Global:WTParameter = $Parameter
 
     if( $VerbosePreference -eq 'Continue' )
     {
@@ -256,13 +258,13 @@ function Invoke-WhiskeyPrivateCommand
     try
     {
         InModuleScope 'Whiskey' { 
-            & $Name @Parameter 
+            & $WTName @WTParameter 
         }
     }
     finally
     {
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
-        Remove-Variable -Name 'Name' -Scope 'Global'
+        Remove-Variable -Name 'WTParameter' -Scope 'Global'
+        Remove-Variable -Name 'WTName' -Scope 'Global'
     }
 }
 function New-AssemblyInfo
@@ -572,7 +574,7 @@ function ThenModuleInstalled
         [String]$AtVersion
     )
 
-    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
+    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) | 
         Should -Exist
 }
 
@@ -670,14 +672,12 @@ if( $IsWindows )
     $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
 
-$PSModulesDirectoryName = 'PSModules'
-
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
     'SuccessCommandScriptBlock'
     'FailureCommandScriptBlock'
     'WhiskeyPlatform'
-    'PSModulesDirectoryName'
+    'TestPSModulesDirectoryName'
     # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
     if( $exportPlatformVars )
     {

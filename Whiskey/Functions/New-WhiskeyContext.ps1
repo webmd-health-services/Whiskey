@@ -83,10 +83,8 @@ function New-WhiskeyContext
         throw ('{0}: The configuration file contains both "Build" and the deprecated "BuildTasks" pipelines. Move all your build tasks under "Build" and remove the "BuildTasks" pipeline.' -f $ConfigurationPath)
     }
 
-    $buildPipelineName = 'Build'
     if( $config.ContainsKey('BuildTasks') )
     {
-        $buildPipelineName = 'BuildTasks'
         Write-WhiskeyWarning ('{0}: The default "BuildTasks" pipeline has been renamed to "Build". Backwards compatibility with "BuildTasks" will be removed in the next major version of Whiskey. Rename your "BuildTasks" pipeline to "Build".' -f $ConfigurationPath)
     }
 
@@ -109,7 +107,6 @@ function New-WhiskeyContext
     [Whiskey.BuildInfo]$buildMetadata = Get-WhiskeyBuildMetadata
     $publish = $false
     $byBuildServer = $buildMetadata.IsBuildServer
-    $prereleaseInfo = ''
     if( $byBuildServer )
     {
         $branch = $buildMetadata.ScmBranch
@@ -130,102 +127,6 @@ function New-WhiskeyContext
                     Write-WhiskeyVerbose -Message ('           {0} -notlike  {1}' -f $branch,$publishWildcard)
                 }
             }
-        }
-    }
-
-    $versionTaskExists = $config[$buildPipelineName] |
-                            Where-Object { $_ -and ($_ | Get-Member -Name 'Keys') } |
-                            Where-Object { $_.Keys | Where-Object { $_ -eq 'Version' } }
-    if( -not $versionTaskExists -and ($config.ContainsKey('PrereleaseMap') -or $config.ContainsKey('Version') -or $config.ContainsKey('VersionFrom')) )
-    {
-        Write-WhiskeyWarning ('{0}: The ''PrereleaseMap'', ''Version'', and ''VersionFrom'' properties are obsolete and will be removed in Whiskey 1.0. They were replaced with the ''Version'' task. Add a ''Version'' task as the first task in your build pipeline. If your current whiskey.yml file looks like this:
-
-    Version: 1.2.3
-
-    PrereleaseMap:
-    - "alpha/*": alpha
-    - "release/*": rc
-
-add a Version task to your build pipeline that looks like this:
-
-    Build:
-    - Version:
-        Version: 1.2.3
-        Prerelease:
-        - "alpha/*": alpha.$(WHISKEY_BUILD_NUMBER)
-        - "release/*": rc.$(WHISKEY_BUILD_NUMBER)
-
-You must add the ".$(WHISKEY_BUILD_NUMBER)" string to each prerelease version. Whiskey no longer automatically adds a prerelease version number for you.
-
-If you use the "VersionFrom" property, your whiskey.yml file looks something like this:
-
-    VersionFrom: Whiskey\Whiskey.psd1
-
-Update it to look like this:
-
-    Build:
-    - Version:
-        Path: Whiskey\Whiskey.psd1
-
-Whiskey also no longer automatically adds build metadata to your version number. To preserve Whiskey''s old default build metadata, add a "Build" property to your new "Version" task that looks like this:
-
-    Build:
-    - Version:
-        Version: 1.2.3
-        Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
-
-    ' -f $ConfigurationPath)
-
-        $versionTask = $null
-
-        $versionTask = @{
-                            Version = ('{0:yyyy.Mdd}.$(WHISKEY_BUILD_NUMBER)' -f (Get-Date))
-                            Build = '$(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID)'
-                        }
-
-        if( $config['Version'] )
-        {
-            $versionTask['Version'] = $config['Version']
-        }
-        elseif( $config['VersionFrom'] )
-        {
-            $versionTask.Remove('Version')
-            $versionTask['Path'] = $config['VersionFrom']
-        }
-
-        if( $config['PrereleaseMap'] )
-        {
-            $versionTask['Prerelease'] = $config['PrereleaseMap'] |
-                                            ForEach-Object {
-                                                if( -not ($_ | Get-Member 'Keys') )
-                                                {
-                                                    return $_
-                                                }
-
-                                                $newMap = @{ }
-                                                foreach( $key in $_.Keys )
-                                                {
-                                                    $value = $_[$key]
-                                                    $newMap[$key] = '{0}.$(WHISKEY_BUILD_NUMBER)' -f $value
-                                                }
-                                                $newMap
-                                            }
-
-        }
-
-        if( $versionTask )
-        {
-            if( -not $config[$buildPipelineName] )
-            {
-                $config[$buildPipelineName] = @()
-            }
-
-            $config[$buildPipelineName] = & {
-                                            @{
-                                                Version = $versionTask
-                                            }
-                                            $config[$buildPipelineName]
-                                    }
         }
     }
 
@@ -257,30 +158,7 @@ Whiskey also no longer automatically adds build metadata to your version number.
         Write-WhiskeyError -Message ('{0}: The "Variable" property is no longer supported. Use the `SetVariable` task instead. Move your `Variable` property (and values) into your `Build` pipeline as the first task. Rename `Variable` to `SetVariable`.' -f $ConfigurationPath) -ErrorAction Stop
     }
 
-    if( $versionTaskExists )
-    {
-        $context.Version = New-WhiskeyVersionObject -SemVer '0.0.0'
-    }
-    else
-    {
-        Write-WhiskeyWarning ('Whiskey''s default, date-based version number is OBSOLETE. Beginning with Whiskey 1.0, the default Whiskey version number will be 0.0.0. Use the Version task to set your own custom version. For example, this Version task preserves the existing behavior:
-
-    Build
-    - Version:
-        Version: $(WHISKEY_BUILD_STARTED_AT.ToString(''yyyy.Mdd'')).$(WHISKEY_BUILD_NUMBER)
-        Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID)
- ')
-        $rawVersion = '{0:yyyy.Mdd}.{1}' -f (Get-Date),$context.BuildMetadata.BuildNumber
-        if( $context.ByBuildServer )
-        {
-            $branch = $buildMetadata.ScmBranch
-            $branch = $branch -replace '[^A-Za-z0-9-]','-'
-            $commitID = $buildMetadata.ScmCommitID.Substring(0,7)
-            $buildInfo = '{0}.{1}.{2}' -f $buildMetadata.BuildNumber,$branch,$commitID
-            $rawVersion = '{0}+{1}' -f $rawVersion,$buildInfo
-        }
-        $context.Version = New-WhiskeyVersionObject -SemVer $rawVersion
-    }
+    $context.Version = New-WhiskeyVersionObject -SemVer '0.0.0'
 
     return $context
 }

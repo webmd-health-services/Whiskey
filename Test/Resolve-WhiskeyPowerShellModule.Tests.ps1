@@ -197,8 +197,8 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules aren''
         Init
         GivenName 'Pester'
         WhenResolvingPowerShellModule -SkipCaching
-        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}' -f $PSModulesDirectoryName,$packageManagementVersion) | Should -Exist
-        Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\{1}' -f $PSModulesDirectoryName,$powerShellGetVersion) | Should -Exist
+        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}' -f $TestPSModulesDirectoryName,$packageManagementVersion) | Should -Exist
+        Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\{1}' -f $TestPSModulesDirectoryName,$powerShellGetVersion) | Should -Exist
     }
 }
 
@@ -207,7 +207,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manife
     It 'should uninstall potentially corrupt modules' {
         Init
         GivenName 'Pester'
-        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $PSModulesDirectoryName,$packageManagementVersion) 
+        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $TestPSModulesDirectoryName,$packageManagementVersion) 
         New-Item -Path $manifestPath -ItemType 'Directory' -Force
         { Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore } | Should -Throw
         $Global:Error.Clear()
@@ -222,7 +222,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manife
     It 'should uninstall potentially corrupt modules' {
         Init
         GivenName 'Pester'
-        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $PSModulesDirectoryName,$packageManagementVersion) 
+        $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $TestPSModulesDirectoryName,$packageManagementVersion) 
         New-Item -Path $manifestPath -ItemType 'File' -Force
         '@{ "RequiredAssemblies" = "Fubar.dll" }' | Set-Content -Path $manifestPath
         { Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore } | Should -Throw

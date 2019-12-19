@@ -43,7 +43,7 @@ function Init
                                              -ForBuildRoot $testRoot `
                                              -IncludePSModule 'Pester'
 
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '4.*' } |
         Remove-Item -Recurse -Force
@@ -108,17 +108,23 @@ function WhenPesterTaskIsInvoked
     param(
         [switch]$WithClean,
 
-        [switch]$CaptureOutput
+        [switch]$NoJob,
+
+        [hashtable]$WithArgument = @{ }
     )
 
     $failed = $false
     $Global:Error.Clear()
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
-    if( -not $CaptureOutput )
+
+    if( $NoJob )
     {
-        Mock -CommandName 'Receive-Job' -ModuleName 'Whiskey'
+        $taskParameter['NoJob'] = 'true'
     }
+
+    $WithArgument['Show'] = 'None'
+    $taskParameter['Argument'] = $WithArgument
 
     try
     {
@@ -187,11 +193,16 @@ function ThenPesterShouldHaveRun
         [int]$FailureCount,
             
         [Parameter(Mandatory)]
-        [int]$PassingCount
+        [int]$PassingCount,
+
+        [Switch]$AsJUnitXml,
+
+        [String]$ResultFileName = 'pester+*.xml'
     )
+
     $reportsIn =  $context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester+*.xml' |
-                        Where-Object { $_.Name -match '^pester\+.{8}\..{3}\.xml$' }
+    $testReports = Get-ChildItem -Path $reportsIn -Filter $ResultFileName
+
     #check to see if we were supposed to run any tests.
     if( ($FailureCount + $PassingCount) -gt 0 )
     {
@@ -204,8 +215,13 @@ function ThenPesterShouldHaveRun
     foreach( $testReport in $testReports )
     {
         $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
-        $thisTotal = [int]($xml.'test-results'.'total')
-        $thisFailed = [int]($xml.'test-results'.'failures')
+        $totalAttrName = 'total'
+        if( $AsJUnitXml )
+        {
+            $totalAttrName = 'tests'
+        }
+        $thisTotal = [int]($xml.DocumentElement.$totalAttrName)
+        $thisFailed = [int]($xml.DocumentElement.'failures')
         $thisPassed = ($thisTotal - $thisFailed)
         $total += $thisTotal
         $failed += $thisFailed
@@ -226,6 +242,10 @@ function ThenPesterShouldHaveRun
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
                           -ModuleName 'Whiskey' `
                           -ParameterFilter { 
+                                if( -not [IO.Path]::IsPathRooted($Path) )
+                                {
+                                    $Path = Join-Path -Path $testRoot -ChildPath $Path
+                                }
                                 Write-WhiskeyDebug ('{0}  -eq  {1}' -f $Path,$reportPath) 
                                 $result = $Path -eq $reportPath 
                                 Write-WhiskeyDebug ('  {0}' -f $result) 
@@ -351,23 +371,20 @@ Describe 'Pester4.when missing path' {
         Init
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'Property "Path" is mandatory.'
+        ThenTestShouldFail -failureMessage 'Property "Path": Path is mandatory.'
     }
 }
 
 Describe 'Pester4.when a task path is absolute' {
     AfterEach { Reset }
     It 'should fail' {
-        $pesterPath = 'C:\FubarSnafu'
-        if( -not $IsWindows )
-        {
-            $pesterPath = '/FubarSnafu'
-        }
+        $pesterPath = Join-Path -Path $TestDrive.FullName -ChildPath 'SomeFile'
+        New-Item -Path $pesterPath
         Init
         GivenTestFile $pesterPath
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'absolute'
+        ThenTestShouldFail -failureMessage 'outside\ the\ build\ root'
     }
 }
 
@@ -384,7 +401,7 @@ Describe 'PassingTests' {
 '@
         GivenDescribeDurationReportCount 1
         GivenItDurationReportCount 1
-        WhenPesterTaskIsInvoked -CaptureOutput
+        WhenPesterTaskIsInvoked
         ThenDescribeDurationReportHasRows 1
         ThenItDurationReportHasRows 1
     }
@@ -437,5 +454,77 @@ Describe 'FailingTests' {
         ThenNoPesterTestFileShouldExist
         ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
+    }
+}
+
+Describe 'Pester4.when not running task in job' {
+    AfterEach { Reset }
+    It 'should pass' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @"
+Describe 'PassingTests' {
+    It 'should run inside Whiskey' {
+        Test-Path -Path 'variable:powershellModulesDirectoryName' | Should -BeTrue
+        `$powerShellModulesDirectoryName | Should -Be "$($TestPSModulesDirectoryName)"
+    }
+}
+"@
+        Mock -CommandName 'Import-Module' -ModuleName 'Whiskey'
+        Mock -CommandName 'Invoke-Pester' -ModuleName 'Whiskey' -MockWith {
+            @'
+<test-results errors="0" failures="0" />
+'@ | Set-Content -Path $OutputFile
+            return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
+        }
+        WhenPesterTaskIsInvoked -NoJob
+        Assert-MockCalled -CommandName 'Import-Module' -ModuleName 'Whiskey' -ParameterFilter {
+            $Name | Should -BeLike (Join-Path -Path $testRoot -ChildPath ('{0}\Pester\4.*.*\Pester.psd1' -f $TestPSModulesDirectoryName))
+            return $true
+        }
+        Assert-MockCalled -CommandName 'Invoke-Pester' -ModuleName 'Whiskey' -ParameterFilter { 
+            Push-Location $testRoot
+            try
+            {
+                $Script | Should -Be (Resolve-Path -Path (Join-Path -Path $testRoot -ChildPath 'PassingTests.ps1') -Relative)
+                $Outputfile | Should -BeLike (Resolve-Path -Path (Join-Path -Path $testRoot -ChildPath '.output\pester*.xml') -Relative)
+                $OutputFormat | Should -Be 'NUnitXml'
+                $PassThru | Should -BeTrue
+                return $true
+            }
+            finally
+            {
+                Pop-Location
+            }
+        }
+    }
+}
+
+Describe 'Pester4.when passing custom arguments' {
+    AfterEach { Reset }
+    It 'should pass the arguments' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'PassingTests' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+Describe 'FailingTests' {
+    It 'should fail' {
+        $false | Should -BeTrue
+    }
+}
+'@
+        WhenPesterTaskIsInvoked -WithArgument @{
+            # Make sure the Pester4 task's default values for these get overwritten
+            'OutputFile' = '.output\pester.xml';
+            'OutputFormat' = 'JUnitXml';
+            # Make sure these do *not* get overwritten.
+            'Script' = 'filethatdoesnotexist.ps1'
+            'PassThru' = $false;
+            # Make sure this gets passed.
+            'TestName' = 'PassingTests'
+        }
+        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1 -AsJUnitXml -ResultFileName 'pester.xml'
     }
 }

@@ -1,6 +1,7 @@
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function Init {
+function Init
+{
     $script:testRoot = New-WhiskeyTestRoot
 }
 
