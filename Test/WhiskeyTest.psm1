@@ -19,12 +19,13 @@ elseif( $IsMacOS )
 {
     $WhiskeyPlatform = [Whiskey.Platform]::MacOS
 }
-$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $WhiskeyPlatform)
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('..\.output\.downloadcache-{0}' -f $WhiskeyPlatform)
+$downloadCachePath = [IO.Path]::GetFullPath($downloadCachePath)
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
-    New-Item -Path $downloadCachePath -ItemType 'Directory'
+    New-Item -Path $downloadCachePath -ItemType 'Directory' -Force | Out-Null
 }
 
 function ConvertTo-Yaml
@@ -163,10 +164,11 @@ function Initialize-WhiskeyTestPSModule
 function Install-Node
 {
     param(
-        [String[]]$WithModule,
-
         [String]$BuildRoot
     )
+
+    $VerbosePreference = 'Continue'
+    $DebugPreference = 'Continue'
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
     $toolAttr.PathParameterName = 'NodePath'
@@ -181,54 +183,25 @@ function Install-Node
     }
 
     $destinationDir = Join-Path -Path $BuildRoot -ChildPath '.node'
-    $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
-    $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
-    if( -not $IsWindows )
-    {
-        $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
-        $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'lib/node_modules'
-    }
-    foreach( $name in $WithModule )
-    {
-        if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )
-        {
-            continue
-        }
-
-        $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name)
-        $toolAttr.PathParameterName = '{0}Path' -f $name
-        Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
-    }
-
     if( -not (Test-Path -Path $destinationDir -PathType Container) )
     {
-        New-Item -Path $destinationDir -ItemType 'Directory'
+        New-Item -Path $destinationDir -ItemType 'Directory' -Force | Out-Null
     }
 
     Write-WhiskeyDebug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*','lib','node_modules' -Destination $destinationDir -Recurse -ErrorAction Ignore
-
-    Get-ChildItem -Path $modulesRoot |
-        Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
-        ForEach-Object {
-            $moduleDestinationDir = Join-Path -Path $modulesDestinationDir -ChildPath $_.Name
-            if( $IsWindows )
-            {
-                if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
-                {
-                    New-Item -Path $moduleDestinationDir -ItemType 'Directory' -Force | Out-Null
-                }
-                $robocopyParameter = @{
-                    'Source' = $_.FullName;
-                    'Destination' = $moduleDestinationDir
-                }
-                Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyRobocopy' -Parameter $robocopyParameter
-            }
-            else
-            {
-                Copy-Item -Path $_.FullName -Destination $moduleDestinationDir -Recurse
-            }
+    if( $IsWindows )
+    {
+        $robocopyParameter = @{
+            'Source' = $nodeRoot;
+            'Destination' = $destinationDir;
+            'Exclude' = '*.zip','*.tar.*';
         }
+        Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyRobocopy' -Parameter $robocopyParameter
+    }
+    else
+    {
+        Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*' -Destination $destinationDir -Recurse -ErrorAction Ignore
+    }
 
     Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include '*.zip','*.tar.*' |
         ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |

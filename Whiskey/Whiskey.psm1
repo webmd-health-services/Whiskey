@@ -28,45 +28,46 @@ Update-TypeData -TypeName 'Whiskey.BuildInfo' -SerializationDepth 50 -ErrorActio
 Update-TypeData -TypeName 'Whiskey.BuildVersion' -SerializationDepth 50 -ErrorAction Ignore
 
 Write-Timing 'Testing that correct Whiskey assembly is loaded.'
-$oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
-$attr = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' -ErrorAction Ignore
-if( -not ($attr | Get-Member 'Platform') )
-{
-    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
-}
-
-$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
-if( -not $attr )
-{
-    Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
-}
 
 function Assert-Member
 {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowNull()]
         [Object]$Object,
 
-        [Parameter(Mandatory)]
-        [String[]]$Property
+        [String[]]$Property = @()
     )
+
+    $oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
+
+    if( -not $Object )
+    {
+        Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
+    }
 
     foreach( $propertyToCheck in $Property )
     {
         if( -not ($Object | Get-Member $propertyToCheck) )
         {
             Write-Debug -Message ('Object "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck)
-            Write-Error -Message ('You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.') -ErrorAction Stop
+            Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
         }
     }
 }
 
-$context = New-Object -TypeName 'Whiskey.Context'
+$attr = New-Object -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') -ErrorAction Ignore
+Assert-Member -Object $attr
+
+$attr = New-Object -TypeName 'Whiskey.Tasks.ValidatePathAttribute' -ErrorAction Ignore
+Assert-Member -Object $attr -Property @( 'Create' )
+
+$context = New-Object -TypeName 'Whiskey.Context' -ErrorAction Ignore
 Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 
-$taskAttribute = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Fubar'
-Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage' )
+$taskAttribute = New-Object -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Fubar' -ErrorAction Ignore
+Assert-Member -Object $taskAttribute -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage', 'Platform' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments

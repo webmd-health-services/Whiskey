@@ -21,8 +21,7 @@ function Publish-WhiskeyNuGetPackage
     {
         $Path = 
             Join-Path -Path $TaskContext.OutputDirectory.FullName -ChildPath '*.nupkg' |
-            Resolve-Path |
-            Select-Object -ExpandProperty 'ProviderPath'
+            Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PathType 'File' -PropertyName 'Path'
     }
 
     $publishSymbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar

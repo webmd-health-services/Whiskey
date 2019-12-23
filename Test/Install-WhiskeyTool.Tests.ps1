@@ -361,8 +361,9 @@ Describe 'Install-WhiskeyTool.when installing Node module and Node isn''t instal
 }
 
 Describe 'Install-WhiskeyTool.when installing specific version of a Node module via version parameter' {
-    AfterEach { Reset }
+    AfterEach { Reset ; $Global:VerbosePreference = 'SilentlyContinue' }
     It 'should install that version of Node' {
+        $Global:VerbosePreference = 'Continue'
         Init
         Install-Node -BuildRoot $testRoot
         GivenVersionParameterName 'Fubar'

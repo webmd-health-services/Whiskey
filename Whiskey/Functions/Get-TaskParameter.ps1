@@ -51,17 +51,17 @@ function Get-TaskParameter
                                              -Context $Context
         }
 
-        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttribute =
+        [Whiskey.Tasks.ValidatePathAttribute]$validatePathAttribute =
             $cmdParameter.Attributes |
             Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
 
-        if( $validateAsPathAttribute )
+        if( $validatePathAttribute )
         {
             $params = @{ }
 
             $params['CmdParameter'] = $cmdParameter
-            $params['ValidateAsPathAttribute'] = $validateAsPathAttribute
-            $value = $value | Resolve-WhiskeyTaskPathParameter -TaskContext $Context @params
+            $params['ValidatePathAttribute'] = $validatePathAttribute
+            $value = $value | Resolve-WhiskeyTaskPath -TaskContext $Context -TaskParameter $TaskProperty @params
         }
 
         # If the user didn't provide a value and we couldn't find one, don't pass anything.

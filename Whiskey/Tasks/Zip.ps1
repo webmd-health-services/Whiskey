@@ -9,7 +9,13 @@ function New-WhiskeyZipArchive
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath()]
+        [String]$SourceRoot,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent)]
+        [String]$ArchivePath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -35,20 +41,6 @@ function New-WhiskeyZipArchive
             $Source = $Source -replace '\\','/'
         }
         Write-WhiskeyInfo -Context $TaskContext -Message ('  compressing {0,-18} {1}{2}' -f $What,$Source,$Destination)
-    }
-
-    $archivePath = $TaskParameter['ArchivePath']
-    if( -not [IO.Path]::IsPathRooted($archivePath) )
-    {
-        $archivePath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $archivePath
-    }
-    $archivePath = Join-Path -Path $archivePath -ChildPath '.'  # Get PowerShell to convert directory separator characters.
-    $archivePath = [IO.Path]::GetFullPath($archivePath)
-    $buildRootRegex = '^{0}(\\|/)' -f [regex]::Escape($TaskContext.BuildRoot)
-    if( $archivePath -notmatch $buildRootRegex )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ArchivePath: path to ZIP archive "{0}" is outside the build root directory. Please change this path so it is under the "{1}" directory. We recommend using a relative path, as that it will always be resolved relative to the build root directory.' -f $archivePath,$TaskContext.BuildRoot)
-        return
     }
 
     $behaviorParams = @{ }
@@ -96,19 +88,9 @@ function New-WhiskeyZipArchive
         $behaviorParams['EntryNameEncoding'] = $entryNameEncoding
     }
 
-    $parentPathParam = @{ }
-    $sourceRoot = $TaskContext.BuildRoot
-    if( $TaskParameter.ContainsKey('SourceRoot') )
-    {
-        $sourceRoot = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
-        $parentPathParam['ParentPath'] = $sourceRoot
-    }
-
-    $sourceRootRegex = '^{0}' -f ([regex]::Escape($sourceRoot))
-
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Creating ZIP archive "{0}".' -f ($archivePath -replace $sourceRootRegex,'').Trim('\','/'))
-    $archiveDirectory = $archivePath | Split-Path -Parent
-    if( -not (Test-Path -Path $archiveDirectory -PathType Container) )
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Creating ZIP archive "{0}".' -f $ArchivePath)
+    $archiveDirectory = $ArchivePath | Split-Path -Parent
+    if( $archiveDirectory -and -not (Test-Path -Path $archiveDirectory -PathType Container) )
     {
         New-Item -Path $archiveDirectory -ItemType 'Directory' -Force | Out-Null
     }
@@ -119,99 +101,125 @@ function New-WhiskeyZipArchive
         return
     }
 
-    New-ZipArchive -Path $archivePath @behaviorParams -Force
+    New-ZipArchive -Path $ArchivePath @behaviorParams -Force
 
-    foreach( $item in $TaskParameter['Path'] )
+    if( $SourceRoot )
     {
-        $override = $False
-        if( (Get-Member -InputObject $item -Name 'Keys') )
+        Write-WhiskeyWarning -Context $TaskContext -Message ('The "SourceRoot" property is obsolete. Please use the "WorkingDirectory" property instead.')
+        $ArchivePath = Resolve-Path -Path $ArchivePath | Select-Object -ExpandProperty 'ProviderPath'
+        Push-Location -Path $SourceRoot
+    }
+
+    try
+    {
+        foreach( $item in $TaskParameter['Path'] )
         {
-            $sourcePath = $null
-            $override = $True
-            foreach( $key in $item.Keys )
+            $override = $False
+            if( (Get-Member -InputObject $item -Name 'Keys') )
             {
-                $destinationItemName = $item[$key]
-                $sourcePath = $key
-            }
-        }
-        else
-        {
-            $sourcePath = $item
-        }
-
-        $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @parentPathParam
-        if( -not $sourcePaths )
-        {
-            return
-        }
-
-        foreach( $sourcePath in $sourcePaths )
-        {
-            $relativePath = $sourcePath -replace $sourceRootRegex,''
-            $relativePath = $relativePath.Trim([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-
-            $addParams = @{ BasePath = $sourceRoot }
-            $destinationParam = @{ }
-            if( $override )
-            {
-                $addParams = @{ EntryName = $destinationItemName }
-                $destinationParam['Destination'] = $destinationItemName
-            }
-
-            if( (Test-Path -Path $sourcePath -PathType Leaf) )
-            {
-                Write-CompressionInfo -What 'file' -Source $relativePath @destinationParam
-                Add-ZipArchiveEntry -ZipArchivePath $archivePath -InputObject $sourcePath @addParams @behaviorParams
-                continue
-            }
-
-            function Find-Item
-            {
-                param(
-                    [Parameter(Mandatory)]
-                    $Path
-                )
-
-                if( (Test-Path -Path $Path -PathType Leaf) )
+                $sourcePath = $null
+                $override = $True
+                foreach( $key in $item.Keys )
                 {
-                    return Get-Item -Path $Path
+                    $destinationItemName = $item[$key]
+                    $sourcePath = $key
+                }
+            }
+            else
+            {
+                $sourcePath = $item
+            }
+
+            $sourcePaths = 
+                $sourcePath | 
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+            if( -not $sourcePaths )
+            {
+                return
+            }
+
+            $basePath = (Get-Location).Path
+            foreach( $sourcePath in $sourcePaths )
+            {
+                $addParams = @{ BasePath = $basePath }
+                $destinationParam = @{ }
+                if( $override )
+                {
+                    $addParams = @{ EntryName = $destinationItemName }
+                    $destinationParam['Destination'] = $destinationItemName
                 }
 
-                $Path = Join-Path -Path $Path -ChildPath '*'
-                & {
-                        Get-ChildItem -Path $Path -Include $TaskParameter['Include'] -Exclude $TaskParameter['Exclude'] -File
-                        Get-Item -Path $Path -Exclude $TaskParameter['Exclude'] |
-                            Where-Object { $_.PSIsContainer }
-                    }  |
-                    ForEach-Object {
-                        if( $_.PSIsContainer )
-                        {
-                            Find-Item -Path $_.FullName
-                        }
-                        else
-                        {
-                            $_
-                        }
+                if( (Test-Path -Path $sourcePath -PathType Leaf) )
+                {
+                    Write-CompressionInfo -What 'file' -Source $sourcePath @destinationParam
+                    Add-ZipArchiveEntry -ZipArchivePath $ArchivePath -InputObject $sourcePath @addParams @behaviorParams
+                    continue
+                }
+
+                function Find-Item
+                {
+                    param(
+                        [Parameter(Mandatory)]
+                        $Path
+                    )
+
+                    if( (Test-Path -Path $Path -PathType Leaf) )
+                    {
+                        return Get-Item -Path $Path
                     }
-            }
 
-            if( $override )
-            {
-                $addParams['BasePath'] = $sourcePath
-                $addParams['EntryParentPath'] = $destinationItemName
-                $addParams.Remove('EntryName')
-                $destinationParam['Destination'] = $destinationItemName
-            }
+                    $Path = Join-Path -Path $Path -ChildPath '*'
+                    & {
+                            Get-ChildItem -Path $Path -Include $TaskParameter['Include'] -Exclude $TaskParameter['Exclude'] -File
+                            Get-Item -Path $Path -Exclude $TaskParameter['Exclude'] |
+                                Where-Object { $_.PSIsContainer }
+                        }  |
+                        ForEach-Object {
+                            if( $_.PSIsContainer )
+                            {
+                                Find-Item -Path $_.FullName
+                            }
+                            else
+                            {
+                                $_
+                            }
+                        }
+                }
 
-            $typeDesc = 'directory'
-            if( $TaskParameter['Include'] -or $TaskParameter['Exclude'] )
-            {
-                $typeDesc = 'filtered directory'
-            }
+                if( $override )
+                {
+                    $overrideBasePath = 
+                        Resolve-Path -Path $sourcePath | 
+                        Select-Object -ExpandProperty 'ProviderPath'
 
-            Write-CompressionInfo -What $typeDesc -Source $relativePath @destinationParam
-            Find-Item -Path $sourcePath |
-                Add-ZipArchiveEntry -ZipArchivePath $archivePath @addParams @behaviorParams
+                    if( (Test-Path -Path $overrideBasePath -PathType Leaf) )
+                    {
+                        $overrideBasePath = Split-Path -Parent -Path $overrideBasePath
+                    }
+
+                    $addParams['BasePath'] = $overrideBasePath
+                    $addParams['EntryParentPath'] = $destinationItemName
+                    $addParams.Remove('EntryName')
+                    $destinationParam['Destination'] = $destinationItemName
+                }
+
+                $typeDesc = 'directory'
+                if( $TaskParameter['Include'] -or $TaskParameter['Exclude'] )
+                {
+                    $typeDesc = 'filtered directory'
+                }
+
+                Write-CompressionInfo -What $typeDesc -Source $sourcePath @destinationParam
+                Find-Item -Path $sourcePath |
+                    Add-ZipArchiveEntry -ZipArchivePath $ArchivePath @addParams @behaviorParams
+            }
+        }
+    }
+    finally
+    {
+        if( $SourceRoot )
+        {
+            Pop-Location
         }
     }
 }

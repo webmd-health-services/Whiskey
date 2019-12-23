@@ -164,7 +164,8 @@ function ThenModuleNotInstalled
 
     $modulePath = Join-Path -Path $testRoot -ChildPath $InDirectory
     $modulePath = Join-Path -Path $modulePath -ChildPath $taskParameter['Name']
-    $modulePath = Join-Path -Path $modulePath -ChildPath ('*.*.*\{0}.psd1' -f $taskParameter['Name'])
+    $modulePath = Join-Path -Path $modulePath -ChildPath '*.*.*'
+    $modulePath = Join-Path -Path $modulePath -ChildPath ('{0}.psd1' -f $taskParameter['Name'])
     $modulePath | Should -Not -Exist
 }
 
@@ -287,7 +288,10 @@ Describe 'GetPowerShellModule.when importing module after installation' {
     AfterEach { Reset }
     It 'should import module into global scope' {
         Init
-        Import-Module -Name (Join-Path $PSScriptRoot -ChildPath ('..\{0}\Glob' -f $TestPSModulesDirectoryName) -Resolve) -Force
+        $modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
+        $modulePath = Join-Path -Path $modulePath -ChildPath $TestPSModulesDirectoryName
+        $modulePath = Join-Path -Path $modulePath 'Glob' -Resolve
+        Import-Module -Name $modulePath -Force
         GivenImport
         GivenModule 'Glob'
         WhenTaskRun

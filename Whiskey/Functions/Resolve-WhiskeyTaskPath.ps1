@@ -1,5 +1,5 @@
 
-function Resolve-WhiskeyTaskPath
+function Resolve-WhiskeyTaskPathInternal
 {
     [CmdletBinding()]
     param(

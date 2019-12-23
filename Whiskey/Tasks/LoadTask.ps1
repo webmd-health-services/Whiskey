@@ -8,19 +8,22 @@ function Import-WhiskeyTask
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $module = Get-Module -Name 'Whiskey'
-    $paths = Resolve-WhiskeyTaskPath -TaskContext $TaskContext -Path $TaskParameter['Path'] -PropertyName 'Path'
-    foreach( $path in $paths )
+    foreach( $pathItem in $Path )
     {
-        if( $TaskContext.TaskPaths | Where-Object { $_.FullName -eq $path } )
+        $fullPathItem = Resolve-Path -Path $pathItem | Select-Object -ExpandProperty 'ProviderPath'
+        if( $TaskContext.TaskPaths | Where-Object { $_.FullName -eq $fullPathItem } )
         {
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Already loaded tasks from file "{0}".' -f $path)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('Already loaded tasks from file "{0}".' -f $pathItem)
             continue
         }
 
@@ -29,7 +32,7 @@ function Import-WhiskeyTask
         # We do this in a background script block to ensure the function is scoped correctly. If it isn't, it
         # won't be available outside the script block. If it is, it will be visible after the script block completes.
         & {
-            . $path
+            . $pathItem
         }
         $newTasks = Get-WhiskeyTask | Where-Object { -not $knownTasks.ContainsKey($_.Name) }
         if( -not $newTasks )
@@ -41,15 +44,15 @@ function Import-WhiskeyTask
 * the function has a `[Whiskey.Task(''MyTask'')]` attribute that declares the task''s name
 * a task with the same name hasn''t already been loaded
 
-See about_Whiskey_Writing_Tasks for more information.' -f $path)
+See about_Whiskey_Writing_Tasks for more information.' -f $pathItem)
             return
         }
 
-        Write-WhiskeyInfo -Context $TaskContext -Message ($path)
+        Write-WhiskeyInfo -Context $TaskContext -Message ($pathItem)
         foreach( $task in $newTasks )
         {
             Write-WhiskeyInfo -Context $TaskContext -Message ('  {0}' -f $task.Name)
         }
-        $TaskContext.TaskPaths.Add((Get-Item -Path $path))
+        $TaskContext.TaskPaths.Add((Get-Item -Path $pathItem))
     }
 }
