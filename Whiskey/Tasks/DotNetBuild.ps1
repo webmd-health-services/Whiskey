@@ -20,7 +20,7 @@ function Invoke-WhiskeyDotNetBuild
     $projectPaths = ''
     if ($TaskParameter['Path'])
     {
-        $projectPaths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $projectPaths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPathInternal -TaskContext $TaskContext -PropertyName 'Path'
     }
 
     $verbosity = $TaskParameter['Verbosity']

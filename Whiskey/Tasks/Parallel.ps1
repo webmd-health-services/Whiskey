@@ -133,7 +133,9 @@ function Invoke-WhiskeyParallelTask
                 if( $completedJob )
                 {
                     $job.Completed = $true
-                    $completedJob | Receive-Job
+                    # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+                    # Since some things use Write-Host, this is a workaround to avoid seeing duplicate host output.
+                    $completedJob | Receive-Job -InformationAction SilentlyContinue
                     $duration = $job.PSEndTime - $job.PSBeginTime
                     Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  {2} in {3}' -f $job.QueueIndex,$job.Name,$job.State.ToString().ToUpperInvariant(),$duration)
                     if( $job.JobStateInfo.State -eq [Management.Automation.JobState]::Failed )

@@ -10,6 +10,7 @@ function Merge-WhiskeyFile
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
         [String[]]$Path,
 
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,Create)]
         [String]$DestinationPath,
 
         [switch]$DeleteSourceFiles,
@@ -25,20 +26,6 @@ function Merge-WhiskeyFile
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    $DestinationPath = Resolve-WhiskeyTaskPath -TaskContext $TaskContext `
-                                               -Path $DestinationPath `
-                                               -PropertyName 'DestinationPath' `
-                                               -PathType 'File' `
-                                               -Force
-    
-    $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)
-    $normalizedBuildRoot = Join-Path -Path $normalizedBuildRoot -ChildPath ([IO.Path]::DirectorySeparatorChar)
-    if( -not $DestinationPath.StartsWith($normalizedBuildRoot) )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'DestinationPath' -Message ('"{0}" resolves to "{1}", which is outside the build root "{2}".' -f $PSBoundParameters['DestinationPath'],$DestinationPath,$TaskContext.BuildRoot.FullName)
-        return
-    }
 
     if( $Clear )
     {

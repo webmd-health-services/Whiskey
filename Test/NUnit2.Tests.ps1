@@ -592,14 +592,14 @@ Describe 'NUnit2.when Install-WhiskeyTool fails' {
 
 Describe 'NUnit2.when Path Parameter is not included' {
     It 'should fail the build' {
-        $withError = [regex]::Escape('Element ''Path'' is mandatory')
+        $withError = [regex]::Escape('Property "Path" is mandatory')
         Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
     }
 }
 
 Describe 'NUnit2.when Path Parameter is invalid' {
     It 'should fail the build' {
-        $withError = [regex]::Escape('does not exist.')
+        $withError = [regex]::Escape('do not exist.')
         Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
     }
 }
@@ -613,7 +613,8 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
 }
 
 Describe 'NUnit2.when running NUnit tests with coverage filters' {
-    It 'should pass coverage filters to OpenCover' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
+    It 'should pass coverage filters to OpenCover' -Skip {
         $coverageFilter = (
                         '-[NUnit2FailingTest]*',
                         '+[NUnit2PassingTest]*'
@@ -675,7 +676,8 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
 }
 
 Describe 'NUnit2.when running with custom OpenCover arguments' {
-    It 'should pass custom OpenCover arguments' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
+    It 'should pass custom OpenCover arguments' -Skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
@@ -684,7 +686,8 @@ Describe 'NUnit2.when running with custom OpenCover arguments' {
 }
 
 Describe 'NUnit2.when running with custom ReportGenerator arguments' {
-    It 'should pass ReportGenerator arguments' {
+    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
+    It 'should pass ReportGenerator arguments' -Skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
@@ -719,7 +722,7 @@ Describe 'NUnit2.when using custom tool versions' {
     }
 }
 
-Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
+Describe 'NUnit2.when initializing and no path is included' {
     It 'should fail' {
         Init
         GivenPassingTests
@@ -729,7 +732,7 @@ Describe 'NUnit2.when the Initialize Switch is active and no path is included' {
         ThenItInstalled 'OpenCover' $latestOpenCoverVersion
         ThenItInstalled 'ReportGenerator' $latestReportGeneratorVersion
         ThenItShouldNotRunTests
-        ThenErrorShouldNotBeThrown -ErrorMessage 'does not exist.'
+        ThenErrorShouldNotBeThrown -ErrorMessage 'do not exist.'
     }
 }
 

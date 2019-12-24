@@ -139,11 +139,13 @@ function Invoke-WhiskeyPowerShell
 
         do
         {
-            $job | Receive-Job
+            # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
+            # Since some things use Write-Host, this is a workaround to avoid seeing duplicate host output.
+            $job | Receive-Job -InformationAction SilentlyContinue
         }
         while( -not ($job | Wait-Job -Timeout 1) )
 
-        $job | Receive-Job
+        $job | Receive-Job -InformationAction SilentlyContinue
 
         if( (Test-Path -Path $resultPath -PathType Leaf) )
         {

@@ -506,12 +506,16 @@ function WhenRunningTask
     $script:threwException = $false
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Name $Named -Parameter $Parameter 
+        $script:output = Invoke-WhiskeyTask -TaskContext $context `
+                                            -Name $Named `
+                                            -Parameter $Parameter `
+                                            4>&1 `
+                                            5>&1 
     }
     catch
     {
+        Write-CaughtError $_
         $script:threwException = $true
-        Write-Error $_
     }
 }
 
@@ -812,12 +816,12 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and clean
     }
 }
 
-Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory doesn''t exist' {
     It 'should fail' {
         Init
         GivenRunByDeveloper
         WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
-        ThenThrewException 'WorkingDirectory.+does not exist.'
+        ThenThrewException '\bInvalid(\\|/)Directory\b.+does not exist'
         ThenTaskNotRun 'NoOpTask'
     }
 }
@@ -1402,6 +1406,56 @@ Describe ('Invoke-WhiskeyTask.when task is obsolete and user provides custom obs
         WhenRunningTask 'ObsoleteWithCustomMessageTask' -WarningVariable 'warnings'
         $warnings | Should -Match 'Use\ the\ NonObsoleteTask\ instead\.'
         $warnings | Should -Not -Match 'is\ obsolete'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when using ErrorAction property' {
+    It 'should set tasks''s ErrorActionPreference' {
+        Init
+        $ErrorActionPreference = 'Ignore'
+        WhenRunningTask 'Log' -Parameter @{ Message = 'FAIL!'; Level = 'Error' ; 'ErrorAction' = 'Stop' } -ErrorVariable 'errors'
+        ThenPipelineFailed
+        ThenThrewException 'FAIL!'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when using WarningAction property' {
+    It 'should set tasks''s WarningPreference' {
+        Init
+        $WarningPreference = 'Ignore'
+        WhenRunningTask 'Log' -Parameter @{ Message = 'WARNING!'; Level = 'Warning' ; 'WarningAction' = 'Continue' } -WarningVariable 'warnings'
+        ThenPipelineSucceeded
+        $warnings | Should -Match 'WARNING!'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when using InformationAction property' {
+    It 'should set tasks''s InformationPreference' {
+        Init
+        $InformationPreference = 'Ignore'
+        WhenRunningTask 'Log' -Parameter @{ Message = 'INFORMATION!'; 'InformationAction' = 'Continue' } -InformationVariable 'infos' 
+        ThenPipelineSucceeded
+        $infos | Should -Match 'INFORMATION!'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when using Verbose switch' {
+    It 'should set tasks''s VerbosePreference' {
+        Init
+        $VerbosePreference = 'Ignore'
+        WhenRunningTask 'Log' -Parameter @{ Message = 'VERBOSE!'; 'Level' = 'Verbose'; 'Verbose' = 'true' }
+        ThenPipelineSucceeded
+        $output | Should -Match 'VERBOSE!'
+    }
+}
+
+Describe 'Invoke-WhiskeyTask.when using Debug switch' {
+    It 'should set tasks''s DebugPreference' {
+        Init
+        $DebugPreference = 'Ignore'
+        WhenRunningTask 'Log' -Parameter @{ Message = 'DEBUG!'; 'Level' = 'Debug'; 'Debug' = 'true' }
+        ThenPipelineSucceeded
+        $output | Should -Match 'DEBUG!'
     }
 }
 

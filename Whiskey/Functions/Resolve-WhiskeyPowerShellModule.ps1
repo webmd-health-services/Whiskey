@@ -32,13 +32,24 @@ function Resolve-WhiskeyPowerShellModule
 
         [Parameter(Mandatory)]
         # The path to the directory where the PSModules directory should be created.
-        [String]$BuildRoot
+        [String]$BuildRoot,
+
+        # The path to a custom directory where you want the module installed. The default is `PSModules` in the build root.
+        [String]$Path,
+
+        # Allow prerelease versions.
+        [switch]$AllowPrerelease
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    if( $Path )
+    {
+        $modulesRoot = $Path
+    }
+
     if( -not (Test-Path -Path $modulesRoot -PathType Container) )
     {
         New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Stop | Out-Null
@@ -83,6 +94,12 @@ function Resolve-WhiskeyPowerShellModule
         # Install Package Management modules in the background so we can load the new versions. These modules use 
         # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
         Start-Job -ScriptBlock {
+            $ErrorActionPreference = $using:ErrorActionPreference
+            $VerbosePreference = $using:VerbosePreference
+            $InformationPreference = $using:InformationPreference
+            $DebugPreference = $using:DebugPreference
+            $ProgressPreference = $using:ProgressPreference
+
             $modulesToInstall = $using:modulesToInstall
             $modulesRoot = $using:modulesRoot
 
@@ -100,18 +117,19 @@ function Resolve-WhiskeyPowerShellModule
                 Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $module.Name,$module.Version,$modulesRoot,$module.Repository)
                 Save-Module -Name $module.Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
             }
-        } | Receive-Job -Wait -AutoRemoveJob | Out-Null
+        } | Receive-Job -Wait -AutoRemoveJob -InformationAction SilentlyContinue | Out-Null
         Write-WhiskeyDebug -Message ('                                               END')
     }
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' -BuildRoot $BuildRoot
+    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' `
+                                   -PSModulesRoot (Join-Path -Path $BuildRoot -ChildPath $powershellModulesDirectoryName)
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )
     {
         $atVersionString = ' at version {0}' -f $Version
 
-        if( -not [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) )
+        if( -not [Management.Automation.WildcardPattern]::ContainsWildcardCharacters($version) -and [Version]::TryParse($Version,[ref]$null) )
         {
             $tempVersion = [Version]$Version
             if( $TempVersion -and ($TempVersion.Build -lt 0) )
@@ -121,14 +139,14 @@ function Resolve-WhiskeyPowerShellModule
         }
 
         $module = 
-            Find-Module -Name $Name -AllVersions |
+            Find-Module -Name $Name -AllVersions -AllowPrerelease:$AllowPrerelease |
             Where-Object { $_.Version.ToString() -like $Version } |
             Sort-Object -Property 'Version' -Descending
     }
     else
     {
         $atVersionString = ''
-        $module = Find-Module -Name $Name -ErrorAction Ignore
+        $module = Find-Module -Name $Name -AllowPrerelease:$AllowPrerelease -ErrorAction Ignore
     }
 
     if( -not $module )

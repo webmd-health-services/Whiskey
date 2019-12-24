@@ -178,93 +178,119 @@ function Invoke-WhiskeyTask
         }
     }
 
-    $workingDirectory = $TaskContext.BuildRoot
-    if( $Parameter['WorkingDirectory'] )
-    {
-        $workingDirectory = $Parameter['WorkingDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory'
-    }
-
-    $taskTempDirectory = ''
-    $requiredTools = Get-RequiredTool -CommandName $task.CommandName
-    $startedAt = Get-Date
-    $result = 'FAILED'
-    $currentDirectory = [IO.Directory]::GetCurrentDirectory()
-    Push-Location -Path $workingDirectory
-    [IO.Directory]::SetCurrentDirectory($workingDirectory)
+    # Start every task in the BuildRoot.
+    Push-Location $TaskContext.BuildRoot
+    $originalDirectory = [IO.Directory]::GetCurrentDirectory()
+    [IO.Directory]::SetCurrentDirectory($TaskContext.BuildRoot)
     try
     {
-        if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
+        $workingDirectory = $TaskContext.BuildRoot
+        if( $Parameter['WorkingDirectory'] )
         {
-            $result = 'SKIPPED'
-            return
+            # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
+            $workingDirectory = 
+                $Parameter['WorkingDirectory'] | 
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory' -Mandatory -OnlySinglePath -PathType 'Directory' |
+                Resolve-Path |
+                Select-Object -ExpandProperty 'ProviderPath'
         }
 
-        $inCleanMode = $TaskContext.ShouldClean
-        if( $inCleanMode )
+        $taskTempDirectory = ''
+        $requiredTools = Get-RequiredTool -CommandName $task.CommandName
+        $startedAt = Get-Date
+        $result = 'FAILED'
+        Set-Location -Path $workingDirectory
+        [IO.Directory]::SetCurrentDirectory($workingDirectory)
+        $originalDebugPreference = $DebugPreference
+        try
         {
-            if( -not $task.SupportsClean )
+            if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
             {
-                Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsClean.{0} -ne Build.ShouldClean.{1}' -f $task.SupportsClean,$TaskContext.ShouldClean)
                 $result = 'SKIPPED'
                 return
             }
-        }
 
-        foreach( $requiredTool in $requiredTools )
+            $inCleanMode = $TaskContext.ShouldClean
+            if( $inCleanMode )
+            {
+                if( -not $task.SupportsClean )
+                {
+                    Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsClean.{0} -ne Build.ShouldClean.{1}' -f $task.SupportsClean,$TaskContext.ShouldClean)
+                    $result = 'SKIPPED'
+                    return
+                }
+            }
+
+            foreach( $requiredTool in $requiredTools )
+            {
+                Install-WhiskeyTool -ToolInfo $requiredTool `
+                                    -InstallRoot $TaskContext.BuildRoot `
+                                    -TaskParameter $taskProperties `
+                                    -InCleanMode:$inCleanMode `
+                                    -ErrorAction Stop
+            }
+
+            if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsInitialize.{0} -ne Build.ShouldInitialize.{1}' -f $task.SupportsInitialize,$TaskContext.ShouldInitialize)
+                $result = 'SKIPPED'
+                return
+            }
+
+            Invoke-Event -EventName 'BeforeTask' -Property $taskProperties
+            Invoke-Event -EventName ('Before{0}Task' -f $Name) -Property $taskProperties
+
+            Write-WhiskeyVerbose -Context $TaskContext -Message ''
+            $startedAt = Get-Date
+            $taskTempDirectory = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
+            $TaskContext.Temp = $taskTempDirectory
+            if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
+            {
+                New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
+            }
+
+            $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+
+            # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a build
+            # to hang, so let's set it to Continue so users can see debug output.
+            if( $parameter['Debug'] )
+            {
+                $DebugPreference = 'Continue'
+                $parameter.Remove('Debug')
+            }
+
+            & $task.CommandName @parameter
+            $result = 'COMPLETED'
+        }
+        finally
         {
-            Install-WhiskeyTool -ToolInfo $requiredTool `
-                                -InstallRoot $TaskContext.BuildRoot `
-                                -TaskParameter $taskProperties `
-                                -InCleanMode:$inCleanMode `
-                                -ErrorAction Stop
+            $DebugPreference = $originalDebugPreference
+
+            # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
+            if( $TaskContext.ShouldClean )
+            {
+                foreach( $requiredTool in $requiredTools )
+                {
+                    Uninstall-WhiskeyTool -BuildRoot $TaskContext.BuildRoot -ToolInfo $requiredTool
+                }
+            }
+
+            if( $taskTempDirectory -and (Test-Path -Path $taskTempDirectory -PathType Container) )
+            {
+                Remove-Item -Path $taskTempDirectory -Recurse -Force -ErrorAction Ignore
+            }
+            $endedAt = Get-Date
+            $duration = $endedAt - $startedAt
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('{0} in {1}' -f $result,$duration)
+            Write-WhiskeyVerbose -Context $TaskContext -Message ''
         }
 
-        if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
-        {
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsInitialize.{0} -ne Build.ShouldInitialize.{1}' -f $task.SupportsInitialize,$TaskContext.ShouldInitialize)
-            $result = 'SKIPPED'
-            return
-        }
-
-        Invoke-Event -EventName 'BeforeTask' -Property $taskProperties
-        Invoke-Event -EventName ('Before{0}Task' -f $Name) -Property $taskProperties
-
-        Write-WhiskeyVerbose -Context $TaskContext -Message ''
-        $startedAt = Get-Date
-        $taskTempDirectory = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
-        $TaskContext.Temp = $taskTempDirectory
-        if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
-        {
-            New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
-        }
-
-        $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
-        & $task.CommandName @parameter
-        $result = 'COMPLETED'
+        Invoke-Event -EventName 'AfterTask' -Property $taskProperties
+        Invoke-Event -EventName ('After{0}Task' -f $Name) -Property $taskProperties
     }
     finally
     {
-        # Clean required tools *after* running the task since the task might need a required tool in order to do the cleaning (e.g. using Node to clean up installed modules)
-        if( $TaskContext.ShouldClean )
-        {
-            foreach( $requiredTool in $requiredTools )
-            {
-                Uninstall-WhiskeyTool -BuildRoot $TaskContext.BuildRoot -ToolInfo $requiredTool
-            }
-        }
-
-        if( $taskTempDirectory -and (Test-Path -Path $taskTempDirectory -PathType Container) )
-        {
-            Remove-Item -Path $taskTempDirectory -Recurse -Force -ErrorAction Ignore
-        }
-        $endedAt = Get-Date
-        $duration = $endedAt - $startedAt
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0} in {1}' -f $result,$duration)
-        Write-WhiskeyVerbose -Context $TaskContext -Message ''
-        [IO.Directory]::SetCurrentDirectory($currentDirectory)
+        [IO.Directory]::SetCurrentDirectory($originalDirectory)
         Pop-Location
     }
-
-    Invoke-Event -EventName 'AfterTask' -Property $taskProperties
-    Invoke-Event -EventName ('After{0}Task' -f $Name) -Property $taskProperties
 }

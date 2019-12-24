@@ -85,27 +85,34 @@ function WhenLogging
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [String]$Message,
+        [String[]]$Message,
 
-        [String]$AtLevel
+        [String]$AtLevel,
+
+        [hashtable]$WithParameter = @{ },
+
+        [switch]$InCleanMode,
+
+        [switch]$InInitializeMode
     )
 
-    $parameter = @{
-        'Message' = $Message
-    }
+    $WithParameter['Message'] = $Message
 
     if( $AtLevel )
     {
-        $parameter['Level'] = $AtLevel
+        $WithParameter['Level'] = $AtLevel
     }
 
     $script:failed = $false
-    $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
+    $context = New-WhiskeyTestContext -ForDeveloper `
+                                      -ForBuildRoot $TestDrive.FullName `
+                                      -InCleanMode:$InCleanMOde `
+                                      -InInitMode:$InInitializeMode
     try
     {
         $script:output = Invoke-WhiskeyTask -Name 'Log' `
                                             -TaskContext $context `
-                                            -Parameter $parameter `
+                                            -Parameter $WithParameter `
                                             -ErrorVariable 'errors' `
                                             -WarningVariable 'warnings' `
                                             -InformationVariable 'infos' `
@@ -176,5 +183,60 @@ Describe 'Log.when using invalid level' {
         Init
         WhenLogging 'does not matter' -AtLevel 'HumDiggity' -ErrorAction SilentlyContinue
         ThenFailed 'Property "Level" has an invalid value'
+    }
+}
+
+Describe 'Log.when user specifies ErrorAction = Stop' {
+    It 'should fail' {
+        Init
+        WhenLogging 'STOP!' -AtLevel 'Error' -WithParameter @{ 'ErrorAction' = 'Stop' } -ErrorAction SilentlyContinue
+        ThenFailed -ExpectedErrorMessage 'STOP!'
+    }
+}
+
+Describe 'Log.when user specifies Verbose property' {
+    It 'should write verbose' {
+        Init
+        $VerbosePreference = 'Ignore'
+        WhenLogging 'VERBOSE!' -AtLevel 'Verbose' -WithParameter @{ 'Verbose' = $true }
+        ThenWroteVerbose 'VERBOSE!'
+    }
+}
+
+Describe 'Log.when user specifies Debug property' {
+    It 'should write debug' {
+        Init
+        $DebugPreference = 'Ignore'
+        WhenLogging 'DEBUG!' -AtLevel 'Debug' -WithParameter @{ 'Debug' = $true }
+        ThenWroteDebug 'DEBUG!'
+    }
+}
+
+Describe 'Log.when logging multiple messages' {
+    It 'should group all the messages' {
+        Init
+        WhenLogging 'line 1', 'line 2', 'line 3' 
+        $infos | Should -HaveCount 5
+        $infos[0] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
+        $infos[1] | Should -Match '^\ {4}line 1$'
+        $infos[2] | Should -Match '^\ {4}line 2$'
+        $infos[3] | Should -Match '^\ {4}line 3$'
+        $infos[4] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
+    }
+}
+
+Describe 'Log.when run in Clean mode' {
+    It 'should write messages' {
+        Init
+        WhenLogging 'message' -InCleanMode
+        ThenWroteInfo 'message'
+    }
+}
+
+Describe 'Log.when run in Initialize mode' {
+    It 'should write messages' {
+        Init
+        WhenLogging 'message' -InInitializeMode
+        ThenWroteInfo 'message'
     }
 }

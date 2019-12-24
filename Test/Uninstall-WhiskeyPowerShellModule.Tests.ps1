@@ -14,7 +14,7 @@ function GivenAnInstalledPowerShellModule
         [String]$WithName = 'SomeModule'
     )
 
-    $moduleRoot = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
+    $moduleRoot = Join-Path -Path $testRoot -ChildPath $TestPSModulesDirectoryName
     $Name = '{0}\{1}' -f $WithName, $WithVersion
     $importRoot = Join-Path -Path $moduleRoot -ChildPath $WithName
     $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $Name
@@ -72,7 +72,7 @@ function ThenPowerShellModuleUninstalled
 
     $Name = '{0}\{1}' -f $WithName, $WithVersion
 
-    $path = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
+    $path = Join-Path -Path $testRoot -ChildPath $TestPSModulesDirectoryName
     $modulePath = Join-Path -Path $path -ChildPath $Name
 
     Test-Path -Path $modulePath -PathType Container | Should -BeFalse
@@ -82,7 +82,7 @@ function ThenPowerShellModuleUninstalled
 
 function ThenRemovedPSModulesDirectory
 {
-    Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName | Should -Not -Exist
+    Join-Path -Path $testRoot -ChildPath $TestPSModulesDirectoryName | Should -Not -Exist
 }
 
 Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module' {
@@ -112,14 +112,14 @@ Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module with 
         WhenUninstallingPowerShellModule -WithVersion '0.37.*'
         ThenPowerShellModuleUninstalled -WithVersion '0.37.*'
 
-        $psmodulesRoot = Join-Path -Path $testRoot -ChildPath $PSModulesDirectoryName
+        $psmodulesRoot = Join-Path -Path $testRoot -ChildPath $TestPSModulesDirectoryName
         $modulePath = Join-Path -Path $psmodulesRoot -ChildPath 'SomeModule\0.38.2\SomeModule.psd1'
         $modulePath | Should -Exist
     }
 }
 
-Describe ('Uninstall-WhiskeyPowerShellModule.when {0} directory is empty after module uninstall' -f $PSModulesDirectoryName) {
-    It ('should delete the {0} directory' -f $PSModulesDirectoryName) {
+Describe ('Uninstall-WhiskeyPowerShellModule.when {0} directory is empty after module uninstall' -f $TestPSModulesDirectoryName) {
+    It ('should delete the {0} directory' -f $TestPSModulesDirectoryName) {
         Init
         GivenAnInstalledPowerShellModule
         WhenUninstallingPowerShellModule
