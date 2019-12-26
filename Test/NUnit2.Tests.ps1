@@ -577,24 +577,16 @@ Describe 'NUnit2.when Install-WhiskeyNuGetPackage fails' {
 
 Describe 'NUnit2.when Path Parameter is not included' {
     It 'should fail the build' {
-<<<<<<< HEAD
         Init
         $withError = [regex]::Escape('Element ''Path'' is mandatory')
-=======
-        $withError = [regex]::Escape('Property "Path" is mandatory')
->>>>>>> 48c5dc0a66d82bdd7e090cb0bb407bc680e312bc
         Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
     }
 }
 
 Describe 'NUnit2.when Path Parameter is invalid' {
     It 'should fail the build' {
-<<<<<<< HEAD
         Init
         $withError = [regex]::Escape('does not exist.')
-=======
-        $withError = [regex]::Escape('do not exist.')
->>>>>>> 48c5dc0a66d82bdd7e090cb0bb407bc680e312bc
         Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
     }
 }
@@ -609,13 +601,9 @@ Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails
 }
 
 Describe 'NUnit2.when running NUnit tests with coverage filters' {
-<<<<<<< HEAD
-    It 'should pass coverage filters to OpenCover' {
-        Init
-=======
     # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
     It 'should pass coverage filters to OpenCover' -Skip {
->>>>>>> 48c5dc0a66d82bdd7e090cb0bb407bc680e312bc
+        Init
         $coverageFilter = (
                         '-[NUnit2FailingTest]*',
                         '+[NUnit2PassingTest]*'
@@ -677,12 +665,8 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
 }
 
 Describe 'NUnit2.when running with custom OpenCover arguments' {
-<<<<<<< HEAD
-    It 'should pass custom OpenCover arguments' {
-=======
     # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
     It 'should pass custom OpenCover arguments' -Skip {
->>>>>>> 48c5dc0a66d82bdd7e090cb0bb407bc680e312bc
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
