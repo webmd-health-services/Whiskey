@@ -578,7 +578,7 @@ Describe 'NUnit2.when Install-WhiskeyNuGetPackage fails' {
 Describe 'NUnit2.when Path Parameter is not included' {
     It 'should fail the build' {
         Init
-        $withError = [regex]::Escape('Element ''Path'' is mandatory')
+        $withError = [regex]::Escape('"Path" is mandatory')
         Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
     }
 }
@@ -586,7 +586,7 @@ Describe 'NUnit2.when Path Parameter is not included' {
 Describe 'NUnit2.when Path Parameter is invalid' {
     It 'should fail the build' {
         Init
-        $withError = [regex]::Escape('does not exist.')
+        $withError = [regex]::Escape('do not exist.')
         Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
     }
 }
