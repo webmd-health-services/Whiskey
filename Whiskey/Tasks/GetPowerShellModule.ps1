@@ -12,7 +12,7 @@ function Get-WhiskeyPowerShellModule
 
         [switch]$AllowPrerelease,
 
-        [Whiskey.Tasks.ValidatePath(AllowNonexistent)]
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent,Create,PathType='Directory')]
         [String]$Path,
 
         [switch]$Import
@@ -32,36 +32,38 @@ function Get-WhiskeyPowerShellModule
         Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $TaskContext.BuildRoot -Path $Path
         return
     }
-    
+
+    if( -not $Path )
+    {
+        $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $powershellModulesDirectoryName
+        if( -not (Test-Path -Path $Path -PathType Container) )
+        {
+            New-Item -Path $Path -ItemType 'Directory' | Out-Null
+        }
+        $Path = $Path | Resolve-Path -Relative
+    }
+
+    # PackageManagement/PowerShellGet functions don't like relative paths.
+    $fullPath = $Path | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
+
     $module = Resolve-WhiskeyPowerShellModule -Name $Name `
                                               -Version $Version `
                                               -BuildRoot $TaskContext.BuildRoot `
                                               -AllowPrerelease:$AllowPrerelease `
-                                              -Path $Path `
+                                              -Path $fullPath `
                                               -ErrorAction Stop
     if( -not $module )
     {
         return
     }
 
-    $destination = Join-Path -Path $TaskContext.BuildRoot -ChildPath $powershellModulesDirectoryName
-    if( $Path )
-    {
-        $destination = $Path
-    }
-    $destination = Resolve-Path -Path $destination -Relative -ErrorAction Ignore
-    if( $destination )
-    {
-        $destination = ' to {0}' -f $destination
-    }
-
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1}{2}.' -f $Name,$module.Version,$destination)
+    Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$Path)
     $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
                                                   -Version $module.Version `
                                                   -BuildRoot $TaskContext.BuildRoot `
                                                   -SkipImport:(-not $Import) `
                                                   -AllowPrerelease:$AllowPrerelease `
-                                                  -Path $Path `
+                                                  -Path $fullPath `
                                                   -ErrorAction Stop
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $moduleRoot)
 }

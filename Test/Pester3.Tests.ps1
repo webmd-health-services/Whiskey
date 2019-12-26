@@ -301,14 +301,14 @@ Describe 'PassingTests' {
     }
 }
 
-Describe 'Pester3.when missing Path Configuration' {
+Describe 'Pester3.when missing path' {
     AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
+        ThenTestShouldFail -failureMessage 'Path is mandatory'
     }
 }
 
@@ -349,14 +349,14 @@ Describe 'PassingTests' {
     }
 }
 
-Describe 'Pester3.when a task path is absolute' {
+Describe 'Pester3.when a task path is outside the build root' {
     AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
-        GivenTestFile 'C:\FubarSnafu'
+        GivenTestFile '..\FubarSnafu.ps1'
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'absolute'
+        ThenTestShouldFail -failureMessage 'outside\ the\ build\ root'
     }
 }

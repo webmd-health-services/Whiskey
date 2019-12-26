@@ -378,9 +378,9 @@ Describe 'Pester4.when missing path' {
 Describe 'Pester4.when a task path is absolute' {
     AfterEach { Reset }
     It 'should fail' {
-        $pesterPath = Join-Path -Path $TestDrive.FullName -ChildPath 'SomeFile'
-        New-Item -Path $pesterPath
         Init
+        $pesterPath = Join-Path -Path $testRoot -ChildPath '..\SomeFile'
+        New-Item -Path $pesterPath
         GivenTestFile $pesterPath
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0

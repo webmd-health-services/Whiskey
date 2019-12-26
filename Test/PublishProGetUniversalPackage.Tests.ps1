@@ -165,7 +165,12 @@ function ThenPackagePublished
 
     Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
                       -ModuleName 'Whiskey' `
-                      -ParameterFilter { $PackagePath -eq (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $FileName)) }
+                      -ParameterFilter { 
+                          $expectedPath = Join-Path -Path '.\.output' -ChildPath $FileName
+                          Write-Debug ('PackagePath  expected  {0}' -f $expectedPath)
+                          Write-Debug ('             actual    {0}' -f $PackagePath)
+                          $PackagePath -eq $expectedPath
+                      }
     $Global:Error | Should -BeNullOrEmpty
 }
 
@@ -331,7 +336,7 @@ function WhenPublishingPackage
 
 Describe 'PublishProGetUniversalPackage.when user publishes default files' {
     AfterEach { Reset }
-    It 'should public files' {
+    It 'should publish files' {
         Init
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
@@ -436,7 +441,7 @@ Describe 'PublishProGetUniversalPackage.when there are no upack files' {
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
         WhenPublishingPackage -ErrorAction SilentlyContinue
-        ThenTaskFailed ([regex]::Escape(('.output{0}*.upack" does not exist' -f [IO.Path]::DirectorySeparatorChar)))
+        ThenTaskFailed ([regex]::Escape('Found no packages to publish'))
     }
 }
 

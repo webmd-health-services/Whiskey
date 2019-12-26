@@ -471,7 +471,7 @@ Describe 'MSBuild.when compilation fails' {
     }
 }
 
-Describe 'MSBuild.when Path parameter is empty' {
+Describe 'MSBuild.when path parameter is empty' {
     AfterEach { Reset }
     It 'should fail' {
         Init
@@ -480,11 +480,11 @@ Describe 'MSBuild.when Path parameter is empty' {
         ThenProjectsNotCompiled
         ThenNuGetPackagesNotRestored
         ThenTaskFailed
-        ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+        ThenWritesError ([regex]::Escape('Path is mandatory'))
     }
 }
 
-Describe 'MSBuild.when Path parameter is not provided' {
+Describe 'MSBuild.when path parameter is not provided' {
     AfterEach { Reset }
     It 'should fail' {
         Init
@@ -493,7 +493,7 @@ Describe 'MSBuild.when Path parameter is not provided' {
         ThenProjectsNotCompiled
         ThenNuGetPackagesNotRestored
         ThenTaskFailed
-        ThenWritesError ([regex]::Escape('Element ''Path'' is mandatory'))
+        ThenWritesError ([regex]::Escape('Path is mandatory'))
     }
 }
 

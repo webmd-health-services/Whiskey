@@ -9,31 +9,22 @@ function Invoke-WhiskeyPester3Task
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory)]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of Pester Tests to run with Pester3, e.g.
-
-        Build:
-        - Pester3:
-            Path:
-            - My.Tests.ps1
-            - Tests')
-        return
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     $outputFile = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
     $outputFile = [IO.Path]::GetFullPath($outputFile)
 
     $moduleInfo = $TaskParameter['PesterModuleInfo']
     $pesterManifestPath = $moduleInfo.Path
+
+    $workingDirectory = (Get-Location).Path
 
     # We do this in the background so we can test this with Pester.
     $job = Start-Job -ScriptBlock {
@@ -42,6 +33,8 @@ function Invoke-WhiskeyPester3Task
         $ProgressPreference = $using:ProgressPreference
         $WarningPreference = $using:WarningPreference
         $ErrorActionPreference = $using:ErrorActionPreference
+
+        Set-Location -Path $using:workingDirectory
 
         $script = $using:Path
         $pesterManifestPath = $using:pesterManifestPath

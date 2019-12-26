@@ -9,7 +9,10 @@ function Publish-WhiskeyProGetUniversalPackage
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='File')]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -54,40 +57,37 @@ function Publish-WhiskeyProGetUniversalPackage
 
     $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
 
-    if( -not ($TaskParameter.ContainsKey('Path')) )
+    if( -not $Path )
     {
-        $TaskParameter['Path'] = Join-Path -Path ($TaskContext.OutputDirectory | Split-Path -Leaf) -ChildPath '*.upack'
+        $Path = 
+            Join-Path -Path $TaskContext.OutputDirectory -ChildPath '*.upack' |
+            Resolve-WhiskeyTaskPath -TaskContext $TaskContext -AllowNonexistent -PropertyName 'Path' -PathType 'File'
     }
 
-    $errorActionParam = @{ }
     $allowMissingPackages = $false
     if( $TaskParameter.ContainsKey('AllowMissingPackage') )
     {
         $allowMissingPackages = $TaskParameter['AllowMissingPackage'] | ConvertFrom-WhiskeyYamlScalar
     }
 
-    if( $allowMissingPackages )
-    {
-        $errorActionParam['ErrorAction'] = 'Ignore'
-    }
-    $packages = $TaskParameter['Path'] |
-                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' @errorActionParam |
-                    Where-Object {
-                        if( -not $TaskParameter.ContainsKey('Exclude') )
-                        {
-                            return $true
-                        }
+    $packages = 
+        $Path |
+        Where-Object {
+            if( -not $TaskParameter.ContainsKey('Exclude') )
+            {
+                return $true
+            }
 
-                        foreach( $exclusion in $TaskParameter['Exclude'] )
-                        {
-                            if( $_ -like $exclusion )
-                            {
-                                return $false
-                            }
-                        }
+            foreach( $exclusion in $TaskParameter['Exclude'] )
+            {
+                if( $_ -like $exclusion )
+                {
+                    return $false
+                }
+            }
 
-                        return $true
-                    }
+            return $true
+        }
 
 
     if( $allowMissingPackages -and -not $packages )

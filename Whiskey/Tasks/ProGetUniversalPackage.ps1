@@ -9,7 +9,10 @@ function New-WhiskeyProGetUniversalPackage
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(PathType='Directory')]
+        [String]$SourceRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -96,34 +99,6 @@ function New-WhiskeyProGetUniversalPackage
         }
     }
 
-    $parentPathParam = @{ }
-    $sourceRoot = $TaskContext.BuildRoot
-    if( $TaskParameter.ContainsKey('SourceRoot') )
-    {
-        $sourceRoot = $TaskParameter['SourceRoot'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'SourceRoot'
-        $parentPathParam['ParentPath'] = $sourceRoot
-    }
-
-    $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath 'upack'
-    New-Item -Path $tempRoot -ItemType 'Directory' | Out-Null
-
-    $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
-    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-Null
-
-    $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
-    $manifestProperties | ConvertTo-Json | Set-Content -Path $upackJsonPath
-
-    # Add the version.json file
-    $versionJsonPath = Join-Path -Path $tempPackageRoot -ChildPath 'version.json'
-    @{
-        Version = $version.Version.ToString();
-        SemVer2 = $version.SemVer2.ToString();
-        SemVer2NoBuildMetadata = $version.SemVer2NoBuildMetadata.ToString();
-        PrereleaseMetadata = $version.SemVer2.Prerelease;
-        BuildMetadata = $version.SemVer2.Build;
-        SemVer1 = $version.SemVer1.ToString();
-    } | ConvertTo-Json -Depth 1 | Set-Content -Path $versionJsonPath
-
     function Copy-ToPackage
     {
         param(
@@ -139,7 +114,7 @@ function New-WhiskeyProGetUniversalPackage
             if( (Get-Member -InputObject $item -Name 'Keys') )
             {
                 $sourcePath = $null
-                $override = $True
+                $override = $true
                 foreach( $key in $item.Keys )
                 {
                     $destinationItemName = $item[$key]
@@ -150,24 +125,25 @@ function New-WhiskeyProGetUniversalPackage
             {
                 $sourcePath = $item
             }
-            $pathparam = 'path'
+
+            $pathparam = 'Path'
             if( $AsThirdPartyItem )
             {
                 $pathparam = 'ThirdPartyPath'
             }
 
-            $sourcePaths = $sourcePath | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam @parentPathParam
+            $sourcePaths = 
+                $sourcePath | 
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam 
             if( -not $sourcePaths )
             {
                 return
             }
 
+            $basePath = (Get-Location).Path
             foreach( $sourcePath in $sourcePaths )
             {
-                $relativePath = $sourcePath -replace ('^{0}' -f ([regex]::Escape($sourceRoot))),''
-                $relativePath = $relativePath.Trim([IO.Path]::DirectorySeparatorChar)
-
-                $addParams = @{ BasePath = $sourceRoot }
+                $addParams = @{ BasePath = $basePath }
                 $overrideInfo = ''
                 if( $override )
                 {
@@ -178,7 +154,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( $AsThirdPartyItem )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging unfiltered item    {0}{1}' -f $relativePath,$overrideInfo)
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging unfiltered item    {0}{1}' -f $sourcePath,$overrideInfo)
                     Get-Item -Path $sourcePath |
                         Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
                     continue
@@ -186,7 +162,7 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging file               {0}{1}' -f $relativePath,$overrideInfo)
+                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging file               {0}{1}' -f $sourcePath,$overrideInfo)
                     Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams -ErrorAction Stop
                     continue
                 }
@@ -229,7 +205,15 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( $override )
                 {
-                    $addParams['BasePath'] = $sourcePath
+                    $overrideBasePath = 
+                        Resolve-Path -Path $sourcePath | 
+                        Select-Object -ExpandProperty 'ProviderPath'
+
+                    if( (Test-Path -Path $overrideBasePath -PathType Leaf) )
+                    {
+                        $overrideBasePath = Split-Path -Parent -Path $overrideBasePath
+                    }
+                    $addParams['BasePath'] = $overrideBasePath 
                     $addParams.Remove('PackageItemName')
                     $overrideInfo = ' -> {0}' -f $destinationItemName
 
@@ -239,12 +223,32 @@ function New-WhiskeyProGetUniversalPackage
                     }
                 }
 
-                Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $relativePath,$overrideInfo)
+                Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $sourcePath,$overrideInfo)
                 Find-Item -Path $sourcePath |
                     Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
             }
         }
     }
+
+    $tempRoot = Join-Path -Path $TaskContext.Temp -ChildPath 'upack'
+    New-Item -Path $tempRoot -ItemType 'Directory' | Out-Null
+
+    $tempPackageRoot = Join-Path -Path $tempRoot -ChildPath 'package'
+    New-Item -Path $tempPackageRoot -ItemType 'Directory' | Out-Null
+
+    $upackJsonPath = Join-Path -Path $tempRoot -ChildPath 'upack.json'
+    $manifestProperties | ConvertTo-Json | Set-Content -Path $upackJsonPath
+
+    # Add the version.json file
+    $versionJsonPath = Join-Path -Path $tempPackageRoot -ChildPath 'version.json'
+    @{
+        Version = $version.Version.ToString();
+        SemVer2 = $version.SemVer2.ToString();
+        SemVer2NoBuildMetadata = $version.SemVer2NoBuildMetadata.ToString();
+        PrereleaseMetadata = $version.SemVer2.Prerelease;
+        BuildMetadata = $version.SemVer2.Build;
+        SemVer1 = $version.SemVer1.ToString();
+    } | ConvertTo-Json -Depth 1 | Set-Content -Path $versionJsonPath
 
     $badChars = [IO.Path]::GetInvalidFileNameChars() | ForEach-Object { [regex]::Escape($_) }
     $fixRegex = '[{0}]' -f ($badChars -join '')
@@ -273,13 +277,29 @@ function New-WhiskeyProGetUniversalPackage
 
     Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $versionJsonPath -ErrorAction Stop
 
-    if( $TaskParameter['Path'] )
+    if( $SourceRoot )
     {
-        Copy-ToPackage -Path $TaskParameter['Path']
+        Write-WhiskeyWarning -Context $TaskContext -Message ('The "SourceRoot" property is obsolete. Please use the "WorkingDirectory" property instead.')
+        Push-Location -Path $SourceRoot
     }
 
-    if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
+    try
     {
-        Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+        if( $TaskParameter['Path'] )
+        {
+            Copy-ToPackage -Path $TaskParameter['Path']
+        }
+
+        if( $TaskParameter.ContainsKey('ThirdPartyPath') -and $TaskParameter['ThirdPartyPath'] )
+        {
+            Copy-ToPackage -Path $TaskParameter['ThirdPartyPath'] -AsThirdPartyItem
+        }
+    }
+    finally
+    {
+        if( $SourceRoot )
+        {
+            Pop-Location
+        }
     }
 }

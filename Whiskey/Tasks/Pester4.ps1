@@ -29,6 +29,7 @@ function Invoke-WhiskeyPester4Task
 
     if( $Exclude )
     {
+        $Exclude = $Exclude | Convert-WhiskeyPathDirectorySeparator 
         $path = $path |
                     Where-Object {
                         foreach( $exclusion in $Exclude )
@@ -55,7 +56,7 @@ function Invoke-WhiskeyPester4Task
 
     $pesterManifestPath = $PesterModuleInfo.Path
 
-    $Argument['Script'] = $Path | Resolve-Path -Relative
+    $Argument['Script'] = $Path
     $Argument['PassThru'] = $true
 
     if( $Argument.ContainsKey('OutputFile') )

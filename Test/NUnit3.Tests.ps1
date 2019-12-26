@@ -548,7 +548,7 @@ Describe 'NUnit3.when missing Path parameter' {
     It 'should fail' {
         Init
         WhenRunningTask -ErrorAction SilentlyContinue
-        ThenTaskFailedWithMessage 'Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run'
+        ThenTaskFailedWithMessage 'Property "Path" is mandatory'
     }
 }
 
