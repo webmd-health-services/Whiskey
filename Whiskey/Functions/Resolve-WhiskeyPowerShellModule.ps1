@@ -34,9 +34,6 @@ function Resolve-WhiskeyPowerShellModule
         # The path to the directory where the PSModules directory should be created.
         [String]$BuildRoot,
 
-        # The path to a custom directory where you want the module installed. The default is `PSModules` in the build root.
-        [String]$Path,
-
         # Allow prerelease versions.
         [switch]$AllowPrerelease
     )
@@ -45,10 +42,6 @@ function Resolve-WhiskeyPowerShellModule
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
-    if( $Path )
-    {
-        $modulesRoot = $Path
-    }
 
     if( -not (Test-Path -Path $modulesRoot -PathType Container) )
     {
@@ -121,8 +114,7 @@ function Resolve-WhiskeyPowerShellModule
         Write-WhiskeyDebug -Message ('                                               END')
     }
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' `
-                                   -PSModulesRoot (Join-Path -Path $BuildRoot -ChildPath $powershellModulesDirectoryName)
+    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' -PSModulesRoot $modulesRoot
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )

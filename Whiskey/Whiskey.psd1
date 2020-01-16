@@ -170,6 +170,7 @@
 * Removed all support for old "VersionFrom", "PrereleaseMap", and "Version" properties in the root of your whiskey.yml file. Use Whiskey's `Version` task instead.
 
 ## Improvements and Bug Fixes
+
 * The `GetPowerShellModule` task now supports installing prerelease versions of modules. Set the `AllowPrerelease` property to `true`.
 * The `GetPowerShellModule` task can now install a module into a custom directory instead of the PSModules directory. Pass the path to the `Path` parameter.
 * The `GetPowerShellModule` task can now import the module being installed. Set the `Import` property to `true`.

@@ -50,7 +50,6 @@ function Get-WhiskeyPowerShellModule
                                               -Version $Version `
                                               -BuildRoot $TaskContext.BuildRoot `
                                               -AllowPrerelease:$AllowPrerelease `
-                                              -Path $fullPath `
                                               -ErrorAction Stop
     if( -not $module )
     {
