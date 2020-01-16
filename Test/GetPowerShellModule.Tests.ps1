@@ -281,6 +281,9 @@ Describe 'GetPowerShellModule.when installing to custom directory' {
         GivenCleanMode
         WhenTaskRun
         ThenModuleNotInstalled -InDirectory 'FubarSnafu'
+        # Make sure Whiskey doesn't use the install path of this module as the global install path.
+        Join-Path -Path $testRoot -ChildPath 'FubarSnafu\PackageManagement' | Should -Not -Exist
+        Join-Path -Path $testRoot -ChildPath 'FubarSnafu\PowerShellGet' | Should -Not -Exist
     }
 }
 
