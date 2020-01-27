@@ -1,4 +1,3 @@
-
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $testRoot = $null
@@ -15,13 +14,7 @@ function GivenAnInstalledNuGetPackage
         [String]$WithVersion = '2.6.4',
 
         [String]$WithName = 'NUnit.Runners'
-
     )
-    $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
-    if( -not $WithVersion )
-    {
-        return
-    }
     $dirName = '{0}.{1}' -f $WithName, $WithVersion
     $installRoot = Join-Path -Path $testRoot -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
@@ -30,7 +23,7 @@ function GivenAnInstalledNuGetPackage
 function GivenFile
 {
     param(
-        $Path
+        [String]$Path
     )
 
     New-Item -Path (Join-Path -Path $testRoot -ChildPath $Path) -ItemType 'File' -Force
@@ -78,6 +71,7 @@ function ThenNuGetPackageUninstalled
 {
     [CmdLetBinding()]
     param(
+
         [String]$WithVersion = '2.6.4',
 
         [String]$WithName = 'NUnit.Runners'
@@ -89,18 +83,16 @@ function ThenNuGetPackageUninstalled
 
     $uninstalledPath | Should -Not -Exist
 
-    $Global:Error | Should -beNullOrEmpty
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 function ThenNuGetPackageNotUninstalled
 {
     [CmdLetBinding()]
     param(
-        [String]$WithVersion = '2.6.4',
+        [String]$WithName,
 
-        [String]$WithName = 'NUnit.Runners',
-
-        [switch]$PackageShouldExist,
+        [String]$WithVersion,
 
         [String]$WithError
     )
@@ -109,17 +101,17 @@ function ThenNuGetPackageNotUninstalled
     $path = Join-Path -Path $testRoot -ChildPath 'packages'
     $uninstalledPath = Join-Path -Path $path -ChildPath $Name
 
-    if( -not $PackageShouldExist )
+    $uninstalledPath | Should -Exist
+    Remove-Item -Path $uninstalledPath -Recurse -Force
+
+    if( $WithError )
     {
-        $uninstalledPath | Should -Not -Exist
+        $Global:Error[0] | Should -Match $WithError
     }
     else
     {
-        $uninstalledPath | Should -Exist
-        Remove-Item -Path $uninstalledPath -Recurse -Force
+        $Global:Error | Should -BeNullOrEmpty
     }
-
-    $Global:Error | Should -Match $WithError
 }
 
 function ThenUninstalledDotNet
@@ -165,32 +157,21 @@ function WhenUninstallingTool
 
 if( $IsWindows )
 {
-    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package' {
-        It 'should delete it' {
+
+    Describe 'Uninstall-WhiskeyTool.when given an NuGet Package' {
+        It 'Should pass the correct parameters to Uninstall-WhiskeyNuGetPackage' {
             Init
-            GivenAnInstalledNuGetPackage
-            WhenUninstallingNuGetPackage
-            ThenNuGetPackageUnInstalled
+            Mock 'Uninstall-WhiskeyNuGetPackage' -Module 'Whiskey'
+            $toolobject = New-Object 'Whiskey.RequiresToolAttribute' 'NuGet::NUnit.Runners'
+            $toolobject.version = '2.6.4'
+            WhenUninstallingTool $toolobject
+            Assert-MockCalled 'Uninstall-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+                $Name -eq 'NUnit.Runners'
+                $DownloadRoot -eq $testRoot
+                $Version -eq '2.6.4'
+            }
         }
     }
-    
-    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package with an empty version' {
-        It 'should delete all versions' {
-            Init
-            GivenAnInstalledNuGetPackage -WithVersion ''
-            WhenUninstallingNuGetPackage -WithVersion ''
-            ThenNuGetPackageUnInstalled -WithVersion ''
-        }
-    }
-    
-    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package with a wildcard version' {
-        It 'should fail' {
-            Init
-            GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
-        }
-    }    
 }
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {

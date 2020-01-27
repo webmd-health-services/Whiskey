@@ -2,7 +2,13 @@
 function Invoke-WhiskeyNUnit3Task
 {
     [CmdletBinding()]
-    [Whiskey.Task('NUnit3',SupportsClean,SupportsInitialize,Platform='Windows')]
+    [Whiskey.Task('NUnit3',SupportsInitialize,Platform='Windows')]
+    # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
+    # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
+    [Whiskey.RequiresTool('NuGet::NUnit.Console',PathParameterName='NUnitConsolePath',Version='3.10.0',VersionParameterName='Version')]
+    [Whiskey.RequiresTool('NuGet::NUnit.ConsoleRunner',PathParameterName='NUnitPath',Version='3.10.0',VersionParameterName='Version')]
+    [Whiskey.RequiresTool('NuGet::OpenCover',PathParameterName='OpenCoverPath',VersionParameterName='OpenCoverVersion')]
+    [Whiskey.RequiresTool('NuGet::ReportGenerator',PathParameterName='ReportGeneratorPath',VersionParameterName='ReportGeneratorVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
@@ -15,29 +21,29 @@ function Invoke-WhiskeyNUnit3Task
         [String[]]$Path
     )
 
+
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    # NUnit.Console pulls in ConsoleRunner (of the same version) as a dependency and several NUnit2 compatibility/extension packages.
-    # The ConsoleRunner packages is installed explicitly to resolve the tool/bin path from installed package location.
-    $nunitSupportPackage = 'NUnit.Console'
-    $nunitPackage = 'NUnit.ConsoleRunner'
-
     # Due to a bug in NuGet we can't search for and install packages with wildcards (e.g. 3.*), so we're hardcoding a version for now. See Resolve-WhiskeyNuGetPackageVersion for more details.
-    # (This is the vesrion of NUnit.Console/NUnit.ConsoleRunner which may differ from the core NUnit library version.)
-    $nunitVersion = '3.10.0'
+    # (This is the version of NUnit.Console/NUnit.ConsoleRunner which may differ from the core NUnit library version.)
     if( $TaskParameter['Version'] )
     {
-        $nunitVersion = $TaskParameter['Version']
-        if( $nunitVersion -notlike '3.*' )
+        $version = $TaskParameter['Version']
+        if( $version -notlike '3.*' )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Version' -Message ('The version ''{0}'' isn''t a valid 3.x version of NUnit.' -f $TaskParameter['Version'])
             return
         }
     }
 
+    $nunitPath = $TaskParameter['NUnitPath']
+    $nunitConsolePath = $TaskParameter['NUnitConsolePath']
+    $openCoverPath = $TaskParameter['OpenCoverPath']
+    $reportGeneratorPath = $TaskParameter['reportGeneratorPath']
+
     $reportFormat = 'nunit3';
-    if ($TaskParameter['ResultFormat'])
+    if( $TaskParameter['ResultFormat'] )
     {
         $reportFormat = $TaskParameter['ResultFormat']
     }
@@ -46,74 +52,25 @@ function Invoke-WhiskeyNUnit3Task
     $nunitReport = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('{0}+{1}.xml' -f  $reportFormat, [IO.Path]::GetRandomFileName())
     $nunitReportParam = '--result={0};format={1}' -f $nunitReport, $reportFormat
 
-    $openCoverVersionParam = @{}
-    if ($TaskParameter['OpenCoverVersion'])
-    {
-        $openCoverVersionParam['Version'] = $TaskParameter['OpenCoverVersion']
-    }
-
-    $reportGeneratorVersionParam = @{}
-    if ($TaskParameter['ReportGeneratorVersion'])
-    {
-        $reportGeneratorVersionParam['Version'] = $TaskParameter['ReportGeneratorVersion']
-    }
-
-    if( $TaskContext.ShouldClean )
-    {
-        Uninstall-WhiskeyTool -NuGetPackageName $nunitSupportPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
-        Uninstall-WhiskeyTool -NuGetPackageName $nunitPackage -BuildRoot $TaskContext.BuildRoot -Version $nunitVersion
-        Uninstall-WhiskeyTool -NuGetPackageName 'OpenCover' -BuildRoot $TaskContext.BuildRoot @openCoverVersionParam
-        Uninstall-WhiskeyTool -NuGetPackageName 'ReportGenerator' -BuildRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
-        return
-    }
-
-    $nunitSupportPath = Install-WhiskeyTool -NuGetPackageName $nunitSupportPackage -Version $nunitVersion -DownloadRoot $TaskContext.BuildRoot
-    if (-not $nunitSupportPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package "{0}" failed to install.' -f $nunitSupportPackage)
-        return
-    }
-
-    $nunitPath = Install-WhiskeyTool -NuGetPackageName $nunitPackage -Version $nunitVersion -DownloadRoot $TaskContext.BuildRoot
-    if (-not $nunitPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Package "{0}" failed to install.' -f $nunitPackage)
-        return
-    }
-
-    $openCoverPath = Install-WhiskeyTool -NuGetPackageName 'OpenCover' -DownloadRoot $TaskContext.BuildRoot @openCoverVersionParam
-    if (-not $openCoverPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package "OpenCover" failed to install.'
-        return
-    }
-
-    $reportGeneratorPath = Install-WhiskeyTool -NuGetPackageName 'ReportGenerator' -DownloadRoot $TaskContext.BuildRoot @reportGeneratorVersionParam
-    if (-not $reportGeneratorPath)
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Package "ReportGenerator" failed to install.'
-        return
-    }
-
     if( $TaskContext.ShouldInitialize )
     {
         return
     }
 
     $openCoverArgument = @()
-    if ($TaskParameter['OpenCoverArgument'])
+    if( $TaskParameter['OpenCoverArgument'] )
     {
         $openCoverArgument = $TaskParameter['OpenCoverArgument']
     }
 
     $reportGeneratorArgument = @()
-    if ($TaskParameter['ReportGeneratorArgument'])
+    if( $TaskParameter['ReportGeneratorArgument'] )
     {
         $reportGeneratorArgument = $TaskParameter['ReportGeneratorArgument']
     }
 
     $framework = '4.0'
-    if ($TaskParameter['Framework'])
+    if( $TaskParameter['Framework'] )
     {
         $framework = $TaskParameter['Framework']
     }
@@ -121,7 +78,7 @@ function Invoke-WhiskeyNUnit3Task
 
     $testFilter = ''
     $testFilterParam = ''
-    if ($TaskParameter['TestFilter'])
+    if( $TaskParameter['TestFilter'] )
     {
         $testFilter = $TaskParameter['TestFilter'] | ForEach-Object { '({0})' -f $_ }
         $testFilter = $testFilter -join ' or '
@@ -129,7 +86,7 @@ function Invoke-WhiskeyNUnit3Task
     }
 
     $nunitExtraArgument = ''
-    if ($TaskParameter['Argument'])
+    if( $TaskParameter['Argument'] )
     {
         $nunitExtraArgument = $TaskParameter['Argument']
     }
@@ -137,7 +94,7 @@ function Invoke-WhiskeyNUnit3Task
     $disableCodeCoverage = $TaskParameter['DisableCodeCoverage'] | ConvertFrom-WhiskeyYamlScalar
 
     $coverageFilter = ''
-    if ($TaskParameter['CoverageFilter'])
+    if( $TaskParameter['CoverageFilter'] )
     {
         $coverageFilter = $TaskParameter['CoverageFilter'] -join ' '
     }
@@ -219,7 +176,7 @@ function Invoke-WhiskeyNUnit3Task
     $openCoverExitCode = 0
     $openCoverExitCodeOffset = 1000
 
-    if (-not $disableCodeCoverage)
+    if( -not $disableCodeCoverage )
     {
         $pathArg = $Path | ForEach-Object { '\"{0}\"' -f $_ }
         $pathArg = $pathArg -join ' '
@@ -264,19 +221,19 @@ function Invoke-WhiskeyNUnit3Task
 
     }
 
-    if ($reportGeneratorExitCode -ne 0)
+    if( $reportGeneratorExitCode -ne 0 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('ReportGenerator didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $reportGeneratorConsolePath,$reportGeneratorExitCode)
         return
     }
-    elseif ($openCoverExitCode -ne 0)
+    elseif( $openCoverExitCode -ne 0 )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('OpenCover didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $openCoverConsolePath, $openCoverExitCode)
         return
     }
-    elseif ($nunitExitCode -ne 0)
+    elseif( $nunitExitCode -ne 0 )
     {
-        if (-not (Test-Path -Path $nunitReport -PathType Leaf))
+        if( -not (Test-Path -Path $nunitReport -PathType Leaf) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NUnit3 didn''t run successfully. ''{0}'' returned exit code ''{1}''.' -f $nunitConsolePath,$nunitExitCode)
             return

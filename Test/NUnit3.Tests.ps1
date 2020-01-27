@@ -48,7 +48,7 @@ function Init
     $script:nunitVersion = $null
     $script:supportNUnit2 = $false
 
-    $script:buildRoot = $TestDrive.FullName
+    $script:buildRoot = New-WhiskeyTestRoot
 
     $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
 
@@ -58,6 +58,19 @@ function Init
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath "Assemblies\NUnit$($_)*Test\bin\*\*") `
             -Destination (Join-Path $buildRoot "NUnit$($_)Tests")
     }
+}
+
+function BuildNunit2PassingTest
+{
+    $nunit2PassingAssembly = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2PassingTest\bin\Debug\NUnit2PassingTest.dll'
+    if( Test-Path -Path $nunit2PassingAssembly )
+    {
+       return    
+    }
+
+    $nunit2YmlPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit2.yml' -Resolve
+    $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath $nunit2YmlPath
+    Invoke-WhiskeyBuild -Context $taskContext
 }
 
 function Get-GeneratedNUnitReport {
@@ -219,7 +232,9 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [switch]$InCleanMode
+        [switch]$InCleanMode,
+
+        [switch]$WithoutMock
     )
 
     $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
@@ -296,15 +311,16 @@ function WhenRunningTask
         $taskContext.RunMode = 'Initialize'
     }
 
-    Mock -CommandName 'Install-WhiskeyTool' -Module 'Whiskey' -MockWith {
-        return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.*' -f $NuGetPackageName)) |
-                    Get-Item -ErrorAction Ignore |
-                    Select-Object -First 1 |
-                    Select-Object -ExpandProperty 'FullName'
+    if (-not $WithoutMock)
+    {
+        Mock -CommandName 'Install-WhiskeyNuGetPackage' -Module 'Whiskey' -MockWith {
+            return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.*' -f $Name)) |
+                   Get-Item -ErrorAction Ignore |
+                   Select-Object -First 1 |
+                   Select-Object -ExpandProperty 'FullName'
+        }
+        Mock -CommandName 'Uninstall-WhiskeyNuGetPackage' -ModuleName 'Whiskey'
     }
-
-    Mock -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey'
-
     Copy-Item -Path $packagesRoot -Destination $buildRoot -Recurse -ErrorAction Ignore
 
     try
@@ -325,16 +341,15 @@ function ThenPackageInstalled
         $Version
     )
 
-    Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
-        # $DebugPreference = 'Continue'
-        Write-WhiskeyDebug -Message ('NuGetPackageName  expected  {0}' -f $PackageName)
-        Write-WhiskeyDebug -Message ('                  actual    {0}' -f $NuGetPackageName)
-        $NuGetPackageName -eq $PackageName
+    Assert-MockCalled -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter {
+        Write-Debug -Message ('NuGetPackageName  expected  {0}' -f $PackageName)
+        Write-Debug -Message ('                  actual    {0}' -f $Name)
+        $Name -eq $PackageName
     }
     if( $Version )
     {
         $expectedVersion = $Version
-        Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $expectedVersion }
+        Assert-MockCalled -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $expectedVersion }
     }
 }
 
@@ -344,7 +359,7 @@ function ThenPackageNotInstalled
         $PackageName
     )
 
-    Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $PackageName } -Times 0
+    Assert-MockCalled -CommandName 'Install-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $PackageName } -Times 0
 }
 
 function ThenPackageUninstalled
@@ -354,9 +369,7 @@ function ThenPackageUninstalled
         $Version
     )
 
-    Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $PackageName }
-    $expectedVersion = $Version
-    Assert-MockCalled -CommandName 'Uninstall-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $expectedVersion }
+    Assert-MockCalled -CommandName 'Uninstall-WhiskeyNuGetPackage' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $PackageName }
 }
 
 function ThenRanNUnitWithNoHeaderArgument
@@ -420,7 +433,7 @@ function ThenNUnitReportGenerated
 
     $nunitReport | Should -Not -BeNullOrEmpty -Because 'test results should be saved'
     $nunitReport | Select-Object -ExpandProperty 'Name' | Should -Match "^$($ResultFormat)\+.{8}\..{3}\.xml"
-    if ($ResultFormat -eq 'nunit3') 
+    if( $ResultFormat -eq 'nunit3' ) 
     {
         Get-NunitXmlElement -ReportFile $nunitReport -Element 'test-run' | Should -Not -BeNullOrEmpty
     }
@@ -521,10 +534,10 @@ Describe 'NUnit3.when running in Initialize mode' {
         GivenReportGeneratorVersion
         GivenInitialize
         WhenRunningTask
-        ThenPackageInstalled 'NUnit.Console' $latestNUnit3Version
-        ThenPackageInstalled 'NUnit.ConsoleRunner' $latestNUnit3Version
-        ThenPackageInstalled 'OpenCover' $openCoverVersion
-        ThenPackageInstalled 'ReportGenerator' $reportGeneratorVersion
+        ThenPackageInstalled 'NUnit.Console' -Version $latestNUnit3Version
+        ThenPackageInstalled 'NUnit.ConsoleRunner' -Version $latestNUnit3Version
+        ThenPackageInstalled 'OpenCover' -Version $openCoverVersion
+        ThenPackageInstalled 'ReportGenerator' -Version $reportGeneratorVersion
         ThenNUnitShouldNotRun
         ThenCodeCoverageReportNotCreated
         ThenTaskSucceeded
@@ -548,22 +561,25 @@ Describe 'NUnit3.when given bad Path' {
     }
 }
 
-Describe 'NUnit3.when module fails to install' {
-    foreach ($package in @('NUnit.Console', 'NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator'))
+Describe 'NUnit3.when NuGet package fails to install' {
+    foreach( $package in @('NUnit.Console', 'NUnit.ConsoleRunner', 'OpenCover', 'ReportGenerator') )
     {
         Context ('for missing "{0}" module' -f $package) {
             It 'should fail' {
                 Init
-                Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $NuGetPackageName -eq $package }
-                WhenRunningTask -ErrorAction SilentlyContinue
-                ThenTaskFailedWithMessage ('"{0}" failed to install.' -f $package)
+                Mock -CommandName 'Install-WhiskeyNugetPackage' -ModuleName 'Whiskey' -MockWith {
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('NuGet.exe failed to install "{0}" with exit code "{1}"' -f $Name, $LASTEXITCODE)
+                    return
+                } -ParameterFilter { $Name -eq $package }
+                WhenRunningTask -ErrorAction SilentlyContinue -WithoutMock
+                ThenTaskFailedWithMessage 'failed\ to\ install'
             }
         }
     }
 }
 
 Describe 'NUnit3.when module executables cannot be found' {
-    foreach ($executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe'))
+    foreach( $executable in @('nunit3-console.exe', 'OpenCover.Console.exe', 'ReportGenerator.exe') )
     {
         Context ('for missing "{0}" executable' -f $executable) {
             It 'should fail' {
@@ -624,6 +640,7 @@ Describe 'NUnit3.when running NUnit tests with specific framework' {
 }
 
 Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
+    BeforeEach { BuildNunit2PassingTest }
     It 'should generate nunit3 output' {
         Init
         GivenPath (Get-PassingNUnit2TestPath)
@@ -635,6 +652,7 @@ Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
 }
 
 Describe 'NUnit3.when running NUnit2 tests generating NUnit2 output' {
+    BeforeEach { BuildNunit2PassingTest }
     It 'should generate nunit2 output' {
         Init
         GivenPath (Get-PassingNUnit2TestPath)
@@ -751,7 +769,7 @@ Describe 'NUnit3.when using a non-3 version of NUnit' {
         GivenPassingPath
         GivenVersion '2.6.4'
         WhenRunningTask -ErrorAction SilentlyContinue
-        ThenPackageNotInstalled 'NUnit.ConsoleRunner'
+        ThenNUnitShouldNotRun
         ThenTaskFailedWithMessage 'isn''t\ a\ valid\ 3\.x\ version\ of\ NUnit'
     }
 }

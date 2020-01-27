@@ -1,4 +1,3 @@
-
 function Install-WhiskeyTool
 {
     <#
@@ -8,58 +7,43 @@ function Install-WhiskeyTool
     .DESCRIPTION
     The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
-    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
+    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a `Whiskey.RequiresTool` attribute in the tasks function. Supported tools are `Node`, `NodeModule`, `DotNet`, and `NuGet`.
 
-    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
+    Users of the Whiskey API typcially won't need to use this function. It is called by other Whiskey function so they have the tools they need.
 
     .EXAMPLE
-    Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\tooldir\' -TaskParameter $currentTaskProperties
 
-    Demonstrates how to install a specific version of a NuGet Package. In this case, NUnit Runners version 2.6.4 would be installed.
+    Demonstrates how to call funtion normally.
+
+    .EXAMPLE
+    Install-WhiskeyTool -ToolInfo $ToolObject -InstallRoot 'C:\Rootdir\tooldir\' -TaskParameter $currentTaskProperties -InCleanMode
+
+    Demonstrates how to call function in clean mode.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory,ParameterSetName='Tool')]
+        [Parameter(Mandatory)]
         # The attribute that defines what tool is necessary.
         [Whiskey.RequiresToolAttribute]$ToolInfo,
 
-        [Parameter(Mandatory,ParameterSetName='Tool')]
+        [Parameter(Mandatory)]
         # The directory where you want the tools installed.
         [String]$InstallRoot,
 
-        [Parameter(Mandatory,ParameterSetName='Tool')]
+        [Parameter(Mandatory)]
         # The task parameters for the currently running task.
         [hashtable]$TaskParameter,
-
-        [Parameter(ParameterSetName='Tool')]
+        
         # Running in clean mode, so don't install the tool if it isn't installed.
-        [switch]$InCleanMode,
-
-        [Parameter(Mandatory,ParameterSetName='NuGet')]
-        # The name of the NuGet package to download.
-        [String]$NuGetPackageName,
-
-        [Parameter(ParameterSetName='NuGet')]
-        # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [String]$Version,
-
-        [Parameter(Mandatory,ParameterSetName='NuGet')]
-        # The root directory where the tools should be downloaded. The default is your build root.
-        #
-        # PowerShell modules are saved to `$DownloadRoot\Modules`.
-        #
-        # NuGet packages are saved to `$DownloadRoot\packages`.
-        [String]$DownloadRoot
+        [switch]$InCleanMode
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $mutexName = $InstallRoot
-    if( $DownloadRoot )
-    {
-        $mutexName = $DownloadRoot
-    }
+    
     # Back slashes in mutex names are reserved.
     $mutexName = $mutexName -replace '\\','/'
     $mutexName = $mutexName -replace '/','-'
@@ -87,100 +71,79 @@ function Install-WhiskeyTool
         #$DebugPreference = 'SilentlyContinue'
         $startedUsingAt = Get-Date
 
-        if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
+        $provider,$name = $ToolInfo.Name -split '::'
+        if( -not $name )
         {
-            if( -not $IsWindows )
-            {
-                Write-WhiskeyError -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
-                return
-            }
-            $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
-            if( -not $Version )
-            {
-                return
-            }
-
-            $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
-            $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-            Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
-            if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
-            {
-               & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
-            }
-            return $nuGetRoot
+            $name = $provider
+            $provider = '' 
         }
-        elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
+
+        $version = $TaskParameter[$ToolInfo.VersionParameterName]
+        if( -not $version )
         {
-            $provider,$name = $ToolInfo.Name -split '::'
-            if( -not $name )
-            {
-                $name = $provider
-                $provider = ''
-            }
+            $version = $ToolInfo.Version
+        }
 
-            $version = $TaskParameter[$ToolInfo.VersionParameterName]
-            if( -not $version )
+        if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+        {
+            $module = Install-WhiskeyPowerShellModule -Name $name `
+                                                      -Version $version `
+                                                      -BuildRoot $InstallRoot `
+                                                      -SkipImport:$ToolInfo.SkipImport `
+                                                      -ErrorAction Stop
+            if( $ToolInfo.ModuleInfoParameterName )
             {
-                $version = $ToolInfo.Version
+                $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
             }
+            return
+        }
 
-            if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+        $toolPath = $null
+
+        switch( $provider )
+        {
+            'NodeModule'
             {
-                $module = Install-WhiskeyPowerShellModule -Name $name `
-                                                          -Version $version `
-                                                          -BuildRoot $InstallRoot `
-                                                          -SkipImport:$ToolInfo.SkipImport `
-                                                          -ErrorAction Stop
-                if( $ToolInfo.ModuleInfoParameterName )
+                $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
+                if( -not $nodePath )
                 {
-                    $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
+                    Write-WhiskeyError -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
+                    return
                 }
-                return
+                $toolPath = Install-WhiskeyNodeModule -Name $name `
+                                                        -BuildRootPath $InstallRoot `
+                                                        -Version $version `
+                                                        -Global `
+                                                        -InCleanMode:$InCleanMode `
+                                                        -ErrorAction Stop
             }
-
-            $toolPath = $null
-            switch( $provider )
+            'NuGet'
+            {   
+                $toolPath = Install-WhiskeyNuGetPackage -Name $name -Version $version -DownloadRoot $InstallRoot -ErrorAction Stop
+            }
+            default
             {
-                'NodeModule'
+                switch( $name )
                 {
-                    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
-                    if( -not $nodePath )
+                    'Node'
                     {
-                        Write-WhiskeyError -Message ('It looks like Node isn''t installed in your repository. Whiskey usually installs Node for you into a .node directory. If this directory doesn''t exist, this is most likely a task authoring error and the author of your task needs to add a `WhiskeyTool` attribute declaring it has a dependency on Node. If the .node directory exists, the Node package is most likely corrupt. Please delete it and re-run your build.') -ErrorAction stop
-                        return
+                        $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode
                     }
-                    $toolPath = Install-WhiskeyNodeModule -Name $name `
-                                                          -BuildRootPath $InstallRoot `
-                                                          -Version $version `
-                                                          -Global `
-                                                          -InCleanMode:$InCleanMode `
-                                                          -ErrorAction Stop
-                }
-                default
-                {
-                    switch( $name )
+                    'DotNet'
                     {
-                        'Node'
-                        {
-                            $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode
-                        }
-                        'DotNet'
-                        {
-                            $toolPath = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot -WorkingDirectory (Get-Location).ProviderPath -Version $version -ErrorAction Stop
-                        }
-                        default
-                        {
-                            throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
-                        }
+                        $toolPath = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot -WorkingDirectory (Get-Location).ProviderPath -Version $version -ErrorAction Stop
+                    }
+                    default
+                    {
+                        throw ('Unknown tool "{0}". The only supported tools are "Node" and "DotNet".' -f $name)
                     }
                 }
             }
+        }
 
-            if( $ToolInfo.PathParameterName )
-            {
-                $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
-            }
+        if( $ToolInfo.PathParameterName )
+        {
+            $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
         }
     }
     finally

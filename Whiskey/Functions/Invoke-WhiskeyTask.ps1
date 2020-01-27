@@ -1,4 +1,3 @@
-
 function Invoke-WhiskeyTask
 {
     <#
@@ -98,7 +97,7 @@ function Invoke-WhiskeyTask
             $CommandName
         )
 
-        $cmd = Get-Command -Name $CommandName -ErrorAction Ignore
+        $cmd = Get-Command -Name $CommandName -ErrorAction Ignore 
         if( -not $cmd -or -not (Get-Member -InputObject $cmd -Name 'ScriptBlock') )
         {
             return
@@ -107,11 +106,8 @@ function Invoke-WhiskeyTask
         $cmd.ScriptBlock.Attributes |
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
-
     $knownTasks = Get-WhiskeyTask -Force
-
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
-
     if( -not $task )
     {
         $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
