@@ -4,6 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $failed = $false
 
 function GivenFile
@@ -15,7 +16,7 @@ function GivenFile
         [Object]$WithContent
     )
 
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
+    $fullPath = Join-Path -Path $testRoot -ChildPath $Path
     if( $WithContent )
     {
         if( $WithContent -is [String] )
@@ -50,6 +51,7 @@ function Get-RandomByte
 function Init
 {
     $script:failed = $false
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function ThenFailed
@@ -80,7 +82,7 @@ function ThenFile
         [Object]$HasContent
     )
 
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
+    $fullPath = Join-Path -Path $testRoot -ChildPath $Path
     if( $PSCmdlet.ParameterSetName -eq 'Exists' )
     {
         $fullPath | Should -Exist
@@ -128,7 +130,7 @@ function WhenMerging
         [String[]]$Excluding
     )
 
-    $context = New-WhiskeyTestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
 
     $parameters = @{ 'Path' = $Path ; 'DestinationPath' = $Into }
     if( $AndDeletingSourceFiles )
@@ -227,7 +229,7 @@ Describe 'MergeFile.when destination file is outside the build root' {
         Init
         GivenFile 'one.txt' -WithContent 'failed!'
         WhenMerging 'one.txt' -Into '..\somefile.txt' -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'which\ is\ outside\ the\ build\ root' 
+        ThenFailed -WithError 'is\ outside\ the\ build\ root' 
     }
 }
 

@@ -8,7 +8,6 @@ $testRoot = $null
 
 InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
 
-    $progetUri = [Uri]'https://proget.example.com/'
     $configurationPath = $null
     $context = $null
     $path = "bad"
@@ -37,14 +36,10 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
         $Context.PipelineName | Should -Be ''
         $Context.TaskDefaults | Should -BeOfType ([Collections.IDictionary])
 
-        $expectedVersion = '{0:yyyy.Mdd}.{1}' -f (Get-Date),$Context.BuildMetadata.BuildNumber
+        $expectedVersion = '0.0.0'
         ThenVersionIs $expectedVersion
         ThenSemVer2NoBuildMetadataIs $expectedVersion
         ThenSemVer1Is $expectedVersion
-        if( $ByBuildServer )
-        {
-            $expectedVersion = '{0}+{1}.{2}.{3}' -f $expectedVersion,$Context.BuildMetadata.BuildNumber,($Context.BuildMetadata.ScmBranch -replace '[^A-Za-z0-9-]','-'),$Context.BuildMetadata.ScmCommitID.Substring(0,7)
-        }
         ThenSemVer2Is $expectedVersion
         $Context.Configuration | Should -BeOfType ([Collections.IDictionary])
         $Context.Configuration.ContainsKey('SomProperty') | Should -BeTrue
@@ -363,14 +358,16 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
     }
     
     Describe 'New-WhiskeyContext.when version number uses build number' {
-        It 'should create context' {
-            Context 'by developer' {
+        Context 'by developer' {
+            It 'should create context' {
                 Init
                 GivenConfiguration -BuildNumber '0'
                 WhenCreatingContext -Environment 'fubar'
                 ThenDeveloperContextCreated -Environment 'fubar'
             }
-            Context 'by build server' {
+        }
+        Context 'by build server' {
+            It 'should create context' {
                 Init
                 GivenConfiguration -BuildNumber '45' -ForBuildServer
                 WhenCreatingContext -Environment 'fubar'
@@ -562,109 +559,6 @@ InModuleScope -ModuleName 'Whiskey' -ScriptBlock {
             WhenCreatingContext
             ThenShouldCleanIs $false
             ThenShouldInitializeIs $false
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when Version property is used' {
-        It 'should create the context' {
-            Init
-            GivenConfiguration @{ 'Build' = @(@{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }}) ; 'Version' = '1.2.3-rc.1+fubar.snafu' }
-            WhenCreatingContext -RunBy 'BuildServer'
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            ThenSemVer1Is '1.2.3-rc1'
-            ThenSemVer2Is '1.2.3-rc.1+.'
-            ThenSemVer2NoBuildMetadataIs '1.2.3-rc.1'
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when VersionFrom property is used' {
-        It 'should create the context' {
-            Init
-            '@{ ModuleVersion = "1.2.3" }' | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'module.psd1')
-            GivenConfiguration @{ 'VersionFrom' = 'module.psd1' }
-            WhenCreatingContext -RunBy 'BuildServer'
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            ThenSemVer1Is '1.2.3'
-            ThenSemVer2Is '1.2.3+.'
-            ThenSemVer2NoBuildMetadataIs '1.2.3'
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when Version task already exists' {
-        It 'should create the context' {
-            Init
-            GivenConfiguration @{
-                                    Version = '4.5.6';
-                                    Build = @(
-                                                    @{
-                                                        Version = @{
-                                                                        Version = '1.2.3'
-                                                                }
-                                                    }
-                                                )
-                                }
-            WhenCreatingContext
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            ThenSemVer1Is '1.2.3'
-            ThenSemVer2Is '1.2.3'
-            ThenSemVer2NoBuildMetadataIs '1.2.3'
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when PrereleaseMap property exists' {
-        It 'should create the context' {
-            Init
-            GivenConfiguration @{
-                                PrereleaseMap = @(
-                                                    @{ 'develop' = 'beta' },
-                                                    @{ 'feature/*' = 'alpha' }
-                                                );
-                            }
-            WhenCreatingContext -RunBy 'BuildServer'
-            $script:context.BuildMetadata.ScmBranch = 'feature/snafu'
-            $script:context.BuildMetadata.BuildNumber = $buildNumber = '50'
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            $expectedVersion = '{0:yyyy.Mdd}.{1}' -f $script:context.StartedAt,$buildNumber
-            ThenSemVer1Is ('{0}-alpha{1}' -f $expectedVersion,$buildNumber)
-            ThenSemVer2Is ('{0}-alpha.{1}+feature-snafu.' -f $expectedVersion,$buildNumber)
-            ThenSemVer2NoBuildMetadataIs ('{0}-alpha.{1}' -f $expectedVersion,$buildNumber)
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties' {
-        It 'should create the context' {
-            Init
-            GivenConfiguration -BuildNumber 50 `
-                            -Configuration @{ 'Build' = @( @{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }} ) } `
-                            -ForBuildServer
-            WhenCreatingContext
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            $expectedVersion = '{0:yyyy.Mdd}.50' -f $script:context.StartedAt
-            ThenVersionIs $expectedVersion
-            ThenSemVer1Is $expectedVersion
-            ThenSemVer2Is ('{0}+50.develop.deadbee' -f $expectedVersion)
-            ThenSemVer2NoBuildMetadataIs $expectedVersion
-        }
-    }
-    
-    Describe 'New-WhiskeyContext.when there are no Version, VersionFrom or PrereleaseMap properties and being run by a developer' {
-        It 'should create the context' {
-            Init
-            GivenConfiguration -BuildNumber 50 `
-                            -Configuration @{ 'Build' = @( @{ 'SetVariable' = @{ 'Variable' = @{ 'One' = 'Two' } }} ) }
-            WhenCreatingContext
-            # Run a build to ensure the Version task is in the build tasks.
-            Invoke-WhiskeyBuild -Context $script:context
-            $expectedVersion = '{0:yyyy.Mdd}.50' -f $script:context.StartedAt
-            ThenVersionIs $expectedVersion
-            ThenSemVer1Is $expectedVersion
-            ThenSemVer2Is $expectedVersion
-            ThenSemVer2NoBuildMetadataIs $expectedVersion
         }
     }
     

@@ -1,13 +1,17 @@
 function Invoke-WhiskeyNUnit2Task
 {
-    [Whiskey.Task('NUnit2',SupportsClean, SupportsInitialize,Platform='Windows')]
+    [Whiskey.Task('NUnit2',SupportsClean,SupportsInitialize,Platform='Windows')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        # TODO: Once this task uses NuGet tool provider, make this Mandatory and remove the test that Path has a value.
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='File')]
+        [String[]]$Path
     )
 
     Set-StrictMode -version 'latest'
@@ -137,10 +141,9 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
-    # Be sure that the Taskparameter contains a 'Path'.
-    if( -not ($TaskParameter.ContainsKey('Path')))
+    if( -not $Path )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g.
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths, which should be a list of assemblies whose tests to run, e.g.
 
         Build:
         - NUnit2:
@@ -150,7 +153,14 @@ function Invoke-WhiskeyNUnit2Task
         return
     }
 
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+    $missingPaths = $Path | Where-Object { -not (Test-Path -Path $_ -PathType Leaf) }
+    if( $missingPaths )
+    {
+        $missingPaths = $missingPaths -join ('{0}*' -f [Environment]::NewLine)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('The following paths do not exist.{0} {0}*{1}{0} ' -f [Environment]::NewLine,$missingPaths)
+        return
+    }
+
     $reportPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('nunit2+{0}.xml' -f [IO.Path]::GetRandomFileName())
 
     $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
@@ -180,7 +190,7 @@ function Invoke-WhiskeyNUnit2Task
     {
         $coverageFilterString = ($TaskParameter['CoverageFilter'] -join " ")
         $extraArgString = ($extraArgs -join " ")
-        $pathsArg = ($path -join '" "')
+        $pathsArg = ($Path -join '" "')
         $nunitArgs = '"{0}" /noshadow {1} /xml="{2}" {3} {4} {5}' -f $pathsArg,$frameworkParam,$reportPath,$includeParam,$excludeParam,$extraArgString
         $nunitArgs = $nunitArgs -replace '"', '\"'
         Write-WhiskeyDebug -Message ('Running OpenCover')
@@ -199,7 +209,7 @@ function Invoke-WhiskeyNUnit2Task
     else
     {
         Write-WhiskeyDebug -Message ('Running NUnit')
-        & $nunitConsolePath $path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
+        & $nunitConsolePath $Path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
         Write-WhiskeyDebug -Message ('COMPLETE')
         if( $LastExitCode )
         {

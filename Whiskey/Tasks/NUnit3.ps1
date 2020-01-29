@@ -8,7 +8,11 @@ function Invoke-WhiskeyNUnit3Task
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        # TODO: Once this task uses NuGet tool provider, make this Mandatory and remove the test that Path has a value.
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='File')]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -170,9 +174,9 @@ function Invoke-WhiskeyNUnit3Task
         return
     }
 
-    if (-not $TaskParameter['Path'])
+    if( -not $Path )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be one or more paths to the assemblies whose tests should be run, e.g.
 
             Build:
             - NUnit3:
@@ -184,14 +188,15 @@ function Invoke-WhiskeyNUnit3Task
         return
     }
 
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
-    $path | Foreach-Object {
-        if (-not (Test-Path -Path $_ -PathType Leaf))
+    foreach( $pathItem in $Path )
+    {
+        if (-not (Test-Path -Path $pathItem -PathType Leaf))
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''Path'' item ''{0}'' does not exist.' -f $_)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"Path" item "{0}" does not exist.' -f $pathItem)
             return
         }
     }
+
 
     $coverageReportDir = Join-Path -Path $TaskContext.outputDirectory -ChildPath "opencover"
     New-Item -Path $coverageReportDir -ItemType 'Directory' -Force | Out-Null
@@ -216,9 +221,8 @@ function Invoke-WhiskeyNUnit3Task
 
     if (-not $disableCodeCoverage)
     {
-
-        $path = $path | ForEach-Object { '\"{0}\"' -f $_ }
-        $path = $path -join ' '
+        $pathArg = $Path | ForEach-Object { '\"{0}\"' -f $_ }
+        $pathArg = $pathArg -join ' '
 
         $nunitReportParam = '\"{0}\"' -f $nunitReportParam
 
@@ -238,7 +242,7 @@ function Invoke-WhiskeyNUnit3Task
             $nunitExtraArgument = $nunitExtraArgument -join ' '
         }
 
-        $openCoverNunitArguments = '{0} {1} {2} {3} {4}' -f $path,$frameworkParam,$testFilterParam,$nunitReportParam,$nunitExtraArgument
+        $openCoverNunitArguments = '{0} {1} {2} {3} {4}' -f $pathArg,$frameworkParam,$testFilterParam,$nunitReportParam,$nunitExtraArgument
         & $openCoverConsolePath "-target:$nunitConsolePath" "-targetargs:$openCoverNunitArguments" "-filter:$coverageFilter" "-output:$openCoverReport" -register:user -returntargetcode:$openCoverExitCodeOffset $openCoverArgument
 
         if ($LASTEXITCODE -ge 745)
@@ -255,7 +259,7 @@ function Invoke-WhiskeyNUnit3Task
     }
     else
     {
-        & $nunitConsolePath $path $frameworkParam $testFilterParam $nunitReportParam $nunitExtraArgument
+        & $nunitConsolePath $Path $frameworkParam $testFilterParam $nunitReportParam $nunitExtraArgument
         $nunitExitCode = $LASTEXITCODE
 
     }

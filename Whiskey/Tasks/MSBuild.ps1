@@ -5,13 +5,15 @@ function Invoke-WhiskeyMSBuild
     [Whiskey.RequiresPowerShellModule('VSSetup',Version='2.*',VersionParameterName='VSSetupVersion')]
     [CmdletBinding()]
     param(
-        # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         [Whiskey.Context]$TaskContext,
 
-        # The parameters/configuration to use to run the task. Should be a hashtable that contains the following item(s):
-        #
-        # * `Path` (Mandatory): the relative paths to the files/directories to include in the build. Paths should be relative to the whiskey.yml file they were taken from.
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [String[]]$Path,
+
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='Directory',Create)]
+        [String]$OutputDirectory
     )
 
     Set-StrictMode -version 'Latest'
@@ -19,21 +21,6 @@ function Invoke-WhiskeyMSBuild
 
     #setup
     $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']
-
-    # Make sure the Taskpath contains a Path parameter.
-    if( -not ($TaskParameter.ContainsKey('Path')) -or -not $TaskParameter['Path'] )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''Path'' is mandatory. It should be one or more paths, relative to your whiskey.yml file, to build with MSBuild.exe, e.g.
-
-        Build:
-        - MSBuild:
-            Path:
-            - MySolution.sln
-            - MyCsproj.csproj')
-        return
-    }
-
-    $path = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     $msbuildInfos = Get-MSBuild | Sort-Object -Descending 'Version'
     $version = $TaskParameter['Version']
@@ -78,7 +65,7 @@ function Invoke-WhiskeyMSBuild
         }
     }
 
-    foreach( $projectPath in $path )
+    foreach( $projectPath in $Path )
     {
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $projectPath)
         $errors = $null
@@ -86,7 +73,7 @@ function Invoke-WhiskeyMSBuild
         {
             if( $TaskContext.ShouldClean )
             {
-                $packageDirectoryPath = Join-Path -path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
+                $packageDirectoryPath = Join-Path -Path ( Split-Path -Path $projectPath -Parent ) -ChildPath 'packages'
                 if( Test-Path -Path $packageDirectoryPath -PathType Container )
                 {
                     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Removing NuGet packages at {0}.' -f $packageDirectoryPath)
@@ -128,18 +115,20 @@ function Invoke-WhiskeyMSBuild
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
 
         $property = Invoke-Command {
-                                        ('Configuration={0}' -f $configuration)
+            Write-Output ('Configuration={0}' -f $configuration)
 
-                                        if( $TaskParameter.ContainsKey('Property') )
-                                        {
-                                            $TaskParameter['Property']
-                                        }
+            if( $TaskParameter.ContainsKey('Property') )
+            {
+                Write-Output ($TaskParameter['Property'])
+            }
 
-                                        if( $TaskParameter.ContainsKey('OutputDirectory') )
-                                        {
-                                            ('OutDir={0}' -f ($TaskParameter['OutputDirectory'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'OutputDirectory' -Force))
-                                        }
-                                  }
+            if( $OutputDirectory )
+            {
+                # Get an absolute path. MSBuild interprets relative paths as being relative to .csproj being compiled.
+                $OutputDirectory = Resolve-Path -Path $OutputDirectory | Select-Object -ExpandProperty 'ProviderPath'
+                Write-Output ('OutDir={0}' -f $OutputDirectory)
+            }
+        }
 
         $cpuArg = '/maxcpucount'
         $cpuCount = $TaskParameter['CpuCount'] | ConvertFrom-WhiskeyYamlScalar

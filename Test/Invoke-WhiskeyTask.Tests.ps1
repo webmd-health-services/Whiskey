@@ -816,12 +816,12 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and clean
     }
 }
 
-Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is invalid' {
+Describe 'Invoke-WhiskeyTask.when WorkingDirectory doesn''t exist' {
     It 'should fail' {
         Init
         GivenRunByDeveloper
         WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
-        ThenThrewException 'WorkingDirectory.+does not exist.'
+        ThenThrewException '\bInvalid(\\|/)Directory\b.+does not exist'
         ThenTaskNotRun 'NoOpTask'
     }
 }
