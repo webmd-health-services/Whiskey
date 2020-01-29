@@ -35,6 +35,19 @@ function Get-TaskParameter
 
         $value = $TaskProperty[$propertyName]
 
+        if( -not $value )
+        {
+            foreach( $aliasName in $cmdParameter.Aliases )
+            {
+                $value = $TaskProperty[$aliasName]
+                if( $value )
+                {
+                    Write-WhiskeyWarning -Context $Context -Message ('Property "{0}" is deprecated. Rename to "{1}" instead.' -f $aliasName,$propertyName)
+                    break
+                }
+            }
+        }
+
         # PowerShell can't implicitly convert strings to bool/switch values so we have to do it.
         if( $cmdParameter.ParameterType -eq [switch] -or $cmdParameter.ParameterType -eq [bool] )
         {

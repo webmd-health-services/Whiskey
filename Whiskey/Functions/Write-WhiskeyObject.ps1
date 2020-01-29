@@ -52,6 +52,58 @@ function Write-WhiskeyObject
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
         
         $objects = [Collections.ArrayList]::new()
+
+        function ConvertTo-String
+        {
+            param(
+                [Parameter(Mandatory,ValueFromPipeline)]
+                [AllowNull()]
+                [AllowEmptyString()]
+                [AllowEmptyCollection()]
+                [Object]$InputObject
+            )
+ 
+            process
+            {
+                if( $null -eq $InputObject )
+                {
+                    return '$null'
+                }
+
+                if( ($InputObject | Measure-Object).Count -gt 1 )
+                {
+                    $output = New-Object 'Text.StringBuilder' '@( '
+                    $values = $InputObject | ConvertTo-String
+                    $values = $values -join ', '
+                    [void]$output.Append($values)
+                    [void]$output.Append(' )')
+                    return $output.ToString()
+                }
+
+                if( $InputObject | Get-Member 'Keys' )
+                {
+                    $output = New-Object 'Text.StringBuilder' '@{ '
+                    $values = & {
+                        foreach( $key in $InputObject.Keys )
+                        {
+                            $value = ConvertTo-String -InputObject $InputObject[$key]
+                            $key = $key | ConvertTo-String
+                            Write-Output ('{0} = {1}' -f $key,$value)
+                        }
+                    }
+                    [void]$output.Append(($values -join '; '))
+                    [void]$output.Append(' }')
+                    return $output.ToString()
+                }
+
+                if( $InputObject -is [String] -and $InputObject -ne '$null' )
+                {
+                    return ("'{0}'" -f ($InputObject -replace "'","''"))
+                }
+
+                return $InputObject.ToString()
+            }
+        }
     }
 
     process
@@ -71,9 +123,11 @@ function Write-WhiskeyObject
                     foreach( $key in ($object.Keys | Sort-Object) )
                     {
                         $value = $object[$key]
-                        $firstValue = $value | Select-Object -First 1
+                        $firstValue = ConvertTo-String ($value | Select-Object -First 1)
                         Write-Output ($formatString -f $key,$firstValue)
-                        $value | Select-Object -Skip 1 | ForEach-Object { $formatString -f ' ',$_ }
+                        $value | 
+                            Select-Object -Skip 1 | 
+                            ForEach-Object { $formatString -f ' ',(ConvertTo-String $_) }
                     }
                 }
                 else 
