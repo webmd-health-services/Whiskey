@@ -108,7 +108,7 @@ function Write-WhiskeyObject
 
     process
     {
-        $objects.Add($InputObject)
+        [void]$objects.Add($InputObject)
     }
 
     end
