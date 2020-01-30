@@ -8,8 +8,8 @@ function Invoke-WhiskeyPester4Task
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Whiskey.Tasks.ValidatePath(Mandatory)]
-        [String[]]$Path,
+        [Alias('Path')]
+        [object]$Script,
 
         [String[]]$Exclude,
 
@@ -30,33 +30,85 @@ function Invoke-WhiskeyPester4Task
     if( $Exclude )
     {
         $Exclude = $Exclude | Convert-WhiskeyPathDirectorySeparator 
-        $path = $path |
-                    Where-Object {
-                        foreach( $exclusion in $Exclude )
-                        {
-                            if( $_ -like $exclusion )
-                            {
-                                Write-WhiskeyVerbose -Context $TaskContext -Message ('EXCLUDE  {0} -like    {1}' -f $_,$exclusion)
-                                return $false
-                            }
-                            else
-                            {
-                                Write-WhiskeyVerbose -Context $TaskContext -Message ('         {0} -notlike {1}' -f $_,$exclusion)
-                            }
-                        }
-                        return $true
-                    }
-        if( -not $path )
+    }
+
+    if( -not $Script )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Script' -Message ('Script is mandatory.')
+        return
+    }
+
+    $Script = & {
+        foreach( $scriptItem in $Script )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run. Property "Exclude" matched all paths in the "Path" property. Please update your exclusion rules to include at least one test. View verbose output to see what exclusion filters excluded what test files.')
-            return
+            $path = $null
+
+            if( $scriptItem -is [String] )
+            {
+                $path = $scriptItem
+            }
+            elseif( $scriptItem | Get-Member -Name 'Keys' )
+            {
+                $path = $scriptItem['Path']
+                $numPaths = ($path | Measure-Object).Count
+                if( $numPaths -gt 1 )
+                {
+                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Script' -Message ('when passing a hashtable to Pester''s "Script" parameter, the "Path" value must be a single string. We got {0} strings: {1}' -f $numPaths,($path -join ', '))
+                    continue
+                }
+            }
+
+            $path = Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Script' -Path $path -Mandatory
+
+            foreach( $pathItem in $path )
+            {
+                if( $Exclude )
+                {
+                    $excluded = $false
+                    foreach( $exclusion in $Exclude )
+                    {
+                        if( $pathItem -like $exclusion )
+                        {
+                            Write-WhiskeyVerbose -Context $TaskContext -Message ('EXCLUDE  {0} -like    {1}' -f $pathItem,$exclusion)
+                            $excluded = $true
+                        }
+                        else
+                        {
+                            Write-WhiskeyVerbose -Context $TaskContext -Message ('         {0} -notlike {1}' -f $pathItem,$exclusion)
+                        }
+                    }
+
+                    if( $excluded )
+                    {
+                        continue
+                    }
+                }
+
+                if( $scriptItem -is [String] )
+                {
+                    Write-Output $pathItem
+                    continue
+                }
+
+                if( $scriptItem | Get-Member -Name 'Keys' )
+                {
+                    $newScriptItem = $scriptItem.Clone()
+                    $newScriptItem['Path'] = $pathItem
+                    Write-Output $newScriptItem
+                }
+            }
         }
     }
 
+    if( -not $Script )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run.')
+        return
+    }
 
     $pesterManifestPath = $PesterModuleInfo.Path
 
-    $Argument['Script'] = $Path
+    $Argument['Script'] = $Script
     $Argument['PassThru'] = $true
 
     if( $Argument.ContainsKey('OutputFile') )

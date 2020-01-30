@@ -538,3 +538,18 @@ function ValidateSinglePathWithGlobTask
 
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
+
+function TaskWithParameterAliases
+{
+    [Whiskey.Task('TaskWithParameterAliases')]
+    [CmdletBinding()]
+    param(
+        [Alias('OldOne')]
+        [String]$One,
+
+        [Alias('OldTwo','ReallyOldTwo')]
+        [String]$Two
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}
