@@ -59,6 +59,27 @@ function Publish-WhiskeyPowerShellModule
         return
     }
 
+    $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore
+    if( $TaskContext.Version.SemVer2.Prerelease -and `
+        (-not ($manifest.PrivateData) -or `
+        -not ($manifest.PrivateData | Get-Member 'Keys') -or `
+        -not $manifest.PrivateData.ContainsKey('PSData') -or `
+        -not ($manifest.PrivateData['PSData'] | Get-Member 'Keys') -or `
+        -not $manifest.PrivateData['PSData'].ContainsKey('Prerelease')) )
+    {
+        Stop-WhiskeyTask -TaskContext $Context -Message ("Module manifest ""$($manifestPath)"" is missing a ""Prerelease"" property. Please make sure the manifest's PrivateData hashtable contains a PSData key with a Prerelease property, e.g.
+        
+    @{
+        PrivateData = @{
+            PSData = @{
+                Prerelease = '';
+            }
+        }
+    }
+        ")
+        return
+    }
+
     $manifest = Get-Content $manifestPath
     $versionString = 'ModuleVersion = ''{0}.{1}.{2}''' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
     $manifest = $manifest -replace 'ModuleVersion\s*=\s*(''|")[^''"]*(''|")', $versionString

@@ -179,6 +179,7 @@
 * Added support to the `Pester4` task for passing arbitrary parameters to Invoke-Pester. Pass the parameters as named properties via the new `Argument` property.
 * Created `Write-WhiskeyObject` function for writing objects in sensible ways. Currently, only hashtables/dictionaries are supported. Keys/values are printed so they align and are recognizable. Other objects are passed to PowerShell's `Out-String` for formatting.
 * Created `Convert-WhiskeyPathDirectorySeparator` for converting the directory separators in a path to the separator for the current platform.
+* The `PublishPowerShellModule` task will now fail if your current build has prerelease metadata but the manifest of the module being published is missing a Prerelease property.
 '@
         } # End of PSData hashtable
 
