@@ -28,33 +28,6 @@ function GivenItDurationReportCount
     $taskParameter['ItDurationReportCount'] = $Count
 }
 
-function Init
-{
-    $script:taskParameter = @{}
-    $script:version = $null
-    $script:failed = $false
-    $script:taskParameter = @{}
-    $Global:Error.Clear()
-
-    $script:testRoot = New-WhiskeyTestRoot
-
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
-                                             -ForDeveloper `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'Pester'
-
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
-    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
-        Where-Object { $_.Name -notlike '4.*' } |
-        Remove-Item -Recurse -Force
-
-}
-
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
-
 function GivenExclude
 {
     param(
@@ -102,39 +75,30 @@ function GivenTestFile
     }
 }
 
-function WhenPesterTaskIsInvoked
+function Init
 {
-    [CmdletBinding()]
-    param(
-        [switch]$WithClean,
-
-        [switch]$NoJob,
-
-        [hashtable]$WithArgument = @{ }
-    )
-
-    $failed = $false
+    $script:taskParameter = @{}
+    $script:version = $null
+    $script:failed = $false
+    $script:taskParameter = @{}
     $Global:Error.Clear()
 
-    Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+    $script:testRoot = New-WhiskeyTestRoot
 
-    if( $NoJob )
-    {
-        $taskParameter['NoJob'] = 'true'
-    }
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester4' `
+                                             -ForDeveloper `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'Pester'
 
-    $WithArgument['Show'] = 'None'
-    $taskParameter['Argument'] = $WithArgument
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+        Where-Object { $_.Name -notlike '4.*' } |
+        Remove-Item -Recurse -Force
+}
 
-    try
-    {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester4'
-    }
-    catch
-    {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_
-    }
+function Reset
+{
+    Reset-WhiskeyTestPSModule
 }
 
 function Get-OutputReportRowCount
@@ -284,6 +248,51 @@ function ThenTestShouldCreateMultipleReportFiles
         Should -Be 2
 }
 
+function WhenPesterTaskIsInvoked
+{
+    [CmdletBinding()]
+    param(
+        [switch]$WithClean,
+
+        [switch]$NoJob,
+
+        [hashtable]$WithArgument = @{ }
+    )
+
+    $failed = $false
+    $Global:Error.Clear()
+
+    Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+
+    if( $NoJob )
+    {
+        $taskParameter['NoJob'] = 'true'
+    }
+
+    $WithArgument['Show'] = 'None'
+    $taskParameter['Argument'] = $WithArgument
+
+    if( $WithArgument.ContainsKey('Script') )
+    {
+        $taskParameter['Script'] = $WithArgument['Script']
+        $WithArgument.Remove('Script')
+        if( $taskParameter.ContainsKey('Path') )
+        {
+            $taskParameter.Remove('Path')
+        }
+    }
+
+    try
+    {
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester4'
+    }
+    catch
+    {
+        $script:failed = $true
+        Write-Error -ErrorRecord $_
+    }
+}
+
 Describe 'Pester4.when running passing Pester tests' {
     AfterEach { Reset }
     It 'should run the tests' {
@@ -371,7 +380,7 @@ Describe 'Pester4.when missing path' {
         Init
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'Property "Path": Path is mandatory.'
+        ThenTestShouldFail -failureMessage 'Property "Script": Script is mandatory.'
     }
 }
 
@@ -452,7 +461,7 @@ Describe 'FailingTests' {
         GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenNoPesterTestFileShouldExist
-        ThenTestShouldFail ([regex]::Escape('Found no tests to run. Property "Exclude" matched all paths in the "Path" property.'))
+        ThenTestShouldFail ([regex]::Escape('Found no tests to run.'))
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
     }
 }
@@ -520,11 +529,71 @@ Describe 'FailingTests' {
             'OutputFile' = '.output\pester.xml';
             'OutputFormat' = 'JUnitXml';
             # Make sure these do *not* get overwritten.
-            'Script' = 'filethatdoesnotexist.ps1'
             'PassThru' = $false;
             # Make sure this gets passed.
             'TestName' = 'PassingTests'
         }
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1 -AsJUnitXml -ResultFileName 'pester.xml'
+    }
+}
+
+Describe 'Pester4.when passing named arguments to script' {
+    AfterEach { Reset }
+    It 'should pass arguments' {
+        Init
+        $oneValue = [Guid]::NewGuid()
+        $twoValue = [Guid]::NewGuid()
+        $threeValue = [Guid]::NewGuid()
+        $fourValue = [Guid]::NewGuid()
+        $testContent = @"
+param(
+    [Parameter(Mandatory,Position=0)]
+    [String]`$One,
+
+    [Parameter(Mandatory,Position=1)]
+    [String]`$Two,
+
+    [Parameter(Mandatory)]
+    [String]`$Three,
+
+    [Parameter(Mandatory)]
+    [String]`$Four
+)
+
+Describe 'ArgTest' {
+    It 'should pass them' {
+        `$One | Should -Be '$($oneValue)'
+        `$Two | Should -Be '$($twoValue)'
+        `$Three | Should -Be '$($threeValue)'
+        `$Four | Should -Be '$($fourValue)'
+    }
+}
+"@
+        GivenTestFile 'ArgTest.ps1' $testContent
+        GivenTestFile 'Arg2Test.ps1' $testContent
+        WhenPesterTaskIsInvoked -WithArgument @{
+            'Script' = @{
+                'Path' = 'Arg*.ps1';
+                'Parameters' = @{
+                    'Three' = $threeValue;
+                    'Four' = $fourValue;
+                };
+                'Arguments' = @( $oneValue, $twoValue )
+            }
+        }
+        ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
+    }
+}
+
+Describe 'Pester4.when passing hashtable to script property with multiple paths' {
+    AfterEach { Reset }
+    It 'should pass arguments' {
+        Init
+        WhenPesterTaskIsInvoked -WithArgument @{
+            'Script' = @{
+                'Path' = ('Path1.ps1','Path2.ps1')
+            }
+        } -ErrorAction SilentlyContinue
+        ThenTestShouldFail '"Path" value must be a single string'
     }
 }

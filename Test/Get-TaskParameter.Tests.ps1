@@ -296,3 +296,15 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
         }
     }
 }
+
+Describe 'Get-TaskParameter.when using property alias' {
+    It 'should write a warning and pass the value' {
+        Init
+        $one = [Guid]::NewGuid()
+        $two = [Guid]::NewGuid()
+        WhenRunningTask 'TaskWithParameterAliases' -Parameter @{ 'OldOne' = $one ; 'ReallyOldTwo' = $two } -WarningVariable 'warnings'
+        ThenTaskCalled -WithParameter @{ 'One' = $one ; 'Two' = $two ; }
+        $warnings | Should -HaveCount 2
+        $warnings | Should -Match 'Property "(OldOne|ReallyOldTwo)" is deprecated.'
+    }
+}

@@ -74,7 +74,6 @@ function Install-WhiskeyPowerShellModule
         'Name' = $Name;
         'BuildRoot' = $BuildRoot;
         'AllowPrerelease' = $AllowPrerelease;
-        'Path' = $Path;
     }
     $module = $null
     if( -not $Version )
