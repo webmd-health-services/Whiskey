@@ -41,8 +41,8 @@ function Get-MSBuild
 
     }
 
-    $toolsVersionRegPath = 'hklm:\software\Microsoft\MSBuild\ToolsVersions'
-    $toolsVersionRegPath32 = 'hklm:\software\Wow6432Node\Microsoft\MSBuild\ToolsVersions'
+    $toolsVersionRegPath = 'HKLM:\SOFTWARE\Microsoft\MSBuild\ToolsVersions'
+    $toolsVersionRegPath32 = 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions'
     $tools32Exists = Test-Path -Path $toolsVersionRegPath32 -PathType Container
 
     foreach( $key in (Get-ChildItem -Path $toolsVersionRegPath) )

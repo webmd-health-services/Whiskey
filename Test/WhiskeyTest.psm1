@@ -92,7 +92,7 @@ function Import-WhiskeyTestModule
     param(
         [Parameter(Mandatory)]
         [String[]]$Name,
-        
+
         [switch]$Force
     )
 
@@ -129,7 +129,7 @@ function Initialize-WhiskeyTestPSModule
     )
 
     $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $TestPSModulesDirectoryName
-    Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot) 
+    Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot)
     if( -not (Test-Path -Path $destinationRoot -PathType Container) )
     {
         New-Item -Path $destinationRoot -ItemType 'Directory' | Out-Null
@@ -141,14 +141,14 @@ function Initialize-WhiskeyTestPSModule
         'PowerShellGet'
         $Name
     }
-    
+
     foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve) -Directory))
     {
         if( $module.Name -notin $Name )
         {
             continue
         }
-        
+
         if( (Test-Path -Path (Join-Path -Path $destinationRoot -ChildPath $module.Name) ) )
         {
             continue
@@ -157,8 +157,8 @@ function Initialize-WhiskeyTestPSModule
         Write-WhiskeyDebug -Message ('{0} -> {1}' -f $module.FullName,$destinationRoot)
         Copy-Item -Path $module.FullName -Destination $destinationRoot -Recurse
     }
-    
-    Write-WhiskeyDebug -Message '                 END' 
+
+    Write-WhiskeyDebug -Message '                 END'
 }
 
 function Install-Node
@@ -230,8 +230,8 @@ function Invoke-WhiskeyPrivateCommand
 
     try
     {
-        InModuleScope 'Whiskey' { 
-            & $WTName @WTParameter 
+        InModuleScope 'Whiskey' {
+            & $WTName @WTParameter
         }
     }
     finally
@@ -251,7 +251,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-// General Information about an assembly is controlled through the following 
+// General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("NUnit2FailingTest")]
@@ -263,8 +263,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-// Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  If you need to access a type in this assembly from 
+// Setting ComVisible to false makes the types in this assembly not visible
+// to COM components.  If you need to access a type in this assembly from
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
@@ -274,16 +274,16 @@ using System.Runtime.InteropServices;
 // Version information for an assembly consists of the following four values:
 //
 //      Major Version
-//      Minor Version 
+//      Minor Version
 //      Build Number
 //      Revision
 //
-// You can specify all the values or you can default the Build and Revision Numbers 
+// You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 [assembly: AssemblyVersion("1.0.0")]
 [assembly: AssemblyFileVersion("1.0.0")]
 [assembly: AssemblyInformationalVersion("1.0.0")]
-'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs') 
+'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs')
 }
 
 function New-MSBuildProject
@@ -479,11 +479,11 @@ function New-WhiskeyTestContext
 
 function New-WhiskeyTestRoot
 {
-    # Eventually, I hope Invoke-Pester supports running individual `It` blocks (as of this writing, you can only run 
+    # Eventually, I hope Invoke-Pester supports running individual `It` blocks (as of this writing, you can only run
     # individual `Describe` blocks, which is why we use a single-It-per-Describe pattern). Unfortunately, Pester's test
-    # drive is setup and torn down at the Describe block, which means all our tests were written with the expectation 
+    # drive is setup and torn down at the Describe block, which means all our tests were written with the expectation
     # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
-    # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5, 
+    # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5,
     # which will allow running specific `It` blocks.
     $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
@@ -520,7 +520,7 @@ function Remove-DotNet
 
     Get-Process -Name 'dotnet' -ErrorAction Ignore |
         Where-Object { $_.Path -like ('{0}\*' -f $BuildRoot) } |
-        ForEach-Object { 
+        ForEach-Object {
             Write-WhiskeyDebug ('Killing process "{0}" (Id: {1}; Path: {2})' -f $_.Name,$_.Id,$_.Path)
             Stop-Process -Id $_.Id -Force }
 
@@ -537,6 +537,24 @@ function Reset-WhiskeyTestPSModule
         Remove-Module -Force
 }
 
+function ThenErrorRecord
+{
+    param(
+        [switch]$Empty,
+        [String]$Matches
+    )
+
+    if( $Empty )
+    {
+        $Global:Error | Should -BeNullOrEmpty -Because 'the global error record should be empty'
+    }
+
+    if( $Matches )
+    {
+        $Global:Error | Should -Match $Matches -Because 'it should write the expected error message'
+    }
+}
+
 function ThenModuleInstalled
 {
     param(
@@ -547,7 +565,7 @@ function ThenModuleInstalled
         [String]$AtVersion
     )
 
-    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) | 
+    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist
 }
 
@@ -562,7 +580,7 @@ function Use-CallerPreference
 
         [Parameter(Mandatory = $true)]
         [Management.Automation.SessionState]
-        # The module function's `$ExecutionContext.SessionState` object.  Requires the function be decorated with the `[CmdletBinding()]` attribute. 
+        # The module function's `$ExecutionContext.SessionState` object.  Requires the function be decorated with the `[CmdletBinding()]` attribute.
         #
         # Used to set variables in its callers' scope, even if that caller is in a different script module.
         $SessionState
@@ -621,7 +639,7 @@ function Write-CaughtError
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $doNotWritePrefs = @(
-        [Management.Automation.ActionPreference]::Ignore, 
+        [Management.Automation.ActionPreference]::Ignore,
         [Management.Automation.ActionPreference]::SilentlyContinue
     )
 
