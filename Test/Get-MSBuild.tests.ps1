@@ -59,29 +59,46 @@ function GivenVersionInRegistry
     param(
         [String]$Version,
         [String]$WithPath,
-        [switch]$Bit32,
+        [String]$WithPath32,
         [switch]$KeyOnly
     )
 
-    $key = Join-Path -Path $toolsVersionsKeyPath -ChildPath $Version
-    if( $Bit32 )
+    $key = ''
+    if ($WithPath)
     {
-        $key = Join-Path -Path $toolsVersionsKeyPath32 -ChildPath $Version
+        $key = Join-Path -Path $toolsVersionsKeyPath -ChildPath $Version
+        New-Item -Path $key | Out-Null
     }
 
-    New-Item -Path $key | Out-Null
+    $key32 = ''
+    if ($WithPath32)
+    {
+        $key32 = Join-Path -Path $toolsVersionsKeyPath32 -ChildPath $Version
+        New-Item -Path $key32 | Out-Null
+    }
 
     if ($KeyOnly)
     {
         return
     }
 
-    New-ItemProperty -Path $key -Name 'MSBuildToolsPath' -Value ($WithPath | Split-Path -Parent) | Out-Null
+    if ($key)
+    {
+        New-ItemProperty -Path $key -Name 'MSBuildToolsPath' -Value ($WithPath | Split-Path -Parent) | Out-Null
+        Mock -CommandName 'Test-Path' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter ([scriptblock]::Create(('$Path -like ''{0}*''' -f $WithPath))) `
+             -MockWith { return $true }
+    }
 
-    Mock -CommandName 'Test-Path' `
-         -ModuleName 'Whiskey' `
-         -ParameterFilter ([scriptblock]::Create(('$Path -like ''{0}*''' -f $WithPath))) `
-         -MockWith { return $true }
+    if ($key32)
+    {
+        New-ItemProperty -Path $key32 -Name 'MSBuildToolsPath' -Value ($WithPath32 | Split-Path -Parent) | Out-Null
+        Mock -CommandName 'Test-Path' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter ([scriptblock]::Create(('$Path -like ''{0}*''' -f $WithPath32))) `
+             -MockWith { return $true }
+    }
 }
 
 function GivenVersionInVisualStudio
@@ -109,17 +126,32 @@ function GivenVersionInVisualStudio
          -ModuleName 'Whiskey' `
          -MockWith { $instances }.GetNewClosure()
 
-    if ($MSBuildPath)
-    {
-        $msbuildPath = Join-Path -Path $VSInstallRoot -ChildPath $MSBuildPath
-        New-Item -Path $MSBuildPath -Force | Out-Null
-    }
+    $MSBuildPath, $MSBuildPath32 |
+        Where-Object { $_ } |
+        ForEach-Object {
+            $fullMsbuildPath = Join-Path -Path $VSInstallRoot -ChildPath $_
+            New-Item -Path $fullMsbuildPath -Force | Out-Null
 
-    if ($MSBuildPath32)
-    {
-        $msbuildPath32 = Join-Path -Path $VSInstallRoot -ChildPath $MSBuildPath32
-        New-Item -Path $msbuildPath32 -Force | Out-Null
-    }
+            $selectObjectfilter =
+                [scriptblock]::Create((@"
+                    if( `$ExpandProperty -ne 'VersionInfo' ) { return `$false }
+                    if( `$InputObject.FullName -ne '$($fullMsbuildPath)' ) { return `$false }
+                    return `$true
+"@))
+
+            Mock -CommandName 'Select-Object' `
+                 -ModuleName 'Whiskey' `
+                 -ParameterFilter $selectObjectfilter `
+                 -MockWith {
+                    $Version = [version]$Version
+                    [pscustomobject]@{
+                        ProductVersion = ('{0}+g9802d43bc3' -f $Version)
+                        ProductMajorPart = $Version.Major
+                        ProductMinorPart = $Version.Minor
+                        ProductBuildPart = $Version.Build
+                    }
+                }.GetNewClosure()
+        }
 }
 
 function WhenGettingMSBuild
@@ -192,13 +224,17 @@ Describe 'Get-MSBuild.when version registry key exists but not the tool path reg
     }
 }
 
-Describe 'Get-MSBuild.when multiple versions found in registry' {
+Describe 'Get-MSBuild.when multiple versions exist in registry' {
     It 'should return all versions found' {
         Init
-        GivenVersionInRegistry '4.0' -WithPath ($msbuild4Path = 'TestDrive:\MSBuild\4.0\amd64\MSBuild.exe')
-        GivenVersionInRegistry '4.0' -Bit32 -WithPath ($msbuild4Path32 = 'TestDrive:\MSBuild\4.0\MSBuild.exe')
-        GivenVersionInRegistry '12.0' -WithPath ($msbuild12Path = 'TestDrive:\MSBuild\12.0\amd64\MSBuild.exe')
-        GivenVersionInRegistry '12.0' -Bit32 -WithPath ($msbuild12Path32 = 'TestDrive:\MSBuild\12.0\MSBuild.exe')
+        GivenVersionInRegistry '4.0' `
+                               -WithPath ($msbuild4Path = 'TestDrive:\MSBuild\4.0\amd64\MSBuild.exe') `
+                               -WithPath32 ($msbuild4Path32 = 'TestDrive:\MSBuild\4.0\MSBuild.exe')
+
+        GivenVersionInRegistry '12.0' `
+                               -WithPath ($msbuild12Path = 'TestDrive:\MSBuild\12.0\amd64\MSBuild.exe') `
+                               -WithPath32 ($msbuild12Path32 = 'TestDrive:\MSBuild\12.0\MSBuild.exe')
+
         GivenVersionInRegistry '14.0' -WithPath ($msbuild14Path = 'TestDrive:\MSBuild\14.0\amd64\MSBuild.exe')
         GivenVersionInRegistry '15.0' -KeyOnly
         WhenGettingMSBuild
@@ -216,7 +252,7 @@ Describe 'Get-MSBuild.when multiple versions found in registry' {
     }
 }
 
-Describe 'Get-MSBuild.when found MSBuild in Visual Studio Install' {
+Describe 'Get-MSBuild.when MSBuild installed with Visual Studio' {
     It 'should return all versions found' {
         Init
         $vs15Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\Professional'
@@ -237,23 +273,38 @@ Describe 'Get-MSBuild.when found versions in all places' {
     It 'should return all versions found' {
         Init
         GivenVersionInRegistry '4.0' -KeyOnly
-        GivenVersionInRegistry '12.0' -WithPath ($msbuild12Path = 'TestDrive:\MSBuild\12.0\amd64\MSBuild.exe')
-        GivenVersionInRegistry '12.0' -Bit32 -WithPath ($msbuild12Path32 = 'TestDrive:\MSBuild\12.0\MSBuild.exe')
+        GivenVersionInRegistry '12.0' `
+                               -WithPath ($msbuild12Path = 'TestDrive:\MSBuild\12.0\amd64\MSBuild.exe') `
+                               -WithPath32 ($msbuild12Path32 = 'TestDrive:\MSBuild\12.0\MSBuild.exe')
+
         GivenVersionInRegistry '14.0' -WithPath ($msbuild14Path = 'TestDrive:\MSBuild\14.0\amd64\MSBuild.exe')
 
         $vs15Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\Professional'
-        GivenVersionInVisualStudio -Version '15.0' `
+        GivenVersionInVisualStudio -Version '15.90' `
                                    -VSInstallRoot $vs15Root `
                                    -MSBuildPath ($vs15Msbuild = 'MSBuild\15.0\Bin\amd64\MSBuild.exe') `
                                    -MSBuildPath32 ($vs15Msbuild32 = 'MSBuild\15.0\Bin\MSBuild.exe')
 
         $vs15BuildToolsRoot = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\BuildTools'
-        GivenVersionInVisualStudio -Version '15.0' `
+        GivenVersionInVisualStudio -Version '15.100' `
                                    -VSInstallRoot $vs15BuildToolsRoot `
                                    -MSBuildPath ($vs15Msbuild = 'MSBuild\15.0\Bin\amd64\MSBuild.exe') `
                                    -MSBuildPath32 ($vs15Msbuild32 = 'MSBuild\15.0\Bin\MSBuild.exe')
+
+        $vs19Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2019\Professional'
+        GivenVersionInVisualStudio -Version '16.40' `
+                                    -VSInstallRoot $vs19Root `
+                                    -MSBuildPath ($vs19Msbuild = 'MSBuild\Current\Bin\amd64\MSBuild.exe') `
+                                    -MSBuildPath32 ($vs19Msbuild32 = 'MSBuild\Current\Bin\MSBuild.exe')
+
+        $vs50Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2050\Professional'
+        GivenVersionInVisualStudio -Version '50.00' `
+                                    -VSInstallRoot $vs50Root `
+                                    -MSBuildPath ($vs50Msbuild = 'MSBuild\some\unexpected\path\in\the\future\amd64\MSBuild.exe') `
+                                    -MSBuildPath32 ($vs50Msbuild32 = 'MSBuild\some\unexpected\path\in\the\future\MSBuild.exe')
+
         WhenGettingMSBuild
-        ThenReturnedExpectedObjects -Count 4
+        ThenReturnedExpectedObjects -Count 6
         ThenFoundMSBuild '12.0' `
                          -InstallPath $msbuild12Path `
                          -InstallPath32 $msbuild12Path32
@@ -266,25 +317,34 @@ Describe 'Get-MSBuild.when found versions in all places' {
         ThenFoundMSBuild '15.0' `
                          -InstallPath (Join-Path -Path $vs15BuildToolsRoot -ChildPath $vs15Msbuild) `
                          -InstallPath32 (Join-Path -Path $vs15BuildToolsRoot -ChildPath $vs15Msbuild32)
+        ThenFoundMSBuild '16.0' `
+                         -InstallPath (Join-Path -Path $vs19Root -ChildPath $vs19Msbuild) `
+                         -InstallPath32 (Join-Path -Path $vs19Root -ChildPath $vs19Msbuild32)
+        ThenFoundMSBuild '50.0' `
+                         -InstallPath (Join-Path -Path $vs50Root -ChildPath $vs50Msbuild) `
+                         -InstallPath32 (Join-Path -Path $vs50Root -ChildPath $vs50Msbuild32)
         ThenErrorRecord -Empty
     }
 }
 
-Describe 'Get-MSBuild.when MSbuild found in Visual Studio Install does not exist in a versioned directory' {
-    It 'should not return that version' {
+Describe 'Get-MSBuild.when Visual Studio install contains MSBuild in a non-versioned directory' {
+    It 'should return that version' {
         Init
         $vs15Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\Professional'
-        GivenVersionInVisualStudio -Version '15.0' `
+        GivenVersionInVisualStudio -Version '15.90' `
                                    -VSInstallRoot $vs15Root `
-                                   -MSBuildPath 'MSBuild\Im-Not-A-Version\Bin\amd64\MSBuild.exe' `
-                                   -MSBuildPath32 'MSBuild\Im-Not-A-Version\Bin\MSBuild.exe'
+                                   -MSBuildPath ($vs15Msbuild = 'MSBuild\Im-Not-A-Version\Bin\amd64\MSBuild.exe') `
+                                   -MSBuildPath32 ($vs15Msbuild32 = 'MSBuild\Im-Not-A-Version\Bin\MSBuild.exe')
         WhenGettingMSBuild
-        ThenReturnedNothing
+        ThenReturnedExpectedObjects -Count 1
+        ThenFoundMSBuild '15.0' `
+                         -InstallPath (Join-Path -Path $vs15Root -ChildPath $vs15Msbuild) `
+                         -InstallPath32 (Join-Path -Path $vs15Root -ChildPath $vs15Msbuild32)
         ThenErrorRecord -Empty
     }
 }
 
-Describe 'Get-MSBuild.when only found 64bit MSBuild in Visual Studio Install' {
+Describe 'Get-MSBuild.when only 64bit version of MSBuild installed' {
     It 'should return the 64bit version found' {
         Init
         $vs15Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\Professional'
@@ -301,7 +361,7 @@ Describe 'Get-MSBuild.when only found 64bit MSBuild in Visual Studio Install' {
     }
 }
 
-Describe 'Get-MSBuild.when only found 32bit MSBuild in Visual Studio Install' {
+Describe 'Get-MSBuild.when only 32bit version of MSBuild installed' {
     It 'should return the 32bit version found' {
         Init
         $vs15Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2017\Professional'
@@ -318,7 +378,7 @@ Describe 'Get-MSBuild.when only found 32bit MSBuild in Visual Studio Install' {
     }
 }
 
-Describe 'Get-MSBuild.when MSbuild found in Visual Studio Install does not exist under a "MSBuild" directory' {
+Describe 'Get-MSBuild.when MSBuild installed with Visual Studio does not exist under a "MSBuild" directory' {
     It 'should not return that version' {
         Init
         GivenVersionInVisualStudio -Version '15.0' `

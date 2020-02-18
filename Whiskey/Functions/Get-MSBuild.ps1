@@ -90,31 +90,49 @@ function Get-MSBuild
             continue
         }
 
-        $versionRoots = Get-ChildItem -Path $msbuildRoot -Directory | 
-                            Where-Object { Test-Version $_.Name }
+        $versionRoots =
+            Get-ChildItem -Path $msbuildRoot -Directory |
+            Where-Object { Get-ChildItem -Path $_.FullName -Filter 'MSBuild.exe' -Recurse }
 
         foreach( $versionRoot in $versionRoots )
         {
-            $path = Join-Path -Path $versionRoot.FullName -ChildPath 'Bin\amd64\MSBuild.exe'
-            $path32 = Join-Path -Path $versionRoot.FullName -ChildPath 'Bin\MSBuild.exe'
-            if( -not (Test-Path -Path $path -PathType Leaf) )
+            $paths = Get-ChildItem -Path $versionRoot.FullName -Filter 'MSBuild.exe' -Recurse
+
+            $path =
+                $paths |
+                Where-Object { $_.Directory.Name -eq 'amd64' } |
+                Select-Object -ExpandProperty 'FullName'
+
+            $path32 =
+                $paths |
+                Where-Object { $_.Directory.Name -ne 'amd64' } |
+                Select-Object -ExpandProperty 'FullName'
+
+            if( -not $path )
             {
                 $path = $path32
             }
 
-            if( -not (Test-Path -Path $path -PathType Leaf) )
+            if( -not $path )
             {
                 continue
             }
 
-            if( -not (Test-Path -Path $path32 -PathType Leaf) )
+            if( -not $path32 )
             {
                 $path32 = ''
             }
 
+            $majorVersion =
+                Get-Item -Path $path |
+                Select-Object -ExpandProperty 'VersionInfo' |
+                Select-Object -ExpandProperty 'ProductMajorPart'
+
+            $majorMinor = '{0}.0' -f $majorVersion
+
             [pscustomobject]@{
-                                Name =  $versionRoot.Name;
-                                Version = [Version]$versionRoot.Name;
+                                Name =  $majorMinor;
+                                Version = [Version]$majorMinor;
                                 Path = $path;
                                 Path32 = $path32;
                             }
