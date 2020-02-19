@@ -40,7 +40,7 @@ function Init
           -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions' } `
           -MockWith {
             $PSBoundParameters['Path'] = $toolsKeyPath32
-            Get-ChildItem @PSBoundParameters
+            Test-Path @PSBoundParameters
          }.GetNewClosure()
 
     Mock -CommandName 'Get-ChildItem' `
