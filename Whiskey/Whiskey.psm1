@@ -54,21 +54,32 @@ function Assert-Member
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowNull()]
         [Object]$Object,
 
-        [Parameter(Mandatory)]
-        [String[]]$Property
+        [String[]]$Property = @()
     )
+
+    $oldVersionLoadedMsg = 'You''ve got an old version of Whiskey loaded. Please open a new PowerShell session.'
+
+    if( -not $Object )
+    {
+        Write-Error -Message $oldVersionLoadedMsg -ErrorAction Stop
+    }
 
     foreach( $propertyToCheck in $Property )
     {
         if( -not ($Object | Get-Member $propertyToCheck) )
         {
-            $msg = 'Class "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck
+            $msg = 'Object "{0}" is missing member "{1}".' -f $Object.GetType().FullName,$propertyToCheck
             Write-Error -Message ('{0} {1}' -f $msg,$oldVersionLoadedMsg) -ErrorAction Stop
         }
     }
 }
+
+Write-Timing 'Checking Whiskey.Context class.'
+$context = New-WhiskeyObject -TypeName 'Whiskey.Context'
+Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
 
 Write-Timing 'Checking Whiskey.TaskAttribute class.'
 $attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' 
@@ -77,9 +88,8 @@ Assert-Member -Object $attr -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsol
 Write-Timing 'Checking for Whiskey.RequiresPowerShellModuleAttribute class.'
 New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') | Out-Null
 
-Write-Timing 'Checking Whiskey.Context class.'
-$context = New-WhiskeyObject -TypeName 'Whiskey.Context'
-Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
+$attr = New-WhiskeyObject -TypeName 'Whiskey.Tasks.ValidatePathAttribute'
+Assert-Member -Object $attr -Property @( 'Create' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments

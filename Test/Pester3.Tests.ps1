@@ -31,7 +31,7 @@ function GivenTestContext
                                              @optionalParams
 
     # Make sure only Pester 3 is included.
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $PSModulesDirectoryName)
+    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
     Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
         Where-Object { $_.Name -notlike '3.*' } |
         Remove-Item -Recurse -Force
@@ -114,7 +114,7 @@ function ThenPesterShouldBeInstalled
         [String]$ExpectedVersion
     )
 
-    $pesterDirectoryName = '{0}\Pester\{1}' -f $PSModulesDirectoryName,$ExpectedVersion
+    $pesterDirectoryName = '{0}\Pester\{1}' -f $TestPSModulesDirectoryName,$ExpectedVersion
     $pesterPath = Join-Path -Path $context.BuildRoot -ChildPath $pesterDirectoryName
     $pesterPath = Join-Path -Path $pesterPath -ChildPath 'Pester.psd1'
 
@@ -301,14 +301,14 @@ Describe 'PassingTests' {
     }
 }
 
-Describe 'Pester3.when missing Path Configuration' {
+Describe 'Pester3.when missing path' {
     AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'Element ''Path'' is mandatory.'
+        ThenTestShouldFail -failureMessage 'Path is mandatory'
     }
 }
 
@@ -349,14 +349,14 @@ Describe 'PassingTests' {
     }
 }
 
-Describe 'Pester3.when a task path is absolute' {
+Describe 'Pester3.when a task path is outside the build root' {
     AfterEach { Reset }
     It 'should fail' {
         Init
         GivenTestContext
-        GivenTestFile 'C:\FubarSnafu'
+        GivenTestFile '..\FubarSnafu.ps1'
         WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        ThenTestShouldFail -failureMessage 'absolute'
+        ThenTestShouldFail -failureMessage 'outside\ the\ build\ root'
     }
 }

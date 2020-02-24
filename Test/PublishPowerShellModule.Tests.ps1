@@ -114,7 +114,9 @@ function Invoke-Publish
 
         [switch]$WithoutPathParameter,
 
-        [String]$WithCredentialID
+        [String]$WithCredentialID,
+
+        [switch]$WithNoPrereleaseProperty
     )
     
     $version = '1.2.3'
@@ -151,6 +153,11 @@ function Invoke-Publish
         $module = Join-Path -Path $testRoot -ChildPath 'MyModule'
         if( -not $ForManifestPath )
         {            
+            $prereleaseProperty = "Prerelease = '';"
+            if( $WithNoPrereleaseProperty )
+            {
+                $prereleaseProperty = ''
+            }
             New-Item -Path $module -ItemType 'file' -Name 'MyModule.psd1' -Value @"
 @{
     # Version number of this module.
@@ -158,7 +165,7 @@ function Invoke-Publish
 
     PrivateData = @{
         PSData = @{
-            Prerelease = '';
+            $($prereleaseProperty)
         }
     }
     
@@ -338,7 +345,7 @@ function ThenModulePublished
         [Parameter(Mandatory)]
         [String]$ToRepositoryNamed,
 
-        [String]$ExpectedPathName = (Join-Path -Path $testRoot -ChildPath 'MyModule'),
+        [String]$ExpectedPathName = (Join-Path -Path '.' -ChildPath 'MyModule'),
 
         [switch]$WithNoRepositoryName
     )
@@ -447,6 +454,20 @@ Describe 'PublishPowerShellModule.when publishing prerelease module' {
         ThenRepositoryNotRegistered
         ThenModulePublished -ToRepositoryNamed 'SomeRepo'
         ThenManifest -HasPrerelease 'beta1'
+    }
+}
+
+Describe 'PublishPowerShellModule.when publishing prerelease module but module manifest is missing Prerelease element' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Initialize-Test
+        GivenPrerelease 'rc5'
+        GivenRepository 'SomeRepo'
+        Invoke-Publish -ForRepositoryNamed 'SomeRepo' -WithNoPrereleaseProperty -ErrorAction SilentlyContinue
+        ThenFailed 'missing a "Prerelease" property'
+        ThenRepositoryNotChecked
+        ThenRepositoryNotRegistered
+        ThenModuleNotPublished
     }
 }
 
@@ -565,7 +586,7 @@ Describe 'PublishPowerShellModule.when non-directory path parameter' {
         Initialize-Test
         GivenRepository 'Fubar'
         Invoke-Publish -ForRepositoryNamed 'Fubar' -WithInvalidPath  -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'should\ be\ to\ a\ directory'
+        ThenFailed -WithError 'should resolve to a directory'
         ThenModuleNotPublished
     }
 }

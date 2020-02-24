@@ -22,7 +22,7 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 
     $script:licenseReportPath = Join-Path -Path $testRoot -ChildPath '.output\node-license-checker-report.json'
-    Install-Node -WithModule 'license-checker' -BuildRoot $testRoot
+    Install-Node -BuildRoot $testRoot
 }
 
 function CreatePackageJson

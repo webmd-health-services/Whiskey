@@ -35,7 +35,32 @@ function Invoke-WhiskeyDotNet
 
     if( $TaskParameter.ContainsKey('Path') )
     {
-        $projectPaths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $projectPaths = 
+            $TaskParameter['Path'] | 
+            Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType 'File' -AllowNonexistent
+        if( -not $projectPaths -and (Get-Location).Path -ne $TaskContext.BuildRoot )
+        {
+            Push-Location $TaskContext.BuildRoot
+            try
+            {
+                $projectPaths =
+                    $TaskParameter['Path'] |
+                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType 'File' |
+                    Resolve-Path |
+                    Select-Object -ExpandProperty 'ProviderPath'
+            }
+            finally
+            {
+                Pop-Location
+            }
+
+            if( $projectPaths )
+            {
+                Write-WhiskeyWarning -Context $TaskContext -Message ('Property Path: Paths are now resolved relative to a task''s working directory, not the build root. Please update the paths in your whiskey.yml file so they are relative to the DotNet task''s working directory.')
+                $projectPaths = $projectPaths | Resolve-Path -Relative
+            }
+        }
+
         foreach( $projectPath in $projectPaths )
         {
             Invoke-WhiskeyDotNetCommand @invokeParameters -ProjectPath $projectPath

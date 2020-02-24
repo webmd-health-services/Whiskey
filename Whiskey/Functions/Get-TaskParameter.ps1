@@ -35,6 +35,19 @@ function Get-TaskParameter
 
         $value = $TaskProperty[$propertyName]
 
+        if( -not $value )
+        {
+            foreach( $aliasName in $cmdParameter.Aliases )
+            {
+                $value = $TaskProperty[$aliasName]
+                if( $value )
+                {
+                    Write-WhiskeyWarning -Context $Context -Message ('Property "{0}" is deprecated. Rename to "{1}" instead.' -f $aliasName,$propertyName)
+                    break
+                }
+            }
+        }
+
         # PowerShell can't implicitly convert strings to bool/switch values so we have to do it.
         if( $cmdParameter.ParameterType -eq [switch] -or $cmdParameter.ParameterType -eq [bool] )
         {
@@ -51,17 +64,17 @@ function Get-TaskParameter
                                              -Context $Context
         }
 
-        [Whiskey.Tasks.ValidatePathAttribute]$validateAsPathAttribute =
+        [Whiskey.Tasks.ValidatePathAttribute]$validatePathAttribute =
             $cmdParameter.Attributes |
             Where-Object { $_ -is [Whiskey.Tasks.ValidatePathAttribute] }
 
-        if( $validateAsPathAttribute )
+        if( $validatePathAttribute )
         {
             $params = @{ }
 
             $params['CmdParameter'] = $cmdParameter
-            $params['ValidateAsPathAttribute'] = $validateAsPathAttribute
-            $value = $value | Resolve-WhiskeyTaskPathParameter -TaskContext $Context @params
+            $params['ValidatePathAttribute'] = $validatePathAttribute
+            $value = $value | Resolve-WhiskeyTaskPath -TaskContext $Context -TaskParameter $TaskProperty @params
         }
 
         # If the user didn't provide a value and we couldn't find one, don't pass anything.

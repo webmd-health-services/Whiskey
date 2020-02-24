@@ -249,7 +249,7 @@ function ThenPackagePublished
         $testRoot = $script:testRoot
         Assert-MockCalled -CommandName 'Invoke-WhiskeyNuGetPush' -ModuleName 'Whiskey' -ParameterFilter { 
             #$DebugPreference = 'Continue'
-            $expectedPath = Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $item)
+            $expectedPath = Join-Path -Path '.' -ChildPath ('.output\{0}' -f $item)
             Write-WhiskeyDebug -Message ('Path  expected  {0}' -f $expectedPath)
             $Path | Where-Object { 
                                     Write-WhiskeyDebug -Message ('      actual    {0}' -f $_)
@@ -319,7 +319,7 @@ Describe 'NuGetPush.when publishing a NuGet package' {
     }
 }
 
-Describe 'NuGetPush.when publishing a NuGet package with prerlease metadata' {
+Describe 'NuGetPush.when publishing a NuGet package with prerelease metadata' {
     It 'should publish with prerelease metadata' {
         Init
         GivenPackageVersion '1.2.3-preleasee45'
@@ -343,7 +343,7 @@ Describe 'NuGetPush.when publishing a symbols NuGet package' {
     }
 }
 
-Describe 'NuGetPush.when theree are multiple packages' {
+Describe 'NuGetPush.when there are multiple packages' {
     It 'should publish all' {
         Init
         GivenPackageVersion '3.4.5'

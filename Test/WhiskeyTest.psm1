@@ -1,4 +1,6 @@
 
+$TestPSModulesDirectoryName = 'PSModules'
+
 $exportPlatformVars = $false
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
@@ -17,12 +19,13 @@ elseif( $IsMacOS )
 {
     $WhiskeyPlatform = [Whiskey.Platform]::MacOS
 }
-$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('.downloadcache-{0}' -f $WhiskeyPlatform)
+$downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('..\.output\.downloadcache-{0}' -f $WhiskeyPlatform)
+$downloadCachePath = [IO.Path]::GetFullPath($downloadCachePath)
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
-    New-Item -Path $downloadCachePath -ItemType 'Directory'
+    New-Item -Path $downloadCachePath -ItemType 'Directory' -Force | Out-Null
 }
 
 function ConvertTo-Yaml
@@ -89,11 +92,11 @@ function Import-WhiskeyTestModule
     param(
         [Parameter(Mandatory)]
         [String[]]$Name,
-        
+
         [switch]$Force
     )
 
-    $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve
+    $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve
     if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
     {
         $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
@@ -125,8 +128,8 @@ function Initialize-WhiskeyTestPSModule
         [String[]]$Name
     )
 
-    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $PSModulesDirectoryName
-    Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot) 
+    $destinationRoot = Join-Path -Path $BuildRoot -ChildPath $TestPSModulesDirectoryName
+    Write-WhiskeyDebug ('Copying Modules  {0}  START' -f $destinationRoot)
     if( -not (Test-Path -Path $destinationRoot -PathType Container) )
     {
         New-Item -Path $destinationRoot -ItemType 'Directory' | Out-Null
@@ -138,14 +141,14 @@ function Initialize-WhiskeyTestPSModule
         'PowerShellGet'
         $Name
     }
-    
-    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $PSModulesDirectoryName) -Resolve) -Directory))
+
+    foreach( $module in (Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve) -Directory))
     {
         if( $module.Name -notin $Name )
         {
             continue
         }
-        
+
         if( (Test-Path -Path (Join-Path -Path $destinationRoot -ChildPath $module.Name) ) )
         {
             continue
@@ -154,17 +157,18 @@ function Initialize-WhiskeyTestPSModule
         Write-WhiskeyDebug -Message ('{0} -> {1}' -f $module.FullName,$destinationRoot)
         Copy-Item -Path $module.FullName -Destination $destinationRoot -Recurse
     }
-    
-    Write-WhiskeyDebug -Message '                 END' 
+
+    Write-WhiskeyDebug -Message '                 END'
 }
 
 function Install-Node
 {
     param(
-        [String[]]$WithModule,
-
         [String]$BuildRoot
     )
+
+    $VerbosePreference = 'Continue'
+    $DebugPreference = 'Continue'
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
     $toolAttr.PathParameterName = 'NodePath'
@@ -179,54 +183,25 @@ function Install-Node
     }
 
     $destinationDir = Join-Path -Path $BuildRoot -ChildPath '.node'
-    $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'node_modules'
-    $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'node_modules'
-    if( -not $IsWindows )
-    {
-        $modulesRoot = Join-Path -Path $nodeRoot -ChildPath 'lib/node_modules'
-        $modulesDestinationDir = Join-Path -Path $destinationDir -ChildPath 'lib/node_modules'
-    }
-    foreach( $name in $WithModule )
-    {
-        if( (Test-Path -Path (Join-Path -Path $modulesRoot -ChildPath $name) -PathType Container) )
-        {
-            continue
-        }
-
-        $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' ('NodeModule::{0}' -f $name)
-        $toolAttr.PathParameterName = '{0}Path' -f $name
-        Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
-    }
-
     if( -not (Test-Path -Path $destinationDir -PathType Container) )
     {
-        New-Item -Path $destinationDir -ItemType 'Directory'
+        New-Item -Path $destinationDir -ItemType 'Directory' -Force | Out-Null
     }
 
     Write-WhiskeyDebug -Message ('Copying {0} -> {1}' -f $nodeRoot,$destinationDir)
-    Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*','lib','node_modules' -Destination $destinationDir -Recurse -ErrorAction Ignore
-
-    Get-ChildItem -Path $modulesRoot |
-        Where-Object { $_.Name -eq 'npm' -or $WithModule -contains $_.Name } |
-        ForEach-Object {
-            $moduleDestinationDir = Join-Path -Path $modulesDestinationDir -ChildPath $_.Name
-            if( $IsWindows )
-            {
-                if( -not (Test-Path -Path $moduleDestinationDir -PathType Container) )
-                {
-                    New-Item -Path $moduleDestinationDir -ItemType 'Directory' -Force | Out-Null
-                }
-                $robocopyParameter = @{
-                    'Source' = $_.FullName;
-                    'Destination' = $moduleDestinationDir
-                }
-                Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyRobocopy' -Parameter $robocopyParameter
-            }
-            else
-            {
-                Copy-Item -Path $_.FullName -Destination $moduleDestinationDir -Recurse
-            }
+    if( $IsWindows )
+    {
+        $robocopyParameter = @{
+            'Source' = $nodeRoot;
+            'Destination' = $destinationDir;
+            'Exclude' = '*.zip','*.tar.*';
         }
+        Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyRobocopy' -Parameter $robocopyParameter
+    }
+    else
+    {
+        Copy-Item -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Exclude '*.zip','*.tar.*' -Destination $destinationDir -Recurse -ErrorAction Ignore
+    }
 
     Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include '*.zip','*.tar.*' |
         ForEach-Object { Join-Path -Path $destinationDir -ChildPath $_.Name } |
@@ -243,8 +218,8 @@ function Invoke-WhiskeyPrivateCommand
         [hashtable]$Parameter = @{}
     )
 
-    $Global:Name = $Name
-    $Global:Parameter = $Parameter
+    $Global:WTName = $Name
+    $Global:WTParameter = $Parameter
 
     if( $VerbosePreference -eq 'Continue' )
     {
@@ -255,14 +230,14 @@ function Invoke-WhiskeyPrivateCommand
 
     try
     {
-        InModuleScope 'Whiskey' { 
-            & $Name @Parameter 
+        InModuleScope 'Whiskey' {
+            & $WTName @WTParameter
         }
     }
     finally
     {
-        Remove-Variable -Name 'Parameter' -Scope 'Global'
-        Remove-Variable -Name 'Name' -Scope 'Global'
+        Remove-Variable -Name 'WTParameter' -Scope 'Global'
+        Remove-Variable -Name 'WTName' -Scope 'Global'
     }
 }
 function New-AssemblyInfo
@@ -276,7 +251,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-// General Information about an assembly is controlled through the following 
+// General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("NUnit2FailingTest")]
@@ -288,8 +263,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-// Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  If you need to access a type in this assembly from 
+// Setting ComVisible to false makes the types in this assembly not visible
+// to COM components.  If you need to access a type in this assembly from
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
@@ -299,16 +274,16 @@ using System.Runtime.InteropServices;
 // Version information for an assembly consists of the following four values:
 //
 //      Major Version
-//      Minor Version 
+//      Minor Version
 //      Build Number
 //      Revision
 //
-// You can specify all the values or you can default the Build and Revision Numbers 
+// You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 [assembly: AssemblyVersion("1.0.0")]
 [assembly: AssemblyFileVersion("1.0.0")]
 [assembly: AssemblyInformationalVersion("1.0.0")]
-'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs') 
+'@ | Set-Content -Path (Join-Path -Path $RootPath -ChildPath 'AssemblyInfo.cs')
 }
 
 function New-MSBuildProject
@@ -504,11 +479,11 @@ function New-WhiskeyTestContext
 
 function New-WhiskeyTestRoot
 {
-    # Eventually, I hope Invoke-Pester supports running individual `It` blocks (as of this writing, you can only run 
+    # Eventually, I hope Invoke-Pester supports running individual `It` blocks (as of this writing, you can only run
     # individual `Describe` blocks, which is why we use a single-It-per-Describe pattern). Unfortunately, Pester's test
-    # drive is setup and torn down at the Describe block, which means all our tests were written with the expectation 
+    # drive is setup and torn down at the Describe block, which means all our tests were written with the expectation
     # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
-    # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5, 
+    # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5,
     # which will allow running specific `It` blocks.
     $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
@@ -545,7 +520,7 @@ function Remove-DotNet
 
     Get-Process -Name 'dotnet' -ErrorAction Ignore |
         Where-Object { $_.Path -like ('{0}\*' -f $BuildRoot) } |
-        ForEach-Object { 
+        ForEach-Object {
             Write-WhiskeyDebug ('Killing process "{0}" (Id: {1}; Path: {2})' -f $_.Name,$_.Id,$_.Path)
             Stop-Process -Id $_.Id -Force }
 
@@ -562,6 +537,24 @@ function Reset-WhiskeyTestPSModule
         Remove-Module -Force
 }
 
+function ThenErrorRecord
+{
+    param(
+        [switch]$Empty,
+        [String]$Matches
+    )
+
+    if( $Empty )
+    {
+        $Global:Error | Should -BeNullOrEmpty -Because 'the global error record should be empty'
+    }
+
+    if( $Matches )
+    {
+        $Global:Error | Should -Match $Matches -Because 'it should write the expected error message'
+    }
+}
+
 function ThenModuleInstalled
 {
     param(
@@ -572,7 +565,7 @@ function ThenModuleInstalled
         [String]$AtVersion
     )
 
-    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $PSModulesDirectoryName,$Named,$AtVersion) | 
+    Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist
 }
 
@@ -587,7 +580,7 @@ function Use-CallerPreference
 
         [Parameter(Mandatory = $true)]
         [Management.Automation.SessionState]
-        # The module function's `$ExecutionContext.SessionState` object.  Requires the function be decorated with the `[CmdletBinding()]` attribute. 
+        # The module function's `$ExecutionContext.SessionState` object.  Requires the function be decorated with the `[CmdletBinding()]` attribute.
         #
         # Used to set variables in its callers' scope, even if that caller is in a different script module.
         $SessionState
@@ -646,7 +639,7 @@ function Write-CaughtError
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $doNotWritePrefs = @(
-        [Management.Automation.ActionPreference]::Ignore, 
+        [Management.Automation.ActionPreference]::Ignore,
         [Management.Automation.ActionPreference]::SilentlyContinue
     )
 
@@ -670,14 +663,12 @@ if( $IsWindows )
     $FailureCommandScriptBlock = { cmd /c exit 1 }
 }
 
-$PSModulesDirectoryName = 'PSModules'
-
 $variablesToExport = & {
     'WhiskeyTestDownloadCachePath'
     'SuccessCommandScriptBlock'
     'FailureCommandScriptBlock'
     'WhiskeyPlatform'
-    'PSModulesDirectoryName'
+    'TestPSModulesDirectoryName'
     # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
     if( $exportPlatformVars )
     {

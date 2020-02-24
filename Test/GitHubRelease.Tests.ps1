@@ -1,9 +1,10 @@
 
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+$testRoot = $null
 $apiKeys = @{ }
 $failed = $false
 
@@ -68,7 +69,7 @@ function GivenFile
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path)
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
 }
 
 function GivenReleaseCreated
@@ -117,12 +118,13 @@ function GivenWhiskeyYml
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
 }
 
 function Init
 {
     $script:apiKeys = @{ }
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function ThenAssetNotUploadedTo
@@ -241,7 +243,7 @@ function ThenRequest
                 #$DebugPreference = 'Continue'
                 Write-WhiskeyDebug ('Uri     expected  {0}' -f $ToUri)
                 Write-WhiskeyDebug ('        actual    {0}' -f $Uri)
-                $WithFile = Join-Path -Path $TestDrive.FullName -ChildPath $WithFile
+                $WithFile = $WithFile
                 Write-WhiskeyDebug ('InFile  expected  {0}' -f $WithFile)
                 Write-WhiskeyDebug ('        actual    {0}' -f $InFile)
                 $Uri -eq [Uri]$ToUri -and $InFile -eq $WithFile 
@@ -280,7 +282,9 @@ function WhenRunningTask
     $script:failed = $false
     try
     {
-        [Whiskey.Context]$context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+        [Whiskey.Context]$context = New-WhiskeyTestContext -ForDeveloper `
+                                                           -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml') `
+                                                           -ForBuildRoot $testRoot
         foreach( $key in $apiKeys.Keys )
         {
             Add-WhiskeyApiKey -Context $context -ID $key -Value $apiKeys[$key]
@@ -351,12 +355,12 @@ Build:
                 -ToUri 'https://api.github.com/webmd-health-services/Whiskey/releases/0/assets?name=Whiskey.zip&label=ZIP' `
                 -UsedMethod Post `
                 -AsContentType 'fubar/snafu' `
-                -WithFile 'Whiskey.zip'
+                -WithFile (Join-Path -Path '.' -ChildPath 'Whiskey.zip')
     ThenRequest -Should 'upload asset' `
                 -ToUri 'https://api.github.com/webmd-health-services/Whiskey/releases/0/assets?name=Whiskey2.zip' `
                 -UsedMethod Post `
                 -AsContentType 'fubar/snafu' `
-                -WithFile 'Whiskey2.zip'
+                -WithFile (Join-Path -Path '.' -ChildPath 'Whiskey2.zip')
 }
 
 Describe 'GitHubRelease.when the release and asset already exist' {
@@ -562,7 +566,7 @@ Build:
 '@
     ThenAssetNotUploadedTo 'https://example.com/releases/0/assets'
     ThenTaskFailed
-    ThenError -Matches 'Whiskey.zip"\ does\ not\ exist'
+    ThenError -Matches 'Whiskey\.zip.*\ does\ not\ exist'
 }
 
 

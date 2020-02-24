@@ -20,7 +20,7 @@ function Invoke-WhiskeyDotNetPublish
     $projectPaths = ''
     if ($TaskParameter['Path'])
     {
-        $projectPaths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
+        $projectPaths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPathInternalInternal -TaskContext $TaskContext -PropertyName 'Path'
     }
 
     $verbosity = $TaskParameter['Verbosity']

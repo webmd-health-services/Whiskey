@@ -8,26 +8,14 @@ function New-WhiskeyNuGetPackage
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [String[]]$Path
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
-
-    if( -not ($TaskParameter.ContainsKey('Path')))
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Path'' is mandatory. It should be one or more paths to .csproj or .nuspec files to pack, e.g.
-
-    Build:
-    - PublishNuGetPackage:
-        Path:
-        - MyProject.csproj
-        - MyNuspec.nuspec
-    ')
-        return
-    }
-
-    $paths = $TaskParameter['Path'] | Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
 
     $symbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
     $symbolsArg = ''
@@ -61,12 +49,12 @@ function New-WhiskeyNuGetPackage
                                 }
     }
 
-    foreach ($path in $paths)
+    foreach( $pathItem in $Path )
     {
         $projectName = $TaskParameter['PackageID']
         if( -not $projectName )
         {
-            $projectName = [IO.Path]::GetFileNameWithoutExtension(($path | Split-Path -Leaf))
+            $projectName = [IO.Path]::GetFileNameWithoutExtension(($pathItem | Split-Path -Leaf))
         }
         $packageVersion = $TaskParameter['PackageVersion']
         if( -not $packageVersion )
@@ -77,7 +65,7 @@ function New-WhiskeyNuGetPackage
         # Create NuGet package
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
 
-        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory $symbolsArg -Properties ('Configuration={0}' -f $configuration) $propertiesArgs $path
+        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory $symbolsArg -Properties ('Configuration={0}' -f $configuration) $propertiesArgs $pathItem
 
         # Make sure package was created.
         $filename = '{0}.{1}{2}.nupkg' -f $projectName,$packageVersion,$symbolsFileNameSuffix
@@ -85,7 +73,7 @@ function New-WhiskeyNuGetPackage
         $packagePath = Join-Path -Path $TaskContext.OutputDirectory -childPath $filename
         if( -not (Test-Path -Path $packagePath -PathType Leaf) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against ''{0}'' but the expected NuGet package ''{1}'' does not exist.' -f $path,$packagePath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('We ran nuget pack against "{0}" but the expected NuGet package "{1}" does not exist.' -f $pathItem,$packagePath)
             return
         }
     }
