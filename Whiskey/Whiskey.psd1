@@ -180,6 +180,7 @@
 * Created `Write-WhiskeyObject` function for writing objects in sensible ways. Currently, only hashtables/dictionaries are supported. Keys/values are printed so they align and are recognizable. Other objects are passed to PowerShell's `Out-String` for formatting.
 * Created `Convert-WhiskeyPathDirectorySeparator` for converting the directory separators in a path to the separator for the current platform.
 * The `PublishPowerShellModule` task will now fail if your current build has prerelease metadata but the manifest of the module being published is missing a Prerelease property.
+* The `MSBuild` task now supports version `16.0` (Visual Studio 2019) and later.
 '@
         } # End of PSData hashtable
 
