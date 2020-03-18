@@ -109,6 +109,9 @@ function New-WhiskeyGitHubRelease
         $createOrEditUri = $release.url
     }
 
+    $releaseName = $TaskParameter['Name']
+    $releaseNameDesc = ''
+
     $releaseData = @{
                         tag_name = $tag
                     }
@@ -118,9 +121,10 @@ function New-WhiskeyGitHubRelease
         $releaseData['target_commitish'] = $TaskParameter['Commitish']
     }
 
-    if( $TaskParameter['Name'] )
+    if( $releaseName )
     {
-        $releaseData['name'] = $TaskParameter['Name']
+        $releaseData['name'] = $releaseName
+        $releaseNameDesc = '"{0}" ' -f $releaseName
     }
 
     if( $TaskParameter['Description'] )
@@ -128,7 +132,7 @@ function New-WhiskeyGitHubRelease
         $releaseData['body'] = $TaskParameter['Description']
     }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release "{1}" "{2}" at commit "{3}".' -f $actionDescription,$TaskParameter['Name'],$tag,$TaskContext.BuildMetadata.ScmCommitID)
+    Write-WhiskeyInfo -Context $TaskContext -Message ('{0} release {1}with tag "{2}" at commit "{3}".' -f $actionDescription,$releaseNameDesc,$tag,$TaskContext.BuildMetadata.ScmCommitID)
     $release = Invoke-GitHubApi -Uri $createOrEditUri -Parameter $releaseData -Method $createOrEditMethod
     $release
 
@@ -152,34 +156,29 @@ function New-WhiskeyGitHubRelease
                 continue
             }
 
-            $assetName = $assetPath | Split-Path -Leaf
-            $assetLabel = $asset['Name']
-            if( $assetLabel -eq $null )
+            $assetName = $asset['Name']
+            if( -not $assetName ) 
             {
-                $assetLabel = ""
+                $assetName = $assetPath | Split-Path -Leaf
             }
 
             $existingAsset = $existingAssets | Where-Object { $_ -and $_.name -eq $assetName }
             if( $existingAsset )
             {
-                Write-WhiskeyInfo -Context $TaskContext -Message ('Updating file "{0}".' -f $assetName)
-                Invoke-GitHubApi -Method Patch -Uri $existingAsset.url -Parameter @{ name = $assetName; label = $assetLabel }
+                Write-WhiskeyInfo -Context $TaskContext -Message ('Updating asset "{0}" from file "{1}.' -f $assetName,$assetPath)
+                Invoke-GitHubApi -Method Patch -Uri $existingAsset.url -Parameter @{ name = $assetName; label = $assetName }
             }
             else
             {
                 $uri = $release.upload_url -replace '{[^}]+}$'
-                $uri = '{0}?name={1}' -f $uri,[Uri]::EscapeDataString($assetName)
-                if( $assetLabel )
-                {
-                    $uri = '{0}&label={1}' -f $uri,[Uri]::EscapeDataString($assetLabel)
-                }
-                Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading file "{0}".' -f $assetPath)
+                $uri = '{0}?name={1}&label={1}' -f $uri,[Uri]::EscapeDataString($assetName)
                 $contentType = $asset['ContentType']
                 if( -not $contentType )
                 {
                     Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName $basePropertyName -Message ('Property "ContentType" is mandatory. It must be the "{0}" file''s media type. For a list of acceptable types, see https://www.iana.org/assignments/media-types/media-types.xhtml.' -f $assetPath)
                     continue
                 }
+                Write-WhiskeyInfo -Context $TaskContext -Message ('Uploading asset "{0}" from file "{1}".' -f $assetName,$assetPath)
                 Invoke-GitHubApi -Method Post -Uri $uri -ContentType $asset['ContentType'] -InFile $assetPath
             }
         }
