@@ -73,7 +73,7 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
     $zipUri = 
         $release.assets |
         ForEach-Object { $_ } |
-        Where-Object { $_.name -eq 'Whiskey.zip' } |
+        Where-Object { $_.name -like 'Whiskey*.zip' } |
         Select-Object -ExpandProperty 'browser_download_url'
     
     if( -not $zipUri )
