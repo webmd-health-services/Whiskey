@@ -38,6 +38,8 @@ param(
 )
 
 #Requires -Version 5.1
+$ErrorActionPreference = 'Stop'
+
 Set-StrictMode -Version Latest
 
 # Set to a specific version to use a specific version of Whiskey. 
