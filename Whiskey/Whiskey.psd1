@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.44.2'
+    ModuleVersion = '0.45.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,7 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: Whiskey's recommended build.ps1 script not detecting new Whiskey packages that have version number in their name.
+* Added a new common task property `OutVariable` for redirecting a task's output to a Whiskey variable.
 '@
         } # End of PSData hashtable
 

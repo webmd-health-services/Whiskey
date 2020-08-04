@@ -169,7 +169,11 @@ function Invoke-WhiskeyTask
 
     [hashtable]$taskProperties = $Parameter.Clone()
     $commonProperties = @{}
-    foreach( $commonPropertyName in @( 'OnlyBy', 'ExceptBy', 'OnlyOnBranch', 'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring', 'WorkingDirectory', 'IfExists', 'UnlessExists', 'OnlyOnPlatform', 'ExceptOnPlatform' ) )
+    foreach( $commonPropertyName in @(
+        'OnlyBy', 'ExceptBy', 'OnlyOnBranch',
+        'ExceptOnBranch', 'OnlyDuring', 'ExceptDuring',
+        'WorkingDirectory', 'IfExists', 'UnlessExists',
+        'OnlyOnPlatform', 'ExceptOnPlatform', 'OutVariable' ) )
     {
         if ($taskProperties.ContainsKey($commonPropertyName))
         {
@@ -188,8 +192,8 @@ function Invoke-WhiskeyTask
         if( $Parameter['WorkingDirectory'] )
         {
             # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
-            $workingDirectory = 
-                $Parameter['WorkingDirectory'] | 
+            $workingDirectory =
+                $Parameter['WorkingDirectory'] |
                 Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory' -Mandatory -OnlySinglePath -PathType 'Directory' |
                 Resolve-Path |
                 Select-Object -ExpandProperty 'ProviderPath'
@@ -259,7 +263,24 @@ function Invoke-WhiskeyTask
                 $parameter.Remove('Debug')
             }
 
-            & $task.CommandName @parameter
+            $outVariable = $commonProperties['OutVariable']
+
+            if ($outVariable)
+            {
+                $taskOutput = & $task.CommandName @parameter
+
+                if (-not $taskOutput)
+                {
+                    $taskOutput = ''
+                }
+
+                Add-WhiskeyVariable -Context $TaskContext -Name $outVariable -Value $taskOutput
+            }
+            else
+            {
+                & $task.CommandName @parameter
+            }
+
             $result = 'COMPLETED'
         }
         finally
