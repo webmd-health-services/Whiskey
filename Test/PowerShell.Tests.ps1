@@ -1,4 +1,4 @@
- 
+
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
@@ -7,6 +7,7 @@ Set-StrictMode -Version 'Latest'
 $testRoot = $null
 $workingDirectory = $null
 $failed = $false
+$scriptBlock = $null
 $scriptName = $null
 
 function Get-OutputFilePath
@@ -40,7 +41,7 @@ function GivenAScript
 
     $script:scriptName = 'myscript.ps1'
     $scriptPath = Join-Path -Path $testRoot -ChildPath $scriptName
-        
+
     @"
 $($WithParam)
 
@@ -62,6 +63,15 @@ function GivenLastExitCode
 function GivenNoWorkingDirectory
 {
     $script:workingDirectory = $null
+}
+
+function GivenScriptBlock
+{
+    param(
+        [String]$ScriptBlock
+    )
+
+    $script:scriptBlock = $ScriptBlock
 }
 
 function GivenWorkingDirectory
@@ -90,6 +100,10 @@ function GivenWorkingDirectory
 function Init
 {
     $script:testRoot = New-WhiskeyTestRoot
+    $script:failed = $false
+    $script:scriptBlock = $null
+    $script:scriptName = $null
+    $script:workingDirectory = $null
 }
 function ThenFile
 {
@@ -98,7 +112,7 @@ function ThenFile
         $HasContent
     )
 
-    $fullpath = Join-Path -Path $testRoot -ChildPath $Path 
+    $fullpath = Join-Path -Path $testRoot -ChildPath $Path
     $fullpath | Should -Exist
     Get-Content -Path $fullpath | Should -Be $HasContent
 }
@@ -154,11 +168,26 @@ function WhenTheTaskRuns
         [switch]$InInitMode
     )
 
-    $taskParameter = @{
-                        Path = @(
-                                $scriptName
-                            )
-                        }
+    $context = New-WhiskeyTestContext -ForDeveloper `
+                                      -InCleanMode:$InCleanMode `
+                                      -InInitMode:$InInitMode `
+                                      -ForBuildRoot $testRoot
+
+    $taskParameter = @{}
+
+    if( $scriptName )
+    {
+        $taskParameter['Path'] = @( $scriptName )
+
+        Get-Content -Path (Join-Path -Path $testRoot -ChildPath $scriptName) -Raw |
+            Write-WhiskeyDebug -Context $context
+    }
+
+    if( $null -ne $scriptBlock )
+    {
+        $taskParameter['ScriptBlock'] = $scriptBlock
+        $scriptBlock | Write-WhiskeyDebug -Context $context
+    }
 
     if( $workingDirectory )
     {
@@ -170,21 +199,13 @@ function WhenTheTaskRuns
         $taskParameter['Argument'] = $WithArgument
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper `
-                                      -InCleanMode:$InCleanMode `
-                                      -InInitMode:$InInitMode `
-                                      -ForBuildRoot $testRoot
-    
-    Get-Content -Path (Join-Path -Path $testRoot -ChildPath $scriptName) -Raw |
-        Write-WhiskeyDebug -Context $context
-
     $failed = $false
 
     $Global:Error.Clear()
     $script:failed = $false
     try
     {
-        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter 
+        Invoke-WhiskeyTask -Name 'PowerShell' -TaskContext $context -Parameter $taskParameter
     }
     catch
     {
@@ -233,7 +254,7 @@ Describe 'PowerShell.when script throws a terminating exception' {
         Init
         GivenAScript @'
 throw 'fubar!'
-'@ 
+'@
         WhenTheTaskRuns -ErrorAction SilentlyContinue
         ThenTheTaskFails
         ThenTheScriptRan
@@ -248,7 +269,7 @@ Describe 'PowerShell.when script''s error action preference is Stop' {
 $ErrorActionPreference = 'Stop'
 Write-Error 'snafu!'
 throw 'fubar'
-'@ 
+'@
         WhenTheTaskRuns -ErrorAction SilentlyContinue
         ThenTheTaskFails
         ThenTheScriptRan
@@ -267,7 +288,7 @@ $ErrorActionPreference = 'Stop'
 Write-WhiskeyDebug ('ErrorActionPreference  {0}' -f $ErrorActionPreference)
 Non-ExistingCmdlet -Name 'Test'
 throw 'fubar'
-'@ 
+'@
         WhenTheTaskRuns -ErrorAction SilentlyContinue
         ThenTheTaskFails
         ThenTheScriptRan
@@ -372,7 +393,7 @@ $(
         throw ('TaskContext.BuildMetadata is a string instead of a [Whiskey.BuildInfo].')
     }
 "@
-        WhenTheTaskRuns 
+        WhenTheTaskRuns
         ThenTheTaskPasses
     }
 }
@@ -426,9 +447,88 @@ Describe 'PowerShell.when run in Clean mode' {
 Describe 'PowerShell.when run in Initialize mode' {
     It 'should run' {
         Init
-        GivenAScript 
+        GivenAScript
         WhenTheTaskRuns -InInitMode
         ThenTheTaskPasses
         ThenTheScriptRan
+    }
+}
+
+Describe 'PowerShell.when missing required properties' {
+    It 'should fail' {
+        Init
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheLastErrorMatches ([regex]::Escape('Missing required property. Task must use one of "Path" or "ScriptBlock".'))
+    }
+}
+
+Describe 'PowerShell.when given both Path and ScriptBlock properties' {
+    It 'should fail' {
+        Init
+        GivenAPassingScript
+        GivenScriptBlock ''
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheLastErrorMatches ([regex]::Escape('Task uses both "Path" and "ScriptBlocK" properties. Only one of these properties is allowed.'))
+    }
+}
+
+Describe 'PowerShell.when given ScriptBlock' {
+    It 'should run the script block' {
+        Init
+        GivenScriptBlock @'
+Set-Content -Path 'file.txt' -Value 'test content'
+'@
+        WhenTheTaskRuns
+        ThenTheTaskPasses
+        ThenFile 'file.txt' -HasContent 'test content'
+    }
+}
+
+Describe 'PowerShell.when given ScriptBlock fails' {
+    It 'should fail' {
+        Init
+        GivenScriptBlock @'
+throw 'script block failed'
+'@
+        WhenTheTaskRuns -ErrorAction SilentlyContinue
+        ThenTheTaskFails
+        ThenTheLastErrorMatches 'threw a terminating exception'
+    }
+}
+
+Describe 'PowerShell.when passing parameters to ScriptBlock' {
+    It 'should pass the parameters' {
+        Init
+        GivenScriptBlock @'
+param(
+    $Content
+)
+Set-Content -Path 'file.txt' -Value $Content
+'@
+        WhenTheTaskRuns -WithArgument @{ Content = 'content from parameter' }
+        ThenTheTaskPasses
+        ThenFile 'file.txt' -HasContent 'content from parameter'
+    }
+}
+
+Describe 'PowerShell.when passing TaskContext to ScriptBlock' {
+    It 'should pass TaskContext to ScriptBlock' {
+        Init
+        GivenScriptBlock @'
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [Whiskey.Context]$TaskContext
+)
+
+if (-not $PSCmdlet.MyInvocation.BoundParameters.ContainsKey('TaskContext') )
+{
+    throw 'TaskContext not passed to scriptblock!'
+}
+'@
+        WhenTheTaskRuns
+        ThenTheTaskPasses
     }
 }
