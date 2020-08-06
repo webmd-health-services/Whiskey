@@ -162,6 +162,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Added a new common task property `OutVariable` for redirecting a task's output to a Whiskey variable.
+* Fixed: Whiskey failed to retrieve API key values from context object on non-Windows platforms running PowerShell 7.0+.
 '@
         } # End of PSData hashtable
 
