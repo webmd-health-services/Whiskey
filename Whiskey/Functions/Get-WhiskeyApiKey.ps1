@@ -43,6 +43,15 @@ function Get-WhiskeyApiKey
     }
 
     $secureString = $Context.ApiKeys[$ID]
-    $stringPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
-    return [Runtime.InteropServices.Marshal]::PtrToStringAuto($stringPtr)
+
+    $convertFromSecureString = Get-Command -Name 'ConvertFrom-SecureString'
+    if( $convertFromSecureString.Parameters.ContainsKey('AsPlainText') )
+    {
+        ConvertFrom-SecureString -SecureString $secureString -AsPlainText
+    }
+    else
+    {
+        $stringPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureString)
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($stringPtr)
+    }
 }
