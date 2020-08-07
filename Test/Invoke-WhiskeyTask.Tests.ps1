@@ -1459,4 +1459,15 @@ Describe 'Invoke-WhiskeyTask.when using Debug switch' {
     }
 }
 
+Describe 'Invoke-WhiskeyTask.when using OutVariable property' {
+    It 'should capture output in Whiskey variable' {
+        Init
+        WhenRunningTask 'GenerateOutputTask' -Parameter @{ Output = 'task output text'; OutVariable = 'TASK_OUTPUT' }
+        ThenPipelineSucceeded
+        $output | Should -BeNullOrEmpty
+        $context.Variables.ContainsKey('TASK_OUTPUT') | Should -BeTrue
+        $context.Variables['TASK_OUTPUT'] | Should -Be 'task output text'
+    }
+}
+
 Remove-Module -Name 'WhiskeyTestTasks' -Force -ErrorAction Ignore

@@ -553,3 +553,13 @@ function TaskWithParameterAliases
 
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
+
+function GenerateOutputTask
+{
+    [Whiskey.Task('GenerateOutputTask')]
+    param(
+        [String]$Output
+    )
+
+    $Output
+}

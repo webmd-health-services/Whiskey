@@ -7,8 +7,10 @@ function Invoke-WhiskeyPowerShell
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
+        [Whiskey.Tasks.ValidatePath(PathType='File')]
         [String[]]$Path,
+
+        [String]$ScriptBlock,
 
         [Object]$Argument = @()
     )
@@ -16,15 +18,39 @@ function Invoke-WhiskeyPowerShell
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $scriptBlockGiven = $PSCmdlet.MyInvocation.BoundParameters.ContainsKey('ScriptBlock')
+
+    if( -not $Path -and -not $scriptBlockGiven )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Missing required property. Task must use one of "Path" or "ScriptBlock".'
+        return
+    }
+    elseif( $Path -and $scriptBlockGiven )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Task uses both "Path" and "ScriptBlocK" properties. Only one of these properties is allowed.'
+        return
+    }
+
+    if( $scriptBlockGiven )
+    {
+        $Path = Join-Path -Path $TaskContext.Temp.FullName -ChildPath 'scriptblock.ps1'
+        Set-Content -Path $Path -Value $ScriptBlock -Force
+    }
+
     $workingDirectory = (Get-Location).ProviderPath
 
-    foreach( $scriptPath in $path )
+    foreach( $scriptPath in $Path )
     {
+        $mediumAndPath = "script `"$($scriptPath)`""
+        if( $scriptBlockGiven )
+        {
+            $mediumAndPath = 'script block'
+        }
 
         $scriptCommand = Get-Command -Name $scriptPath -ErrorAction Ignore
         if( -not $scriptCommand )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Can''t run PowerShell script "{0}": it has a syntax error.' -f $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message "Can't run PowerShell $($mediumAndPath): it has a syntax error."
             continue
         }
 
@@ -82,7 +108,7 @@ function Invoke-WhiskeyPowerShell
 
             if( $argument )
             {
-                $argumentDesc = 
+                $argumentDesc =
                     & {
                         if( ($argument | Get-Member -Name 'Keys') )
                         {
@@ -127,7 +153,7 @@ function Invoke-WhiskeyPowerShell
             }
             catch
             {
-                $_ | Out-String | Write-WhiskeyError 
+                $_ | Out-String | Write-WhiskeyError
             }
 
             Set-StrictMode -Version 'Latest'
@@ -153,20 +179,19 @@ function Invoke-WhiskeyPowerShell
         }
         else
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" threw a terminating exception.' -F $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message "PowerShell $($mediumAndPath) threw a terminating exception."
             return
         }
 
         if( $runResult.ExitCode -ne 0 )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" failed, exited with code {1}.' -F $scriptPath,$runResult.ExitCode)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message "PowerShell $($mediumAndPath) failed, exited with code $($runResult.ExitCode)."
             return
         }
         elseif( -not $runResult.Successful )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('PowerShell script "{0}" threw a terminating exception.' -F $scriptPath)
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message "PowerShell $($mediumAndPath) threw a terminating exception."
             return
         }
-
     }
 }

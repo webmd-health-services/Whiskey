@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.44.0'
+    ModuleVersion = '0.45.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,24 +161,9 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-## Breaking Changes
-
-* Whiskey's default version number is now `0.0.0` instead of using the current date. If you care about your version number, make sure you have a `Version` task defined in your whiskey.yml file.
-* Whiskey's `CopyFile`, `Delete`, `DotNet`, `File`, `LoadTask`, `GetPowerShellModule`, `GitHubRelease`, `MergeFile`, `MSBuild`, `NuGetPack`, `NuGetPush`, `NuGetRestore`, `NUnit2`, `NUnit3`, `Pester3`, `PowerShell`, `ProGetUniversalPackage`, `PublishPowerShellModule`, `PublishProGetUniversalPackage`, `SetVariableFromPowerShellDataFile`, `SetVariableFromXml`, `Version`, and `Zip` tasks now resolve paths relative to their working directories instead of the build root. If you use a `WorkingDirectory` property on any of these tasks, make sure the values to their path properties are relative to that working directory.
-* Whiskey now passes relative paths to tasks. Task authors may need to update their tasks to support this.
-* The `Resolve-WhiskeyTaskPath` function's parameters have changed. If you use `Resolve-WhiskeyTaskPath`, you'll need to update your usages to use the new parameters.
-* Removed all support for old "VersionFrom", "PrereleaseMap", and "Version" properties in the root of your whiskey.yml file. Use Whiskey's `Version` task instead.
-
-## Improvements and Bug Fixes
-
-* The `GetPowerShellModule` task now supports installing prerelease versions of modules. Set the `AllowPrerelease` property to `true`.
-* The `GetPowerShellModule` task can now install a module into a custom directory instead of the PSModules directory. Pass the path to the `Path` parameter.
-* The `GetPowerShellModule` task can now import the module being installed. Set the `Import` property to `true`.
-* Fixed: Whiskey fails to fail a build when certain PowerShell terminating errors are thrown (i.e. strict mode violations, command not found error, etc.).
-* The `SourceRoot` property on the `ProGetUniversalPackage` and `Zip` tasks is deprecated. Use `WorkingDirectory` instead.
-* Added support to the `Pester4` task for passing arbitrary parameters to Invoke-Pester. Pass the parameters as named properties via the new `Argument` property.
-* Created `Write-WhiskeyObject` function for writing objects in sensible ways. Currently, only hashtables/dictionaries are supported. Keys/values are printed so they align and are recognizable. Other objects are passed to PowerShell's `Out-String` for formatting.
-* Created `Convert-WhiskeyPathDirectorySeparator` for converting the directory separators in a path to the separator for the current platform.
+* Added a new common task property `OutVariable` for redirecting a task's output to a Whiskey variable.
+* Fixed: Whiskey failed to retrieve API key values from context object on non-Windows platforms running PowerShell 7.0+.
+* Added a `ScriptBlock` property to the `PowerShell` task for defining a block of PowerShell code in the `whiskey.yml` for the task to run.
 '@
         } # End of PSData hashtable
 
