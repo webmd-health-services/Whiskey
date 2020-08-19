@@ -3,7 +3,7 @@ function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('ProGetUniversalPackage')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
