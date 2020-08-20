@@ -452,7 +452,7 @@ function ThenPackageArchive
     {
         foreach ($path in $ContainsPath)
         {
-            $path = $path -replace '[\\/]', [IO.Path]::DirectorySeparatorChar
+            $path = $path -replace '\\','/'
             $packageArchive.Entries.FullName | Should -Contain $path
         }
     }

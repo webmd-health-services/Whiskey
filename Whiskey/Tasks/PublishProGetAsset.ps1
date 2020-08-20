@@ -3,7 +3,7 @@
 function Publish-WhiskeyProGetAsset
 {
     [Whiskey.Task('PublishProGetAsset')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.9.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
     [CmdletBinding()]
     param(
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.

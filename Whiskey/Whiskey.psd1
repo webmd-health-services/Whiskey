@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.45.0'
+    ModuleVersion = '0.45.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,9 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added a new common task property `OutVariable` for redirecting a task's output to a Whiskey variable.
-* Fixed: Whiskey failed to retrieve API key values from context object on non-Windows platforms running PowerShell 7.0+.
-* Added a `ScriptBlock` property to the `PowerShell` task for defining a block of PowerShell code in the `whiskey.yml` for the task to run.
+* Updated `ProGetAutomation` PowerShell module dependency to version `0.10.*` (from `0.9.*`) for tasks `ProGetUniversalPackage`, `PublishProGetAsset`, `PublishProGetUniversalPackage`.
 '@
         } # End of PSData hashtable
 
