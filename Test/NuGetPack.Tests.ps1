@@ -407,7 +407,6 @@ Describe 'NuGetPack.when creating package from .nuspec file' {
     <id>package</id>
     <version>1.2.3</version>
     <authors>Fizz Author</authors>
-    <owners>Fizz Author</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Buzz Desc</description>
   </metadata>
@@ -442,7 +441,6 @@ Describe 'NuGetPack.when package ID is different than path' {
     <version>1.2.3</version>
     <title>Title</title>
     <authors>Somebody</authors>
-    <owners>Somebody</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Description</description>
   </metadata>
@@ -475,7 +473,6 @@ Describe 'NuGetPack.when customizing version' {
     <id>package</id>
     <version>2.2.2</version>
     <authors>Somebody</authors>
-    <owners>Somebody</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Description</description>
   </metadata>
