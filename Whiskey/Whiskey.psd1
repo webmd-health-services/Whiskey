@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.45.1'
+    ModuleVersion = '0.46.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,7 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Updated `ProGetAutomation` PowerShell module dependency to version `0.10.*` (from `0.9.*`) for tasks `ProGetUniversalPackage`, `PublishProGetAsset`, `PublishProGetUniversalPackage`.
+* Added `InstallNode` task for installing Node.js.
 '@
         } # End of PSData hashtable
 
