@@ -6,13 +6,14 @@ function Install-Node
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [String]$Version,
+
+        [switch]$Force
     )
 
-    if( $TaskParameter['Force'] -or $TaskParameter['Version'] )
+    if( $Force -or $Version )
     {
         #Skips install if specified version is already installed
-        Install-WhiskeyNode -InstallRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
+        Install-WhiskeyNode -InstallRoot $TaskContext.BuildRoot -Version $Version
     }
 }

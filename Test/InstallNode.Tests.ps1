@@ -10,15 +10,16 @@ $script:latestNodeVersion =
     Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | 
     Sort-Object | 
     Select-Object -ExpandProperty SyncRoot | 
-    Where-Object{ $_.lts -ne $false } | 
+    Where-Object{ $_.lts  } | 
     Select-Object -ExpandProperty version | 
     Select-Object -First 1
 
 function Init
 {
     $script:testRoot = New-WhiskeyTestRoot
-    $script:context = $null
+    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
     $script:fileCreatedTime = New-Object Collections.ArrayList
+    $script:nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
 }
 
 function ThenNodeInstalled
@@ -27,45 +28,34 @@ function ThenNodeInstalled
         [String]$Version
     )
 
-    $nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
-    Test-Path -Path $nodePath -PathType Container | Should -BeTrue
+    $nodePath | Should -Exist
     if($Version)
     {
         Get-ChildItem -Path $nodePath | Where-Object { $_.Name -match '\d+\.\d+\.\d+' } | Select-Object -ExpandProperty Name
-        $Version -match $Matches[0] | Should -BeTrue
+        $Version | Should -Match $Matches[0]
     }
 }
 
 function WhenInstallingNode
 {
     param(
-        [String]$Version
+        [String]$Version,
+
+        [switch]$Force
     )
 
-    $nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
-    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testRoot
-    $parameters = @{
-        'Version' = $Version
+    if( $Force )
+    {
+        $parameters['Force'] = $true
     }
+    $parameters['Version'] = $Version
     Invoke-WhiskeyTask -TaskContext $context -Parameter $parameters -Name 'InstallNode' 
     $script:fileCreatedTime.add(((Get-ChildItem -Path $nodePath).CreationTime | Select-Object -ExpandProperty ticks))
 }
 
-function WhenInstallingNodeForce
-{
-    param(
-        [String]$Version
-    )
-    $parameters = @{
-        'Force' = $true
-        'Version' = $Version
-    }
-    Invoke-WhiskeyTask -TaskContext $context -Parameter $parameters -Name 'InstallNode'
-}
-
 function ThenNodeFolderDidNotChange
 {
-    @( $filecreatedTime | Select-Object -Unique ).Count -eq 1 | Should -BeTrue
+    @( $filecreatedTime | Select-Object -Unique ) | Should -HaveCount 1
 }
 
 Describe 'InstallNode' {
@@ -89,7 +79,7 @@ Describe 'InstallNode Node.js 4.5.0, then InstallNode with force' {
         Init
         WhenInstallingNode -Version '4.5.0'
         ThenNodeInstalled -Version '4.5.0'
-        WhenInstallingNodeForce
+        WhenInstallingNode -Force
         ThenNodeInstalled -Version $latestNodeVersion
     }
 }
