@@ -511,31 +511,19 @@ function ThenUpackMetadataIs
         # $DebugPreference = 'Continue'
         foreach ($key in $Reference.Keys)
         {
-            Write-WhiskeyDebug -Context $context $key
-            if ($key -notin $Difference.Keys)
+            $Difference.ContainsKey($key) | Should -BeTrue -Because "missing key $($key)"
+            $referenceValue = $Reference[$key]
+            $differenceValue = $Difference[$key]
+            if( ($referenceValue | Get-Member -Name 'Keys') )
             {
-                Write-WhiskeyDebug -Context $context -Message ('Expected  {0},{1}' -f $key,($Difference.Keys -join ','))
-                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference.Keys)
-                return $false
+                $msg = "expected $($key) to be a hashtable but got $($differenceValue.GetType().FullName)"
+                $differenceValue | Get-Member -Name 'Keys' | Should -Not -BeNullOrEmpty -Because $msg
+                Assert-HashTableEqual -Reference $referenceValue -Difference $differenceValue
+                continue
             }
-            elseif ($Reference[$key] | Get-Member -Name 'Keys')
-            {
-                if (-not ($Difference[$key] | Get-Member -Name 'Keys') -or (-not (Assert-HashTableEqual -Reference $Reference[$key] -Difference $Difference[$key])))
-                {
-                    Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
-                    Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
-                    return $false
-                }
-            }
-            elseif (Compare-Object -ReferenceObject $Reference[$key] -DifferenceObject $Difference[$key])
-            {
-                Write-WhiskeyDebug -Context $context -Message ('Expected  {0}' -f $Reference[$key])
-                Write-WhiskeyDebug -Context $context -Message ('Actual    {0}' -f $Difference[$key])
-                return $false
-            }
-        }
 
-        return $true
+            $differenceValue | Should -Be $referenceValue -Because "(""$($key)"" property)"
+        }
     }
 
     function ConvertTo-Hashtable {
@@ -566,7 +554,7 @@ function ThenUpackMetadataIs
     $ExpectedContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
     Write-WhiskeyDebug -Context $context 'Actual'
     $upackContent | ConvertTo-Json | Write-WhiskeyDebug -Context $context
-    Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent | Should -BeTrue
+    Assert-HashTableEqual -Reference $ExpectedContent -Difference $upackContent
 }
 
 function ThenPackageShouldBeCompressed
@@ -1188,21 +1176,21 @@ Describe 'ProGetUniversalPackage.when customizing package version' {
         Init
         GivenBuildVersion '1.2.3-rc.1+build.300'
         GivenARepositoryWithItems 'my.file'
-        GivenPackageVersion '5.8.2'
+        GivenPackageVersion '5.8.2-rc.2+develop.deadbee.301'
         WhenPackaging -Paths 'my.file'
         ThenPackageShouldInclude 'my.file','version.json'
         ThenUpackMetadataIs @{
             'name' = $defaultPackageName;
             'title' = $defaultPackageName;
             'description' = $defaultDescription;
-            'version' = '5.8.2-rc.1';
+            'version' = '5.8.2-rc.2+develop.deadbee.301';
         }
         ThenVersionIs -Version '5.8.2' `
-                    -PrereleaseMetadata 'rc.1' `
-                    -BuildMetadata 'build.300' `
-                    -SemVer2 '5.8.2-rc.1+build.300' `
-                    -SemVer1 '5.8.2-rc1' `
-                    -SemVer2NoBuildMetadata '5.8.2-rc.1'
+                      -PrereleaseMetadata 'rc.2' `
+                      -BuildMetadata 'develop.deadbee.301' `
+                      -SemVer2 '5.8.2-rc.2+develop.deadbee.301' `
+                      -SemVer1 '5.8.2-rc2' `
+                      -SemVer2NoBuildMetadata '5.8.2-rc.2'
         ThenTaskSucceeds
     }
 }
@@ -1222,11 +1210,11 @@ Describe 'ProGetUniversalPackage.when not customizing package version' {
             'version' = $context.Version.SemVer2NoBuildMetadata.ToString();
         }
         ThenVersionIs -Version '1.2.3' `
-                    -PrereleaseMetadata 'rc.1' `
-                    -BuildMetadata 'build.300' `
-                    -SemVer2 '1.2.3-rc.1+build.300' `
-                    -SemVer1 '1.2.3-rc1' `
-                    -SemVer2NoBuildMetadata '1.2.3-rc.1'
+                      -PrereleaseMetadata 'rc.1' `
+                      -BuildMetadata 'build.300' `
+                      -SemVer2 '1.2.3-rc.1+build.300' `
+                      -SemVer1 '1.2.3-rc1' `
+                      -SemVer2NoBuildMetadata '1.2.3-rc.1'
         ThenTaskSucceeds
     }
 }

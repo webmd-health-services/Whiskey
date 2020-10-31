@@ -26,7 +26,7 @@
     CompatiblePSEditions = @( 'Desktop', 'Core' )
 
     # Copyright statement for this module
-    Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
+    Copyright = '(c) 2016 - 2020 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Continuous Integration/Continuous Delivery module.'
@@ -162,6 +162,7 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Added `InstallNode` task for installing Node.js.
+* Fixed: the ProGetUniversalPackage task ignores and overwrites release and build metadata in the `Version` property.
 '@
         } # End of PSData hashtable
 
