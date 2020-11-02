@@ -51,26 +51,25 @@ function New-WhiskeyProGetUniversalPackage
 
     $version = $TaskParameter['Version']
 
-    # ProGet uses build metadata to distinguish different versions, so we can't use a full semantic version.
     if( $version )
     {
-        if( ($version -notmatch '^\d+\.\d+\.\d+$') )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Version" is invalid. It must be a three part version number, i.e. MAJOR.MINOR.PATCH.')
-            return
-        }
         [SemVersion.SemanticVersion]$semVer = $null
         if( -not ([SemVersion.SemanticVersion]::TryParse($version, [ref]$semVer)) )
         {
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Version" is not a valid semantic version.')
             return
         }
-        $semVer = New-Object 'SemVersion.SemanticVersion' $semVer.Major,$semVer.Minor,$semVer.Patch,$TaskContext.Version.SemVer2.Prerelease,$TaskContext.Version.SemVer2.Build
+        # If someone has provided their own version, use it.
         $version = New-WhiskeyVersionObject -SemVer $semVer
+        $packageVersion = $semVer.ToString()
     }
     else
     {
         $version = $TaskContext.Version
+        # ProGet uses build metadata to distinguish different versions (i.e. 2.0.1+build.1 is different than 
+        # 2.0.1+build.2), which means users could inadvertently release multiple versions of a package. Remove the
+        # build metadata to prevent this. This should be what people expect most of the time.
+        $packageVersion = $version.SemVer2NoBuildMetadata.ToString()
     }
 
     $compressionLevel = [IO.Compression.CompressionLevel]::Optimal
@@ -270,7 +269,7 @@ function New-WhiskeyProGetUniversalPackage
     $outFileDisplay = $outFileDisplay.Trim([IO.Path]::DirectorySeparatorChar)
     Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFileDisplay)
     New-ProGetUniversalPackage -OutFile $outFile `
-                               -Version $version.SemVer2NoBuildMetadata.ToString() `
+                               -Version $packageVersion `
                                -Name $TaskParameter['Name'] `
                                -Description $TaskParameter['Description'] `
                                -AdditionalMetadata $manifestProperties
