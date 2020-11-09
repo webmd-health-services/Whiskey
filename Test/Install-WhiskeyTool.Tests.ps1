@@ -367,8 +367,8 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
         Init
         Install-Node -BuildRoot $testRoot
         GivenVersionParameterName 'Fubar'
-        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '13.1.0' } -Version '16.0.0'
-        ThenNodeModuleInstalled 'license-checker' -AtVersion '13.1.0'
+        WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '25.0.0' } -Version '16.0.0'
+        ThenNodeModuleInstalled 'license-checker' -AtVersion '25.0.0'
     }
 }
 
@@ -377,8 +377,8 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
     It 'should install the version in the attribute' {
         Init
         Install-Node -BuildRoot $testRoot
-        WhenInstallingTool 'NodeModule::nsp' @{ } -Version '2.7.0'
-        ThenNodeModuleInstalled 'nsp' -AtVersion '2.7.0'
+        WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.20.0'
+        ThenNodeModuleInstalled 'axios' -AtVersion '0.20.0'
     }
 }
 
