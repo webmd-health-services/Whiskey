@@ -565,7 +565,7 @@ else
             {
                 $paths = 
                     Get-ChildItem -Path $rootPath -File |
-                    Split-Path -Leaf
+                    Split-Path -Leaf 
 
                 $changedCasePaths = 
                     $paths |
@@ -594,6 +594,8 @@ else
                         }
                     }
                 }
+                
+                $expectedPaths = $expectedPaths | Where-Object {$_ -ne ".\DOCKERFILE.WINDOWS"}
                 $resolvedPaths | Sort-Object | Should -Be ($expectedPaths | Sort-Object)
             }
             finally

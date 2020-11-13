@@ -1,0 +1,13 @@
+#Dockerfile to build Whiskey in a linux container. Example build command: docker build -t whs/whiskey -f .\Dockerfile.linux
+FROM mcr.microsoft.com/powershell
+
+RUN apt-get update && \
+    apt-get install sudo && \
+    usermod -aG sudo root && \
+    sudo apt-get install libunwind-dev -y && \
+    sudo apt-get install xz-utils
+
+ADD . /build/Whiskey
+WORKDIR /build/Whiskey
+
+RUN sudo pwsh -File build.ps1 
