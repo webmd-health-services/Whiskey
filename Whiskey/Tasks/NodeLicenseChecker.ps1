@@ -22,8 +22,14 @@ function Invoke-WhiskeyNodeLicenseChecker
 
     Write-WhiskeyDebug -Context $TaskContext -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
-        & $nodePath $licenseCheckerPath '--json'
+        & $nodePath $licenseCheckerPath '--json' '--failOn' 'AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later'
     }
+    if( $LASTEXITCODE -eq 1 )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message "license-checker reported a prohibited GPL license. See above for more details."
+        return
+    }
+    
     Write-WhiskeyDebug -Context $TaskContext -Message ('COMPLETE')
 
     $report = Invoke-Command -NoNewScope -ScriptBlock {

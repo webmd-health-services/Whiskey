@@ -27,6 +27,9 @@ function Init
 
 function CreatePackageJson
 {
+    param(
+        [String]$License
+    )
     $packageJsonPath = Join-Path -Path $testRoot -ChildPath 'package.json'
 
     @"
@@ -35,8 +38,8 @@ function CreatePackageJson
     "version": "0.0.1",
     "description": "test",
     "repository": "bitbucket:example/repo",
-    "private": true,
-    "license": "MIT",
+    "private": false,
+    "license": "$($License)",
     "dependencies": {
         $($script:dependency -join ',')
     },
@@ -124,7 +127,9 @@ function ThenTaskSucceeded
 function WhenRunningTask
 {
     [CmdletBinding()]
-    param()
+    param(
+        [String]$License
+    )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
 
@@ -132,7 +137,7 @@ function WhenRunningTask
 
     try
     {
-        CreatePackageJson
+        CreatePackageJson -license $License
 
         Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NodeLicenseChecker'
     }
@@ -147,7 +152,7 @@ Describe 'NodeLicenseChecker.when running license-checker' {
     AfterEach { Reset }
     It 'should pass' {
         Init
-        WhenRunningTask
+        WhenRunningTask -License "MIT"
         ThenLicenseReportCreated
         ThenLicenseReportIsValidJSON
         ThenLicenseReportFormatTransformed
@@ -160,8 +165,38 @@ Describe 'NodeLicenseChecker.when license checker did not return valid JSON' {
     It 'should fail' {
         Init
         GivenBadJson
-        WhenRunningTask -ErrorAction SilentlyContinue
+        WhenRunningTask -License "MIT" -ErrorAction SilentlyContinue
         ThenLicenseReportNotCreated
         ThenTaskFailedWithMessage 'failed to output a valid JSON report'
+    }
+}
+
+Describe 'NodeLicenseChecker.when license reports a AGPL-1.0-or-later license' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        WhenRunningTask -License "AGPL-1.0-or-later" -ErrorAction SilentlyContinue
+        ThenLicenseReportNotCreated
+        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
+    }
+}
+
+Describe 'NodeLicenseChecker.when license reports a GPL-1.0-or-later license' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        WhenRunningTask -License "GPL-1.0-or-later" -ErrorAction SilentlyContinue
+        ThenLicenseReportNotCreated
+        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
+    }
+}
+
+Describe 'NodeLicenseChecker.when license reports a LGPL-2.0-or-later license' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        WhenRunningTask -License "LGPL-2.0-or-later" -ErrorAction SilentlyContinue
+        ThenLicenseReportNotCreated
+        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
     }
 }
