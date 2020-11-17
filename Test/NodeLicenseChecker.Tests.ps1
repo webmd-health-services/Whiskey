@@ -10,6 +10,7 @@ $devDependency = $null
 $failed = $false
 $licenseReportPath = $null
 $output = $null
+$whsFailOn = @("--failOn", "AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later")
 
 function Init
 {
@@ -128,12 +129,19 @@ function WhenRunningTask
 {
     [CmdletBinding()]
     param(
-        [String]$License
+        [String]$License,
+
+        [String[]]$Argument
     )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
 
     $taskParameter = @{ }
+
+    if( $Argument )
+    {
+        $taskParameter['Arguments'] = $Argument 
+    }
 
     try
     {
@@ -171,32 +179,45 @@ Describe 'NodeLicenseChecker.when license checker did not return valid JSON' {
     }
 }
 
-Describe 'NodeLicenseChecker.when license reports a AGPL-1.0-or-later license' {
+Describe 'NodeLicenseChecker.when license reports a AGPL-1.0-or-later license and is included with --failOn' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenRunningTask -License "AGPL-1.0-or-later" -ErrorAction SilentlyContinue
+        WhenRunningTask -License "AGPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
         ThenLicenseReportNotCreated
-        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
     }
 }
 
-Describe 'NodeLicenseChecker.when license reports a GPL-1.0-or-later license' {
+Describe 'NodeLicenseChecker.when license reports a GPL-1.0-or-later license and is included with --failOn' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenRunningTask -License "GPL-1.0-or-later" -ErrorAction SilentlyContinue
+        WhenRunningTask -License "GPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
         ThenLicenseReportNotCreated
-        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
     }
 }
 
-Describe 'NodeLicenseChecker.when license reports a LGPL-2.0-or-later license' {
+Describe 'NodeLicenseChecker.when license reports a LGPL-2.0-or-later license and is included with --failOn' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenRunningTask -License "LGPL-2.0-or-later" -ErrorAction SilentlyContinue
+        WhenRunningTask -License "LGPL-2.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
         ThenLicenseReportNotCreated
-        ThenTaskFailedWithMessage 'license-checker reported a prohibited'
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
+    }
+}
+
+Describe 'NodeLicenseChecker.when passing in multiple arguments.' {
+    AfterEach { Reset }
+    $argument = @("--failOn", "MIT", "--direct", "--production")
+    It 'should pass' {
+        Init
+        WhenRunningTask -License "LGPL-2.0-or-later" -Argument $argument -ErrorAction SilentlyContinue
+        ThenLicenseReportCreated
+        ThenLicenseReportIsValidJSON
+        ThenLicenseReportFormatTransformed
+        ThenTaskSucceeded
     }
 }

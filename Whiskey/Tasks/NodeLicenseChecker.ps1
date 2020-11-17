@@ -10,23 +10,24 @@ function Invoke-WhiskeyNodeLicenseChecker
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [String[]]$Arguments
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
     $licenseCheckerPath = Assert-WhiskeyNodeModulePath -Path $TaskParameter['LicenseCheckerPath'] -CommandPath 'bin\license-checker' -ErrorAction Stop
 
     $nodePath = Assert-WhiskeyNodePath -Path $TaskParameter['NodePath'] -ErrorAction Stop
 
     Write-WhiskeyDebug -Context $TaskContext -Message ('Generating license report')
     $reportJson = Invoke-Command -NoNewScope -ScriptBlock {
-        & $nodePath $licenseCheckerPath '--json' '--failOn' 'AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later'
+        & $nodePath $licenseCheckerPath '--json' $Arguments -join " "
     }
     if( $LASTEXITCODE -eq 1 )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message "license-checker reported a prohibited GPL license. See above for more details."
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message "license-checker returned a non-zero exit code. See above output for more details."
         return
     }
     
