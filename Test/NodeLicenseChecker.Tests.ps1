@@ -10,7 +10,7 @@ $devDependency = $null
 $failed = $false
 $licenseReportPath = $null
 $output = $null
-$whsFailOn = @("--failOn", "AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later")
+$whsFailOn = @("--json", "--failOn", "AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later")
 
 function Init
 {
@@ -22,7 +22,6 @@ function Init
 
     $script:testRoot = New-WhiskeyTestRoot
 
-    $script:licenseReportPath = Join-Path -Path $testRoot -ChildPath '.output\node-license-checker-report.json'
     Install-Node -BuildRoot $testRoot
 }
 
@@ -51,11 +50,6 @@ function CreatePackageJson
 "@ | Set-Content -Path $packageJsonPath -Force
 }
 
-function GivenBadJson
-{
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'ConvertFrom-Json' }
-}
-
 function GivenDependency 
 {
     param(
@@ -80,31 +74,6 @@ function Reset
 function ThenLicenseCheckerNotRun
 {
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--json' } -Times 0
-}
-
-function ThenLicenseReportCreated
-{
-    $licenseReportPath | Should -Exist
-}
-
-function ThenLicenseReportIsValidJSON
-{
-    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
-
-    $licenseReportJson | Should -Not -BeNullOrEmpty
-}
-
-function ThenLicenseReportNotCreated
-{
-    $licenseReportPath | Should -Not -Exist
-}
-
-function ThenLicenseReportFormatTransformed
-{
-    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
-
-    $licenseReportJson | Select-Object -ExpandProperty 'name' | Should -Not -BeNullOrEmpty
-    $licenseReportJson | Select-Object -ExpandProperty 'licenses' | Should -Not -BeNullOrEmpty
 }
 
 function ThenTaskFailedWithMessage
@@ -160,22 +129,8 @@ Describe 'NodeLicenseChecker.when running license-checker' {
     AfterEach { Reset }
     It 'should pass' {
         Init
-        WhenRunningTask -License "MIT"
-        ThenLicenseReportCreated
-        ThenLicenseReportIsValidJSON
-        ThenLicenseReportFormatTransformed
+        WhenRunningTask -License "MIT" -Argument "--json"
         ThenTaskSucceeded
-    }
-}
-
-Describe 'NodeLicenseChecker.when license checker did not return valid JSON' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
-        GivenBadJson
-        WhenRunningTask -License "MIT" -ErrorAction SilentlyContinue
-        ThenLicenseReportNotCreated
-        ThenTaskFailedWithMessage 'failed to output a valid JSON report'
     }
 }
 
@@ -184,7 +139,6 @@ Describe 'NodeLicenseChecker.when license reports a AGPL-1.0-or-later license an
     It 'should fail' {
         Init
         WhenRunningTask -License "AGPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
-        ThenLicenseReportNotCreated
         ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
     }
 }
@@ -194,7 +148,6 @@ Describe 'NodeLicenseChecker.when license reports a GPL-1.0-or-later license and
     It 'should fail' {
         Init
         WhenRunningTask -License "GPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
-        ThenLicenseReportNotCreated
         ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
     }
 }
@@ -204,20 +157,16 @@ Describe 'NodeLicenseChecker.when license reports a LGPL-2.0-or-later license an
     It 'should fail' {
         Init
         WhenRunningTask -License "LGPL-2.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
-        ThenLicenseReportNotCreated
         ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
     }
 }
 
 Describe 'NodeLicenseChecker.when passing in multiple arguments.' {
     AfterEach { Reset }
-    $argument = @("--failOn", "MIT", "--direct", "--production")
+    $argument = @("--json", "--failOn", "MIT", "--direct", "--production")
     It 'should pass' {
         Init
         WhenRunningTask -License "LGPL-2.0-or-later" -Argument $argument -ErrorAction SilentlyContinue
-        ThenLicenseReportCreated
-        ThenLicenseReportIsValidJSON
-        ThenLicenseReportFormatTransformed
         ThenTaskSucceeded
     }
 }
