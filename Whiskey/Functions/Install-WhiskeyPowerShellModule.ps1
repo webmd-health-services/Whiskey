@@ -93,57 +93,74 @@ function Install-WhiskeyPowerShellModule
     {
         $modulesRoot = $Path
     }
-    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
-    $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
 
-    $manifest = $null
-    $manifestOk = $false
-    try
+    if(Test-WhiskeyPowershellModule -Name $Name -Version $Version)
     {
-        $manifest =
-            Get-Item -Path $moduleManifestPath -ErrorAction Ignore |
-            Test-ModuleManifest -ErrorAction Ignore |
-            Sort-Object -Property 'Version' -Descending |
-            Select-Object -First 1
-        $manifestOk = $true
-    }
-    catch
-    {
-        $Global:Error.RemoveAt(0)
-    }
+        $installedModules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
 
-    if( $manifestOk -and $manifest )
-    {
-        $manifest
+        foreach ($module in $installedModules) 
+        {
+            if( $module.Version -like $Version)
+            {
+                $module
+                break
+            }
+        }
     }
     else
     {
-        $module = $null
-        if( -not $manifest )
+        $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
+        $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
+
+        $manifest = $null
+        $manifestOk = $false
+        try
         {
-            $module = Resolve-WhiskeyPowerShellModule @resolveParameters -Version $Version 
-            if( -not $module )
+            $manifest =
+                Get-Item -Path $moduleManifestPath -ErrorAction Ignore |
+                Test-ModuleManifest -ErrorAction Ignore |
+                Sort-Object -Property 'Version' -Descending |
+                Select-Object -First 1
+            $manifestOk = $true
+        }
+        catch
+        {
+            $Global:Error.RemoveAt(0)
+        }
+
+        if( $manifestOk -and $manifest )
+        {
+            $manifest
+        }
+        else
+        {
+            $module = $null
+            if( -not $manifest )
             {
+                $module = Resolve-WhiskeyPowerShellModule @resolveParameters -Version $Version
+                if( -not $module )
+                {
+                    return
+                }
+            }
+
+            Write-WhiskeyVerbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
+            Save-Module -Name $Name `
+                        -RequiredVersion $module.Version `
+                        -Repository $module.Repository `
+                        -Path $modulesRoot `
+                        -AllowPrerelease:$AllowPrerelease
+
+            $moduleVersionDirName = Get-ModuleVersionDirectoryName -Version $module.Version
+            $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
+            $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore -WarningAction Ignore
+            if( -not $manifest )
+            {
+                Write-WhiskeyError -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
                 return
             }
+            $manifest
         }
-
-        Write-WhiskeyVerbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
-        Save-Module -Name $Name `
-                    -RequiredVersion $module.Version `
-                    -Repository $module.Repository `
-                    -Path $modulesRoot `
-                    -AllowPrerelease:$AllowPrerelease
-
-        $moduleVersionDirName = Get-ModuleVersionDirectoryName -Version $module.Version
-        $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
-        $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore -WarningAction Ignore
-        if( -not $manifest )
-        {
-            Write-WhiskeyError -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
-            return
-        }
-        $manifest
     }
 
     if( -not $SkipImport )

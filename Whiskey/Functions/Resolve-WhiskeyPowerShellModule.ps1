@@ -60,6 +60,13 @@ function Resolve-WhiskeyPowerShellModule
     foreach( $packageName in $packageManagementPackages.Keys )
     {
         $packageVersion = $packageManagementPackages[$packageName]
+
+        # Module is available globally so no need to install it.
+        if( Test-WhiskeyPowerShellModule -Name $packageName -Version $packageVersion)
+        {
+            continue
+        }
+
         $moduleManifestPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $packageName,$packageVersion)
         $manifestOk = $false
         $manifest = $null

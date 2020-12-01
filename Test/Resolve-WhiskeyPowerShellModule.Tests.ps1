@@ -56,6 +56,16 @@ function GivenModuleDoesNotExist
     Mock -CommandName 'Find-Module' -ModuleName 'Whiskey'
 }
 
+function GivenModuleInstalledGlobally
+{
+    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $true }
+}
+
+function GivenModuleNotInstalledGlobally
+{
+    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $false }
+}
+
 function Reset
 {
     Reset-WhiskeyTestPSModule
@@ -134,6 +144,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given module Name "Pester"' {
     It 'should find it' {
         Init
         GivenName 'Pester'
+        GivenModuleNotInstalledGlobally
         WhenResolvingPowerShellModule
         ThenReturnedModuleInfoObject
         ThenReturnedModule 'Pester'
@@ -147,6 +158,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given module Name "Pester" and Ve
         Init
         GivenName 'Pester'
         GivenVersion '4.3.1'
+        GivenModuleNotInstalledGlobally
         WhenResolvingPowerShellModule
         ThenReturnedModuleInfoObject
         ThenReturnedModule 'Pester' -AtVersion '4.3.1'
@@ -160,6 +172,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given Version wildcard' {
         Init
         GivenName 'Pester'
         GivenVersion '4.3.*'
+        GivenModuleNotInstalledGlobally
         WhenResolvingPowerShellModule
         ThenReturnedModuleInfoObject
         ThenReturnedModule 'Pester' -AtVersion '4.3.1'
@@ -172,6 +185,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when given module that does not exist'
     It 'should fail' {
         Init
         GivenModuleDoesNotExist
+        GivenModuleNotInstalledGlobally
         WhenResolvingPowerShellModule -ErrorAction SilentlyContinue
         ThenErrorMessage 'Failed to find'
         ThenReturnedNothing
@@ -183,6 +197,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when Find-Module returns module from t
     It 'should pick one' {
         Init
         GivenName 'Pester'
+        GivenModuleNotInstalledGlobally
         GivenReturnedModuleFromTwoRepositories
         WhenResolvingPowerShellModule
         ThenReturnedModuleInfoObject
@@ -196,6 +211,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules aren''
     It 'should install package management modules' {
         Init
         GivenName 'Pester'
+        GivenModuleNotInstalledGlobally
         WhenResolvingPowerShellModule -SkipCaching
         Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}' -f $TestPSModulesDirectoryName,$packageManagementVersion) | Should -Exist
         Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\{1}' -f $TestPSModulesDirectoryName,$powerShellGetVersion) | Should -Exist
@@ -207,6 +223,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manife
     It 'should uninstall potentially corrupt modules' {
         Init
         GivenName 'Pester'
+        GivenModuleNotInstalledGlobally
         $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $TestPSModulesDirectoryName,$packageManagementVersion) 
         New-Item -Path $manifestPath -ItemType 'Directory' -Force
         { Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore } | Should -Throw
@@ -222,6 +239,7 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manife
     It 'should uninstall potentially corrupt modules' {
         Init
         GivenName 'Pester'
+        GivenModuleNotInstalledGlobally
         $manifestPath = Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}\PackageManagement.psd1' -f $TestPSModulesDirectoryName,$packageManagementVersion) 
         New-Item -Path $manifestPath -ItemType 'File' -Force
         '@{ "RequiredAssemblies" = "Fubar.dll" }' | Set-Content -Path $manifestPath
@@ -230,5 +248,17 @@ Describe 'Resolve-WhiskeyPowerShellModule.when package management modules manife
         WhenResolvingPowerShellModule -SkipCaching
         Test-ModuleManifest -Path $manifestPath | Should -Not -BeNullOrEmpty
         $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Resolve-WhiskeyPowerShellModule.when package management modules are installed globally' {
+    AfterEach { Reset }
+    It 'should not install package management modules' {
+        Init
+        GivenName 'Pester'
+        GivenModuleInstalledGlobally
+        WhenResolvingPowerShellModule -SkipCaching
+        Join-Path -Path $testRoot -ChildPath ('{0}\PackageManagement\{1}' -f $TestPSModulesDirectoryName,$packageManagementVersion) | Should -Not -Exist
+        Join-Path -Path $testRoot -ChildPath ('{0}\PowerShellGet\{1}' -f $TestPSModulesDirectoryName,$powerShellGetVersion) | Should -Not -Exist
     }
 }

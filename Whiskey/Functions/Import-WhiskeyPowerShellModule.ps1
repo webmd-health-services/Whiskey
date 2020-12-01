@@ -45,8 +45,19 @@ function Import-WhiskeyPowerShellModule
 
     foreach( $moduleName in $Name )
     {
+        $module = $null
         $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $moduleName
-        if( (Test-Path -Path $moduleDir -PathType Container) )
+
+        if(Test-WhiskeyPowerShellModule -Name $moduleName)
+        {
+            $module = $moduleName
+        }
+        elseif( Test-Path -Path $moduleDir -PathType Container )
+        {
+            $module = $moduleDir
+        }
+
+        if( $module )
         {
             Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
             Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $moduleName,$relativePSModulesRoot)
@@ -56,7 +67,7 @@ function Import-WhiskeyPowerShellModule
             {
                 & {
                     $VerbosePreference = 'SilentlyContinue'
-                    Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop -Verbose:$false
+                    Import-Module -Name $module -Global -Force -ErrorAction Stop -Verbose:$false
                 } 4> $null
             }
             finally
@@ -66,7 +77,7 @@ function Import-WhiskeyPowerShellModule
                 $Global:Error.Clear()
                 $Global:Error.AddRange($errorsBefore)
             }
-            break
+            continue
         }
 
         if( -not (Get-Module -Name $moduleName) )
