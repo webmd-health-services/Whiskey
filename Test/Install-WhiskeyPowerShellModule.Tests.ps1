@@ -1,4 +1,3 @@
-
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
@@ -18,17 +17,6 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 
     Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
-}
-
-function GivenModuleInstalledGlobally
-{
-    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $true }
-    Mock -CommandName 'Import-WhiskeyPowershellModule' -ModuleName 'Whiskey'
-}
-
-function GivenModuleNotInstalledGlobally
-{
-    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $false }
 }
 
 # Wrap private function so we can call it like it's public.
@@ -116,21 +104,10 @@ function ThenModuleInstalled
     Join-Path -Path $testRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Name,$AtVersion) | Should -Exist
 }
 
-function ThenModuleNotInstalled
-{
-    param(
-        $Name,
-        $AtVersion
-    )
-    
-    Join-Path -Path $testRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Name,$AtVersion) | Should -Not -Exist
-}
-
 Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a PowerShell module' {
     AfterEach { Reset }
     It 'should install package management modules and the module' {
         Init
-        GivenModuleNotInstalledGlobally
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '0.2.0'
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '0.2.0'
         ThenModuleInstalled 'Zip' -AtVersion '0.2.0'
@@ -149,7 +126,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     AfterEach { Reset }
     It 'should install at patch number 0' {
         Init
-        GivenModuleNotInstalledGlobally
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '0.2' -ActualVersion '0.2.0'
         $Global:Error | Should -BeNullOrEmpty
         ThenModuleImported 'Zip' -AtVersion '0.2.0'
@@ -160,7 +136,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module om
     AfterEach { Reset }
     It 'should install the latest version' {
         Init
-        GivenModuleNotInstalledGlobally
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '' -ActualVersion $latestZip.Version
         $Global:Error | Should -BeNullOrEmpty
         ThenModuleImported 'Zip' -AtVersion $latestZip.Version
@@ -171,7 +146,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module us
     AfterEach { Reset }
     It 'should resolve to the latest version that matches the wildcard' {
         Init
-        GivenModuleNotInstalledGlobally
         $version = [Version]($latestZip.Version)
         Invoke-PowerShellInstall -ForModule 'Zip' -Version ('{0}.*' -f $version.Major) -ActualVersion $latestZip.Version
         ThenModuleImported 'Zip' -AtVersion $latestZip.Version
@@ -182,7 +156,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module' {
     AfterEach { Reset }
     It 'should install the module' {
         Init
-        GivenModuleNotInstalledGlobally
         Invoke-PowerShellInstall -ForModule 'Zip' -Version '0.2.0'
         ThenModuleImported 'Zip' -AtVersion '0.2.0'
     }
@@ -192,7 +165,6 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     AfterEach { Reset }
     It 'should fail' {
         Init
-        GivenModuleNotInstalledGlobally
         $InformationPreference = 'Continue'
         $result = Install-PowerShellModule -Name 'Zip' -Version '0.0.1' #-ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
@@ -201,11 +173,10 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     }
 }
 
-Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module that doesn''t exist and version parameter is empty' {
+Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module and version parameter is empty' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        GivenModuleNotInstalledGlobally
         $result = Install-PowerShellModule -Name 'Fubar' -Version '' -ErrorAction SilentlyContinue
         $result | Should -BeNullOrEmpty
         $Global:Error.Count | Should -BeGreaterThan 0
@@ -217,7 +188,6 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module is already inst
     AfterEach { Reset }
     It 'should install the new version' {
         Init
-        GivenModuleNotInstalledGlobally
         Install-PowerShellModule -Name 'Zip' -Version $latestZip.Version
         $info = Get-ChildItem -Path $testRoot -Filter 'Zip.psd1' -Recurse
         $manifest = Test-ModuleManifest -Path $info.FullName
@@ -233,7 +203,6 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module directory exist
     AfterEach { Reset }
     It 'should still install the module' {
         Init
-        GivenModuleNotInstalledGlobally
         $moduleRootDir = Join-Path -Path $testRoot -ChildPath ('{0}\Zip' -f $TestPSModulesDirectoryName)
         New-Item -Path $moduleRootDir -ItemType Directory | Write-WhiskeyDebug
         Invoke-PowerShellInstall -ForModule 'Zip' -Version $latestZip.Version
@@ -244,7 +213,6 @@ Describe 'Install-WhiskeyPowerShellModule.when PowerShell module can''t be impor
     AfterEach { Reset }
     It 'should re-download the module' {
         Init
-        GivenModuleNotInstalledGlobally
         Install-PowerShellModule -Name 'Zip' -Version $latestZip.Version
         $moduleManifest = Join-Path -Path $testRoot -ChildPath ('{0}\Zip\{1}\Zip.psd1' -f $TestPSModulesDirectoryName,$latestZip.Version) -Resolve
         '@{ }' | Set-Content -Path $moduleManifest
@@ -258,7 +226,6 @@ Describe 'Install-WhiskeyPowerShellModule.when skipping import' {
     AfterEach { Reset }
     It 'should not import the module' {
         Init
-        GivenModuleNotInstalledGlobally
         Install-PowerShellModule 'Zip' -SkipImport
         ThenModuleNotImported 'Zip'
     }
@@ -268,7 +235,6 @@ Describe 'Install-WhiskeyPowerShellModule.when previous version installed and us
     AfterEach { Reset }
     It 'should install the latest version' {
         Init
-        GivenModuleNotInstalledGlobally
         Install-PowerShellModule -Name 'Zip' -Version '0.1.*'
         Install-PowerShellModule -Name 'Zip'
         ThenModuleInstalled 'Zip' -AtVersion '0.1.0'
@@ -283,7 +249,6 @@ Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installe
         Init
         $newestVersion = $allZipVersions | Select-Object -First 1
         $previousVersion = $allZipVersions | Select-Object -Skip 1 | Select-Object -First 1
-        GivenModuleNotInstalledGlobally
         Install-PowerShellModule -Name 'Zip' -Version $newestVersion.Version
         Install-PowerShellModule -Name 'Zip' -Version $previousVersion.Version
         ThenModuleInstalled 'Zip' -AtVersion $newestVersion.Version
@@ -293,49 +258,5 @@ Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installe
         Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
         $Global:Error | Should -BeNullOrEmpty
         $result.Version | Should -Be $newestVersion.Version
-    }
-}
-Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installed globally and locally that match task wildcard' {
-    AfterEach { Reset }
-    It 'should return globally installed version' {
-        Init
-        $newestVersion = $allZipVersions | Select-Object -First 1
-        $previousVersion = $allZipVersions | Select-Object -Skip 1 | Select-Object -First 1
-        GivenModuleNotInstalledGlobally
-        $globalModule = Install-PowerShellModule -Name 'Zip' -Version $previousVersion.Version
-        Install-PowerShellModule -Name 'Zip' -Version $newestVersion.Version
-        ThenModuleInstalled 'Zip' -AtVersion $newestVersion.Version
-        ThenModuleInstalled 'Zip' -AtVersion $previousVersion.Version
-        GivenModuleInstalledGlobally
-        Mock -CommandName 'Get-Module' -ModuleName 'Whiskey' -MockWith { $globalModule }.GetNewClosure()
-        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
-        $result = Install-PowerShellModule -Name 'Zip' -Version '*'
-        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
-        $Global:Error | Should -BeNullOrEmpty
-        $result.Version | Should -Be $previousVersion.Version
-    }
-}
-
-Describe 'Install-WhiskeyPowerShellModule.when module is installed globally and skipping import' {
-    AfterEach { Reset }
-    It 'should not re-install or import the module' {
-        Init
-        GivenModuleInstalledGlobally
-        Install-PowerShellModule -Name 'Zip' -Version $latestZip.version -SkipImport
-        ThenModuleNotInstalled 'Zip' -AtVersion $latestZip.Version
-        Assert-MockCalled -CommandName 'Import-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -Times 0
-    }
-}
-
-Describe 'Install-WhiskeyPowerShellModule.when module is installed globally' {
-    AfterEach { Reset }
-    It 'should import but not re-install the module' {
-        Init
-        Install-PowerShellModule -Name 'Zip' -Version $latestZip.version  -SkipImport
-        GivenModuleInstalledGlobally
-        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
-        Install-PowerShellModule -Name 'Zip' -Version $latestZip.version 
-        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
-        Assert-MockCalled -CommandName 'Import-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -Exactly 1
     }
 }

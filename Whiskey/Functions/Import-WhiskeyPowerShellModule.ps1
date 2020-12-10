@@ -26,11 +26,16 @@ function Import-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The module names to import.
-        [String[]]$Name,
+        [String]$Name,
 
-        [Parameter(Mandatory)]
+        # The version of the module to import.
+        [String]$Version,
+
         # The path to the build root, where the PSModules directory can be found.
-        [String]$PSModulesRoot
+        [String]$PSModulesRoot,
+
+        # Import the globally installed version of the module.
+        [switch]$InstalledGlobally
     )
 
     Set-StrictMode -Version 'Latest'
@@ -41,48 +46,75 @@ function Import-WhiskeyPowerShellModule
         Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
     }
 
-    $relativePSModulesRoot = Resolve-Path -Path $PSModulesRoot -Relative -ErrorAction Ignore
+    $module = $null
 
-    foreach( $moduleName in $Name )
+    if($InstalledGlobally)
     {
-        $module = $null
-        $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $moduleName
-
-        if(Test-WhiskeyPowerShellModule -Name $moduleName)
+        if(-not $Version)
         {
-            $module = $moduleName
+            $Version = '*'
         }
-        elseif( Test-Path -Path $moduleDir -PathType Container )
+
+        $globalModules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
+
+        foreach ($globalModule in $globalModules)
+        {
+            if($globalModule.Version -like $Version)
+            {
+                $module = $globalModule.Path
+                break
+            } 
+        }
+    }
+    elseif ($PSModulesRoot)
+    {
+        $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $Name
+        if ( Test-Path -Path $moduleDir -PathType Container )
         {
             $module = $moduleDir
         }
+    }
 
-        if( $module )
+    if( $module )
+    {
+        $relativeModulePath = Resolve-Path -Path $module -Relative -ErrorAction Ignore
+        Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
+        Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $Name,$relativeModulePath)
+        $errorsBefore = $Global:Error.Clone()
+        $Global:Error.Clear()
+        try
         {
-            Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-            Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $moduleName,$relativePSModulesRoot)
-            $errorsBefore = $Global:Error.Clone()
-            $Global:Error.Clear()
-            try
-            {
-                & {
-                    $VerbosePreference = 'SilentlyContinue'
-                    Import-Module -Name $module -Global -Force -ErrorAction Stop -Verbose:$false
-                } 4> $null
-            }
-            finally
-            {
-                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
-                # tests to fail. I know this is a little extreme.
-                $Global:Error.Clear()
-                $Global:Error.AddRange($errorsBefore)
-            }
-            continue
+            & {
+                $VerbosePreference = 'SilentlyContinue'
+                Import-Module -Name $module -Global -Force -ErrorAction Stop -Verbose:$false
+            } 4> $null
         }
-
-        if( -not (Get-Module -Name $moduleName) )
+        finally
         {
-            Write-WhiskeyError -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName) -ErrorAction Stop
+            # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
+            # tests to fail. I know this is a little extreme.
+            $Global:Error.Clear()
+            $Global:Error.AddRange($errorsBefore)
+        }
+        return
+    }
+    else
+    {
+        if($InstalledGlobally)
+        {
+            if($Version)
+            {
+                Write-WhiskeyError -Message ('Version "{0}" of module "{1}" does not exist in the global scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Version,$Name) -ErrorAction Stop
+            }
+            else
+            {
+                Write-WhiskeyError -Message ('Module "{0}" does not exist in the global scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Name) -ErrorAction Stop
+            }
+
+        }
+        else
+        {
+            Write-WhiskeyError -Message ('Module "{0}" does not exist in the local scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Name) -ErrorAction Stop
         }
     }
 }

@@ -25,8 +25,6 @@ function GivenModuleInstalled
         'Name' = $Name;
         'Version' = $AtVersion;
     }
-
-    $script:globalModules | Should -Not -BeNullOrEmpty
 }
 
 
@@ -37,12 +35,12 @@ function Reset
 
 function ThenReturnedFalse
 {
-    $output | Should -Be $false
+    $output | Should -BeFalse
 }
 
 function ThenReturnedTrue
 {
-    $output | Should -Be $true
+    $output | Should -BeTrue
 }
 
 function WhenTestingPowerShellModule
@@ -63,12 +61,8 @@ function WhenTestingPowerShellModule
         $parameter['Version'] = $ModuleVersion
     }
 
-    if($script:globalModules)
-    {
-        $globalModules = $script:globalModules
-        $globalModules | Should -Not -BeNullOrEmpty
-        Mock -CommandName 'Get-Module' -ModuleName 'Whiskey' -MockWith { $globalModules }.GetNewClosure()
-    }
+    $globalModules = $script:globalModules
+    Mock -CommandName 'Get-Module' -ModuleName 'Whiskey' -MockWith { $globalModules }.GetNewClosure()
 
     $script:output = Invoke-WhiskeyPrivateCommand -Name 'Test-WhiskeyPowerShellModule' -Parameter $parameter -ErrorAction $ErrorActionPreference
 }

@@ -10,7 +10,7 @@ function Install-WhiskeyTool
 
     `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
 
-    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they ahve the tools they need.
+    Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so they have the tools they need.
 
     .EXAMPLE
     Install-WhiskeyTool -NugetPackageName 'NUnit.Runners' -version '2.6.4'
@@ -127,11 +127,34 @@ function Install-WhiskeyTool
 
             if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
             {
-                $module = Install-WhiskeyPowerShellModule -Name $name `
-                                                          -Version $version `
-                                                          -BuildRoot $InstallRoot `
-                                                          -SkipImport:$ToolInfo.SkipImport `
-                                                          -ErrorAction Stop
+                if(Test-WhiskeyPowerShellModule -Name $name -Version $version)
+                {
+
+                    $globalModules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
+
+                    foreach ($globalModule in $globalModules)
+                    {
+                        if($globalModule.Version -like $version)
+                        {
+                            $module = $globalModule.Path
+                            break
+                        } 
+                    }
+
+                    if(-not $ToolInfo.SkipImport)
+                    {
+                        Import-WhiskeyPowershellModule -Name $name -Version $version -InstalledGlobally
+                    }
+                }
+                else 
+                {
+                    $module = Install-WhiskeyPowerShellModule -Name $name `
+                                                            -Version $version `
+                                                            -BuildRoot $InstallRoot `
+                                                            -SkipImport:$ToolInfo.SkipImport `
+                                                            -ErrorAction Stop
+                }
+
                 if( $ToolInfo.ModuleInfoParameterName )
                 {
                     $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module

@@ -61,9 +61,10 @@ function Resolve-WhiskeyPowerShellModule
     {
         $packageVersion = $packageManagementPackages[$packageName]
 
-        # Module is available globally so no need to install it.
+        # Module is available globally so no need to install it, import the globally installed version.
         if( Test-WhiskeyPowerShellModule -Name $packageName -Version $packageVersion)
         {
+            Import-WhiskeyPowerShellModule -Name $packageName -Version $packageVersion -InstalledGlobally
             continue
         }
 
@@ -85,6 +86,10 @@ function Resolve-WhiskeyPowerShellModule
             Write-WhiskeyDebug -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
             $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
             [Void]$modulesToInstall.Add($module)
+        }
+        else 
+        {
+            Import-WhiskeyPowerShellModule -Name $packageName -PSModulesRoot $modulesRoot
         }
     }
 
@@ -119,9 +124,12 @@ function Resolve-WhiskeyPowerShellModule
             }
         } | Receive-Job -Wait -AutoRemoveJob -InformationAction SilentlyContinue | Out-Null
         Write-WhiskeyDebug -Message ('                                               END')
-    }
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' -PSModulesRoot $modulesRoot
+        foreach( $moduleInfo in $modulesToInstall )
+        {
+            Import-WhiskeyPowerShellModule -Name $moduleInfo.Name -PSModulesRoot $modulesRoot
+        }
+    }
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )
