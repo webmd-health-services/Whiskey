@@ -6,7 +6,7 @@ function Install-WhiskeyTool
     Downloads and installs tools needed by the Whiskey module.
 
     .DESCRIPTION
-    The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. A `DirectoryInfo` object for the downloaded tool's directory is returned.
+    The `Install-WhiskeyTool` function downloads and installs PowerShell modules or NuGet Packages needed by functions in the Whiskey module. PowerShell modules are installed to a `Modules` directory in your build root. If PowerShell modules are already installed globally and are listed in the PSModulePath environment variable, they will not be re-installed. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
     `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
 

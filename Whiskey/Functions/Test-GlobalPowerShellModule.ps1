@@ -5,8 +5,10 @@ function Test-GlobalPowershellModule
     Checks if a module is installed globally.
      
     .DESCRIPTION
-    The `Test-GlobalPowerShellModule` function tests if a module is installed globally. If the module is installed globally, it returns true. Otherwise it returns false.
-     
+    The `Test-GlobalPowerShellModule` function tests if a module is installed globally and returns a `PSCustomObject` containing the propeties `Found` and `Path`. If the module is installed globally, the `Found` property is set to `true` and the `Path` property is set to the path of the global module. Otherwise, the `Found` property is set to `false` and the `Path` property is set to `null`.
+
+    `Get-Module -ListAvailable` is used to search for the global module. It looks for installed modules in the list of paths found in the PSModulePath environment variable. 
+
     .EXAMPLE
     Test-GlobalPowerShellModule -Name 'Pester'
 
@@ -23,7 +25,6 @@ function Test-GlobalPowershellModule
     Demonstrates that you can use a wildcard to check if a major version of a module is installed globally.
     #>
     [CmdletBinding()]
-    #[OutputType([Object])]
     param(
         [Parameter(Mandatory)]
         # The name of the module to check if installed globally.

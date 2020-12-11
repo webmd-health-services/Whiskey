@@ -8,19 +8,29 @@ function Import-WhiskeyPowerShellModule
     .DESCRIPTION
     The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task. Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If a module with the same name is currently loaded, it is removed and re-imported.
 
-    The module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory or the `GetPowerShellModule` task to install a module in the appropriate place.
+    If the `InstalledGlobally` switch is set, the module must be installed globally and the path to the module must exist in the PSModulePath environment variable. If multiple versions of the module exist, the latest version will be imported unless a version is provided.
 
-    Pass the name of the modules to the `Name` parameter.
-
-    .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion'
-
-    Demonstrates how to use this method to import a single module.
+    If the `InstalledGlobally` switch is not set, the module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory or the `GetPowerShellModule` task to install a module in the appropriate place.
 
     .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion','ProGetAutomation'
+    Import-WhiskeyPowerShellModule -Name 'Zip' -InstalledGlobally
 
-    Demonstrates how to use this method to import multiple modules.
+    Demonstrates how to use this method to import the latest version of a globally installed module.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.2.0' -InstalledGlobally
+
+    Demonstrates how to use this method to a import specific version a globally installed module.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.*' -InstalledGlobally
+
+    Demonstrates that you can use wildcards to import the latest minor version of a globally installed module.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'Zip' -PSModulesRoot 'Path/To/Build/Root'
+
+    Demonstrates how to use this method to import a module that is installed locally at `PSModulesRoot`.
     #>
     [CmdletBinding()]
     param(
@@ -28,10 +38,10 @@ function Import-WhiskeyPowerShellModule
         # The module names to import.
         [String]$Name,
 
-        # The version of the module to import.
+        # The version of the module to import. Only referenced when importing a globally installed module.
         [String]$Version,
 
-        # The path to the build root, where the PSModules directory can be found.
+        # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
         [String]$PSModulesRoot,
 
         # Import the globally installed version of the module.
@@ -94,11 +104,11 @@ function Import-WhiskeyPowerShellModule
         {
             if($Version)
             {
-                Write-WhiskeyError -Message ('Version "{0}" of module "{1}" does not exist in the global scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Version,$Name) -ErrorAction Stop
+                Write-WhiskeyError -Message ('Version "{0}" of module "{1}" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.' -f $Version,$Name) -ErrorAction Stop
             }
             else
             {
-                Write-WhiskeyError -Message ('Module "{0}" does not exist in the global scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Name) -ErrorAction Stop
+                Write-WhiskeyError -Message ('Module "{0}" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.' -f $Name) -ErrorAction Stop
             }
 
         }

@@ -121,10 +121,19 @@ Describe 'Import-WhiskeyPowerShellModule.when module to import globally is not i
         init
         GivenModuleNotInstalledGlobally
         {WhenImportingPowerShellModule -Name 'unknownModule' -InstalledGlobally} | Should -Throw
-        ThenErrorMessage -Message 'Module "unknownModule" does not exist in the global scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.'
+        ThenErrorMessage -Message 'Module "unknownModule" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.'
     }
 }
 
+Describe 'Import-WhiskeyPowerShellModule.when a specific version of a module to import globally is not installed globally' {
+    AfterEach { Reset }
+    it 'should throw an error' {
+        init
+        GivenModuleNotInstalledGlobally
+        {WhenImportingPowerShellModule -Name 'unknownModule' -Version '0.2.0' -InstalledGlobally} | Should -Throw
+        ThenErrorMessage -Message 'Version "0.2.0" of module "unknownModule" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.'
+    }
+}
 Describe 'Import-WhiskeyPowerShellModule.when module to import locally is installed locally' {
     AfterEach { Reset }
     it 'should import the latest version of the locally installed module' {
