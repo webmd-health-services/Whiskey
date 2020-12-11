@@ -50,20 +50,10 @@ function Import-WhiskeyPowerShellModule
 
     if($InstalledGlobally)
     {
-        if(-not $Version)
+        $globalModule = Test-GlobalPowerShellModule -Name $Name -Version $Version
+        if($globalModule.Found)
         {
-            $Version = '*'
-        }
-
-        $globalModules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
-
-        foreach ($globalModule in $globalModules)
-        {
-            if($globalModule.Version -like $Version)
-            {
-                $module = $globalModule.Path
-                break
-            } 
+            $module = $globalModule.Path
         }
     }
     elseif ($PSModulesRoot)

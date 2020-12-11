@@ -59,12 +59,26 @@ function GivenModuleDoesNotExist
 
 function GivenPkgMgmtModulesInstalledGlobally
 {
-    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $true }
+    param(
+        [String]$Path
+    )
+
+    $globalModule = [pscustomobject]@{
+        'Found' = $true;
+        'Path' = $Path;
+    }
+
+    Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
 }
 
 function GivenPkgMgmtModulesNotInstalledGlobally
 {
-    Mock -CommandName 'Test-WhiskeyPowershellModule' -ModuleName 'Whiskey' -MockWith { $false }
+    $globalModule = [pscustomobject]@{
+        'Found' = $false;
+        'Path' = $null;
+    }
+
+    Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
 }
 
 function Reset

@@ -430,8 +430,14 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and task needs
     AfterEach { Reset }
     It 'should install the module' {
         Init
+
+        $globalModule = [pscustomobject]@{
+            'Found' = $false;
+            'Path' = $null;
+        }
+
+        Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return 'PSModulePath' }
-        Mock -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return $false }
         $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
         $attr.ModuleInfoParameterName = 'ZipModuleInfo'
         $attr.Version = '0.2.0'
@@ -454,8 +460,14 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and task doesn
     AfterEach { Reset }
     It 'should install the module' {
         Init
+
+        $globalModule = [pscustomobject]@{
+            'Found' = $false;
+            'Path' = $null;
+        }
+
+        Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return 'PSModulePath' }
-        Mock -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return $false }
         $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
         $attr.Version = '0.2.0'
         $attr.SkipImport = $true
@@ -479,13 +491,11 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module that is alread
         Init
 
         $globalModule = [pscustomobject]@{
-            'Name' = 'Zip';
-            'Version' = '0.2.0';
+            'Found' = $true;
             'Path' = 'PSModulePath';
         }
 
-        Mock -CommandName 'Get-Module' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'Zip' } -MockWith { return $globalModule }.GetNewClosure()
-        Mock -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return $true }
+        Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
         Mock -CommandName 'Import-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
         $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
@@ -493,7 +503,7 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module that is alread
         $attr.Version = '0.2.0'
         $attr.SkipImport = $true
         WhenInstallingTool -FromAttribute $attr 
-        Assert-MockCalled -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {  
+        Assert-MockCalled -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {  
             $Name -eq 'Zip' 
             $Version -eq '0.2.0'
         }
@@ -520,13 +530,11 @@ Describe 'Install-WhiskeyTool.when installing and importing a PowerShell module 
         Init
         
         $globalModule = [pscustomobject]@{
-            'Name' = 'Zip';
-            'Version' = '0.2.0';
+            'Found' = $true;
             'Path' = 'PSModulePath';
         }
 
-        Mock -CommandName 'Get-Module' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'Zip' } -MockWith { return $globalModule }.GetNewClosure()
-        Mock -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -MockWith { return $true }
+        Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
         Mock -CommandName 'Import-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
         Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'
         $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
@@ -534,7 +542,7 @@ Describe 'Install-WhiskeyTool.when installing and importing a PowerShell module 
         $attr.Version = '0.2.0'
         $attr.SkipImport = $false
         WhenInstallingTool -FromAttribute $attr 
-        Assert-MockCalled -CommandName 'Test-WhiskeyPowerShellModule' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {  
+        Assert-MockCalled -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {  
             $Name -eq 'Zip' 
             $Version -eq '0.2.0'
         }

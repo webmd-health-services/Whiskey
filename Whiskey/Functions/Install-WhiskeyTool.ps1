@@ -127,19 +127,10 @@ function Install-WhiskeyTool
 
             if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
             {
-                if(Test-WhiskeyPowerShellModule -Name $name -Version $version)
+                $globalModule = Test-GlobalPowerShellModule -Name $name -Version $version
+                if($globalModule.Found)
                 {
-
-                    $globalModules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
-
-                    foreach ($globalModule in $globalModules)
-                    {
-                        if($globalModule.Version -like $version)
-                        {
-                            $module = $globalModule.Path
-                            break
-                        } 
-                    }
+                    $module = $globalModule.Path
 
                     if(-not $ToolInfo.SkipImport)
                     {

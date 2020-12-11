@@ -62,7 +62,8 @@ function Resolve-WhiskeyPowerShellModule
         $packageVersion = $packageManagementPackages[$packageName]
 
         # Module is available globally so no need to install it, import the globally installed version.
-        if( Test-WhiskeyPowerShellModule -Name $packageName -Version $packageVersion)
+        $globalModule = Test-GlobalPowerShellModule -Name $packageName -Version $packageVersion
+        if($globalModule.Found)
         {
             Import-WhiskeyPowerShellModule -Name $packageName -Version $packageVersion -InstalledGlobally
             continue
