@@ -26,6 +26,13 @@ function Init
 
 
     Remove-Module -Force -Name Zip -ErrorAction Ignore
+
+    Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { 
+        return [pscustomobject]@{
+            'Found' = $false;
+            'Path' = $null;
+        }
+    }
 }
 
 function GivenARepositoryWithItems
