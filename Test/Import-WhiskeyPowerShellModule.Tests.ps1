@@ -3,90 +3,51 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $output = $null
+$installedModule = $null
+$testRoot = $null
 
 function Init
 {
     $Global:Error.Clear()
-    Mock -CommandName 'Import-Module' -ModuleName 'Whiskey' -MockWith { $true }
+    $script:installedModule = $null
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
-function GivenModuleInstalledLocally
+function GivenModuleInstalled
 {
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { $true }
-}
-
-function GivenModuleNotInstalledLocally
-{
-    Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -MockWith { $false } 
-}
-
-function GivenModuleInstalledGlobally
-{ 
     param(
-        [String]$Path
+        [Parameter(Mandatory)]
+        [String]$Name,
+
+        [Version]$Version = '0.0.0'
     )
 
-    $globalModule = [pscustomobject]@{
-        'Found' = $true;
-        'Path' = $Path;
+    $script:installedModule = 
+        [Management.Automation.PSModuleInfo]::New($false) |
+        Add-Member -Name 'Name' -MemberType NoteProperty -Value $Name -Force -PassThru |
+        Add-Member -Name 'Version' -MemberType NoteProperty -Value $Version -Force -PassThru |
+        Add-Member -Name 'MockObject' -MemberType NoteProperty -Value $true -PassThru 
+}
+
+function ThenImportsModule
+{
+    param(
+        [Parameter(Mandatory)]
+        [String]$Named,
+
+        [String]$AtVersion = '0.0.0'
+    )
+
+    $filters = @(
+        { $ModuleInfo.Name | Should -Be $Named ; $true },
+        { $ModuleInfo.Version | Should -Be $AtVersion ; $true },
+        { $ModuleInfo.MockObject | Should -BeTrue ; $true }
+    )
+
+    foreach( $filter in $filters )
+    {
+        Assert-MockCalled -CommandName 'Import-Module' -ModuleName 'Whiskey' -ParameterFilter $filter -Times 1 -Exactly
     }
-
-    Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
-}
-
-function GivenModuleNotInstalledGlobally
-{
-    $globalModule = [pscustomobject]@{
-        'Found' = $false;
-        'Path' = $null;
-    }
-
-    Mock -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey'  -MockWith { return $globalModule }.GetNewClosure()
-}
-
-function WhenImportingPowerShellModule
-{
-    param(
-        [String] $Name,
-        [String] $Version,
-        [String] $PSModulesRoot,
-        [Switch] $InstalledGlobally
-    )
-
-    $parameter = @{
-        'Name' = $Name;
-        'Version' = $Version;
-        'PSModulesRoot' = $PSModulesRoot;
-        'InstalledGlobally' = $InstalledGlobally;
-    }
-
-    $script:output = Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyPowerShellModule' -Parameter $parameter -ErrorAction $ErrorActionPreference
-}
-
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
-
-function ThenImportsLocalModule
-{
-    param(
-        $ModulePath
-    )
-
-    Assert-MockCalled -CommandName 'Import-Module' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModulePath } -Times 1
-}
-
-function ThenImportsGlobalModule
-{
-    param(
-        $ModuleName,
-        $ModuleVersion,
-        $ModulePath
-    )
-    
-    Assert-MockCalled -CommandName 'Test-GlobalPowerShellModule' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModuleName -and $Version -eq $ModuleVersion} -Times 1
-    Assert-MockCalled -CommandName 'Import-Module' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $ModulePath } -Times 1
 }
 
 function ThenNoErrors
@@ -94,76 +55,73 @@ function ThenNoErrors
     $Global:Error | Should -BeNullOrEmpty
 }
 
-function ThenErrorMessage
+function WhenImportingPowerShellModule
 {
+    [CmdletBinding()]
     param(
-        $Message
+        [String] $Name,
+        [String] $Version,
+        [scriptblock]$MockImportWith = {}
     )
 
-    $Global:Error | Should -Match $Message 
+    Mock -CommandName 'Import-Module' -ModuleName 'Whiskey' -MockWith $MockImportWith
+
+    $installedModule = $script:installedModule
+    if( $installedModule )
+    {
+        Mock -CommandName 'Get-WhiskeyPSModule' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter ([scriptblock]::Create("{ throw ""$($installedModule.Name)"" ; `$Name -eq ""$($installedModule.Name)"" }")) `
+             -MockWith { return $installedModule }.GetNewClosure()
+    }
+    else
+    {
+        Mock -CommandName 'Get-WhiskeyPSModule' -ModuleName 'Whiskey'
+    }
+
+    $parameter = @{
+        'Name' = $Name;
+        'Version' = $Version;
+        'PSModulesRoot' = $testRoot;
+    }
+
+    $script:output = Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyPowerShellModule' -Parameter $parameter
 }
 
-Describe 'Import-WhiskeyPowerShellModule.when module to import globally is installed globally' {
-    AfterEach { Reset }
+Describe 'Import-WhiskeyPowerShellModule.when module is installed' {
     it 'should import global module' {
         init
-        GivenModuleInstalledGlobally -Path 'Path/To/Global/Zip/Module'
-        GivenModuleNotInstalledLocally
-        WhenImportingPowerShellModule -Name 'Zip' -Version '0.2.0' -InstalledGlobally
-        ThenImportsGlobalModule -ModuleName 'Zip' -ModuleVersion '0.2.0' -ModulePath 'Path/To/Global/Zip/Module'
+        GivenModuleInstalled 'Zip'
+        WhenImportingPowerShellModule -Name 'Zip'
+        ThenImportsModule 'Zip'
         ThenNoErrors
     }
 }
 
-Describe 'Import-WhiskeyPowerShellModule.when module to import globally is not installed globally' {
-    AfterEach { Reset }
-    it 'should throw an error' {
+Describe 'Import-WhiskeyPowerShellModule.when specific version of a module is installed' {
+    it 'should import global module' {
         init
-        GivenModuleNotInstalledGlobally
-        {WhenImportingPowerShellModule -Name 'unknownModule' -InstalledGlobally} | Should -Throw
-        ThenErrorMessage -Message 'Module "unknownModule" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.'
-    }
-}
-
-Describe 'Import-WhiskeyPowerShellModule.when a specific version of a module to import globally is not installed globally' {
-    AfterEach { Reset }
-    it 'should throw an error' {
-        init
-        GivenModuleNotInstalledGlobally
-        {WhenImportingPowerShellModule -Name 'unknownModule' -Version '0.2.0' -InstalledGlobally} | Should -Throw
-        ThenErrorMessage -Message 'Version "0.2.0" of module "unknownModule" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.'
-    }
-}
-Describe 'Import-WhiskeyPowerShellModule.when module to import locally is installed locally' {
-    AfterEach { Reset }
-    it 'should import the latest version of the locally installed module' {
-        init
-        $testRoot = New-WhiskeyTestRoot
-        $modulePath = Join-Path -Path $testRoot -ChildPath 'Zip'
-        GivenModuleInstalledLocally
-        WhenImportingPowerShellModule -Name 'Zip' -PSModulesRoot $testRoot
-        ThenImportsLocalModule -modulePath $modulePath
+        GivenModuleInstalled 'Zip' -Version '9.8.7'
+        WhenImportingPowerShellModule -Name 'Zip' -Version '9.8.7'
+        ThenImportsModule 'Zip' -AtVersion '9.8.7'
         ThenNoErrors
     }
 }
 
-Describe 'Import-WhiskeyPowerShellModule.when PSModuleRoot is not provided for a module to be imported locally' {
-    AfterEach { Reset }
-    it 'should throw an error' {
-        init
-        GivenModuleInstalledLocally
-        { WhenImportingPowerShellModule -Name 'Zip' } | Should -throw
-        ThenErrorMessage -Message 'Module "Zip" does not exist in the local scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.'
+Describe 'Import-WhiskeyPowerShellModule.when module is not installed' {
+    AfterEach { $Global:ErrorActionPreference = 'Continue' }
+    It 'should throw an error' {
+        Init
+        $Global:ErrorActionPreference = 'Stop' 
+        { WhenImportingPowerShellModule -Name 'Zip' } | Should -Throw 'that module isn''t installed'
     }
 }
 
-Describe 'Import-WhiskeyPowerShellModule.when module to import locally is not installed locally' {
-    AfterEach { Reset }
-    it 'should throw an error' {
-        init
-        $testRoot = New-WhiskeyTestRoot
-        GivenModuleNotInstalledLocally
-        {WhenImportingPowerShellModule -Name 'unknownModule' -PSModulesRoot $testRoot} | Should -Throw
-        ThenErrorMessage -Message 'Module "unknownModule" does not exist in the local scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.'
+Describe 'Import-WhiskeyPowerShellModule.when module writes silent errors during import' {
+    It 'should remove those errors' {
+        Init
+        GivenModuleInstalled 'Zip'
+        WhenImportingPowerShellModule 'Zip' -MockImportWith { Write-Error 'Fubar!' -ErrorAction SilentlyContinue }
+        $Global:Error | Should -BeNullOrEmpty
     }
 }

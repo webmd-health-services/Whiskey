@@ -38,83 +38,64 @@ function Import-WhiskeyPowerShellModule
         # The module names to import.
         [String]$Name,
 
-        # The version of the module to import. Only referenced when importing a globally installed module.
+        # The version of the module to import.
         [String]$Version,
 
+        [Parameter(Mandatory)]
         # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
-        [String]$PSModulesRoot,
-
-        # Import the globally installed version of the module.
-        [switch]$InstalledGlobally
+        [String]$PSModulesRoot
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    & {
-        $VerbosePreference = 'SilentlyContinue'
-        Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
-    }
-
-    $module = $null
-
-    if($InstalledGlobally)
+    $numErrorsBefore = $Global:Error.Count
+    $foundModule = $false
+    try
     {
-        $globalModule = Test-GlobalPowerShellModule -Name $Name -Version $Version
-        if($globalModule.Found)
-        {
-            $module = $globalModule.Path
-        }
-    }
-    elseif ($PSModulesRoot)
-    {
-        $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $Name
-        if ( Test-Path -Path $moduleDir -PathType Container )
-        {
-            $module = $moduleDir
-        }
-    }
-
-    if( $module )
-    {
-        $relativeModulePath = Resolve-Path -Path $module -Relative -ErrorAction Ignore
-        Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-        Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $Name,$relativeModulePath)
-        $errorsBefore = $Global:Error.Clone()
-        $Global:Error.Clear()
-        try
-        {
-            & {
-                $VerbosePreference = 'SilentlyContinue'
-                Import-Module -Name $module -Global -Force -ErrorAction Stop -Verbose:$false
-            } 4> $null
-        }
-        finally
-        {
-            # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
-            # tests to fail. I know this is a little extreme.
-            $Global:Error.Clear()
-            $Global:Error.AddRange($errorsBefore)
-        }
-        return
-    }
-    else
-    {
-        if($InstalledGlobally)
-        {
-            if($Version)
+        $foundModule = & {
+            $VerbosePreference = 'SilentlyContinue'
+            $module = Get-WhiskeyPSModule -Name $Name -Version $Version -PSModulesRoot $PSModulesRoot
+            if( -not $module )
             {
-                Write-WhiskeyError -Message ('Version "{0}" of module "{1}" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.' -f $Version,$Name) -ErrorAction Stop
-            }
-            else
-            {
-                Write-WhiskeyError -Message ('Module "{0}" does not exist in the global scope. Make sure the module is installed and the path to the module is listed in the PSModulePath environment variable.' -f $Name) -ErrorAction Stop
+                return $false
             }
 
-        }
-        else
+            $loadedModules = Get-Module -Name $Name
+            $loadedModules |
+                Where-Object 'Version' -ne $module.Version |
+                Remove-Module -Verbose:$false -WhatIf:$false -Force
+
+            if( ($loadedModules | Where-Object 'Version' -eq $module.Version) )
+            {
+                Write-WhiskeyDebug -Message ("Module $($Name) $($module.Version) already loaded.")
+                return $true
+            }
+
+            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false
+            return $true
+        } 4> $null
+    }
+    finally
+    {
+        # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
+        # tests to fail. I know this is a little extreme.
+        $numToRemove = $Global:Error.Count - $numErrorsBefore
+        for( $idx = 0; $idx -lt $numToRemove; $idx++ )
         {
-            Write-WhiskeyError -Message ('Module "{0}" does not exist in the local scope. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $Name) -ErrorAction Stop
+            $Global:Error.RemoveAt(0)
         }
+    }
+
+    if( -not $foundModule )
+    {
+        $versionDesc = ''
+        if( $Version )
+        {
+            $versionDesc = " $($Version)"
+        }
+        $msg = "Unable to import module ""$($Name)""$($versionDesc): that module isn't installed. To install a module, " +
+               'use the "GetPowerShellModule" task.'
+        Write-WhiskeyError -Message $msg
     }
 }

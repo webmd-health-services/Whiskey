@@ -35,6 +35,13 @@ function Test-Import
         return $false
     }
 
+    $count = ($module | Measure-Object).Count
+    if( $count -gt 1 )
+    {
+        Write-Error -Message "There are $($count) $($Name) modules loaded."
+        return $false
+    }
+    
     if( -not ($module | Get-Member 'ImportedAt') )
     {
         Write-Timing ('Module "{0}" not loaded by WhiskeyTest.' -f $Name)
@@ -46,6 +53,15 @@ function Test-Import
     {
         $moduleRoot = $module.Path | Split-Path
     }
+
+    $importedAt = $module | Select-Object -ExpandProperty 'ImportedAt' -ErrorAction Ignore
+    $prefix = " "
+    if( -not $importedAt )
+    {
+        $importedAt = [DateTime]::MinValue #$module.ImportedAt
+        $prefix = "!"
+    }
+    Write-Timing "$($module.Name)  $($prefix) ImportedAt  $($importedAt)"
 
     Write-Timing ('Testing "{0}" for changes.' -f $moduleRoot)
     $filesChanged = 
@@ -59,7 +75,7 @@ function Test-Import
                 Get-ChildItem -Path $moduleRoot -File -Recurse
             }
         } |
-        Where-Object { $module.ImportedAt -lt $_.LastWriteTime } 
+        Where-Object { $importedAt -lt $_.LastWriteTime } 
 
     if( $filesChanged )
     {

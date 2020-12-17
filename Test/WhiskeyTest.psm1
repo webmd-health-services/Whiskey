@@ -535,6 +535,17 @@ function Reset-WhiskeyTestPSModule
     Get-Module |
         Where-Object { $_.Path -like ('{0}*' -f $TestDrive.FullName) } |
         Remove-Module -Force
+    Reset-WhiskeyPSModulePath
+}
+
+function Reset-WhiskeyPSModulePath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    $paths =
+        $env:PSModulePath -split [IO.Path]::PathSeparator | 
+        Where-Object { $_ -notlike '*\*.*\PSModules' } |
+        Where-Object { $_ -ne $whiskeyPSModulesPath }
+    $env:PSModulePath = $paths -join [IO.Path]::PathSeparator
 }
 
 function ThenErrorRecord
@@ -564,6 +575,13 @@ function ThenModuleInstalled
 
         [String]$AtVersion
     )
+
+    if( -not $InBuildRoot )
+    {
+        $msg = 'The InBuildRoot parameter will eventually become a required parameter on ThenModuleInstalled. Please ' +
+               'update your usages to pass in the build root.'
+        Write-Warning -Message $msg
+    }
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist

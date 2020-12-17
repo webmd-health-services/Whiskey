@@ -50,104 +50,125 @@ function Install-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    function Get-ModuleVersionDirectoryName
+    function Find-PSModule
     {
-        param(
-            [Parameter(Mandatory)]
-            [String]$Version
-        )
-
-        if( [Version]::TryParse($Version,[ref]$null) )
-        {
-            return $Version
+        $findParameters = @{
+            'Name' = $Name;
+            'BuildRoot' = $BuildRoot;
+            'AllowPrerelease' = $AllowPrerelease;
+            'Version' = $Version;
         }
 
-        if( $Version -match ('^(\d+\.\d+\.\d+)') )
-        {
-            return $Matches[1]
-        }
-
-        return $Version
+        return Find-WhiskeyPowerShellModule @findParameters
     }
 
-    $resolveParameters = @{
-        'Name' = $Name;
-        'BuildRoot' = $BuildRoot;
-        'AllowPrerelease' = $AllowPrerelease;
-    }
-    $module = $null
-    if( -not $Version )
-    {
-        $module = Resolve-WhiskeyPowerShellModule @resolveParameters
-        if( -not $module )
-        {
-            return
-        }
-        $Version = $module.Version
-    }
-
-    $moduleVersionDirName = Get-ModuleVersionDirectoryName -Version $Version
-
-    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
     if( $Path )
     {
-        $modulesRoot = $Path
-    }
-    $moduleRoot = Join-Path -Path $modulesRoot -ChildPath $Name
-    $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
-
-    $manifest = $null
-    $manifestOk = $false
-    try
-    {
-        $manifest =
-            Get-Item -Path $moduleManifestPath -ErrorAction Ignore |
-            Test-ModuleManifest -ErrorAction Ignore |
-            Sort-Object -Property 'Version' -Descending |
-            Select-Object -First 1
-        $manifestOk = $true
-    }
-    catch
-    {
-        $Global:Error.RemoveAt(0)
-    }
-
-    if( $manifestOk -and $manifest )
-    {
-        $manifest
+        $Path = $Path.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        if( -not (Test-Path -Path $Path) )
+        {
+            New-Item -Path $Path -ItemType 'Directory' | Out-Null
+        }
+        # Whiskey's PowerShell functions assume all modules are installed in a path in PSModulePath environment variable
+        # so make sure the user's path is in that path.
+        Register-WhiskeyPSModulePath -Path $Path
+        $installRoot = $Path
     }
     else
     {
-        $module = $null
-        if( -not $manifest )
+        $installRoot = Get-WhiskeyPSModulePath -PSModulesRoot $BuildRoot -Create
+    }
+
+    if( -not $Version )
+    {
+        # We need to know the latest version of the module so we can see if it is already installed.
+        $latestModule = Find-PSModule
+        if( -not $latestModule )
         {
-            $module = Resolve-WhiskeyPowerShellModule @resolveParameters -Version $Version
-            if( -not $module )
+            return
+        }
+        $Version = $latestModule.Version
+    }
+
+    try
+    {
+        $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot -Name $Name -Version $Version
+
+        if( $installedModule )
+        {
+            $installedInPSModulePath = -not $Path
+            $installedInCustomPath = $Path -and `
+                                     ($installedModule.Path | Split-Path | Split-Path | Split-Path) -eq $Path
+            if( $installedInPSModulePath -or $installedInCustomPath )
             {
+                if( -not $SkipImport )
+                {
+                    Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+                }
+
+                # Already installed or installed where the user wants it.
+                return $installedModule
+            }
+        }
+
+        # Find what module *should* be installed.
+        $moduleToInstall = Find-PSModule
+        if( -not $moduleToInstall )
+        {
+            return
+        }
+
+        # Now we know where the module is going to be saved, let's make sure the destination doesn't exist.
+        $moduleRoot = Join-Path -Path $installRoot -ChildPath $moduleToInstall.Name
+        $moduleRoot = Join-Path -Path $moduleRoot -ChildPath $moduleToInstall.Version
+        if( (Test-Path -Path $moduleRoot) )
+        {
+            Remove-Item -Path $moduleRoot -Recurse -Force
+            if( (Test-Path -Path $moduleRoot) )
+            {
+                $msg = "Unable to install PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) to " +
+                       """$($installRoot)"": the destination path ""$($moduleRoot)"" exists and deleting it failed. " +
+                       'Make sure files under the destination directory aren''t in use.'
+                Write-WhiskeyError -Message $msg
                 return
             }
         }
 
-        Write-WhiskeyVerbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $Name,$module.Version,$modulesRoot,$module.Repository)
-        Save-Module -Name $Name `
-                    -RequiredVersion $module.Version `
-                    -Repository $module.Repository `
-                    -Path $modulesRoot `
+        $msg = "Saving PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " + 
+               """$($moduleToInstall.Repository)"" to ""$($installRoot)""."
+        Write-WhiskeyVerbose -Message $msg
+        Save-Module -Name $moduleToInstall.Name `
+                    -RequiredVersion $moduleToInstall.Version `
+                    -Repository $moduleToInstall.Repository `
+                    -Path $installRoot `
                     -AllowPrerelease:$AllowPrerelease
 
-        $moduleVersionDirName = Get-ModuleVersionDirectoryName -Version $module.Version
-        $moduleManifestPath = Join-Path -Path $moduleRoot -ChildPath ('{0}\{1}.psd1' -f $moduleVersionDirName,$Name)
-        $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore -WarningAction Ignore
-        if( -not $manifest )
+        $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
+                                               -Name $moduleToInstall.Name `
+                                               -Version $moduleToInstall.Version
+
+        if( -not $installedModule )
         {
-            Write-WhiskeyError -Message ('Failed to download {0} {1} from {2} ({3}). Either the {0} module does not exist, or it does but version {1} does not exist.' -f $Name,$Version,$module.Repository,$module.RepositorySourceLocation)
+            $msg = "Failed to download PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " +
+                   "$($moduleToInstall.Repository) to ""$($installRoot)"": the module doesn't exist after running PowerShell's " +
+                   '"Save-Module" command.'
+            Write-WhiskeyError -Message $msg
             return
         }
-        $manifest
-    }
 
-    if( -not $SkipImport )
+        $installedModule | Write-Output
+
+        if( -not $SkipImport )
+        {
+            Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+        }
+    }
+    finally
     {
-        Import-WhiskeyPowerShellModule -Name $Name -PSModulesRoot $modulesRoot
+        if( $Path )
+        {
+            # Remove the user's path from the PSModulePath environment variable.
+            Unregister-WhiskeyPSModulePath -Path $Path
+        }
     }
 }

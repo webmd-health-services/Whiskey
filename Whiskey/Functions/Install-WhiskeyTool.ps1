@@ -127,29 +127,17 @@ function Install-WhiskeyTool
 
             if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
             {
-                $globalModule = Test-GlobalPowerShellModule -Name $name -Version $version
-                if($globalModule.Found)
-                {
-                    $module = $globalModule.Path
-
-                    if(-not $ToolInfo.SkipImport)
-                    {
-                        Import-WhiskeyPowershellModule -Name $name -Version $version -InstalledGlobally
-                    }
-                }
-                else 
-                {
-                    $module = Install-WhiskeyPowerShellModule -Name $name `
-                                                            -Version $version `
-                                                            -BuildRoot $InstallRoot `
-                                                            -SkipImport:$ToolInfo.SkipImport `
-                                                            -ErrorAction Stop
-                }
+                $module = Install-WhiskeyPowerShellModule -Name $name `
+                                                          -Version $version `
+                                                          -BuildRoot $InstallRoot `
+                                                          -SkipImport:$ToolInfo.SkipImport `
+                                                          -ErrorAction Stop
 
                 if( $ToolInfo.ModuleInfoParameterName )
                 {
                     $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
                 }
+
                 return
             }
 
