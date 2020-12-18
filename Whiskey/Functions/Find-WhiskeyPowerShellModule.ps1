@@ -46,8 +46,8 @@ function Find-WhiskeyPowerShellModule
     # * Whiskey\Tasks\PublishPowerShellModule.ps1
     # * whiskey.yml
     $packageManagementPackages = @{
-        'PackageManagement' = '1.4.5';
-        'PowerShellGet' = '2.2.1'
+        'PackageManagement' = '1.4.7';
+        'PowerShellGet' = '2.2.5'
     }
     $modulesToInstall = New-Object 'Collections.ArrayList'
     foreach( $packageName in $packageManagementPackages.Keys )

@@ -6,8 +6,8 @@ Set-StrictMode -Version 'Latest'
 # * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
 # * Whiskey\Tasks\PublishPowerShellModule.ps1
 # * whiskey.yml
-$packageManagementVersion = '1.4.5'
-$powerShellGetVersion = '2.2.1'
+$packageManagementVersion = '1.4.7'
+$powerShellGetVersion = '2.2.5'
 
 $moduleName = $null
 $moduleVersion = $null

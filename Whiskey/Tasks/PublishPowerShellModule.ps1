@@ -6,8 +6,8 @@ function Publish-WhiskeyPowerShellModule
     # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
     # * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
     # * whiskey.yml
-    [Whiskey.RequiresPowerShellModule('PackageManagement',Version='1.4.5',VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresPowerShellModule('PowerShellGet',Version='2.2.1',VersionParameterName='PowerShellGetVersion')]
+    [Whiskey.RequiresPowerShellModule('PackageManagement',Version='1.4.7',VersionParameterName='PackageManagementVersion')]
+    [Whiskey.RequiresPowerShellModule('PowerShellGet',Version='2.2.5',VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

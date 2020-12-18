@@ -38,11 +38,11 @@ Build:
 # * Whiskey\Tasks\PublishPowerShellModule.ps1
 - GetPowerShellModule:
     Name: PackageManagement
-    Version: 1.4.5
+    Version: 1.4.7
 
 - GetPowerShellModule:
     Name: PowerShellGet
-    Version: 2.2.1
+    Version: 2.2.5
 
 - GetPowerShellModule:
     Name: Pester
