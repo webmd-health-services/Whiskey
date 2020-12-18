@@ -188,8 +188,27 @@ Queues:
 Describe 'Parallel.when second queue finishes before first queue' {
     It 'should wait for all queues to finish' {
         Init
-        GivenFile 'one.ps1' 'Write-Host ("1" * 80) ; Write-Host (Get-Date) ; Start-Sleep -Seconds 12 ; 1 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
-        GivenFile 'two.ps1' 'Write-Host ("2" * 80) ; Write-Host (Get-Date) ; 2 ; Write-Host (Get-Date) ; $Global:Error | Format-List * -Force | Out-String | Write-Host'
+        GivenFile 'one.ps1' @'
+Write-Host ("1" * 80)
+Write-Host (Get-Date)
+while( -not (Test-Path -Path 'two.ps1.started') )
+{
+    Write-Host '.' -NoNewLine
+    Start-Sleep -Seconds 1
+}
+Start-Sleep -Seconds 5
+$Global:Error | Format-List * -Force | Out-String | Write-Host
+1 | Write-Output
+Write-Host (Get-Date)
+'@
+        GivenFile 'two.ps1' @'
+Write-Host ("2" * 80)
+Write-Host (Get-Date)
+'' | Set-Content -Path 'two.ps1.started'
+$Global:Error | Format-List * -Force | Out-String | Write-Host
+2 | Write-Output
+Write-Host (Get-Date) 
+'@
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
@@ -201,7 +220,7 @@ Queues:
 '@
         [Object[]]$output = WhenRunningTask $task #-ErrorAction SilentlyContinue
         ThenCompleted
-        $output.Count | Should -Be 2
+        $output | Should -HaveCount 2
         $output[0] | Should -Be 2
         $output[1] | Should -Be 1
         ThenNoErrors
