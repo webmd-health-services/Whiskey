@@ -74,6 +74,11 @@ function Find-WhiskeyPowerShellModule
         # Install Package Management modules in the background so we can load the new versions. These modules use 
         # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
         Start-Job -ScriptBlock {
+            $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue'
+
+            Import-Module -Name 'PackageManagement'
+            Import-Module -Name 'PowerShellGet'
+
             $ErrorActionPreference = $using:ErrorActionPreference
             $VerbosePreference = $using:VerbosePreference
             $InformationPreference = $using:InformationPreference
@@ -83,14 +88,24 @@ function Find-WhiskeyPowerShellModule
             $modulesToInstall = $using:modulesToInstall
             $modulesRoot = $using:modulesRoot
 
+            Write-Debug -Message ('Bootstrapping NuGet provider')
             Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-            foreach( $moduleInfo in $modulesToInstall )
+            # These need to be installed in this order.
+            foreach( $name in @('PackageManagement', 'PowerShellGet') )
             {
+                $moduleInfo = $modulesToInstall | Where-Object 'Name' -eq $name
+                if( -not $moduleInfo )
+                {
+                    Write-Debug ("  Skipping $($name): already installed.")
+                    continue
+                }
+
                 $module = 
                     Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version |
                     Select-Object -First 1
                 if( -not $module )
                 {
+                    Write-Debug -Message "Module $($moduleInfo.Name) $($moduleInfo.Version) not found by Find-Module."
                     continue
                 }
 
