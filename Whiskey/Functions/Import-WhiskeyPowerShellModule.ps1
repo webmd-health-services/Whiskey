@@ -6,31 +6,28 @@ function Import-WhiskeyPowerShellModule
     Imports a PowerShell module.
 
     .DESCRIPTION
-    The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task. Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If a module with the same name is currently loaded, it is removed and re-imported.
+    The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task.
+    Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If the
+    module is currently loaded but is at a different version than requested, that module is removed first, and the 
+    correct version is imported.
 
-    If the `InstalledGlobally` switch is set, the module must be installed globally and the path to the module must exist in the PSModulePath environment variable. If multiple versions of the module exist, the latest version will be imported unless a version is provided.
-
-    If the `InstalledGlobally` switch is not set, the module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory or the `GetPowerShellModule` task to install a module in the appropriate place.
-
-    .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'Zip' -InstalledGlobally
-
-    Demonstrates how to use this method to import the latest version of a globally installed module.
+    If the module isn't installed (or if the requested version of the module isn't installed), you'll get an error. Use
+    the `Install-WhiskeyPowerShellModule` to install the module. If a task needs a module, use the 
+    `[Whiskey.RequiresPowerShellModule]` task attribute.
 
     .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.2.0' -InstalledGlobally
+    Import-WhiskeyPowerShellModule -Name 'Zip' -PSModulesRoot $buildRoot
 
-    Demonstrates how to use this method to a import specific version a globally installed module.
-
-    .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.*' -InstalledGlobally
-
-    Demonstrates that you can use wildcards to import the latest minor version of a globally installed module.
+    Demonstrates how to use this method to import a module that is installed in a global module location or in the 
+    current build's PSModules directory (usually in the build root directory). The latest/newest installed version is
+    imported.
 
     .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'Zip' -PSModulesRoot 'Path/To/Build/Root'
+    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.2.0' -PSModulesRoot $buildRoot
 
-    Demonstrates how to use this method to import a module that is installed locally at `PSModulesRoot`.
+    Demonstrates how to use this method to import a specific version of a module that is installed in a global module 
+    location or in the current build's PSModules directory (usually in the build root directory). The latest/newest
+    installed version is imported.
     #>
     [CmdletBinding()]
     param(
