@@ -11,6 +11,28 @@ $result = $null
 $expectedModuleName = $null
 $expectedModuleVersion = $null
 
+$installedModules = @()
+
+function GivenModule
+{
+    param(
+        [Parameter(Mandatory)]
+        [String]$Named,
+
+        [Parameter(Mandatory)]
+        [Version]$AtVersion,
+
+        [Parameter(Mandatory)]
+        [String]$InstalledIn
+    )
+
+    $script:installedModules += [pscustomobject]@{
+        'Name' = $Named;
+        'Version' = $AtVersion;
+        'Path' = (Join-Path -Path $InstalledIn -ChildPath "$($Named).psm1")
+    }
+}
+
 function Init
 {
     param(
@@ -22,6 +44,7 @@ function Init
     $script:expectedModuleVersion = $null
     $script:result = $null
     $script:testRoot = New-WhiskeyTestRoot
+    $script:installedModules = @()
 
     Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
 
@@ -35,7 +58,8 @@ function Install-PowerShellModule
     param(
         $Name,
         $Version,
-        [switch]$SkipImport
+        [switch]$SkipImport,
+        $Path
     )
 
     $parameter = $PSBoundParameters
@@ -62,7 +86,8 @@ function Reset-PSModulePath
 function ThenModuleImported
 {
     param(
-        [String]$AtVersion = $expectedModuleVersion
+        [String]$AtVersion = $expectedModuleVersion,
+        [String]$From
     )
 
     $module = Get-Module -Name $expectedModuleName
@@ -70,15 +95,12 @@ function ThenModuleImported
     $module.Version | Should -Be $AtVersion
 }
 
-function ThenModuleNotImported
-{
-    Get-Module -Name $expectedModuleName | Should -BeNullOrEmpty
-}
-
 function ThenModuleInstalled
 {
     param(
-        $AtVersion = $expectedModuleVersion
+        $Name = $expectedModuleName,
+        $AtVersion = $expectedModuleVersion,
+        $In = $TestPSModulesDirectoryName
     )
     
     $result | Should -Not -BeNullOrEmpty
@@ -91,14 +113,14 @@ function ThenModuleInstalled
     $module | Should -Not -BeNullOrEmpty
     $module.Version | Should -Be $AtVersion
 
-    Join-Path -Path $testRoot -ChildPath "$($TestPSModulesDirectoryName)\$($expectedModuleName)\$($AtVersion)" | 
+    Join-Path -Path $testRoot -ChildPath "$($In)\$($Name)\$($AtVersion)" | 
         Should -Exist
 }
 
 function ThenModuleInfoReturned
 {
     param(
-        [String]$AtVersion = $expectedModuleVersion
+        [String]$AtVersion = $script:expectedModuleVersion
     )
 
     $result | Should -Not -BeNullOrEmpty
@@ -108,17 +130,40 @@ function ThenModuleInfoReturned
     $result.Version | Should -Be $AtVersion
 }
 
+function ThenModuleNotImported
+{
+    Get-Module -Name $expectedModuleName | Should -BeNullOrEmpty
+}
+
+function ThenModuleNotInstalled
+{
+    param(
+        [String]$Named = $expectedModuleName,
+        [String]$In
+    )
+
+    $rootPath = Join-Path -Path $testRoot -ChildPath $In
+    Join-Path -Path $rootPath -ChildPath $Named | Should -Not -Exist
+}
+
 function ThenNoErrors
 {
     $Global:Error | Should -BeNullOrEmpty
 }
 
+function ThenNoModuleInfoReturned
+{
+    $result | Should -BeNullOrEmpty
+}
+
 function WhenInstallingPSModule
 {
+    [CmdletBinding()]
     param(
         $ForModule,
         $Version,
-        [switch]$SkipImport
+        [switch]$SkipImport,
+        [String]$AtPath
     )
 
     $script:expectedModuleName = $ForModule
@@ -132,7 +177,56 @@ function WhenInstallingPSModule
         Remove-Module -Name $ForModule -Force -ErrorAction Ignore
     }
 
-    $script:result = Install-PowerShellModule -Name $ForModule -Version $Version -SkipImport:$SkipImport
+    $installedModules = $script:installedModules
+    $global:getWhiskeyPSModuleCalled = $false
+    if( $installedModules )
+    {
+        Mock -CommandName 'Get-WhiskeyPSModule' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter {
+                 if( $getWhiskeyPSModuleCalled )
+                {
+                    return $false
+                }
+                
+                $whiskeyCallers = Get-PSCallStack | Where-Object 'Command' -like '*-Whiskey*'
+                $whiskeyCallers | Format-Table | Out-String | Write-Debug
+                $whiskeyCaller = $whiskeyCallers | Select-Object -First 1 
+                $whiskeyCaller | Format-List | Out-String | Write-Debug
+                $whiskeyCaller.InvocationInfo | Format-List | Out-String | Write-Debug
+                $whiskeyCaller.Arguments | Format-List | Out-String | Write-Debug
+                $calledByWhiskey = $whiskeyCaller.Command -eq 'Install-WhiskeyPowerShellModule'
+                if( $calledByWhiskey -and -not $getWhiskeyPSModuleCalled )
+                {
+                    $global:getWhiskeyPSModuleCalled = $true
+                }
+                return $calledByWhiskey
+             }.GetNewClosure() `
+             -MockWith { $installedModules | Write-Output }.GetNewClosure()
+    }
+
+    $conditionalParams = @{}
+
+    if( $AtPath )
+    {
+        $conditionalParams['Path'] = $AtPath
+    }
+
+    if( $SkipImport )
+    {
+        $conditionalParams['SkipImport'] = $true
+    }
+
+    Push-Location $testRoot
+    try
+    {
+        $script:result = Install-PowerShellModule -Name $ForModule -Version $Version @conditionalParams
+    }
+    finally
+    {
+        Remove-Variable -Name 'getWhiskeyPSModuleCalled' -Force -Scope 'Global'
+        Pop-Location
+    }
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when installing and re-installing a PowerShell module' {
@@ -308,5 +402,53 @@ Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installe
         Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Whiskey' -Times 0
         ThenNoErrors
         ThenModuleInfoReturned -AtVersion $newestVersion.Version
+    }
+}
+
+foreach( $modulePath in ($env:PSModulePath -split [IO.Path]::PathSeparator) )
+{
+    Describe "Install-WhiskeyPowerShellModule.when user installing to custom path but module exists globally in $($modulePath)" {
+        AfterEach { Reset }
+        It 'should install module at the custom path' {
+            Init
+            GivenModule 'Zip' -AtVersion $latestZip.Version -InstalledIn $modulePath
+            WhenInstallingPSModule 'Zip' -Version $latestZip.Version -AtPath 'mycustompath'
+            ThenModuleInfoReturned 'Zip' -AtVersion $latestZip.Version
+            ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version -In 'mycustompath'
+            ThenModuleImported 'Zip' -AtVersion $latestZip.Version -From 'mycustompath'
+            ThenModuleNotInstalled 'Zip' -In 'PSModules'
+        }
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when module fails to install' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
+        { WhenInstallingPSModule 'Zip' -ErrorAction Stop } |
+            Should -Throw 'the module doesn''t exist after running'
+        ThenNoModuleInfoReturned
+        ThenModuleNotInstalled
+        ThenModuleNotImported
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when remains of old module still in place and can''t be removed' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        $expectedVersion = $latestZip.Version
+        $expectedPathWildcard = "*\PSModules\Zip\$($expectedVersion)\*"
+        $parameterFilter = [scriptblock]::Create("{ `$Path -like ""$($expectedPathWildcard)""}")
+        Mock -Command 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $parameterFilter -MockWith { return $true }
+        Mock -Command 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter $parameterFilter
+        New-Item -Path (Join-Path -Path $testRoot -ChildPath "PSModules\Zip\$($latestZip.Version)") -ItemType 'Directory'
+        $slash = [IO.Path]::DirectorySeparatorChar
+        $expectedMsg ="the destination path "".$($slash)PSModules$($slash)Zip$($slash)$($expectedVersion)"" exists" 
+        { WhenInstallingPSModule 'Zip' -ErrorAction Stop } | Should -Throw $expectedMsg
+        ThenNoModuleInfoReturned
+        ThenModuleNotInstalled
+        ThenModuleNotImported
     }
 }

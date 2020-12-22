@@ -65,6 +65,11 @@ function Install-WhiskeyPowerShellModule
     if( $Path )
     {
         $Path = $Path.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        if( -not [IO.Path]::IsPathRooted($Path) )
+        {
+            $Path = Join-Path -Path $BuildRoot -ChildPath $Path
+            $Path = [IO.Path]::GetFullPath($Path)
+        }
         if( -not (Test-Path -Path $Path) )
         {
             New-Item -Path $Path -ItemType 'Directory' | Out-Null
@@ -126,9 +131,10 @@ function Install-WhiskeyPowerShellModule
             Remove-Item -Path $moduleRoot -Recurse -Force
             if( (Test-Path -Path $moduleRoot) )
             {
-                $msg = "Unable to install PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) to " +
-                       """$($installRoot)"": the destination path ""$($moduleRoot)"" exists and deleting it failed. " +
-                       'Make sure files under the destination directory aren''t in use.'
+                $msg = "Unable to install PowerShell module $($moduleToInstall.Name) $($moduleToInstall.Version) to " +
+                       """$($installRoot | Resolve-Path -Relative)"": the destination path " +
+                       """$($moduleRoot | Resolve-Path -Relative)"" exists and deleting it failed. Make sure files " +
+                       'under the destination directory aren''t in use.'
                 Write-WhiskeyError -Message $msg
                 return
             }
@@ -149,9 +155,9 @@ function Install-WhiskeyPowerShellModule
 
         if( -not $installedModule )
         {
-            $msg = "Failed to download PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " +
-                   "$($moduleToInstall.Repository) to ""$($installRoot)"": the module doesn't exist after running PowerShell's " +
-                   '"Save-Module" command.'
+            $msg = "Failed to download PowerShell module $($moduleToInstall.Name) $($moduleToInstall.Version) from " +
+                   "repository $($moduleToInstall.Repository) to ""$($installRoot | Resolve-Path -Relative)"": the " +
+                   'module doesn''t exist after running PowerShell''s "Save-Module" command.'
             Write-WhiskeyError -Message $msg
             return
         }

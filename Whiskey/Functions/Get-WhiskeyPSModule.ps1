@@ -73,7 +73,7 @@ function Get-WhiskeyPSModule
             # Make sure there's a valid module there.
             $numErrorsBefore = $Global:Error.Count
             $manifest = $null
-            $debugMsg = "Module $($module.Name) $($module.Version) (($module.ManifestPath)) has "
+            $debugMsg = "Module $($module.Name) $($module.Version) ($($module.ManifestPath)) has "
             try
             {
                 $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore
