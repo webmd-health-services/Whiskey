@@ -6,72 +6,93 @@ function Import-WhiskeyPowerShellModule
     Imports a PowerShell module.
 
     .DESCRIPTION
-    The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task. Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If a module with the same name is currently loaded, it is removed and re-imported.
+    The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task.
+    Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If the
+    module is currently loaded but is at a different version than requested, that module is removed first, and the 
+    correct version is imported.
 
-    The module must be installed in Whiskey's PowerShell modules directory. Use the `RequiresTool` attribute on a task to have Whiskey install a module in this directory or the `GetPowerShellModule` task to install a module in the appropriate place.
-
-    Pass the name of the modules to the `Name` parameter.
-
-    .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion'
-
-    Demonstrates how to use this method to import a single module.
+    If the module isn't installed (or if the requested version of the module isn't installed), you'll get an error. Use
+    the `Install-WhiskeyPowerShellModule` to install the module. If a task needs a module, use the 
+    `[Whiskey.RequiresPowerShellModule]` task attribute.
 
     .EXAMPLE
-    Import-WhiskeyPowerShellModule -Name 'BuildMasterAutomtion','ProGetAutomation'
+    Import-WhiskeyPowerShellModule -Name 'Zip' -PSModulesRoot $buildRoot
 
-    Demonstrates how to use this method to import multiple modules.
+    Demonstrates how to use this method to import a module that is installed in a global module location or in the 
+    current build's PSModules directory (usually in the build root directory). The latest/newest installed version is
+    imported.
+
+    .EXAMPLE
+    Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.2.0' -PSModulesRoot $buildRoot
+
+    Demonstrates how to use this method to import a specific version of a module that is installed in a global module 
+    location or in the current build's PSModules directory (usually in the build root directory). The latest/newest
+    installed version is imported.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         # The module names to import.
-        [String[]]$Name,
+        [String]$Name,
+
+        # The version of the module to import.
+        [String]$Version,
 
         [Parameter(Mandatory)]
-        # The path to the build root, where the PSModules directory can be found.
+        # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
         [String]$PSModulesRoot
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    & {
-        $VerbosePreference = 'SilentlyContinue'
-        Get-Module -Name $Name | Remove-Module -Force -WhatIf:$false
+    $numErrorsBefore = $Global:Error.Count
+    $foundModule = $false
+    try
+    {
+        $foundModule = & {
+            $VerbosePreference = 'SilentlyContinue'
+            $module = Get-WhiskeyPSModule -Name $Name -Version $Version -PSModulesRoot $PSModulesRoot
+            if( -not $module )
+            {
+                return $false
+            }
+
+            $loadedModules = Get-Module -Name $Name
+            $loadedModules |
+                Where-Object 'Version' -ne $module.Version |
+                Remove-Module -Verbose:$false -WhatIf:$false -Force
+
+            if( ($loadedModules | Where-Object 'Version' -eq $module.Version) )
+            {
+                Write-WhiskeyDebug -Message ("Module $($Name) $($module.Version) already loaded.")
+                return $true
+            }
+
+            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false
+            return $true
+        } 4> $null
+    }
+    finally
+    {
+        # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
+        # tests to fail. I know this is a little extreme.
+        $numToRemove = $Global:Error.Count - $numErrorsBefore
+        for( $idx = 0; $idx -lt $numToRemove; $idx++ )
+        {
+            $Global:Error.RemoveAt(0)
+        }
     }
 
-    $relativePSModulesRoot = Resolve-Path -Path $PSModulesRoot -Relative -ErrorAction Ignore
-
-    foreach( $moduleName in $Name )
+    if( -not $foundModule )
     {
-        $moduleDir = Join-Path -Path $PSModulesRoot -ChildPath $moduleName
-        if( (Test-Path -Path $moduleDir -PathType Container) )
+        $versionDesc = ''
+        if( $Version )
         {
-            Write-WhiskeyDebug -Message ('PSModuleAutoLoadingPreference = "{0}"' -f $PSModuleAutoLoadingPreference)
-            Write-WhiskeyVerbose -Message ('Importing PowerShell module "{0}" from "{1}".' -f $moduleName,$relativePSModulesRoot)
-            $errorsBefore = $Global:Error.Clone()
-            $Global:Error.Clear()
-            try
-            {
-                & {
-                    $VerbosePreference = 'SilentlyContinue'
-                    Import-Module -Name $moduleDir -Global -Force -ErrorAction Stop -Verbose:$false
-                } 4> $null
-            }
-            finally
-            {
-                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
-                # tests to fail. I know this is a little extreme.
-                $Global:Error.Clear()
-                $Global:Error.AddRange($errorsBefore)
-            }
-            break
+            $versionDesc = " $($Version)"
         }
-
-        if( -not (Get-Module -Name $moduleName) )
-        {
-            Write-WhiskeyError -Message ('Module "{0}" does not exist. Make sure your task uses the "RequiresTool" attribute so that the module gets installed automatically.' -f $moduleName) -ErrorAction Stop
-        }
+        $msg = "Unable to import module ""$($Name)""$($versionDesc): that module isn't installed. To install a module, " +
+               'use the "GetPowerShellModule" task.'
+        Write-WhiskeyError -Message $msg
     }
 }

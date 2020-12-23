@@ -66,7 +66,7 @@ function ThenPowershellModule
     }
     elseif ($Installed)
     {
-        Assert-MockCalled -CommandName 'Resolve-WhiskeyPowerShellModule' `
+        Assert-MockCalled -CommandName 'Find-WhiskeyPowerShellModule' `
                           -ModuleName 'Whiskey' `
                           -ParameterFilter { $Name -eq $expectedName }
         Assert-MockCalled -CommandName 'Install-WhiskeyPowerShellModule' `
@@ -117,7 +117,7 @@ function WhenRunningTask
         }
         elseif ($initialize)
         {
-            Mock -CommandName 'Resolve-WhiskeyPowerShellModule' `
+            Mock -CommandName 'Find-WhiskeyPowerShellModule' `
                  -ModuleName 'Whiskey' `
                  -MockWith { [pscustomobject]@{ 'Name' = $Name; 'Version' = $Version } }
             Mock -CommandName 'Install-WhiskeyPowerShellModule' -ModuleName 'Whiskey'

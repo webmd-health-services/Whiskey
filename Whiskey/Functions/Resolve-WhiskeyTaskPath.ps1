@@ -173,7 +173,8 @@ function Resolve-WhiskeyTaskPath
 
         if( $UseGlob )
         {
-            Install-WhiskeyPowerShellModule -Name 'Glob' -Version '0.1.*' -BuildRoot $TaskContext.BuildRoot | Out-Null
+            Install-WhiskeyPowerShellModule -Name 'Glob' -Version '0.1.*' -BuildRoot $TaskContext.BuildRoot -ErrorAction Stop |
+                Out-Null
         }
 
         $insideCurrentDirPrefix = '.{0}' -f [IO.Path]::DirectorySeparatorChar
