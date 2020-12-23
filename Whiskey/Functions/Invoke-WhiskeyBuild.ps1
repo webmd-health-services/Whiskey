@@ -83,13 +83,7 @@ function Invoke-WhiskeyBuild
 
     $Context.StartedAt = $script:buildStartedAt = Get-Date
 
-    # If there are older versions of the PackageManagement and/or PowerShellGet
-    # modules available on this system, the modules that ship with Whiskey will use
-    # those global versions instead of the versions we load from inside Whiskey. So,
-    # we have to put the ones that ship with Whiskey first. See
-    # https://github.com/PowerShell/PowerShellGet/issues/446 .
-    $originalPSModulesPath = $env:PSModulePath
-    $env:PSModulePath = '{0};{1}' -f (Join-Path -Path $Context.BuildRoot -ChildPath $powerShellModulesDirectoryName),$env:PSModulePath
+    Register-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
 
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
@@ -149,7 +143,7 @@ function Invoke-WhiskeyBuild
         }
         Set-WhiskeyBuildStatus -Context $Context -Status $status
 
-        $env:PSModulePath = $originalPSModulesPath
+        Unregister-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
     }
 
     # There are some errors (strict mode validation failures, command not found errors, etc.) that stop a build, but 

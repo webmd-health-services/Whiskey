@@ -24,8 +24,9 @@ function Init
     $script:context = $null
     $script:expandPath = Join-Path -Path $testRoot -ChildPath ([IO.Path]::GetRandomFileName())
 
-
     Remove-Module -Force -Name Zip -ErrorAction Ignore
+
+    Reset-WhiskeyPSModulePath
 }
 
 function GivenARepositoryWithItems
@@ -61,6 +62,7 @@ function GivenARepositoryWithItems
 function Reset
 {
     Reset-WhiskeyTestPSModule
+    Reset-WhiskeyPSModulePath
 }
 
 function ThenArchiveShouldInclude
@@ -662,6 +664,7 @@ Build:
     ArchivePath: Zip.zip
     Path: fubar.txt
 '@ -AndModuleNotInstalled
-        ThenModuleInstalled 'Zip' -AtVersion '0.3.*' -InBuildRoot $context.BuildRoot
+        $latestZip = Find-Module -Name 'Zip' | Select-Object -First 1
+        ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version -InBuildRoot $context.BuildRoot
     }
 }

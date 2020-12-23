@@ -35,26 +35,22 @@ function Get-WhiskeyPowerShellModule
 
     if( -not $Path )
     {
-        $Path = Join-Path -Path $TaskContext.BuildRoot -ChildPath $powershellModulesDirectoryName
-        if( -not (Test-Path -Path $Path -PathType Container) )
-        {
-            New-Item -Path $Path -ItemType 'Directory' | Out-Null
-        }
+        $Path = Get-WhiskeyPSModulePath -PSModulesRoot $TaskContext.BuildRoot -Create
         $Path = $Path | Resolve-Path -Relative
     }
 
-    # PackageManagement/PowerShellGet functions don't like relative paths.
-    $fullPath = $Path | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
-
-    $module = Resolve-WhiskeyPowerShellModule -Name $Name `
-                                              -Version $Version `
-                                              -BuildRoot $TaskContext.BuildRoot `
-                                              -AllowPrerelease:$AllowPrerelease `
-                                              -ErrorAction Stop
+    $module = Find-WhiskeyPowerShellModule -Name $Name `
+                                           -Version $Version `
+                                           -BuildRoot $TaskContext.BuildRoot `
+                                           -AllowPrerelease:$AllowPrerelease `
+                                           -ErrorAction Stop
     if( -not $module )
     {
         return
     }
+
+    # PackageManagement/PowerShellGet functions don't like relative paths.
+    $fullPath = $Path | Resolve-Path | Select-Object -ExpandProperty 'ProviderPath'
 
     Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$Path)
     $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
