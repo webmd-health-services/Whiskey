@@ -66,6 +66,7 @@ function Get-WhiskeyPSModule
         Add-Member -Name 'ManifestPath' `
                    -MemberType ScriptProperty `
                    -Value { return Join-Path -Path ($_.Path | Split-Path) -ChildPath "$($_.Name).psd1" } `
+                   -Force `
                    -PassThru |
         Where-Object {
             $module = $_

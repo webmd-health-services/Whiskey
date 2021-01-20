@@ -259,7 +259,7 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module an
     }
 }
 
-Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module omitting Version' {
+Describe 'Install-WhiskeyPowerShellModule.when installing the latest version of a PowerShell module' {
     AfterEach { Reset }
     It 'should install the latest version' {
         Init
@@ -268,6 +268,25 @@ Describe 'Install-WhiskeyPowerShellModule.when installing a PowerShell module om
         ThenModuleInfoReturned -AtVersion $latestZip.Version
         ThenModuleImported -AtVersion $latestZip.Version
         ThenModuleInstalled -AtVersion $latestZip.Version
+    }
+}
+
+Describe 'Install-WhiskeyPowerShellModule.when reinstalling the latest version of a PowerShell module in the current directory' {
+    AfterEach { Reset }
+    It 'should install the latest version' {
+        Init
+        WhenInstallingPSModule 'Zip' -AtPath '.'
+        ThenNoErrors
+        ThenModuleInfoReturned -AtVersion $latestZip.Version
+        ThenModuleImported -AtVersion $latestZip.Version -From '.'
+        ThenModuleInstalled -AtVersion $latestZip.Version -In '.'
+
+        # Re-install
+        WhenInstallingPSModule 'Zip' -AtPath '.'
+        ThenNoErrors
+        ThenModuleInfoReturned -AtVersion $latestZip.Version
+        ThenModuleImported -AtVersion $latestZip.Version -From '.'
+        ThenModuleInstalled -AtVersion $latestZip.Version -In '.'
     }
 }
 
