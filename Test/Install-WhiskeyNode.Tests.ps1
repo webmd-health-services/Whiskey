@@ -8,6 +8,7 @@ $threwException = $false
 $taskWorkingDirectory = $null
 $nodePath = $null
 $testRoot = $null
+$outPath = $null
 
 function GivenPackageJson
 {
@@ -34,6 +35,7 @@ function Init
     $script:nodePath = $null
     $script:threwException = $false
     $script:testRoot = New-WhiskeyTestRoot
+    $script:outPath = $testRoot
     $script:taskWorkingDirectory = $testRoot
 }
 
@@ -81,7 +83,7 @@ function ThenNodeInstalled
         $platformID = 'darwin'
         $extension = 'tar.gz'
     }
-    Join-Path -Path $testRoot -ChildPath ('.node\node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
+    Join-Path -Path $outPath -ChildPath ('node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
 
     $nodePath | Should -Exist
     & $nodePath '--version' | Should -Be $NodeVersion
@@ -138,6 +140,9 @@ function WhenInstallingTool
     $parameter = $PSBoundParameters
     $parameter['InstallRoot'] = $testRoot
 
+    #Note: Passing new parameter
+    $parameter['OutputPath'] = $outPath 
+
     Push-Location -path $taskWorkingDirectory
     try
     {
@@ -152,6 +157,32 @@ function WhenInstallingTool
     {
         Pop-Location
     }
+}
+
+#Note: New test WIP
+function GivenAntiVirusLockingFiles
+{
+        $temp = $nodePath
+        $file = (Join-Path -Path $temp -ChildPath 'README.md')
+        Start-Job -ScriptBlock {                                       
+             $file = [IO.File]::Open($file, 'Open', 'Write', 'None')
+
+                  try
+                  {
+                      Start-Sleep -Seconds 5
+                  }
+                  finally
+                  {
+                      $file.Close()
+                  }
+        }
+
+        do
+        {
+            Start-Sleep -Milliseconds 100
+            Write-Debug -Message ('Waiting for hosts file to get locked.')
+        }
+        while( (Get-Content -Path $file -ErrorAction SilentlyContinue ) )
 }
 
 Describe 'Install-WhiskeyNode.when installing' {
@@ -326,5 +357,16 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
         WhenInstallingTool -InCleanMode
         ThenNodeInstalled -AtLatestVersion
         ThenNoError
+    }
+}
+
+#Note: Add new test to simulate anti-virus locking behavior 
+Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+    AfterEach { Reset }
+    It 'should still install Node.js' {
+        Init
+        #GivenAntiVirusLockingFiles
+        WhenInstallingTool # Not sure why it's called this. Should be called "WhenInstallingNode"
+        ThenNodeInstalled -AtLatestVersion
     }
 }

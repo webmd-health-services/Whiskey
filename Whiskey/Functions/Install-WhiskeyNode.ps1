@@ -11,7 +11,11 @@ function Install-WhiskeyNode
         [switch]$InCleanMode,
 
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
-        [String]$Version
+        [String]$Version,
+
+        #Note: Adding new parameter
+        [Parameter(Mandatory)]
+        [String]$OutputPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -97,10 +101,12 @@ function Install-WhiskeyNode
     }
 
     $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
-    if( -not (Test-Path -Path $nodeRoot -PathType Container) )
-    {
-        New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
-    }
+
+    #Note: Remove creation of .node
+    #if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+    #{
+    #    New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
+    #}
 
     $platform = 'win'
     $packageExtension = 'zip'
@@ -117,40 +123,47 @@ function Install-WhiskeyNode
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
     $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
-    $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
+    #Note: Instead of downloading the archive into the .node directory, download it to the build output directory. 
+    #Add a OutputPath parameter to Install-WhiskeyNode. Update usages across Whiskey to pass this new parameter in.
+    $nodeZipFile = Join-Path -Path $OutputPath -ChildPath $filename
     if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
     {
         $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
-        try
-        {
-            Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
-        }
-        catch
-        {
-            $responseInfo = ''
-            $notFound = $false
-            if( $_.Exception | Get-Member -Name 'Response' )
-            {
-                $responseStatus = $_.Exception.Response.StatusCode
-                $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
-                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
-                {
-                    $notFound = $true
-                }
-            }
-            else
-            {
-                Write-WhiskeyError -ErrorRecord $_
-                $responseInfo = 'Please see previous error for more information.'
-            }
 
-            $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
-            if( $notFound )
+        #Note: Only download the archive if the $installNode variable is true. 
+        if($installNode)
+        {
+            try
             {
-                $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
             }
-            Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
-            return
+            catch
+            {
+                $responseInfo = ''
+                $notFound = $false
+                if( $_.Exception | Get-Member -Name 'Response' )
+                {
+                    $responseStatus = $_.Exception.Response.StatusCode
+                    $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
+                    if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+                    {
+                        $notFound = $true
+                    }
+                }
+                else
+                {
+                    Write-WhiskeyError -ErrorRecord $_
+                    $responseInfo = 'Please see previous error for more information.'
+                }
+
+                $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
+                if( $notFound )
+                {
+                    $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                }
+                Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
+                return
+            }
         }
     }
 
@@ -161,12 +174,69 @@ function Install-WhiskeyNode
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
             $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
-            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
-            & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-WhiskeyVerbose
+            
+            #Note: Add -spe switch
+            #Note: Get archive root directory
 
-            Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
-                Get-ChildItem |
-                Move-Item -Destination $nodeRoot
+            $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
+            $outputDirectoryName = $archive.Entries[0].FullName
+            $archive.Dispose()
+            $outputDirectoryName = $outputDirectoryName.Substring(0, $outputDirectoryName.Length - 1)
+            $outputDirectoryName = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
+
+            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputDirectoryName)
+            & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputDirectoryName) '-y' | Write-WhiskeyVerbose
+
+            #Note: Rename cmdlet
+
+            <#====================WIP========================#>
+
+            $flag = $true
+            $Attempt = 1
+            $Retry = 10
+            $Interval = 100
+
+            do
+            {
+                try
+                {
+                    $PreviousPreference = $ErrorActionPreference
+                    $ErrorActionPreference = 'Stop'
+                    Rename-Item -Path $outputDirectoryName -NewName '.node'
+                    $ErrorActionPreference = $PreviousPreference
+
+                    Write-Output 'Successful!!!'
+                    $flag = $false
+                }
+                catch
+                {
+                    if($Attempt -gt $Retry)
+                    {
+                        Write-Output 'Sorry the operation failed!!'
+                        Write-Verbose "FAILED ---- $($_.exception.message) `n"
+                        $flag = $false
+                    }
+                    else
+                    {
+                        Write-Output 'Retrying'
+                        Start-Sleep -Milliseconds $Interval
+                        $Attempt = $Attempt + 1
+                    }    
+                }
+            }
+            while($flag)
+
+            if(-not $flag)
+            {
+                Write-Output 'Sorry could not complete job'
+            }
+
+            <#---------------------WIP----------------------#>
+
+
+            #Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
+            #    Get-ChildItem |
+            #    Move-Item -Destination $nodeRoot
         }
         else
         {
