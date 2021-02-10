@@ -35,7 +35,7 @@ function Init
     $script:nodePath = $null
     $script:threwException = $false
     $script:testRoot = New-WhiskeyTestRoot
-    $script:outPath = $testRoot
+    $script:outPath = New-Item -Path $testRoot -Name 'test' -ItemType 'directory'
     $script:taskWorkingDirectory = $testRoot
 }
 
@@ -51,7 +51,9 @@ function ThenNodeInstalled
 
         [String]$NpmVersion,
 
-        [switch]$AtLatestVersion
+        [switch]$AtLatestVersion,
+
+        [switch]$NodeZipFileCheck
     )
 
     $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $testRoot
@@ -83,7 +85,15 @@ function ThenNodeInstalled
         $platformID = 'darwin'
         $extension = 'tar.gz'
     }
-    Join-Path -Path $outPath -ChildPath ('node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
+
+    if($NodeZipFileCheck)
+    {
+        Join-Path -Path $outPath -ChildPath ('node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Exist
+    }
+    else
+    {
+        Join-Path -Path $outPath -ChildPath ('node-{0}-{1}-x64.{2}' -f $NodeVersion,$platformID,$extension) | Should -Not -Exist
+    }
 
     $nodePath | Should -Exist
     & $nodePath '--version' | Should -Be $NodeVersion
@@ -159,17 +169,16 @@ function WhenInstallingTool
     }
 }
 
-#Note: New test WIP
 function GivenAntiVirusLockingFiles
 {
-        $temp = $nodePath
+        $temp = Join-Path -Path $testRoot -ChildPath '.node'
         $file = (Join-Path -Path $temp -ChildPath 'README.md')
         Start-Job -ScriptBlock {                                       
              $file = [IO.File]::Open($file, 'Open', 'Write', 'None')
 
                   try
                   {
-                      Start-Sleep -Seconds 5
+                      Start-Sleep -Seconds 8
                   }
                   finally
                   {
@@ -190,7 +199,7 @@ Describe 'Install-WhiskeyNode.when installing' {
     It 'should install Node.js' {
         Init
         WhenInstallingTool
-        ThenNodeInstalled -AtLatestVersion
+        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck 
     }
 }
 
@@ -229,7 +238,7 @@ Describe 'Install-WhiskeyNode.when installing specific version' {
 }
 '@
         WhenInstallingTool
-        ThenNodeInstalled 'v9.2.1' -NpmVersion '5.5.1'
+        ThenNodeInstalled 'v9.2.1' -NpmVersion '5.5.1' -NodeZipFileCheck 
     }
 }
 
@@ -245,7 +254,7 @@ Describe 'Install-WhiskeyNode.when upgrading to a new version' {
 }
 '@
         WhenInstallingTool
-        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2' -NodeZipFileCheck 
 
         GivenPackageJson @'
 {
@@ -256,7 +265,7 @@ Describe 'Install-WhiskeyNode.when upgrading to a new version' {
 }
 '@
         WhenInstallingTool
-        ThenNodeInstalled 'v8.9.0' -NpmVersion '5.6.0'
+        ThenNodeInstalled 'v8.9.0' -NpmVersion '5.6.0' -NodeZipFileCheck 
     }
 }
 
@@ -273,7 +282,7 @@ Describe 'Install-WhiskeyNode.when user specifies version in whiskey.yml and use
 }
 '@
         WhenInstallingTool -Version '8.8.*'
-        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2'
+        ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2' -NodeZipFileCheck 
     }
 }
 
@@ -289,7 +298,7 @@ Describe 'Install-WhiskeyNode.when using custom version of NPM' {
 }
 '@
         WhenInstallingTool
-        ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0'
+        ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0' -NodeZipFileCheck 
     }
 }
 
@@ -298,7 +307,7 @@ Describe 'Install-WhiskeyNode.when already installed' {
     It 'should use version of Node already there' {
         Init
         WhenInstallingTool
-        ThenNodeInstalled -AtLatestVersion
+        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck 
 
         Mock -CommandName 'Invoke-WebRequest' -Module 'Whiskey'
         $nodeUnzipPath = Join-Path -Path $testRoot -ChildPath '.node\node-*-win-x64'
@@ -333,7 +342,7 @@ Describe 'Install-WhiskeyNode.when packageJson is in working directory' {
 '@ -InDirectory $taskWorkingDirectory
 
         WhenInstallingTool
-        ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1'
+        ThenNodeInstalled -NodeVersion 'v8.9.0' -NpmVersion '5.5.1' -NodeZipFileCheck 
     }
 }
 
@@ -365,8 +374,8 @@ Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package
     AfterEach { Reset }
     It 'should still install Node.js' {
         Init
-        #GivenAntiVirusLockingFiles
+        GivenAntiVirusLockingFiles
         WhenInstallingTool # Not sure why it's called this. Should be called "WhenInstallingNode"
-        ThenNodeInstalled -AtLatestVersion
+        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
     }
 }
