@@ -35,7 +35,7 @@ function Init
     $script:nodePath = $null
     $script:threwException = $false
     $script:testRoot = New-WhiskeyTestRoot
-    $script:outPath = New-Item -Path $testRoot -Name 'test' -ItemType 'directory'
+    $script:outPath = New-Item -Path $testRoot -Name '.output' -ItemType 'directory'
     $script:taskWorkingDirectory = $testRoot
 }
 
@@ -169,29 +169,126 @@ function WhenInstallingTool
     }
 }
 
+function Lock-File {
+    param(
+        $Seconds,
+        $File
+    )
+    Start-Job -ScriptBlock {                                     
+        write-host "Locking file start" 
+        $file = [IO.File]::Open($using:File, 'Open', 'Write', 'None')
+
+
+        try
+        {
+            write-host "start sleep file start"
+            Start-Sleep -Seconds $using:Seconds
+        }
+
+        finally
+        {
+           write-host "file locking end"
+           $file.Close()
+        }
+    }
+
+    # Wait for file to get locked
+    do
+    {
+        Start-Sleep -Milliseconds 100
+        Write-Debug -Message ('Waiting for hosts file to get locked.')
+    }
+    while( (Get-Content -Path $File -ErrorAction SilentlyContinue ) )
+
+    write-host "file locked - end of lock file script"
+
+    $Global:Error.Clear()
+}
+
 function GivenAntiVirusLockingFiles
 {
-        $temp = Join-Path -Path $testRoot -ChildPath '.node'
-        $file = (Join-Path -Path $temp -ChildPath 'README.md')
-        Start-Job -ScriptBlock {                                       
-             $file = [IO.File]::Open($file, 'Open', 'Write', 'None')
+    param(
+    [String]$NodeVersion,
 
-                  try
-                  {
-                      Start-Sleep -Seconds 8
-                  }
-                  finally
-                  {
-                      $file.Close()
-                  }
-        }
+    [switch]$AtLatestVersion,
 
-        do
-        {
-            Start-Sleep -Milliseconds 100
-            Write-Debug -Message ('Waiting for hosts file to get locked.')
-        }
-        while( (Get-Content -Path $file -ErrorAction SilentlyContinue ) )
+    [int]$Seconds
+    )
+
+    if( $AtLatestVersion )
+    {
+        $expectedVersion = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' |
+                                ForEach-Object { $_ } |
+                                Where-Object { $_.lts } |
+                                Select-Object -First 1
+        $NodeVersion = $expectedVersion.version
+    }
+
+    if( $IsWindows )
+    {
+        $platformID = 'win'
+        $extension = 'zip'
+    }
+    elseif( $IsLinux )
+    {
+        $platformID = 'linux'
+        $extension = 'tar.xz'
+    }
+    elseif( $IsMacOS )
+    {
+        $platformID = 'darwin'
+        $extension = 'tar.gz'
+    }
+
+    $extractedDirName = 'node-{0}-{1}-x64' -f $NodeVersion,$platformID
+    $filename = '{0}.{1}' -f $extractedDirName,$extension
+    $nodeZipFile = Join-Path -Path $outPath -ChildPath $filename 
+
+    $uri = 'https://nodejs.org/dist/{0}/{1}' -f $NodeVersion,$filename
+    Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
+    $nodeZipFile | Should -Exist
+
+    $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
+    $outputDirectoryName = $archive.Entries[0].FullName
+    $archive.Dispose()
+    $outputDirectoryName = $outputDirectoryName.Substring(0, $outputDirectoryName.Length - 1)
+    $outputDirectoryName = New-Item -Path $testRoot -Name $outputDirectoryName -ItemType 'Directory'
+    $outputDirectoryName | Should -Exist
+
+    Remove-Item -Force $nodeZipFile
+    
+    $targetFile = Join-Path -Path $outputDirectoryName -ChildPath 'lock.txt'
+    New-Item -Path $targetFile -ItemType 'File'
+    $targetFile | Should -Exist
+
+    $job = Lock-File -Seconds $Seconds -File $targetFile -log_msg log_msg
+
+    try {
+
+        WhenInstallingTool
+	}
+    finally {
+
+        $job | Wait-Job | Receive-Job
+    }      
+}
+
+Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+    AfterEach { Reset }
+    It 'should still install Node.js' {
+        Init
+        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 40
+        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
+    }
+}
+
+Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 60
+        ThenNodeNotInstalled
+    }
 }
 
 Describe 'Install-WhiskeyNode.when installing' {
@@ -369,13 +466,4 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
     }
 }
 
-#Note: Add new test to simulate anti-virus locking behavior 
-Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-    AfterEach { Reset }
-    It 'should still install Node.js' {
-        Init
-        GivenAntiVirusLockingFiles
-        WhenInstallingTool # Not sure why it's called this. Should be called "WhenInstallingNode"
-        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
-    }
-}
+

@@ -13,7 +13,6 @@ function Install-WhiskeyNode
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
         [String]$Version,
 
-        #Note: Adding new parameter
         [Parameter(Mandatory)]
         [String]$OutputPath
     )
@@ -102,12 +101,6 @@ function Install-WhiskeyNode
 
     $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
 
-    #Note: Remove creation of .node
-    #if( -not (Test-Path -Path $nodeRoot -PathType Container) )
-    #{
-    #    New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
-    #}
-
     $platform = 'win'
     $packageExtension = 'zip'
     if( $IsLinux )
@@ -123,14 +116,11 @@ function Install-WhiskeyNode
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
     $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
-    #Note: Instead of downloading the archive into the .node directory, download it to the build output directory. 
-    #Add a OutputPath parameter to Install-WhiskeyNode. Update usages across Whiskey to pass this new parameter in.
     $nodeZipFile = Join-Path -Path $OutputPath -ChildPath $filename
     if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
     {
         $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
 
-        #Note: Only download the archive if the $installNode variable is true. 
         if($installNode)
         {
             try
@@ -174,9 +164,6 @@ function Install-WhiskeyNode
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
             $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
-            
-            #Note: Add -spe switch
-            #Note: Get archive root directory
 
             $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
             $outputDirectoryName = $archive.Entries[0].FullName
@@ -186,14 +173,10 @@ function Install-WhiskeyNode
 
             Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputDirectoryName)
             & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputDirectoryName) '-y' | Write-WhiskeyVerbose
-
-            #Note: Rename cmdlet
-
-            <#====================WIP========================#>
-
+            
             $flag = $true
             $Attempt = 1
-            $Retry = 10
+            $Retry = 100
             $Interval = 100
 
             do
@@ -201,42 +184,30 @@ function Install-WhiskeyNode
                 try
                 {
                     $PreviousPreference = $ErrorActionPreference
+                    write-host "renaming!"
                     $ErrorActionPreference = 'Stop'
                     Rename-Item -Path $outputDirectoryName -NewName '.node'
                     $ErrorActionPreference = $PreviousPreference
 
-                    Write-Output 'Successful!!!'
                     $flag = $false
                 }
                 catch
                 {
                     if($Attempt -gt $Retry)
                     {
-                        Write-Output 'Sorry the operation failed!!'
-                        Write-Verbose "FAILED ---- $($_.exception.message) `n"
+                        write-host "didnt work!"
+                        Write-WhiskeyError "FAILED ---- $($_.exception.message) `n"
                         $flag = $false
                     }
                     else
                     {
-                        Write-Output 'Retrying'
+                        write-host "reattempting!!"
                         Start-Sleep -Milliseconds $Interval
                         $Attempt = $Attempt + 1
                     }    
                 }
             }
             while($flag)
-
-            if(-not $flag)
-            {
-                Write-Output 'Sorry could not complete job'
-            }
-
-            <#---------------------WIP----------------------#>
-
-
-            #Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
-            #    Get-ChildItem |
-            #    Move-Item -Destination $nodeRoot
         }
         else
         {
