@@ -556,16 +556,29 @@ else
     # Whiskey detects the case-sensitivity of the file system and calls Find-GlobFile with matching case-sensitivity.
     # This detection needs to handle when resolving paths from the root directory.
     Describe 'Resolve-WhiskeyTaskPath.when globbing in the root directory' {
-        AfterEach { Reset }
+        AfterEach { 
+            Reset
+            if( -not $IsWindows )
+            {
+                sudo chmod o-w /
+            }
+        }
         It 'should correctly detect case-sensitivity' {
             Init
-            $rootPath = Resolve-Path -Path ([IO.Path]::DirectorySeparatorChar) | Select-Object -ExpandProperty 'ProviderPath'
+            if( -not $IsWindows )
+            {
+                sudo chmod o+w /
+            }
+            $rootPath = 
+                Resolve-Path -Path ([IO.Path]::DirectorySeparatorChar) | 
+                Select-Object -ExpandProperty 'ProviderPath'
+            Initialize-WhiskeyTestPSModule -BuildRoot $rootPath -Name 'Glob'
             Push-Location $rootPath
             try
             {
                 $paths = 
                     Get-ChildItem -Path $rootPath -File |
-                    Split-Path -Leaf
+                    Split-Path -Leaf 
 
                 $changedCasePaths = 
                     $paths |
@@ -577,11 +590,10 @@ else
                     Get-ChildItem -Path $rootPath -Directory -Force |
                         ForEach-Object { '**\{0}\**' -f $_.Name }
 
-                Mock -CommandName 'Install-WhiskeyPowerShellModule' -Module 'Whiskey'
                 $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
                 $context.BuildRoot = $rootPath
-                $resolvedPaths = 
-                    $changedCasePaths | 
+                $resolvedPaths =
+                    $changedCasePaths |
                     Resolve-WhiskeyTaskPath -TaskContext $context -UseGlob -PropertyName 'Path' -Exclude $exclude -ErrorAction Ignore
                 $expectedPaths = & {
                     foreach( $changedCasePath in $changedCasePaths )
@@ -594,6 +606,8 @@ else
                         }
                     }
                 }
+                
+                $expectedPaths = $expectedPaths | Where-Object {$_ -ne ".\DOCKERFILE.WINDOWS"}
                 $resolvedPaths | Sort-Object | Should -Be ($expectedPaths | Sort-Object)
             }
             finally

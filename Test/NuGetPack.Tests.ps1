@@ -371,11 +371,12 @@ Describe 'NuGetPack.when creating multiple packages for publishing' {
         ThenTaskSucceeds
     }
 }
+
 Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
     It 'should download and use that version of NuGet' {
         InitTest
         GivenABuiltLibrary
-        GivenVersion '3.5.0'
+        GivenVersion '4.5.0'
         WhenRunningNuGetPackTask
         ThenSpecificNuGetVersionInstalled
         ThenTaskSucceeds

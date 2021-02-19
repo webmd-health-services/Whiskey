@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.46.0'
+    ModuleVersion = '0.47.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -26,7 +26,7 @@
     CompatiblePSEditions = @( 'Desktop', 'Core' )
 
     # Copyright statement for this module
-    Copyright = '(c) 2016 - 2018 WebMD Health Services. All rights reserved.'
+    Copyright = '(c) 2016 - 2020 WebMD Health Services. All rights reserved.'
 
     # Description of the functionality provided by this module
     Description = 'Continuous Integration/Continuous Delivery module.'
@@ -162,6 +162,8 @@
             # ReleaseNotes of this module
             ReleaseNotes = @'
 * Added `InstallNode` task for installing Node.js.
+* Fixed: the ProGetUniversalPackage task ignores and overwrites release and build metadata in the `Version` property.
+* Whiskey now uses global PowerShell modules rather than always installing a private copy in a repository's PSModules folder. Private modules in "PSModules" are always used instead of global modules.
 '@
         } # End of PSData hashtable
 

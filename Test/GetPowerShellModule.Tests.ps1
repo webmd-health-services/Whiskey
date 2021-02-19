@@ -293,12 +293,13 @@ Describe 'GetPowerShellModule.when importing module after installation' {
         Init
         $modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
         $modulePath = Join-Path -Path $modulePath -ChildPath $TestPSModulesDirectoryName
-        $modulePath = Join-Path -Path $modulePath 'Glob' -Resolve
+        $modulePath = Join-Path -Path $modulePath 'Zip' -Resolve
         Import-Module -Name $modulePath -Force
         GivenImport
-        GivenModule 'Glob'
+        GivenModule 'Zip'
+        GivenVersion '0.2.0'
         WhenTaskRun
-        ThenModuleInstalled
-        ThenModuleImported 'Glob'
+        ThenModuleInstalled -AtVersion '0.2.0'
+        ThenModuleImported 'Zip'
     }
 }

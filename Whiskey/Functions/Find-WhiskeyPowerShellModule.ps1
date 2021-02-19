@@ -1,23 +1,23 @@
-function Resolve-WhiskeyPowerShellModule
+function Find-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
     Searches for a PowerShell module using PowerShellGet to ensure it exists and returns the resulting object from PowerShellGet.
 
     .DESCRIPTION
-    The `Resolve-WhiskeyPowerShellModule` function takes a `Name` of a PowerShell module and uses PowerShellGet's `Find-Module` cmdlet to search for the module. If the module is found, the object from `Find-Module` describing the module is returned. If no module is found, an error is written and nothing is returned. If the module is found in multiple PowerShellGet repositories, only the first one from `Find-Module` is returned.
+    The `Find-WhiskeyPowerShellModule` function takes a `Name` of a PowerShell module and uses PowerShellGet's `Find-Module` cmdlet to search for the module. If the module is found, the object from `Find-Module` describing the module is returned. If no module is found, an error is written and nothing is returned. If the module is found in multiple PowerShellGet repositories, only the first one from `Find-Module` is returned.
 
     If a `Version` is specified then this function will search for that version of the module from all versions returned from `Find-Module`. If the version cannot be found, an error is written and nothing is returned.
 
     `Version` supports wildcard patterns.
 
     .EXAMPLE
-    Resolve-WhiskeyPowerShellModule -Name 'Pester'
+    Find-WhiskeyPowerShellModule -Name 'Pester'
 
     Demonstrates getting the module info on the latest version of the Pester module.
 
     .EXAMPLE
-    Resolve-WhiskeyPowerShellModule -Name 'Pester' -Version '4.*'
+    Find-WhiskeyPowerShellModule -Name 'Pester' -Version '4.*'
 
     Demonstrates getting the module info on the latest '4.X' version of the Pester module.
     #>
@@ -41,52 +41,44 @@ function Resolve-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
-
-    if( -not (Test-Path -Path $modulesRoot -PathType Container) )
-    {
-        New-Item -Path $modulesRoot -ItemType 'Directory' -ErrorAction Stop | Out-Null
-    }
-
     # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-    # * Test\Resolve-WhiskeyPowerShellModule.Tests.ps1
+    # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
     # * Whiskey\Tasks\PublishPowerShellModule.ps1
     # * whiskey.yml
     $packageManagementPackages = @{
-        'PackageManagement' = '1.4.5';
-        'PowerShellGet' = '2.2.1'
+        'PackageManagement' = '1.4.7';
+        'PowerShellGet' = '2.2.5'
     }
-    $modulesToInstall = New-Object 'Collections.ArrayList' 
+    $modulesToInstall = New-Object 'Collections.ArrayList'
     foreach( $packageName in $packageManagementPackages.Keys )
     {
         $packageVersion = $packageManagementPackages[$packageName]
-        $moduleManifestPath = Join-Path -Path $modulesRoot -ChildPath ('{0}\{1}\{0}.psd1' -f $packageName,$packageVersion)
-        $manifestOk = $false
-        $manifest = $null
-        try
+
+        # Don't install modules if it's already installed.
+        $module = Get-WhiskeyPSModule -Name $packageName -Version $packageVersion -PSModulesRoot $BuildRoot
+        if( $module )
         {
-            $manifest = Test-ModuleManifest -Path $moduleManifestPath -ErrorAction Ignore
-            $manifestOk = $true
-        }
-        catch
-        {
-            $Global:Error.RemoveAt(0)
+            continue
         }
 
-        if( -not $manifestOk -or -not $manifest )
-        {
-            Write-WhiskeyDebug -Message ('Module "{0}" version {1} does not exist at {2}.' -f $packageName,$packageVersion,($moduleManifestPath | Split-Path))
-            $module = [pscustomobject]@{ 'Name' = $packageName ; 'Version' = $packageVersion }
-            [Void]$modulesToInstall.Add($module)
-        }
+        $moduleInfo = [pscustomobject]@{ 'Name' = $packageName; 'Version' = $packageVersion; }
+        $msg = "Module ""$($moduleInfo.Name)"" version $($moduleInfo.Version) is not installed."
+        Write-WhiskeyDebug -Message $msg
+        [Void]$modulesToInstall.Add($moduleInfo)
     }
 
     if( $modulesToInstall.Count )
     {
+        $modulesRoot = Get-WhiskeyPSModulePath -PSModulesRoot $BuildRoot -Create
         Write-WhiskeyDebug -Message ('Installing package management modules to {0}.  BEGIN' -f $modulesRoot)
         # Install Package Management modules in the background so we can load the new versions. These modules use 
         # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
         Start-Job -ScriptBlock {
+            $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue'
+
+            Import-Module -Name 'PackageManagement'
+            Import-Module -Name 'PowerShellGet'
+
             $ErrorActionPreference = $using:ErrorActionPreference
             $VerbosePreference = $using:VerbosePreference
             $InformationPreference = $using:InformationPreference
@@ -96,14 +88,24 @@ function Resolve-WhiskeyPowerShellModule
             $modulesToInstall = $using:modulesToInstall
             $modulesRoot = $using:modulesRoot
 
+            Write-Debug -Message ('Bootstrapping NuGet provider')
             Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-            foreach( $moduleInfo in $modulesToInstall )
+            # These need to be installed in this order.
+            foreach( $name in @('PackageManagement', 'PowerShellGet') )
             {
+                $moduleInfo = $modulesToInstall | Where-Object 'Name' -eq $name
+                if( -not $moduleInfo )
+                {
+                    Write-Debug ("  Skipping $($name): already installed.")
+                    continue
+                }
+
                 $module = 
                     Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version |
                     Select-Object -First 1
                 if( -not $module )
                 {
+                    Write-Debug -Message "Module $($moduleInfo.Name) $($moduleInfo.Version) not found by Find-Module."
                     continue
                 }
 
@@ -114,7 +116,12 @@ function Resolve-WhiskeyPowerShellModule
         Write-WhiskeyDebug -Message ('                                               END')
     }
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement','PowerShellGet' -PSModulesRoot $modulesRoot
+    foreach( $moduleName in $packageManagementPackages.Keys )
+    {
+        Import-WhiskeyPowerShellModule -Name $moduleName `
+                                       -Version $packageManagementPackages[$moduleName] `
+                                       -PSModulesRoot $BuildRoot
+    }
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )

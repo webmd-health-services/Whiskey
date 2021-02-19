@@ -1,0 +1,16 @@
+#Dockerfile to build Whiskey in a windows container. Example build command: docker build -t whs/whiskey -f .\Dockerfile.windows
+FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019
+
+#Install additional versions of .Net
+RUN powershell -Command Set-Service -Name wuauserv -StartupType Manual
+RUN DISM /Online /Enable-Feature /FeatureName:NetFx3 /All
+
+#Enable LongPaths for tests
+RUN powershell -Command Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem -Name LongPathsEnabled -Value 1
+
+#Copy project into container
+ADD . /build/Whiskey
+WORKDIR /build/Whiskey
+
+#Whiskey build
+RUN powershell -file .\build.ps1 

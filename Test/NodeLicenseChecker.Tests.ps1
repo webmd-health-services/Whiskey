@@ -10,6 +10,7 @@ $devDependency = $null
 $failed = $false
 $licenseReportPath = $null
 $output = $null
+$whsFailOn = @("--json", "--failOn", "AGPL-1.0-or-later;GPL-1.0-or-later;LGPL-2.0-or-later")
 
 function Init
 {
@@ -21,12 +22,14 @@ function Init
 
     $script:testRoot = New-WhiskeyTestRoot
 
-    $script:licenseReportPath = Join-Path -Path $testRoot -ChildPath '.output\node-license-checker-report.json'
     Install-Node -BuildRoot $testRoot
 }
 
 function CreatePackageJson
 {
+    param(
+        [String]$License
+    )
     $packageJsonPath = Join-Path -Path $testRoot -ChildPath 'package.json'
 
     @"
@@ -35,8 +38,8 @@ function CreatePackageJson
     "version": "0.0.1",
     "description": "test",
     "repository": "bitbucket:example/repo",
-    "private": true,
-    "license": "MIT",
+    "private": false,
+    "license": "$($License)",
     "dependencies": {
         $($script:dependency -join ',')
     },
@@ -45,11 +48,6 @@ function CreatePackageJson
     }
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
-}
-
-function GivenBadJson
-{
-    Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match 'ConvertFrom-Json' }
 }
 
 function GivenDependency 
@@ -78,31 +76,6 @@ function ThenLicenseCheckerNotRun
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter { $ScriptBlock.ToString() -match '--json' } -Times 0
 }
 
-function ThenLicenseReportCreated
-{
-    $licenseReportPath | Should -Exist
-}
-
-function ThenLicenseReportIsValidJSON
-{
-    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
-
-    $licenseReportJson | Should -Not -BeNullOrEmpty
-}
-
-function ThenLicenseReportNotCreated
-{
-    $licenseReportPath | Should -Not -Exist
-}
-
-function ThenLicenseReportFormatTransformed
-{
-    $licenseReportJson = Get-Content -Path $licenseReportPath -Raw | ConvertFrom-Json
-
-    $licenseReportJson | Select-Object -ExpandProperty 'name' | Should -Not -BeNullOrEmpty
-    $licenseReportJson | Select-Object -ExpandProperty 'licenses' | Should -Not -BeNullOrEmpty
-}
-
 function ThenTaskFailedWithMessage
 {
     param(
@@ -124,15 +97,24 @@ function ThenTaskSucceeded
 function WhenRunningTask
 {
     [CmdletBinding()]
-    param()
+    param(
+        [String]$License,
+
+        [String[]]$Argument
+    )
 
     $taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
 
     $taskParameter = @{ }
 
+    if( $Argument )
+    {
+        $taskParameter['Arguments'] = $Argument 
+    }
+
     try
     {
-        CreatePackageJson
+        CreatePackageJson -license $License
 
         Invoke-WhiskeyTask -TaskContext $taskContext -Parameter $taskParameter -Name 'NodeLicenseChecker'
     }
@@ -147,21 +129,44 @@ Describe 'NodeLicenseChecker.when running license-checker' {
     AfterEach { Reset }
     It 'should pass' {
         Init
-        WhenRunningTask
-        ThenLicenseReportCreated
-        ThenLicenseReportIsValidJSON
-        ThenLicenseReportFormatTransformed
+        WhenRunningTask -License "MIT" -Argument "--json"
         ThenTaskSucceeded
     }
 }
 
-Describe 'NodeLicenseChecker.when license checker did not return valid JSON' {
+Describe 'NodeLicenseChecker.when license reports a AGPL-1.0-or-later license and is included with --failOn' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        GivenBadJson
-        WhenRunningTask -ErrorAction SilentlyContinue
-        ThenLicenseReportNotCreated
-        ThenTaskFailedWithMessage 'failed to output a valid JSON report'
+        WhenRunningTask -License "AGPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
+    }
+}
+
+Describe 'NodeLicenseChecker.when license reports a GPL-1.0-or-later license and is included with --failOn' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        WhenRunningTask -License "GPL-1.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
+    }
+}
+
+Describe 'NodeLicenseChecker.when license reports a LGPL-2.0-or-later license and is included with --failOn' {
+    AfterEach { Reset }
+    It 'should fail' {
+        Init
+        WhenRunningTask -License "LGPL-2.0-or-later" -Argument $whsFailOn -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'license-checker returned a non-zero exit code.'
+    }
+}
+
+Describe 'NodeLicenseChecker.when passing in multiple arguments.' {
+    AfterEach { Reset }
+    $argument = @("--json", "--failOn", "MIT", "--direct", "--production")
+    It 'should pass' {
+        Init
+        WhenRunningTask -License "LGPL-2.0-or-later" -Argument $argument -ErrorAction SilentlyContinue
+        ThenTaskSucceeded
     }
 }

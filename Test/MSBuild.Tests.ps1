@@ -724,7 +724,7 @@ Describe 'MSBuild.when run by developer using a specific version of NuGet' {
     It 'should use that version of NuGet' {
         Init
         GivenProjectsThatCompile
-        GivenNuGetVersion '3.5.0'
+        GivenNuGetVersion '4.5.0'
         WhenRunningTask -AsDeveloper
         ThenSpecificNuGetVersionInstalled
         ThenNuGetPackagesRestored
