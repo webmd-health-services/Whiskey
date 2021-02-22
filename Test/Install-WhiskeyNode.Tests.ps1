@@ -280,13 +280,10 @@ Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package
         GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 40
         ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
     }
-}
 
-Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-    AfterEach { Reset }
     It 'should fail' {
         Init
-        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 60
+        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 180
         ThenNodeNotInstalled
     }
 }
