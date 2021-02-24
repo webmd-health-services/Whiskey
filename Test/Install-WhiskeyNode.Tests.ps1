@@ -452,7 +452,7 @@ if($IsWindows)
 
         It 'should fail' {
             Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 180
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
             ThenNodeNotInstalled
         }
     }
