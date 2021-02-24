@@ -14,6 +14,7 @@ function Install-WhiskeyNode
         [String]$Version,
 
         [Parameter(Mandatory)]
+        # The build output directory
         [String]$OutputPath
     )
 
@@ -184,7 +185,6 @@ function Install-WhiskeyNode
                 try
                 {
                     $PreviousPreference = $ErrorActionPreference
-                    write-host "renaming!"
                     $ErrorActionPreference = 'Stop'
                     Rename-Item -Path $outputDirectoryName -NewName '.node'
                     $ErrorActionPreference = $PreviousPreference
@@ -195,13 +195,11 @@ function Install-WhiskeyNode
                 {
                     if($Attempt -gt $Retry)
                     {
-                        write-host "didnt work!"
-                        Write-WhiskeyError "FAILED ---- $($_.exception.message) `n"
+                        Write-WhiskeyError "Error: $($_.exception.message) `n"
                         $flag = $false
                     }
                     else
                     {
-                        write-host "reattempting!!"
                         Start-Sleep -Milliseconds $Interval
                         $Attempt = $Attempt + 1
                     }    

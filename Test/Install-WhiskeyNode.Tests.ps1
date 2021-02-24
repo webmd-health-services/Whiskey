@@ -149,8 +149,6 @@ function WhenInstallingTool
 
     $parameter = $PSBoundParameters
     $parameter['InstallRoot'] = $testRoot
-
-    #Note: Passing new parameter
     $parameter['OutputPath'] = $outPath 
 
     Push-Location -path $taskWorkingDirectory
@@ -175,19 +173,15 @@ function Lock-File {
         $File
     )
     Start-Job -ScriptBlock {                                     
-        write-host "Locking file start" 
         $file = [IO.File]::Open($using:File, 'Open', 'Write', 'None')
-
 
         try
         {
-            write-host "start sleep file start"
             Start-Sleep -Seconds $using:Seconds
         }
 
         finally
         {
-           write-host "file locking end"
            $file.Close()
         }
     }
@@ -199,8 +193,6 @@ function Lock-File {
         Write-Debug -Message ('Waiting for hosts file to get locked.')
     }
     while( (Get-Content -Path $File -ErrorAction SilentlyContinue ) )
-
-    write-host "file locked - end of lock file script"
 
     $Global:Error.Clear()
 }
@@ -273,20 +265,6 @@ function GivenAntiVirusLockingFiles
     }      
 }
 
-Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-    AfterEach { Reset }
-    It 'should still install Node.js' {
-        Init
-        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 40
-        ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
-    }
-
-    It 'should fail' {
-        Init
-        GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 180
-        ThenNodeNotInstalled
-    }
-}
 
 Describe 'Install-WhiskeyNode.when installing' {
     AfterEach { Reset }
@@ -451,7 +429,6 @@ Describe 'Install-WhiskeyNode.when run in clean mode' {
     }
 }
 
-
 Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
     AfterEach { Reset }
     It 'should uninstall Node.js' {
@@ -460,6 +437,24 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
         WhenInstallingTool -InCleanMode
         ThenNodeInstalled -AtLatestVersion
         ThenNoError
+    }
+}
+
+if($IsWindows)
+{
+    Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+        AfterEach { Reset }
+        It 'should still install Node.js' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 40
+            ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
+        }
+
+        It 'should fail' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 180
+            ThenNodeNotInstalled
+        }
     }
 }
 
