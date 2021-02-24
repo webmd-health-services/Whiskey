@@ -211,6 +211,11 @@ function Install-WhiskeyNode
         }
         else
         {
+            if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+            {
+                New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
+            }
+
             Write-WhiskeyVerbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
             tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-WhiskeyVerbose
             if( $LASTEXITCODE )
