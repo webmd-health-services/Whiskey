@@ -250,31 +250,11 @@ function GivenAntiVirusLockingFiles
     }
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $NodeVersion,$platformID
-    $filename = '{0}.{1}' -f $extractedDirName,$extension
-    $nodeZipFile = Join-Path -Path $outPath -ChildPath $filename 
-
-    $uri = 'https://nodejs.org/dist/{0}/{1}' -f $NodeVersion,$filename
-    Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
-    $nodeZipFile | Should -Exist
-
-    $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
-    $outputDirectoryName = $archive.Entries[0].FullName
-    $archive.Dispose()
-    $outputDirectoryName = $outputDirectoryName.Substring(0, $outputDirectoryName.Length - 1)
-    #$outputDirectoryName = New-Item -Path $testRoot -Name $outputDirectoryName -ItemType 'Directory'
-    #$outputDirectoryName | Should -Exist
-
-    Remove-Item -Force $nodeZipFile
     
-    #$targetFile = Join-Path -Path $outputDirectoryName -ChildPath 'lock.txt'
-    $targetFilePath = Join-Path -Path $testRoot -ChildPath $outputDirectoryName
+    $targetFilePath = Join-Path -Path $testRoot -ChildPath $extractedDirName
     $targetFile = Join-Path -Path $targetFilePath -ChildPath 'LICENSE'
 
-
-    #New-Item -Path $targetFile -ItemType 'File'
-    #$targetFile | Should -Exist
-
-    $job = Lock-File -Seconds $Seconds -File $targetFile -DirName $outputDirectoryName
+    $job = Lock-File -Seconds $Seconds -File $targetFile -DirName $extractedDirName
 
     try {
 
@@ -298,7 +278,7 @@ if($IsWindows)
 
         It 'should fail' {
             Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 23
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 30
             ThenNodeNotInstalled
         }
     }
