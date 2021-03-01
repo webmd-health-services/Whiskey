@@ -170,9 +170,21 @@ function WhenInstallingTool
 function Lock-File {
     param(
         $Seconds,
-        $File
+        $File,
+        $DirName
     )
-    Start-Job -ScriptBlock {                                     
+    Start-Job -ScriptBlock {    
+        <#while(-not (Test-Path -Path (Join-Path -Path $using:outPath -ChildPath $using:DirName )))
+        {
+            if(Test-Path -Path (Join-Path -Path $using:outPath -ChildPath $using:DirName ))
+            {#>
+        while(-not (Test-Path -Path (Join-Path -Path $using:testRoot -ChildPath $using:DirName )))
+        {
+            continue;
+        }
+
+        Write-Host "Found Directory!!!"
+
         $file = [IO.File]::Open($using:File, 'Open', 'Write', 'None')
 
         try
@@ -182,17 +194,22 @@ function Lock-File {
 
         finally
         {
-           $file.Close()
+            $file.Close()
         }
+        
     }
 
     # Wait for file to get locked
+
     do
     {
         Start-Sleep -Milliseconds 100
         Write-Debug -Message ('Waiting for hosts file to get locked.')
     }
     while( (Get-Content -Path $File -ErrorAction SilentlyContinue ) )
+
+
+    Write-Host "File Locked"
 
     $Global:Error.Clear()
 }
@@ -244,16 +261,20 @@ function GivenAntiVirusLockingFiles
     $outputDirectoryName = $archive.Entries[0].FullName
     $archive.Dispose()
     $outputDirectoryName = $outputDirectoryName.Substring(0, $outputDirectoryName.Length - 1)
-    $outputDirectoryName = New-Item -Path $testRoot -Name $outputDirectoryName -ItemType 'Directory'
-    $outputDirectoryName | Should -Exist
+    #$outputDirectoryName = New-Item -Path $testRoot -Name $outputDirectoryName -ItemType 'Directory'
+    #$outputDirectoryName | Should -Exist
 
     Remove-Item -Force $nodeZipFile
     
-    $targetFile = Join-Path -Path $outputDirectoryName -ChildPath 'lock.txt'
-    New-Item -Path $targetFile -ItemType 'File'
-    $targetFile | Should -Exist
+    #$targetFile = Join-Path -Path $outputDirectoryName -ChildPath 'lock.txt'
+    $targetFilePath = Join-Path -Path $testRoot -ChildPath $outputDirectoryName
+    $targetFile = Join-Path -Path $targetFilePath -ChildPath 'LICENSE'
 
-    $job = Lock-File -Seconds $Seconds -File $targetFile -log_msg log_msg
+
+    #New-Item -Path $targetFile -ItemType 'File'
+    #$targetFile | Should -Exist
+
+    $job = Lock-File -Seconds $Seconds -File $targetFile -DirName $outputDirectoryName
 
     try {
 
@@ -264,6 +285,24 @@ function GivenAntiVirusLockingFiles
         $job | Wait-Job | Receive-Job
     }      
 }
+
+if($IsWindows)
+{
+    Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+        AfterEach { Reset }
+        It 'should still install Node.js' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 15
+            ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
+        }
+
+        It 'should fail' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 23
+            ThenNodeNotInstalled
+        }
+    }
+}   
 
 
 Describe 'Install-WhiskeyNode.when installing' {
@@ -440,22 +479,6 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
     }
 }
 
-if($IsWindows)
-{
-    Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-        AfterEach { Reset }
-        It 'should still install Node.js' {
-            Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 40
-            ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
-        }
 
-        It 'should fail' {
-            Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
-            ThenNodeNotInstalled
-        }
-    }
-}
 
 

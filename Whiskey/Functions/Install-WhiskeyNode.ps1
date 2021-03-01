@@ -174,6 +174,11 @@ function Install-WhiskeyNode
 
             Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputDirectoryName)
             & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputDirectoryName) '-y' | Write-WhiskeyVerbose
+
+            Write-Host "Target Directory Created"
+            Write-Host $outputDirectoryName
+
+            Start-Sleep -Seconds 3
             
             $flag = $true
             $Attempt = 1
@@ -184,6 +189,7 @@ function Install-WhiskeyNode
             {
                 try
                 {
+                    Write-Host 'Renaming'
                     $PreviousPreference = $ErrorActionPreference
                     $ErrorActionPreference = 'Stop'
                     Rename-Item -Path $outputDirectoryName -NewName '.node'
@@ -195,11 +201,13 @@ function Install-WhiskeyNode
                 {
                     if($Attempt -gt $Retry)
                     {
+                        Write-Host 'Did not work!'
                         Write-WhiskeyError "Error: $($_.exception.message) `n"
                         $flag = $false
                     }
                     else
                     {
+                        Write-Host 'Retrying'
                         Start-Sleep -Milliseconds $Interval
                         $Attempt = $Attempt + 1
                     }    
