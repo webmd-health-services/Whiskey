@@ -174,10 +174,7 @@ function Lock-File {
         $DirName
     )
     Start-Job -ScriptBlock {    
-        <#while(-not (Test-Path -Path (Join-Path -Path $using:outPath -ChildPath $using:DirName )))
-        {
-            if(Test-Path -Path (Join-Path -Path $using:outPath -ChildPath $using:DirName ))
-            {#>
+
         while(-not (Test-Path -Path (Join-Path -Path $using:testRoot -ChildPath $using:DirName )))
         {
             continue;
@@ -278,7 +275,7 @@ if($IsWindows)
 
         It 'should fail' {
             Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 30
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
             ThenNodeNotInstalled
         }
     }
