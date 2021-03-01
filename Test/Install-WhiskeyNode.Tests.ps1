@@ -180,8 +180,6 @@ function Lock-File {
             continue;
         }
 
-        Write-Host "Found Directory!!!"
-
         $file = [IO.File]::Open($using:File, 'Open', 'Write', 'None')
 
         try
@@ -197,16 +195,12 @@ function Lock-File {
     }
 
     # Wait for file to get locked
-
     do
     {
         Start-Sleep -Milliseconds 100
         Write-Debug -Message ('Waiting for hosts file to get locked.')
     }
     while( (Get-Content -Path $File -ErrorAction SilentlyContinue ) )
-
-
-    Write-Host "File Locked"
 
     $Global:Error.Clear()
 }
@@ -261,26 +255,7 @@ function GivenAntiVirusLockingFiles
 
         $job | Wait-Job | Receive-Job
     }      
-}
-
-if($IsWindows)
-{
-    Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-        AfterEach { Reset }
-        It 'should still install Node.js' {
-            Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 15
-            ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
-        }
-
-        It 'should fail' {
-            Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
-            ThenNodeNotInstalled
-        }
-    }
 }   
-
 
 Describe 'Install-WhiskeyNode.when installing' {
     AfterEach { Reset }
@@ -456,6 +431,23 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
     }
 }
 
+if($IsWindows)
+{
+    Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
+        AfterEach { Reset }
+        It 'should still install Node.js' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 13
+            ThenNodeInstalled -AtLatestVersion -NodeZipFileCheck
+        }
+
+        It 'should fail' {
+            Init
+            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
+            ThenNodeNotInstalled
+        }
+    }
+}
 
 
 
