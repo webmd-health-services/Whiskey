@@ -122,7 +122,7 @@ function Install-WhiskeyNode
     {
         $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
 
-        if($installNode)
+        if( $installNode )
         {
             try
             {
@@ -169,43 +169,35 @@ function Install-WhiskeyNode
             $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
             $outputDirectoryName = $archive.Entries[0].FullName
             $archive.Dispose()
-            $outputDirectoryName = $outputDirectoryName.Substring(0, $outputDirectoryName.Length - 1)
-            $outputDirectoryName = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
+            $outputDirectoryName = $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+            $outputRoot = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
 
-            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputDirectoryName)
-            & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputDirectoryName) '-y' | Write-WhiskeyVerbose
+            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputRoot)
+            & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
 
-            $flag = $true
-            $Attempt = 1
-            $Retry = 100
-            $Interval = 100
-
+            $nodeDirectoryName = '.node'
+            $maxTime = [TimeSpan]::New(0, 0, 10)
+            $timer = [Diagnostics.Stopwatch]::StartNew()
+            $exists = $false
             do
             {
-                try
-                {
-                    $PreviousPreference = $ErrorActionPreference
-                    $ErrorActionPreference = 'Stop'
-                    Rename-Item -Path $outputDirectoryName -NewName '.node'
-                    $ErrorActionPreference = $PreviousPreference
+                Rename-Item -Path $outputRoot -NewName '.node' -ErrorAction Ignore
+                $exists = Test-Path -Path $nodeRoot -PathType Container
 
-                    $flag = $false
-                }
-                catch
+                if( $exists )
                 {
-                    if($Attempt -gt $Retry)
-                    {
-                        Write-WhiskeyError "Error - $($_.exception.message) `n"
-                        $flag = $false
-                    }
-                    else
-                    {
-                        Start-Sleep -Milliseconds $Interval
-                        $Attempt = $Attempt + 1
-                    }    
+                    break
                 }
+
+                Start-Sleep -Milliseconds 100
             }
-            while($flag)
+            while( $timer.Elapsed -lt $maxTime )
+
+            if( -not $exists )
+            {
+                Write-WhiskeyError -Message ("Failed to install Node to ""{0}"": failed to rename ""{1}"" to ""{2}""." -f $nodeRoot, $outputDirectoryName, $nodeDirectoryName)
+            }
+
         }
         else
         {

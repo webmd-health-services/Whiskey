@@ -31,7 +31,7 @@ function ThenNodeInstalled
     $nodePath | Should -Exist
     if($Version)
     {
-        Get-ChildItem -Path ($testRoot) | Where-Object { $_.Name -match '\d+\.\d+\.\d+' } | Select-Object -ExpandProperty Name
+        Get-ChildItem -Path $testRoot | Where-Object { $_.Name -match '\d+\.\d+\.\d+' } | Select-Object -ExpandProperty Name
         $Version | Should -Match $Matches[1]
     }
 }
