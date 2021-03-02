@@ -176,7 +176,7 @@ function Lock-File {
 
     Start-Job -ScriptBlock {    
 
-        while(-not (Test-Path -Path (Join-Path -Path $using:testRoot -ChildPath $using:DirName )))
+        while(-not (Test-Path -Path (Join-Path -Path $using:testRoot -ChildPath $using:DirName ) ) )
         {
             Start-Sleep -Milliseconds 100
             continue;
