@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.47.0'
+    ModuleVersion = '0.47.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,9 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added `InstallNode` task for installing Node.js.
-* Fixed: the ProGetUniversalPackage task ignores and overwrites release and build metadata in the `Version` property.
-* Whiskey now uses global PowerShell modules rather than always installing a private copy in a repository's PSModules folder. Private modules in "PSModules" are always used instead of global modules.
+* Fixed an issue where extracting a local copy of Node.js would fail because of interference from anti-virus scanners.
 '@
         } # End of PSData hashtable
 
