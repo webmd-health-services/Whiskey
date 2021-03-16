@@ -161,7 +161,8 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed an issue where extracting a local copy of Node.js would fail because of interference from anti-virus scanners.
+* Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
+* Fixed: builds fail when run under a Jenkins PR build.
 '@
         } # End of PSData hashtable
 
