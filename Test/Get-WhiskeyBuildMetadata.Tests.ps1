@@ -6,6 +6,7 @@ Set-StrictMode -Version 'Latest'
 
 InModuleScope 'Whiskey' {
     $buildInfo = $null
+    $script:envVars = @{}
 
     function GivenEnvironmentVariable
     {
@@ -14,9 +15,7 @@ InModuleScope 'Whiskey' {
             $Value
         )
 
-        $filter = [scriptblock]::Create(('$Path -eq ''env:{0}''' -f $Name))
-        Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $true }
-        Mock -CommandName 'Get-Item' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return [pscustomobject]@{ Value = $Value } }.GetNewClosure()
+        $script:envVars[$Name] = $Value
     }
 
     function GivenDeveloperEnvironment
@@ -166,6 +165,8 @@ InModuleScope 'Whiskey' {
     function Init
     {
         $script:buildInfo = $null
+        $script:envVars = @{}
+        $Global:Error.Clear()
     }
 
     function ThenBuildMetadataIs
@@ -258,6 +259,23 @@ InModuleScope 'Whiskey' {
 
     function WhenGettingBuildMetadata
     {
+        # Make sure Get-Item fails when an environment variable fails so we make sure we handle it.
+        Mock -CommandName 'Get-Item' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Path -like 'env:*' } `
+             -MockWith { Write-Error -Message "Cannot find path '$($Path)' because it does not exist." -ErrorAction $ErrorActionPreference }
+
+        foreach( $envVarName in $script:envVars.Keys )
+        {
+            $value = $script:envVars[$envVarName]
+            $filter = [scriptblock]::Create(("`$Path -eq 'env:$($envVarName)'"))
+            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $true }
+            Mock -CommandName 'Get-Item' `
+                 -ModuleName 'Whiskey' `
+                 -ParameterFilter $filter `
+                 -MockWith { return [pscustomobject]@{ Value = $value }}.GetNewClosure()
+        }
+
         $script:buildInfo = Get-WhiskeyBuildMetadata
     }
 
@@ -281,6 +299,16 @@ InModuleScope 'Whiskey' {
                             -ScmBranch 'master' `
                             -JobUri 'https://job.example.com' 
         ThenBuildServerIs ([Whiskey.BuildServer]::Jenkins)
+    }
+
+    Describe 'Get-WhiskeyBuildMetadata.when running under Jenkins pull request' {
+        It 'should not write an error' {
+            Init
+            GivenEnvironmentVariable 'JENKINS_URL' 'https://example.com'
+            # No other environment variables.
+            WhenGettingBuildMetadata
+            $Global:Error | Should -BeNullOrEmpty
+        }
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when run by a developer' {
@@ -316,6 +344,7 @@ InModuleScope 'Whiskey' {
     }
 
     Describe 'Get-WhiskeyBuildMetadata.when running under TeamCity' {
+        Init
         GivenTeamCityEnvironment -BuildNumber '13' `
                                  -VcsNumber 'deadbeedeadbeedeadbeedeadbeedeadbeedeadb' `
                                  -ProjectName 'TeamCityWhiskeyAdapter' `
