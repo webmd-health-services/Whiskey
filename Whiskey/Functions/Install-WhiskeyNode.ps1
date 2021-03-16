@@ -11,7 +11,11 @@ function Install-WhiskeyNode
         [switch]$InCleanMode,
 
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
-        [String]$Version
+        [String]$Version,
+
+        [Parameter(Mandatory)]
+        # The build output directory
+        [String]$OutputPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -97,10 +101,6 @@ function Install-WhiskeyNode
     }
 
     $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
-    if( -not (Test-Path -Path $nodeRoot -PathType Container) )
-    {
-        New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
-    }
 
     $platform = 'win'
     $packageExtension = 'zip'
@@ -117,40 +117,44 @@ function Install-WhiskeyNode
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
     $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
-    $nodeZipFile = Join-Path -Path $nodeRoot -ChildPath $filename
+    $nodeZipFile = Join-Path -Path $OutputPath -ChildPath $filename
     if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
     {
         $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
-        try
-        {
-            Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
-        }
-        catch
-        {
-            $responseInfo = ''
-            $notFound = $false
-            if( $_.Exception | Get-Member -Name 'Response' )
-            {
-                $responseStatus = $_.Exception.Response.StatusCode
-                $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
-                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
-                {
-                    $notFound = $true
-                }
-            }
-            else
-            {
-                Write-WhiskeyError -ErrorRecord $_
-                $responseInfo = 'Please see previous error for more information.'
-            }
 
-            $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
-            if( $notFound )
+        if( $installNode )
+        {
+            try
             {
-                $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
             }
-            Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
-            return
+            catch
+            {
+                $responseInfo = ''
+                $notFound = $false
+                if( $_.Exception | Get-Member -Name 'Response' )
+                {
+                    $responseStatus = $_.Exception.Response.StatusCode
+                    $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
+                    if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
+                    {
+                        $notFound = $true
+                    }
+                }
+                else
+                {
+                    Write-WhiskeyError -ErrorRecord $_
+                    $responseInfo = 'Please see previous error for more information.'
+                }
+
+                $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
+                if( $notFound )
+                {
+                    $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                }
+                Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
+                return
+            }
         }
     }
 
@@ -161,15 +165,47 @@ function Install-WhiskeyNode
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
             $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
-            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$nodeRoot)
-            & $7z 'x' $nodeZipFile ('-o{0}' -f $nodeRoot) '-y' | Write-WhiskeyVerbose
 
-            Get-ChildItem -Path $nodeRoot -Filter 'node-*' -Directory |
-                Get-ChildItem |
-                Move-Item -Destination $nodeRoot
+            $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
+            $outputDirectoryName = $archive.Entries[0].FullName
+            $archive.Dispose()
+            $outputDirectoryName = $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+            $outputRoot = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
+
+            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputRoot)
+            & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
+
+            $nodeDirectoryName = '.node'
+            $maxTime = [TimeSpan]::New(0, 0, 10)
+            $timer = [Diagnostics.Stopwatch]::StartNew()
+            $exists = $false
+            do
+            {
+                Rename-Item -Path $outputRoot -NewName '.node' -ErrorAction Ignore
+                $exists = Test-Path -Path $nodeRoot -PathType Container
+
+                if( $exists )
+                {
+                    break
+                }
+
+                Start-Sleep -Milliseconds 100
+            }
+            while( $timer.Elapsed -lt $maxTime )
+
+            if( -not $exists )
+            {
+                Write-WhiskeyError -Message ("Failed to install Node to ""{0}"": failed to rename ""{1}"" to ""{2}""." -f $nodeRoot, $outputDirectoryName, $nodeDirectoryName)
+            }
+
         }
         else
         {
+            if( -not (Test-Path -Path $nodeRoot -PathType Container) )
+            {
+                New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
+            }
+
             Write-WhiskeyVerbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
             tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-WhiskeyVerbose
             if( $LASTEXITCODE )

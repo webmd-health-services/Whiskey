@@ -14,6 +14,6 @@ function Install-Node
     if( $Force -or $Version )
     {
         #Skips install if specified version is already installed
-        Install-WhiskeyNode -InstallRoot $TaskContext.BuildRoot -Version $Version
+        Install-WhiskeyNode -InstallRoot $TaskContext.BuildRoot -Version $Version -OutputPath $TaskContext.OutputDirectory
     }
 }
