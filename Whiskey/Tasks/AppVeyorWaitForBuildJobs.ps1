@@ -45,6 +45,7 @@ function Wait-WhiskeyAppVeyorBuildJob
     # Eventually AppVeyor will time us out.
     while( $true )
     {
+        $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
         $result = Invoke-RestMethod -Uri $buildUri -Method Get -Headers $headers -Verbose:$false
         $result | ConvertTo-Json -Depth 100 | Write-Debug
 

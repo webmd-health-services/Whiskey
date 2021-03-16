@@ -167,9 +167,6 @@ function Install-Node
         [String]$BuildRoot
     )
 
-    $VerbosePreference = 'Continue'
-    $DebugPreference = 'Continue'
-
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
     $toolAttr.PathParameterName = 'NodePath'
     Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
