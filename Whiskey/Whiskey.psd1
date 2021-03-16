@@ -161,9 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Added `InstallNode` task for installing Node.js.
-* Fixed: the ProGetUniversalPackage task ignores and overwrites release and build metadata in the `Version` property.
-* Whiskey now uses global PowerShell modules rather than always installing a private copy in a repository's PSModules folder. Private modules in "PSModules" are always used instead of global modules.
+* Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
 * Fixed: builds fail when run under a Jenkins PR build.
 '@
         } # End of PSData hashtable
