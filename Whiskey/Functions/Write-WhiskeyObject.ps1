@@ -6,17 +6,18 @@ function Write-WhiskeyObject
     Writes objects as recognizable strings.
 
     .DESCRIPTION
-    The `Write-WhiskeyObject` function writes objects as recognizable strings. Use the `Level` parameter to control what write function to use (see the help for `Write-WhiskeyInfo` for more information). It supports hashtables and dictionaries. It writes the keys and values in separate columns. If a value contains multiple values, each value is aligned with previous values. For example:
+    The `Write-WhiskeyObject` function writes objects as recognizable strings. Use the `Level` parameter to control
+    what write function to use (see the help for `Write-WhiskeyInfo` for more information). It supports hashtables and
+    dictionaries. It writes the keys and values in separate columns. If a value contains multiple values, each value is
+    aligned with previous values. For example:
 
-        VERBOSE: [13:34:39.15]
-        VERBOSE:     OutputFile    .output\pester.xml
-        VERBOSE:     OutputFormat  JUnitXml
-        VERBOSE:     PassThru      True
-        VERBOSE:     Script        .\PassingTests.ps1
-        VERBOSE:                   .\OtherPassingTests.ps1
-        VERBOSE:     Show          None
-        VERBOSE:     TestName      PassingTests
-        VERBOSE: [13:34:39.15]
+        OutputFile    .output\pester.xml
+        OutputFormat  JUnitXml
+        PassThru      True
+        Script        .\PassingTests.ps1
+                      .\OtherPassingTests.ps1
+        Show          None
+        TestName      PassingTests
 
     .EXAMPLE
     $hashtable | Write-WhiskeyObject -Context $Context -Level Verbose
@@ -26,7 +27,8 @@ function Write-WhiskeyObject
     .EXAMPLE
     $hashtable | Write-WhiskeyObject -Level Verbose
 
-    Demonstrates that the `Context` parameter is optional. Whiskey searches up the call stack to find one if you don't pass it.
+    Demonstrates that the `Context` parameter is optional. Whiskey searches up the call stack to find one if you don't
+    pass it.
     #>
     [CmdletBinding()]
     param(

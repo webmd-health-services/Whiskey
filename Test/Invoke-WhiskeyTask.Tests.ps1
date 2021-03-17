@@ -375,7 +375,7 @@ function ThenThrewException
     )
 
     $threwException | Should -BeTrue
-    $Global:Error | Should -Match $Pattern
+    $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
 }
 
 function ThenToolInstalled
@@ -464,7 +464,6 @@ function WhenRunningTask
 
     $script:context = New-WhiskeyTestContext @byItDepends -ForBuildRoot $testRoot
     $context.PipelineName = 'Build';
-    $context.TaskName = $null;
     $context.TaskIndex = 1;
     foreach( $key in $taskDefaults.Keys )
     {

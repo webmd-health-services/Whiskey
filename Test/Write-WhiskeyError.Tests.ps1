@@ -28,8 +28,8 @@ function New-Context
 {
 
     $context = [Whiskey.Context]::new()
-    $context.TaskName = 'MyTask'
-    $context.StartedAt = (Get-Date)
+    $context.StartBuild()
+    $context.StartTask('MyTask')
     return $context
 }
 

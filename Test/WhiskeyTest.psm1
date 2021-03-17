@@ -420,7 +420,6 @@ function New-WhiskeyTestContext
     $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
-    $context.StartedAt = Get-Date
 
     if( $InCleanMode )
     {
@@ -450,11 +449,6 @@ function New-WhiskeyTestContext
     $context.Publish = $PSCmdlet.ParameterSetName -eq 'ByBuildServer'
     $context.RunBy = $runBy
 
-    if( $ForTaskName )
-    {
-        $context.TaskName = $ForTaskName
-    }
-
     if( $ForVersion )
     {
         $context.Version.SemVer2 = $ForVersion
@@ -470,6 +464,13 @@ function New-WhiskeyTestContext
     New-Item -Path $context.OutputDirectory -ItemType 'Directory' -Force -ErrorAction Ignore | Out-String | Write-WhiskeyDebug
 
     Initialize-WhiskeyTestPSModule -BuildRoot $context.BuildRoot -Name $IncludePSModule
+
+    $context.StartBuild()
+
+    if( $ForTaskName )
+    {
+        $context.StartTask($ForTaskName)
+    }
 
     return $context
 }

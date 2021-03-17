@@ -17,9 +17,10 @@ $whiskeyScriptRoot = $PSScriptRoot
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
 $whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
 
-$buildStartedAt = [DateTime]::MinValue
-
 $PSModuleAutoLoadingPreference = 'None'
+
+# The indentation to use when writing task messages.
+$taskWriteIndent = '  '
 
 Write-Timing 'Updating serialiazation depths on Whiskey objects.'
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
@@ -79,7 +80,8 @@ function Assert-Member
 
 Write-Timing 'Checking Whiskey.Context class.'
 $context = New-WhiskeyObject -TypeName 'Whiskey.Context'
-Assert-Member -Object $context -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys' )
+Assert-Member -Object $context `
+              -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys', 'BuildStopwatch', 'TaskStopwatch' )
 
 Write-Timing 'Checking Whiskey.TaskAttribute class.'
 $attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' 

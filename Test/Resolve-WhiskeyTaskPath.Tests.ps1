@@ -137,7 +137,6 @@ function WhenRunningTask
 
     $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot -IncludePSModule 'Glob'
     $context.PipelineName = 'Build'
-    $context.TaskName = $null
     $context.TaskIndex = 1
 
     $Global:Error.Clear()

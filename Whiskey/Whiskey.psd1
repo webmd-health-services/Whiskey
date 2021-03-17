@@ -163,6 +163,7 @@
             ReleaseNotes = @'
 * Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
 * Fixed: builds fail when run under a Jenkins PR build.
+* Improved Whiskey's build output.
 '@
         } # End of PSData hashtable
 

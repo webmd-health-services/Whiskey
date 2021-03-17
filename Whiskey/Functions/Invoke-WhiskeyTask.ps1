@@ -140,11 +140,9 @@ function Invoke-WhiskeyTask
         return
     }
 
-    $TaskContext.TaskName = $Name
-
     if( $task.Obsolete )
     {
-        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $task.Name
+        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $Name
         if( $task.ObsoleteMessage )
         {
             $message = $task.ObsoleteMessage
@@ -155,7 +153,7 @@ function Invoke-WhiskeyTask
     if( -not $task.Platform.HasFlag($CurrentPlatform) )
     {
         $msg = 'Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f `
-                    $task.Name,$task.Platform,$CurrentPlatform
+                    $Name,$task.Platform,$CurrentPlatform
         Write-WhiskeyError -Message $msg -ErrorAction Stop
         return
     }
@@ -203,7 +201,6 @@ function Invoke-WhiskeyTask
 
         $taskTempDirectory = ''
         $requiredTools = Get-RequiredTool -CommandName $task.CommandName
-        $startedAt = Get-Date
         $result = 'FAILED'
         Set-Location -Path $workingDirectory
         [IO.Directory]::SetCurrentDirectory($workingDirectory)
@@ -247,7 +244,8 @@ function Invoke-WhiskeyTask
             Invoke-Event -EventName ('Before{0}Task' -f $Name) -Property $taskProperties
 
             Write-WhiskeyVerbose -Context $TaskContext -Message ''
-            $startedAt = Get-Date
+            $TaskContext.StartTask($Name)
+            Write-WhiskeyInfo -Context $TaskContext -Message "$($Name)" -NoIndent
             $taskTempDirectory = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
             $TaskContext.Temp = $taskTempDirectory
             if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
@@ -302,10 +300,14 @@ function Invoke-WhiskeyTask
             {
                 Remove-Item -Path $taskTempDirectory -Recurse -Force -ErrorAction Ignore
             }
-            $endedAt = Get-Date
-            $duration = $endedAt - $startedAt
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('{0} in {1}' -f $result,$duration)
-            Write-WhiskeyVerbose -Context $TaskContext -Message ''
+            $Context.StopTask()
+            $duration = $Context.TaskStopwatch.Elapsed
+            if( $result -eq 'FAILED' )
+            {
+                $msg = "!$($taskWriteIndent.Substring(1))FAILED"
+                Write-WhiskeyInfo -Context $TaskContext -Message $msg -NoIndent
+            }
+            Write-WhiskeyInfo -Context $TaskContext -Message '' -NoTiming
         }
 
         Invoke-Event -EventName 'AfterTask' -Property $taskProperties
