@@ -164,6 +164,7 @@
 # 0.48.1
 
 * Fixed: Whiskey's build output doesn't show timings when a task ends.
+* Fixed: the Context object's StartedAt property needs to continue to be settable.
 
 # 0.48.0
 
