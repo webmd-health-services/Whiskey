@@ -147,7 +147,15 @@ function Write-WhiskeyInfo
                 }
             }
 
-            & $writeCmd "$($prefix)  $($indent)$($msg)"
+            $separator = '  '
+            $thisMsgIndent = $indent
+            if( -not $msg )
+            {
+                $separator = ''
+                $thisMsgIndent = ''
+            }
+
+            & $writeCmd "$($prefix)$($separator)$($thisMsgIndent)$($msg)"
         }
     }
 

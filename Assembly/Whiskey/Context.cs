@@ -69,7 +69,7 @@ namespace Whiskey
 
         public bool ShouldInitialize { get { return RunMode == RunMode.Initialize; } }
 
-        public DateTime StartedAt { get; private set; }
+        public DateTime StartedAt { get; set; }
 
         public Stopwatch BuildStopwatch { get; private set; }
 

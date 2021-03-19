@@ -307,7 +307,7 @@ function Invoke-WhiskeyTask
                 $msg = "!$($taskWriteIndent.Substring(1))FAILED"
                 Write-WhiskeyInfo -Context $TaskContext -Message $msg -NoIndent
             }
-            Write-WhiskeyInfo -Context $TaskContext -Message '' -NoTiming
+            Write-WhiskeyInfo -Context $TaskContext -Message '' -NoIndent
         }
 
         Invoke-Event -EventName 'AfterTask' -Property $taskProperties
