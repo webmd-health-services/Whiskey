@@ -60,7 +60,7 @@ function ThenWroteInfo
 
     $infos | Select-Object -First 1 | Should -Match "$($durationRegex)Log"
     $infos | Select-Object -Skip 1 | Select-Object -SkipLast 1 | Should -Match "$($durationRegex)\ \ $($Message)"
-    $infos | Select-Object -Last 1 | Should -Match '^ *$'
+    $infos | Select-Object -Last 1 | Should -Match "^\[ \dm\d\ds\]  \[ \dm\d\ds\]$"
 }
 
 function ThenWroteVerbose

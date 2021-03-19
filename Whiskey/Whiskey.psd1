@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.48.0'
+    ModuleVersion = '0.48.1'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,6 +161,12 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+# 0.48.1
+
+* Fixed: Whiskey's build output doesn't show timings when a task ends.
+
+# 0.48.0
+
 * Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
 * Fixed: builds fail when run under a Jenkins PR build.
 * Improved Whiskey's build output.
