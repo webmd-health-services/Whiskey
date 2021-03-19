@@ -272,6 +272,9 @@ function WhenRunningBuild
         [hashtable]$WithParameter = @{}
     )
 
+    $startedAt = Get-Date
+    Start-Sleep -Milliseconds 1
+
     Mock -CommandName 'Set-WhiskeyBuildStatus' -ModuleName 'Whiskey'
 
     $whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
@@ -356,9 +359,7 @@ function WhenRunningBuild
         {
             $optionalParams['PipelineName'] = $PipelineName
         }
-        $startedAt = Get-Date
-        Start-Sleep -Milliseconds 1
-        $context.StartedAt = [DateTime]::MinValue
+        $context.StartBuild()
         $modulePath = $env:PSModulePath
         Invoke-WhiskeyBuild -Context $context @optionalParams @WithParameter
         It ('should set build start time') {
