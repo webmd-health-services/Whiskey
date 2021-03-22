@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.48.1'
+    ModuleVersion = '0.48.2'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,10 +161,14 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+# 0.48.2
+
+* Fixed: the Context object's TaskName property isn't public/settable.
+
 # 0.48.1
 
 * Fixed: Whiskey's build output doesn't show timings when a task ends.
-* Fixed: the Context object's StartedAt property needs to continue to be settable.
+* Fixed: the Context object's StartedAt property isn't public/settable.
 
 # 0.48.0
 
