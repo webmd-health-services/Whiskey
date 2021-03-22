@@ -73,7 +73,7 @@ namespace Whiskey
 
         public Stopwatch BuildStopwatch { get; private set; }
 
-        public string TaskName { get; private set; }
+        public string TaskName { get; set; }
 
         public int TaskIndex { get; set; }
 
