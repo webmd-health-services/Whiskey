@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.48.2'
+    ModuleVersion = '0.48.3'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,6 +161,11 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
+# 0.48.3
+
+* Verbose and debug build output messages no longer have timestamp prefixes (hard to recognize info output).
+* Warning build output no longer has a task name prefix (hard to recognize info output).
+
 # 0.48.2
 
 * Fixed: the Context object's TaskName property isn't public/settable.

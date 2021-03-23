@@ -83,7 +83,6 @@ function Write-WhiskeyInfo
             return
         }
 
-        $isWarning = $Level -eq 'Warning'
         $isInfo = $Level -eq 'Info'
 
         $writeCmd = 'Write-{0}' -f $Level
@@ -92,9 +91,9 @@ function Write-WhiskeyInfo
             $writeCmd = 'Write-Information'
         }
 
-        if( -not $context )
+        if( -not $Context )
         {
-            $context = Get-WhiskeyContext
+            $Context = Get-WhiskeyContext
         }
 
         $prefix = ''
@@ -121,25 +120,19 @@ function Write-WhiskeyInfo
                 continue
             }
 
-            if( $isWarning )
+            if( -not $isInfo )
             {
-                $prefix = ''
-                if( $Context -and $Context.TaskName )
-                {
-                    $prefix = "[$($Context.TaskName)]  "
-                }
-
-                Write-Warning -Message "$($prefix)$($msg)"
+                & $writeCmd $msg
                 continue
             }
 
             $prefix = ''
             if( -not $NoTiming )
             {
-                if( $context )
+                if( $Context )
                 {
                     $prefix =
-                        "[$($context.BuildStopwatch | Format-Stopwatch)]  [$($context.TaskStopwatch | Format-Stopwatch)]"
+                        "[$($Context.BuildStopwatch | Format-Stopwatch)]  [$($Context.TaskStopwatch | Format-Stopwatch)]"
                 }
                 else
                 {

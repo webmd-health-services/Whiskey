@@ -16,11 +16,11 @@ Describe 'Write-WhiskeyInfo' {
             $DebugPreference = 'Continue'
             $debug = Write-WhiskeyDebug 'Debug!' 5>&1 
 
-            $errors | Should -CMatch 'Error!'
-            $warnings | Should -CMatch 'Warning!'
-            $info | Should -CMatch '\[23:59:59\]    Info!'
-            $verbose | Should -CMatch '\[23:59:59\]  Verbose!'
-            $debug | Should -CMatch '\[23:59:59\]  Debug!'
+            $errors | Should -Be 'Error!'
+            $warnings | Should -Be 'Warning!'
+            $info | Should -CMatch '^\[23:59:59\]    Info!$'
+            $verbose | Should -Be 'Verbose!'
+            $debug | Should -Be 'Debug!'
         }
     }
 
@@ -42,12 +42,12 @@ Describe 'Write-WhiskeyInfo' {
                     $DebugPreference = 'Continue'
                     $debug = Write-WhiskeyDebug 'Debug!' 5>&1
 
-                    $errors | Should -CMatch 'Error!'
-                    $warnings | Should -CMatch ('Warning!' -f $Context.TaskName)
+                    $errors | Should -Be 'Error!'
+                    $warnings | Should -Be 'Warning!'
                     $durationRegex = '\[ \dm\d\ds\]  \[ \dm\d\ds\]'
-                    $info | Should -CMatch "$($durationRegex)    Info!"
-                    $verbose | Should -CMatch "$($durationRegex)  Verbose!"
-                    $debug | Should -CMatch "$($durationRegex)  Debug!"
+                    $info | Should -CMatch "^$($durationRegex)    Info!$"
+                    $verbose | Should -Be "Verbose!"
+                    $debug | Should -Be "Debug!"
                 }
 
                 $context = New-Object 'Whiskey.Context'
@@ -150,8 +150,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 param(
                     [String[]]$Output,
                     [switch]$NoIndent,
-                    [switch]$NoDuration,
-                    [switch]$NoTaskName
+                    [switch]$NoDuration
                 )
 
                 $indentRegex = '\ \ '
@@ -166,14 +165,9 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     $durationRegex = ''
                 }
 
-                $taskNameRegex = '\[Fubar\]\ \ '
-                if( $NoTaskName )
-                {
-                    $taskNameRegex = ''
-                }
-                $output[0] | Should -CMatch "^$($durationRegex)$($taskNameRegex)$($indentRegex)1$"
-                $output[1] | Should -CMatch "^$($durationRegex)$($taskNameRegex)$($indentRegex)2$"
-                $output[2] | Should -CMatch "^$($durationRegex)$($taskNameRegex)$($indentRegex)3$"
+                $output[0] | Should -CMatch "^$($durationRegex)$($indentRegex)1$"
+                $output[1] | Should -CMatch "^$($durationRegex)$($indentRegex)2$"
+                $output[2] | Should -CMatch "^$($durationRegex)$($indentRegex)3$"
             }
 
             $output =
@@ -203,7 +197,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $info -NoTaskName
+                    ThenOutputAsGroup $info
                     $output | Should -BeNullOrEmpty
                 }
                 'Verbose'
@@ -211,14 +205,14 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output -NoTaskName -NoIndent
+                    ThenOutputAsGroup $output -NoDuration -NoIndent
                 }
                 'Debug'
                 {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output -NoTaskName -NoIndent
+                    ThenOutputAsGroup $output -NoDuration -NoIndent
                 }
             }
         }
