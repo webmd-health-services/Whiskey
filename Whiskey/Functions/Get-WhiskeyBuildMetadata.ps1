@@ -29,7 +29,7 @@ function Get-WhiskeyBuildMetadata
             $Name
         )
 
-        Get-Item -Path ('env:{0}' -f $Name) | Select-Object -ExpandProperty 'Value'
+        Get-Item -Path ('env:{0}' -f $Name) -ErrorAction Ignore | Select-Object -ExpandProperty 'Value'
     }
 
     $buildInfo = New-WhiskeyBuildMetadataObject

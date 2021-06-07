@@ -165,7 +165,13 @@ function Install-WhiskeyTool
                     {
                         'Node'
                         {
-                            $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode
+                            $outPath = $InstallRoot
+                            if( $DownloadRoot )
+                            {
+                                $outPath = $DownloadRoot
+                            }
+
+                            $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode -OutputPath $outPath
                         }
                         'DotNet'
                         {
