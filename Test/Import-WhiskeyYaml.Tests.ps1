@@ -6,58 +6,19 @@ Set-StrictMode -Version 'Latest'
 
 $validYaml = @"
 Build:
-- TaskDefaults:
-    Pester4:
-        Verbose: false
-
-- GetPowerShellModule:
-    Name: BuildMasterAutomation
-    Version: 0.6.*
-
-- GetPowerShellModule:
-    Name: ProGetAutomation
-    Version: 0.9.*
-
-- GetPowerShellModule:
-    Name: BitbucketServerAutomation
-    Version: 0.9.*
-
 - GetPowerShellModule:
     Name: VSSetup
     Version: 2.*
-
-- GetPowerShellModule:
-    Name: Zip
-    Version: 0.3.*
 
 "@
 
 $brokenYaml = @"
 Build:
-- TaskDefaults:
-    Pester4:
-        Verbose: false
-
-- GetPowerShellModule:
-    Name: BuildMasterAutomation
-    Version: 0.6.*
-
-- GetPowerShellModule:
-    Name: ProGetAutomation
-    Version: 0.9.*
-
-- GetPowerShellModule:
-    Name: BitbucketServerAutomation
-    Version: 0.9.*
-
 - GetPower
-ShellModule:
+ShellMo
+dule:
     Name: VSSetup
     Version: 2.*
-
-- GetPowerShellModule:
-    Name: Zip
-    Version: 0.3.*
 
 "@
 
@@ -69,8 +30,15 @@ Describe 'Yaml is properly formatted' {
 
 Describe 'Yaml is not properly formatted' {
     It 'should throw error' {
-        { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $brokenYaml } } | Should -Throw "whiskey.yml cannot be parsed"
+        { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $brokenYaml } } | Should -Throw "YAML cannot be parsed: $([Environment]::NewLine) $brokenYaml"
+    }
+}
 
+Describe 'Yaml is not properly formatted in a file' {
+    It 'should throw error' {
+        $Path = '.\whiskey.sample.yml'
+        Mock -CommandName 'Get-Content' -ModuleName 'Whiskey' { return "Build: - GetPowerShellModule:Name: VSSetupVersion: 2.*"}
+        { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Path' = $Path } } | Should -Throw "Whiskey configuration file ""$($Path)"" cannot be parsed"
     }
 }
 

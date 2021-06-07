@@ -12,7 +12,6 @@ function Import-WhiskeyYaml
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    $ErrorActionPreference = "Stop"
 
     if( $PSCmdlet.ParameterSetName -eq 'FromFile' )
     {
@@ -30,7 +29,14 @@ function Import-WhiskeyYaml
     }
     catch
     {
-        Write-Error "whiskey.yml cannot be parsed"
+        if( $PSCmdlet.ParameterSetName -eq 'FromFile' )
+        {
+            Write-WhiskeyError "Whiskey configuration file ""$($Path)"" cannot be parsed" -ErrorAction Stop
+        }
+        else
+        {
+            Write-WhiskeyError "YAML cannot be parsed: $([Environment]::NewLine) $Yaml" -ErrorAction Stop
+        }
     }
     finally
     {
