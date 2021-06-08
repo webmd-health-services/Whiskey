@@ -31,11 +31,11 @@ function Import-WhiskeyYaml
     {
         if( $PSCmdlet.ParameterSetName -eq 'FromFile' )
         {
-            Write-WhiskeyError "Whiskey configuration file ""$($Path)"" cannot be parsed" -ErrorAction Stop
+            Write-WhiskeyError "Whiskey configuration file ""$($Path)"" cannot be parsed: $($_)." -ErrorAction Stop
         }
         else
         {
-            Write-WhiskeyError "YAML cannot be parsed: $([Environment]::NewLine) $Yaml" -ErrorAction Stop
+            Write-WhiskeyError "YAML cannot be parsed: $($_)$([Environment]::NewLine * 2)$($Yaml)" -ErrorAction Stop
         }
     }
     finally

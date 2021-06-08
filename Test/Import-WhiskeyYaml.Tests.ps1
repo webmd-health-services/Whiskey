@@ -30,7 +30,7 @@ Describe 'Yaml is properly formatted' {
 
 Describe 'Yaml is not properly formatted' {
     It 'should throw error' {
-        { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $brokenYaml } } | Should -Throw "YAML cannot be parsed: $([Environment]::NewLine) $brokenYaml"
+        { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $brokenYaml } } | Should -Throw "YAML cannot be parsed:"
     }
 }
 
@@ -39,6 +39,7 @@ Describe 'Yaml is not properly formatted in a file' {
         $Path = '.\whiskey.sample.yml'
         Mock -CommandName 'Get-Content' -ModuleName 'Whiskey' { return "Build: - GetPowerShellModule:Name: VSSetupVersion: 2.*"}
         { Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Path' = $Path } } | Should -Throw "Whiskey configuration file ""$($Path)"" cannot be parsed"
+        Assert-MockCalled -CommandName 'Get-Content' -ModuleName 'Whiskey' -Times 1 -Exactly
     }
 }
 
