@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.48.0'
+    ModuleVersion = '0.48.4'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -161,8 +161,7 @@
 
             # ReleaseNotes of this module
             ReleaseNotes = @'
-* Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
-* Fixed: builds fail when run under a Jenkins PR build.
+* Fixed: Whiskey build doesn't fail if Whiskey configuration file contains invalid YAML.
 '@
         } # End of PSData hashtable
 
