@@ -143,15 +143,7 @@ function Invoke-WhiskeyPester5Task
         $cmdName = 'Invoke-Command'
     }
 
-    $config = [PesterConfiguration]::Default
-    $config.TestResult.Enabled = $true
-    $config.Run.Path = $Argument.Path
-    $config.Run.PassThru = $true
-    $config.Run.Throw = $true
-    # $config.Should.ErrorAction.Value = $ErrorActionPreference
-    $config.Debug.ShowFullErrors = $true
-    $config.Debug.WriteDebugMessages = $true
-
+    # New Pester5 Configuration
     $configuration = [PesterConfiguration]@{
         Debug = @{
             ShowFullErrors = $true
@@ -172,40 +164,38 @@ function Invoke-WhiskeyPester5Task
     }
 
     try {
-        # Set-Location -Path $WorkingDirectory
-        # Import-Module -Name $pesterManifestPath -Verbose:$false -WarningAction Ignore
         $testResult = Invoke-Pester -Configuration $configuration
     }
     catch {
         Write-Error -ErrorRecord $_
     }
 
-    # $result = & $cmdName -ArgumentList $args -ScriptBlock {
-    #     param(
-    #         [String]$WorkingDirectory,
-    #         [String]$PesterManifestPath,
-    #         [hashtable]$Parameter,
-    #         [hashtable]$Preference
-    #     )
+    $result = & $cmdName -ArgumentList $args -ScriptBlock {
+        param(
+            [String]$WorkingDirectory,
+            [String]$PesterManifestPath,
+            [hashtable]$Parameter,
+            [hashtable]$Preference
+        )
 
-    #     Set-Location -Path $WorkingDirectory
+        Set-Location -Path $WorkingDirectory
 
-    #     $VerbosePreference = 'SilentlyContinue'
-    #     Import-Module -Name $PesterManifestPath -Verbose:$false -WarningAction Ignore
+        $VerbosePreference = 'SilentlyContinue'
+        Import-Module -Name $PesterManifestPath -Verbose:$false -WarningAction Ignore
 
-    #     $VerbosePreference = $Preference['VerbosePreference']
-    #     $DebugPreference = $Preference['DebugPreference']
-    #     $ProgressPreference = $Preference['ProgressPreference']
-    #     $WarningPreference = $Preference['WarningPreference']
-    #     $ErrorActionPreference = $Preference['ErrorActionPreference']
+        $VerbosePreference = $Preference['VerbosePreference']
+        $DebugPreference = $Preference['DebugPreference']
+        $ProgressPreference = $Preference['ProgressPreference']
+        $WarningPreference = $Preference['WarningPreference']
+        $ErrorActionPreference = $Preference['ErrorActionPreference']
         
-    #     Invoke-Pester @Parameter
-    # }
+        Invoke-Pester @Parameter
+    }
     
-    # if( -not $NoJob )
-    # {
-    #     $testResult = $testResult | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
-    # }
+    if( -not $NoJob )
+    {
+        $testResult = $testResult | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
+    }
 
     $testResult.Tests |
         Group-Object -Property 'Path' |
