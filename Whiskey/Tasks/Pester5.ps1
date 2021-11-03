@@ -2,7 +2,9 @@
 function Invoke-WhiskeyPester5Task
 {
     [Whiskey.Task('Pester5')]
-    [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='5.*',VersionParameterName='Version',SkipImport)]
+    [Whiskey.RequiresPowerShellModule('Pester',
+                                      ModuleInfoParameterName='PesterModuleInfo', Version='5.*',
+                                      VersionParameterName='Version', SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -129,28 +131,12 @@ function Invoke-WhiskeyPester5Task
 
     $Argument | Write-WhiskeyObject -Context $context -Level Verbose
 
-    $args = @(
+    $cmdArgList = @(
         (Get-Location).Path,
         $pesterManifestPath,
-        # New Pester5 Configuration
-        @{
-            Debug = @{
-                ShowFullErrors = $true
-                WriteDebugMessages = $true
-            }
-            Run = @{
-                Path = $Script
-                PassThru = $true
-            }
-            Should = @{
-                ErrorAction = $ErrorActionPreference
-            }
-            TestResult = @{
-                Enabled = $true
-                OutputPath = $outputFile
-                OutputFormat = $Argument.OutputFormat
-            }
-        },
+        $Script,
+        $outputFile,
+        $Argument.OutputFormat
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -166,12 +152,14 @@ function Invoke-WhiskeyPester5Task
         $cmdName = 'Invoke-Command'
     }
 
-    $result = & $cmdName -ArgumentList $args -ScriptBlock {
+    $result = & $cmdName -ArgumentList $cmdArgList -ScriptBlock {
         param(
-            [String]$WorkingDirectory,
-            [String]$PesterManifestPath,
-            [hashtable]$Parameter,
-            [hashtable]$Preference
+            [String] $WorkingDirectory,
+            [String] $PesterManifestPath,
+            [String[]] $Path,
+            [String] $OutputPath,
+            [String] $OutputFormat,
+            [hashtable] $Preference
         )
         
         Set-Location -Path $WorkingDirectory
@@ -186,7 +174,31 @@ function Invoke-WhiskeyPester5Task
         $ErrorActionPreference = $Preference['ErrorActionPreference']
 
         # New Pester5 Configuration
-        $configuration = [PesterConfiguration]$Parameter
+        $configuration = [PesterConfiguration]@{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            }
+            Run = @{
+                Path = $Path;
+                PassThru = $true;
+            }
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            }
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = $OutputPath;
+                OutputFormat = $OutputFormat
+            }
+        }
+        
+        Write-Debug '  [PesterConfiguration]'
+        Write-Debug "    Run.Path  [$($Parameter.Run.Path.GetType().FullName)] ""$($Parameter.Run.Path.ToString())"""
+        Write-Debug '  [PesterConfiguration]'
+
+        # New Pester5 Configuration
+        $configuration | ConvertTo-Json -Depth 100 | Write-Debug
         Invoke-Pester -Configuration $configuration
     }
     

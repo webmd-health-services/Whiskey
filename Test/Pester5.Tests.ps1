@@ -30,9 +30,9 @@ function GivenInvalidVersion
 {
     $Script:taskParameter['Version'] = '4.0.0'
     Mock -CommandName 'Test-Path' `
-        -ModuleName 'Whiskey' `
-        -MockWith { return $False }`
-        -ParameterFilter { $Path -eq $context.BuildRoot }
+         -ModuleName 'Whiskey' `
+         -MockWith { return $False }`
+         -ParameterFilter { $Path -eq $context.BuildRoot }
 }
 
 function GivenTestFile
@@ -42,10 +42,10 @@ function GivenTestFile
         [String]$Content
     )
 
-    $taskParameter['Path'] = & {
-        if( $taskParameter.ContainsKey('Path') )
+    $taskParameter['Script'] = & {
+        if( $taskParameter.ContainsKey('Script') )
         {
-            $taskParameter['Path']
+            $taskParameter['Script']
         }
         $Path 
     }
