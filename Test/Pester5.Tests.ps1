@@ -9,24 +9,6 @@ $taskParameter = @{}
 $failed = $false
 $output = $null
 
-function GivenDescribeDurationReportCount
-{
-    param(
-        $Count
-    )
-
-    $taskParameter['DescribeDurationReportCount'] = $Count
-}
-
-function GivenItDurationReportCount
-{
-    param(
-        $Count
-    )
-
-    $taskParameter['ItDurationReportCount'] = $Count
-}
-
 function GivenExclude
 {
     param(
@@ -131,24 +113,6 @@ function Get-OutputReportRowCount
     return $rowCount
 }
 
-function ThenDescribeDurationReportHasRows
-{
-    param(
-        $Count
-    )
-
-    Get-OutputReportRowCount -Regex '\bDescribe\b +\bDuration\b' | Should -Be $Count
-}
-
-function ThenItDurationReportHasRows
-{
-    param(
-        $Count
-    )
-
-    Get-OutputReportRowCount -Regex '\bDescribe\b +\bName\b +\bTime\b' | Should -Be $Count
-}
-
 function ThenPesterShouldHaveRun
 {
     param(
@@ -234,11 +198,6 @@ function ThenNoPesterTestFileShouldExist
     $testReports | Should -BeNullOrEmpty
 }
 
-function ThenNoDurationReportPresent
-{
-    $output | Out-String | Should -Not -Match '\bDescribe\b( +\bName\b)? +\b(Duration|Time)\b'
-}
-
 function ThenTestShouldCreateMultipleReportFiles
 {
     Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
@@ -308,7 +267,6 @@ Describe 'One' {
 '@
         WhenPesterTaskIsInvoked 
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 2
-        ThenNoDurationReportPresent
     }
 }
 
@@ -332,6 +290,7 @@ Describe 'Failing' {
     }
 }
 
+# Still having trouble with this test
 Describe 'Pester5.when running multiple test scripts' {
     AfterEach { Reset }
     It 'should run all the scripts' {
@@ -396,25 +355,6 @@ Describe 'Pester5.when a task path is absolute' {
     }
 }
 
-Describe 'Pester5.when showing duration reports' {
-    AfterEach { Reset }
-    It 'should output the report' {
-        Init
-        GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' {
-    It 'should pass' {
-        $true | Should -BeTrue
-    }
-}
-'@
-        GivenDescribeDurationReportCount 1
-        GivenItDurationReportCount 1
-        WhenPesterTaskIsInvoked
-        ThenDescribeDurationReportHasRows 1
-        ThenItDurationReportHasRows 1
-    }
-}
-
 Describe 'Pester5.when excluding tests and an exclusion filter doesn''t match' {
     AfterEach { Reset }
     It 'should still run' {
@@ -465,6 +405,7 @@ Describe 'FailingTests' {
     }
 }
 
+# Still having trouble with this test
 Describe 'Pester5.when not running task in job' {
     AfterEach { Reset }
     It 'should pass' {
@@ -507,6 +448,7 @@ Describe 'PassingTests' {
     }
 }
 
+# Still having trouble with this test
 Describe 'Pester5.when passing custom arguments' {
     AfterEach { Reset }
     It 'should pass the arguments' {
@@ -525,7 +467,7 @@ Describe 'FailingTests' {
 '@
         WhenPesterTaskIsInvoked -WithArgument @{
             # Make sure the Pester5 task's default values for these get overwritten
-            'OutputFile' = '.output\pester.xml';
+            'Output' = '.output\pester.xml';
             'OutputFormat' = 'JUnitXml';
             # Make sure these do *not* get overwritten.
             'PassThru' = $false;
@@ -536,6 +478,7 @@ Describe 'FailingTests' {
     }
 }
 
+# Still having trouble with this test
 Describe 'Pester5.when passing named arguments to script' {
     AfterEach { Reset }
     It 'should pass arguments' {
@@ -594,21 +537,5 @@ Describe 'Pester5.when passing hashtable to script property with multiple paths'
             }
         } -ErrorAction SilentlyContinue
         ThenTestShouldFail '"Path" value must be a single string'
-    }
-}
-
-Describe "Get-Num"{
-    It "should return 1"{
-        Get-Num | Should -Be 1
-    }
-}
-
-Describe "New-thing"{
-    BeforeEach{
-        Mock New-Thing {return "That"}
-    }
-    It "should not return a thing"{
-        New-Thing | Should -Not -Be "Thing"
-        Should -Invoke -Commandname New-Thing -Times 1
     }
 }

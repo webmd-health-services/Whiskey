@@ -122,12 +122,35 @@ function Invoke-WhiskeyPester5Task
         $Argument['Output'] = $outputFile
     }
 
+    if( -not $Argument.ContainsKey('OutputFormat') )
+    {
+        $Argument['OutputFormat'] = 'NUnitXml'
+    }
+
     $Argument | Write-WhiskeyObject -Context $context -Level Verbose
 
     $args = @(
         (Get-Location).Path,
         $pesterManifestPath,
-        $Argument,
+        # New Pester5 Configuration
+        @{
+            Debug = @{
+                ShowFullErrors = $true
+                WriteDebugMessages = $true
+            }
+            Run = @{
+                Path = $Script
+                PassThru = $true
+            }
+            Should = @{
+                ErrorAction = $ErrorActionPreference
+            }
+            TestResult = @{
+                Enabled = $true
+                OutputPath = $outputFile
+                OutputFormat = $Argument.OutputFormat
+            }
+        },
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -143,33 +166,6 @@ function Invoke-WhiskeyPester5Task
         $cmdName = 'Invoke-Command'
     }
 
-    # New Pester5 Configuration
-    $configuration = [PesterConfiguration]@{
-        Debug = @{
-            ShowFullErrors = $true
-            WriteDebugMessages = $true;
-        }
-        Run = @{
-            Path = $Argument.Path
-            PassThru = $true
-            Throw = $true
-        }
-        Should = @{
-            ErrorAction = $ErrorActionPreference
-        }
-        TestResult = @{
-            Enabled = $true;
-            OutputPath = $outputFile
-        }
-    }
-
-    try {
-        $testResult = Invoke-Pester -Configuration $configuration
-    }
-    catch {
-        Write-Error -ErrorRecord $_
-    }
-
     $result = & $cmdName -ArgumentList $args -ScriptBlock {
         param(
             [String]$WorkingDirectory,
@@ -177,7 +173,7 @@ function Invoke-WhiskeyPester5Task
             [hashtable]$Parameter,
             [hashtable]$Preference
         )
-
+        
         Set-Location -Path $WorkingDirectory
 
         $VerbosePreference = 'SilentlyContinue'
@@ -188,32 +184,16 @@ function Invoke-WhiskeyPester5Task
         $ProgressPreference = $Preference['ProgressPreference']
         $WarningPreference = $Preference['WarningPreference']
         $ErrorActionPreference = $Preference['ErrorActionPreference']
-        
-        Invoke-Pester @Parameter
+
+        # New Pester5 Configuration
+        $configuration = [PesterConfiguration]$Parameter
+        Invoke-Pester -Configuration $configuration
     }
     
-    if( -not $NoJob )
+    if( $result -is [Management.Automation.Job] )
     {
-        $testResult = $testResult | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
+        $result = $result | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
     }
-
-    $testResult.Tests |
-        Group-Object -Property 'Path' |
-        ForEach-Object {
-            $totalTime = [TimeSpan]::Zero
-            $_.Group | ForEach-Object { $totalTime += $_.Duration }
-            [pscustomobject]@{
-                                Describe = $_.Name;
-                                Duration = $totalTime
-                            }
-        } | Sort-Object -Property 'Duration' -Descending |
-        Select-Object -First $DescribeDurationReportCount |
-        Format-Table -AutoSize
-
-    $testResult.Tests |
-        Sort-Object -Property 'Duration' -Descending |
-        Select-Object -First $ItDurationReportCount |
-        Format-Table -AutoSize -Property 'Describe','Name','Duration'
 
     Publish-WhiskeyPesterTestResult -Path $outputFile
 
