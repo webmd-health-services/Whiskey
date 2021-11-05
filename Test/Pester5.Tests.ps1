@@ -147,7 +147,7 @@ function ThenPesterShouldHaveRun
         {
             $totalAttrName = 'tests'
         }
-        $thisTotal = [int]($xml.DocumentElement.$totalAttrName)
+        $thisTotal = [int]($xml.DocumentElement.$totalAttrName) - [int]($xml.DocumentElement.disabled)
         $thisFailed = [int]($xml.DocumentElement.'failures')
         $thisPassed = ($thisTotal - $thisFailed)
         $total += $thisTotal
@@ -290,7 +290,6 @@ Describe 'Failing' {
     }
 }
 
-# Still having trouble with this test
 Describe 'Pester5.when running multiple test scripts' {
     AfterEach { Reset }
     It 'should run all the scripts' {
@@ -448,18 +447,17 @@ Describe 'PassingTests' {
     }
 }
 
-# Still having trouble with this test
 Describe 'Pester5.when passing custom arguments' {
     AfterEach { Reset }
     It 'should pass the arguments' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' {
+Describe 'PassingTests' -Tag 'PassingTests'{
     It 'should pass' {
         $true | Should -BeTrue
     }
 }
-Describe 'FailingTests' {
+Describe 'FailingTests' -Tag 'FailingTests'{
     It 'should fail' {
         $false | Should -BeTrue
     }
@@ -472,7 +470,8 @@ Describe 'FailingTests' {
             # Make sure these do *not* get overwritten.
             'PassThru' = $false;
             # Make sure this gets passed.
-            'TestName' = 'PassingTests'
+            'Tags' = 'PassingTests';
+            'ExcludeTags' = 'FailingTests';
         }
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1 -AsJUnitXml -ResultFileName 'pester.xml'
     }
