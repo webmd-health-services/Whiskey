@@ -129,14 +129,26 @@ function Invoke-WhiskeyPester5Task
         $Argument['OutputFormat'] = 'NUnitXml'
     }
 
+    $tags = $null
+    if($Argument.ContainsKey('Tags')){
+        $tags = $Argument.Tags
+    }
+
+    $excludeTags = $null
+    if($Argument.ContainsKey('ExcludeTags')){
+        $excludeTags = $Argument.ExcludeTags
+    }
+
     $Argument | Write-WhiskeyObject -Context $context -Level Verbose
 
     $cmdArgList = @(
         (Get-Location).Path,
         $pesterManifestPath,
         $Script,
+        $tags,
+        $excludeTags,
         $outputFile,
-        $Argument.OutputFormat
+        $Argument.OutputFormat,
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -157,6 +169,8 @@ function Invoke-WhiskeyPester5Task
             [String] $WorkingDirectory,
             [String] $PesterManifestPath,
             [String[]] $Path,
+            [String[]] $Tags,
+            [String[]] $ExcludeTags,
             [String] $OutputPath,
             [String] $OutputFormat,
             [hashtable] $Preference
@@ -183,6 +197,10 @@ function Invoke-WhiskeyPester5Task
                 Path = $Path;
                 PassThru = $true;
             }
+            Filter = @{
+                Tag = $Tags;
+                ExcludeTag = $ExcludeTags
+            }
             Should = @{
                 ErrorAction = $ErrorActionPreference;
             }
@@ -193,6 +211,7 @@ function Invoke-WhiskeyPester5Task
             }
         }
         
+        $DebugPreference = 'Continue'
         Write-Debug '  [PesterConfiguration]'
         Write-Debug "    Run.Path  [$($Parameter.Run.Path.GetType().FullName)] ""$($Parameter.Run.Path.ToString())"""
         Write-Debug '  [PesterConfiguration]'
