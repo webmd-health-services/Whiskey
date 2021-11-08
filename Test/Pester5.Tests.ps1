@@ -143,11 +143,13 @@ function ThenPesterShouldHaveRun
     {
         $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
         $totalAttrName = 'total'
+        $disabled = 0
         if( $AsJUnitXml )
         {
             $totalAttrName = 'tests'
+            $disabled = [int]($xml.DocumentElement.'disabled')
         }
-        $thisTotal = [int]($xml.DocumentElement.$totalAttrName) - [int]($xml.DocumentElement.disabled)
+        $thisTotal = [int]($xml.DocumentElement.$totalAttrName) - $disabled
         $thisFailed = [int]($xml.DocumentElement.'failures')
         $thisPassed = ($thisTotal - $thisFailed)
         $total += $thisTotal
@@ -452,12 +454,12 @@ Describe 'Pester5.when passing custom arguments' {
     It 'should pass the arguments' {
         Init
         GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' -Tag 'PassingTests'{
+Describe 'PassingTests'{
     It 'should pass' {
         $true | Should -BeTrue
     }
 }
-Describe 'FailingTests' -Tag 'FailingTests'{
+Describe 'FailingTests'{
     It 'should fail' {
         $false | Should -BeTrue
     }
@@ -470,14 +472,12 @@ Describe 'FailingTests' -Tag 'FailingTests'{
             # Make sure these do *not* get overwritten.
             'PassThru' = $false;
             # Make sure this gets passed.
-            'Tags' = 'PassingTests';
-            'ExcludeTags' = 'FailingTests';
+            'TestName' = 'PassingTests';
         }
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1 -AsJUnitXml -ResultFileName 'pester.xml'
     }
 }
 
-# Still having trouble with this test
 Describe 'Pester5.when passing named arguments to script' {
     AfterEach { Reset }
     It 'should pass arguments' {
@@ -515,11 +515,12 @@ Describe 'ArgTest' {
         WhenPesterTaskIsInvoked -WithArgument @{
             'Script' = @{
                 'Path' = 'Arg*.ps1';
-                'Parameters' = @{
-                    'Three' = $threeValue;
-                    'Four' = $fourValue;
+                'Data' = @{
+                    One = $oneValue;
+                    Two = $twoValue;
+                    Three = $threeValue;
+                    Four = $fourValue;
                 };
-                'Arguments' = @( $oneValue, $twoValue )
             }
         }
         ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
