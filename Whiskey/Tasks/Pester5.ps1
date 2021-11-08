@@ -129,24 +129,32 @@ function Invoke-WhiskeyPester5Task
         $Argument['OutputFormat'] = 'NUnitXml'
     }
 
-    $tags = $null
-    if($Argument.ContainsKey('Tags')){
-        $tags = $Argument.Tags
-    }
-
-    $excludeTags = $null
-    if($Argument.ContainsKey('ExcludeTags')){
-        $excludeTags = $Argument.ExcludeTags
+    $testName = ''
+    if($Argument.ContainsKey('TestName')){
+        $testName = $Argument.TestName
     }
 
     $Argument | Write-WhiskeyObject -Context $context -Level Verbose
 
+    $data = $null
+    # Checking to see if Script is a container with data being passed in for tests
+    if($Script -is [System.Array]){
+        if($Script[0] -is [Hashtable]) {
+            [String[]] $paths = @()
+            $Script | ForEach-Object {
+                $paths += ($_.Path)
+            }
+            $data = $Script[0].Data
+            $Script = $paths
+        }
+    }
+    
     $cmdArgList = @(
         (Get-Location).Path,
         $pesterManifestPath,
         $Script,
-        $tags,
-        $excludeTags,
+        $data,
+        $testName,
         $outputFile,
         $Argument.OutputFormat,
         @{
@@ -169,8 +177,8 @@ function Invoke-WhiskeyPester5Task
             [String] $WorkingDirectory,
             [String] $PesterManifestPath,
             [String[]] $Path,
-            [String[]] $Tags,
-            [String[]] $ExcludeTags,
+            [hashtable] $TestData,
+            [String] $TestName,
             [String] $OutputPath,
             [String] $OutputFormat,
             [hashtable] $Preference
@@ -187,6 +195,8 @@ function Invoke-WhiskeyPester5Task
         $WarningPreference = $Preference['WarningPreference']
         $ErrorActionPreference = $Preference['ErrorActionPreference']
 
+        $container = New-PesterContainer -Path $Path -Data $TestData
+
         # New Pester5 Configuration
         $configuration = [PesterConfiguration]@{
             Debug = @{
@@ -194,12 +204,11 @@ function Invoke-WhiskeyPester5Task
                 WriteDebugMessages = ($DebugPreference -eq 'Continue');
             }
             Run = @{
-                Path = $Path;
                 PassThru = $true;
+                Container = $container
             }
             Filter = @{
-                Tag = $Tags;
-                ExcludeTag = $ExcludeTags
+                FullName = $TestName;
             }
             Should = @{
                 ErrorAction = $ErrorActionPreference;
@@ -207,17 +216,17 @@ function Invoke-WhiskeyPester5Task
             TestResult = @{
                 Enabled = $true;
                 OutputPath = $OutputPath;
-                OutputFormat = $OutputFormat
+                OutputFormat = $OutputFormat;
             }
         }
         
         $DebugPreference = 'Continue'
-        Write-Debug '  [PesterConfiguration]'
-        Write-Debug "    Run.Path  [$($Parameter.Run.Path.GetType().FullName)] ""$($Parameter.Run.Path.ToString())"""
-        Write-Debug '  [PesterConfiguration]'
+        # Write-Debug '  [PesterConfiguration]'
+        # Write-Debug "    Run.Path  [$($Parameter.Run.Path.GetType().FullName)] ""$($Parameter.Run.Path.ToString())"""
+        # Write-Debug '  [PesterConfiguration]'
 
         # New Pester5 Configuration
-        $configuration | ConvertTo-Json -Depth 100 | Write-Debug
+        # $configuration | ConvertTo-Json -Depth 100 | Write-Debug
         Invoke-Pester -Configuration $configuration
     }
     
