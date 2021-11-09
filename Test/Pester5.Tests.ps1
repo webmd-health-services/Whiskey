@@ -12,34 +12,18 @@ $output = $null
 function GivenExclude
 {
     param(
-        $Exclude
+        [String[]] $Exclude
     )
 
     $taskParameter['Exclude'] = $Exclude
 }
 
-function GivenVersion
-{
-    param(
-        [String]$Version
-    )
-    $Script:taskParameter['Version'] = $Version
-}
-
-function GivenInvalidVersion
-{
-    $Script:taskParameter['Version'] = '4.0.0'
-    Mock -CommandName 'Test-Path' `
-         -ModuleName 'Whiskey' `
-         -MockWith { return $False }`
-         -ParameterFilter { $Path -eq $context.BuildRoot }
-}
-
 function GivenTestFile
 {
     param(
-        [String]$Path,
-        [String]$Content
+        [String] $Path,
+
+        [String] $Content
     )
 
     $taskParameter['Script'] = & {
@@ -82,49 +66,26 @@ function Reset
     Reset-WhiskeyTestPSModule
 }
 
-function Get-OutputReportRowCount
+function ThenNoPesterTestFileShouldExist 
 {
-    param(
-        $Regex
-    )
-
-    $report = $output | Out-String
-    $report = $report -split ([regex]::Escape([Environment]::Newline))
-    $reportStarted = $false
-    $rowCount = 0
-    for( $idx = 0; $idx -lt $report.Count; ++$idx )
-    {
-        if( $reportStarted )
-        {
-            if( -not $report[$idx] )
-            {
-                break
-            }
-            $rowCount++
-            continue
-        }
-
-        if( $report[$idx] -match $Regex )
-        {
-            $idx++
-            $reportStarted = $true
-        }
-    }
-    return $rowCount
+    $reportsIn =  $script:context.outputDirectory
+    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
+    write-host $testReports
+    $testReports | Should -BeNullOrEmpty
 }
 
 function ThenPesterShouldHaveRun
 {
     param(
         [Parameter(Mandatory)]
-        [int]$FailureCount,
+        [int] $FailureCount,
             
         [Parameter(Mandatory)]
-        [int]$PassingCount,
+        [int] $PassingCount,
 
-        [Switch]$AsJUnitXml,
+        [Switch] $AsJUnitXml,
 
-        [String]$ResultFileName = 'pester+*.xml'
+        [String] $ResultFileName = 'pester+*.xml'
     )
 
     $reportsIn =  $context.outputDirectory
@@ -183,23 +144,6 @@ function ThenPesterShouldHaveRun
     }
 }
 
-function ThenTestShouldFail
-{
-    param(
-        [String]$failureMessage
-    )
-    $Script:failed | Should -BeTrue
-    $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
-}
-
-function ThenNoPesterTestFileShouldExist 
-{
-    $reportsIn =  $script:context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
-    write-host $testReports
-    $testReports | Should -BeNullOrEmpty
-}
-
 function ThenTestShouldCreateMultipleReportFiles
 {
     Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
@@ -208,15 +152,25 @@ function ThenTestShouldCreateMultipleReportFiles
         Should -Be 2
 }
 
+function ThenTestShouldFail
+{
+    param(
+        [String] $failureMessage
+    )
+
+    $Script:failed | Should -BeTrue
+    $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
+}
+
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [switch]$WithClean,
+        [switch] $WithClean,
 
-        [switch]$NoJob,
+        [switch] $NoJob,
 
-        [hashtable]$WithArgument = @{ }
+        [hashtable] $WithArgument = @{ }
     )
 
     $failed = $false
@@ -406,7 +360,6 @@ Describe 'FailingTests' {
     }
 }
 
-# Still having trouble with this test
 Describe 'Pester5.when not running task in job' {
     AfterEach { Reset }
     It 'should pass' {
@@ -419,26 +372,34 @@ Describe 'PassingTests' {
     }
 }
 "@
-        Mock -CommandName 'Import-Module' -ModuleName 'Whiskey'
-        Mock -CommandName 'Invoke-Pester' -ModuleName 'Whiskey' -MockWith {
+        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith {
             @'
 <test-results errors="0" failures="0" />
 '@ | Set-Content -Path $OutputFile
             return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
         }
         WhenPesterTaskIsInvoked -NoJob
-        Assert-MockCalled -CommandName 'Import-Module' -ModuleName 'Whiskey' -ParameterFilter {
-            $Name | Should -BeLike (Join-Path -Path $testRoot -ChildPath ('{0}\Pester\5.*.*\Pester.psd1' -f $TestPSModulesDirectoryName))
-            return $true
-        }
-        Assert-MockCalled -CommandName 'Invoke-Pester' -ModuleName 'Whiskey' -ParameterFilter { 
+        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
             Push-Location $testRoot
             try
             {
-                $Script | Should -Be (Resolve-Path -Path (Join-Path -Path $testRoot -ChildPath 'PassingTests.ps1') -Relative)
-                $Outputfile | Should -BeLike (Resolve-Path -Path (Join-Path -Path $testRoot -ChildPath '.output\pester*.xml') -Relative)
-                $OutputFormat | Should -Be 'NUnitXml'
-                $PassThru | Should -BeTrue
+                $ArgumentList[0] | Should -Be $testRoot
+                $expectedManifestPath = Join-Path -Path '*' -ChildPath (Join-Path -Path '5.*' -ChildPath 'Pester.psd1')
+                $ArgumentList[1] | Should -BeLike $expectedManifestPath
+                $ArgumentList[2] | Should -Be (Join-Path -Path '.' -ChildPath 'PassingTests.ps1')
+                $ArgumentList[3] | Should -BeNullOrEmpty
+                $ArgumentList[4] | Should -BeNullOrEmpty
+                $ArgumentList[5] | Should -BeLike (Join-Path -Path '.output' -ChildPath 'pester+*.xml')
+                $ArgumentList[6] | Should -Be 'NUnitXml'
+                $ArgumentList[7] | Should -BeOfType [hashtable]
+                $prefNames = @(
+                    'DebugPreference',
+                    'ErrorActionPreference',
+                    'ProgressPreference',
+                    'VerbosePreference',
+                    'WarningPreference'
+                ) | Sort-Object
+                $ArgumentList[7].Keys | Sort-Object | Should -Be $prefNames
                 return $true
             }
             finally
@@ -533,8 +494,8 @@ Describe 'Pester5.when passing hashtable to script property with multiple paths'
         Init
         WhenPesterTaskIsInvoked -WithArgument @{
             'Script' = @{
-                'Path' = ('Path1.ps1','Path2.ps1')
-            }
+                'Path' = ('Path1.ps1','Path2.ps1');
+            };
         } -ErrorAction SilentlyContinue
         ThenTestShouldFail '"Path" value must be a single string'
     }

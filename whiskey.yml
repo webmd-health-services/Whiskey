@@ -44,7 +44,7 @@ Build:
 
 - GetPowerShellModule:
     Name: Pester
-    Version: 4.*
+    Version: 3.*
 
 - GetPowerShellModule:
     Name: Glob

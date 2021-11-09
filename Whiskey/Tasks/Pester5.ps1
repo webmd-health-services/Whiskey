@@ -8,22 +8,22 @@ function Invoke-WhiskeyPester5Task
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]$TaskContext,
+        [Whiskey.Context] $TaskContext,
 
         [Alias('Path')]
-        [object]$Script,
+        [object] $Script,
 
-        [String[]]$Exclude,
+        [String[]] $Exclude,
 
-        [int]$DescribeDurationReportCount = 0,
+        [int] $DescribeDurationReportCount = 0,
 
-        [int]$ItDurationReportCount = 0,
+        [int] $ItDurationReportCount = 0,
 
-        [Management.Automation.PSModuleInfo]$PesterModuleInfo,
+        [Management.Automation.PSModuleInfo] $PesterModuleInfo,
 
-        [Object]$Argument = @{},
+        [Object] $Argument = @{},
 
-        [switch]$NoJob
+        [switch] $NoJob
     )
 
     Set-StrictMode -Version 'Latest'
@@ -130,7 +130,8 @@ function Invoke-WhiskeyPester5Task
     }
 
     $testName = ''
-    if($Argument.ContainsKey('TestName')){
+    if($Argument.ContainsKey('TestName'))
+    {
         $testName = $Argument.TestName
     }
 
@@ -138,15 +139,14 @@ function Invoke-WhiskeyPester5Task
 
     $data = $null
     # Checking to see if Script is a container with data being passed in for tests
-    if($Script -is [System.Array]){
-        if($Script[0] -is [Hashtable]) {
-            [String[]] $paths = @()
-            $Script | ForEach-Object {
-                $paths += ($_.Path)
-            }
-            $data = $Script[0].Data
-            $Script = $paths
+    if($Script -is [System.Array] -and $Script[0] -is [Hashtable])
+    {
+        [String[]] $paths = @()
+        $Script | ForEach-Object {
+            $paths += ($_.Path)
         }
+        $data = $Script[0].Data
+        $Script = $paths
     }
     
     $cmdArgList = @(
@@ -175,12 +175,19 @@ function Invoke-WhiskeyPester5Task
     $result = & $cmdName -ArgumentList $cmdArgList -ScriptBlock {
         param(
             [String] $WorkingDirectory,
+
             [String] $PesterManifestPath,
+
             [String[]] $Path,
+
             [hashtable] $TestData,
+
             [String] $TestName,
+
             [String] $OutputPath,
+
             [String] $OutputFormat,
+
             [hashtable] $Preference
         )
         
@@ -195,38 +202,30 @@ function Invoke-WhiskeyPester5Task
         $WarningPreference = $Preference['WarningPreference']
         $ErrorActionPreference = $Preference['ErrorActionPreference']
 
-        $container = New-PesterContainer -Path $Path -Data $TestData
-
         # New Pester5 Configuration
         $configuration = [PesterConfiguration]@{
             Debug = @{
                 ShowFullErrors = ($DebugPreference -eq 'Continue');
                 WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            }
+            };
             Run = @{
                 PassThru = $true;
-                Container = $container
-            }
+                Container = New-PesterContainer -Path $Path -Data $TestData;
+            };
             Filter = @{
                 FullName = $TestName;
-            }
+            };
             Should = @{
                 ErrorAction = $ErrorActionPreference;
-            }
+            };
             TestResult = @{
                 Enabled = $true;
                 OutputPath = $OutputPath;
                 OutputFormat = $OutputFormat;
-            }
+            };
         }
         
-        $DebugPreference = 'Continue'
-        # Write-Debug '  [PesterConfiguration]'
-        # Write-Debug "    Run.Path  [$($Parameter.Run.Path.GetType().FullName)] ""$($Parameter.Run.Path.ToString())"""
-        # Write-Debug '  [PesterConfiguration]'
-
-        # New Pester5 Configuration
-        # $configuration | ConvertTo-Json -Depth 100 | Write-Debug
+        # New Pester5 Invoke-Pester with Configuration
         Invoke-Pester -Configuration $configuration
     }
     
