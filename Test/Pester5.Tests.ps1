@@ -168,7 +168,7 @@ function WhenPesterTaskIsInvoked
     param(
         [switch] $WithClean,
 
-        [switch] $NoJob,
+        [switch] $AsJob,
 
         [hashtable] $WithArgument = @{ }
     )
@@ -178,9 +178,9 @@ function WhenPesterTaskIsInvoked
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
-    if( $NoJob )
+    if( $AsJob )
     {
-        $taskParameter['NoJob'] = 'true'
+        $taskParameter['AsJob'] = 'true'
     }
 
     $WithArgument['Show'] = 'None'
@@ -221,7 +221,7 @@ Describe 'One' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked 
+        WhenPesterTaskIsInvoked -AsJob
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 2
     }
 }
@@ -240,7 +240,7 @@ Describe 'Failing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -FailureCount 2 -PassingCount 0
         ThenTestShouldFail -failureMessage 'Pester tests failed'
     }
@@ -264,7 +264,7 @@ Describe 'Passing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked  -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -FailureCount 1 -PassingCount 1
     }
 }
@@ -280,8 +280,8 @@ Describe 'PassingTests' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked
-        WhenPesterTaskIsInvoked
+        WhenPesterTaskIsInvoked -AsJob
+        WhenPesterTaskIsInvoked -AsJob
         ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
         ThenTestShouldCreateMultipleReportFiles
     }
@@ -291,7 +291,7 @@ Describe 'Pester5.when missing path' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
         ThenTestShouldFail -failureMessage 'Property "Script": Script is mandatory.'
     }
@@ -304,7 +304,7 @@ Describe 'Pester5.when a task path is absolute' {
         $pesterPath = Join-Path -Path $testRoot -ChildPath '..\SomeFile'
         New-Item -Path $pesterPath
         GivenTestFile $pesterPath
-        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
         ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
         ThenTestShouldFail -failureMessage 'outside\ the\ build\ root'
     }
@@ -329,7 +329,7 @@ Describe 'FailingTests' {
 }
 '@
         GivenExclude '*fail*','Passing*'
-        WhenPesterTaskIsInvoked
+        WhenPesterTaskIsInvoked -AsJob
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1
     }
 }
@@ -353,7 +353,7 @@ Describe 'FailingTests' {
 }
 '@
         GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
-        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
         ThenNoPesterTestFileShouldExist
         ThenTestShouldFail ([regex]::Escape('Found no tests to run.'))
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
@@ -378,7 +378,7 @@ Describe 'PassingTests' {
 '@ | Set-Content -Path $OutputFile
             return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
         }
-        WhenPesterTaskIsInvoked -NoJob
+        WhenPesterTaskIsInvoked
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
             Push-Location $testRoot
             try
@@ -426,7 +426,7 @@ Describe 'FailingTests'{
     }
 }
 '@
-        WhenPesterTaskIsInvoked -WithArgument @{
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
             # Make sure the Pester5 task's default values for these get overwritten
             'Output' = '.output\pester.xml';
             'OutputFormat' = 'JUnitXml';
@@ -473,7 +473,7 @@ Describe 'ArgTest' {
 "@
         GivenTestFile 'ArgTest.ps1' $testContent
         GivenTestFile 'Arg2Test.ps1' $testContent
-        WhenPesterTaskIsInvoked -WithArgument @{
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
             'Script' = @{
                 'Path' = 'Arg*.ps1';
                 'Data' = @{
@@ -492,7 +492,7 @@ Describe 'Pester5.when passing hashtable to script property with multiple paths'
     AfterEach { Reset }
     It 'should pass arguments' {
         Init
-        WhenPesterTaskIsInvoked -WithArgument @{
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
             'Script' = @{
                 'Path' = ('Path1.ps1','Path2.ps1');
             };
