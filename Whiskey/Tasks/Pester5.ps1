@@ -23,7 +23,7 @@ function Invoke-WhiskeyPester5Task
 
         [Object] $Argument = @{},
 
-        [switch] $NoJob
+        [switch] $AsJob
     )
 
     Set-StrictMode -Version 'Latest'
@@ -166,10 +166,10 @@ function Invoke-WhiskeyPester5Task
         }
     )
 
-    $cmdName = 'Start-Job'
-    if( $NoJob )
+    $cmdName = 'Invoke-Command'
+    if( $AsJob )
     {
-        $cmdName = 'Invoke-Command'
+        $cmdName = 'Start-Job'
     }
 
     $result = & $cmdName -ArgumentList $cmdArgList -ScriptBlock {
