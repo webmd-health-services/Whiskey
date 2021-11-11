@@ -6,17 +6,9 @@ $testRoot = $null
 $context = $null
 $version = $null
 $taskParameter = @{}
+$testScript = @{}
 $failed = $false
 $output = $null
-
-function GivenExclude
-{
-    param(
-        [String[]] $Exclude
-    )
-
-    $taskParameter['Exclude'] = $Exclude
-}
 
 function GivenTestFile
 {
@@ -26,10 +18,10 @@ function GivenTestFile
         [String] $Content
     )
 
-    $taskParameter['Script'] = & {
-        if( $taskParameter.ContainsKey('Script') )
+    $testScript['Script'] = & {
+        if( $testScript.ContainsKey('Script') )
         {
-            $taskParameter['Script']
+            $testScript['Script']
         }
         $Path 
     }
@@ -43,9 +35,9 @@ function GivenTestFile
 function Init
 {
     $script:taskParameter = @{}
+    $script:testScript = @{}
     $script:version = $null
     $script:failed = $false
-    $script:taskParameter = @{}
     $Global:Error.Clear()
 
     $script:testRoot = New-WhiskeyTestRoot
@@ -223,14 +215,14 @@ function WhenPesterTaskIsInvoked
         }
     }
 
-    if( $taskParameter.ContainsKey('Script') )
+    if( $testScript.ContainsKey('Script') )
     {
-        $path = $taskParameter.Script
+        $path = $testScript.Script
     }
 
-    if( $taskParameter.ContainsKey('Exclude') )
+    if( $WithArgument.ContainsKey('Exclude') )
     {
-        $exclude = $taskParameter.Exclude
+        $exclude = $WithArgument.Exclude
     }
 
     # New Pester5 Configuration
@@ -394,8 +386,9 @@ Describe 'FailingTests' {
     }
 }
 '@
-        GivenExclude '*fail*','Passing*'
-        WhenPesterTaskIsInvoked -AsJob
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            'Exclude' = '*fail*','Passing*'
+        }
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1
     }
 }
@@ -418,8 +411,9 @@ Describe 'FailingTests' {
     }
 }
 '@
-        GivenExclude (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
-        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            'Exclude' = (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
+        } -ErrorAction SilentlyContinue
         ThenNoPesterTestFileShouldExist
         ThenTestShouldFail ([regex]::Escape('Found no tests to run.'))
         ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
