@@ -9,39 +9,31 @@ function Invoke-WhiskeyPester5Task
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
-
-        [Alias('Path')]
-        [object] $Script,
-
-        [String[]] $Exclude,
-
-        [int] $DescribeDurationReportCount = 0,
-
-        [int] $ItDurationReportCount = 0,
-
+        
         [Management.Automation.PSModuleInfo] $PesterModuleInfo,
 
-        [Object] $Argument = @{},
+        [switch] $AsJob,
 
-        [switch] $AsJob
+        [hashtable] $PesterConfiguration
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $Exclude = $PesterConfiguration.Run.ExcludePath
     if( $Exclude )
     {
         $Exclude = $Exclude | Convert-WhiskeyPathDirectorySeparator 
     }
 
-    if( -not $Script )
+    if( -not $PesterConfiguration.Run.Container.Path )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Script' -Message ('Script is mandatory.')
         return
     }
 
-    $Script = & {
-        foreach( $scriptItem in $Script )
+    $PesterConfiguration.Run.Container.Path = & {
+        foreach( $scriptItem in $PesterConfiguration.Run.Container.Path )
         {
             $path = $null
 
@@ -102,7 +94,7 @@ function Invoke-WhiskeyPester5Task
         }
     }
 
-    if( -not $Script )
+    if( -not $PesterConfiguration.Run.Container.Path )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found no tests to run.')
         return
@@ -110,53 +102,10 @@ function Invoke-WhiskeyPester5Task
 
     $pesterManifestPath = $PesterModuleInfo.Path
 
-    $Argument['Path'] = $Script
-    $Argument['PassThru'] = $true
-
-    if( $Argument.ContainsKey('Output') )
-    {
-        $outputFile = $Argument['Output']
-    }
-    else
-    {
-        $outputFileRoot = Resolve-Path -Path $TaskContext.OutputDirectory -Relative
-        $outputFile = Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
-        $Argument['Output'] = $outputFile
-    }
-
-    if( -not $Argument.ContainsKey('OutputFormat') )
-    {
-        $Argument['OutputFormat'] = 'NUnitXml'
-    }
-
-    $testName = ''
-    if($Argument.ContainsKey('TestName'))
-    {
-        $testName = $Argument.TestName
-    }
-
-    $Argument | Write-WhiskeyObject -Context $context -Level Verbose
-
-    $data = $null
-    # Checking to see if Script is a container with data being passed in for tests
-    if($Script -is [System.Array] -and $Script[0] -is [Hashtable])
-    {
-        [String[]] $paths = @()
-        $Script | ForEach-Object {
-            $paths += ($_.Path)
-        }
-        $data = $Script[0].Data
-        $Script = $paths
-    }
-    
     $cmdArgList = @(
         (Get-Location).Path,
         $pesterManifestPath,
-        $Script,
-        $data,
-        $testName,
-        $outputFile,
-        $Argument.OutputFormat,
+        $PesterConfiguration,
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -178,15 +127,7 @@ function Invoke-WhiskeyPester5Task
 
             [String] $PesterManifestPath,
 
-            [String[]] $Path,
-
-            [hashtable] $TestData,
-
-            [String] $TestName,
-
-            [String] $OutputPath,
-
-            [String] $OutputFormat,
+            [hashtable] $PesterConfiguration,
 
             [hashtable] $Preference
         )
@@ -205,23 +146,23 @@ function Invoke-WhiskeyPester5Task
         # New Pester5 Configuration
         $configuration = [PesterConfiguration]@{
             Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+                ShowFullErrors = [System.Convert]::ToBoolean($PesterConfiguration.Debug.ShowFullErrors);
+                WriteDebugMessages = [System.Convert]::ToBoolean($PesterConfiguration.Debug.WriteDebugMessages);
             };
             Run = @{
-                PassThru = $true;
-                Container = New-PesterContainer -Path $Path -Data $TestData;
+                Container = New-PesterContainer -Path $PesterConfiguration.Run.Container.Path -Data $PesterConfiguration.Run.Container.Data;
+                PassThru = $PesterConfiguration.Run.PassThru;
             };
             Filter = @{
-                FullName = $TestName;
+                FullName = $PesterConfiguration.Filter.FullName;
             };
             Should = @{
-                ErrorAction = $ErrorActionPreference;
+                ErrorAction = $PesterConfiguration.Should.ErrorAction;
             };
             TestResult = @{
-                Enabled = $true;
-                OutputPath = $OutputPath;
-                OutputFormat = $OutputFormat;
+                Enabled = [System.Convert]::ToBoolean($PesterConfiguration.TestResult.Enabled);
+                OutputPath = $PesterConfiguration.TestResult.OutputPath;
+                OutputFormat = $PesterConfiguration.TestResult.OutputFormat;
             };
         }
         
@@ -234,15 +175,15 @@ function Invoke-WhiskeyPester5Task
         $result = $result | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
     }
 
-    Publish-WhiskeyPesterTestResult -Path $outputFile
+    Publish-WhiskeyPesterTestResult -Path $PesterConfiguration.TestResult.OutputPath
 
-    $outputFileContent = Get-Content -Path $outputFile -Raw
+    $outputFileContent = Get-Content -Path $PesterConfiguration.TestResult.OutputPath -Raw
     $outputFileContent | Write-WhiskeyDebug
     $result = [xml]$outputFileContent
 
     if( -not $result )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to parse Pester output XML report "{0}".' -f $outputFile)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to parse Pester output XML report "{0}".' -f $PesterConfiguration.TestResult.OutputPath)
         return
     }
 

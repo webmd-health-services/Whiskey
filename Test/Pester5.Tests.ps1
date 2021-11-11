@@ -175,6 +175,12 @@ function WhenPesterTaskIsInvoked
 
     $failed = $false
     $Global:Error.Clear()
+    $passThru = $true
+    $outputFormat = 'NUnitXml'
+    $testName = ''
+    $data = $null
+    $path = $null
+    $exclude = $null
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
@@ -183,18 +189,78 @@ function WhenPesterTaskIsInvoked
         $taskParameter['AsJob'] = 'true'
     }
 
-    $WithArgument['Show'] = 'None'
-    $taskParameter['Argument'] = $WithArgument
+    if( $WithArgument.ContainsKey('PassThru') ){
+        $passThru = $WithArgument.PassThru
+    }
 
+    if( $WithArgument.ContainsKey('Output') )
+    {
+        $outputPath = $WithArgument['Output']
+    }
+    else
+    {
+        $outputFileRoot = $context.OutputDirectory.Name
+        $outputPath = Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
+    }
+
+    if( $WithArgument.ContainsKey('OutputFormat') )
+    {
+        $outputFormat = $WithArgument['OutputFormat']
+    }
+
+    if($WithArgument.ContainsKey('TestName'))
+    {
+        $testName = $WithArgument.TestName
+    }
+
+    # Checking to see if data is being passed in for tests
     if( $WithArgument.ContainsKey('Script') )
     {
-        $taskParameter['Script'] = $WithArgument['Script']
-        $WithArgument.Remove('Script')
-        if( $taskParameter.ContainsKey('Path') )
+        $path = $WithArgument.Script
+        if( $WithArgument.Script.ContainsKey('Data') )
         {
-            $taskParameter.Remove('Path')
+            $data = $WithArgument.Script.Data
         }
     }
+
+    if( $taskParameter.ContainsKey('Script') )
+    {
+        $path = $taskParameter.Script
+    }
+
+    if( $taskParameter.ContainsKey('Exclude') )
+    {
+        $exclude = $taskParameter.Exclude
+    }
+
+    # New Pester5 Configuration
+    $configuration = @{
+        Debug = @{
+            ShowFullErrors = ($DebugPreference -eq 'Continue');
+            WriteDebugMessages = ($DebugPreference -eq 'Continue');
+        };
+        Run = @{
+            ExcludePath = $exclude;
+            Container = @{
+                Path = $path;
+                Data = $data;
+            }
+            PassThru = $passThru;
+        };
+        Filter = @{
+            FullName = $testName;
+        };
+        Should = @{
+            ErrorAction = $ErrorActionPreference;
+        };
+        TestResult = @{
+            Enabled = $true;
+            OutputPath = $outputPath;
+            OutputFormat = $outputFormat;
+        };
+    }
+
+    $taskParameter['PesterConfiguration'] = $configuration
 
     try
     {
@@ -375,7 +441,7 @@ Describe 'PassingTests' {
         Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith {
             @'
 <test-results errors="0" failures="0" />
-'@ | Set-Content -Path $OutputFile
+'@ | Set-Content -Path $PesterConfiguration.TestResult.OutputPath
             return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
         }
         WhenPesterTaskIsInvoked
@@ -386,12 +452,13 @@ Describe 'PassingTests' {
                 $ArgumentList[0] | Should -Be $testRoot
                 $expectedManifestPath = Join-Path -Path '*' -ChildPath (Join-Path -Path '5.*' -ChildPath 'Pester.psd1')
                 $ArgumentList[1] | Should -BeLike $expectedManifestPath
-                $ArgumentList[2] | Should -Be (Join-Path -Path '.' -ChildPath 'PassingTests.ps1')
-                $ArgumentList[3] | Should -BeNullOrEmpty
-                $ArgumentList[4] | Should -BeNullOrEmpty
-                $ArgumentList[5] | Should -BeLike (Join-Path -Path '.output' -ChildPath 'pester+*.xml')
-                $ArgumentList[6] | Should -Be 'NUnitXml'
-                $ArgumentList[7] | Should -BeOfType [hashtable]
+                $ArgumentList[2] | Should -BeOfType [hashtable]
+                $ArgumentList[2].Run.Container.Path | Should -Be (Join-Path -Path '.' -ChildPath 'PassingTests.ps1')
+                $ArgumentList[2].Run.Container.Data | Should -BeNullOrEmpty
+                $ArgumentList[2].Filter.FullName | Should -BeNullOrEmpty
+                $ArgumentList[2].TestResult.OutputPath | Should -BeLike (Join-Path -Path '.output' -ChildPath 'pester+*.xml')
+                $ArgumentList[2].TestResult.OutputFormat | Should -Be 'NUnitXml'
+                $ArgumentList[3] | Should -BeOfType [hashtable]
                 $prefNames = @(
                     'DebugPreference',
                     'ErrorActionPreference',
@@ -399,7 +466,7 @@ Describe 'PassingTests' {
                     'VerbosePreference',
                     'WarningPreference'
                 ) | Sort-Object
-                $ArgumentList[7].Keys | Sort-Object | Should -Be $prefNames
+                $ArgumentList[3].Keys | Sort-Object | Should -Be $prefNames
                 return $true
             }
             finally
