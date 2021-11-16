@@ -75,6 +75,48 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
+if( -not (Get-Variable -Name 'IsWindows' -ErrorAction Ignore) )
+{
+    $IsLinux = $false
+    $IsMacOS = $false
+    $IsWindows = $true
+}
+
+if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) -or
+    -not (dotnet --list-sdks |
+            Where-Object { $_ -match '^(\d+\.\d+\.\d+)' } |
+            ForEach-Object { [Version]$Matches[1] } |
+            Where-Object 'Major' -ge 6) )
+{
+    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
+    if( $IsWindows )
+    {
+        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
+    }
+
+    if( $IsWindows )
+    {
+        & $dotnetInstallPath -Channel 'LTS'
+    }
+    else 
+    {
+        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
+        {
+            $msg = 'Curl is required to install .NET Core. Please install it with this platform''s (or your) ' +
+                   'preferred package manager.'
+            Write-Error -Message $msg
+            exit 1
+        }
+        bash $dotnetInstallPath -Channel 'LTS'
+    }
+
+    if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+    {
+        Write-Error -Message '.NET Core LTS SDK didn''t get installed.'
+        exit 1
+    }
+}
+
 $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
 $productVersion = '{0}{1}' -f $version,$versionSuffix
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -101,27 +143,13 @@ try
         ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
     }
 
-    if( (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
-    {
-        Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
-        dotnet build --configuration=$MSBuildConfiguration $params
+    Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+    dotnet build --configuration=$MSBuildConfiguration $params
 
-        dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
-        if( $LASTEXITCODE )
-        {
-            Write-Error -Message ('Unit tests failed.')
-        }
-    }
-    else
+    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
+    if( $LASTEXITCODE )
     {
-        $msbuildPath = [Environment]::GetFolderPath([Environment+SpecialFolder]::Windows)
-        $msbuildPath =
-            Join-Path -Path $msbuildPath -ChildPath 'Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe' -Resolve
-
-        $slnPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey.sln'
-        $msg = "& ""$($msbuildPath) /p:Configuration=$($MSBuildConfiguration) $($params -join ' ') ""$($slnPath)"""
-        Write-Verbose $msg -Verbose
-        & $msbuildPath /p:Configuration=$MSBuildConfiguration $params $slnPath
+        Write-Error -Message ('Unit tests failed.')
     }
 }
 finally
