@@ -17,14 +17,14 @@ image:
 - macOS-BigSur
 - macOS-Mojave
 
-environment:
-  matrix:
-  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
-    LANG: us_US.UTF-8
-  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
-    LANG: us_US.UTF-8
-  - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
-    LANG: us_US.UTF-8
+# environment:
+#   matrix:
+#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+#     LANG: us_US.UTF-8
+#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
+#     LANG: us_US.UTF-8
+#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
+#     LANG: us_US.UTF-8
 
 build:
   verbosity: minimal
