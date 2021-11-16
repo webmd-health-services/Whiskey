@@ -239,9 +239,9 @@ if( $PipelineName )
 
 $context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
 $apiKeys = @{
-                'PowerShellGallery' = 'POWERSHELL_GALLERY_API_KEY';
-                'github.com' = 'GITHUB_ACCESS_TOKEN';
-                'AppVeyor' = 'APPVEYOR_BEARER_TOKEN';
+                'PowerShellGallery' = 'WHS_POWERSHELL_GALLERY_API_KEY';
+                'github.com' = 'WHS_GITHUB_ACCESS_TOKEN';
+                'AppVeyor' = 'WHS_APPVEYOR_BEARER_TOKEN';
             }
 
 Write-Verbose -Message '# ENVIRONMENT VARIABLES'
