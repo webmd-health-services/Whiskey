@@ -75,58 +75,6 @@ if( Test-Path -Path ('env:APPVEYOR') )
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
 }
 
-$minDotNetVersion = [Version]'2.1.503'
-$dotnetVersion = $null
-$dotnetInstallDir = Join-Path -Path $PSScriptRoot -ChildPath '.dotnet'
-$dotnetExeName = 'dotnet.exe'
-if( -not (Get-Variable 'IsLinux' -ErrorAction SilentlyContinue) ) 
-{
-    $IsLinux = $false
-    $IsMacOS = $false
-    $IsWindows = $true
-}
-if( -not $IsWindows )
-{
-    $dotnetExeName = 'dotnet'
-}
-$dotnetPath = Join-Path -Path $dotnetInstallDir -ChildPath $dotnetExeName
-
-if( (Test-Path -Path $dotnetPath -PathType Leaf) )
-{
-    $dotnetVersion = & $dotnetPath --version | ForEach-Object { [Version]$_ }
-    Write-Verbose ('dotnet {0} installed in {1}.' -f $dotnetVersion,$dotnetInstallDir)
-}
-
-if( -not $dotnetVersion -or $dotnetVersion -lt $minDotNetVersion )
-{
-    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
-    if( $IsWindows )
-    {
-        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
-    }
-
-    Write-Verbose -Message ('{0} -Version {1} -InstallDir "{2}" -NoPath' -f $dotnetInstallPath,$minDotNetVersion,$dotnetInstallDir)
-    if( $IsWindows )
-    {
-        & $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
-    }
-    else 
-    {
-        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
-        {
-            Write-Error -Message ('Curl is required to install .NET Core. Please install it with this platform''s (or your) preferred package manager.')
-            exit 1
-        }
-        bash $dotnetInstallPath -Version $minDotNetVersion -InstallDir $dotnetInstallDir -NoPath
-    }
-
-    if( -not (Test-Path -Path $dotnetPath -PathType Leaf) )
-    {
-        Write-Error -Message ('.NET Core {0} didn''t get installed to "{1}".' -f $minDotNetVersion,$dotnetPath)
-        exit 1
-    }
-}
-
 $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
 $productVersion = '{0}{1}' -f $version,$versionSuffix
 Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -152,10 +100,10 @@ try
                             '/filelogger9'
                             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
                     }
-    Write-Verbose ('{0} build --configuration={1} {2}' -f $dotnetPath,$MSBuildConfiguration,($params -join ' '))
-    & $dotnetPath build --configuration=$MSBuildConfiguration $params
+    Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+    dotnet build --configuration=$MSBuildConfiguration $params
 
-    & $dotnetPath test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
+    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
