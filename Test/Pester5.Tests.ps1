@@ -204,16 +204,6 @@ function WhenPesterTaskIsInvoked
         $testName = $WithArgument.TestName
     }
 
-    # Checking to see if data is being passed in for tests
-    if( $WithArgument.ContainsKey('Script') )
-    {
-        $path = $WithArgument.Script
-        if( $WithArgument.Script.ContainsKey('Data') )
-        {
-            $taskParameter['TestData'] = $WithArgument.Script.Data;
-        }
-    }
-
     if( $testScript.ContainsKey('Script') )
     {
         $path = $testScript.Script
@@ -222,6 +212,19 @@ function WhenPesterTaskIsInvoked
     if( $WithArgument.ContainsKey('Exclude') )
     {
         $exclude = $WithArgument.Exclude
+    }
+
+    # Checking to see if data is being passed in for tests
+    if( $WithArgument.ContainsKey('Script') )
+    {
+        if( $WithArgument.Script.ContainsKey('Data') )
+        {
+            $container = @{
+                Path = $path;
+                Data = $WithArgument.Script.Data;
+            }
+            $taskParameter['Container'] = $container
+        }
     }
 
     # New Pester5 Configuration
@@ -233,10 +236,6 @@ function WhenPesterTaskIsInvoked
         Run = @{
             Path = $path;
             ExcludePath = $exclude;
-            Container = @{
-                Path = $null;
-                Data = $null;
-            }
             PassThru = $passThru;
         };
         Filter = @{

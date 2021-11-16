@@ -16,29 +16,8 @@ function Invoke-WhiskeyPester5Task
 
         [hashtable] $Configuration,
 
-        [hashtable] $TestData
+        [hashtable] $Container
     )
-
-    function ConvertTo-Pester5Configuration
-    {
-        param(
-            [hashtable] $config
-        )
-
-        foreach ($key in @($config.Keys)) {
-            foreach ($subKey in @($config[$key].Keys)) {
-                if($config[$key][$subkey].GetType().Name -eq 'ArrayList' ){
-                    $config[$key][$subKey] = [String[]]$config[$key][$subKey]
-                }
-                if($config[$key][$subkey].GetType().Name -eq [String] -and $config[$key][$subkey] -eq 'True'){
-                    $config[$key][$subkey] = $true
-                }
-                if($config[$key][$subkey].GetType().Name -eq [String] -and $config[$key][$subkey] -eq 'False'){
-                    $config[$key][$subkey] = $false
-                }
-            }
-        }
-    }
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -49,7 +28,7 @@ function Invoke-WhiskeyPester5Task
         (Get-Location).Path,
         $pesterManifestPath,
         $Configuration,
-        $TestData,
+        $Container,
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -73,10 +52,75 @@ function Invoke-WhiskeyPester5Task
 
             [hashtable] $Configuration,
 
-            [hashtable] $TestData,
+            [hashtable] $Container,
 
             [hashtable] $Preference
         )
+
+        function Convert-ArrayList
+        {
+            param(
+                [Parameter(Mandatory)]
+                [Collections.ICollection] $InputObject
+            )
+            
+            foreach( $entry in @($InputObject.GetEnumerator()) )
+            {
+                if( $entry.Value -is [Collections.ICollection] -and $entry.Value.PSobject.Properties.Name -contains 'Values' )
+                {
+                    Convert-ArrayList $entry.Value
+                    continue
+                }
+                
+                # PesterConfiguration only wants arrays for its lists. It doesn't handle any other list object.
+                if( $entry.Value -is [Collections.IList] -and  $entry.Value -isnot [Array] )
+                {
+                    $InputObject[$entry.Key] = ($entry.Value.GetEnumerator() | ForEach-Object { $_ }) -as [Array]
+                    continue
+                }
+            }
+        }
+
+        function Convert-Boolean
+        {
+            param(
+                [Parameter(Mandatory)]
+                [Collections.ICollection] $InputObject
+            )
+            
+            foreach( $entry in @($InputObject.GetEnumerator()) )
+            {
+                if( $entry.Value -is [Collections.ICollection] -and $entry.Value.PSobject.Properties.Name -contains 'Values' )
+                {
+                    Convert-Boolean $entry.Value
+                    continue
+                }
+                
+                # PesterConfiguration does not accept strings for boolean values. True has to be $true
+                if( $entry.Value -is [String] -and  $entry.Value -eq 'True' -or $entry.Value -eq 'False' )
+                {
+                    $InputObject[$entry.Key] = [System.Convert]::ToBoolean($entry.Value)
+                    continue
+                }
+            }
+        }
+
+        function Get-PesterContainer
+        {
+            param(
+                [Parameter(Mandatory)]
+                [hashtable] $Container
+            )
+            
+            if( $Container.ContainsKey('Path') )
+            {
+                return New-PesterContainer -Path $Container.Path -Data $Container.Data
+            }
+            if( $Container.ContainsKey('ScriptBlock') )
+            {
+                return New-PesterContainer -ScriptBlock $Container.ScriptBlock
+            }
+        }
         
         Set-Location -Path $WorkingDirectory
 
@@ -92,35 +136,20 @@ function Invoke-WhiskeyPester5Task
         $DebugPreference = 'Continue'
         Write-Debug $Configuration.Run.Path.GetType()
 
-        foreach ($key in @($Configuration.Keys)) {
-            foreach ($subKey in @($Configuration[$key].Keys)) {
-                if($Configuration[$key][$subkey].GetType().Name -eq 'ArrayList' ){
-                    $Configuration[$key][$subKey] = [String[]]$Configuration[$key][$subKey]
-                }
-                if($Configuration[$key][$subkey].GetType().Name -eq [String] -and $Configuration[$key][$subkey] -eq 'True'){
-                    $Configuration[$key][$subkey] = $true
-                }
-                if($Configuration[$key][$subkey].GetType().Name -eq [String] -and $Configuration[$key][$subkey] -eq 'False'){
-                    $Configuration[$key][$subkey] = $false
-                }
-            }
-        }
-
-        # # Line below doesnt work for some reason when I try to pass $Configuration into function to handle array lists
-        # ConvertTo-Pester5Configuration -config $Configuration
+        Convert-ArrayList -InputObject $Configuration
+        Convert-Boolean -InputObject $Configuration
 
         Write-Debug $Configuration.Run.Path.GetType()
 
         # New Pester5 Invoke-Pester with Configuration
-        $config = New-PesterConfiguration -Hashtable $Configuration
+        $pesterConfiguration = New-PesterConfiguration -Hashtable $Configuration
 
         # If there is test data we have to set up a Pester Container
-        if($TestData -ne $null){
-            $container = New-PesterContainer -Path $Configuration.Run.Path -Data $TestData
-            $config.Run.Container = $container
+        if($Container -ne $null){
+            $pesterConfiguration.Run.Container = Get-PesterContainer -Container $Container
         }
 
-        Invoke-Pester -Configuration $config
+        Invoke-Pester -Configuration $pesterConfiguration
     }
     
     if( $result -is [Management.Automation.Job] )
@@ -128,5 +157,10 @@ function Invoke-WhiskeyPester5Task
         $result = $result | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
     }
 
-    Publish-WhiskeyPesterTestResult -Path $Configuration.TestResult.OutputPath
+    if( $Configuration.ContainsKey('TestResult') -and `
+    $Configuration['TestResult'] -is [Collections.ICollection] `
+    -and $Configuration['TestResult'].Contains('OutputPath') )
+    {
+        Publish-WhiskeyPesterTestResult -Path $Configuration['TestResult']['OutputPath']
+    }
 }
