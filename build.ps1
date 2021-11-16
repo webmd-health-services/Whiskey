@@ -27,15 +27,15 @@ Starts a build and uses "Release" as the build configuration when building the W
 param(
     [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    [switch]$Clean,
+    [switch] $Clean,
 
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [switch]$Initialize,
+    [switch] $Initialize,
 
-    [String]$PipelineName,
+    [String] $PipelineName,
 
-    [String]$MSBuildConfiguration = 'Debug'
+    [String] $MSBuildConfiguration = 'Debug'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -87,26 +87,41 @@ try
     }
 
     $params = & {
-                            '/p:Version={0}' -f $productVersion
-                            '/p:VersionPrefix={0}' -f $version
-                            if( $versionSuffix )
-                            {
-                                '/p:VersionSuffix={0}' -f $versionSuffix
-                            }
-                            if( $VerbosePreference -eq 'Continue' )
-                            {
-                                '--verbosity=n'
-                            }
-                            '/filelogger9'
-                            ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
-                    }
-    Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
-    dotnet build --configuration=$MSBuildConfiguration $params
+        '/p:Version={0}' -f $productVersion
+        '/p:VersionPrefix={0}' -f $version
+        if( $versionSuffix )
+        {
+            '/p:VersionSuffix={0}' -f $versionSuffix
+        }
+        if( $VerbosePreference -eq 'Continue' )
+        {
+            '--verbosity=n'
+        }
+        '/filelogger9'
+        ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+    }
 
-    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
-    if( $LASTEXITCODE )
+    if( (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
     {
-        Write-Error -Message ('Unit tests failed.')
+        Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+        dotnet build --configuration=$MSBuildConfiguration $params
+
+        dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
+        if( $LASTEXITCODE )
+        {
+            Write-Error -Message ('Unit tests failed.')
+        }
+    }
+    else
+    {
+        $msbuildPath = [Environment]::GetFolderPath([Environment+SpecialFolder]::Windows)
+        $msbuildPath =
+            Join-Path -Path $msbuildPath -ChildPath 'Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe' -Resolve
+
+        $slnPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey.sln'
+        $msg = "& ""$($msbuildPath) /p:Configuration=$($MSBuildConfiguration) $($params -join ' ') ""$($slnPath)"""
+        Write-Verbose $msg -Verbose
+        & $msbuildPath /p:Configuration=$MSBuildConfiguration $params $slnPath
     }
 }
 finally
