@@ -38,16 +38,14 @@ param(
     [String] $MSBuildConfiguration = 'Debug'
 )
 
-# $ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
 
-$PSVersionTable | Out-String
-Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" -ErrorAction Ignore
-
+$whiskeyPsd1Path = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1'
 # ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
-$manifest = Test-ModuleManifest -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -ErrorAction Ignore
+$manifest = Test-ModuleManifest -Path $whiskeyPsd1Path -ErrorAction Ignore
 if( -not $manifest )
 {
     Write-Error -Message ('Unable to load Whiskey''s module manifest.')
@@ -81,8 +79,14 @@ if( Test-Path -Path ('env:APPVEYOR') )
 
 if( -not (Get-Variable -Name 'IsWindows' -ErrorAction Ignore) )
 {
+    # Because we only do this on platforms where they don't exist.
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsLinux = $false
+
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsMacOS = $false
+
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsWindows = $true
 }
 
