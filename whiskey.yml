@@ -63,6 +63,12 @@ Build:
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
+- CopyFile:
+    Path:
+    - CHANGELOG.md
+    - README.md
+    DestinationDirectory: Whiskey
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
