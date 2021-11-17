@@ -85,7 +85,12 @@ function WhenInstallingNodeModule
     Push-Location $TestDrive.FullName
     try
     {
-        $script:output = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter
+        # Ignore STDERR because PowerShell on .NET Framework <= 4.6.2 converts command stderr to gross ErrorRecords
+        # which causes our error checking assertions to fail.
+        $script:output = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' `
+                                                      -Parameter $parameter `
+                                                      -ErrorAction $ErrorActionPreference `
+                                                      2>$null
     }
     finally
     {
