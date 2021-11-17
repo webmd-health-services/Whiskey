@@ -39,6 +39,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
 
@@ -82,39 +83,48 @@ if( -not (Get-Variable -Name 'IsWindows' -ErrorAction Ignore) )
     $IsWindows = $true
 }
 
-if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) -or
-    -not (dotnet --list-sdks |
-            Where-Object { $_ -match '^(\d+\.\d+\.\d+)' } |
-            ForEach-Object { [Version]$Matches[1] } |
-            Where-Object 'Major' -ge 6) )
+$whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
+if( -not (Test-Path -Path $whiskeyBinPath) )
 {
-    $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.sh'
-    if( $IsWindows )
-    {
-        $dotnetInstallPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin\dotnet-install.ps1'
-    }
+    New-Item -Path $whiskeyBinPath -ItemType 'Directory' | Out-Null
+}
 
-    if( $IsWindows )
-    {
-        & $dotnetInstallPath -Channel 'LTS'
-    }
-    else 
-    {
-        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
-        {
-            $msg = 'Curl is required to install .NET Core. Please install it with this platform''s (or your) ' +
-                   'preferred package manager.'
-            Write-Error -Message $msg
-            exit 1
-        }
-        bash $dotnetInstallPath -Channel 'LTS'
-    }
+$nugetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'nuget.exe'
+Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nugetExePath
 
-    if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+$dotnetShInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh'
+Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.sh' -OutFile $dotnetShInstallPath
+
+$dotnetPs1InstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
+Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $dotnetPs1InstallPath
+
+if( $IsWindows )
+{
+    # SDK
+    & $dotnetPs1InstallPath -Channel 'LTS'
+    # Runtime for tests
+    & $dotnetPs1InstallPath -Channel '6.0' -Runtime dotnet
+}
+else
+{
+    if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
     {
-        Write-Error -Message '.NET Core LTS SDK didn''t get installed.'
+        $msg = 'Curl is required to install .NET Core. Please install it with this platform''s (or your) ' +
+                'preferred package manager.'
+        Write-Error -Message $msg
         exit 1
     }
+
+    # SDK
+    & $dotnetShInstallPath --channel 'LTS'
+    # Runtime for tests
+    & $dotnetShInstallPath --channel '6.0' --runtime 'dotnet'
+}
+
+if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+{
+    Write-Error -Message '.NET failed to install or wasn''t added to PATH environment variable.'
+    exit 1
 }
 
 $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
@@ -129,6 +139,7 @@ try
     }
 
     $params = & {
+        "--configuration=$($MSBuildConfiguration)"
         '/p:Version={0}' -f $productVersion
         '/p:VersionPrefix={0}' -f $version
         if( $versionSuffix )
@@ -144,50 +155,20 @@ try
     }
 
     Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
-    dotnet build --configuration=$MSBuildConfiguration $params
+    dotnet build $params
 
-    dotnet test --configuration=$MSBuildConfiguration --results-directory=$outputDirectory --logger=trx --no-build
+    dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build
     if( $LASTEXITCODE )
     {
         Write-Error -Message ('Unit tests failed.')
     }
+
+    $whiskeyCsprojPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Whiskey.csproj' -Resolve
+    dotnet publish $params --no-self-contained --no-build --no-restore -o $whiskeyBinPath $whiskeyCsprojPath
 }
 finally
 {
     Pop-Location
-}
-
-$whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
-$whiskeyOutBinPath = Join-Path -Path $PSScriptRoot -ChildPath ('Assembly\Whiskey\bin\{0}\netstandard2.0' -f $MSBuildConfiguration)
-$whiskeyAssemblyPath = Get-Item -Path (Join-Path -Path $whiskeyOutBinPath -ChildPath 'Whiskey.dll')
-$whiskeyAssemblyVersion = $whiskeyAssemblyPath.VersionInfo
-$fileVersion = [Version]('{0}.0' -f $version)
-if( $whiskeyAssemblyVersion.FileVersion -ne $fileVersion )
-{
-    Write-Error -Message ('{0}: file version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$fileVersion,$whiskeyAssemblyVersion.FileVersion) 
-    exit 1
-}
-
-if( $whiskeyAssemblyVersion.ProductVersion -ne $productVersion )
-{
-    Write-Error -Message ('{0}: product version not set correctly. Expected "{1}" but was "{2}".' -f $whiskeyAssemblyPath.FullName,$productVersion,$whiskeyAssemblyVersion.ProductVersion) 
-    exit 1
-}
-
-foreach( $assembly in (Get-ChildItem -Path $whiskeyOutBinPath -Filter '*.dll') )
-{
-    $destinationPath = Join-Path -Path $whiskeyBinPath -ChildPath $assembly.Name
-    if( (Test-Path -Path $destinationPath -PathType Leaf) )
-    {
-        $sourceHash = Get-FileHash -Path $assembly.FullName
-        $destinationHash = Get-FileHash -Path $destinationPath
-        if( $sourceHash.Hash -eq $destinationHash.Hash )
-        {
-            continue
-        }
-    }
-
-    Copy-Item -Path $assembly.FullName -Destination $whiskeyBinPath
 }
 
 $ErrorActionPreference = 'Continue'
