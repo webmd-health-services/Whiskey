@@ -161,6 +161,7 @@ function WhenRunningNuGetPackTask
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
             Write-WhiskeyDebug -Message 'http://httpstat.us/404'
+            $ProgressPreference = 'SilentlyContinue'
             Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
@@ -168,6 +169,7 @@ function WhenRunningNuGetPackTask
     {
         Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith { 
             Write-WhiskeyDebug -Message 'http://httpstat.us/500'
+            $ProgressPreference = 'SilentlyContinue'
             Invoke-WebRequest -Uri 'http://httpstat.us/500' -Headers @{ 'Accept' = 'text/html' }
         } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
     }
@@ -182,6 +184,7 @@ function WhenRunningNuGetPackTask
                 $global:counter++    
                 Write-WhiskeyDebug $global:counter
                 Write-WhiskeyDebug -Message 'http://httpstat.us/404'
+                $ProgressPreference = 'SilentlyContinue'
                 Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
             }
             $global:counter = 0

@@ -92,7 +92,7 @@ function WhenBootstrapping
         return $nestedCount -eq 1
     } -MockWith { 
         $parameters = @{}
-        $cmdParameters = Get-Command 'invoke-WebRequest' | Select-Object -Expand 'Parameters' 
+        $cmdParameters = Get-Command 'Invoke-WebRequest' | Select-Object -Expand 'Parameters' 
         foreach( $name in $cmdParameters.Keys )
         {
             $value = Get-Variable -Name $name -ValueOnly -ErrorAction Ignore
@@ -102,6 +102,7 @@ function WhenBootstrapping
             }
         }
         $parameters | ConvertTo-Json | Write-Verbose
+        $ProgressPreference = 'SilentlyContinue'
         Microsoft.PowerShell.Utility\Invoke-WebRequest @parameters }
 
     & (Join-Path -Path $testRoot -ChildPath 'build.ps1' -Resolve)
