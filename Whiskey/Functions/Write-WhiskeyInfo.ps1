@@ -157,7 +157,19 @@ function Write-WhiskeyInfo
         if( $write -and $isError -and $errorMsgs.Count )
         {
             $errorMsg = $errorMsgs -join [Environment]::NewLine
-            Write-Error -Message $errorMsg
+            Write-Host "ErrorActionPreference  $($ErrorActionPreference)"
+            if( $ErrorActionPreference -ne [Management.Automation.ActionPreference]::SilentlyContinue )
+            {
+                # Write the error message to stderr so we have full control of what it looks like (i.e. it doesn't show
+                # errors using PowerShell's terrible error view). Besides, in a build tool, stack traces are only 
+                # useful for Whiskey developers, not people trying to figure out why/how their build broke.
+                #
+                # This error can *not* be caught *or* redirected by PowerShell since it is bypassing PowerShell's streams
+                # and going direct to STDERR.
+                $Host.UI.WriteErrorLine($errorMsg)
+            }
+            # Still make sure it appears in the global error variable.
+            Write-Error -Message $errorMsg -ErrorAction ([Management.Automation.ActionPreference]::SilentlyContinue)
         }
     }
 }

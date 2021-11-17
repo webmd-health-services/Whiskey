@@ -63,8 +63,6 @@
 
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
-                            'Formats\System.Exception.format.ps1xml',
-                            'Formats\System.Management.Automation.ErrorRecord.format.ps1xml',
                             'Formats\Whiskey.BuildInfo.format.ps1xml',
                             'Formats\Whiskey.BuildVersion.format.ps1xml',
                             'Formats\Whiskey.Context.format.ps1xml',
