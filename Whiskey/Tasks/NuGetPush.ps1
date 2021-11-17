@@ -89,6 +89,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         $numErrorsAtStart = $Global:Error.Count
         try
         {
+            $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
             Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
             $packageExists = $true
         }
@@ -138,6 +139,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         {
             try
             {
+                $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
                 Invoke-WebRequest -Uri $packageUri -UseBasicParsing | Out-Null
             }
             catch

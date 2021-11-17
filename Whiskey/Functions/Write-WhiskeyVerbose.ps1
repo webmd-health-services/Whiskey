@@ -6,37 +6,28 @@ function Write-WhiskeyVerbose
     Logs verbose messages.
 
     .DESCRIPTION
-    The `Write-WhiskeyVerbose` function writes verbose messages with PowerShell's `Write-Verbose` cmdlet. Pass the context of the current build to the `Context` parameter and the message to log to the `Message` parameter. Each message is prefixed with the duration of the current build and the current task name (if any). If the duration can't be determined, the current time is used.
+    The `Write-WhiskeyVerbose` function writes verbose messages with PowerShell's `Write-Verbose` cmdlet. Pass the
+    context of the current build to the `Context` parameter and the message to log to the `Message` parameter. Each
+    message is prefixed with the duration of the current build and current task. Multiple messages may be passed to the
+    `Message` parameter or piped to `Write-WhiskeyVerbose`.
 
-    If `$VerbosePreference` is set to `SilentlyContinue` or `Ignore`, Whiskey doesn't write anything at all. Message are silently dropped. Whiskey does its best to do as little work as possible.
-
-    If you pipe multiple messages to `Write-WhiskeyVerbose`, they are grouped together. The duration and task name are written before and after the group. Each message in the group is then written unchanged, indented slightly, e.g.
-
-        [00:00:08.42]  [Log]
-            My first verbose message.
-            My second verbose message.
-        [00:00:08.52]  [Log]
+    If `$VerbosePreference` is set to `SilentlyContinue` or `Ignore`, `Write-WhiskeyVerbose` does no work and
+    immediately returns
 
     To see verbose messages in your build output, use the `-Verbose` switch when running your build.
 
-    You can also log error, warning, info, and debug messages with Whiskey's `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, and `Write-WhiskeyDebug` functions.
+    You can also log error, warning, info, and debug messages with Whiskey's `Write-WhiskeyError`,
+    `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, and `Write-WhiskeyDebug` functions.
 
     .EXAMPLE
     Write-WhiskeyVerbose -Context $context -Message 'My verbose message'
 
-    Demonstrates how write a verbose message. In this case, something like this would be written:
-
-        [00:00:20:93]  [Log]  My verbose message.
+    Demonstrates how to write a verbose message.
 
     .EXAMPLE
     $messages | Write-WhiskeyVerbose -Context $context
 
-    Demonstrates that you can pipe messages to `Write-WhiskeyVerbose`. If multiple messages are piped, the are grouped together like this:
-
-        [00:00:16.39]  [Log]
-            My first verbose message.
-            My second verbose message.
-        [00:00:16.58]  [Log]
+    Demonstrates that you can pipe messages to `Write-WhiskeyVerbose`.
     #>
     [CmdletBinding()]
     param(

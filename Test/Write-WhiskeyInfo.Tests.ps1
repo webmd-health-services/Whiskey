@@ -16,11 +16,11 @@ Describe 'Write-WhiskeyInfo' {
             $DebugPreference = 'Continue'
             $debug = Write-WhiskeyDebug 'Debug!' 5>&1 
 
-            $errors | Should -CMatch 'Error!'
-            $warnings | Should -CMatch '\[23:59:59.99\]  Warning!'
-            $info | Should -CMatch '\[23:59:59.99\]  Info!'
-            $verbose | Should -CMatch '\[23:59:59.99\]  Verbose!'
-            $debug | Should -CMatch '\[23:59:59.99\]  Debug!'
+            $errors | Should -Be 'Error!'
+            $warnings | Should -Be 'Warning!'
+            $info | Should -CMatch '^\[23:59:59\]    Info!$'
+            $verbose | Should -Be 'Verbose!'
+            $debug | Should -Be 'Debug!'
         }
     }
 
@@ -42,16 +42,17 @@ Describe 'Write-WhiskeyInfo' {
                     $DebugPreference = 'Continue'
                     $debug = Write-WhiskeyDebug 'Debug!' 5>&1
 
-                    $errors | Should -CMatch 'Error!'
-                    $warnings | Should -CMatch ('\[00:00:\d{{2}}\.\d{{2}}\]  \[{0}\]  Warning!' -f $Context.TaskName)
-                    $info | Should -CMatch ('\[00:00:\d{{2}}\.\d{{2}}\]  \[{0}\]  Info!' -f $Context.TaskName)
-                    $verbose | Should -CMatch ('\[00:00:\d{{2}}\.\d{{2}}\]  \[{0}\]  Verbose!' -f $Context.TaskName)
-                    $debug | Should -CMatch ('\[00:00:\d{{2}}\.\d{{2}}\]  \[{0}\]  Debug!' -f $Context.TaskName)
+                    $errors | Should -Be 'Error!'
+                    $warnings | Should -Be 'Warning!'
+                    $durationRegex = '\[ \dm\d\ds\]  \[ \dm\d\ds\]'
+                    $info | Should -CMatch "^$($durationRegex)    Info!$"
+                    $verbose | Should -Be "Verbose!"
+                    $debug | Should -Be "Debug!"
                 }
 
                 $context = New-Object 'Whiskey.Context'
-                $context.StartedAt = Get-Date
-                $context.TaskName = 'WriteLog'
+                $context.StartBuild()
+                $context.StartTask('WriteLog')
 
                 Invoke-Write -Context $context -InformationVariable 'output'
             }
@@ -100,48 +101,37 @@ Describe 'Write-WhiskeyInfo' {
         }
     }
 
-    It 'should omit task name part if no task name' {
-        $context = New-Object 'Whiskey.Context'
-        $context.StartedAt = Get-Date
-
-        $InformationPreference = 'Continue'
-        Write-WhiskeyInfo -Context $context -Message 'Message!' -InformationVariable 'output'
-        $output | Should -CMatch '\[00:00:\d{2}.\d{2}\]  Message!' 
-    }
-
     It 'should still write when passed null message' {
         $InformationPreference = 'Continue'
         Write-WhiskeyInfo -Message @($null) -InformationVariable 'output'
-        $output | Should -Match '^\[\d{2}:\d{2}:\d{2}\.\d{2}\]  $'
+        $output | Should -Match '^\[\d{2}:\d{2}:\d{2}\]\ *$'
     }
 
     It 'should still write when passed empty message' {
         $InformationPreference = 'Continue'
         Write-WhiskeyInfo -Message '' -InformationVariable 'output'
-        $output | Should -Match '^\[\d{2}:\d{2}:\d{2}\.\d{2}\]  $'
+        $output | Should -Match '^\[\d{2}:\d{2}:\d{2}\]\ *$'
     }
 
     It ('should write all messages when passed multiple messages with no context') {
         $InformationPreference = 'Continue'
         Write-WhiskeyInfo -Message @('One','Two','Three') -InformationVariable 'output'
-        $output | Should -HaveCount 5
-        $output[0],$output[4] | Should -CMatch '^\[\d{2}:\d{2}:\d{2}\.\d{2}\]$' 
-        $output[1] | Should -CMatch ('^\ {4}One$')
-        $output[2] | Should -CMatch ('^\ {4}Two$')
-        $output[3] | Should -CMatch ('^\ {4}Three$')
+        $output | Should -HaveCount 3
+        $output[0] | Should -CMatch ('^\[\d\d:\d\d:\d\d\]\ {4}One$')
+        $output[1] | Should -CMatch ('^\[\d\d:\d\d:\d\d\]\ {4}Two$')
+        $output[2] | Should -CMatch ('^\[\d\d:\d\d:\d\d\]\ {4}Three$')
     }
 
     It ('should write all messages when passed multiple messages and a context') {
         $InformationPreference = 'Continue'
         $context = [Whiskey.Context]::new()
-        $context.TaskName = 'Snafu'
-        $context.StartedAt = Get-Date
+        $context.StartBuild()
+        $context.StartTask('Snafu')
         Write-WhiskeyInfo -Context $context -Message @('One','Two','Three') -InformationVariable 'output'
-        $output | Should -HaveCount 5
-        $output[0],$output[4] | Should -CMatch '^\[\d{2}:\d{2}:\d{2}\.\d{2}\]  \[Snafu\]$'
-        $output[1] | Should -CMatch ('^    One$')
-        $output[2] | Should -CMatch ('^    Two$')
-        $output[3] | Should -CMatch ('^    Three$')
+        $output | Should -HaveCount 3
+        $output[0] | Should -CMatch ('^(\[ \dm\d\ds\]  ){2}  One$')
+        $output[1] | Should -CMatch ('^(\[ \dm\d\ds\]  ){2}  Two$')
+        $output[2] | Should -CMatch ('^(\[ \dm\d\ds\]  ){2}  Three$')
     }
 }
 
@@ -149,22 +139,35 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
 {
     Describe ('Write-Whiskey{0}.when piped messages' -f $level) {
         It ('should bookend all messages and indent each message') {
-            $context = [Whiskey.Context]::new()
-            $context.TaskName = 'Fubar'
-            $context.StartedAt = Get-Date
+            $context = [Whiskey.Context]::New()
+            $context.StartBuild()
+            $context.StartTask('Fubar')
             $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  = 
                 $DebugPreference = 'Continue'
-
 
             function ThenOutputAsGroup
             {
                 param(
-                    [String[]]$Output
+                    [String[]]$Output,
+                    [switch]$NoIndent,
+                    [switch]$NoDuration
                 )
-                $output[0],$output[4] | Should -CMatch ('^\[00:00:\d{{2}}\.\d{{2}}\]  \[Fubar\]$' -f $level.ToUpperInvariant())
-                $output[1] | Should -CMatch ('^    1$')
-                $output[2] | Should -CMatch ('^    2$')
-                $output[3] | Should -CMatch ('^    3$')
+
+                $indentRegex = '\ \ '
+                if( $NoIndent )
+                {
+                    $indentRegex = ''
+                }
+
+                $durationRegex = '(\[ \dm\d\ds\]\ \ ){2}'
+                if( $NoDuration )
+                {
+                    $durationRegex = ''
+                }
+
+                $output[0] | Should -CMatch "^$($durationRegex)$($indentRegex)1$"
+                $output[1] | Should -CMatch "^$($durationRegex)$($indentRegex)2$"
+                $output[2] | Should -CMatch "^$($durationRegex)$($indentRegex)3$"
             }
 
             $output =
@@ -186,7 +189,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 'Warning'
                 {
                     $errors | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $warnings 
+                    ThenOutputAsGroup $warnings -NoDuration -NoIndent
                     $info | Should -BeNullOrEmpty
                     $output | Should -BeNullOrEmpty
                 }
@@ -194,7 +197,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $info 
+                    ThenOutputAsGroup $info
                     $output | Should -BeNullOrEmpty
                 }
                 'Verbose'
@@ -202,14 +205,14 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output
+                    ThenOutputAsGroup $output -NoDuration -NoIndent
                 }
                 'Debug'
                 {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output
+                    ThenOutputAsGroup $output -NoDuration -NoIndent
                 }
             }
         }
