@@ -38,10 +38,13 @@ param(
     [String] $MSBuildConfiguration = 'Debug'
 )
 
-$ErrorActionPreference = 'Stop'
+# $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
+
+$PSVersionTable | Out-String
+Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" -ErrorAction Ignore
 
 # ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
 $manifest = Test-ModuleManifest -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1') -ErrorAction Ignore
@@ -164,7 +167,12 @@ try
     }
 
     $whiskeyCsprojPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Whiskey.csproj' -Resolve
-    dotnet publish $params --no-self-contained --no-build --no-restore -o $whiskeyBinPath $whiskeyCsprojPath
+    foreach( $framework in @('netstandard2.0', 'net452') )
+    {
+        $outPath = Join-Path -Path $whiskeyBinPath -ChildPath $framework
+        dotnet publish $params -f $framework --no-self-contained --no-build --no-restore -o $outPath $whiskeyCsprojPath
+    }
+
 }
 finally
 {

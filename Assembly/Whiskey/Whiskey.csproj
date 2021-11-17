@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
     <Authors>WebMD Health Services</Authors>
     <Version>0.0.0</Version>
     <Copyright>Copyright © WebMD Health Services 2018</Copyright>
@@ -12,9 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PowerShellStandard.Library" Version="5.1.0">
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="SemanticVersion" Version="2.1.0" />
     <PackageReference Include="YamlDotNet" Version="11.2.1" />
   </ItemGroup>

@@ -19,9 +19,23 @@ $releases =
 
 $latestRelease = 
     $releases |
-    Where-Object { $_.name -notlike '*-*' } |
+    Where-Object 'name' -NotLike '*-*' |
     Sort-Object -Property 'created_at' -Descending |
     Select-Object -First 1
+
+# TODO: remove once a version after 0.48.3 is published.
+if( ($latestRelease -as [version]) -le [version]'0.48.3' )
+{
+    $net4Key = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction Ignore
+    $net462Release = 460798
+    if( $net4Key -and $net4Key.Release -le $net462Release )
+    {
+        $msg = 'These tests require a version of Whiskey after 0.48.3 when the tests are running on .NET ' + 
+               "$($net4Key.Version) or earlier."
+        Write-Warning $msg
+        return
+    }
+}
 
 function ThenModule
 {
