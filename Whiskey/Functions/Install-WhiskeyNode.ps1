@@ -34,6 +34,7 @@ function Install-WhiskeyNode
 
     $npmVersionToInstall = $null
     $nodeVersionToInstall = $null
+    $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
     $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
     if( $Version )
     {
@@ -100,7 +101,8 @@ function Install-WhiskeyNode
         $installNode = $true
     }
 
-    $nodeRoot = Join-Path -Path $InstallRoot -ChildPath '.node'
+    $nodeDirectoryName = '.node'
+    $nodeRoot = Join-Path -Path $InstallRoot -ChildPath $nodeDirectoryName
 
     $platform = 'win'
     $packageExtension = 'zip'
@@ -126,6 +128,7 @@ function Install-WhiskeyNode
         {
             try
             {
+                $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
                 Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
             }
             catch
@@ -162,40 +165,52 @@ function Install-WhiskeyNode
     {
         if( $IsWindows )
         {
-            # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download 7-zip. It can handle paths that long.
+            # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download
+            # 7-zip because it can handle long paths.
             $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
 
             $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
             $outputDirectoryName = $archive.Entries[0].FullName
             $archive.Dispose()
-            $outputDirectoryName = $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+            $outputDirectoryName =
+                $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
             $outputRoot = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
 
             Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputRoot)
             & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
 
-            $nodeDirectoryName = '.node'
-            $maxTime = [TimeSpan]::New(0, 0, 10)
+            # We use New-TimeSpan so we can mock it and in the mock wait for our simulated anti-virus process to lock a
+            # file (i.e. so we can test that this wait logic works).
+            $maxTime = New-TimeSpan -Seconds 10
             $timer = [Diagnostics.Stopwatch]::StartNew()
             $exists = $false
+            $lastError = $null
+            Write-WhiskeyDebug "Renaming ""$($outputRoot)"" -> ""$($nodeDirectoryName)""."
             do
             {
-                Rename-Item -Path $outputRoot -NewName '.node' -ErrorAction Ignore
+                Rename-Item -Path $outputRoot -NewName $nodeDirectoryName -ErrorAction SilentlyContinue
                 $exists = Test-Path -Path $nodeRoot -PathType Container
 
                 if( $exists )
                 {
+                    Write-WhiskeyDebug "Rename succeeded."
                     break
                 }
 
-                Start-Sleep -Milliseconds 100
+                $lastError = $Global:Error | Select-Object -First 1
+                Write-WhiskeyDebug -Message "Rename failed: $($lastError)"
+
+                $Global:Error.RemoveAt(0)
+                Start-Sleep -Seconds 1
             }
             while( $timer.Elapsed -lt $maxTime )
 
             if( -not $exists )
             {
-                Write-WhiskeyError -Message ("Failed to install Node to ""{0}"": failed to rename ""{1}"" to ""{2}""." -f $nodeRoot, $outputDirectoryName, $nodeDirectoryName)
+                $msg = "Failed to install Node to ""$($nodeRoot)"" because renaming directory " +
+                       """$($outputDirectoryName)"" to ""$($nodeDirectoryName)"" failed: $($lastError)"
+                Write-WhiskeyError -Message $msg
             }
 
         }

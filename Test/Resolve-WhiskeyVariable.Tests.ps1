@@ -504,7 +504,7 @@ Describe 'Resolve-WhiskeyVariable.WHISKEY_SEMVER1_PATCH' {
 Describe 'Resolve-WhiskeyVariable.WHISKEY_BUILD_STARTED_AT' {
     It 'should resolve' {
         Init
-        $context.StartedAt = Get-Date
+        $context.StartBuild()
         WhenResolving '$(WHISKEY_BUILD_STARTED_AT.Year)'
         ThenValueIs $context.StartedAt.Year.ToString()
     }

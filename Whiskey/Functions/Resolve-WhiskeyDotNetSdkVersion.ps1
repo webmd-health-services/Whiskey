@@ -37,6 +37,8 @@ function Resolve-WhiskeyDotNetSdkVersion
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+
     if ($Version)
     {
         $urisToTry = @(

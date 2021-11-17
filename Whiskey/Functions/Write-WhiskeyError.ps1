@@ -6,15 +6,23 @@ function Write-WhiskeyError
     Logs error messages.
 
     .DESCRIPTION
-    The `Write-WhiskeyError` function writes error messages using `Write-Error`. Pass the context of the current build to the `Context` parameter and the message you want to write to the `Message` parameter. Error messages are prefixed with the duration of the current build and the current task name (if any). If the duration of the current build can't be determined, the current time is written instead.
+    The `Write-WhiskeyError` function writes error messages using PowerShell's `Write-Error` cmdlet. Pass the context of
+    the current build to the `Context` parameter and the message you want to write to the `Message` parameter. Error
+    messages are prefixed with the duration of the current build and current task.
+
+    You may pass multiple message to the `Message` parameter or pipe messages to `Write-WhiskeyError`. All messages are
+    joined together with newlines before `Write-Error` is called.
     
-    By default, error messages do not stop a build. If you want to log an error *and* fail/stop a build, use `Stop-WhiskeyTask`.
+    By default, error messages do *not* stop a build. If you want to log an error *and* fail/stop a build, use
+    the `Stop-WhiskeyTask` function.
 
-    If `$ErrorActionPreference` is `Ignore`, Whiskey drops all messages and tries to do as little as possible so logging has minimal impact. For all other error action preferences, messages are still processed and written.
+    If `$ErrorActionPreference` is `Ignore`, `Write-WhiskeyError` does no work and immediately returns
 
-    Whiskey ships with its own error output formatter that will show the entire script stack trace of an error. You'll get this view even if you don't use `Write-WhiskeyError`.
+    Whiskey ships with its own error output formatter that will show the entire script stack trace of an error. You'll
+    get this view even if you don't use `Write-WhiskeyError`.
 
-    You can also log warning, info, verbose, and debug messages with Whiskey's `Write-WhiskeyWarning`, `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug` functions.
+    You can also log warning, info, verbose, and debug messages with Whiskey's `Write-WhiskeyWarning`,
+    `Write-WhiskeyInfo`, `Write-WhiskeyVerbose`, and `Write-WhiskeyDebug` functions.
 
     .EXAMPLE
     Write-WhiskeyError -Context $context -Message 'Something bad happened!'
@@ -24,7 +32,8 @@ function Write-WhiskeyError
     .EXAMPLE
     $errors | Write-WhiskeyError -Context $context
 
-    Demonstrates that you can pipe messages to `Write-WhiskeyError`.
+    Demonstrates that you can pipe messages to `Write-WhiskeyError`. If you do, all the messages will be combined with
+    a newline before calling `Write-Error`.
     #>
     [CmdletBinding()]
     param(

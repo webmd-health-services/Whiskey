@@ -81,7 +81,7 @@ function Invoke-WhiskeyBuild
         $InformationPreference = 'Continue'
     }
 
-    $Context.StartedAt = $script:buildStartedAt = Get-Date
+    $Context.StartBuild()
 
     Register-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
 
@@ -144,6 +144,11 @@ function Invoke-WhiskeyBuild
         Set-WhiskeyBuildStatus -Context $Context -Status $status
 
         Unregister-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
+
+        $context.StopBuild()
+
+        $msg = "$($status) in $(($context.BuildStopwatch | Format-Stopwatch).Trim())"
+        Write-WhiskeyInfo -Context $context -Message $msg -NoTiming -NoIndent
     }
 
     # There are some errors (strict mode validation failures, command not found errors, etc.) that stop a build, but 

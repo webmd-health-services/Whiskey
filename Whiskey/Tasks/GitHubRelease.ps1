@@ -78,6 +78,7 @@ function New-WhiskeyGitHubRelease
 
         try
         {
+            $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
             Invoke-RestMethod -Uri $Uri -Method $Method -Headers $headers -ContentType $ContentType @optionalParams
         }
         catch

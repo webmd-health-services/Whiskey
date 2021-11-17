@@ -9,6 +9,7 @@ $warnings = $null
 $infos = $null
 $output = $null
 $failed = $false
+$durationRegex = '(\[ \dm\d\ds\]\ \ ){2}'
 
 function Init
 {
@@ -57,7 +58,9 @@ function ThenWroteInfo
         [String]$Message
     )
 
-    $infos | Should -Match $Message
+    $infos | Select-Object -First 1 | Should -Match "$($durationRegex)Log"
+    $infos | Select-Object -Skip 1 | Select-Object -SkipLast 1 | Should -Match "$($durationRegex)\ \ $($Message)"
+    $infos | Select-Object -Last 1 | Should -Match "^\[ \dm\d\ds\]  \[ \dm\d\ds\]$"
 }
 
 function ThenWroteVerbose
@@ -216,12 +219,7 @@ Describe 'Log.when logging multiple messages' {
     It 'should group all the messages' {
         Init
         WhenLogging 'line 1', 'line 2', 'line 3' 
-        $infos | Should -HaveCount 5
-        $infos[0] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
-        $infos[1] | Should -Match '^\ {4}line 1$'
-        $infos[2] | Should -Match '^\ {4}line 2$'
-        $infos[3] | Should -Match '^\ {4}line 3$'
-        $infos[4] | Should -Match ('^\[00:00:0\d.\d\d\]  \[Log\]$')
+        ThenWroteInfo 'line (1|2|3)'
     }
 }
 

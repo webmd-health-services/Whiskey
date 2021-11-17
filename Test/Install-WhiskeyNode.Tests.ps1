@@ -39,9 +39,22 @@ function Init
     $script:taskWorkingDirectory = $testRoot
 }
 
-function Reset 
+function Reset
 {
+    [CmdletBinding()]
+    param(
+    )
+
     Remove-Node -BuildRoot $testRoot
+    # Remove any leftover or still running background jobs.
+    Write-Verbose -Message 'Removing leftover jobs.'
+    $DebugPreference = 'Continue'
+    $jobs = Get-Job | Where-Object 'Name' -EQ $PSCommandPath
+    $jobs | Receive-Job
+    $jobs | Remove-Job -Force
+    Write-Verbose -Message 'Done removing jobs.'
+    $Global:VerbosePreference = 'SilentlyContinue'
+    $Global:DebugPreference = 'SilentlyContinue'
 }
 
 function ThenNodeInstalled
@@ -156,65 +169,66 @@ function WhenInstallingTool
     {
         $script:nodePath = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' -Parameter $parameter
     }
-    catch
-    {
-        $script:threwException = $true
-        Write-Error -ErrorRecord $_
-    }
     finally
     {
         Pop-Location
     }
 }
 
-function Lock-File {
+function Lock-File
+{
     param(
-        $Seconds,
-        $File,
-        $DirName
+        $Duration,
+        $Path
     )
 
-    Start-Job -ScriptBlock {    
+    Start-Job -Name $PSCommandPath -ScriptBlock {
 
-        while(-not (Test-Path -Path (Join-Path -Path $using:testRoot -ChildPath $using:DirName ) ) )
+        $DebugPreference = 'Continue'
+
+        $parentDir = $using:Path | Split-Path
+        Write-Debug "[$(Get-Date)]  Waiting for ""$($parentDir)"" to exist."
+        while(-not (Test-Path -Path $parentDir) )
+        {
+            Start-Sleep -Milliseconds 1
+        }
+        Write-Debug "[$(Get-Date)]  Directory ""$($using:Path)"" exists."
+
+        Write-Debug "[$(Get-Date)]  Locking ""$($using:Path)""."
+        New-Item -Path $using:Path -ItemType 'File'
+        $file = [IO.File]::Open($using:Path, 'Open', 'Write', 'None')
+        Write-Debug "[$(Get-Date)]  Locked  ""$($using:Path)""."
+
+        Write-Debug -Message "[$(Get-Date)]  Waiting for 7-Zip to finish."
+        while( (Get-Process -Name '7za' -ErrorAction Ignore) )
         {
             Start-Sleep -Milliseconds 100
-            continue;
         }
-
-        $file = [IO.File]::Open($using:File, 'Open', 'Write', 'None')
+        Write-Debug -Message "[$(Get-Date)]  7-Zip finished."
 
         try
         {
-            Start-Sleep -Seconds $using:Seconds
+            Write-Debug "[$(Get-Date)]  Holding lock on ""$($using:Path)"" for $($using:Duration)."
+            Start-Sleep -Seconds $using:Duration.TotalSeconds
         }
-
         finally
         {
+            Write-Debug "[$(Get-Date)]  Unlocking/closing ""$($using:Path)""."
             $file.Close()
+            Write-Debug "[$(Get-Date)]  Unlocked ""$($using:Path)""."
         }
-        
     }
-
-    # Wait for file to get locked
-    do
-    {
-        Start-Sleep -Milliseconds 100
-        Write-Debug -Message ('Waiting for hosts file to get locked.')
-    }
-    while( ( Get-Content -Path $File -ErrorAction Ignore ) )
-
-    $Global:Error.Clear()
 }
 
 function GivenAntiVirusLockingFiles
 {
+    [CmdletBinding()]
     param(
         [String]$NodeVersion,
 
         [switch]$AtLatestVersion,
 
-        [int]$Seconds
+        [TimeSpan]$For
     )
 
     if( $AtLatestVersion )
@@ -229,35 +243,33 @@ function GivenAntiVirusLockingFiles
     if( $IsWindows )
     {
         $platformID = 'win'
-        $extension = 'zip'
     }
     elseif( $IsLinux )
     {
         $platformID = 'linux'
-        $extension = 'tar.xz'
     }
     elseif( $IsMacOS )
     {
         $platformID = 'darwin'
-        $extension = 'tar.gz'
     }
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $NodeVersion,$platformID
     
     $targetFilePath = Join-Path -Path $testRoot -ChildPath $extractedDirName
-    $targetFile = Join-Path -Path $targetFilePath -ChildPath 'LICENSE'
+    $lockSignalPath = Join-Path -Path $targetFilePath -ChildPath '.lock'
 
-    $job = Lock-File -Seconds $Seconds -File $targetFile -DirName $extractedDirName
+    Lock-File -Duration $For -Path $lockSignalPath
 
-    try 
-    {
-        WhenInstallingTool
-	}
-    finally 
-    {
-        $job | Wait-Job | Receive-Job
-    }      
-}   
+    Mock -CommandName 'New-TimeSpan' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
+        Write-WhiskeyDebug "Waiting for background job to lock file ""$($lockSignalPath)""."
+        while( -not (Test-Path -Path "$($lockSignalPath)") )
+        {
+            Start-Sleep -Milliseconds 1
+        }
+        Write-WhiskeyDebug ("File ""$($lockSignalPath)"" locked.")
+        return [TimeSpan]::New(`$Days, `$Hours, `$Minutes, `$Seconds)
+"@))
+}
 
 Describe 'Install-WhiskeyNode.when installing' {
     AfterEach { Reset }
@@ -284,8 +296,7 @@ Describe 'Install-WhiskeyNode.when installing old version' {
     }
 }
 "@
-        WhenInstallingTool -ErrorAction SilentlyContinue
-        ThenThrewException ([regex]::Escape(('Failed to download Node v{0}' -f $oldVersion)))
+        { WhenInstallingTool } | Should -Throw ('Failed to download Node v{0}' -f $oldVersion)
         ThenNodeNotInstalled
         ThenNodePackageNotFound
     }
@@ -436,23 +447,27 @@ Describe 'Install-WhiskeyNode.when run in clean mode and Node is installed' {
 if( $IsWindows )
 {
     Describe 'Install-WhiskeyNode.when anti-virus locks file in uncompressed package' {
-        AfterEach { Reset }
+        AfterEach { Reset -Verbose }
         It 'should still install Node.js' {
+            $Global:VerbosePreference = 'Continue'
+            $Global:DebugPreference = 'Continue'
             Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 13
+            GivenAntiVirusLockingFiles -AtLatestVersion -For '00:00:05'
+            WhenInstallingTool
             ThenNodeInstalled -AtLatestVersion -AndArchiveFileExists
         }
     }
 
     Describe 'Install-WhiskeyNode.when anti-virus locks the file too long' {
-        AfterEach { Reset }
+        AfterEach { Reset -Verbose }
         It 'should fail' {
+            $Global:VerbosePreference = 'Continue'
+            $Global:DebugPreference = 'Continue'
             Init
-            GivenAntiVirusLockingFiles -AtLatestVersion -Seconds 120
+            GivenAntiVirusLockingFiles -AtLatestVersion -For '00:00:20'
+            { WhenInstallingTool } | Should -Throw 'Node executable doesn''t exist'
             ThenNodeNotInstalled
+            $Global:Error | Where-Object { $_ -like '*because renaming*' } | Should -Not -BeNullOrEmpty
         }
     }
 }
-
-
-
