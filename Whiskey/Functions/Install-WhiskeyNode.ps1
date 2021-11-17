@@ -126,6 +126,12 @@ function Install-WhiskeyNode
 
         if( $installNode )
         {
+            if( -not (Test-Path -Path $OutputPath) )
+            {
+                Write-WhiskeyDebug -Message "Creating output directory ""$($OutputPath)""."
+                New-Item -Path $OutputPath -ItemType 'Directory' -Force | Out-Null
+            }
+
             try
             {
                 $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
@@ -146,7 +152,7 @@ function Install-WhiskeyNode
                 }
                 else
                 {
-                    Write-WhiskeyError -ErrorRecord $_
+                    Write-WhiskeyError -Message "Exception downloading ""$($uri)"": $($_)"
                     $responseInfo = 'Please see previous error for more information.'
                 }
 
