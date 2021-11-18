@@ -5,8 +5,9 @@ Set-StrictMode -Version 'Latest'
 
 $name = $null
 $output = $null
-$registryUri = 'http://registry.npmjs.org'
 $version = $null
+$testRoot = $null
+$testNum = 0
 
 function Init
 {
@@ -14,7 +15,9 @@ function Init
     $script:name = $null
     $script:output = $null
     $script:version = $null
-    Install-Node
+    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($script:testNum++)
+    New-Item -Path $script:testRoot -ItemType 'Directory' -Force
+    Install-Node -BuildRoot $script:testRoot
 }
 
 function GivenNpmSucceedsButModuleNotInstalled
@@ -40,7 +43,7 @@ function GivenVersion
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $TestDrive.FullName -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
 
     @"
 {
@@ -53,16 +56,11 @@ function CreatePackageJson
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
 
-    @"
+}
+
+function Reset
 {
-    "name": "NPM-Test-App",
-    "version": "0.0.1",
-    "lockfileVersion": 1,
-    "requires": true,
-    "dependencies": {
-    }
-} 
-"@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
+    # Remove-Node -BuildRoot $script:testRoot
 }
 
 function WhenInstallingNodeModule
@@ -80,9 +78,9 @@ function WhenInstallingNodeModule
     }
 
     $parameter['Name'] = $name
-    $parameter['BuildRootPath'] = $TestDrive.FullName
+    $parameter['BuildRootPath'] = $script:testRoot
 
-    Push-Location $TestDrive.FullName
+    Push-Location $script:testRoot
     try
     {
         # Ignore STDERR because PowerShell on .NET Framework <= 4.6.2 converts command stderr to gross ErrorRecords
@@ -114,7 +112,7 @@ function ThenModule
         [switch]$DoesNotExist
     )
 
-    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $TestDrive.FullName
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:testRoot
 
     if ($Exists)
     {
@@ -152,7 +150,7 @@ function ThenReturnedPathForModule
         $Module
     )
 
-    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Module -BuildRootPath $TestDrive.FullName
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Module -BuildRootPath $script:testRoot
     
     $output | Should -Be $modulePath
 }
@@ -163,7 +161,7 @@ function ThenReturnedNothing
 }
 
 Describe 'Install-WhiskeyNodeModule.when given name' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should install the module' {
         Init
         GivenName 'wrappy'
@@ -175,7 +173,7 @@ Describe 'Install-WhiskeyNodeModule.when given name' {
 }
 
 Describe 'Install-WhiskeyNodeModule.when given name and version' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should install that version' {
         Init
         GivenName 'wrappy'
@@ -188,7 +186,7 @@ Describe 'Install-WhiskeyNodeModule.when given name and version' {
 }
 
 Describe 'Install-WhiskeyNodeModule.when given bad module name' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenName 'nonexistentmodule'
@@ -200,7 +198,7 @@ Describe 'Install-WhiskeyNodeModule.when given bad module name' {
 }
 
 Describe 'Install-WhiskeyNodeModule.when NPM executes successfully but module is not found' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenName 'wrappy'
