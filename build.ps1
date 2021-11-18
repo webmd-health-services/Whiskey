@@ -122,10 +122,22 @@ else
         exit 1
     }
 
-    # SDK
-    & $dotnetShInstallPath --channel 'LTS'
-    # Runtime for tests
-    & $dotnetShInstallPath --channel '6.0' --runtime 'dotnet'
+    $output = @()
+    bash -c @"
+. '$($dotnetShInstallPath)' --channel 'LTS'
+which dotnet
+. '$($dotnetShInstallPath)' --channel '6.0' --runtime 'dotnet'
+"@ |
+        Tee-Object -Variable 'output'
+
+    $dotnetPath =
+        $output | Where-Object { Test-Path -Path $_ -PathType Leaf } | Select-Object -First 1 | Split-Path -Parent
+    if( -not $dotnetPath )
+    {
+        $msg = "Shell command to install .NET didn't return the path to the dotnet command."
+        Write-Error -Message $msg -ErrorAction Stop
+    }
+    $env:PATH = "$($dotnetPath)$([IO.Path]::PathSeparator)$($env:PATH)"
 }
 
 if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )

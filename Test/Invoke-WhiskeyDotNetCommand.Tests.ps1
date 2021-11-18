@@ -275,8 +275,7 @@ Describe 'Invoke-WhiskeyDotNetCommand.when dotnet command exits with non-zero ex
     }
 }
 
-$realDotNetPath = Get-Command -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\.dotnet\dotnet') |
-                    Select-Object -ExpandProperty Source
+$realDotNetPath = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty Source
 Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable' {
     It 'should work with actual dotnet.exe' {
         Init -SkipDotNetMock
