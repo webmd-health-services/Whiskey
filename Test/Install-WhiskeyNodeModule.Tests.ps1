@@ -7,7 +7,6 @@ $name = $null
 $output = $null
 $version = $null
 $testRoot = $null
-$testNum = 0
 
 function Init
 {
@@ -15,8 +14,7 @@ function Init
     $script:name = $null
     $script:output = $null
     $script:version = $null
-    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($script:testNum++)
-    New-Item -Path $script:testRoot -ItemType 'Directory' -Force
+    $script:testRoot = New-WhiskeyTestRoot
     Install-Node -BuildRoot $script:testRoot
 }
 
@@ -60,7 +58,6 @@ function CreatePackageJson
 
 function Reset
 {
-    # Remove-Node -BuildRoot $script:testRoot
 }
 
 function WhenInstallingNodeModule
