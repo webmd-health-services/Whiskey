@@ -18,7 +18,7 @@ $whiskeyScriptRoot = $PSScriptRoot
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
+$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'nuget.exe' -Resolve
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $buildStartedAt = [DateTime]::MinValue

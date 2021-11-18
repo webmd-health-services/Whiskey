@@ -4,7 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 # Build the assemblies that use NUnit3. Only do this once.
 $latestNUnit3Version = '3.10.0'
-$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve
+$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 $argument = $null
 $clean = $false
