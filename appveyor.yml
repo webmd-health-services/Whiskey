@@ -9,22 +9,13 @@ image:
 - Visual Studio 2015
 - Visual Studio 2017
 - Visual Studio 2019
-- Visual Studio 2022
+# - Visual Studio 2022
 - Ubuntu # Ubuntu and Ubuntu1804 are the same
 - Ubuntu2004
 - Ubuntu1604
-- macOS
-- macOS-BigSur
-- macOS-Mojave
-
-# environment:
-#   matrix:
-#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
-#     LANG: us_US.UTF-8
-#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
-#     LANG: us_US.UTF-8
-#   - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
-#     LANG: us_US.UTF-8
+# - macOS
+# - macOS-BigSur
+# - macOS-Mojave
 
 build:
   verbosity: minimal
@@ -42,7 +33,7 @@ for:
 
 - matrix:
     only:
-    - image: Visual Studio 2022
+    - image: Visual Studio 2019
   environment:
     PUBLISH: True
 
