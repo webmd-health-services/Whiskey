@@ -153,6 +153,13 @@ if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $
     Write-Error -Message  $oldVersionLoadedMsg -ErrorAction Stop 
 }
 
+Write-Timing 'Updating formats.'
+$prependFormats = @(
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Management.Automation.ErrorRecord.format.ps1xml'),
+                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Exception.format.ps1xml')
+                    )
+Update-FormatData -PrependPath $prependFormats
+
 Write-Timing ('Creating internal module variables.')
 
 $dotNetExeName = 'dotnet'
