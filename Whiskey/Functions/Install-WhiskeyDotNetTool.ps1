@@ -83,7 +83,8 @@ function Install-WhiskeyDotNetTool
         $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
     }
 
-    $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot (Join-Path -Path $InstallRoot -ChildPath '.dotnet') -Version $sdkVersion -Global
+    $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+    $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
 
     Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SdkVersion $sdkVersion
 

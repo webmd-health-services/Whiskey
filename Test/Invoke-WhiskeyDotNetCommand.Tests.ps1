@@ -9,11 +9,7 @@ $dotNetPath = $null
 $failed = $false
 $projectPath = $null
 $taskContext = $null
-
-# So we can mock Whiskey's private function.
-function Write-WhiskeyCommand
-{
-}
+$testRoot = $null
 
 function Init
 {
@@ -26,12 +22,12 @@ function Init
     $script:failed = $false
     $script:projectPath = $null
     $script:taskContext = $null
+    $script:testRoot = New-WhiskeyTestRoot
 
     if( -not $SkipDotNetMock )
     {
         Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith $SuccessCommandScriptBlock
     }
-    Mock -CommandName 'Write-WhiskeyCommand' -ModuleName 'Whiskey'
 }
 
 function GivenArgumentList
@@ -98,7 +94,7 @@ function ThenLogFileName
     $expectedLoggerArg = ('/filelogger9 /flp9:LogFile={0};Verbosity=d' -f $logFilePath)
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-        # $DebugPreference = 'Continue'
+        $ArgumentList | Out-String | Write-WhiskeyDebug
         $actualLoggerArg = $ArgumentList[3] -join ' '
         Write-WhiskeyDebug ('LoggerArg  EXPECTED  {0}' -f $expectedLoggerArg)
         Write-WhiskeyDebug ('           ACTUAL    {0}' -f $actualLoggerArg)
@@ -108,6 +104,7 @@ function ThenLogFileName
 
 function ThenNoErrors
 {
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     $Global:Error | Should -BeNullOrEmpty
 }
 
@@ -118,7 +115,6 @@ function ThenRanCommand
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-        # $DebugPreference = 'Continue'
         $actualCommand = $ArgumentList[1]
         Write-WhiskeyDebug ('Name  EXPECTED  {0}' -f $ExpectedCommand)
         Write-WhiskeyDebug ('      ACTUAL    {0}' -f $actualCommand)
@@ -133,7 +129,6 @@ function ThenRanWithArguments
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-        # $DebugPreference = 'Continue'
         $ExpectedArguments = $ExpectedArguments -join ','
         $actualArguments = $ArgumentList[2] -join ','
         Write-WhiskeyDebug ('ArgumentList  EXPECTED  {0}' -f $ExpectedArguments)
@@ -149,7 +144,7 @@ function ThenRanWithPath
     )
 
     Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-        # $DebugPreference = 'Continue'
+        $ArgumentList | Out-String | Write-WhiskeyDebug
         $actualDotNetPath = $ArgumentList[0]
         Write-WhiskeyDebug ('DotNetPath  EXPECTED  {0}' -f $ExpectedPath)
         Write-WhiskeyDebug ('            ACTUAL    {0}' -f $actualDotNetPath)
@@ -170,11 +165,6 @@ function ThenRanWithProject
         Write-WhiskeyDebug ('             ACTUAL    {0}' -f $actualProjectPath)
         $actualProjectPath -eq $ExpectedProjectPath
     }
-}
-
-function ThenWroteCommandInfo
-{
-    Assert-MockCalled -CommandName 'Write-WhiskeyCommand' -ModuleName 'Whiskey'
 }
 
 function WhenRunningDotNetCommand
@@ -201,7 +191,7 @@ function WhenRunningDotNetCommand
 
     try
     {
-        $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
+        $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testRoot
         $parameter['TaskContext'] = $taskContext
         Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyDotNetCommand' -Parameter $parameter 
     }
@@ -228,7 +218,6 @@ Describe 'Invoke-WhiskeyDotNetCommand.when running with minimum parameters' {
         GivenDotNetPath 'C:\dotnet\dotnet.exe'
         GivenCommandName 'build'
         WhenRunningDotNetCommand
-        ThenWroteCommandInfo
         ThenRanWithPath 'C:\dotnet\dotnet.exe'
         ThenRanCommand 'build'
         ThenLogFileName 'dotnet.build.log'
@@ -243,7 +232,6 @@ Describe 'Invoke-WhiskeyDotNetCommand.when running with additional arguments' {
         GivenCommandName 'publish'
         GivenArgumentList '--output=C:\output','--verbosity=diagnostic'
         WhenRunningDotNetCommand
-        ThenWroteCommandInfo
         ThenRanWithPath 'C:\dotnet\dotnet.exe'
         ThenRanCommand 'publish'
         ThenRanWithArguments '--output=C:\output','--verbosity=diagnostic'

@@ -105,6 +105,8 @@ if( -not (Test-Path -Path $whiskeyBinPath) )
 foreach( $url in $binToolUrls )
 {
     $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
+    $msg = "Installing ""$($toolPath)"" from $($url)."
+    Write-Information $msg
     Invoke-WebRequest -Uri $url -OutFile $toolPath
 }
 

@@ -53,9 +53,10 @@ function Invoke-WhiskeyDotNetCommand
         {
             $logFilePath = 'dotnet.{0}.{1}.log' -f $Name.ToLower(),($ProjectPath | Split-Path -Leaf)
         }
+        $logFilePath = $logFilePath -replace '[^a-zA-Z0-9.]', '_'
         $relativeOutDirectory = $TaskContext.OutputDirectory | Resolve-Path -Relative
         $logFilePath = Join-Path -Path $relativeOutDirectory -ChildPath $logFilePath
-        ('/flp9:LogFile={0};Verbosity=d' -f $logFilePath)
+        "/flp9:LogFile=$($logFilePath);Verbosity=d"
     }
 
     $commandInfoArgList = & {

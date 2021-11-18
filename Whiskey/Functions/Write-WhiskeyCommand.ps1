@@ -14,30 +14,30 @@ function Write-WhiskeyCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     
-    $logArgumentList = Invoke-Command {
-                                          if( $Path -match '\ ' )
-                                          {
-                                              '&'
-                                          }
-                                          $Path
-                                          $ArgumentList
-                                      } |
-                                      ForEach-Object { 
-                                          if( $_ -match '\ ' )
-                                          {
-                                              '"{0}"' -f $_.Trim('"',"'")
-                                          }
-                                          else
-                                          {
-                                              $_
-                                          }
-                                      }
+    $logArgumentList = & {
+            if( $Path -match '\ ' )
+            {
+                '&'
+            }
+            $Path
+            $ArgumentList
+        } |
+        ForEach-Object { 
+            if( $_ -match '\ ' )
+            {
+                '"{0}"' -f $_.Trim('"',"'")
+            }
+            else
+            {
+                $_
+            }
+        }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ($logArgumentList -join ' ')
-    Write-WhiskeyVerbose -Context $TaskContext -Message $path
-    $argumentPrefix = ' ' * ($path.Length + 2)
+    Write-WhiskeyInfo -Context $TaskContext -Message ($logArgumentList -join ' ') -InformationAction Continue
+    Write-WhiskeyVerbose -Context $TaskContext -Message $path -Verbose
+    $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
     {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument)
+        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
     }
 }

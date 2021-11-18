@@ -12,115 +12,83 @@ function Install-WhiskeyDotNetSdk
     Install-WhiskeyDotNetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4'
 
     Demonstrates installing .NET Core SDK version 2.1.4 to the 'C:\Build\.dotnet' directory. After install the function will return the path 'C:\Build\.dotnet\dotnet.exe'.
-
-    .EXAMPLE
-    Install-WhiskeyDotNetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4' -Global
-
-    Demonstrates searching for an existing global install of the .NET Core SDK version '2.1.4'. If not found globally, the SDK will be installed to 'C:\Build\.dotnet'.
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         # Directory where the .NET Core SDK will be installed.
-        [String]$InstallRoot,
-
         [Parameter(Mandatory)]
-        # Version of the .NET Core SDK to install.
-        [String]$Version,
+        [String] $InstallRoot,
 
-        # Search for the desired version from existing global installs of the .NET Core SDK. If found, the install is skipped and the path to the global install is returned.
-        [switch]$Global
+        # Version of the .NET Core SDK to install.
+        [Parameter(Mandatory)]
+        [String] $Version
     )
 
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if ($Global)
+    $dotnetPaths = Get-Command -Name 'dotnet' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source'
+    if( $dotnetPaths )
     {
-        $dotnetGlobalInstalls = Get-Command -Name 'dotnet' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Path'
-        if ($dotnetGlobalInstalls)
+        $msg = "Checking for installed .NET SDK $($Version)."
+        Write-WhiskeyVerbose -Message $msg
+        foreach( $dotnetPath in $dotnetPaths )
         {
-            Write-WhiskeyVerbose -Message ('[{0}] Found global installs of .NET Core SDK: "{1}"' -f $MyInvocation.MyCommand,($dotnetGlobalInstalls -join '","'))
+            $sdkPath = Join-Path -Path ($dotnetPath | Split-Path -Parent) -ChildPath ('sdk\{0}' -f $Version)
 
-            Write-WhiskeyVerbose -Message ('[{0}] Checking global installs for SDK version "{1}"' -f $MyInvocation.MyCommand,$Version)
-            foreach ($dotnetPath in $dotnetGlobalInstalls)
+            if (Test-Path -Path $sdkPath -PathType Container)
             {
-                $sdkPath = Join-Path -Path ($dotnetPath | Split-Path -Parent) -ChildPath ('sdk\{0}' -f $Version)
-
-                if (Test-Path -Path $sdkPath -PathType Container)
-                {
-                    Write-WhiskeyVerbose ('[{0}] Found SDK version "{1}" at "{2}"' -f $MyInvocation.MyCommand,$Version,$sdkPath)
-                    return $dotnetPath
-                }
+                $msg = "Found .NET SDK $($Version) at ""$($sdkPath)""."
+                Write-WhiskeyVerbose -Message $msg
+                return $dotnetPath
             }
         }
-
-        Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version "{1}" not found globally' -f $MyInvocation.MyCommand,$Version)
     }
 
-    $verboseParam = @{}
-    if ($VerbosePreference -eq 'Continue')
+    $msg = "Installing .NET SDK $($Version) to ""$($InstallRoot)""."
+    Write-WhiskeyInfo -Message $msg
+
+    if( -not (Test-Path -Path $InstallRoot) )
     {
-        $verboseParam['Verbose'] = $true
+        New-Item -Path $InstallRoot -ItemType 'Directory' | Out-Null
     }
 
-    Write-WhiskeyVerbose -Message ('[{0}] Installing .NET Core SDK version "{1}" to "{2}"' -f $MyInvocation.MyCommand,$Version,$InstallRoot)
-
-    $dotnetInstallScript = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' -Resolve
-    $errorActionParam = @{ ErrorAction = 'Stop' }
-    $installingWithShell = $false
-    $executableName = 'dotnet.exe'
-    if( $IsLinux -or $IsMacOS )
+    # Both scripts handle if the .NET SDK is installed or not.
+    if( $IsWindows )
     {
-        $dotnetInstallScript = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' -Resolve
-        $errorActionParam = @{ }
-        $installingWithShell = $true
-        $executableName = 'dotnet'  
-    }
-    Invoke-Command -NoNewScope -ArgumentList $dotnetInstallScript,$InstallRoot,$Version,$verboseParam -ScriptBlock {
-        param(
-            $dotnetInstall,
-            $InstallDir,
-            $VersionNumber,
-            $Verbose
-        )
-
-        $errCount = $Global:Error.Count
-        & {
-            if( $installingWithShell )
-            {
-                Write-WhiskeyVerbose ('bash {0} -InstallDir "{1}" -Version "{2}" -NoPath' -f $dotnetInstall,$InstallDir,$VersionNumber)
-                bash $dotnetInstall -InstallDir $InstallDir -Version $VersionNumber -NoPath
-            }
-            else 
-            {
-                Write-WhiskeyVerbose ('{0} -InstallDir "{1}" -Version "{2}" -NoPath' -f $dotnetInstall,$InstallDir,$VersionNumber)
-                & $dotnetInstall -InstallDir $InstallDir -Version $VersionNumber -NoPath @Verbose @errorActionParam
-            }
-        } | Write-WhiskeyVerbose
-        if( $installingWithShell -and $LASTEXITCODE )
+        $verboseParam = @{}
+        if( $VerbosePreference -eq 'Continue' )
         {
-            Write-WhiskeyError -Message ('{0} exited with code "{1}". Failed to install .NET Core.' -f $dotnetInstall,$LASTEXITCODE) -ErrorAction Stop
-            return
+            $verboseParam['Verbose'] = $true
         }
-        $newErrCount = $Global:Error.Count
-        for( $count = 0; $count -lt $newErrCount; ++$count )
-        {
-            $Global:Error.RemoveAt(0)
-        }
+        
+        $cmdName = 'dotnet.exe'
+        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' -Resolve
+        $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+        & $dotnetInstallPath -InstallDir $InstallRoot -Version $Version -NoPath @verboseParam
     }
-
-    $dotnetPath = Join-Path -Path $InstallRoot -ChildPath $executableName -Resolve -ErrorAction Ignore
-    if (-not $dotnetPath)
+    else
     {
-        Write-WhiskeyError -Message ('After attempting to install .NET Core SDK version "{0}", the "{1}" executable was not found in "{2}"' -f $Version,$executableName,$InstallRoot)
+        $cmdName = 'dotnet'
+        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' -Resolve
+        bash $dotnetInstallPath -InstallDir $InstallRoot -Version $Version
+    }
+    
+    $dotnetPath = Join-Path -Path $InstallRoot -ChildPath $cmdName -Resolve -ErrorAction Ignore
+    if( -not $dotnetPath )
+    {
+        $msg = "After attempting to install .NET Core SDK version ""$($Version)"", the ""$($cmdName)"" command was " +
+               "not found in ""$($InstallRoot)""."
+        Write-WhiskeyError -Message $msg
         return
     }
 
-    $sdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}' -f $Version)
-    if (-not (Test-Path -Path $sdkPath -PathType Container))
+    $sdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}' -f $Version) -Resolve -ErrorAction Ignore
+    if( -not $sdkPath )
     {
-        Write-WhiskeyError -Message ('The "{0}" command was installed but version "{1}" of the SDK was not found at "{2}"' -f $executableName,$Version,$sdkPath)
+        $msg = "The ""$($cmdName)"" command was installed but .NET SDK ""$($Version)"" doesn't exist in " +
+               """$(Join-Path -Path $InstallRoot -ChildPath 'sdk')""."
+        Write-WhiskeyError -Message $msg
         return
     }
 
