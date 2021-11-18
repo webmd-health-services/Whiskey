@@ -3,13 +3,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$buildID = '80'
-$branch = 'origin/feature/fubar'
-$commitID = 'deadbeefdeadbeefdeadbeefdeadbeef'
-$appBuildMetadata = 'feature-fubar.deadbee'
-$libraryBuildMetadata = '80.feature-fubar.deadbee'
-$developerBuildMetadata = '{0}.{1}' -f [Environment]::UserName,[Environment]::MachineName
-
 function Assert-ConvertsTo
 {
     param(
@@ -29,7 +22,7 @@ function Assert-ConvertsTo
         }
         Describe ('ConvertTo-WhiskeySemanticVersion.when passed {0}' -f $inputDesc) {
             It ('should convert to {0}' -f $expectedVersion) {
-                $InputObject | ConvertTo-WhiskeySemanticVersion | Should Be $expectedVersion
+                $InputObject | ConvertTo-WhiskeySemanticVersion | Should -Be $expectedVersion
             }
         }
     }
@@ -50,3 +43,12 @@ function Assert-ConvertsTo
 '1.0130'           | Assert-ConvertsTo '1.130.0'
 [Version]'1.2.3'   | Assert-ConvertsTo '1.2.3'
 [SemVersion.SemanticVersion]'1.2.3-rc.4+build' | Assert-ConvertsTo '1.2.3-rc.4+build'
+
+Describe 'ConvertTo-WhiskeySemanticVersion.when input is not valid' {
+    It 'should fail' {
+        $Global:Error.Clear()
+        $result = 'fubar' | ConvertTo-WhiskeySemanticVersion -ErrorAction SilentlyContinue
+        $result | Should -BeNullOrEmpty
+        $Global:Error | Should -Match 'Unable to convert'
+    }
+}

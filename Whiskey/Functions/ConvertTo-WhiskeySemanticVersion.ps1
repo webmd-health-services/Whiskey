@@ -25,27 +25,6 @@ function ConvertTo-WhiskeySemanticVersion
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        [Version]$asVersion = $null
-        if( $InputObject -is [String] )
-        {
-            [int]$asInt = 0
-            [Double]$asDouble = 0.0
-            [SemVersion.SemanticVersion]$semVersion = $null
-            if( [SemVersion.SemanticVersion]::TryParse($InputObject,[ref]$semVersion) )
-            {
-                return $semVersion
-            }
-
-            if( [Version]::TryParse($InputObject,[ref]$asVersion) )
-            {
-                $InputObject = $asVersion
-            }
-            elseif( [int]::TryParse($InputObject,[ref]$asInt) )
-            {
-                $InputObject = $asInt
-            }
-        }
-        
         if( $InputObject -is [SemVersion.SemanticVersion] )
         {
             return $InputObject
@@ -78,19 +57,31 @@ function ConvertTo-WhiskeySemanticVersion
                 $InputObject = $InputObject.ToString()
             }
         }
-        else
-        {
-            Write-WhiskeyError -Message ('Unable to convert ''{0}'' to a semantic version. We tried parsing it as a version, date, double, and integer. Sorry. But we''re giving up.' -f $PSBoundParameters['InputObject'])
-            return
-        }
 
-        $semVersion = $null
-        if( ([SemVersion.SemanticVersion]::TryParse($InputObject,[ref]$semVersion)) )
+        [Version]$asVersion = $null
+        [SemVersion.SemanticVersion]$semVersion = $null
+        if( [SemVersion.SemanticVersion]::TryParse($InputObject, [ref]$semVersion) )
         {
             return $semVersion
         }
 
-        Write-WhiskeyError -Message ('Unable to convert ''{0}'' of type ''{1}'' to a semantic version.' -f $PSBoundParameters['InputObject'],$PSBoundParameters['InputObject'].GetType().FullName)
+        if( [Version]::TryParse($InputObject, [ref]$asVersion) )
+        {
+            $major,$minor,$patch =
+                @($asVersion.Major, $asVersion.Minor, $asVersion.Build) |
+                ForEach-Object { if( $_ -eq -1 ) { return 0 } return $_ }
+            return [SemVersion.SemanticVersion]::New($major, $minor, $patch)
+        }
+
+        [int] $asInt = 0
+        if( [int]::TryParse($InputObject, [ref]$asInt) )
+        {
+            return [SemVersion.SemanticVersion]::New($asInt, 0, 0)
+        }
+
+        $original = $PSBoundParameters['InputObject']
+        $msg = "Unable to convert ""[$($original.GetType().FullName)] $($original)"" to a semantic version."
+        Write-WhiskeyError -Message $msg
     }
 }
 
