@@ -63,10 +63,10 @@
 
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
-        'Formats\Whiskey.BuildInfo.format.ps1xml',
-        'Formats\Whiskey.BuildVersion.format.ps1xml',
-        'Formats\Whiskey.Context.format.ps1xml',
-        'Formats\Whiskey.TaskAttribute.format.ps1xml'
+        'Formats\Whiskey.BuildInfo.ps1xml',
+        'Formats\Whiskey.BuildVersion.ps1xml',
+        'Formats\Whiskey.Context.ps1xml',
+        'Formats\Whiskey.TaskAttribute.ps1xml'
     )
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
