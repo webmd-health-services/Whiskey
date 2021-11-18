@@ -173,7 +173,6 @@ Build:
             - Test\Install-WhiskeyTool.Tests.ps1
             - Test\NuGetPack.Tests.ps1
             - Test\Parallel.Tests.ps1
-            - Test\Pester3.Tests.ps1
             - Test\Pester4.Tests.ps1
             - Test\PublishNodeModule.Tests.ps1
     - Tasks:
@@ -217,7 +216,6 @@ Build:
             - "*\\Test\\NUnit2.Tests.ps1"
             - "*\\Test\\NUnit3.Tests.ps1"
             - "*\\Test\\Parallel.Tests.ps1"
-            - "*\\Test\\Pester3.Tests.ps1"
             - "*\\Test\\Pester4.Tests.ps1"
             - "*\\Test\\PowerShell.Tests.ps1"
             - "*\\Test\\ProGetUniversalPackage.Tests.ps1"

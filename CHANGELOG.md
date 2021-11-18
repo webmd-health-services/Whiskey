@@ -1,9 +1,10 @@
-# 0.48.4
+# 0.49.0
 
 * Fixed: Whiskey build doesn't fail if Whiskey configuration file contains invalid YAML.
 * Fixed: Whiskey fails to run on AppVeyor's Visual Studio 2013 build image, i.e. on .NET 4.6.2 or earlier.
 * Fixed: installing Node.js fails if the build's output directory doesn't exist.
 * Fixed: when downloading Node.js, exceptions not related to downloading don't get shown to the user.
+* The `Pester3` task is obsolete and is no longer supported. Use the `Pester4` task instead.
 
 
 # 0.48.3
