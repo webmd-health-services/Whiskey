@@ -96,21 +96,25 @@ if( -not (Test-Path -Path $whiskeyBinPath) )
     New-Item -Path $whiskeyBinPath -ItemType 'Directory' | Out-Null
 }
 
-$nugetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'nuget.exe'
-Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nugetExePath
+[Uri[]] $binToolUrls = @(
+    'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe',
+    'https://dot.net/v1/dotnet-install.sh',
+    'https://dot.net/v1/dotnet-install.ps1'
+)
 
-$dotnetShInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh'
-Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.sh' -OutFile $dotnetShInstallPath
-
-$dotnetPs1InstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
-Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $dotnetPs1InstallPath
+foreach( $url in $binToolUrls )
+{
+    $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
+    Invoke-WebRequest -Uri $url -OutFile $toolPath
+}
 
 if( $IsWindows )
 {
+    $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
     # SDK
-    & $dotnetPs1InstallPath -Channel 'LTS'
+    & $dotnetInstallPath -Channel 'LTS'
     # Runtime for tests
-    & $dotnetPs1InstallPath -Channel '6.0' -Runtime dotnet
+    & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
 }
 else
 {
@@ -122,11 +126,12 @@ else
         exit 1
     }
 
+    $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh'
     $output = @()
     bash -c @"
-. '$($dotnetShInstallPath)' --channel 'LTS'
+. '$($dotnetInstallPath)' --channel 'LTS'
 which dotnet
-. '$($dotnetShInstallPath)' --channel '6.0' --runtime 'dotnet'
+. '$($dotnetInstallPath)' --channel '6.0' --runtime 'dotnet'
 "@ |
         Tee-Object -Variable 'output'
 
