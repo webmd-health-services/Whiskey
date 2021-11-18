@@ -43,6 +43,8 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $IsWindows = $true
 }
 
+Write-Timing 'Loading assemblies.'
+
 # .NET Framework 4.6.2 won't load netstandard2.0 assemblies.
 $frameworkMoniker = 'netstandard2.0'
 $net4Key = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction Ignore
@@ -74,6 +76,7 @@ foreach( $assemblyBaseName in @('SemanticVersion', 'YamlDotNet', 'Whiskey') )
         Write-Error -Message "Exception loading assembly ""$($assemblyPath)"": $($ex)" -ErrorAction Stop
     }
 }
+Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
 
 Write-Timing 'Updating serialiazation depths on Whiskey objects.'
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
