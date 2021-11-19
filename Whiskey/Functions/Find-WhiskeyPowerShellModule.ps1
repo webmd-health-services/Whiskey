@@ -76,8 +76,8 @@ function Find-WhiskeyPowerShellModule
         Start-Job -ScriptBlock {
             $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue'
 
-            Import-Module -Name 'PackageManagement'
-            Import-Module -Name 'PowerShellGet'
+            Import-Module -Name 'PackageManagement' -WarningAction Ignore
+            Import-Module -Name 'PowerShellGet' -WarningAction Ignore
 
             $ErrorActionPreference = $using:ErrorActionPreference
             $VerbosePreference = $using:VerbosePreference

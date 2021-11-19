@@ -5,6 +5,7 @@
 * Fixed: installing Node.js fails if the build's output directory doesn't exist.
 * Fixed: when downloading Node.js, exceptions not related to downloading don't get shown to the user.
 * The `Pester3` task is obsolete and is no longer supported. Use the `Pester4` task instead.
+* Warnings written by `Import-Module` are now hidden.
 
 
 # 0.48.3
