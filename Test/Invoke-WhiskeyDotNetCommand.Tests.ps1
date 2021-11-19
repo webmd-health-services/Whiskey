@@ -264,6 +264,7 @@ Describe 'Invoke-WhiskeyDotNetCommand.when dotnet command exits with non-zero ex
 }
 
 $realDotNetPath = Get-Command -Name 'dotnet' | Select-Object -ExpandProperty Source
+Write-Verbose -Message "[dotnet]  $($realDotNetPath)  $(& $realDotNetPath --version)" -Verbose
 Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable' {
     It 'should work with actual dotnet.exe' {
         Init -SkipDotNetMock

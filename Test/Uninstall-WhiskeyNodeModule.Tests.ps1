@@ -5,7 +5,7 @@ Set-StrictMode -Version 'Latest'
 
 $force = $false
 $name = $null
-$registryUri = 'http://registry.npmjs.org'
+$testRoot = $null
 
 # Private Whiskey function. Define it so Pester doesn't complain about it not existing.
 function Remove-WhiskeyFileSystemItem
@@ -15,16 +15,16 @@ function Remove-WhiskeyFileSystemItem
 function Init
 {
     $Global:Error.Clear()
-    $script:applicationRoot = $TestDrive.FullName
+    $script:testRoot = New-WhiskeyTestRoot
     $script:name = $null
     $script:force = $false
     CreatePackageJson
-    Install-Node
+    Install-Node -BuildRoot $script:testRoot
 }
 
 function CreatePackageJson
 {
-    $packageJsonPath = Join-Path -Path $script:applicationRoot -ChildPath 'package.json'
+    $packageJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
 
     @"
 {
@@ -36,17 +36,6 @@ function CreatePackageJson
     "license": "MIT"
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
-
-    @"
-{
-    "name": "NPM-Test-App",
-    "version": "0.0.1",
-    "lockfileVersion": 1,
-    "requires": true,
-    "dependencies": {
-    }
-} 
-"@ | Set-Content -Path ($packageJsonPath -replace '\bpackage\.json','package-lock.json') -Force
 }
 
 function GivenName
@@ -78,12 +67,12 @@ function GivenInstalledModule
         $Name
     )
 
-    Push-Location $TestDrive.FullName
+    Push-Location $script:testRoot
     try
     {
         $parameter = @{
             'Name' = $Name;
-            'BuildRootPath' = $TestDrive.FullName;
+            'BuildRootPath' = $script:testRoot;
         }
         Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter | Out-Null
     }
@@ -93,6 +82,10 @@ function GivenInstalledModule
     }
 }
 
+function Reset
+{
+}
+
 function WhenUninstallingNodeModule
 {
     [CmdletBinding()]
@@ -100,10 +93,10 @@ function WhenUninstallingNodeModule
     
     $parameter = $PSBoundParameters
     $parameter['Name'] = $name
-    $parameter['BuildRootPath'] = $TestDrive.FullName
+    $parameter['BuildRootPath'] = $script:testRoot
     $parameter['Force'] = $force
 
-    Push-Location $TestDrive.FullName
+    Push-Location $script:testRoot
     try
     {
         Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyNodeModule' -Parameter $parameter
@@ -127,7 +120,7 @@ function ThenModule
         [switch]$DoesNotExist
     )
 
-    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:applicationRoot -ErrorAction Ignore
+    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:testRoot -ErrorAction Ignore
 
     if ($Exists)
     {
@@ -154,7 +147,7 @@ function ThenErrorMessage
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should not fail' {
         Init
         GivenName 'wrappy'
@@ -165,7 +158,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should remove the module' {
         Init
         GivenInstalledModule 'wrappy'
@@ -179,7 +172,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails to remove module' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should ignore uninstall failures' {
         Init
         GivenInstalledModule 'wrappy'
@@ -195,7 +188,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails t
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenInstalledModule 'wrappy'
@@ -207,7 +200,7 @@ Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module'
 }
 
 Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails' {
-    AfterEach { Remove-Node }
+    AfterEach { Reset }
     It 'should fail' {
         Init
         GivenInstalledModule 'wrappy'

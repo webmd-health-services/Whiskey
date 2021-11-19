@@ -450,8 +450,28 @@ Found {0} paths that should resolve to a {1}, but don''t:
             }
             $childName = Split-Path -Leaf  -Path $childPath
         }
-        $caseSensitivePath = Join-Path -Path $parentPath -ChildPath $childName.ToUpperInvariant()
-        $caseSensitive = -not (Test-Path -Path $caseSensitivePath)
+        
+        $caseSensitivePath = [Text.StringBuilder]::New((Join-Path -Path $parentPath -ChildPath $childName))
+        for( $idx = $caseSensitivePath.Length - 1; $idx -ge 0; --$idx )
+        {
+            $char = $caseSensitivePath[$idx]
+            $isUpper = [char]::IsUpper($char)
+            $isLower = [char]::IsLower($char)
+            if( -not ($isUpper -or $isLower) )
+            {
+                # Not a character so move on to the next.
+                continue
+            }
+
+            if( $isUpper )
+            {
+                $caseSensitivePath[$idx] = [char]::ToLower($char)
+                break
+            }
+
+            $caseSensitivePath[$idx] = [char]::ToUpper($char)
+        }
+        $caseSensitive = -not (Test-Path -Path $caseSensitivePath.ToString())
         # We only want to hit the file system once, since globs are pretty greedy.
         $resolvedPaths = 
             Find-GlobFile -Path $currentDir -Include $globPaths -Exclude $Exclude -Force -CaseSensitive:$caseSensitive |

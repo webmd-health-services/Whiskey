@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $failed = $false
+$testRoot = $null
 
 function Init
 {
@@ -13,9 +14,10 @@ function Init
     )
 
     $script:failed = $false
+    $script:testRoot = New-WhiskeyTestRoot
     if( -not $SkipInstall )
     {
-        Install-Node
+        Install-Node -BuildRoot $script:testRoot
     }
 }
 
@@ -26,7 +28,7 @@ function ThenFile
         $Is
     )
 
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath $Named
+    $path = Join-Path -Path $script:testRoot -ChildPath $Named
     $path | Should -Exist
     $path | Should -FileContentMatchMultiline $Is
 }
@@ -69,7 +71,7 @@ function WhenRunningCommand
     }
                         
 
-    $context = New-WhiskeyTestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
     $script:failed = $false
 
     try
@@ -116,7 +118,7 @@ Describe 'Npm.when command not given' {
 Describe 'Npm.when command has no arguments' {
     It 'should not fail' {
         Init
-        WhenRunningCommand 'install'
+        WhenRunningCommand 'version'
         ThenTaskSucceeds
     }
 }

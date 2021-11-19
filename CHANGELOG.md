@@ -6,7 +6,8 @@
 * Fixed: when downloading Node.js, exceptions not related to downloading don't get shown to the user.
 * The `Pester3` task is obsolete and is no longer supported. Use the `Pester4` task instead.
 * Warnings written by `Import-Module` are now hidden.
-
+* Fixed: `Resolve-WhiskeyTaskPath` can return extra files if searching on a case-sensitive file system and the directory
+being searched has no upper or lower case letters.
 
 # 0.48.3
 
