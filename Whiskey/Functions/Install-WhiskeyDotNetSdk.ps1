@@ -3,15 +3,23 @@ function Install-WhiskeyDotNetSdk
 {
     <#
     .SYNOPSIS
-    Installs the .NET Core SDK tooling.
+    Installs the .NET SDK.
 
     .DESCRIPTION
-    The `Install-WhiskeyDotNetSdk` function will install the .NET Core SDK tools and return the path to the installed `dotnet.exe` command. If you specify the `Global` switch then the function will first look for any globally installed .NET Core SDK's with the desired version already installed. If one is found, then install is skipped and the path to the global install is returned. The function uses the `dotnet-install.ps1` script from the [dotnet-cli](https://github.com/dotnet/cli) GitHub repository to download and install the SDK.
+    The `Install-WhiskeyDotNetSdk` function installs the .NET SDK. It uses the `dotnet-install.ps1` and
+    `dotnet-install.sh` scripts—provided and supported by Microsoft—on Windows and Linux/macOS, respectively. Any output
+    from the install scripts is written instead to PowerShell's information stream. The function returns the path to the
+    dotnet command. 
+
+    If a `dotnet` tool is already installed and availble, `Install-WhiskeyDotNetSdk` inspects the contents of its
+    installation folder to determine if the version of the SDK is installed globally (it looks for a "sdk\$VERSION"
+    directory where the dotnet command is. If the SDK is installed, the path to the global dotnet command is returned.
 
     .EXAMPLE
     Install-WhiskeyDotNetSdk -InstallRoot 'C:\Build\.dotnet' -Version '2.1.4'
 
-    Demonstrates installing .NET Core SDK version 2.1.4 to the 'C:\Build\.dotnet' directory. After install the function will return the path 'C:\Build\.dotnet\dotnet.exe'.
+    Demonstrates installing .NET Core SDK version 2.1.4 to the 'C:\Build\.dotnet' directory. After install the function
+    will return the path 'C:\Build\.dotnet\dotnet.exe'.
     #>
     [CmdletBinding()]
     param(
@@ -45,7 +53,8 @@ function Install-WhiskeyDotNetSdk
         }
     }
 
-    $msg = "Installing .NET SDK $($Version) to ""$($InstallRoot | Resolve-WhiskeyRelativePath)""."
+    $InstallRoot = $InstallRoot | Resolve-WhiskeyRelativePath
+    $msg = "Installing .NET SDK $($Version) to ""$($InstallRoot)""."
     Write-WhiskeyInfo -Message $msg
 
     if( -not (Test-Path -Path $InstallRoot) )
@@ -60,7 +69,7 @@ function Install-WhiskeyDotNetSdk
             ''
         }
         '-InstallDir'
-        $InstallRoot | Resolve-WhiskeyRelativePath
+        $InstallRoot
         '-Version'
         $Version
         if( $IsWindows )
@@ -78,18 +87,22 @@ function Install-WhiskeyDotNetSdk
     if( $IsWindows )
     {
         $cmdName = 'dotnet.exe'
-        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' -Resolve
+        $dotnetInstallPath =
+            Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' | Resolve-WhiskeyRelativePath
         $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
         Write-WhiskeyCommand -Path $dotnetInstallPath -ArgumentList $displayArgs
-        & $dotnetInstallPath -InstallDir $InstallRoot -Version $Version -NoPath @verboseParam
+        & $dotnetInstallPath -InstallDir $InstallRoot -Version $Version -NoPath @verboseParam |
+            ForEach-Object { Write-Information $_ }
     }
     else
     {
         $cmdName = 'dotnet'
-        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' -Resolve
+        $dotnetInstallPath =
+            Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' | Resolve-WhiskeyRelativePath
         $displayArgs[0] = $dotnetInstallPath
         Write-WhiskeyCommand -Path 'bash' -ArgumentList $displayArgs
-        bash $dotnetInstallPath -InstallDir $InstallRot -Version $Version
+        bash $dotnetInstallPath -InstallDir $InstallRoot -Version $Version | ForEach-Object { Write-Information $_ }
+        Write-WhiskeyDebug 'Install complete.'
     }
     
     $dotnetPath = Join-Path -Path $InstallRoot -ChildPath $cmdName -Resolve -ErrorAction Ignore

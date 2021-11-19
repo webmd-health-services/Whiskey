@@ -102,12 +102,18 @@ function ThenTaskFailedWithError
     )
 
     $failed | Should -BeTrue
-    $Global:Error | Should -Match $ExpectedError
+    $Global:Error |
+        Where-Object { $_ | Get-Member 'ScriptStackTrace' } |
+        Where-Object 'ScriptStackTrace' -NotMatch '\bdotnet-install\.(ps1|sh)\b' |
+        Should -Match $ExpectedError
 }
 
 function ThenTaskSuccess
 {
-    $Global:Error | Should -BeNullOrEmpty
+    $Global:Error |
+        Where-Object { $_ | Get-Member 'ScriptStackTrace' } |
+        Where-Object 'ScriptStackTrace' -NotMatch '\bdotnet-install\.(ps1|sh)\b' |
+        Should -BeNullOrEmpty
     $failed | Should -BeFalse
 }
 

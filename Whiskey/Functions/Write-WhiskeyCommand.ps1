@@ -13,8 +13,6 @@ function Write-WhiskeyCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $Path = $Path | Resolve-WhiskeyRelativePath
-
     $logArgumentList = & {
             if( $Path -match '\ ' )
             {
@@ -34,11 +32,11 @@ function Write-WhiskeyCommand
             }
         }
 
-    Write-WhiskeyInfo -Context $TaskContext -Message ($logArgumentList -join ' ') -InformationAction Continue
-    Write-WhiskeyDebug -Context $TaskContext -Message $Path -Verbose
+    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ') -InformationAction Continue
+    Write-WhiskeyDebug -Context $Context -Message $Path -Verbose
     $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
     {
-        Write-WhiskeyDebug -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
+        Write-WhiskeyDebug -Context $Context -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
     }
 }
