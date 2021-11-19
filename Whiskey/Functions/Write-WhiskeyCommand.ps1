@@ -3,17 +3,18 @@ function Write-WhiskeyCommand
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [Whiskey.Context]$Context,
+        [Whiskey.Context] $Context,
 
-        [String]$Path,
+        [String] $Path,
 
-        [String[]]$ArgumentList
+        [String[]] $ArgumentList
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
+    $Path = $Path | Resolve-WhiskeyRelativePath
+
     $logArgumentList = & {
             if( $Path -match '\ ' )
             {
@@ -34,10 +35,10 @@ function Write-WhiskeyCommand
         }
 
     Write-WhiskeyInfo -Context $TaskContext -Message ($logArgumentList -join ' ') -InformationAction Continue
-    Write-WhiskeyVerbose -Context $TaskContext -Message $path -Verbose
+    Write-WhiskeyDebug -Context $TaskContext -Message $Path -Verbose
     $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
     {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
+        Write-WhiskeyDebug -Context $TaskContext -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
     }
 }

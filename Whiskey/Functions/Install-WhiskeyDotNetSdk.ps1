@@ -45,7 +45,7 @@ function Install-WhiskeyDotNetSdk
         }
     }
 
-    $msg = "Installing .NET SDK $($Version) to ""$($InstallRoot)""."
+    $msg = "Installing .NET SDK $($Version) to ""$($InstallRoot | Resolve-WhiskeyRelativePath)""."
     Write-WhiskeyInfo -Message $msg
 
     if( -not (Test-Path -Path $InstallRoot) )
@@ -53,25 +53,43 @@ function Install-WhiskeyDotNetSdk
         New-Item -Path $InstallRoot -ItemType 'Directory' | Out-Null
     }
 
+    $verboseParam = @{}
+    [String[]] $displayArgs = & {
+        if( -not $IsWindows )
+        {
+            ''
+        }
+        '-InstallDir'
+        $InstallRoot | Resolve-WhiskeyRelativePath
+        '-Version'
+        $Version
+        if( $IsWindows )
+        {
+            '-NoPath'
+            if( $VerbosePreference -eq 'Continue' )
+            {
+                '-Verbose'
+                $verboseParam['Verbose'] = $true
+            }
+        }
+    }
+
     # Both scripts handle if the .NET SDK is installed or not.
     if( $IsWindows )
     {
-        $verboseParam = @{}
-        if( $VerbosePreference -eq 'Continue' )
-        {
-            $verboseParam['Verbose'] = $true
-        }
-        
         $cmdName = 'dotnet.exe'
         $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1' -Resolve
         $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+        Write-WhiskeyCommand -Path $dotnetInstallPath -ArgumentList $displayArgs
         & $dotnetInstallPath -InstallDir $InstallRoot -Version $Version -NoPath @verboseParam
     }
     else
     {
         $cmdName = 'dotnet'
         $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh' -Resolve
-        bash $dotnetInstallPath -InstallDir $InstallRoot -Version $Version
+        $displayArgs[0] = $dotnetInstallPath
+        Write-WhiskeyCommand -Path 'bash' -ArgumentList $displayArgs
+        bash $dotnetInstallPath -InstallDir $InstallRot -Version $Version
     }
     
     $dotnetPath = Join-Path -Path $InstallRoot -ChildPath $cmdName -Resolve -ErrorAction Ignore
