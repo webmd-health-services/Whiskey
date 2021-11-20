@@ -7,6 +7,8 @@ skip_branch_with_pr: true
 build:
   verbosity: minimal
 
+test: off
+
 environment:
   global:
     PUBLISH: False
