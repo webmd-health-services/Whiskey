@@ -74,7 +74,7 @@ Build:
     Script: Test\build.ps1.Tests.ps1
 
 - Pester4:
-    Script: Test
+    Script: Test/*.Tests.ps1
     Exclude: "*/Test/build.ps1.Tests.ps1"
 
 # Testing performance is different between Linux and Windows so we run tests
