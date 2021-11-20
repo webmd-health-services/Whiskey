@@ -69,8 +69,13 @@ Build:
     - README.md
     DestinationDirectory: Whiskey
 
+# This can't be run with the other tests because it deletes Whiskey while it's imported which PowerShell hates.
+- Pester4:
+    Script: Test\build.ps1.Tests.ps1
+
 - Pester4:
     Script: Test
+    Exclude: "*/Test/build.ps1.Tests.ps1"
 
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
