@@ -4,36 +4,73 @@ skip_tags: true
 
 skip_branch_with_pr: true
 
-image:
-- Visual Studio 2013
-- Visual Studio 2015
-- Visual Studio 2017
-- Visual Studio 2019
-# - Visual Studio 2022
-- Ubuntu # Ubuntu and Ubuntu1804 are the same
-- Ubuntu2004
-- Ubuntu1604
-# - macOS
-# - macOS-BigSur
-# - macOS-Mojave
-
 build:
   verbosity: minimal
 
-build_script:
-- ps: $env:PUBLISH = 'False' ; .\build.ps1
-- pwsh: .\build.ps1
+environment:
+  global:
+    PUBLISH: False
+  matrix:
+  - job_name: Windows PowerShell 5.1/.NET 4.6.2 on Windows Server 2012R2
+    job_group: ps
+    appveyor_build_worker_image: Visual Studio 2013
+
+  - job_name: Windows PowerShell 5.1/.NET 4.8 on Windows Server 2012R2
+    job_group: ps
+    appveyor_build_worker_image: Visual Studio 2015
+
+  - job_name: Windows PowerShell 5.1 on Windows Server 2016
+    job_group: ps
+    appveyor_build_worker_image: Visual Studio 2017
+
+  - job_name: Windows PowerShell 5.1 on Windows Server 2019
+    job_group: ps
+    appveyor_build_worker_image: Visual Studio 2019
+
+  - job_name: PowerShell 6.2 on Windows Server 2012R2
+    job_group: pwsh
+    appveyor_build_worker_image: Visual Studio 2015
+
+  - job_name: PowerShell 6.2 on Windows Server 2016
+    job_group: pwsh
+    appveyor_build_worker_image: Visual Studio 2017
+
+  - job_name: PowerShell 7.2 on Ubuntu
+    job_group: pwsh
+    appveyor_build_worker_image: Ubuntu
+
+  - job_name: PowerShell 7.2 on Ubuntu 16.04
+    job_group: pwsh
+    appveyor_build_worker_image: Ubuntu1604
+
+  - job_name: PowerShell 7.2 on Ubuntu 20.04
+    job_group: pwsh
+    appveyor_build_worker_image: Ubuntu2004
+
+  - job_name: PowerShell 7.1 on Windows Server 2019 with Deploy
+    job_group: pwsh_deploy
+    appveyor_build_worker_image: Visual Studio 2019
 
 for:
+# Build in Windows PowerShell
 - matrix:
     only:
-      - image: Visual Studio 2013
+    - job_group: ps
   build_script:
   - ps: .\build.ps1
 
+# Build in PowerShell
 - matrix:
     only:
-    - image: Visual Studio 2019
+    - job_group: pwsh
+  build_script:
+  - pwsh: ./build.ps1
+
+# Build and Deploy
+- matrix:
+    only:
+    - job_group: pwsh_deploy
   environment:
     PUBLISH: True
-
+  build_script:
+  - pwsh: .\build.ps1
