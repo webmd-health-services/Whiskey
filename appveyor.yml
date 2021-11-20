@@ -13,45 +13,36 @@ environment:
   global:
     PUBLISH: False
   matrix:
-  - job_name: Windows PowerShell 5.1/.NET 4.6.2 on Windows Server 2012R2
+  - job_name: Windows PowerShell 5.1/.NET 4.6.2
     job_group: ps
     appveyor_build_worker_image: Visual Studio 2013
 
-  - job_name: Windows PowerShell 5.1/.NET 4.8 on Windows Server 2012R2
-    job_group: ps
-    appveyor_build_worker_image: Visual Studio 2015
-
-  - job_name: Windows PowerShell 5.1 on Windows Server 2016
-    job_group: ps
-    appveyor_build_worker_image: Visual Studio 2017
-
-  - job_name: Windows PowerShell 5.1 on Windows Server 2019
+  - job_name: Windows PowerShell 5.1/.NET 4.8
     job_group: ps
     appveyor_build_worker_image: Visual Studio 2019
 
-  - job_name: PowerShell 6.2 on Windows Server 2012R2
+  - job_name: PowerShell 6.2 on Windows
     job_group: pwsh
     appveyor_build_worker_image: Visual Studio 2015
-
-  - job_name: PowerShell 6.2 on Windows Server 2016
-    job_group: pwsh
-    appveyor_build_worker_image: Visual Studio 2017
 
   - job_name: PowerShell 7.2 on Ubuntu
     job_group: pwsh
     appveyor_build_worker_image: Ubuntu
 
-  - job_name: PowerShell 7.2 on Ubuntu 16.04
-    job_group: pwsh
-    appveyor_build_worker_image: Ubuntu1604
-
-  - job_name: PowerShell 7.2 on Ubuntu 20.04
-    job_group: pwsh
-    appveyor_build_worker_image: Ubuntu2004
-
-  - job_name: PowerShell 7.1 on Windows Server 2019 with Deploy
+  - job_name: PowerShell 7.1 on Windows with Deploy
     job_group: pwsh_deploy
     appveyor_build_worker_image: Visual Studio 2019
+
+  # TODO: Add PowerShell 7.2 on Windows
+  # - job_name: PowerShell 7.2 on Windows
+  #   job_group: pwsh
+  #   appveyor_build_worker_image: Visual Studio 2022
+
+  # TODO: Add PowerShell 7.1 on macOS
+  # - job_name: PowerShell 7.1 on macOS
+  #   job_group: pwsh
+  #   appveyor_build_worker_image: macOS
+
 
 for:
 # Build in Windows PowerShell
