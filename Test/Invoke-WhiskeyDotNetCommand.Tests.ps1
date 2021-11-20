@@ -171,9 +171,11 @@ function WhenRunningDotNetCommand
 {
     [CmdletBinding()]
     param(
+        [switch] $WithNoLogging
     )
 
     $parameter = $PSBoundParameters
+    $parameter.Remove('WithNoLogging')
     $parameter['DotNetPath'] = $dotNetPath;
     $parameter['Name'] = $commandName;
 
@@ -185,6 +187,11 @@ function WhenRunningDotNetCommand
     if ($projectPath)
     {
         $parameter['ProjectPath'] = $projectPath
+    }
+
+    if( $WithNoLogging )
+    {
+        $parameter['NoLog'] = $true
     }
 
     $Global:Error.Clear()
@@ -270,7 +277,7 @@ Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable' {
         Init -SkipDotNetMock
         GivenDotNetPath $realDotNetPath
         GivenCommandName '--version'
-        WhenRunningDotNetCommand 
+        WhenRunningDotNetCommand -WithNoLogging
         ThenNoErrors
     }
 }
@@ -280,7 +287,7 @@ Describe 'Invoke-WhiskeyDotNetCommand.when actually running dotnet executable wi
         Init -SkipDotNetMock
         GivenDotNetPath $realDotNetPath
         GivenCommandName 'nfzhhih3sov'
-        WhenRunningDotNetCommand  -ErrorAction SilentlyContinue
+        WhenRunningDotNetCommand -WithNoLogging  -ErrorAction SilentlyContinue
         ThenErrorMessage ('failed\ with\ exit\ code')
     }
 }

@@ -127,9 +127,11 @@ function WhenRunningDotNet
 
         $WithArgument,
 
-        $WithSdkVersion,
+        $InWorkingDirectory,
 
-        $InWorkingDirectory
+        [switch] $NotLogging,
+
+        [String] $UsingSdk
     )
 
     $script:taskContext = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $testRoot
@@ -150,14 +152,19 @@ function WhenRunningDotNet
         $taskParameter['Argument'] = $WithArgument
     }
 
-    if( $WithSdkVersion )
-    {
-        $taskParameter['SdkVersion'] = $WithSdkVersion
-    }
-
     if( $InWorkingDirectory )
     {
         $taskParameter['WorkingDirectory'] = $InWorkingDirectory
+    }
+
+    if( $NotLogging )
+    {
+        $taskParameter['NoLog'] = $true
+    }
+
+    if( $UsingSdk )
+    {
+        $taskParameter['SdkVersion'] = $UsingSdk
     }
 
     try
@@ -177,10 +184,48 @@ Describe 'DotNet.when command succeeds' {
     It 'should pass build' {
         Init
         GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.*'
+        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' )
         ThenProjectBuilt 'bin\DotNetCore.dll'
         ThenLogFile 'dotnet.build.log' -Exists
         ThenTaskSuccess
+    }
+}
+
+Describe 'DotNet.when not logging' {
+    AfterEach { Reset }
+    It 'should pass build' {
+        Init
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
+        WhenRunningDotNet 'build' `
+                          -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) `
+                          -NotLogging
+        ThenProjectBuilt 'bin\DotNetCore.dll'
+        ThenLogFile 'dotnet*.log' -Not -Exists
+        ThenTaskSuccess
+    }
+}
+
+Describe 'DotNet.when customizing SDK' {
+    AfterEach { Reset }
+    It 'should install that version of the SDK' {
+        Init
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.0'
+        Mock -CommandName 'Get-Command' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Name -eq 'dotnet' -and $All -and $ErrorActionPreference -eq 'Ignore' }
+        WhenRunningDotNet 'build' `
+                          -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) `
+                          -NotLogging `
+                          -UsingSdk '5.*'
+        ThenProjectBuilt 'bin\DotNetCore.dll'
+        ThenTaskSuccess
+        $sdkInstallPath = Join-Path -Path $testRoot -ChildPath '.dotnet'
+        $sdkInstallPath = Join-Path -Path $sdkInstallPath -ChildPath 'sdk'
+        $sdkInstallPath | Should -Exist
+
+        (& (Join-Path -Path $testRoot -ChildPath '.dotnet\dotnet') '--list-sdks') |
+            Where-Object { $_ -match "5\.\d+\.\d+ \[$([regex]::Escape($sdkInstallPath))\]" } |
+            Should -Not -BeNullOrEmpty
     }
 }
 
@@ -188,8 +233,8 @@ Describe 'DotNet.when command fails' {
     AfterEach { Reset }
     It 'should fail build' {
         Init
-        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreapp2.1'
-        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -WithSdkVersion '2.0.*' -ErrorAction SilentlyContinue
+        GivenDotNetCoreProject 'DotNetCore.csproj' -Targeting 'netcoreappX.x'
+        WhenRunningDotNet 'build' -WithArgument @( '-c=$(WHISKEY_MSBUILD_CONFIGURATION)', '--output=bin\' ) -ErrorAction SilentlyContinue
         ThenTaskFailedWithError 'dotnet(\.exe)?"\ failed\ with\ exit\ code'
     }
 }
@@ -200,7 +245,7 @@ Describe 'DotNet.when passing paths to the command' {
         Init
         GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         GivenDotNetCoreProject 'DotNetCore2\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithPath 'DotNetCore*\*.csproj' -WithSdkVersion '2.*'
+        WhenRunningDotNet 'build' -WithPath 'DotNetCore*\*.csproj'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenProjectBuilt 'DotNetCore2\bin\Debug\netcoreapp2.0\DotNetCore2.dll'
         ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
@@ -226,7 +271,7 @@ Describe 'DotNet.when passing paths to the command and working directory isn''t 
         Init
         GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
         GivenDotNetCoreProject 'DotNetCore\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
-        WhenRunningDotNet 'build' -WithPath 'DotNetCore\*.csproj' -WithSdkVersion '2.*' -InWorkingDirectory 'DotNetCore' -WarningVariable 'warnings'
+        WhenRunningDotNet 'build' -WithPath 'DotNetCore\*.csproj' -InWorkingDirectory 'DotNetCore' -WarningVariable 'warnings'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore.dll'
         ThenProjectBuilt 'DotNetCore\bin\Debug\netcoreapp2.0\DotNetCore2.dll'
         ThenLogFile 'dotnet.build.DotNetCore.csproj.log' -Exists
