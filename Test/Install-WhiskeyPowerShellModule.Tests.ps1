@@ -48,7 +48,7 @@ function Init
 
     Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
 
-    Reset-PSModulePath
+    Reset-WhiskeyPSModulePath
 }
 
 # Wrap private function so we can call it like it's public.
@@ -71,18 +71,9 @@ function Install-PowerShellModule
 function Reset
 {
     Reset-WhiskeyTestPSModule
-    Reset-PSModulePath
+    Reset-WhiskeyPSModulePath
 }
 
-function Reset-PSModulePath
-{
-    $newModulePaths = 
-        $env:PSModulePath -split [IO.Path]::PathSeparator |
-        Where-Object { $_ -notlike '*\*.*\PSModules' } |
-        Where-Object { $_ -notlike '*\Whiskey\PSModules' }
-    $env:PSModulePath = $newModulePaths -join ';'
-
-}
 function ThenModuleImported
 {
     param(
@@ -424,19 +415,21 @@ Describe 'Install-WhiskeyPowerShellModule.when multiple modules already installe
     }
 }
 
-foreach( $modulePath in ($env:PSModulePath -split [IO.Path]::PathSeparator) )
-{
-    Describe "Install-WhiskeyPowerShellModule.when user installing to custom path but module exists globally in $($modulePath)" {
-        AfterEach { Reset }
-        It 'should install module at the custom path' {
-            Init
-            GivenModule 'Zip' -AtVersion $latestZip.Version -InstalledIn $modulePath
-            WhenInstallingPSModule 'Zip' -Version $latestZip.Version -AtPath 'mycustompath'
-            ThenModuleInfoReturned 'Zip' -AtVersion $latestZip.Version
-            ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version -In 'mycustompath'
-            ThenModuleImported 'Zip' -AtVersion $latestZip.Version -From 'mycustompath'
-            ThenModuleNotInstalled 'Zip' -In 'PSModules'
-        }
+Describe "Install-WhiskeyPowerShellModule.when user installing to custom path but module exists globally" {
+    AfterEach { Reset }
+    It 'should install module at the custom path' {
+        Init
+        $globalModulePath = 
+            ($env:PSModulePath -split [IO.Path]::PathSeparator) |
+            Where-Object { $_ -match '\b(Windows)?PowerShell\b' } |
+            Select-Object -First 1
+        Write-Verbose $globalModulePath -Verbose
+        GivenModule 'Zip' -AtVersion $latestZip.Version -InstalledIn $globalModulePath
+        WhenInstallingPSModule 'Zip' -Version $latestZip.Version -AtPath 'mycustompath'
+        ThenModuleInfoReturned 'Zip' -AtVersion $latestZip.Version
+        ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version -In 'mycustompath'
+        ThenModuleImported 'Zip' -AtVersion $latestZip.Version -From 'mycustompath'
+        ThenModuleNotInstalled 'Zip' -In 'PSModules'
     }
 }
 

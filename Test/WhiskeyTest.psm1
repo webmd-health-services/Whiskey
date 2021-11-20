@@ -541,9 +541,12 @@ function Reset-WhiskeyTestPSModule
 function Reset-WhiskeyPSModulePath
 {
     $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
+    $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $pesterTestDriveRoot = "$($pesterTestDriveRoot)$([IO.Path]::DirectorySeparatorChar)"
     $paths =
         $env:PSModulePath -split [IO.Path]::PathSeparator | 
-        Where-Object { $_ -notlike '*\*.*\PSModules' } |
+        Where-Object { -not $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
         Where-Object { $_ -ne $whiskeyPSModulesPath }
     $env:PSModulePath = $paths -join [IO.Path]::PathSeparator
 }
