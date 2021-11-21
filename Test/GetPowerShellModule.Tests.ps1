@@ -294,7 +294,7 @@ Describe 'GetPowerShellModule.when importing module after installation' {
         $modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
         $modulePath = Join-Path -Path $modulePath -ChildPath $TestPSModulesDirectoryName
         $modulePath = Join-Path -Path $modulePath 'Zip' -Resolve
-        Import-Module -Name $modulePath -Force
+        Import-Module -Name $modulePath -Force -WarningAction Ignore
         GivenImport
         GivenModule 'Zip'
         GivenVersion '0.2.0'

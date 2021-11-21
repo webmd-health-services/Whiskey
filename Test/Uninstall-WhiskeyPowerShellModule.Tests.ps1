@@ -28,7 +28,7 @@ function GivenAnInstalledPowerShellModule
 
     # Import the module so we can test later that it gets removed before getting deleted.
     Get-Module -Name $WithName | Remove-Module -Force
-    Import-Module -Name $importRoot -Force
+    Import-Module -Name $importRoot -Force -WarningAction Ignore
 }
 
 function Init

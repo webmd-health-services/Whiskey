@@ -98,7 +98,7 @@ function ThenModuleInstalled
     $path = $result.Path
     $errors = @()
     $module = Start-Job {
-        Import-Module -Name $using:path -RequiredVersion $using:AtVersion -PassThru
+        Import-Module -Name $using:path -RequiredVersion $using:AtVersion -PassThru -WarningAction Ignore
     } | Wait-Job | Receive-Job -ErrorVariable 'errors'
     $errors | Should -BeNullOrEmpty
     $module | Should -Not -BeNullOrEmpty
