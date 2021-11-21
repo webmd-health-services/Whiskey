@@ -42,7 +42,7 @@ function Invoke-WhiskeyPester3Task
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterManifestPath
+                                        Import-Module -Name $pesterManifestPath -WarningAction Ignore
                                     }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru
