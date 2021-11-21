@@ -259,8 +259,9 @@ Describe 'GetPowerShellModule.when called with clean mode' {
 }
 
 Describe 'GetPowerShellModule.when allowing prerelease versions' {
-    AfterEach { Reset }
+    AfterEach { Reset ; $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue' }
     It 'should install a prelease version' {
+        $Global:VerbosePreference = $Global:DebugPreference = 'Continue'
         Init
         GivenModule 'Whiskey'
         GivenVersion '0.43.*-*'
