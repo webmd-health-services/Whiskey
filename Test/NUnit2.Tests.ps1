@@ -2,6 +2,14 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+if( (Test-Path -Path 'env:APPVEYOR_*') -and $env:APPVEYOR_BUILD_WORKER_IMAGE -eq 'Visual Studio 2013' )
+{
+    $msg = 'NUnit2 tests hang on AppVeyor''s Visual Studio 2013 image. Since they work everywhere else, just skip ' +
+           'them for now.'
+    Write-Warning $msg
+    return
+}
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
