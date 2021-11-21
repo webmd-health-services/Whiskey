@@ -18,3 +18,5 @@
 /.vscode/**
 /.dotnet/**
 /Whiskey/Modules/**
+/Test/Assemblies/PSModules/
+/Whiskey/*.md
