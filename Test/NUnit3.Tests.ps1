@@ -2,6 +2,9 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+# OpenCover hangs when run on .NET 4.6.2.
+$skip = (Test-Path -Path 'env:APPVEYOR_*') -and $env:APPVEYOR_BUILD_WORKER_IMAGE -eq 'Visual Studio 2013'
+
 # Build the assemblies that use NUnit3. Only do this once.
 $latestNUnit3Version = '3.10.0'
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
@@ -589,7 +592,7 @@ Describe 'NUnit3.when running NUnit tests with disabled code coverage' {
 }
 
 Describe 'NUnit3.when running NUnit tests with multiple paths' {
-    It 'should run tests in each path' {
+    It 'should run tests in each path' -Skip:$skip {
         Init
         GivenPath (Get-PassingTestPath), (Get-PassingTestPath)
         WhenRunningTask
@@ -600,7 +603,7 @@ Describe 'NUnit3.when running NUnit tests with multiple paths' {
 }
 
 Describe 'NUnit3.when running failing NUnit tests' {
-    It 'should fail the build' {
+    It 'should fail the build' -Skip:$skip {
         Init
         GivenPath (Get-FailingTestPath), (Get-PassingTestPath)
         WhenRunningTask -ErrorAction SilentlyContinue
@@ -611,7 +614,7 @@ Describe 'NUnit3.when running failing NUnit tests' {
 }
 
 Describe 'NUnit3.when running NUnit tests with specific framework' {
-    It 'should run tests with that dotNET framework' {
+    It 'should run tests with that dotNET framework' -Skip:$skip {
         Init
         GivenPassingPath
         GivenFramework '4.5'
@@ -624,7 +627,7 @@ Describe 'NUnit3.when running NUnit tests with specific framework' {
 }
 
 Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
-    It 'should generate nunit3 output' {
+    It 'should generate nunit3 output' -Skip:$skip {
         Init
         GivenPath (Get-PassingNUnit2TestPath)
         WhenRunningTask
@@ -635,7 +638,7 @@ Describe 'NUnit3.when running NUnit2 tests generating NUnit3 output' {
 }
 
 Describe 'NUnit3.when running NUnit2 tests generating NUnit2 output' {
-    It 'should generate nunit2 output' {
+    It 'should generate nunit2 output' -Skip:$skip {
         Init
         GivenPath (Get-PassingNUnit2TestPath)
         GivenResultFormat 'nunit2'
@@ -647,7 +650,7 @@ Describe 'NUnit3.when running NUnit2 tests generating NUnit2 output' {
 }
 
 Describe 'NUnit3.when running NUnit with extra arguments' {
-    It 'should run NUnit with those arguments' {
+    It 'should run NUnit with those arguments' -Skip:$skip {
         Init
         GivenPassingPath
         GivenArgument '--noheader','--dispose-runners'
@@ -660,7 +663,7 @@ Describe 'NUnit3.when running NUnit with extra arguments' {
 }
 
 Describe 'NUnit3.when running NUnit with bad arguments' {
-    It 'should pass bad args to NUnit and fail' {
+    It 'should pass bad args to NUnit and fail' -Skip:$skip {
         Init
         GivenPassingPath
         GivenArgument '-badarg'
@@ -671,7 +674,7 @@ Describe 'NUnit3.when running NUnit with bad arguments' {
 }
 
 Describe 'NUnit3.when running NUnit with a test filter' {
-    It 'should pass test filter to NUnit' {
+    It 'should pass test filter to NUnit' -Skip:$skip {
         Init
         GivenPassingPath
         GivenTestFilter "cat == 'Category with Spaces 1'"
@@ -684,7 +687,7 @@ Describe 'NUnit3.when running NUnit with a test filter' {
 }
 
 Describe 'NUnit3.when running NUnit with multiple test filters' {
-    It 'should pass all test filters' {
+    It 'should pass all test filters' -Skip:$skip {
         Init
         GivenPassingPath
         GivenTestFilter "cat == 'Category with Spaces 1'", "cat == 'Category with Spaces 2'"
@@ -722,7 +725,7 @@ Describe 'NUnit3.when running NUnit tests with OpenCover coverage filter' {
 }
 
 Describe 'NUnit3.when running NUnit tests with ReportGenerator argument' {
-    It 'should pass ReportGenerator argument' {
+    It 'should pass ReportGenerator argument' -Skip:$skip {
         Init
         GivenPassingPath
         GivenReportGeneratorArgument '-verbosity:off'
@@ -735,7 +738,7 @@ Describe 'NUnit3.when running NUnit tests with ReportGenerator argument' {
 }
 
 Describe 'NUnit3.when using custom version of NUnit 3' {
-    It 'should download that version of NUnit' {
+    It 'should download that version of NUnit' -Skip:$skip {
         Init
         GivenPassingPath
         GivenVersion '3.2.1'
@@ -746,7 +749,7 @@ Describe 'NUnit3.when using custom version of NUnit 3' {
 }
 
 Describe 'NUnit3.when using a non-3 version of NUnit' {
-    It 'should fail' {
+    It 'should fail' -Skip:$skip {
         Init
         GivenPassingPath
         GivenVersion '2.6.4'

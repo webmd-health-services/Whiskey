@@ -69,171 +69,164 @@ Build:
     - README.md
     DestinationDirectory: Whiskey
 
-# This can't be run with the other tests because it deletes Whiskey while it's imported which PowerShell hates.
-- Pester4:
-    Script: Test\build.ps1.Tests.ps1
-
-- Pester4:
-    Script: Test/*.Tests.ps1
-    Exclude: "*/Test/build.ps1.Tests.ps1"
-
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
 # more than three queues doesn't help, sadly. (We have four because the first
 # queue only takes about 60 seconds and must be run separately.)
-# - Parallel:
-#     ExceptOnPlatform: Windows
-#     Queues:
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\build.ps1.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\DotNet.Tests.ps1
-#             - Test\Invoke-WhiskeyTask.Tests.ps1
-#             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
-#             - Test\Install-WhiskeyDotNetTool.Tests.ps1
-#             - Test\Parallel.Tests.ps1
-#             - Test\Pester4.Tests.ps1
-#             - Test\PublishNodeModule.Tests.ps1
-#             - Test\PublishPowerShellModule.Tests.ps1
-#             - Test\Version.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\GetPowerShellModule.Tests.ps1
-#             - Test\Install-WhiskeyNode.Tests.ps1
-#             - Test\Install-WhiskeyPowerShellModule.Tests.ps1
-#             - Test\Install-WhiskeyTool.Tests.ps1
-#             - Test\Invoke-WhiskeyBuild.Tests.ps1
-#             - Test\MergeFile.Tests.ps1
-#             - Test\PowerShell.Tests.ps1
-#             - Test\ProGetUniversalPackage.Tests.ps1
-#             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
-#             - Test\Zip.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - "Test\\*.Tests.ps1"
-#             Exclude:
-#             - "*/Test/build.ps1.Tests.ps1"
-#             - "*/Test/DotNet.Tests.ps1"
-#             - "*/Test/GetPowerShellModule.Tests.ps1"
-#             - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
-#             - "*/Test/Install-WhiskeyDotNetTool.Tests.ps1"
-#             - "*/Test/Install-WhiskeyNode.Tests.ps1"
-#             - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
-#             - "*/Test/Install-WhiskeyTool.Tests.ps1"
-#             - "*/Test/Invoke-WhiskeyBuild.Tests.ps1"
-#             - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
-#             - "*/Test/MergeFile.Tests.ps1"
-#             - "*/Test/Parallel.Tests.ps1"
-#             - "*/Test/Pester4.Tests.ps1"
-#             - "*/Test/PowerShell.Tests.ps1"
-#             - "*/Test/ProGetUniversalPackage.Tests.ps1"
-#             - "*/Test/PublishNodeModule.Tests.ps1"
-#             - "*/Test/PublishPowerShellModule.Tests.ps1"
-#             - "*/Test/Find-WhiskeyPowerShellModule.Tests.ps1"
-#             - "*/Test/Version.Tests.ps1"
-#             - "*/Test/Zip.Tests.ps1"
+- Parallel:
+    ExceptOnPlatform: Windows
+    Queues:
+    - Tasks:
+        # Needs to run in its own Pester task since it loads old versions of Whiskey.
+        - Pester4:
+            Script:
+            - Test\build.ps1.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\DotNet.Tests.ps1
+            - Test\Invoke-WhiskeyTask.Tests.ps1
+            - Test\Install-WhiskeyDotNetSdk.Tests.ps1
+            - Test\Install-WhiskeyDotNetTool.Tests.ps1
+            - Test\Parallel.Tests.ps1
+            - Test\Pester4.Tests.ps1
+            - Test\PublishNodeModule.Tests.ps1
+            - Test\PublishPowerShellModule.Tests.ps1
+            - Test\Version.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\GetPowerShellModule.Tests.ps1
+            - Test\Install-WhiskeyNode.Tests.ps1
+            - Test\Install-WhiskeyPowerShellModule.Tests.ps1
+            - Test\Install-WhiskeyTool.Tests.ps1
+            - Test\Invoke-WhiskeyBuild.Tests.ps1
+            - Test\MergeFile.Tests.ps1
+            - Test\PowerShell.Tests.ps1
+            - Test\ProGetUniversalPackage.Tests.ps1
+            - Test\Find-WhiskeyPowerShellModule.Tests.ps1
+            - Test\Zip.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - "Test\\*.Tests.ps1"
+            Exclude:
+            - "*/Test/build.ps1.Tests.ps1"
+            - "*/Test/DotNet.Tests.ps1"
+            - "*/Test/GetPowerShellModule.Tests.ps1"
+            - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
+            - "*/Test/Install-WhiskeyDotNetTool.Tests.ps1"
+            - "*/Test/Install-WhiskeyNode.Tests.ps1"
+            - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
+            - "*/Test/Install-WhiskeyTool.Tests.ps1"
+            - "*/Test/Invoke-WhiskeyBuild.Tests.ps1"
+            - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
+            - "*/Test/MergeFile.Tests.ps1"
+            - "*/Test/Parallel.Tests.ps1"
+            - "*/Test/Pester4.Tests.ps1"
+            - "*/Test/PowerShell.Tests.ps1"
+            - "*/Test/ProGetUniversalPackage.Tests.ps1"
+            - "*/Test/PublishNodeModule.Tests.ps1"
+            - "*/Test/PublishPowerShellModule.Tests.ps1"
+            - "*/Test/Find-WhiskeyPowerShellModule.Tests.ps1"
+            - "*/Test/Version.Tests.ps1"
+            - "*/Test/Zip.Tests.ps1"
 
-# - Parallel:
-#     OnlyOnPlatform: Windows
-#     Queues:
-#     - Tasks:
-#         # Needs to run in its own Pester task since it loads old versions of Whiskey.
-#         - Pester4:
-#             Script: Test\build.ps1.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
-#             # These three tests must be in the same queue.
-#             # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance 
-#             # Windows test queues. This queue takes the longest so all other queues are optimized to take about this 
-#             # long.
-#             - Test\MSBuild.Tests.ps1
-#             - Test\NUnit2.Tests.ps1
-#             - Test\NUnit3.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\AppVeyorWaitForBuildJobs.Tests.ps1
-#             - Test\Install-WhiskeyDotNetTool.Tests.ps1
-#             - Test\Install-WhiskeyNode.Tests.ps1
-#             - Test\Install-WhiskeyPowerShellModule.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
-#             - Test\DotNet.Tests.ps1
-#             - Test\GetPowerShellModule.Tests.ps1
-#             - Test\Install-WhiskeyNodeModule.Tests.ps1
-#             - Test\Invoke-WhiskeyBuild.Tests.ps1
-#             - Test\Invoke-WhiskeyTask.Tests.ps1
-#             - Test\NuGetPush.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\Install-WhiskeyTool.Tests.ps1
-#             - Test\NuGetPack.Tests.ps1
-#             - Test\Parallel.Tests.ps1
-#             - Test\Pester4.Tests.ps1
-#             - Test\PublishNodeModule.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script:
-#             - Test\MergeFile.Tests.ps1
-#             - Test\NodeLicenseChecker.Tests.ps1
-#             - Test\Npm.Tests.ps1
-#             - Test\NuGetRestore.Tests.ps1
-#             - Test\PowerShell.Tests.ps1
-#             - Test\ProGetUniversalPackage.Tests.ps1
-#             - Test\PublishPowerShellModule.Tests.ps1
-#             - Test\Resolve-WhiskeyNodePath.Tests.ps1
-#             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
-#             - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
-#             - Test\Version.Tests.ps1
-#             - Test\Zip.Tests.ps1
-#     - Tasks:
-#         - Pester4:
-#             Script: Test\*.Tests.ps1
-#             Exclude:
-#             - "*\\Test\\AppVeyorWaitForBuildJobs.Tests.ps1"
-#             - "*\\Test\\build.ps1.Tests.ps1"
-#             - "*\\Test\\ConvertFrom-WhiskeyYamlScalar.Tests.ps1"
-#             - "*\\Test\\DotNet.Tests.ps1"
-#             - "*\\Test\\GetPowerShellModule.Tests.ps1"
-#             - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
-#             - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
-#             - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
-#             - "*\\Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
-#             - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
-#             - "*\\Test\\Invoke-WhiskeyBuild.Tests.ps1"
-#             - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
-#             - "*\\Test\\MergeFile.Tests.ps1"
-#             - "*\\Test\\MSBuild.Tests.ps1"
-#             - "*\\Test\\NodeLicenseChecker.Tests.ps1"
-#             - "*\\Test\\Npm.Tests.ps1"
-#             - "*\\Test\\NuGetPack.Tests.ps1"
-#             - "*\\Test\\NuGetPush.Tests.ps1"
-#             - "*\\Test\\NuGetRestore.Tests.ps1"
-#             - "*\\Test\\NUnit2.Tests.ps1"
-#             - "*\\Test\\NUnit3.Tests.ps1"
-#             - "*\\Test\\Parallel.Tests.ps1"
-#             - "*\\Test\\Pester4.Tests.ps1"
-#             - "*\\Test\\PowerShell.Tests.ps1"
-#             - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
-#             - "*\\Test\\PublishNodeModule.Tests.ps1"
-#             - "*\\Test\\PublishPowerShellModule.Tests.ps1"
-#             - "*\\Test\\Resolve-WhiskeyNodePath.Tests.ps1"
-#             - "*\\Test\\Find-WhiskeyPowerShellModule.Tests.ps1"
-#             - "*\\Test\\Uninstall-WhiskeyNodeModule.Tests.ps1"
-#             - "*\\Test\\Version.Tests.ps1"
-#             - "*\\Test\\Zip.Tests.ps1"
+- Parallel:
+    OnlyOnPlatform: Windows
+    Queues:
+    - Tasks:
+        # Needs to run in its own Pester task since it loads old versions of Whiskey.
+        - Pester4:
+            Script: Test\build.ps1.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
+            # These three tests must be in the same queue.
+            # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance 
+            # Windows test queues. This queue takes the longest so all other queues are optimized to take about this 
+            # long.
+            - Test\MSBuild.Tests.ps1
+            - Test\NUnit2.Tests.ps1
+            - Test\NUnit3.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\AppVeyorWaitForBuildJobs.Tests.ps1
+            - Test\Install-WhiskeyDotNetTool.Tests.ps1
+            - Test\Install-WhiskeyNode.Tests.ps1
+            - Test\Install-WhiskeyPowerShellModule.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
+            - Test\DotNet.Tests.ps1
+            - Test\GetPowerShellModule.Tests.ps1
+            - Test\Install-WhiskeyNodeModule.Tests.ps1
+            - Test\Invoke-WhiskeyBuild.Tests.ps1
+            - Test\Invoke-WhiskeyTask.Tests.ps1
+            - Test\NuGetPush.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\Install-WhiskeyTool.Tests.ps1
+            - Test\NuGetPack.Tests.ps1
+            - Test\Parallel.Tests.ps1
+            - Test\Pester4.Tests.ps1
+            - Test\PublishNodeModule.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script:
+            - Test\MergeFile.Tests.ps1
+            - Test\NodeLicenseChecker.Tests.ps1
+            - Test\Npm.Tests.ps1
+            - Test\NuGetRestore.Tests.ps1
+            - Test\PowerShell.Tests.ps1
+            - Test\ProGetUniversalPackage.Tests.ps1
+            - Test\PublishPowerShellModule.Tests.ps1
+            - Test\Resolve-WhiskeyNodePath.Tests.ps1
+            - Test\Find-WhiskeyPowerShellModule.Tests.ps1
+            - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
+            - Test\Version.Tests.ps1
+            - Test\Zip.Tests.ps1
+    - Tasks:
+        - Pester4:
+            Script: Test\*.Tests.ps1
+            Exclude:
+            - "*\\Test\\AppVeyorWaitForBuildJobs.Tests.ps1"
+            - "*\\Test\\build.ps1.Tests.ps1"
+            - "*\\Test\\ConvertFrom-WhiskeyYamlScalar.Tests.ps1"
+            - "*\\Test\\DotNet.Tests.ps1"
+            - "*\\Test\\GetPowerShellModule.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
+            - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyBuild.Tests.ps1"
+            - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
+            - "*\\Test\\MergeFile.Tests.ps1"
+            - "*\\Test\\MSBuild.Tests.ps1"
+            - "*\\Test\\NodeLicenseChecker.Tests.ps1"
+            - "*\\Test\\Npm.Tests.ps1"
+            - "*\\Test\\NuGetPack.Tests.ps1"
+            - "*\\Test\\NuGetPush.Tests.ps1"
+            - "*\\Test\\NuGetRestore.Tests.ps1"
+            - "*\\Test\\NUnit2.Tests.ps1"
+            - "*\\Test\\NUnit3.Tests.ps1"
+            - "*\\Test\\Parallel.Tests.ps1"
+            - "*\\Test\\Pester4.Tests.ps1"
+            - "*\\Test\\PowerShell.Tests.ps1"
+            - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
+            - "*\\Test\\PublishNodeModule.Tests.ps1"
+            - "*\\Test\\PublishPowerShellModule.Tests.ps1"
+            - "*\\Test\\Resolve-WhiskeyNodePath.Tests.ps1"
+            - "*\\Test\\Find-WhiskeyPowerShellModule.Tests.ps1"
+            - "*\\Test\\Uninstall-WhiskeyNodeModule.Tests.ps1"
+            - "*\\Test\\Version.Tests.ps1"
+            - "*\\Test\\Zip.Tests.ps1"
 
 - PowerShell:
     Path: Format-PesterResult.ps1
