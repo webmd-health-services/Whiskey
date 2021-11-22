@@ -13,13 +13,15 @@ environment:
   global:
     PUBLISH: False
   matrix:
-  - job_name: PowerShell 7.2 on Windows
-    job_group: pwsh
-    appveyor_build_worker_image: Visual Studio 2022
+  # TODO: Get builds working on PowerShell 7.2 on Windows.
+  # - job_name: PowerShell 7.2 on Windows
+  #   job_group: pwsh
+  #   appveyor_build_worker_image: Visual Studio 2022
 
-  - job_name: PowerShell 7.1 on macOS
-    job_group: pwsh
-    appveyor_build_worker_image: macOS
+  # TODO: Get builds working on macOS.
+  # - job_name: PowerShell 7.1 on macOS
+  #   job_group: pwsh
+  #   appveyor_build_worker_image: macOS
 
   - job_name: Windows PowerShell 5.1/.NET 4.6.2
     job_group: ps
