@@ -39,9 +39,17 @@ environment:
     job_group: pwsh
     appveyor_build_worker_image: Ubuntu
 
-  - job_name: PowerShell 7.1 on Windows with Deploy
-    job_group: pwsh_deploy
+  - job_name: PowerShell 7.1 on Windows
+    job_group: pwsh
     appveyor_build_worker_image: Visual Studio 2019
+
+
+artifacts:
+- path: .output\*.zip
+  name: GitHub
+- path: .output\*.nupkg
+  name: PowerShellGallery
+- path: .output\*
 
 
 
@@ -60,11 +68,3 @@ for:
   build_script:
   - pwsh: ./build.ps1
 
-# Build and Deploy
-- matrix:
-    only:
-    - job_group: pwsh_deploy
-  environment:
-    PUBLISH: True
-  build_script:
-  - pwsh: .\build.ps1

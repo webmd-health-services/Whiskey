@@ -1,6 +1,3 @@
-PublishOn:
-- master
-- prerelease
 
 Build:
 - TaskDefaults:
@@ -10,7 +7,8 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
     Prerelease:
-    - prerelease: beta$(WHISKEY_BUILD_NUMBER)
+    - "*/*": alpha.$(WHISKEY_BUILD_NUMBER)
+    - develop: rc.$(WHISKEY_BUILD_NUMBER)
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
@@ -235,45 +233,9 @@ Build:
         QueueDuration: "00:10:00"
 
 - Zip:
-    ArchivePath: .output\Whiskey.zip
+    ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
     Path: 
     - Whiskey
     Exclude:
     - "*.pdb"
     - "*.orig"
-
-Publish:
-- AppVeyorWaitForBuildJobs:
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    IfExists: env:WHS_APPVEYOR_BEARER_TOKEN
-    OnlyOnPlatform: Windows
-    ApiKeyID: AppVeyor
-- PublishPowerShellModule:
-    OnlyOnPlatform: Windows
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    RepositoryName: PSGallery
-    RepositoryUri: https://powershellgallery.com/api/v2/
-    Path: Whiskey
-    ApiKeyID: PowerShellGallery
-- SetVariableFromPowerShellDataFile:
-    Path: Whiskey\Whiskey.psd1
-    Variables:
-        PrivateData:
-            PSData:
-                ReleaseNotes: RELEASE_NOTES
-- GitHubRelease:
-    OnlyOnPlatform: Windows
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    RepositoryName: webmd-health-services/Whiskey
-    ApiKeyID: github.com
-    Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
-    Commitish: $(WHISKEY_SCM_COMMIT_ID)
-    Name: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
-    Description: $(RELEASE_NOTES)
-    Assets:
-    - Path: .output\Whiskey.zip
-      ContentType: application/zip
-      Name: Whiskey-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
-    - Path: Whiskey\build.ps1
-      ContentType: text/plain
-      Name: build.ps1
