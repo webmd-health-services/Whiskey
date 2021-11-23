@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $failed = $false
+$testRoot = $null
 
 function Init
 {
@@ -13,9 +14,10 @@ function Init
     )
 
     $script:failed = $false
+    $script:testRoot = New-WhiskeyTestRoot
     if( -not $SkipInstall )
     {
-        Install-Node
+        Install-Node -BuildRoot $script:testRoot
     }
 }
 
@@ -26,12 +28,9 @@ function ThenFile
         $Is
     )
 
-    $path = Join-Path -Path $TestDrive.FullName -ChildPath $Named
-
-    It ('should run command') {
-        $path | Should -Exist
-        $path | Should -FileContentMatchMultiline $Is
-    }
+    $path = Join-Path -Path $script:testRoot -ChildPath $Named
+    $path | Should -Exist
+    $path | Should -FileContentMatchMultiline $Is
 }
 
 function ThenTaskFails
@@ -40,10 +39,8 @@ function ThenTaskFails
         $WithError
     )
 
-    It ('should fail') {
-        $failed | Should -BeTrue
-        $Global:Error | Where-Object { $_ -match $WithError } | Should -Not -BeNullOrEmpty
-    }
+    $failed | Should -BeTrue
+    $Global:Error | Where-Object { $_ -match $WithError } | Should -Not -BeNullOrEmpty
 }
 
 function ThenTaskSucceeds
@@ -51,9 +48,7 @@ function ThenTaskSucceeds
     param(
     )
 
-    It ('should succeed') {
-        $failed | Should -BeFalse
-    }
+    $failed | Should -BeFalse
 }
 
 function WhenRunningCommand
@@ -76,7 +71,7 @@ function WhenRunningCommand
     }
                         
 
-    $context = New-WhiskeyTestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
     $script:failed = $false
 
     try
@@ -92,23 +87,17 @@ function WhenRunningCommand
 }
 
 Describe 'Npm.when command succeeds' {
-    try
-    {
+    It 'should not fail the build' {
         Init -SkipInstall
         WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','.npmrc'
         ThenFile '.npmrc' -Is @'
 fubar=snafu
 '@
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Npm.when command fails' {
-    try
-    {
+    It 'should fail the build' {
         Init
         $configPath = (Get-Item -Path $PSScriptRoot).PSDrive.Root
         $configPath = Join-Path -Path $configPath -ChildPath ([IO.Path]::GetRandomFileName())
@@ -116,34 +105,20 @@ Describe 'Npm.when command fails' {
         WhenRunningCommand 'k4bphelohjx' -ErrorAction SilentlyContinue
         ThenTaskFails -WithError 'NPM\ command\ "npm\ k4bphelohjx.*"\ failed\ with\ exit\ code\ '
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Npm.when command not given' {
-    try
-    {
+    It 'should fail' {
         Init
         WhenRunningCommand -ErrorAction SilentlyContinue
         ThenTaskFails -WithError 'Property\ "Command\" is required'
     }
-    finally
-    {
-        Remove-Node
-    }
 }
 
 Describe 'Npm.when command has no arguments' {
-    try
-    {
+    It 'should not fail' {
         Init
-        WhenRunningCommand 'install'
+        WhenRunningCommand 'version'
         ThenTaskSucceeds
-    }
-    finally
-    {
-        Remove-Node
     }
 }

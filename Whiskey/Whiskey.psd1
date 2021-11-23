@@ -53,7 +53,7 @@
     # RequiredModules = @()
 
     # Assemblies that must be loaded prior to importing this module
-    RequiredAssemblies = @( 'bin\SemanticVersion.dll', 'bin\Whiskey.dll', 'bin\YamlDotNet.dll' )
+    # RequiredAssemblies = @()
 
     # Script files (.ps1) that are run in the caller's environment prior to importing this module.
     # ScriptsToProcess = @()
@@ -63,13 +63,11 @@
 
     # Format files (.ps1xml) to be loaded when importing this module
     FormatsToProcess = @(
-                            'Formats\System.Exception.format.ps1xml',
-                            'Formats\System.Management.Automation.ErrorRecord.format.ps1xml',
-                            'Formats\Whiskey.BuildInfo.format.ps1xml',
-                            'Formats\Whiskey.BuildVersion.format.ps1xml',
-                            'Formats\Whiskey.Context.format.ps1xml',
-                            'Formats\Whiskey.TaskAttribute.format.ps1xml'
-                        )
+        'Formats\Whiskey.BuildInfo.ps1xml',
+        'Formats\Whiskey.BuildVersion.ps1xml',
+        'Formats\Whiskey.Context.ps1xml',
+        'Formats\Whiskey.TaskAttribute.ps1xml'
+    )
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @( )
@@ -160,31 +158,7 @@
             Prerelease = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = @'
-# 0.48.4
-
-* Fixed: Whiskey build doesn't fail if Whiskey configuration file contains invalid YAML.
-
-# 0.48.3
-
-* Verbose and debug build output messages no longer have timestamp prefixes (hard to recognize info output).
-* Warning build output no longer has a task name prefix (hard to recognize info output).
-
-# 0.48.2
-
-* Fixed: the Context object's TaskName property isn't public/settable.
-
-# 0.48.1
-
-* Fixed: Whiskey's build output doesn't show timings when a task ends.
-* Fixed: the Context object's StartedAt property isn't public/settable.
-
-# 0.48.0
-
-* Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
-* Fixed: builds fail when run under a Jenkins PR build.
-* Improved Whiskey's build output.
-'@
+            ReleaseNotes = 'https://github.com/webmd-health-services/Whiskey/blob/master/CHANGELOG.md'
         } # End of PSData hashtable
 
     } # End of PrivateData hashtable

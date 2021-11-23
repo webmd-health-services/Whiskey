@@ -31,16 +31,16 @@ function Import-WhiskeyPowerShellModule
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         # The module names to import.
-        [String]$Name,
+        [Parameter(Mandatory)]
+        [String] $Name,
 
         # The version of the module to import.
-        [String]$Version,
+        [String] $Version,
 
-        [Parameter(Mandatory)]
         # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
-        [String]$PSModulesRoot
+        [Parameter(Mandatory)]
+        [String] $PSModulesRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -69,7 +69,7 @@ function Import-WhiskeyPowerShellModule
                 return $true
             }
 
-            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false
+            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false -WarningAction 'Ignore'
             return $true
         } 4> $null
     }

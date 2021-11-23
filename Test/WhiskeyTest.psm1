@@ -23,6 +23,8 @@ $downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('..\.output\.down
 $downloadCachePath = [IO.Path]::GetFullPath($downloadCachePath)
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
+$testNum = 0
+
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
     New-Item -Path $downloadCachePath -ItemType 'Directory' -Force | Out-Null
@@ -104,7 +106,7 @@ function Import-WhiskeyTestModule
 
     foreach( $moduleName in $Name )
     {
-        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global -WarningAction Ignore
     }
 }
 
@@ -115,7 +117,7 @@ function Import-WhiskeyTestTaskModule
         return
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve) -Global
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve) -Global -Verbose:$false
 }
 
 function Initialize-WhiskeyTestPSModule
@@ -483,7 +485,7 @@ function New-WhiskeyTestRoot
     # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
     # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5,
     # which will allow running specific `It` blocks.
-    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($script:testNum++)
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
     return $testRoot
 }
@@ -539,9 +541,12 @@ function Reset-WhiskeyTestPSModule
 function Reset-WhiskeyPSModulePath
 {
     $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
+    $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $pesterTestDriveRoot = "$($pesterTestDriveRoot)$([IO.Path]::DirectorySeparatorChar)"
     $paths =
         $env:PSModulePath -split [IO.Path]::PathSeparator | 
-        Where-Object { $_ -notlike '*\*.*\PSModules' } |
+        Where-Object { -not $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
         Where-Object { $_ -ne $whiskeyPSModulesPath }
     $env:PSModulePath = $paths -join [IO.Path]::PathSeparator
 }

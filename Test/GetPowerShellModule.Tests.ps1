@@ -259,8 +259,9 @@ Describe 'GetPowerShellModule.when called with clean mode' {
 }
 
 Describe 'GetPowerShellModule.when allowing prerelease versions' {
-    AfterEach { Reset }
+    AfterEach { Reset ; $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue' }
     It 'should install a prelease version' {
+        $Global:VerbosePreference = $Global:DebugPreference = 'Continue'
         Init
         GivenModule 'Whiskey'
         GivenVersion '0.43.*-*'
@@ -294,7 +295,7 @@ Describe 'GetPowerShellModule.when importing module after installation' {
         $modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
         $modulePath = Join-Path -Path $modulePath -ChildPath $TestPSModulesDirectoryName
         $modulePath = Join-Path -Path $modulePath 'Zip' -Resolve
-        Import-Module -Name $modulePath -Force
+        Import-Module -Name $modulePath -Force -WarningAction Ignore
         GivenImport
         GivenModule 'Zip'
         GivenVersion '0.2.0'

@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $failed = $false
+$testRoot = $null
 
 function File
 {
@@ -13,7 +14,7 @@ function File
         $ContentShouldBe
     )
 
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
+    $fullPath = Join-Path -Path $testRoot -ChildPath $Path
     $fullPath | Should -Exist
     Get-Content -Path $fullPath -Raw | Should -Be $ContentShouldBe
 }
@@ -25,11 +26,12 @@ function GivenFile
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path)
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
 }
 
 function Init
 {
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function Invoke-ImportWhiskeyYaml
@@ -48,7 +50,7 @@ function WhenRunningTask
         $Parameter
     )
 
-    $context = New-WhiskeyTestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
 
     $Global:Error.Clear()
     $script:failed = $false
@@ -86,6 +88,7 @@ function ThenFailed
 
 function ThenNoErrors
 {
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     $Global:Error | Should -BeNullOrEmpty
 }
 
@@ -319,7 +322,7 @@ Build:
             Argument:
                 VariableValue: $(Fubar)
 '@
-        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml
+        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml -ForBuildRoot $script:testRoot
         Add-WhiskeyApiKey -Context $context -ID 'ApiKey' -Value 'ApiKey'
         Add-WhiskeyCredential -Context $context -ID 'Credential' -Credential (New-Object 'PsCredential' ('cred',(ConvertTo-SecureString -String 'cred' -AsPlainText -Force)))
         $Global:Error.Clear()
@@ -344,7 +347,8 @@ PowerShell:
 - PowerShell:
     Path: one.ps1
 '@
-        $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+        $context = New-WhiskeyContext -Environment 'Verification' `
+                                      -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
         Invoke-WhiskeyBuild -Context $context
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
     }

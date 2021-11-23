@@ -63,6 +63,12 @@ Build:
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
+- CopyFile:
+    Path:
+    - CHANGELOG.md
+    - README.md
+    DestinationDirectory: Whiskey
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
@@ -72,6 +78,7 @@ Build:
     ExceptOnPlatform: Windows
     Queues:
     - Tasks:
+        # Needs to run in its own Pester task since it loads old versions of Whiskey.
         - Pester4:
             Script:
             - Test\build.ps1.Tests.ps1
@@ -167,7 +174,6 @@ Build:
             - Test\Install-WhiskeyTool.Tests.ps1
             - Test\NuGetPack.Tests.ps1
             - Test\Parallel.Tests.ps1
-            - Test\Pester3.Tests.ps1
             - Test\Pester4.Tests.ps1
             - Test\PublishNodeModule.Tests.ps1
     - Tasks:
@@ -211,7 +217,6 @@ Build:
             - "*\\Test\\NUnit2.Tests.ps1"
             - "*\\Test\\NUnit3.Tests.ps1"
             - "*\\Test\\Parallel.Tests.ps1"
-            - "*\\Test\\Pester3.Tests.ps1"
             - "*\\Test\\Pester4.Tests.ps1"
             - "*\\Test\\PowerShell.Tests.ps1"
             - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
@@ -240,7 +245,7 @@ Build:
 Publish:
 - AppVeyorWaitForBuildJobs:
     UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    IfExists: env:APPVEYOR_BEARER_TOKEN
+    IfExists: env:WHS_APPVEYOR_BEARER_TOKEN
     OnlyOnPlatform: Windows
     ApiKeyID: AppVeyor
 - PublishPowerShellModule:
