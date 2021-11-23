@@ -1,7 +1,7 @@
 
 function Invoke-WhiskeyPester5Task
 {
-    [Whiskey.Task('Pester5')]
+    [Whiskey.Task('Pester')]
     [Whiskey.RequiresPowerShellModule('Pester',
                                       ModuleInfoParameterName='PesterModuleInfo', Version='5.*',
                                       VersionParameterName='Version', SkipImport)]
@@ -118,7 +118,11 @@ function Invoke-WhiskeyPester5Task
             }
             if( $Container.ContainsKey('ScriptBlock') )
             {
-                return New-PesterContainer -ScriptBlock $Container.ScriptBlock
+                if( $Container.ScriptBlock -isnot [scriptblock] )
+                {
+                    $Container.ScriptBlock = [scriptblock]::Create($Container.ScriptBlock)
+                }
+                return New-PesterContainer -ScriptBlock $Container.ScriptBlock -Data $Container.Data
             }
         }
         
@@ -133,19 +137,15 @@ function Invoke-WhiskeyPester5Task
         $WarningPreference = $Preference['WarningPreference']
         $ErrorActionPreference = $Preference['ErrorActionPreference']
         
-        $DebugPreference = 'Continue'
-        Write-Debug $Configuration.Run.Path.GetType()
-
         Convert-ArrayList -InputObject $Configuration
         Convert-Boolean -InputObject $Configuration
-
-        Write-Debug $Configuration.Run.Path.GetType()
 
         # New Pester5 Invoke-Pester with Configuration
         $pesterConfiguration = New-PesterConfiguration -Hashtable $Configuration
 
         # If there is test data we have to set up a Pester Container
-        if($Container -ne $null){
+        if( $null -ne $Container )
+        {
             $pesterConfiguration.Run.Container = Get-PesterContainer -Container $Container
         }
 

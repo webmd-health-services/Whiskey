@@ -129,7 +129,7 @@ function Resolve-WhiskeyVariable
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-        if( $InputObject -eq $null )
+        if( $null -eq $InputObject -or $InputObject -is [scriptblock] )
         {
             return $InputObject
         }
