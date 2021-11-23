@@ -6,8 +6,8 @@ function Publish-WhiskeyPowerShellModule
     # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
     # * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
     # * whiskey.yml
-    [Whiskey.RequiresPowerShellModule('PackageManagement',Version='1.4.7',VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresPowerShellModule('PowerShellGet',Version='2.2.5',VersionParameterName='PowerShellGetVersion')]
+    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.4.7', VersionParameterName='PackageManagementVersion')]
+    [Whiskey.RequiresPowerShellModule('PowerShellGet', Version='2.2.5', VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -17,45 +17,33 @@ function Publish-WhiskeyPowerShellModule
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='Directory')]
-        [String]$Path
+        [String] $Path,
+
+        [Whiskey.Tasks.ValidatePath(PathType='File')]
+        [String] $ModuleManifestPath,
+
+        [String] $RepositoryName,
+
+        [Alias('RepositoryUri')]
+        [String] $RepositoryLocation,
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
+        [String] $CredentialID
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( -not $TaskParameter.ContainsKey('RepositoryName') )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext `
-                         -Message ('Property "RepositoryName" is mandatory. It should be the name of the PowerShell repository you want to publish to, e.g.
-
-        Build:
-        - PublishPowerShellModule:
-            Path: mymodule
-            RepositoryName: PSGallery
-        ')
-        return
-    }
-    $repositoryName = $TaskParameter['RepositoryName']
-
-    $apiKeyID = $TaskParameter['ApiKeyID']
-    if( -not $apiKeyID )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext `
-                         -Message ('Property "ApiKeyID" is mandatory. It must be the ID of the API key to use when publishing to the "{0}" repository. Use the `Add-WhiskeyApiKey` function to add API keys to the build.' -f $repositoryName)
-        return
-    }
-
-    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
-
     $manifestPath = '{0}\{1}.psd1' -f $Path,($Path | Split-Path -Leaf)
-    if( $TaskParameter.ContainsKey('ModuleManifestPath') )
+    if( $ModuleManifestPath )
     {
-        $manifestPath = $TaskParameter['ModuleManifestPath']
+        $manifestPath = $ModuleManifestPath
     }
+
     if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext `
-                         -Message ('Module manifest path "{0}" either does not exist or is a directory.' -f $manifestPath)
+        $msg = "Module manifest path ""$($manifestPath)"" either does not exist or is a directory."
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
@@ -67,8 +55,9 @@ function Publish-WhiskeyPowerShellModule
         -not ($manifest.PrivateData['PSData'] | Get-Member 'Keys') -or `
         -not $manifest.PrivateData['PSData'].ContainsKey('Prerelease')) )
     {
-        Stop-WhiskeyTask -TaskContext $Context -Message ("Module manifest ""$($manifestPath)"" is missing a ""Prerelease"" property. Please make sure the manifest's PrivateData hashtable contains a PSData key with a Prerelease property, e.g.
-        
+        $msg = "Module manifest ""$($manifest.Path)"" is missing a ""Prerelease"" property. Please make sure the " +
+               "manifest's PrivateData hashtable contains a PSData key with a Prerelease property, e.g.
+
     @{
         PrivateData = @{
             PSData = @{
@@ -76,16 +65,17 @@ function Publish-WhiskeyPowerShellModule
             }
         }
     }
-        ")
+"
+        Stop-WhiskeyTask -TaskContext $Context -Message $msg
         return
     }
 
-    $manifest = Get-Content $manifestPath
+    $manifestContent = Get-Content $manifest.Path
     $versionString = 'ModuleVersion = ''{0}.{1}.{2}''' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
-    $manifest = $manifest -replace 'ModuleVersion\s*=\s*(''|")[^''"]*(''|")', $versionString
+    $manifestContent = $manifestContent -replace 'ModuleVersion\s*=\s*(''|")[^''"]*(''|")', $versionString
     $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
-    $manifest = $manifest -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
-    $manifest | Set-Content $manifestPath
+    $manifestContent = $manifestContent -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
+    $manifestContent | Set-Content $manifest.Path
 
     $commonParams = @{}
     if( $VerbosePreference -in @('Continue','Inquire') )
@@ -101,51 +91,111 @@ function Publish-WhiskeyPowerShellModule
         $commonParams['InformationAction'] = $InformationPreference
     }
 
+    Write-WhiskeyDebug -Context $TaskContext -Message 'Bootstrapping NuGet packageprovider.'
     Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
-    $registeredRepositories = Get-PSRepository -ErrorAction Ignore @commonParams
 
-    if( $repositoryName -notin $registeredRepositories.Name )
+    $createTempRepo = $false
+    $infoMsg = ''
+    if( -not $RepositoryLocation -and -not $RepositoryName )
     {
-        $publishLocation = $TaskParameter['RepositoryUri']
-        if( -not $publishLocation )
+        $createTempRepo = $true
+        $RepositoryLocation = $TaskContext.OutputDirectory.FullName
+        $infoMsg = """$($RepositoryLocation | Resolve-WhiskeyRelativePath)"""
+    }
+    elseif( $RepositoryLocation )
+    {
+        $publishTo =
+            Get-PSRepository -ErrorAction Ignore @commonParams | Where-Object 'PublishLocation' -eq $RepositoryLocation
+        if( $publishTo )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext `
-                             -Message ('Property "RepositoryUri" is mandatory since there is no registered repository named "{0}". The "RepositoryUri" must be the URI to the PowerShall repository to publish to. The repository will be registered for you.' -f $repositoryName)
-            return
-        }
-
-        $credentialParam = @{ }
-        if( $TaskParameter.ContainsKey('CredentialID') )
-        {
-            $credentialParam['Credential'] = 
-                Get-WhiskeyCredential -Context $TaskContext `
-                                      -ID $TaskParameter['CredentialID'] `
-                                      -PropertyName 'CredentialID'
-        }
-
-        $exists = $registeredRepositories | Where-Object { $_.SourceLocation -eq $publishLocation }
-        if( $exists )
-        {
-            $repositoryName = $exists.Name 
-            Write-WhiskeyWarning -Context $TaskContext `
-                                 -Message ('The URI "{0}" is registered as the {1} repository. Please update your whiskey.yml file to use this repository name.' -f $publishLocation, $repositoryName)
+            $RepositoryName = $publishTo.Name
         }
         else
         {
-            Register-PSRepository -Name $repositoryName `
-                                  -SourceLocation $publishLocation `
-                                  -PublishLocation $publishLocation `
-                                  -InstallationPolicy Trusted `
-                                  -PackageManagementProvider NuGet @credentialParam `
-                                  -ErrorAction Stop @commonParams
+            $createTempRepo = $true
         }
     }
+    elseif( $RepositoryName )
+    {
+        $publishTo = Get-PSRepository -ErrorAction Ignore @commonParams | Where-Object 'Name' -eq $RepositoryName
+        if( -not $publishTo )
+        {
+            Get-PSRepository | Format-Table -AutoSize
+            $msg = "Unable to publish PowerShell module ""$($manifest.ModuleBase | Resolve-WhiskeyRelativePath)"" to " +
+                   "repository ""$($RepositoryName)"": a repository with that name doesn't exist. Update your " +
+                   'PublishPowerShellModule task with the name of one of the repository''s that ' +
+                   'exists (see above), use the "RepositoryLocation" to specify the URI or path to a repository, ' +
+                   'or leave "RepositoryName" blank to publish to the build output directory.'
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+            return
+        }
+        $RepositoryLocation = $publishTo.PublishLocation
+    }
 
-    # Use the Force switch to allow publishing versions that come *before* the latest version.
-    Publish-Module -Path $Path `
-                   -Repository $repositoryName `
-                   -NuGetApiKey $apiKey `
-                   -Force `
-                   -ErrorAction Stop `
-                   @commonParams
+    try
+    {
+        if( $createTempRepo )
+        {
+            $credentialParam = @{ }
+            if( $CredentialID )
+            {
+                $credentialParam['Credential'] =
+                    Get-WhiskeyCredential -Context $TaskContext -ID $CredentialID -PropertyName 'CredentialID'
+            }
+
+            $tempNameSuffix = [IO.Path]::GetRandomFileName() -replace '\.', ''
+            $RepositoryName = "Whiskey-$($TaskContext.BuildRoot.FullName)-$($tempNameSuffix)"
+
+            $msg = "Registering PowerShell repository ""$($RepositoryName)"" at ""$($RepositoryLocation)""."
+            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+            # Do *not* ErrorAction Stop this. It causes a handled error deep in the bowels of PackageManagement to
+            # cause Register-PSRepository to fail.
+            Register-PSRepository -Name $RepositoryName `
+                                  -SourceLocation $RepositoryLocation `
+                                  -PublishLocation $RepositoryLocation `
+                                  -InstallationPolicy Trusted `
+                                  -PackageManagementProvider NuGet `
+                                  -ErrorAction Continue `
+                                  @credentialParam `
+                                  @commonParams
+
+            if( -not (Get-PSRepository -Name $RepositoryName) )
+            {
+                Get-PSRepository | Format-Table -Auto
+                $msg = "Register-PSRepository didn't register ""$($RepositoryName)"" at location " +
+                       """$($RepositoryLocation)""."
+                Stop-WhiskeyTask -TaskContext $Context -Message $msg
+                return
+            }
+        }
+
+        $apiKeyParam = @{}
+        $apiKeyID = $TaskParameter['ApiKeyID']
+        if( $apiKeyID )
+        {
+            $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
+            if( $apiKey )
+            {
+                $apiKeyParam['NuGetApiKey'] = $apiKey
+            }
+        }
+
+        if( -not $infoMsg )
+        {
+            $infoMsg = "repository ""$($RepositoryName)"" at ""$($RepositoryLocation)"""
+        }
+        $msg = "Publishing PowerShell module ""$($Path | Resolve-WhiskeyRelativePath)"" to $($infoMsg)."
+        Write-WhiskeyInfo -Context $TaskContext -Message $msg
+        # Use the Force switch to allow publishing versions that come *before* the latest version.
+        Publish-Module -Path $Path -Repository $RepositoryName -Force @apiKeyParam @commonParams -ErrorAction Stop
+    }
+    finally
+    {
+        if( $createTempRepo )
+        {
+            $msg = "Unregistering temporary PowerShell repository ""$($RepositoryName)""."
+            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+            Unregister-PSRepository -Name $RepositoryName
+        }
+    }
 }

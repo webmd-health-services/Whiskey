@@ -1,3 +1,4 @@
+
 version: 0.0.0+{build}
 
 skip_tags: true
@@ -10,8 +11,6 @@ build:
 test: off
 
 environment:
-  global:
-    PUBLISH: False
   matrix:
   # TODO: Get builds working on PowerShell 7.2 on Windows.
   # - job_name: PowerShell 7.2 on Windows
@@ -50,7 +49,6 @@ artifacts:
 - path: .output\*.nupkg
   name: PowerShellGallery
 - path: .output\*
-
 
 
 for:

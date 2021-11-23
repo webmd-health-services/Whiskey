@@ -7,8 +7,8 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
     Prerelease:
-    - "*/*": alpha.$(WHISKEY_BUILD_NUMBER)
-    - develop: rc.$(WHISKEY_BUILD_NUMBER)
+    - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
+    - develop: rc$(WHISKEY_BUILD_NUMBER)
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
@@ -41,10 +41,6 @@ Build:
 - GetPowerShellModule:
     Name: PowerShellGet
     Version: 2.2.5
-
-- GetPowerShellModule:
-    Name: Pester
-    Version: 3.*
 
 - GetPowerShellModule:
     Name: Glob
@@ -239,3 +235,6 @@ Build:
     Exclude:
     - "*.pdb"
     - "*.orig"
+
+- PublishPowerShellModule:
+    Path: Whiskey
