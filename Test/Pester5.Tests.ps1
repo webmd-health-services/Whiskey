@@ -6,9 +6,15 @@ $testRoot = $null
 $context = $null
 $version = $null
 $taskParameter = @{}
-$testScript = @{}
 $failed = $false
+$failureMessage = $null
 $output = $null
+
+function GetOutputPath
+{
+    $outputFileRoot = $context.OutputDirectory.Name
+    return Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
+}
 
 function GivenTestFile
 {
@@ -17,14 +23,6 @@ function GivenTestFile
 
         [String] $Content
     )
-
-    $testScript['Script'] = & {
-        if( $testScript.ContainsKey('Script') )
-        {
-            $testScript['Script']
-        }
-        $Path 
-    }
 
     if( -not [IO.Path]::IsPathRooted($Path) )
     {
@@ -35,9 +33,9 @@ function GivenTestFile
 function Init
 {
     $script:taskParameter = @{}
-    $script:testScript = @{}
     $script:version = $null
     $script:failed = $false
+    $script:failureMessage = $null
     $Global:Error.Clear()
 
     $script:testRoot = New-WhiskeyTestRoot
@@ -58,108 +56,45 @@ function Reset
     Reset-WhiskeyTestPSModule
 }
 
-function ThenNoPesterTestFileShouldExist 
-{
-    $reportsIn =  $script:context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter 'pester-*.xml'
-    write-host $testReports
-    $testReports | Should -BeNullOrEmpty
-}
-
-function ThenPesterShouldHaveRun
+function ThenDidNotFail
 {
     param(
-        [Parameter(Mandatory)]
-        [int] $FailureCount,
-            
-        [Parameter(Mandatory)]
-        [int] $PassingCount,
-
         [Switch] $AsJUnitXml,
 
-        [String] $ResultFileName = 'pester+*.xml'
+        [String] $ResultFileName
     )
 
-    $reportsIn =  $context.outputDirectory
-    $testReports = Get-ChildItem -Path $reportsIn -Filter $ResultFileName
+    $script:failed | Should -Be $false
 
-    #check to see if we were supposed to run any tests.
-    if( ($FailureCount + $PassingCount) -gt 0 )
+    if( $AsJUnitXml )
     {
-        $testReports | Should -Not -BeNullOrEmpty
-    }
+        $reportsIn =  $context.outputDirectory
+        $testReports = Get-ChildItem -Path $reportsIn -Filter $ResultFileName
 
-    $total = 0
-    $failed = 0
-    $passed = 0
-    foreach( $testReport in $testReports )
-    {
-        $xml = [xml](Get-Content -Path $testReport.FullName -Raw)
-        $totalAttrName = 'total'
-        $disabled = 0
-        if( $AsJUnitXml )
+        foreach( $testReport in $testReports )
         {
-            $totalAttrName = 'tests'
-            $disabled = [int]($xml.DocumentElement.'disabled')
+            $testReport.Extension | Should -Be '.xml'
         }
-        $thisTotal = [int]($xml.DocumentElement.$totalAttrName) - $disabled
-        $thisFailed = [int]($xml.DocumentElement.'failures')
-        $thisPassed = ($thisTotal - $thisFailed)
-        $total += $thisTotal
-        $failed += $thisFailed
-        $passed += $thisPassed
-    }
-
-    $expectedTotal = $FailureCount + $PassingCount
-    $total | Should -Be $expectedTotal
-    $failed | Should -Be $FailureCount
-    $passed | Should -Be $PassingCount
-
-    foreach( $reportPath in $testReports )
-    {
-        Write-WhiskeyDebug -Context $context ('ReportsIn:  {0}' -f $ReportsIn)
-        Write-WhiskeyDebug -Context $context ('reportPath: {0}' -f $reportPath)
-        $reportPath = Join-Path -Path $ReportsIn -ChildPath $reportPath.Name
-        Write-WhiskeyDebug -Context $context ('reportPath: {0}' -f $reportPath)
-        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' `
-                          -ModuleName 'Whiskey' `
-                          -ParameterFilter { 
-                                if( -not [IO.Path]::IsPathRooted($Path) )
-                                {
-                                    $Path = Join-Path -Path $testRoot -ChildPath $Path
-                                }
-                                Write-WhiskeyDebug ('{0}  -eq  {1}' -f $Path,$reportPath) 
-                                $result = $Path -eq $reportPath 
-                                Write-WhiskeyDebug ('  {0}' -f $result) 
-                                return $result
-                          }
     }
 }
 
-function ThenTestShouldCreateMultipleReportFiles
-{
-    Get-ChildItem -Path (Join-Path -Path $context.OutputDirectory -ChildPath 'pester+*.xml') |
-        Measure-Object |
-        Select-Object -ExpandProperty 'Count' |
-        Should -Be 2
-}
-
-function ThenTestShouldFail
+function ThenFailed
 {
     param(
-        [String] $failureMessage
+        [String] $WithErrorMatching
     )
 
-    $Script:failed | Should -BeTrue
-    $Global:Error | Where-Object { $_ -match $failureMessage} | Should -Not -BeNullOrEmpty
+    $script:failed | Should -BeTrue
+    if($WithErrorMatching -ne $null)
+    {
+        $Global:Error | Should -Match $WithErrorMatching
+    }
 }
 
 function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [switch] $WithClean,
-
         [switch] $AsJob,
 
         [hashtable] $WithArgument = @{ }
@@ -167,11 +102,6 @@ function WhenPesterTaskIsInvoked
 
     $failed = $false
     $Global:Error.Clear()
-    $passThru = $true
-    $outputFormat = 'NUnitXml'
-    $testName = ''
-    $path = ''
-    $exclude = ''
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
@@ -180,82 +110,11 @@ function WhenPesterTaskIsInvoked
         $taskParameter['AsJob'] = 'true'
     }
 
-    if( $WithArgument.ContainsKey('PassThru') ){
-        $passThru = $WithArgument.PassThru
-    }
-
-    if( $WithArgument.ContainsKey('Output') )
-    {
-        $outputPath = $WithArgument['Output']
-    }
-    else
-    {
-        $outputFileRoot = $context.OutputDirectory.Name
-        $outputPath = Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
-    }
-
-    if( $WithArgument.ContainsKey('OutputFormat') )
-    {
-        $outputFormat = $WithArgument['OutputFormat']
-    }
-
-    if($WithArgument.ContainsKey('TestName'))
-    {
-        $testName = $WithArgument.TestName
-    }
-
-    if( $testScript.ContainsKey('Script') )
-    {
-        $path = $testScript.Script
-    }
-
-    if( $WithArgument.ContainsKey('Exclude') )
-    {
-        $exclude = $WithArgument.Exclude
-    }
-
-    # Checking to see if data is being passed in for tests
-    if( $WithArgument.ContainsKey('Script') )
-    {
-        if( $WithArgument.Script.ContainsKey('Data') )
-        {
-            $container = @{
-                Path = $path;
-                Data = $WithArgument.Script.Data;
-            }
-            $taskParameter['Container'] = $container
-        }
-    }
-
-    # New Pester5 Configuration
-    $configuration = @{
-        Debug = @{
-            ShowFullErrors = ($DebugPreference -eq 'Continue');
-            WriteDebugMessages = ($DebugPreference -eq 'Continue');
-        };
-        Run = @{
-            Path = $path;
-            ExcludePath = $exclude;
-            PassThru = $passThru;
-        };
-        Filter = @{
-            FullName = $testName;
-        };
-        Should = @{
-            ErrorAction = $ErrorActionPreference;
-        };
-        TestResult = @{
-            Enabled = $true;
-            OutputPath = $outputPath;
-            OutputFormat = $outputFormat;
-        };
-    }
-
-    $taskParameter['Configuration'] = $configuration
+    $taskParameter['Configuration'] = $WithArgument
 
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester5'
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester'
     }
     catch
     {
@@ -278,8 +137,25 @@ Describe 'One' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 2
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                Path = 'PassingTests.ps1';
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
+        ThenDidNotFail
     }
 }
 
@@ -297,9 +173,32 @@ Describe 'Failing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -FailureCount 2 -PassingCount 0
-        # ThenTestShouldFail -failureMessage 'Pester tests failed'
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                Path = 'FailingTests.ps1';
+                PassThru = $true;
+                Throw = $true;
+                Exit = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        } -ErrorVariable failureMessage
+
+        if( $null -ne ($failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
+        {
+            $script:failed = $true
+        }
+        ThenFailed
     }
 }
 
@@ -321,101 +220,25 @@ Describe 'Passing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -FailureCount 1 -PassingCount 1
-    }
-}
-
-Describe 'Pester5.when run multiple times in the same build' {
-    AfterEach { Reset }
-    It 'should run multiple times' {
-        Init
-        GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' {
-    It 'should pass' {
-        $true | Should -BeTrue
-    }
-}
-'@
-        WhenPesterTaskIsInvoked -AsJob
-        WhenPesterTaskIsInvoked -AsJob
-        ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
-        ThenTestShouldCreateMultipleReportFiles
-    }
-}
-
-Describe 'Pester5.when missing path' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
-        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        # ThenTestShouldFail -failureMessage 'Property "Script": Script is mandatory.'
-    }
-}
-
-Describe 'Pester5.when a task path is absolute' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
-        $pesterPath = Join-Path -Path $testRoot -ChildPath '..\SomeFile'
-        New-Item -Path $pesterPath
-        GivenTestFile $pesterPath
-        WhenPesterTaskIsInvoked -AsJob -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
-        # ThenTestShouldFail -failureMessage 'outside\ the\ build\ root'
-    }
-}
-
-Describe 'Pester5.when excluding tests and an exclusion filter doesn''t match' {
-    AfterEach { Reset }
-    It 'should still run' {
-        Init
-        GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' {
-    It 'should pass' { 
-        $true | Should -BeTrue
-    }
-}
-'@
-        GivenTestFile 'FailingTests.ps1' @'
-Describe 'FailingTests' {
-    It 'should fail' {
-        $true | Should -BeFalse
-    }
-}
-'@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            'Exclude' = '*fail*','Passing*'
-        }
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1
-    }
-}
-
-Describe 'Pester5.when excluding tests and exclusion filters match all paths' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
-        GivenTestFile 'PassingTests.ps1' @'
-Describe 'PassingTests' {
-    It 'should pass' {
-        $true | Should -BeTrue
-    }
-}
-'@
-        GivenTestFile 'FailingTests.ps1' @'
-Describe 'FailingTests' {
-    It 'should fail' {
-        $true | Should -BeFalse
-    }
-}
-'@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            'Exclude' = (Join-Path -Path '*' -ChildPath 'Fail*'),(Join-Path -Path '*' -ChildPath 'Passing*')
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                Path = @('FailingTests.ps1', 'PassingTests.ps1');
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
         } -ErrorAction SilentlyContinue
-        ThenNoPesterTestFileShouldExist
-        # ThenTestShouldFail ([regex]::Escape('Found no tests to run.'))
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 0
+        ThenDidNotFail
     }
 }
 
@@ -437,7 +260,24 @@ Describe 'PassingTests' {
 '@ | Set-Content -Path $Configuration.TestResult.OutputPath
             return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
         }
-        WhenPesterTaskIsInvoked
+        WhenPesterTaskIsInvoked -WithArgument @{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                Path = 'PassingTests.ps1';
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
             Push-Location $testRoot
             try
@@ -488,15 +328,24 @@ Describe 'FailingTests'{
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            # Make sure the Pester5 task's default values for these get overwritten
-            'Output' = '.output\pester.xml';
-            'OutputFormat' = 'JUnitXml';
-            # Make sure these do *not* get overwritten.
-            'PassThru' = $false;
-            # Make sure this gets passed.
-            'TestName' = 'PassingTests';
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                Path = 'PassingTests.ps1';
+                PassThru = $false;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = '.output\pester.xml';
+                OutputFormat = 'JUnitXml';
+            };
         }
-        ThenPesterShouldHaveRun -FailureCount 0 -PassingCount 1 -AsJUnitXml -ResultFileName 'pester.xml'
+        ThenDidNotFail -AsJUnitXml -ResultFileName 'pester.xml'
     }
 }
 
@@ -534,30 +383,154 @@ Describe 'ArgTest' {
 "@
         GivenTestFile 'ArgTest.ps1' $testContent
         GivenTestFile 'Arg2Test.ps1' $testContent
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            'Script' = @{
-                'Path' = 'Arg*.ps1';
-                'Data' = @{
-                    One = $oneValue;
-                    Two = $twoValue;
-                    Three = $threeValue;
-                    Four = $fourValue;
-                };
+        $taskParameter['Container'] = @{
+            Path = ('ArgTest.ps1', 'Arg2Test.ps1');
+            Data = @{
+                One = $oneValue;
+                Two = $twoValue;
+                Three = $threeValue;
+                Four = $fourValue;
             }
         }
-        ThenPesterShouldHaveRun -PassingCount 2 -FailureCount 0
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
+        ThenDidNotFail
     }
 }
 
-Describe 'Pester5.when passing hashtable to script property with multiple paths' {
+Describe 'Pester5.when passing an array list'{
     AfterEach { Reset }
-    It 'should pass arguments' {
+    It 'should get converted correctly'{
         Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'Failing' {
+    It 'should fail' {
+        $false | Should -BeFalse
+    }
+}
+'@
+        GivenTestFile 'PassingTests2.ps1' @'
+Describe 'Passing' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+
+        $pathArrayList = [System.Collections.ArrayList]::new()
+        $pathArrayList.Add('PassingTests.ps1')
+        $pathArrayList.Add('PassingTests2.ps1')
+
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            'Script' = @{
-                'Path' = ('Path1.ps1','Path2.ps1');
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
             };
-        } -ErrorAction SilentlyContinue
-        ThenPesterShouldHaveRun -PassingCount 0 -FailureCount 0
+            Run = @{
+                Path = $pathArrayList;
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
+        ThenDidNotFail
+
+    }
+}
+
+Describe 'Pester5.when passing a string boolean value'{
+    AfterEach { Reset }
+    It 'should get converted correctly'{
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'Passing' {
+    It 'should pass' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            Debug = @{
+                ShowFullErrors = 'True';
+                WriteDebugMessages = 'True';
+            };
+            Run = @{
+                Path = 'PassingTests.ps1';
+                PassThru = 'True';
+            };
+            Should = @{
+                ErrorAction = 'True';
+            };
+            TestResult = @{
+                Enabled = 'True';
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
+        ThenDidNotFail
+    }
+}
+
+Describe 'Pester5.when passing a script block'{
+    AfterEach{ Reset }
+    It 'should pass script block correctly'{
+        Init
+        $oneValue = [Guid]::NewGuid()
+        $scriptBlock = {
+            param(
+                [Parameter(Mandatory)]
+                [String] $One
+            )
+            Describe 'Passing' {
+                It 'should pass' {
+                    $One | Should -Be $oneValue
+                }
+            }
+        }
+        $taskParameter['Container'] = @{
+            ScriptBlock =  $scriptBlock;
+            Data = @{
+                One = $oneValue
+            }
+        }
+        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
+            Debug = @{
+                ShowFullErrors = ($DebugPreference -eq 'Continue');
+                WriteDebugMessages = ($DebugPreference -eq 'Continue');
+            };
+            Run = @{
+                PassThru = $true;
+            };
+            Should = @{
+                ErrorAction = $ErrorActionPreference;
+            };
+            TestResult = @{
+                Enabled = $true;
+                OutputPath = GetOutputPath;
+                OutputFormat = 'NUnitXml';
+            };
+        }
+        ThenDidNotFail
     }
 }
