@@ -114,15 +114,15 @@ function Invoke-WhiskeyPester5Task
             
             if( $Container.ContainsKey('Path') )
             {
-                return New-PesterContainer -Path $Container.Path -Data $Container.Data
+                return New-PesterContainer -Path $Container['Path'] -Data $Container['Data']
             }
             if( $Container.ContainsKey('ScriptBlock') )
             {
-                if( $Container.ScriptBlock -isnot [scriptblock] )
+                if( $Container['ScriptBlock'] -isnot [scriptblock] )
                 {
-                    $Container.ScriptBlock = [scriptblock]::Create($Container.ScriptBlock)
+                    $Container['ScriptBlock'] = [scriptblock]::Create($Container['ScriptBlock'])
                 }
-                return New-PesterContainer -ScriptBlock $Container.ScriptBlock -Data $Container.Data
+                return New-PesterContainer -ScriptBlock $Container['ScriptBlock'] -Data $Container['Data']
             }
         }
         
@@ -144,7 +144,7 @@ function Invoke-WhiskeyPester5Task
         $pesterConfiguration = New-PesterConfiguration -Hashtable $Configuration
 
         # If there is test data we have to set up a Pester Container
-        if( $null -ne $Container )
+        if( $Container )
         {
             $pesterConfiguration.Run.Container = Get-PesterContainer -Container $Container
         }
