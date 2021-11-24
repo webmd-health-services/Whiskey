@@ -59,22 +59,14 @@ function Reset
 function ThenDidNotFail
 {
     param(
-        [Switch] $AsJUnitXml,
-
-        [String] $ResultFileName
+        [Switch] $AsJUnitXml
     )
 
     $script:failed | Should -Be $false
 
     if( $AsJUnitXml )
     {
-        $reportsIn =  $context.outputDirectory
-        $testReports = Get-ChildItem -Path $reportsIn -Filter $ResultFileName
-
-        foreach( $testReport in $testReports )
-        {
-            $testReport.Extension | Should -Be '.xml'
-        }
+        Join-Path -Path $context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
     }
 }
 
@@ -85,7 +77,7 @@ function ThenFailed
     )
 
     $script:failed | Should -BeTrue
-    if($WithErrorMatching -ne $null)
+    if( $WithErrorMatching )
     {
         $Global:Error | Should -Match $WithErrorMatching
     }
@@ -138,21 +130,8 @@ Describe 'One' {
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
             Run = @{
                 Path = 'PassingTests.ps1';
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
             };
         }
         ThenDidNotFail
@@ -174,23 +153,9 @@ Describe 'Failing' {
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
             Run = @{
                 Path = 'FailingTests.ps1';
-                PassThru = $true;
                 Throw = $true;
-                Exit = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
             };
         } -ErrorVariable failureMessage
 
@@ -221,21 +186,8 @@ Describe 'Passing' {
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
             Run = @{
                 Path = @('FailingTests.ps1', 'PassingTests.ps1');
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
             };
         } -ErrorAction SilentlyContinue
         ThenDidNotFail
@@ -257,27 +209,9 @@ Describe 'PassingTests' {
         Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith {
             @'
 <test-results errors="0" failures="0" />
-'@ | Set-Content -Path $Configuration.TestResult.OutputPath
-            return ([pscustomobject]@{ 'TestResult' = [pscustomobject]@{ 'Time' = [TimeSpan]::Zero } })
+'@ 
         }
-        WhenPesterTaskIsInvoked -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
-            Run = @{
-                Path = 'PassingTests.ps1';
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
-            };
-        }
+        WhenPesterTaskIsInvoked
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
             Push-Location $testRoot
             try
@@ -286,11 +220,7 @@ Describe 'PassingTests' {
                 $expectedManifestPath = Join-Path -Path '*' -ChildPath (Join-Path -Path '5.*' -ChildPath 'Pester.psd1')
                 $ArgumentList[1] | Should -BeLike $expectedManifestPath
                 $ArgumentList[2] | Should -BeOfType [hashtable]
-                $ArgumentList[2].Run.Path | Should -Be 'PassingTests.ps1'
-                $ArgumentList[2].Run.ExcludePath | Should -BeNullOrEmpty
-                $ArgumentList[2].Filter.FullName | Should -BeNullOrEmpty
-                $ArgumentList[2].TestResult.OutputPath | Should -BeLike (Join-Path -Path '.output' -ChildPath 'pester+*.xml')
-                $ArgumentList[2].TestResult.OutputFormat | Should -Be 'NUnitXml'
+                $ArgumentList[2] | Should -BeNullOrEmpty
                 $ArgumentList[3] | Should -BeNullOrEmpty
                 $ArgumentList[4] | Should -BeOfType [hashtable]
                 $prefNames = @(
@@ -328,16 +258,8 @@ Describe 'FailingTests'{
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
             Run = @{
                 Path = 'PassingTests.ps1';
-                PassThru = $false;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
             };
             TestResult = @{
                 Enabled = $true;
@@ -345,7 +267,8 @@ Describe 'FailingTests'{
                 OutputFormat = 'JUnitXml';
             };
         }
-        ThenDidNotFail -AsJUnitXml -ResultFileName 'pester.xml'
+        ThenDidNotFail -AsJUnitXml
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
     }
 }
 
@@ -392,23 +315,7 @@ Describe 'ArgTest' {
                 Four = $fourValue;
             }
         }
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
-            Run = @{
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
-            };
-        }
+        WhenPesterTaskIsInvoked -AsJob
         ThenDidNotFail
     }
 }
@@ -437,21 +344,8 @@ Describe 'Passing' {
         $pathArrayList.Add('PassingTests2.ps1')
 
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
             Run = @{
                 Path = $pathArrayList;
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
             };
         }
         ThenDidNotFail
@@ -461,7 +355,7 @@ Describe 'Passing' {
 
 Describe 'Pester5.when passing a string boolean value'{
     AfterEach { Reset }
-    It 'should get converted correctly'{
+    It 'should get converted correctly and return test results'{
         Init
         GivenTestFile 'PassingTests.ps1' @'
 Describe 'Passing' {
@@ -471,16 +365,8 @@ Describe 'Passing' {
 }
 '@
         WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = 'True';
-                WriteDebugMessages = 'True';
-            };
             Run = @{
                 Path = 'PassingTests.ps1';
-                PassThru = 'True';
-            };
-            Should = @{
-                ErrorAction = 'True';
             };
             TestResult = @{
                 Enabled = 'True';
@@ -489,6 +375,7 @@ Describe 'Passing' {
             };
         }
         ThenDidNotFail
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
     }
 }
 
@@ -514,23 +401,26 @@ Describe 'Pester5.when passing a script block'{
                 One = $oneValue
             }
         }
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Debug = @{
-                ShowFullErrors = ($DebugPreference -eq 'Continue');
-                WriteDebugMessages = ($DebugPreference -eq 'Continue');
-            };
-            Run = @{
-                PassThru = $true;
-            };
-            Should = @{
-                ErrorAction = $ErrorActionPreference;
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
-            };
+        WhenPesterTaskIsInvoked -AsJob
+        ThenDidNotFail
+    }
+}
+
+Describe 'Pester5.when passing a script block with no data'{
+    AfterEach{ Reset }
+    It 'should pass script block correctly'{
+        Init
+        $scriptBlock = {
+            Describe 'Passing' {
+                It 'should pass' {
+                    $true | Should -BeTrue
+                }
+            }
         }
+        $taskParameter['Container'] = @{
+            ScriptBlock =  $scriptBlock;
+        }
+        WhenPesterTaskIsInvoked -AsJob
         ThenDidNotFail
     }
 }
