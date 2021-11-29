@@ -63,6 +63,35 @@ Build:
     - README.md
     DestinationDirectory: Whiskey
 
+- Zip:
+    ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
+    Path: 
+    - Whiskey
+    Exclude:
+    - "*.pdb"
+    - "*.orig"
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [ 'PushArtifact', '.output/Whiskey-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
+
+- PublishPowerShellModule:
+    Path: Whiskey
+
+- PowerShell:
+    ScriptBlock: Get-ChildItem -Path '$(WHISKEY_OUTPUT_DIRECTORY)'
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [
+        'PushArtifact',
+        '.output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
+        '-DeploymentName',
+        'PowerShellGallery'
+    ]
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
@@ -227,14 +256,3 @@ Build:
     Argument:
         Path: ./.output/pester*.xml
         QueueDuration: "00:10:00"
-
-- Zip:
-    ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
-    Path: 
-    - Whiskey
-    Exclude:
-    - "*.pdb"
-    - "*.orig"
-
-- PublishPowerShellModule:
-    Path: Whiskey
