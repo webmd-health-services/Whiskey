@@ -3,6 +3,23 @@
 ## Added
 
 * Added a `NoLog` parameter to the `DotNet` task to turn off logging.
+* Whiskey now supports publishing PowerShell modules with AppVeyor deployments instead of directly from/by Whiskey. Use
+the `PublishPowerShellModule` to publish a .nupkg file of your module, then use AppVeyor to publish that module to the
+PowerShell Gallery, or other PowerShell NuGet-based feed.
+
+## Changed
+
+* The `PublishPowerShellModule` task's default behavior is now to publish a module to a .nupkg file in the current
+build's output directory. This allows another tool/process to publish the module (i.e. you can remove your deploy logic
+from your build).
+* Renamed the `PublishPowerShellModule` task's `RepositoryUri` property to `RepositoryLocation`, since
+`Publish-Module` allows publishing to the file system.
+* `PublishPowerShellModule` task ignores the `RepositoryName` property if the `RepositoryLocation` property is given. If
+a repository exists whose publish location is `RepositoryLocation`, that repository is used. Otherwise, a temp
+repository is registered that publishes to `RepositoryLocation` to publish the module, and then unregistered after
+publishing.
+* The `PublishPowerShellModule` task will fail if no repository with the same name as the `RepositoryName` property
+exists and the `RepositoryLocation` property doesn't have a value.
 
 ## Deprecated
 
@@ -22,6 +39,9 @@ validating parameters.
 ## Removed
 
 * Warnings written by `Import-Module` are now hidden.
+* The `PublishPowerShellModule` no longer registers permanent PowerShell repositories. If no repository exists that
+matches either of the `RepositoryName` or `RepositoryLocation` properties, the task registers a repository that
+publishes to `RepositoryLocation`, publishes to it, then unregisters the repository.
 
 
 # 0.48.3

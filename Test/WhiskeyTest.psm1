@@ -532,6 +532,11 @@ function Remove-DotNet
 
 function Reset-WhiskeyTestPSModule
 {
+    if( -not (Test-Path -Path 'variable:TestDrive') )
+    {
+        return
+    }
+
     Get-Module |
         Where-Object { $_.Path -like ('{0}*' -f $TestDrive.FullName) } |
         Remove-Module -Force
@@ -540,6 +545,11 @@ function Reset-WhiskeyTestPSModule
 
 function Reset-WhiskeyPSModulePath
 {
+    if( -not (Test-Path -Path 'variable:TestDrive') )
+    {
+        return
+    }
+
     $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
     $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
     $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
