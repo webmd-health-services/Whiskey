@@ -40,7 +40,7 @@ function Init
 
     $script:testRoot = New-WhiskeyTestRoot
 
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester5' `
+    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester' `
                                              -ForDeveloper `
                                              -ForBuildRoot $testRoot `
                                              -IncludePSModule 'Pester'
@@ -59,14 +59,19 @@ function Reset
 function ThenDidNotFail
 {
     param(
-        [Switch] $AsJUnitXml
+        [Switch] $AndPublishedTestResult
     )
 
     $script:failed | Should -Be $false
 
-    if( $AsJUnitXml )
+    if( $AndPublishedTestResult )
     {
         Join-Path -Path $context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+    }
+    else 
+    {
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -Times 0
     }
 }
 
@@ -267,8 +272,7 @@ Describe 'FailingTests'{
                 OutputFormat = 'JUnitXml';
             };
         }
-        ThenDidNotFail -AsJUnitXml
-        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+        ThenDidNotFail -AndPublishedTestResult
     }
 }
 
@@ -374,8 +378,7 @@ Describe 'Passing' {
                 OutputFormat = 'NUnitXml';
             };
         }
-        ThenDidNotFail
-        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+        ThenDidNotFail -AndPublishedTestResult
     }
 }
 

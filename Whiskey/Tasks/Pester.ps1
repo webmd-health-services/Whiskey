@@ -1,5 +1,5 @@
 
-function Invoke-WhiskeyPester5Task
+function Invoke-WhiskeyPesterTask
 {
     [Whiskey.Task('Pester')]
     [Whiskey.RequiresPowerShellModule('Pester',
