@@ -203,7 +203,6 @@ Build:
             - Test\Parallel.Tests.ps1
             - Test\Pester.Tests.ps1
             - Test\Pester4.Tests.ps1
-            - Test\Pester5.Tests.ps1
             - Test\PublishNodeModule.Tests.ps1
     - Tasks:
         - Pester4:
@@ -248,7 +247,6 @@ Build:
             - "*\\Test\\Parallel.Tests.ps1"
             - "*\\Test\\Pester.Tests.ps1"
             - "*\\Test\\Pester4.Tests.ps1"
-            - "*\\Test\\Pester5.Tests.ps1"
             - "*\\Test\\PowerShell.Tests.ps1"
             - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
             - "*\\Test\\PublishNodeModule.Tests.ps1"
