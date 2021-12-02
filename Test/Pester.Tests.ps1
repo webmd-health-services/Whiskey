@@ -30,6 +30,15 @@ function GivenTestFile
     }
 }
 
+function GivenWhiskeyYml
+{
+    param(
+        $Content
+    )
+
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+}
+
 function Init
 {
     $script:taskParameter = @{}
@@ -94,6 +103,8 @@ function WhenPesterTaskIsInvoked
     param(
         [switch] $AsJob,
 
+        [switch] $WithYaml,
+
         [hashtable] $WithArgument = @{ }
     )
 
@@ -107,7 +118,22 @@ function WhenPesterTaskIsInvoked
         $taskParameter['AsJob'] = 'true'
     }
 
-    $taskParameter['Configuration'] = $WithArgument
+    if( $WithYaml )
+    {
+        [Whiskey.Context]$yamlContext = New-WhiskeyTestContext -ForDeveloper `
+                                                -ForBuildRoot $testRoot `
+                                                -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+
+        $taskParameter += 
+        $yamlContext.Configuration['Build'] | 
+        Where-Object { $_.ContainsKey('Pester') } | 
+        ForEach-Object { $_['Pester'] }
+    }
+
+    if( -not $taskParameter.ContainsKey('Configuration') )
+    {
+        $taskParameter['Configuration'] = $WithArgument
+    }
 
     try
     {
@@ -424,6 +450,64 @@ Describe 'Pester5.when passing a script block with no data'{
             ScriptBlock =  $scriptBlock;
         }
         WhenPesterTaskIsInvoked -AsJob
+        ThenDidNotFail
+    }
+}
+
+Describe 'Pester5.when configuration is passed in YAML' {
+    AfterEach { Reset }
+    It 'should pass the configuration correctly' {
+        Init
+        GivenTestFile 'PassingTests.ps1' @'
+Describe 'One' {
+    It 'should pass 1' {
+        $true | Should -BeTrue
+    }
+    It 'should pass again 2' {
+        $true | Should -BeTrue
+    }
+}
+'@
+        GivenWhiskeyYml @'
+        Build:
+        - Pester:
+            Configuration: 
+                Run:
+                    Path : 'PassingTests.ps1'
+'@
+
+        WhenPesterTaskIsInvoked -AsJob -WithYaml
+        ThenDidNotFail
+    }
+}
+
+Describe 'Pester5.when container is passed in YAML'{
+    AfterEach{ Reset }
+    It 'should pass container correctly' {
+        Init
+        $oneValue = [Guid]::NewGuid()
+        $testContent = @"
+param(
+    [Parameter(Mandatory)]
+    [String]`$One
+)
+
+Describe 'ArgTest' {
+    It 'should pass them' {
+        `$One | Should -Be '$($oneValue)'
+    }
+}
+"@
+        GivenTestFile 'ArgTest.ps1' $testContent
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            Container: 
+                Path: 'ArgTest.ps1'
+                Data: 
+                    One: '$($oneValue)'
+"@
+        WhenPesterTaskIsInvoked -AsJob -WithYaml
         ThenDidNotFail
     }
 }

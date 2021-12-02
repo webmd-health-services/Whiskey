@@ -6,8 +6,7 @@
 * Whiskey now supports publishing PowerShell modules with AppVeyor deployments instead of directly from/by Whiskey. Use
 the `PublishPowerShellModule` to publish a .nupkg file of your module, then use AppVeyor to publish that module to the
 PowerShell Gallery, or other PowerShell NuGet-based feed.
-* Added a `Pester` task that defaults to using `Pester 5`.
-
+* Added a `Pester` task that runs PowerShell tests with Pester version 5 or later.
 ## Changed
 
 * The `PublishPowerShellModule` task's default behavior is now to publish a module to a .nupkg file in the current
