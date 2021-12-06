@@ -5,10 +5,10 @@ Set-StrictMode -Version 'Latest'
 $testRoot = $null
 $context = $null
 $version = $null
-$taskParameter = @{}
 $failed = $false
 $failureMessage = $null
 $output = $null
+$whiskeyYamlPath = $null
 
 function GetOutputPath
 {
@@ -36,15 +36,16 @@ function GivenWhiskeyYml
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+    $script:whiskeyYamlPath = (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+    $Content | Set-Content -Path $whiskeyYamlPath
 }
 
 function Init
 {
-    $script:taskParameter = @{}
     $script:version = $null
     $script:failed = $false
     $script:failureMessage = $null
+    $script:whiskeyYamlPath = $null
     $Global:Error.Clear()
 
     $script:testRoot = New-WhiskeyTestRoot
@@ -101,11 +102,6 @@ function WhenPesterTaskIsInvoked
 {
     [CmdletBinding()]
     param(
-        [switch] $AsJob,
-
-        [switch] $WithYaml,
-
-        [hashtable] $WithArgument = @{ }
     )
 
     $failed = $false
@@ -113,27 +109,15 @@ function WhenPesterTaskIsInvoked
 
     Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
-    if( $AsJob )
-    {
-        $taskParameter['AsJob'] = 'true'
-    }
+    $script:context = New-WhiskeyTestContext -ForDeveloper `
+                                             -ConfigurationPath $whiskeyYamlPath `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule 'Pester'
 
-    if( $WithYaml )
-    {
-        [Whiskey.Context]$yamlContext = New-WhiskeyTestContext -ForDeveloper `
-                                                -ForBuildRoot $testRoot `
-                                                -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
-
-        $taskParameter += 
-        $yamlContext.Configuration['Build'] | 
+    $taskParameter = 
+        $context.Configuration['Build'] | 
         Where-Object { $_.ContainsKey('Pester') } | 
         ForEach-Object { $_['Pester'] }
-    }
-
-    if( -not $taskParameter.ContainsKey('Configuration') )
-    {
-        $taskParameter['Configuration'] = $WithArgument
-    }
 
     try
     {
@@ -150,7 +134,7 @@ Describe 'Pester5.when running passing Pester tests' {
     AfterEach { Reset }
     It 'should run the tests' {
         Init
-        GivenTestFile 'PassingTests.ps1' @'
+        GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'One' {
     It 'should pass 1' {
         $true | Should -BeTrue
@@ -160,11 +144,15 @@ Describe 'One' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = 'PassingTests.ps1';
-            };
-        }
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                Run:
+                    Path : 'PassingTests.Tests.ps1'
+"@
+        WhenPesterTaskIsInvoked
         ThenDidNotFail
     }
 }
@@ -173,7 +161,7 @@ Describe 'Pester5.when running failing Pester tests' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        GivenTestFile 'FailingTests.ps1' @'
+        GivenTestFile 'FailingTests.Tests.ps1' @'
 Describe 'Failing' {
     It 'should fail 1' {
         $true | Should -BeFalse
@@ -183,13 +171,16 @@ Describe 'Failing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = 'FailingTests.ps1';
-                Throw = $true;
-            };
-        } -ErrorVariable failureMessage
-
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                Run:
+                    Path : 'FailingTests.Tests.ps1'
+                    Throw: true
+"@
+        WhenPesterTaskIsInvoked -ErrorVariable failureMessage
         if( $null -ne ($failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
         {
             $script:failed = $true
@@ -202,25 +193,29 @@ Describe 'Pester5.when running multiple test scripts' {
     AfterEach { Reset }
     It 'should run all the scripts' {
         Init
-        GivenTestFile 'FailingTests.ps1' @'
+        GivenTestFile 'FailingTests.Tests.ps1' @'
 Describe 'Failing' {
     It 'should fail' {
         $true | Should -BeFalse
     }
 }
 '@
-        GivenTestFile 'PassingTests.ps1' @'
+        GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'Passing' {
     It 'should pass' {
         $true | Should -BeTrue
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = @('FailingTests.ps1', 'PassingTests.ps1');
-            };
-        } -ErrorAction SilentlyContinue
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                Run:
+                    Path : '*Tests.Tests.ps1'
+"@
+        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
         ThenDidNotFail
     }
 }
@@ -229,7 +224,7 @@ Describe 'Pester5.when not running task in job' {
     AfterEach { Reset }
     It 'should pass' {
         Init
-        GivenTestFile 'PassingTests.ps1' @"
+        GivenTestFile 'PassingTests.Tests.ps1' @"
 Describe 'PassingTests' {
     It 'should run inside Whiskey' {
         Test-Path -Path 'variable:powershellModulesDirectoryName' | Should -BeTrue
@@ -242,6 +237,11 @@ Describe 'PassingTests' {
 <test-results errors="0" failures="0" />
 '@ 
         }
+        GivenWhiskeyYml @'
+        Build:
+        - Pester:
+            Configuration: {}
+'@
         WhenPesterTaskIsInvoked
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
             Push-Location $testRoot
@@ -276,7 +276,7 @@ Describe 'Pester5.when passing custom arguments' {
     AfterEach { Reset }
     It 'should pass the arguments' {
         Init
-        GivenTestFile 'PassingTests.ps1' @'
+        GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'PassingTests'{
     It 'should pass' {
         $true | Should -BeTrue
@@ -288,16 +288,19 @@ Describe 'FailingTests'{
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = 'PassingTests.ps1';
-            };
-            TestResult = @{
-                Enabled = $true;
-                OutputPath = '.output\pester.xml';
-                OutputFormat = 'JUnitXml';
-            };
-        }
+        GivenWhiskeyYml @'
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration:
+                Run:
+                    Path: 'PassingTests.Tests.ps1'
+                TestResult: 
+                    Enabled: true
+                    OutputPath: '.output\pester.xml'
+                    OutputFormat: 'JUnitXml'
+'@
+        WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
 }
@@ -334,18 +337,22 @@ Describe 'ArgTest' {
     }
 }
 "@
-        GivenTestFile 'ArgTest.ps1' $testContent
-        GivenTestFile 'Arg2Test.ps1' $testContent
-        $taskParameter['Container'] = @{
-            Path = ('ArgTest.ps1', 'Arg2Test.ps1');
-            Data = @{
-                One = $oneValue;
-                Two = $twoValue;
-                Three = $threeValue;
-                Four = $fourValue;
-            }
-        }
-        WhenPesterTaskIsInvoked -AsJob
+        GivenTestFile 'ArgTest.Tests.ps1' $testContent
+        GivenTestFile 'Arg2Test.Tests.ps1' $testContent
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: {}
+            Container: 
+                Path: 'Arg*.Tests.ps1'
+                Data: 
+                    One: $($oneValue)
+                    Two: $($twoValue)
+                    Three: $($threeValue)
+                    Four: $($fourValue)
+"@
+        WhenPesterTaskIsInvoked
         ThenDidNotFail
     }
 }
@@ -368,18 +375,16 @@ Describe 'Passing' {
     }
 }
 '@
-
-        $pathArrayList = [System.Collections.ArrayList]::new()
-        $pathArrayList.Add('PassingTests.ps1')
-        $pathArrayList.Add('PassingTests2.ps1')
-
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = $pathArrayList;
-            };
-        }
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                Run: 
+                    Path: ['PassingTests.ps1', 'PassingTests2.ps1']
+"@
+        WhenPesterTaskIsInvoked
         ThenDidNotFail
-
     }
 }
 
@@ -394,44 +399,54 @@ Describe 'Passing' {
     }
 }
 '@
-        WhenPesterTaskIsInvoked -AsJob -WithArgument @{
-            Run = @{
-                Path = 'PassingTests.ps1';
-            };
-            TestResult = @{
-                Enabled = 'True';
-                OutputPath = GetOutputPath;
-                OutputFormat = 'NUnitXml';
-            };
-        }
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                Run: 
+                    Path: 'PassingTests.ps1'
+                TestResult:
+                    Enabled: true
+                    OutputPath: $(GetOutputPath)
+                    OutputFormat: 'NUnitXml'
+"@
+        WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
 }
 
-Describe 'Pester5.when passing a script block'{
+Describe 'Pester5.when passing a script block with data'{
     AfterEach{ Reset }
     It 'should pass script block correctly'{
         Init
         $oneValue = [Guid]::NewGuid()
-        $scriptBlock = {
-            param(
-                [Parameter(Mandatory)]
-                [String] $One
-            )
-            Describe 'Passing' {
-                It 'should pass' {
-                    $One | Should -Be $oneValue
-                }
-            }
-        }
-        $taskParameter['Container'] = @{
-            ScriptBlock =  $scriptBlock;
-            Data = @{
-                One = $oneValue
-            }
-        }
-        WhenPesterTaskIsInvoked -AsJob
-        ThenDidNotFail
+
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration: 
+                TestResult:
+                    Enabled: true
+                    OutputPath: $(GetOutputPath)
+                    OutputFormat: 'NUnitXml'
+            Container: 
+                ScriptBlock:
+                    "param(
+                        [Parameter(Mandatory,Position=0)]
+                        [String] `$One
+                    )
+                    Describe 'Passing' {
+                        It 'should pass' {
+                            `$One | Should -Be '$($oneValue)'
+                        }
+                    }"
+                Data: 
+                    One: $($oneValue)
+"@
+        WhenPesterTaskIsInvoked
+        ThenDidNotFail -AndPublishedTestResult
     }
 }
 
@@ -439,75 +454,24 @@ Describe 'Pester5.when passing a script block with no data'{
     AfterEach{ Reset }
     It 'should pass script block correctly'{
         Init
-        $scriptBlock = {
-            Describe 'Passing' {
-                It 'should pass' {
-                    $true | Should -BeTrue
-                }
-            }
-        }
-        $taskParameter['Container'] = @{
-            ScriptBlock =  $scriptBlock;
-        }
-        WhenPesterTaskIsInvoked -AsJob
-        ThenDidNotFail
-    }
-}
-
-Describe 'Pester5.when configuration is passed in YAML' {
-    AfterEach { Reset }
-    It 'should pass the configuration correctly' {
-        Init
-        GivenTestFile 'PassingTests.ps1' @'
-Describe 'One' {
-    It 'should pass 1' {
-        $true | Should -BeTrue
-    }
-    It 'should pass again 2' {
-        $true | Should -BeTrue
-    }
-}
-'@
-        GivenWhiskeyYml @'
-        Build:
-        - Pester:
-            Configuration: 
-                Run:
-                    Path : 'PassingTests.ps1'
-'@
-
-        WhenPesterTaskIsInvoked -AsJob -WithYaml
-        ThenDidNotFail
-    }
-}
-
-Describe 'Pester5.when container is passed in YAML'{
-    AfterEach{ Reset }
-    It 'should pass container correctly' {
-        Init
-        $oneValue = [Guid]::NewGuid()
-        $testContent = @"
-param(
-    [Parameter(Mandatory)]
-    [String]`$One
-)
-
-Describe 'ArgTest' {
-    It 'should pass them' {
-        `$One | Should -Be '$($oneValue)'
-    }
-}
-"@
-        GivenTestFile 'ArgTest.ps1' $testContent
         GivenWhiskeyYml @"
         Build:
         - Pester:
+            AsJob: true
+            Configuration: 
+                TestResult:
+                    Enabled: true
+                    OutputPath: $(GetOutputPath)
+                    OutputFormat: 'NUnitXml'
             Container: 
-                Path: 'ArgTest.ps1'
-                Data: 
-                    One: '$($oneValue)'
+                ScriptBlock:
+                    "Describe 'Passing' {
+                        It 'should pass' {
+                            `$true | Should -BeTrue
+                        }
+                    }"
 "@
-        WhenPesterTaskIsInvoked -AsJob -WithYaml
-        ThenDidNotFail
+        WhenPesterTaskIsInvoked 
+        ThenDidNotFail -AndPublishedTestResult
     }
 }

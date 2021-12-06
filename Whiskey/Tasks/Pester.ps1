@@ -111,6 +111,7 @@ function Invoke-WhiskeyPesterTask
                 [Parameter(Mandatory)]
                 [hashtable] $Container
             )
+            $Container['Data'] | ConvertTo-Json -Depth 100 | Write-Debug
             
             if( $Container.ContainsKey('Path') )
             {
@@ -140,6 +141,8 @@ function Invoke-WhiskeyPesterTask
         Convert-ArrayList -InputObject $Configuration
         Convert-Boolean -InputObject $Configuration
 
+        $DebugPreference = 'Continue'
+
         # New Pester5 Invoke-Pester with Configuration
         $pesterConfiguration = New-PesterConfiguration -Hashtable $Configuration
 
@@ -147,6 +150,7 @@ function Invoke-WhiskeyPesterTask
         if( $Container )
         {
             $pesterConfiguration.Run.Container = Get-PesterContainer -Container $Container
+            $pesterConfiguration.Run.Container | ConvertTo-Json -Depth 3 | Write-Debug
         }
 
         Invoke-Pester -Configuration $pesterConfiguration
@@ -159,7 +163,7 @@ function Invoke-WhiskeyPesterTask
 
     if( $Configuration.ContainsKey('TestResult') -and `
     $Configuration['TestResult'] -is [Collections.ICollection] `
-    -and $Configuration['TestResult'].Contains('OutputPath') )
+    -and $Configuration['TestResult'].ContainsKey('OutputPath') )
     {
         Publish-WhiskeyPesterTestResult -Path $Configuration['TestResult']['OutputPath']
     }
