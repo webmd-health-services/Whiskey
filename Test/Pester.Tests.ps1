@@ -130,7 +130,7 @@ function WhenPesterTaskIsInvoked
     }
 }
 
-Describe 'Pester5.when running passing Pester tests' {
+Describe 'Pester.when running passing Pester tests' {
     AfterEach { Reset }
     It 'should run the tests' {
         Init
@@ -157,7 +157,7 @@ Describe 'One' {
     }
 }
 
-Describe 'Pester5.when running failing Pester tests' {
+Describe 'Pester.when running failing Pester tests' {
     AfterEach { Reset }
     It 'should fail' {
         Init
@@ -189,7 +189,7 @@ Describe 'Failing' {
     }
 }
 
-Describe 'Pester5.when running multiple test scripts' {
+Describe 'Pester.when running multiple test scripts' {
     AfterEach { Reset }
     It 'should run all the scripts' {
         Init
@@ -214,13 +214,18 @@ Describe 'Passing' {
             Configuration: 
                 Run:
                     Path : '*Tests.Tests.ps1'
+                    Throw: true
 "@
-        WhenPesterTaskIsInvoked -ErrorAction SilentlyContinue
-        ThenDidNotFail
+        WhenPesterTaskIsInvoked -ErrorVariable failureMessage
+        if( $null -ne ($failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
+        {
+            $script:failed = $true
+        }
+        ThenFailed
     }
 }
 
-Describe 'Pester5.when not running task in job' {
+Describe 'Pester.when not running task in job' {
     AfterEach { Reset }
     It 'should pass' {
         Init
@@ -272,7 +277,7 @@ Describe 'PassingTests' {
     }
 }
 
-Describe 'Pester5.when passing custom arguments' {
+Describe 'Pester.when passing custom arguments' {
     AfterEach { Reset }
     It 'should pass the arguments' {
         Init
@@ -280,11 +285,6 @@ Describe 'Pester5.when passing custom arguments' {
 Describe 'PassingTests'{
     It 'should pass' {
         $true | Should -BeTrue
-    }
-}
-Describe 'FailingTests'{
-    It 'should fail' {
-        $false | Should -BeTrue
     }
 }
 '@
@@ -305,7 +305,7 @@ Describe 'FailingTests'{
     }
 }
 
-Describe 'Pester5.when passing named arguments to script' {
+Describe 'Pester.when passing named arguments to script' {
     AfterEach { Reset }
     It 'should pass arguments' {
         Init
@@ -357,7 +357,7 @@ Describe 'ArgTest' {
     }
 }
 
-Describe 'Pester5.when passing an array list'{
+Describe 'Pester.when passing an array list'{
     AfterEach { Reset }
     It 'should get converted correctly'{
         Init
@@ -388,7 +388,7 @@ Describe 'Passing' {
     }
 }
 
-Describe 'Pester5.when passing a string boolean value'{
+Describe 'Pester.when passing a string boolean value'{
     AfterEach { Reset }
     It 'should get converted correctly and return test results'{
         Init
@@ -416,7 +416,7 @@ Describe 'Passing' {
     }
 }
 
-Describe 'Pester5.when passing a script block with data'{
+Describe 'Pester.when passing a script block with data'{
     AfterEach{ Reset }
     It 'should pass script block correctly'{
         Init
@@ -434,11 +434,11 @@ Describe 'Pester5.when passing a script block with data'{
             Container: 
                 ScriptBlock:
                     "param(
-                        [Parameter(Mandatory,Position=0)]
+                        [Parameter(Mandatory)]
                         [String] `$One
                     )
                     Describe 'Passing' {
-                        It 'should pass' {
+                        It 'should pass' -TestCases @{ 'One' = `$One} {
                             `$One | Should -Be '$($oneValue)'
                         }
                     }"
@@ -450,7 +450,7 @@ Describe 'Pester5.when passing a script block with data'{
     }
 }
 
-Describe 'Pester5.when passing a script block with no data'{
+Describe 'Pester.when passing a script block with no data'{
     AfterEach{ Reset }
     It 'should pass script block correctly'{
         Init
