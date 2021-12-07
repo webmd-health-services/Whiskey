@@ -10,6 +10,12 @@ Build:
     - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
     - develop: rc$(WHISKEY_BUILD_NUMBER)
 
+# Update the AppVeyor build/version number.
+- Exec:
+      OnlyBy: BuildServer
+      Path: appveyor
+      Argument: [ UpdateBuild, -Version, $(WHISKEY_SEMVER2) ]
+
 - GetPowerShellModule:
     Name: BuildMasterAutomation
     Version: 0.6.*
