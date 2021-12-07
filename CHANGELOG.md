@@ -7,6 +7,9 @@
 the `PublishPowerShellModule` to publish a .nupkg file of your module, then use AppVeyor to publish that module to the
 PowerShell Gallery, or other PowerShell NuGet-based feed.
 * Added a `Pester` task that runs PowerShell tests with Pester version 5 or later.
+* Whiskey overrides PowerShell's default error and exception output formats so that only error messages are output.
+PowerShell's default error view is hard to recognize and read in non-colorized build output. To **not** use Whiskey's
+format, set the `WHISKEY_DISABLE_ERROR_FORMAT` environment variable to `True` **before** importing Whiskey.
 ## Changed
 
 * The `PublishPowerShellModule` task's default behavior is now to publish a module to a .nupkg file in the current
