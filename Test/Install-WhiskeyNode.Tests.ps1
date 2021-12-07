@@ -192,10 +192,19 @@ function Lock-File
         {
             Start-Sleep -Milliseconds 1
         }
-        Write-Debug "[$(Get-Date)]  Directory ""$($using:Path)"" exists."
+        Write-Debug "[$(Get-Date)]  Directory ""$($parentDir)"" exists."
 
         Write-Debug "[$(Get-Date)]  Locking ""$($using:Path)""."
         New-Item -Path $using:Path -ItemType 'File'
+
+        Write-Debug "[$(Get-Date)]  Waiting for ""$($using:Path)"" to exist."
+        while( -not (Test-Path -Path $using:Path) )
+        {
+            Start-Sleep -Milliseconds 1
+        }
+        Write-Debug "[$(Get-Date)]  File ""$($using:Path)"" exists."
+
+        Write-Debug "[$(Get-Date)]  Locking ""$($using:Path)""."
         $file = [IO.File]::Open($using:Path, 'Open', 'Write', 'None')
         Write-Debug "[$(Get-Date)]  Locked  ""$($using:Path)""."
 

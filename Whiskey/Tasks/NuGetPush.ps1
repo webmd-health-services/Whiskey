@@ -99,24 +99,38 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
             if( -not ($_.Exception | Get-Member 'Response') )
             {
                 Write-Error -ErrorRecord $_
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unknown failure checking if {0} {1} package already exists at {2}. {3}' -f  $packageName,$packageVersion,$packageUri,$_)
+                $msg = "Unknown failure checking if $($packageName) $($packageVersion) package already exists at " +
+                       "$($packageUri): $($_)"
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                 return
             }
 
             $response = $_.Exception.Response
+            if( -not ($response | Get-Member 'StatusCode') )
+            {
+                Write-Error -ErrorRecord $_
+                $msg = "Unable to determine HTTP status code from failed HTTP response to $($packageUri) checking if " +
+                       "$($packageName) $($packageVersion) exists: $($_)"
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                return
+            }
+
             if( $response.StatusCode -ne [Net.HttpStatusCode]::NotFound )
             {
-                $error = ''
+                $content = ''
                 if( $response | Get-Member 'GetResponseStream' )
                 {
-                    $content = $response.GetResponseStream()
-                    $content.Position = 0
-                    $reader = New-Object 'IO.StreamReader' $content
-                    $error = $reader.ReadToEnd() -replace '<[^>]+?>',''
+                    $responseStream = $response.GetResponseStream()
+                    $responseStream.Position = 0
+                    $reader = New-Object 'IO.StreamReader' $responseStream
+                    $content = $reader.ReadToEnd() -replace '<[^>]+?>',''
                     $reader.Close()
                     $response.Close()
                 }
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Failure checking if {0} {1} package already exists at {2}. The web request returned a {3} ({4}) status code:{5} {5}{6}' -f $packageName,$packageVersion,$packageUri,$response.StatusCode,[int]$response.StatusCode,[Environment]::NewLine,$error)
+                $msg = "Failure checking if $($packageName) $($packageVersion) package already exists at " +
+                       "$($packageUri). The web request returned status code $($response.StatusCode) " +
+                       "($([int]$response.StatusCode)) status code: $($content)"
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                 return
             }
 
