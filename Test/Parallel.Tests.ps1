@@ -26,6 +26,8 @@ function GivenFile
         $Content
     )
 
+    Write-Debug $Path
+    Write-Debug $Content
     $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
 }
 
@@ -191,27 +193,61 @@ Queues:
 Describe 'Parallel.when second queue finishes before first queue' {
     It 'should wait for all queues to finish' {
         Init
-        GivenFile 'one.ps1' @'
-Write-Host ("1" * 80)
-Write-Host (Get-Date)
-while( -not (Test-Path -Path 'two.ps1.started') )
+        $twoPidPath = Join-Path -Path $testRoot -ChildPath 'two.ps1.pid'
+        GivenFile 'one.ps1' @"
+`$pidPath = '$($twoPidPath)'
+`$prefix = "[ONE]  [`$(`$PID)]  "
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for ""`$(`$pidPath)"" to exist."
+`$writeNewline = `$false
+while( -not (Test-Path -Path `$pidPath) )
 {
     Write-Host '.' -NoNewLine
     Start-Sleep -Seconds 1
+    `$writeNewline = `$true
 }
-Start-Sleep -Seconds 5
-$Global:Error | Format-List * -Force | Out-String | Write-Host
+if( `$writeNewline )
+{
+    Write-Host ''
+}
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  ""`$(`$pidPath)"" exists."
+
+`$twoPid = Get-Content -Path `$pidPath -ReadCount 1
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for process ""`$(`$twoPid)"" exists."
+`$writeNewline = `$false
+while( (Get-Process -Id `$twoPid -ErrorAction Ignore) )
+{
+    Write-Host '.' -NoNewLine
+    Start-Sleep -Seconds 1
+    `$writeNewline = `$true
+}
+if( `$writeNewline )
+{
+    Write-Host ''
+}
+
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Process ""`$(`$twoPid)"" no longer exists."
+if( `$Global:Error )
+{
+    `$Global:Error | Format-List * -Force | Out-String | Write-Host
+}
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 1 to output."
 1 | Write-Output
-Write-Host (Get-Date)
-'@
-        GivenFile 'two.ps1' @'
-Write-Host ("2" * 80)
-Write-Host (Get-Date)
-'' | Set-Content -Path 'two.ps1.started'
-$Global:Error | Format-List * -Force | Out-String | Write-Host
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
+"@
+
+        GivenFile 'two.ps1' @"
+`$prefix = "[TWO]  [`$(`$PID)]  "
+`$pidPath = '$($twoPidPath)'
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Saving PID to ""`$(`$pidPath)""."
+`$PID | Set-Content -Path `$pidPath
+if( `$Global:Error )
+{
+    `$Global:Error | Format-List * -Force | Out-String | Write-Host
+}
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 2 to output."
 2 | Write-Output
-Write-Host (Get-Date) 
-'@
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
+"@
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
