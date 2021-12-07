@@ -224,6 +224,8 @@ if( `$writeNewline )
 {
     Write-Host ''
 }
+# Give the process a little more time to close.
+Start-Sleep -Seconds 1
 
 Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Process ""`$(`$twoPid)"" no longer exists."
 if( `$Global:Error )
