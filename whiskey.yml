@@ -92,6 +92,11 @@ Build:
     Path: appveyor
     Argument: [ 'PushArtifact', '.output/Whiskey-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
 
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [ 'PushArtifact', 'Whiskey/build.ps1', '-DeploymentName', 'GitHub' ]
+
 - PublishPowerShellModule:
     Path: Whiskey
 
