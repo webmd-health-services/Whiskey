@@ -9,6 +9,7 @@ $taskWorkingDirectory = $null
 $nodePath = $null
 $testRoot = $null
 $outPath = $null
+$avStartedFileName = 'av.started'
 
 function GivenPackageJson
 {
@@ -50,6 +51,7 @@ function Reset
     Write-Verbose -Message 'Removing leftover jobs.'
     $DebugPreference = 'Continue'
     $jobs = Get-Job | Where-Object 'Name' -EQ $PSCommandPath
+    $jobs | Format-Table -Auto | Out-String | Write-Debug
     $jobs | Wait-Job -Timeout 30 | Receive-Job
     $jobs | Remove-Job -Force
     Write-Verbose -Message 'Done removing jobs.'
@@ -178,16 +180,29 @@ function WhenInstallingTool
 function Lock-File
 {
     param(
-        $Duration,
-        $Path
+        [Parameter(Mandatory)]
+        [TimeSpan] $Duration,
+
+        [Parameter(Mandatory)]
+        [String] $Path,
+
+        [Parameter(Mandatory)]
+        [String] $AVStartedPath
     )
 
     Start-Job -Name $PSCommandPath -ScriptBlock {
 
         $DebugPreference = 'Continue'
 
-        $parentDir = $using:Path | Split-Path
         $prefix = '[Lock-File]  '
+
+        $parentDir = $using:Path | Split-Path
+
+        $msg = "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Signaling that A/V started: creating file " +
+               """$($using:AVStartedPath)""."
+        Write-Debug $msg
+        New-Item -Path $using:AVStartedPath -ItemType 'File'
+
         Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for ""$($parentDir)"" to exist."
         while(-not (Test-Path -Path $parentDir) )
         {
@@ -262,11 +277,23 @@ function GivenAntiVirusLockingFiles
     
     $targetFilePath = Join-Path -Path $testRoot -ChildPath $extractedDirName
     $lockSignalPath = Join-Path -Path $targetFilePath -ChildPath '.lock'
+    $avSignalPath = Join-Path -Path $testRoot -ChildPath 'av.started'
 
-    Lock-File -Duration $For -Path $lockSignalPath
+    Lock-File -Duration $For -Path $lockSignalPath -AVStartedPath $avSignalPath
 
     Mock -CommandName 'New-TimeSpan' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
         `$prefix = '[New-TimeSpan]  '
+        
+        `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for A/V to start: looking for file " +
+                """$($avSignalPath)""."
+        Write-WhiskeyDebug `$msg
+        while( -not (Test-Path -Path "$($avSignalPath)") )
+        {
+            Start-Sleep -Milliseconds 1
+        }
+        `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  A/V started: file ""$($avSignalPath)"" exists."
+        Write-WhiskeyDebug `$msg
+
         `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for background job to create lock " +
                 "file ""$($lockSignalPath)""."
         Write-WhiskeyDebug `$msg
