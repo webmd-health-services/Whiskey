@@ -224,14 +224,16 @@ if( `$writeNewline )
 {
     Write-Host ''
 }
-# Give the process a little more time to close.
-Start-Sleep -Seconds 1
 
 Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Process ""`$(`$twoPid)"" no longer exists."
 if( `$Global:Error )
 {
     `$Global:Error | Format-List * -Force | Out-String | Write-Host
 }
+# Seen up to four seconds difference between one writing to stdout and two writing to stdout and one's output showing
+# up first. Doubling that then rounded up to 10.
+Start-Sleep -Seconds 10
+
 Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 1 to output."
 1 | Write-Output
 Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
