@@ -186,7 +186,7 @@ function Install-WhiskeyNode
             Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputRoot)
             & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
 
-            # We use New-TimeSpan so we can mock it and in the mock wait for our simulated anti-virus process to lock a
+            # We use New-TimeSpan so we can mock it and wait for our simulated anti-virus process to lock a
             # file (i.e. so we can test that this wait logic works).
             $maxTime = New-TimeSpan -Seconds 10
             $timer = [Diagnostics.Stopwatch]::StartNew()
