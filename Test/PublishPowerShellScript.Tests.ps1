@@ -1,6 +1,13 @@
 Set-StrictMode -Version 'Latest'
 
+Write-Debug 'PUBLISHPOWERSHELLSCRIPT  PSMODULEPATH'
+$env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
+
+Write-Debug 'PUBLISHPOWERSHELLSCRIPT  START'
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
+Write-Debug 'PUBLISHPOWERSHELLSCRIPT  POST INITIALIZE'
 
 $testRoot = $null
 $context = $null
@@ -82,6 +89,9 @@ function Init
 {
     param(
     )
+
+    Write-Debug 'PUBLISHPOWERSHELLSCRIPT  INIT'
+    Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
 
     $script:context = $null
     $script:credentials = @{ }
@@ -204,6 +214,11 @@ function WhenPublishing
 
 function Reset
 {
+    Write-DEbug 'PUBLISHPOWERSHELLSCRIPT  RESET'
+    Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
+
+    $Global:Error | Format-List * -force | Out-String | Write-Debug
+
     Reset-WhiskeyTestPSModule
     Get-PSRepository | Where-Object 'Name' -Like 'Whiskey*' | Unregister-PSRepository
     if( $script:repoToUnregister )

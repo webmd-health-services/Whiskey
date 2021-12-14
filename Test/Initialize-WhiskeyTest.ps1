@@ -140,3 +140,5 @@ finally
     Write-Timing ('Initialize-WhiskeyTest.ps1  End')
     $Global:VerbosePreference = $originalVerbosePreference
 }
+
+Get-Module | Format-Table -AutoSize | Out-String | Write-Debug

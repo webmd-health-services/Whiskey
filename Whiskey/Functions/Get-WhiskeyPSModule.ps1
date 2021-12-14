@@ -55,7 +55,10 @@ function Get-WhiskeyPSModule
     
     Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
     
-    $env:PSModulePath -split [IO.Path]::PathSeparator | Write-WhiskeyDebug
+    Write-WhiskeyDebug '[Get-WhiskeyPSModules]  PSModulePath:'
+    $env:PSModulePath -split [IO.Path]::PathSeparator |
+        ForEach-Object { "  $($_)"} |
+        Write-WhiskeyDebug
     $modules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
     $modules | Out-String | Write-WhiskeyDebug
     $modules |

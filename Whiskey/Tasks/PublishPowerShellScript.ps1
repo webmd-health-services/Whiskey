@@ -174,6 +174,10 @@ function Publish-WhiskeyPowerShellScript
         }
         $msg = "Publishing PowerShell script ""$($Path | Resolve-WhiskeyRelativePath)"" to $($infoMsg)."
         Write-WhiskeyInfo -Context $TaskContext -Message $msg
+
+        Write-Debug 'PUBLISHPOWERSHELLSCRIPT  PUBLISH-SCRIPT'
+        $PSBoundParameters | Format-Table -AutoSize | Out-String | Write-Debug
+        Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
         # Use the Force switch to allow publishing versions that come *before* the latest version.
         Publish-Script -Path $scriptManifestPath -Repository $RepositoryName -Force @apiKeyParam @commonParams -ErrorAction Stop
     }
