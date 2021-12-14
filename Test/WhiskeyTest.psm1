@@ -492,6 +492,12 @@ function New-WhiskeyTestRoot
     return $testRoot
 }
 
+function Register-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
+}
+
 function Remove-Node
 {
     param(
@@ -599,6 +605,12 @@ function ThenModuleInstalled
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist
+}
+
+function Unregister-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
 }
 
 function Use-CallerPreference

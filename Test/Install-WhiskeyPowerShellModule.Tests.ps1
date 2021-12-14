@@ -49,6 +49,7 @@ function Init
     Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
 
     Reset-WhiskeyPSModulePath
+    Unregister-WhiskeyPSModulesPath
 }
 
 # Wrap private function so we can call it like it's public.
@@ -72,6 +73,7 @@ function Reset
 {
     Reset-WhiskeyTestPSModule
     Reset-WhiskeyPSModulePath
+    Register-WhiskeyPSModulesPath
 }
 
 function ThenModuleImported

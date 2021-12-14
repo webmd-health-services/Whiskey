@@ -132,6 +132,10 @@ function Get-WhiskeyPSModule
 
             return $true
         } |
-        Sort-Object -Property 'Version' -Descending |
+        # Get the highest versioned module in the order in which they appear in the PSModulePath environment variable.
+        Group-Object -Property 'Version' |
+        Sort-Object -Property { [Version]$_.Name } -Descending |
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty 'Group' |
         Select-Object -First 1
 }
