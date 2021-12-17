@@ -1,4 +1,8 @@
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
+
+$Global:VerbosePreference = $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
 
 Write-Debug 'PUBLISHPOWERSHELLSCRIPT  PSMODULEPATH'
 $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
@@ -347,11 +351,11 @@ Describe 'PublishPowerShellScript.when publishing to repository that already exi
     AfterEach { Reset }
     It 'should publish the script wihtout registering the repository' {
         Init
-        GivenRepository 'R1'
-        WhenPublishing -ToRepo 'R1'
+        GivenRepository 'RS1'
+        WhenPublishing -ToRepo 'RS1'
         ThenSucceeded
-        ThenScriptPublished -To 'R1'
-        ThenRepository 'R1' -Exists -NotRegistered
+        ThenScriptPublished -To 'RS1'
+        ThenRepository 'RS1' -Exists -NotRegistered
     }
 }
 
@@ -359,10 +363,9 @@ Describe 'PublishPowerShellScript.when publishing to repository that does not ex
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenPublishing -ToRepo 'R2' -ErrorAction Silently
+        WhenPublishing -ToRepo 'RS2' -ErrorAction Silently
         ThenFailed 'a repository with that name doesn''t exist'
-        ThenScriptNotPublished -To $context.OutputDirectory
-        ThenRepository 'R2' -NotExists -NotUnregistered
+        ThenRepository 'RS2' -NotExists -NotUnregistered
     }
 }
 
@@ -446,12 +449,12 @@ Describe 'PublishPowerShellScript.when given repository by location and by name'
     AfterEach { Reset }
     It 'should use repository registered by location' {
         Init
-        GivenRepository -Named 'R7' -At 'R7'
-        WhenPublishing -ToRepo 'R8' -RepoAt $script:publishRoot
+        GivenRepository -Named 'RS7' -At 'RS7'
+        WhenPublishing -ToRepo 'RS8' -RepoAt $script:publishRoot
         ThenSucceeded
-        ThenRepository 'R8' -NotRegistered -NotExists
-        ThenRepository 'R7' -NotRegistered -Exists
-        ThenScriptPublished -To 'R7'
+        ThenRepository 'RS8' -NotRegistered -NotExists
+        ThenRepository 'RS7' -NotRegistered -Exists
+        ThenScriptPublished -To 'RS7'
     }
 }
 

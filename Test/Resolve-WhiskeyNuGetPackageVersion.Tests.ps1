@@ -3,6 +3,8 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+$Global:VerbosePreference = $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 if( -not $IsWindows )
