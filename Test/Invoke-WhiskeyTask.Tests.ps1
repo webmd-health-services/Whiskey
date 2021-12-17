@@ -392,7 +392,8 @@ function ThenToolInstalled
         $expectedInstallRoot = $testRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)
         Write-WhiskeyDebug -Message ('InstallRoot  expected  {0}' -f $expectedInstallRoot)
         Write-WhiskeyDebug -Message ('             actual    {0}' -f $InstallRoot)
-        $InstallRoot -eq $expectedInstallRoot
+        return $InstallRoot -eq $expectedInstallRoot -and 
+               $OutFileRootPath -eq (Join-Path -Path $expectedInstallRoot -ChildPath '.output')
     }
 }
 

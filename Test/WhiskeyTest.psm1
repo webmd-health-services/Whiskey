@@ -171,13 +171,17 @@ function Install-Node
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
     $toolAttr.PathParameterName = 'NodePath'
-    Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
+    Install-WhiskeyTool -ToolInfo $toolAttr `
+                        -InstallRoot $downloadCachePath `
+                        -OutFileRootPath ($downloadCachePath | Split-Path -Parent) `
+                        -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
 
     if( -not $BuildRoot )
     {
-        Write-WhiskeyWarning -Message ('Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.')
+        $msg = 'Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.'
+        Write-WhiskeyWarning -Message $msg
         $BuildRoot = $TestDrive.FullName
     }
 
