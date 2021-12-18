@@ -59,9 +59,41 @@ function Get-WhiskeyPSModule
     $modules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
     $modules | Out-String | Write-WhiskeyDebug
     $modules |
-        Where-Object { 
-            Write-WhiskeyDebug -Message ("Checking if $($_.Name) module's version $($_.Version) is like ""$($Version)"".")
-            return -not $Version -or $_.Version -like $Version
+        Where-Object {
+            if( -not $Version )
+            {
+                return $true
+            }
+
+            $moduleInfo = $_
+
+            $moduleVersion = $moduleInfo.Version
+            $prerelease = ''
+            if( ($moduleInfo | Get-Member 'PreRelease') )
+            {
+                $prerelease = $moduleInfo.PreRelease
+            }
+            else
+            {
+                $privateData = $moduleInfo.PrivateData
+                if( $privateData )
+                {
+                    $psdata = $privateData['PSData']
+                    if( $psdata )
+                    {
+                        $prerelease = $psdata['Prerelease']
+                    }
+                }
+            }
+
+            if( $prerelease )
+            {
+                $moduleVersion = "$($moduleVersion)-$($prerelease)"
+            }
+
+            $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($Version)""."
+            Write-WhiskeyDebug -Message $msg
+            return $moduleVersion -like $Version
         } |
         Add-Member -Name 'ManifestPath' `
                    -MemberType ScriptProperty `
@@ -77,7 +109,7 @@ function Get-WhiskeyPSModule
             $debugMsg = "Module $($module.Name) $($module.Version) ($($module.ManifestPath)) has "
             try
             {
-                $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore
+                $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore -WarningAction Ignore
                 Write-WhiskeyDebug -Message ("$($debugMsg)a valid manifest.")
             }
             catch

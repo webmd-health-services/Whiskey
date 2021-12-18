@@ -143,12 +143,21 @@ function Install-WhiskeyPowerShellModule
         $msg = "Saving PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " + 
                """$($moduleToInstall.Repository)"" to ""$($installRoot)""."
         Write-WhiskeyVerbose -Message $msg
-        Save-Module -Name $moduleToInstall.Name `
-                    -RequiredVersion $moduleToInstall.Version `
-                    -Repository $moduleToInstall.Repository `
-                    -Path $installRoot `
-                    -AllowPrerelease:$AllowPrerelease
-
+        $globalProgressPref = $Global:ProgressPreference
+        # Ignore doesn't work in Windows PowerShell.
+        $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+        try
+        {
+            Save-Module -Name $moduleToInstall.Name `
+                        -RequiredVersion $moduleToInstall.Version `
+                        -Repository $moduleToInstall.Repository `
+                        -Path $installRoot `
+                        -AllowPrerelease:$AllowPrerelease
+        }
+        finally
+        {
+            $Global:ProgressPreference = $globalProgressPref
+        }
         $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
                                                -Name $moduleToInstall.Name `
                                                -Version $moduleToInstall.Version

@@ -39,6 +39,7 @@ exists and the `RepositoryLocation` property doesn't have a value.
 being searched has no upper or lower case letters.
 * Fixed: the `DotNet` command fails when running some commands under .NET 6.0 SDK because .NET 6.0 is stricter about
 validating parameters.
+* Fixed: `GetPowerShellModule` writes an error and fails a build if getting a prerelease version of a module.
 
 ## Removed
 
