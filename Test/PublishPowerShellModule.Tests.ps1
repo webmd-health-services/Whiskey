@@ -318,7 +318,7 @@ function ThenManifest
         [String]$HasPrerelease
     )
 
-    Test-ModuleManifest -Path $ManifestPath | Should -Not -BeNullOrEmpty
+    Test-ModuleManifest -Path $ManifestPath -WarningAction Ignore | Should -Not -BeNullOrEmpty
     # Test-ModuleManifest caches manifests if they have a RootModule property.
     Get-Content -Raw -Path $ManifestPath | Should -Match ([regex]::Escape("Prerelease = '$($HasPrerelease)'"))
 }

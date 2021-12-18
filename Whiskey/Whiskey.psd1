@@ -155,7 +155,7 @@
             # IconUri = ''
 
             # Any prerelease to use when publishing to a repository.
-            Prerelease = ''
+            Prerelease = 'testing53'
 
             # ReleaseNotes of this module
             ReleaseNotes = 'https://github.com/webmd-health-services/Whiskey/blob/master/CHANGELOG.md'

@@ -47,7 +47,7 @@ function Publish-WhiskeyPowerShellModule
         return
     }
 
-    $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore
+    $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore -WarningAction Ignore
     if( $TaskContext.Version.SemVer2.Prerelease -and `
         (-not ($manifest.PrivateData) -or `
         -not ($manifest.PrivateData | Get-Member 'Keys') -or `

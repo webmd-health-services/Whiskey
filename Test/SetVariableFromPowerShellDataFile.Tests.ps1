@@ -102,7 +102,7 @@ Build:
                 Tags: TAGS
 '@
     WhenRunningTask
-    $manifest = Test-ModuleManifest -Path $whiskeyPsd1Path
+    $manifest = Test-ModuleManifest -Path $whiskeyPsd1Path -ErrorAction Ignore -WarningAction Ignore
     ThenVariable 'MODULE_VERSION' -Is $manifest.Version
     ThenVariable 'RELEASE_NOTES' -Is $manifest.PrivateData['PSData']['ReleaseNotes']
     ThenVariable 'TAGS' -Is $manifest.PrivateData['PSData']['Tags']

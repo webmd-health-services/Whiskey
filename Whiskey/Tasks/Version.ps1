@@ -64,7 +64,9 @@
         $fileInfo = Get-Item -Path $Path
         if( $fileInfo.Extension -eq '.psd1' )
         {
-            $rawVersion = Test-ModuleManifest -Path $Path -ErrorAction Ignore  | Select-Object -ExpandProperty 'Version'
+            $rawVersion =
+                Test-ModuleManifest -Path $Path -ErrorAction Ignore -WarningAction Ignore |
+                Select-Object -ExpandProperty 'Version'
             if( -not $rawVersion )
             {
                 Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $Path)
