@@ -27,7 +27,7 @@ exists and the `RepositoryLocation` property doesn't have a value.
 
 ## Deprecated
 
-* The `Pester3` task is obsolete and is no longer supported. Use the `Pester4` task instead.
+* The `Pester3` and `Pester4` tasks are obsolete and no longer supported. Use the `Pester` task instead.
 
 ## Fixed
 
