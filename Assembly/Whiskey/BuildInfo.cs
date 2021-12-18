@@ -12,6 +12,8 @@ namespace Whiskey
             JobName = "";
             ScmBranch = "";
             ScmCommitID = "";
+            ScmSourceBranch = "";
+            ScmSourceCommitID = "";
         }
 
         public int BuildNumber { get; set; }
@@ -30,6 +32,8 @@ namespace Whiskey
 
         public bool IsJenkins { get { return BuildServer == BuildServer.Jenkins; } }
 
+        public bool IsPullRequest { get; set; }
+
         public bool IsTeamCity { get { return BuildServer == BuildServer.TeamCity; } }
 
         public string JobName { get; set; }
@@ -39,6 +43,10 @@ namespace Whiskey
         public string ScmBranch { get; set; }
 
         public string ScmCommitID { get; set; }
+
+        public string ScmSourceBranch { get; set; }
+
+        public string ScmSourceCommitID { get; set; }
 
         public Uri ScmUri { get; set; }
     }

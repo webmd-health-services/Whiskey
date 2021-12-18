@@ -172,18 +172,26 @@ If you want certain branches to always have certain prerelease versions, set Pre
     ' -f $map,$map.GetType().FullName)
                     return
                 }
+
+                $buildInfo = $TaskContext.BuildMetadata
+                $branch = $buildInfo.ScmBranch
+                if( $buildInfo.IsPullRequest )
+                {
+                    $branch = $buildInfo.ScmSourceBranch
+                }
+                
                 foreach( $wildcardPattern in $map.Keys )
                 {
-                    if( $TaskContext.BuildMetadata.ScmBranch -like $wildcardPattern )
+                    if( $branch -like $wildcardPattern )
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}     -like  {1}' -f $TaskContext.BuildMetadata.ScmBranch,$wildcardPattern)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message "$($branch)     -like  $($wildcardPattern)"
                         $foundLabel = $true
                         $prerelease = $map[$wildcardPattern]
                         break
                     }
                     else
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}  -notlike  {1}' -f $TaskContext.BuildMetadata.ScmBranch,$wildcardPattern)
+                        Write-WhiskeyVerbose -Context $TaskContext -Message "$($branch)  -notlike  $($wildcardPattern)"
                     }
                 }
 

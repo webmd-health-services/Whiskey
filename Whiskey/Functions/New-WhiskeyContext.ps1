@@ -55,16 +55,16 @@ function New-WhiskeyContext
     [CmdletBinding()]
     [OutputType([Whiskey.Context])]
     param(
-        [Parameter(Mandatory)]
         # The environment you're building in.
-        [String]$Environment,
-
         [Parameter(Mandatory)]
+        [String] $Environment,
+
         # The path to the `whiskey.yml` file that defines build settings and tasks.
-        [String]$ConfigurationPath,
+        [Parameter(Mandatory)]
+        [String] $ConfigurationPath,
 
         # The place where downloaded tools should be cached. The default is the build root.
-        [String]$DownloadRoot
+        [String] $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -111,7 +111,7 @@ function New-WhiskeyContext
     {
         $branch = $buildMetadata.ScmBranch
 
-        if( $config.ContainsKey( 'PublishOn' ) )
+        if( -not $buildMetadata.IsPullRequest -and $config.ContainsKey('PublishOn') )
         {
             Write-WhiskeyVerbose -Message ('PublishOn')
             foreach( $publishWildcard in $config['PublishOn'] )
