@@ -17,6 +17,18 @@ $publishRoot = $null
 $testScriptName = 'MyScript'
 $repoToUnregister = $null
 
+function Get-Error
+{
+    [CmdletBinding()]
+    param(
+    )
+
+    # PackageManagement and PowerShellGet leave handled errors in Global:Error so we need to filter those errors out.
+    $Global:Error |
+        Where-Object 'ScriptStackTrace' -NotMatch '\bPowerShellGet\b' -ErrorAction Ignore |
+        Where-Object 'ScriptStackTrace' -NotMatch '\bPackageManagement\b' -ErrorAction Ignore
+}
+
 function Get-TestRepositoryFullPath
 {
     param(
@@ -101,117 +113,6 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
 }
 
-function WhenPublishing
-{
-    [CmdletBinding()]
-    param(
-        [String] $ToRepo,
-
-        [String] $RepoAt,
-
-        [String] $ForManifestPath,
-
-        [switch] $WithInvalidPath,
-
-        [switch] $WithNonExistentPath,
-
-        [switch] $WithoutPathParameter,
-
-        [switch] $WithNoPrereleasePropertyInManifest,
-
-        [String] $WithPrerelease,
-
-        [String] $WithApiKey
-    )
-    
-    $version = '1.2.3'
-    if( $WithPrerelease )
-    {
-        $version = '1.2.3-{0}' -f $WithPrerelease
-    }
-
-    $script:context = New-WhiskeyTestContext -ForBuildServer `
-                                             -ForVersion $version `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule @( 'PackageManagement', 'PowerShellGet' )
-    
-    $TaskParameter = @{ }
-
-    if( $ToRepo )
-    {
-        $TaskParameter['RepositoryName'] = $ToRepo
-    }
-
-    if( $WithInvalidPath )
-    {
-        $TaskParameter.Add( 'Path', "$($testScriptName).ps1" )
-        New-Item -Path $testRoot -ItemType 'file' -Name $TaskParameter['Path']
-    }
-    elseif( $WithNonExistentPath )
-    {
-        $TaskParameter.Add( 'Path', 'PathDoesNotExist.ps1' )
-    }
-    elseif( -not $WithoutPathParameter )
-    {
-        $TaskParameter.Add( 'Path', $testScriptName )
-        New-Item -Path $testRoot -ItemType 'directory' -Name $testScriptName
-        $script = Join-Path -Path $testRoot -ChildPath $testScriptName
-        if( -not $ForManifestPath )
-        {
-            # New-item -Path $script -ItemType 'File' -Name "$($testScriptName).ps1" 
-            $Parms = @{
-                Path = "$($script)\$($testScriptName).ps1"
-                Version = $version
-                Author = [Environment]::UserName
-                Description = $testScriptName
-                }
-            New-ScriptFileInfo @Parms
-        }
-        else
-        {
-            $TaskParameter.Add( 'ScriptManifestPath', $ForManifestPath )
-        }
-    }
-
-    Import-WhiskeyTestModule -Name 'PackageManagement','PowerShellGet'
-    Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
-
-    $Global:Error.Clear()
-    $script:failed = $False
-
-    if( $RepoAt )
-    {
-        $TaskParameter['RepositoryLocation'] = $RepoAt
-    }
-
-    if( $WithApiKey )
-    {
-        $TaskParameter['ApiKeyID'] = [Guid]::NewGuid().ToString()
-        Add-WhiskeyApiKey -Context $context -ID $TaskParameter['ApiKeyID'] -Value $WithApiKey
-    }
-
-    foreach( $key in $credentials.Keys )
-    {
-        Add-WhiskeyCredential -Context $context -ID $key -Credential $credentials[$key]
-    }
-
-    if( $script:repoToUnregister )
-    {
-        Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey'
-    }
-
-    Mock -CommandName 'Unregister-PSRepository' -ModuleName 'Whiskey'
-    try
-    {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'PublishPowerShellScript'
-    }
-    catch
-    {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
-    }
-}
-
 function Reset
 {
     Write-DEbug 'PUBLISHPOWERSHELLSCRIPT  RESET'
@@ -226,7 +127,6 @@ function Reset
         Unregister-PSRepository -Name $script:repoToUnregister
     }
 }
-Reset
 
 function ThenFailed
 {
@@ -237,6 +137,18 @@ function ThenFailed
 
     $script:failed | Should -BeTrue
     Get-Error | Should -Match $WithError
+}
+
+function ThenManifest
+{
+    param(
+        [String]$ManifestPath = (Join-Path -Path $testRoot -ChildPath "$($testScriptName)\$($testScriptName).ps1"),
+
+        [String]$HasPrerelease
+    )
+
+    Test-ScriptFileInfo -Path $ManifestPath | Should -Not -BeNullOrEmpty
+    Get-Content -Raw -Path $ManifestPath | Should -Match ".VERSION 1.2.3-$($HasPrerelease)"
 }
 
 function ThenRepository
@@ -280,6 +192,20 @@ function ThenRepository
     }
 }
 
+function ThenScriptNotPublished
+{
+    param(
+        $To = $script:context.OutputDirectory.FullName
+    )
+    
+    if( -not [IO.Path]::IsPathRooted($To) )
+    {
+        $To = Join-Path -Path $script:testRoot -ChildPath $To
+    }
+
+    Join-Path -Path $To -ChildPath "$($testScriptName).*.*.*.nupkg" | Should -Not -Exist
+}
+
 function ThenScriptPublished
 {
     param(
@@ -295,34 +221,126 @@ function ThenScriptPublished
     Join-Path -Path $To -ChildPath "$($testScriptName).*.*.*$($WithPrerelease).nupkg" | Should -Exist
 }
 
-function ThenManifest
-{
-    param(
-        [String]$ManifestPath = (Join-Path -Path $testRoot -ChildPath "$($testScriptName)\$($testScriptName).ps1"),
-
-        [String]$HasPrerelease
-    )
-
-    Test-ScriptFileInfo -Path $ManifestPath | Should -Not -BeNullOrEmpty
-    Get-Content -Raw -Path $ManifestPath | Should -Match ".VERSION 1.2.3-$($HasPrerelease)"
-}
-
 function ThenSucceeded
 {
     $script:failed | Should -BeFalse
     Get-Error | Should -BeNullOrEmpty
 }
 
-function Get-Error
+function WhenPublishing
 {
     [CmdletBinding()]
     param(
-    )
+        [String] $ToRepo,
 
-    # PackageManagement and PowerShellGet leave handled errors in Global:Error so we need to filter those errors out.
-    $Global:Error |
-        Where-Object 'ScriptStackTrace' -NotMatch '\bPowerShellGet\b' -ErrorAction Ignore |
-        Where-Object 'ScriptStackTrace' -NotMatch '\bPackageManagement\b' -ErrorAction Ignore
+        [String] $RepoAt,
+
+        [String] $ForManifestPath,
+
+        [switch] $WithInvalidPath,
+
+        [switch] $WithNonExistentPath,
+
+        [switch] $WithoutPathParameter,
+
+        [switch] $WithNoPrereleasePropertyInManifest,
+
+        [String] $WithPrerelease,
+
+        [String] $WithApiKey,
+
+        [String] $WithCredentialID
+    )
+    
+    $version = '1.2.3'
+    if( $WithPrerelease )
+    {
+        $version = '1.2.3-{0}' -f $WithPrerelease
+    }
+
+    $script:context = New-WhiskeyTestContext -ForBuildServer `
+                                             -ForVersion $version `
+                                             -ForBuildRoot $testRoot `
+                                             -IncludePSModule @( 'PackageManagement', 'PowerShellGet' )
+    
+    $TaskParameter = @{ }
+
+    if( $ToRepo )
+    {
+        $TaskParameter['RepositoryName'] = $ToRepo
+    }
+
+    if( $WithInvalidPath )
+    {
+        $TaskParameter.Add( 'Path', $($testScriptName) )
+        New-Item -Path $testRoot -ItemType 'Directory' -Name $TaskParameter['Path']
+    }
+    elseif( $WithNonExistentPath )
+    {
+        $TaskParameter.Add( 'Path', 'PathDoesNotExist.ps1' )
+    }
+    elseif( -not $WithoutPathParameter )
+    {
+        New-Item -Path $testRoot -ItemType 'Directory' -Name $testScriptName
+        $script = Join-Path -Path $testRoot -ChildPath $testScriptName
+        $TaskParameter.Add( 'Path', "$($script)\$($testScriptName).ps1" )
+        if( -not $ForManifestPath )
+        {
+            $Parms = @{
+                Path = "$($script)\$($testScriptName).ps1"
+                Version = $version
+                Author = [Environment]::UserName
+                Description = $testScriptName
+                }
+            New-ScriptFileInfo @Parms
+        }
+        else
+        {
+            $TaskParameter['Path'] = $ForManifestPath 
+        }
+    }
+
+    Import-WhiskeyTestModule -Name 'PackageManagement','PowerShellGet'
+    Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
+
+    $Global:Error.Clear()
+    $script:failed = $False
+
+    if( $RepoAt )
+    {
+        $TaskParameter['RepositoryLocation'] = $RepoAt
+    }
+
+    if( $WithApiKey )
+    {
+        $TaskParameter['ApiKeyID'] = [Guid]::NewGuid().ToString()
+        Add-WhiskeyApiKey -Context $context -ID $TaskParameter['ApiKeyID'] -Value $WithApiKey
+    }
+
+    if( $WithCredentialID )
+    {
+        $TaskParameter['CredentialID'] = $WithCredentialID
+        foreach( $key in $credentials.Keys )
+        {
+            Add-WhiskeyCredential -Context $context -ID $WithCredentialID -Credential $credentials[$key]
+        }
+    }
+
+    if( $script:repoToUnregister )
+    {
+        Mock -CommandName 'Register-PSRepository' -ModuleName 'Whiskey'
+    }
+
+    Mock -CommandName 'Unregister-PSRepository' -ModuleName 'Whiskey'
+    try
+    {
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'PublishPowerShellScript'
+    }
+    catch
+    {
+        $script:failed = $true
+        Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
+    }
 }
 
 Describe 'PublishPowerShellScript.when publishing to repository that already exists' {
@@ -343,6 +361,7 @@ Describe 'PublishPowerShellScript.when publishing to repository that does not ex
         Init
         WhenPublishing -ToRepo 'R2' -ErrorAction Silently
         ThenFailed 'a repository with that name doesn''t exist'
+        ThenScriptNotPublished -To $context.OutputDirectory
         ThenRepository 'R2' -NotExists -NotUnregistered
     }
 }
@@ -371,7 +390,7 @@ Describe 'PublishPowerShellScript.when publishing with no repository name or rep
 
 Describe 'PublishPowerShellScript.when given an API key' {
     AfterEach { Reset }
-    It 'should fail' {
+    It 'should pass' {
         Init
         Mock -CommandName 'Publish-Script' `
              -ModuleName 'Whiskey' `
@@ -389,6 +408,7 @@ Describe 'PublishPowerShellScript.when path parameter is not included' {
         Init
         WhenPublishing -WithoutPathParameter -ErrorAction SilentlyContinue
         ThenFailed -WithError '"Path\b.*\bis mandatory'
+        ThenScriptNotPublished -To $context.OutputDirectory
     }
 }
 
@@ -398,15 +418,17 @@ Describe 'PublishPowerShellScript.when path does not exist' {
         Init
         WhenPublishing -WithNonExistentPath -ErrorAction SilentlyContinue
         ThenFailed -WithError 'does\ not\ exist'
+        ThenScriptNotPublished -To $context.OutputDirectory
     }
 }
 
-Describe 'PublishPowerShellScript.when path is not a directory' {
+Describe 'PublishPowerShellScript.when path is not a file' {
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenPublishing -WithInvalidPath  -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'should resolve to a directory'
+        WhenPublishing -WithInvalidPath -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'should resolve to a file'
+        ThenScriptNotPublished -To $context.OutputDirectory
     }
 }
 
@@ -416,6 +438,7 @@ Describe 'PublishPowerShellScript.when script manifest is invalid' {
         Init
         WhenPublishing -ForManifestPath 'fubar' -ErrorAction SilentlyContinue
         ThenFailed -WithError '"fubar"\ does\ not\ exist'
+        ThenScriptNotPublished -To $context.OutputDirectory
     }
 }
 
@@ -429,5 +452,22 @@ Describe 'PublishPowerShellScript.when given repository by location and by name'
         ThenRepository 'R8' -NotRegistered -NotExists
         ThenRepository 'R7' -NotRegistered -Exists
         ThenScriptPublished -To 'R7'
+    }
+}
+
+Describe 'PublishPowerShellScript.when given a credential ID' {
+    AfterEach { Reset }
+    It 'should pass' {
+        Init
+        $password = ConvertTo-SecureString 'MySecretPassword' -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential ('TestUser', $password)
+        $credentialID = [Guid]::NewGuid().ToString()
+        GivenCredential -Credential $credential -WithID $credentialID
+        Mock -CommandName 'Publish-Script' `
+             -ModuleName 'Whiskey' `
+             -Verifiable
+        WhenPublishing -WithCredentialID $credentialID
+        ThenSucceeded
+        Assert-VerifiableMock
     }
 }
