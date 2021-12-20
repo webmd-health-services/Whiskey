@@ -474,3 +474,20 @@ Describe 'PublishPowerShellScript.when given a credential ID' {
         Assert-VerifiableMock
     }
 }
+
+Describe 'PublishPowerShellScript.when given a credential ID' {
+    AfterEach { Reset }
+    It 'should pass' {
+        Init
+        $password = ConvertTo-SecureString 'MySecretPassword' -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential ('TestUser', $password)
+        $credentialID = [Guid]::NewGuid().ToString()
+        GivenCredential -Credential $credential -WithID $credentialID
+        Mock -CommandName 'Publish-Script' `
+             -ModuleName 'Whiskey' `
+             -Verifiable
+        WhenPublishing -WithCredentialID $credentialID
+        ThenSucceeded
+        Assert-VerifiableMock
+    }
+}
