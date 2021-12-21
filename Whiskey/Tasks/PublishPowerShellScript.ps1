@@ -34,29 +34,10 @@ function Publish-WhiskeyPowerShellScript
     }
 
     $scriptManifest = Test-ScriptFileInfo -Path $Path
-
     $manifestContent = Get-Content $scriptManifest.Path
     $versionString = ".VERSION $($TaskContext.Version.SemVer2NoBuildMetadata)"
     $manifestContent = $manifestContent -replace '.VERSION\s[^''"]*', $versionString
-
     $manifestContent | Set-Content $scriptManifest.Path
-
-    $commonParams = @{}
-    if( $VerbosePreference -in @('Continue','Inquire') )
-    {
-        $commonParams['Verbose'] = $true
-    }
-    if( $DebugPreference -in @('Continue','Inquire') )
-    {
-        $commonParams['Debug'] = $true
-    }
-    if( (Test-Path -Path 'variable:InformationPreference') )
-    {
-        $commonParams['InformationAction'] = $InformationPreference
-    }
-
-    Write-WhiskeyDebug -Context $TaskContext -Message 'Bootstrapping NuGet packageprovider.'
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
     Publish-WhiskeyPSObject -Context $TaskContext -ScriptInfo $scriptManifest -RepositoryName $RepositoryName `
         -RepositoryLocation $RepositoryLocation -CredentialID $CredentialID -ApiKeyId $ApiKeyID
 }

@@ -2,7 +2,7 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-$Global:VerbosePreference = $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
+$Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
 
 Write-Debug 'PUBLISHPOWERSHELLSCRIPT  PSMODULEPATH'
 $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug

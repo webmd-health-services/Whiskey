@@ -21,6 +21,23 @@ function Publish-WhiskeyPSObject
         [String] $ApiKeyID
     )
 
+    $commonParams = @{}
+    if( $VerbosePreference -in @('Continue','Inquire') )
+    {
+        $commonParams['Verbose'] = $true
+    }
+    if( $DebugPreference -in @('Continue','Inquire') )
+    {
+        $commonParams['Debug'] = $true
+    }
+    if( (Test-Path -Path 'variable:InformationPreference') )
+    {
+        $commonParams['InformationAction'] = $InformationPreference
+    }
+
+    Write-WhiskeyDebug -Context $TaskContext -Message 'Bootstrapping NuGet packageprovider.'
+    Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
+
     $createTempRepo = $false
     $infoMsg = ''
     if( -not $RepositoryLocation -and -not $RepositoryName )

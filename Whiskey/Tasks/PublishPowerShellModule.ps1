@@ -75,23 +75,6 @@ function Publish-WhiskeyPowerShellModule
     $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
     $manifestContent = $manifestContent -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifestContent | Set-Content $manifest.Path
-
-    $commonParams = @{}
-    if( $VerbosePreference -in @('Continue','Inquire') )
-    {
-        $commonParams['Verbose'] = $true
-    }
-    if( $DebugPreference -in @('Continue','Inquire') )
-    {
-        $commonParams['Debug'] = $true
-    }
-    if( (Test-Path -Path 'variable:InformationPreference') )
-    {
-        $commonParams['InformationAction'] = $InformationPreference
-    }
-
-    Write-WhiskeyDebug -Context $TaskContext -Message 'Bootstrapping NuGet packageprovider.'
-    Get-PackageProvider -Name 'NuGet' -ForceBootstrap @commonParams | Out-Null
     Publish-WhiskeyPSObject -Context $TaskContext -ModuleInfo $manifest -RepositoryName $RepositoryName `
         -RepositoryLocation $RepositoryLocation -CredentialID $CredentialID -ApiKeyId $ApiKeyID
 }
