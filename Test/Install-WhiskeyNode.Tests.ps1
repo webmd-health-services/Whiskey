@@ -163,8 +163,8 @@ function WhenInstallingTool
     $Global:Error.Clear()
 
     $parameter = $PSBoundParameters
-    $parameter['InstallRoot'] = $testRoot
-    $parameter['OutputPath'] = $outPath 
+    $parameter['InstallRootPath'] = $testRoot
+    $parameter['OutFileRootPath'] = $outPath 
 
     Push-Location -path $taskWorkingDirectory
     try

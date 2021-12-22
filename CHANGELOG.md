@@ -27,7 +27,7 @@ exists and the `RepositoryLocation` property doesn't have a value.
 
 ## Deprecated
 
-* The `Pester3` task is obsolete and is no longer supported. Use the `Pester4` task instead.
+* The `Pester3` and `Pester4` tasks are obsolete and no longer supported. Use the `Pester` task instead.
 
 ## Fixed
 
@@ -39,6 +39,7 @@ exists and the `RepositoryLocation` property doesn't have a value.
 being searched has no upper or lower case letters.
 * Fixed: the `DotNet` command fails when running some commands under .NET 6.0 SDK because .NET 6.0 is stricter about
 validating parameters.
+* Fixed: `GetPowerShellModule` writes an error and fails a build if getting a prerelease version of a module.
 
 ## Removed
 

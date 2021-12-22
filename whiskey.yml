@@ -79,6 +79,21 @@ Build:
     - README.md
     DestinationDirectory: Whiskey
 
+# PublishPowerShellModule should come *before* we create the ZIP file so that the ZIP file contains a module manifest
+# that has prerelease metadata in it, if needed (which gets added by PublishPowerShellModule).
+- PublishPowerShellModule:
+    Path: Whiskey
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [
+        'PushArtifact',
+        '.output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
+        '-DeploymentName',
+        'PowerShellGallery'
+    ]
+
 - Zip:
     ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
     Path: 
@@ -96,22 +111,6 @@ Build:
     OnlyBy: BuildServer
     Path: appveyor
     Argument: [ 'PushArtifact', 'Whiskey/build.ps1', '-DeploymentName', 'GitHub' ]
-
-- PublishPowerShellModule:
-    Path: Whiskey
-
-- PowerShell:
-    ScriptBlock: Get-ChildItem -Path '$(WHISKEY_OUTPUT_DIRECTORY)'
-
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [
-        'PushArtifact',
-        '.output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
-        '-DeploymentName',
-        'PowerShellGallery'
-    ]
 
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower

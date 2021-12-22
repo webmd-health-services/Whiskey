@@ -22,6 +22,7 @@ function Get-WhiskeyBuildMetadata
     )
 
     Set-StrictMode -Version 'Latest'
+    Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     function Get-EnvironmentVariable
     {
@@ -46,6 +47,14 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.ScmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
         $buildInfo.ScmBranch = $buildInfo.ScmBranch -replace '^origin/',''
         $buildInfo.BuildServer = [Whiskey.BuildServer]::Jenkins
+
+        if( (Test-Path -Path 'env:CHANGE_BRANCH') )
+        {
+            $buildInfo.IsPullRequest = $true
+            $buildInfo.ScmSourceBranch = Get-EnvironmentVariable 'CHANGE_BRANCH'
+            $buildInfo.ScmSourceBranch = $buildInfo.ScmSourceBranch -replace '^origin/',''
+            $buildInfo.ScmSourceCommitID = Get-EnvironmentVariable 'GIT_COMMIT'
+        }
     }
     elseif( (Test-Path -Path 'env:APPVEYOR') )
     {
@@ -68,13 +77,23 @@ function Get-WhiskeyBuildMetadata
             }
             default
             {
-                Write-WhiskeyError -Message ('Unsupported AppVeyor source control provider ''{0}''. If you''d like us to add support for this provider, please submit a new issue at https://github.com/webmd-health-services/Whiskey/issues. Copy/paste your environment variables from this build''s output into your issue.' -f $_)
+                $msg = "Unsupported AppVeyor source control provider ""$($_)"". If you'd like us to add support for " +
+                       'this provider, please submit a new issue at ' +
+                       'https://github.com/webmd-health-services/Whiskey/issues. Copy/paste your environment ' +
+                       'variables from this build''s output into your issue.'
+                Write-WhiskeyError -Message $msg
             }
         }
         $repoName = Get-EnvironmentVariable 'APPVEYOR_REPO_NAME'
         $buildInfo.ScmUri = '{0}/{1}.git' -f $baseUri,$repoName
         $buildInfo.ScmCommitID = Get-EnvironmentVariable 'APPVEYOR_REPO_COMMIT'
         $buildInfo.ScmBranch = Get-EnvironmentVariable 'APPVEYOR_REPO_BRANCH'
+        if( (Test-Path -Path 'env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH') )
+        {
+            $buildInfo.IsPullRequest = $true
+            $buildInfo.ScmSourceBranch = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH'
+            $buildInfo.ScmSourceCommitID = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_COMMIT'
+        }
         $buildInfo.BuildServer = [Whiskey.BuildServer]::AppVeyor
     }
     elseif( (Test-Path -Path 'env:TEAMCITY_BUILD_PROPERTIES_FILE') )

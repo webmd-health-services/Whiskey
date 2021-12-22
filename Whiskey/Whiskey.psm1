@@ -144,7 +144,7 @@ function Assert-Member
     }
 }
 
-Write-Timing 'Checking Whiskey.Context class.'
+Write-Timing 'Checking Whiskey assembly loaded.'
 $context = New-WhiskeyObject -TypeName 'Whiskey.Context'
 Assert-Member -Object $context `
               -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys', 'BuildStopwatch', 'TaskStopwatch' )
@@ -158,6 +158,9 @@ New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -Argumen
 
 $attr = New-WhiskeyObject -TypeName 'Whiskey.Tasks.ValidatePathAttribute'
 Assert-Member -Object $attr -Property @( 'Create' )
+
+$buildInfo = New-WhiskeyObject -TypeName 'Whiskey.BuildInfo'
+Assert-Member -Object $buildInfo -Property @( 'ScmSourceBranch' )
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments

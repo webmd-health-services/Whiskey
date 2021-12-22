@@ -3,25 +3,27 @@ function Install-WhiskeyNode
 {
     [CmdletBinding()]
     param(
+        # The directory where Node should be installed. Will actually be installed into
+        # `Join-Path -Path $InstallRootPath -ChildPath '.node'`.
         [Parameter(Mandatory)]
-        # The directory where Node should be installed. Will actually be installed into `Join-Path -Path $InstallRoot -ChildPath '.node'`.
-        [String]$InstallRoot,
+        [String] $InstallRootPath,
+
+        # The directory where the Node.js package file should be downloaded.
+        [Parameter(Mandatory)]
+        [String] $OutFileRootPath,
 
         # Are we running in clean mode? If so, don't re-install the tool.
-        [switch]$InCleanMode,
+        [switch] $InCleanMode,
 
-        # The version of Node to install. If not provided, will use the version defined in the package.json file. If that isn't supplied, will install the latest LTS version.
-        [String]$Version,
-
-        [Parameter(Mandatory)]
-        # The build output directory
-        [String]$OutputPath
+        # The version of Node to install. If not provided, will use the version defined in the package.json file. If
+        # that isn't supplied, will install the latest LTS version.
+        [String] $Version
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Ignore
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath -ErrorAction Ignore
 
     if( $InCleanMode )
     {
@@ -49,7 +51,7 @@ function Install-WhiskeyNode
         $packageJsonPath = Join-Path -Path (Get-Location).ProviderPath -ChildPath 'package.json'
         if( -not (Test-Path -Path $packageJsonPath -PathType Leaf) )
         {
-            $packageJsonPath = Join-Path -Path $InstallRoot -ChildPath 'package.json'
+            $packageJsonPath = Join-Path -Path $InstallRootPath -ChildPath 'package.json'
         }
 
         if( (Test-Path -Path $packageJsonPath -PathType Leaf) )
@@ -92,7 +94,7 @@ function Install-WhiskeyNode
         $currentNodeVersion = & $nodePath '--version'
         if( $currentNodeVersion -ne $nodeVersionToInstall.version )
         {
-            Uninstall-WhiskeyNode -InstallRoot $InstallRoot
+            Uninstall-WhiskeyNode -InstallRoot $InstallRootPath
             $installNode = $true
         }
     }
@@ -102,7 +104,7 @@ function Install-WhiskeyNode
     }
 
     $nodeDirectoryName = '.node'
-    $nodeRoot = Join-Path -Path $InstallRoot -ChildPath $nodeDirectoryName
+    $nodeRoot = Join-Path -Path $InstallRootPath -ChildPath $nodeDirectoryName
 
     $platform = 'win'
     $packageExtension = 'zip'
@@ -119,23 +121,31 @@ function Install-WhiskeyNode
 
     $extractedDirName = 'node-{0}-{1}-x64' -f $nodeVersionToInstall.version,$platform
     $filename = '{0}.{1}' -f $extractedDirName,$packageExtension
-    $nodeZipFile = Join-Path -Path $OutputPath -ChildPath $filename
-    if( -not (Test-Path -Path $nodeZipFile -PathType Leaf) )
-    {
-        $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
 
-        if( $installNode )
+    if( $installNode )
+    {
+        $nodeZipFilePath = Join-Path -Path $OutFileRootPath -ChildPath $filename
+        if( -not (Test-Path -Path $nodeZipFilePath -PathType Leaf) )
         {
-            if( -not (Test-Path -Path $OutputPath) )
+            $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
+    
+            if( -not (Test-Path -Path $OutFileRootPath) )
             {
-                Write-WhiskeyDebug -Message "Creating output directory ""$($OutputPath)""."
-                New-Item -Path $OutputPath -ItemType 'Directory' -Force | Out-Null
+                Write-WhiskeyDebug -Message "Creating output directory ""$($OutFileRootPath)""."
+                New-Item -Path $OutFileRootPath -ItemType 'Directory' -Force | Out-Null
             }
 
+            $preExistingPkgPath =
+                Join-Path -Path $OutFileRootPath -ChildPath "node-*-*-x64.$($packageExtension)"
+            if( (Test-Path -Path $preExistingPkgPath) )
+            {
+                Remove-Item -Path $preExistingPkgPath -Force -ErrorAction Ignore
+            }
+    
             try
             {
                 $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
-                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFile
+                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFilePath
             }
             catch
             {
@@ -144,7 +154,7 @@ function Install-WhiskeyNode
                 if( $_.Exception | Get-Member -Name 'Response' )
                 {
                     $responseStatus = $_.Exception.Response.StatusCode
-                    $responseInfo = 'Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
+                    $responseInfo = ' Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
                     if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
                     {
                         $notFound = $true
@@ -153,38 +163,36 @@ function Install-WhiskeyNode
                 else
                 {
                     Write-WhiskeyError -Message "Exception downloading ""$($uri)"": $($_)"
-                    $responseInfo = 'Please see previous error for more information.'
+                    $responseInfo = ' Please see previous error for more information.'
                 }
-
-                $errorMsg = 'Failed to download Node {0} from {1}.{2}' -f $nodeVersionToInstall.version,$uri,$responseInfo
+    
+                $errorMsg = "Failed to download Node $($nodeVersionToInstall.version) from $($uri).$($responseInfo)"
                 if( $notFound )
                 {
-                    $errorMsg = '{0} It looks like this version of Node wasn''t packaged as a ZIP file. Please use Node v4.5.0 or newer.' -f $errorMsg
+                    $errorMsg = "$($errorMsg) It looks like this version of Node wasn't packaged as a ZIP file. " +
+                                'Please use Node v4.5.0 or newer.'
                 }
                 Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
                 return
             }
         }
-    }
 
-    if( $installNode )
-    {
         if( $IsWindows )
         {
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download
             # 7-zip because it can handle long paths.
-            $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRoot
+            $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRootPath
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
 
-            $archive = [io.compression.zipfile]::OpenRead($nodeZipFile)
+            $archive = [IO.Compression.ZipFile]::OpenRead($nodeZipFilePath)
             $outputDirectoryName = $archive.Entries[0].FullName
             $archive.Dispose()
             $outputDirectoryName =
                 $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-            $outputRoot = Join-Path -Path $InstallRoot -ChildPath $outputDirectoryName
+            $outputRoot = Join-Path -Path $InstallRootPath -ChildPath $outputDirectoryName
 
-            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFile,$outputRoot)
-            & $7z -spe 'x' $nodeZipFile ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
+            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$nodeZipFilePath,$outputRoot)
+            & $7z -spe 'x' $nodeZipFilePath ('-o{0}' -f $outputRoot) '-y' | Write-WhiskeyVerbose
 
             # We use New-TimeSpan so we can mock it and wait for our simulated anti-virus process to lock a
             # file (i.e. so we can test that this wait logic works).
@@ -227,16 +235,16 @@ function Install-WhiskeyNode
                 New-Item -Path $nodeRoot -ItemType 'Directory' -Force | Out-Null
             }
 
-            Write-WhiskeyVerbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFile,$nodeRoot)
-            tar -xJf $nodeZipFile -C $nodeRoot '--strip-components=1' | Write-WhiskeyVerbose
+            Write-WhiskeyVerbose -Message ('tar -xJf "{0}" -C "{1}" --strip-components=1' -f $nodeZipFilePath,$nodeRoot)
+            tar -xJf $nodeZipFilePath -C $nodeRoot '--strip-components=1' | Write-WhiskeyVerbose
             if( $LASTEXITCODE )
             {
-                Write-WhiskeyError -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFile,$nodeRoot)
+                Write-WhiskeyError -Message ('Failed to extract Node.js {0} package "{1}" to "{2}".' -f $nodeVersionToInstall.version,$nodeZipFilePath,$nodeRoot)
                 return
             }
         }
 
-        $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot -ErrorAction Stop
+        $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath -ErrorAction Stop
     }
 
     $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -NodeRootPath $nodeRoot -ErrorAction Stop

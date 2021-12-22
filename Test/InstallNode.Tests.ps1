@@ -29,10 +29,12 @@ function ThenNodeInstalled
     )
 
     $nodePath | Should -Exist
-    if($Version)
+    if( $Version )
     {
-        Get-ChildItem -Path $testRoot | Where-Object { $_.Name -match '\d+\.\d+\.\d+' } | Select-Object -ExpandProperty Name
-        $Version | Should -Match $Matches[1]
+        Get-ChildItem -Path (Join-Path -Path $testRoot -ChildPath '.output') |
+            Where-Object { $_.Name -match '(\d+\.\d+\.\d+)' } |
+            Select-Object -ExpandProperty Name
+        $Version | Should -Match ([regex]::Escape($Matches[1]))
     }
 }
 
@@ -49,7 +51,11 @@ function WhenInstallingNode
         $parameters['Force'] = $true
     }
     $parameters['Version'] = $Version
-    Invoke-WhiskeyTask -TaskContext $context -Parameter $parameters -Name 'InstallNode' 
+    Invoke-WhiskeyTask -TaskContext $context `
+                       -Parameter $parameters `
+                       -Name 'InstallNode' `
+                       -InformationAction SilentlyContinue
+
     $script:fileCreatedTime.add(((Get-ChildItem -Path $nodePath).CreationTime | Select-Object -ExpandProperty ticks))
 }
 
@@ -59,23 +65,23 @@ function ThenNodeFolderDidNotChange
 }
 
 Describe 'InstallNode' {
-    It "Should install latest Node.js $($latestNodeVersion)"{
+    It "should install latest Node.js $($latestNodeVersion)"{
         Init
         WhenInstallingNode
         ThenNodeInstalled -Version $latestNodeVersion
     }
 }
 
-Describe 'InstallNode Node.js 4.5.0' {
-    It 'Should install Node.js 4.5.0'{
+Describe 'InstallNode.NodeJs 4_5_0' {
+    It 'should install Node.js 4.5.0'{
         Init
         WhenInstallingNode -Version '4.5.0'
         ThenNodeInstalled -Version '4.5.0'
     }
 }
 
-Describe 'InstallNode Node.js 4.5.0, then InstallNode with force' {
-    It "Should overwrite Node.js 4.5.0 with Node.js $($latestNodeVersion)"{
+Describe 'InstallNode.NodeJs 4_5_0, then InstallNode with force' {
+    It "should overwrite installed verion when using Force"{
         Init
         WhenInstallingNode -Version '4.5.0'
         ThenNodeInstalled -Version '4.5.0'
@@ -84,8 +90,8 @@ Describe 'InstallNode Node.js 4.5.0, then InstallNode with force' {
     }
 }
 
-Describe 'InstallNode node version 4.5.0, then InstallNode 4.5.0 again' {
-    It 'Should not overwrite old node folder'{
+Describe 'InstallNode.node version 4_5.0, then InstallNode 4.5.0 again' {
+    It 'should not overwrite if some version already installed' {
         Init
         WhenInstallingNode -Version '4.5.0'
         WhenInstallingNode -Version '4.5.0'
