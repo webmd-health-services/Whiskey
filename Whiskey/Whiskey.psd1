@@ -99,7 +99,6 @@
                             'Publish-WhiskeyBuildMasterPackage',
                             'Publish-WhiskeyNuGetPackage',
                             'Publish-WhiskeyProGetUniversalPackage',
-                            'Publish-WhiskeyPSObject'
                             'Publish-WhiskeyBBServerTag',
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNodePath',

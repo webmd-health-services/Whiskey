@@ -253,7 +253,9 @@ function WhenPublishing
 
         [String] $WithApiKey,
 
-        [String] $WithCredentialID
+        [String] $WithCredentialID,
+
+        [switch] $WithoutVersionProperty
     )
     
     $version = '1.2.3'
@@ -290,13 +292,32 @@ function WhenPublishing
         $TaskParameter.Add( 'Path', "$($script)\$($testScriptName).ps1" )
         if( -not $ForManifestPath )
         {
-            $Parms = @{
-                Path = "$($script)\$($testScriptName).ps1"
-                Version = $version
-                Author = [Environment]::UserName
-                Description = $testScriptName
+            if( $WithoutVersionProperty )
+            {
+                New-Item -Path $script -ItemType 'file' -Name "$($testScriptName).ps1" -Value @"
+    <#PSScriptInfo
+
+    .GUID $([Guid]::NewGuid().ToString())
+    
+    .AUTHOR $([Environment]::UserName)
+    
+    .DESCRIPTION 
+     $($testScriptName)
+    
+    #> 
+    Param()
+"@
+            }
+            else 
+            {
+                $Parms = @{
+                    Path = "$($script)\$($testScriptName).ps1"
+                    Version = $version
+                    Author = [Environment]::UserName
+                    Description = $testScriptName
                 }
-            New-ScriptFileInfo @Parms
+                New-ScriptFileInfo @Parms
+            }
         }
         else
         {
@@ -466,28 +487,25 @@ Describe 'PublishPowerShellScript.when given a credential ID' {
         $credential = New-Object System.Management.Automation.PSCredential ('TestUser', $password)
         $credentialID = [Guid]::NewGuid().ToString()
         GivenCredential -Credential $credential -WithID $credentialID
-        Mock -CommandName 'Publish-Script' `
+        Mock -CommandName 'Publish-WhiskeyPSObject' `
              -ModuleName 'Whiskey' `
              -Verifiable
         WhenPublishing -WithCredentialID $credentialID
         ThenSucceeded
         Assert-VerifiableMock
+        Assert-MockCalled -CommandName 'Publish-WhiskeyPSObject' -ModuleName 'Whiskey' -ParameterFilter {
+            $CredentialID | Should -Be $credentialID
+            return $true
+        }
     }
 }
 
-Describe 'PublishPowerShellScript.when given a credential ID' {
+Describe 'PublishPowerShellScript.when script file does not have .VERSION property'{
     AfterEach { Reset }
-    It 'should pass' {
+    It 'should fail'{
         Init
-        $password = ConvertTo-SecureString 'MySecretPassword' -AsPlainText -Force
-        $credential = New-Object System.Management.Automation.PSCredential ('TestUser', $password)
-        $credentialID = [Guid]::NewGuid().ToString()
-        GivenCredential -Credential $credential -WithID $credentialID
-        Mock -CommandName 'Publish-Script' `
-             -ModuleName 'Whiskey' `
-             -Verifiable
-        WhenPublishing -WithCredentialID $credentialID
-        ThenSucceeded
-        Assert-VerifiableMock
+        WhenPublishing -WithoutVersionProperty -ErrorAction SilentlyContinue
+        ThenFailed -WithError 'missing required metadata properties'
+        ThenScriptNotPublished -To $context.OutputDirectory
     }
 }

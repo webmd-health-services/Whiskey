@@ -33,7 +33,15 @@ function Publish-WhiskeyPowerShellScript
         return
     }
 
-    $scriptManifest = Test-ScriptFileInfo -Path $Path
+    try 
+    {
+        $scriptManifest = Test-ScriptFileInfo -Path $Path
+    }
+    catch 
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $_
+        return
+    }
     $manifestContent = Get-Content $scriptManifest.Path
     $versionString = ".VERSION $($TaskContext.Version.SemVer2NoBuildMetadata)"
     $manifestContent = $manifestContent -replace '.VERSION\s[^''"]*', $versionString

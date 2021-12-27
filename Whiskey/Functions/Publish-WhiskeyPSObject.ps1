@@ -26,10 +26,6 @@ function Publish-WhiskeyPSObject
     {
         $commonParams['Verbose'] = $true
     }
-    if( $DebugPreference -in @('Continue','Inquire') )
-    {
-        $commonParams['Debug'] = $true
-    }
     if( (Test-Path -Path 'variable:InformationPreference') )
     {
         $commonParams['InformationAction'] = $InformationPreference
