@@ -46,15 +46,15 @@ function Reset
     param(
     )
 
-    Remove-Node -BuildRoot $testRoot
     # Remove any leftover or still running background jobs.
-    Write-Verbose -Message 'Removing leftover jobs.'
+    Write-Verbose -Message "[Reset]  [$((Get-Date).ToString('HH:mm:ss.fff'))]  Removing leftover jobs."
     $DebugPreference = 'Continue'
     $jobs = Get-Job | Where-Object 'Name' -EQ $PSCommandPath
     $jobs | Format-Table -Auto | Out-String | Write-Debug
-    $jobs | Wait-Job -Timeout 30 | Receive-Job
-    $jobs | Remove-Job -Force
-    Write-Verbose -Message 'Done removing jobs.'
+    $jobs | Receive-Job -AutoRemoveJob -Wait
+    Write-Verbose -Message "[Reset]  [$((Get-Date).ToString('HH:mm:ss.fff'))]  Done removing jobs."
+
+    Remove-Node -BuildRoot $testRoot
     $Global:VerbosePreference = 'SilentlyContinue'
     $Global:DebugPreference = 'SilentlyContinue'
 }

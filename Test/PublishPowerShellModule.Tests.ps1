@@ -1,4 +1,8 @@
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
+
+$Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
@@ -230,11 +234,11 @@ function WhenPublishing
 function Reset
 {
     Reset-WhiskeyTestPSModule
-    Get-PSRepository | Where-Object 'Name' -Like 'Whiskey*' | Unregister-PSRepository
     if( $script:repoToUnregister )
     {
-        Unregister-PSRepository -Name $script:repoToUnregister
+        Unregister-PSRepository -Name $script:repoToUnregister -ErrorAction Continue
     }
+    Get-PSRepository | Where-Object 'SourceLocation' -Match '^[A-Z]:' | Unregister-PSRepository -ErrorAction Continue
 }
 Reset
 
@@ -345,11 +349,11 @@ Describe 'PublishPowerShellModule.when publishing to repository that already exi
     AfterEach { Reset }
     It 'should publish the module wihtout registering the repository' {
         Init
-        GivenRepository 'R1'
-        WhenPublishing -ToRepo 'R1'
+        GivenRepository 'RM1'
+        WhenPublishing -ToRepo 'RM1'
         ThenSucceeded
-        ThenModulePublished -To 'R1'
-        ThenRepository 'R1' -Exists -NotRegistered
+        ThenModulePublished -To 'RM1'
+        ThenRepository 'RM1' -Exists -NotRegistered
     }
 }
 
@@ -357,9 +361,9 @@ Describe 'PublishPowerShellModule.when publishing to repository that does not ex
     AfterEach { Reset }
     It 'should fail' {
         Init
-        WhenPublishing -ToRepo 'R2' -ErrorAction Silently
+        WhenPublishing -ToRepo 'RM2' -ErrorAction Silently
         ThenFailed 'a repository with that name doesn''t exist'
-        ThenRepository 'R2' -NotExists -NotUnregistered
+        ThenRepository 'RM2' -NotExists -NotUnregistered
     }
 }
 
@@ -448,11 +452,11 @@ Describe 'PublishPowerShellModule.when given repository by location and by name'
     AfterEach { Reset }
     It 'should use repository registered by location' {
         Init
-        GivenRepository -Named 'R7' -At 'R7'
-        WhenPublishing -ToRepo 'R8' -RepoAt $script:publishRoot
+        GivenRepository -Named 'RM7' -At 'RM7'
+        WhenPublishing -ToRepo 'RM8' -RepoAt $script:publishRoot
         ThenSucceeded
-        ThenRepository 'R8' -NotRegistered -NotExists
-        ThenRepository 'R7' -NotRegistered -Exists
-        ThenModulePublished -To 'R7'
+        ThenRepository 'RM8' -NotRegistered -NotExists
+        ThenRepository 'RM7' -NotRegistered -Exists
+        ThenModulePublished -To 'RM7'
     }
 }

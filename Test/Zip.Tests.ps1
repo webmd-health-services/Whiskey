@@ -9,6 +9,14 @@ $threwException = $false
 $context = $null
 $expandPath = $null
 
+# Other modules have an Expand-Archive command, so make sure these tests are using the one we expect/want.
+Get-Command -Name 'Expand-Archive' |
+    Select-Object -ExpandProperty 'Source' |
+    Get-Module |
+    Remove-Module
+
+Import-Module -Name 'Microsoft.PowerShell.Archive'
+
 function Get-BuildRoot
 {
     $buildRoot = (Join-Path -Path $testRoot -ChildPath 'Repo')
@@ -654,9 +662,13 @@ Build:
 }
 
 Describe 'Zip.when Zip module not installed' {
-    AfterEach { Reset }
+    AfterEach {
+        Reset
+        Register-WhiskeyPSModulesPath
+    }
     It 'should install Zip module' {
         Init
+        Unregister-WhiskeyPSModulesPath
         GivenARepositoryWithItems 'fubar.txt' -AndModuleNotInstalled
         WhenPackaging @'
 Build:

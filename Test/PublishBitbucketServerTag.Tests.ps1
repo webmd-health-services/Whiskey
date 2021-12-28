@@ -1,5 +1,9 @@
 
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
+
+Write-Debug 'PUBLISHBITBUCKETSERVERTAG  PSMODULEPATH'
+$env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
@@ -102,6 +106,9 @@ function GivenVersion
 
 function Init
 {
+    Write-Debug 'PUBLISHBITBUCKETSERVERTAG  INIT  PSMODULEPATH'
+    $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
+
     $script:gitUri = ''
     $script:testRoot = New-WhiskeyTestRoot
 }

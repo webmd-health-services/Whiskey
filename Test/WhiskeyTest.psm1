@@ -99,10 +99,8 @@ function Import-WhiskeyTestModule
     )
 
     $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve
-    if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
-    {
-        $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
-    }
+
+    Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $modulesRoot }
 
     foreach( $moduleName in $Name )
     {
@@ -494,6 +492,12 @@ function New-WhiskeyTestRoot
     return $testRoot
 }
 
+function Register-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
+}
+
 function Remove-Node
 {
     param(
@@ -554,15 +558,14 @@ function Reset-WhiskeyPSModulePath
         return
     }
 
-    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
     $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
     $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
     $pesterTestDriveRoot = "$($pesterTestDriveRoot)$([IO.Path]::DirectorySeparatorChar)"
-    $paths =
-        $env:PSModulePath -split [IO.Path]::PathSeparator | 
-        Where-Object { -not $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
-        Where-Object { $_ -ne $whiskeyPSModulesPath }
-    $env:PSModulePath = $paths -join [IO.Path]::PathSeparator
+    $env:PSModulePath -split [IO.Path]::PathSeparator | 
+        Where-Object { $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
+        ForEach-Object {
+            Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $_ }
+        }
 }
 
 function ThenErrorRecord
@@ -602,6 +605,12 @@ function ThenModuleInstalled
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist
+}
+
+function Unregister-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
 }
 
 function Use-CallerPreference
