@@ -1,8 +1,10 @@
 
 function Invoke-WhiskeyPester3Task
 {
-    [Whiskey.Task('Pester3',Platform='Windows')]
-    [Whiskey.RequiresPowerShellModule('Pester',ModuleInfoParameterName='PesterModuleInfo',Version='3.*',VersionParameterName='Version',SkipImport)]
+    [Whiskey.Task('Pester3',Platform='Windows', Obsolete,
+                  ObsoleteMessage='The "Pester3" task is obsolete and is no longer supported.')]
+    [Whiskey.RequiresPowerShellModule('Pester', ModuleInfoParameterName='PesterModuleInfo', Version='3.*',
+                                      VersionParameterName='Version', SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -42,7 +44,7 @@ function Invoke-WhiskeyPester3Task
 
         Invoke-Command -ScriptBlock {
                                         $VerbosePreference = 'SilentlyContinue'
-                                        Import-Module -Name $pesterManifestPath
+                                        Import-Module -Name $pesterManifestPath -WarningAction Ignore
                                     }
 
         Invoke-Pester -Script $script -OutputFile $outputFile -OutputFormat NUnitXml -PassThru

@@ -19,37 +19,41 @@ function Install-WhiskeyTool
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The attribute that defines what tool is necessary.
-        [Whiskey.RequiresToolAttribute]$ToolInfo,
+        [Parameter(Mandatory, ParameterSetName='Tool')]
+        [Whiskey.RequiresToolAttribute] $ToolInfo,
 
-        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The directory where you want the tools installed.
-        [String]$InstallRoot,
+        [Parameter(Mandatory, ParameterSetName='Tool')]
+        [String] $InstallRoot,
 
-        [Parameter(Mandatory,ParameterSetName='Tool')]
         # The task parameters for the currently running task.
-        [hashtable]$TaskParameter,
+        [Parameter(Mandatory, ParameterSetName='Tool')]
+        [hashtable] $TaskParameter,
 
-        [Parameter(ParameterSetName='Tool')]
         # Running in clean mode, so don't install the tool if it isn't installed.
-        [switch]$InCleanMode,
+        [Parameter(ParameterSetName='Tool')]
+        [switch] $InCleanMode,
 
-        [Parameter(Mandatory,ParameterSetName='NuGet')]
+        # The path to a directory where downloaded package files should be saved prior to installation.
+        [Parameter(Mandatory, ParameterSetName='Tool')]
+        [String] $OutFileRootPath,
+
         # The name of the NuGet package to download.
-        [String]$NuGetPackageName,
+        [Parameter(Mandatory, ParameterSetName='NuGet')]
+        [String] $NuGetPackageName,
 
-        [Parameter(ParameterSetName='NuGet')]
         # The version of the package to download. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
-        [String]$Version,
+        [Parameter(ParameterSetName='NuGet')]
+        [String] $Version,
 
-        [Parameter(Mandatory,ParameterSetName='NuGet')]
         # The root directory where the tools should be downloaded. The default is your build root.
         #
         # PowerShell modules are saved to `$DownloadRoot\Modules`.
         #
         # NuGet packages are saved to `$DownloadRoot\packages`.
-        [String]$DownloadRoot
+        [Parameter(Mandatory, ParameterSetName='NuGet')]
+        [String] $DownloadRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -165,13 +169,10 @@ function Install-WhiskeyTool
                     {
                         'Node'
                         {
-                            $outPath = $InstallRoot
-                            if( $DownloadRoot )
-                            {
-                                $outPath = $DownloadRoot
-                            }
-
-                            $toolPath = Install-WhiskeyNode -InstallRoot $InstallRoot -Version $version -InCleanMode:$InCleanMode -OutputPath $outPath
+                            $toolPath = Install-WhiskeyNode -InstallRootPath $InstallRoot `
+                                                            -Version $version `
+                                                            -InCleanMode:$InCleanMode `
+                                                            -OutFileRootPath $OutFileRootPath
                         }
                         'DotNet'
                         {

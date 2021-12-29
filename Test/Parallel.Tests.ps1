@@ -5,6 +5,7 @@ Set-StrictMode -Version 'Latest'
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $failed = $false
+$testRoot = $null
 
 function File
 {
@@ -13,7 +14,7 @@ function File
         $ContentShouldBe
     )
 
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
+    $fullPath = Join-Path -Path $testRoot -ChildPath $Path
     $fullPath | Should -Exist
     Get-Content -Path $fullPath -Raw | Should -Be $ContentShouldBe
 }
@@ -25,11 +26,14 @@ function GivenFile
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $TestDrive.FullName -ChildPath $Path)
+    Write-Debug $Path
+    Write-Debug $Content
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
 }
 
 function Init
 {
+    $script:testRoot = New-WhiskeyTestRoot
 }
 
 function Invoke-ImportWhiskeyYaml
@@ -48,7 +52,7 @@ function WhenRunningTask
         $Parameter
     )
 
-    $context = New-WhiskeyTestContext -ForBuildServer
+    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
 
     $Global:Error.Clear()
     $script:failed = $false
@@ -86,6 +90,7 @@ function ThenFailed
 
 function ThenNoErrors
 {
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     $Global:Error | Should -BeNullOrEmpty
 }
 
@@ -188,27 +193,65 @@ Queues:
 Describe 'Parallel.when second queue finishes before first queue' {
     It 'should wait for all queues to finish' {
         Init
-        GivenFile 'one.ps1' @'
-Write-Host ("1" * 80)
-Write-Host (Get-Date)
-while( -not (Test-Path -Path 'two.ps1.started') )
+        $twoPidPath = Join-Path -Path $testRoot -ChildPath 'two.ps1.pid'
+        GivenFile 'one.ps1' @"
+`$pidPath = '$($twoPidPath)'
+`$prefix = "[ONE]  [`$(`$PID)]  "
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for ""`$(`$pidPath)"" to exist."
+`$writeNewline = `$false
+while( -not (Test-Path -Path `$pidPath) )
 {
     Write-Host '.' -NoNewLine
     Start-Sleep -Seconds 1
+    `$writeNewline = `$true
 }
-Start-Sleep -Seconds 5
-$Global:Error | Format-List * -Force | Out-String | Write-Host
+if( `$writeNewline )
+{
+    Write-Host ''
+}
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  ""`$(`$pidPath)"" exists."
+
+`$twoPid = Get-Content -Path `$pidPath -ReadCount 1
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for process ""`$(`$twoPid)"" exists."
+`$writeNewline = `$false
+while( (Get-Process -Id `$twoPid -ErrorAction Ignore) )
+{
+    Write-Host '.' -NoNewLine
+    Start-Sleep -Seconds 1
+    `$writeNewline = `$true
+}
+if( `$writeNewline )
+{
+    Write-Host ''
+}
+
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Process ""`$(`$twoPid)"" no longer exists."
+if( `$Global:Error )
+{
+    `$Global:Error | Format-List * -Force | Out-String | Write-Host
+}
+# Seen up to four seconds difference between one writing to stdout and two writing to stdout and one's output showing
+# up first. Doubling that then rounded up to 10.
+Start-Sleep -Seconds 10
+
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 1 to output."
 1 | Write-Output
-Write-Host (Get-Date)
-'@
-        GivenFile 'two.ps1' @'
-Write-Host ("2" * 80)
-Write-Host (Get-Date)
-'' | Set-Content -Path 'two.ps1.started'
-$Global:Error | Format-List * -Force | Out-String | Write-Host
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
+"@
+
+        GivenFile 'two.ps1' @"
+`$prefix = "[TWO]  [`$(`$PID)]  "
+`$pidPath = '$($twoPidPath)'
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Saving PID to ""`$(`$pidPath)""."
+`$PID | Set-Content -Path `$pidPath
+if( `$Global:Error )
+{
+    `$Global:Error | Format-List * -Force | Out-String | Write-Host
+}
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 2 to output."
 2 | Write-Output
-Write-Host (Get-Date) 
-'@
+Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
+"@
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
@@ -319,7 +362,7 @@ Build:
             Argument:
                 VariableValue: $(Fubar)
 '@
-        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml
+        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml -ForBuildRoot $script:testRoot
         Add-WhiskeyApiKey -Context $context -ID 'ApiKey' -Value 'ApiKey'
         Add-WhiskeyCredential -Context $context -ID 'Credential' -Credential (New-Object 'PsCredential' ('cred',(ConvertTo-SecureString -String 'cred' -AsPlainText -Force)))
         $Global:Error.Clear()
@@ -344,7 +387,8 @@ PowerShell:
 - PowerShell:
     Path: one.ps1
 '@
-        $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath (Join-Path -Path $TestDrive.FullName -ChildPath 'whiskey.yml')
+        $context = New-WhiskeyContext -Environment 'Verification' `
+                                      -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
         Invoke-WhiskeyBuild -Context $context
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
     }

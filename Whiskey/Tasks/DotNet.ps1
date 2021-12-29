@@ -3,13 +3,15 @@ function Invoke-WhiskeyDotNet
 {
     [CmdletBinding()]
     [Whiskey.Task('DotNet')]
-    [Whiskey.RequiresTool('DotNet',PathParameterName='DotNetPath',VersionParameterName='SdkVersion')]
+    [Whiskey.RequiresTool('DotNet', PathParameterName='DotNetPath', VersionParameterName='SdkVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [switch] $NoLog
     )
 
     Set-StrictMode -Version 'Latest'
@@ -25,10 +27,11 @@ function Invoke-WhiskeyDotNet
     $dotnetExe = $TaskParameter['DotNetPath']
 
     $invokeParameters = @{
-        TaskContext = $TaskContext
-        DotNetPath = $dotnetExe
-        Name = $command
-        ArgumentList = $TaskParameter['Argument']
+        TaskContext = $TaskContext;
+        DotNetPath = $dotnetExe;
+        Name = $command;
+        ArgumentList = $TaskParameter['Argument'];
+        NoLog = $NoLog;
     }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ('.NET Core SDK {0}' -f (& $dotnetExe --version))

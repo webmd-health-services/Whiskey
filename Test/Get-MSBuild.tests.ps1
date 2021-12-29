@@ -9,7 +9,7 @@ if (-not $IsWindows)
     return
 }
 
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\VSSetup')
+Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\VSSetup') -WarningAction Ignore
 
 $output = $null
 $toolsVersionsKeyPath = 'TestRegistry:\ToolsVersions'

@@ -102,7 +102,7 @@ try
     if( Test-Import -Name 'WhiskeyTest' )
     {
         Write-Timing ('    Importing WhiskeyTest')
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force 
+        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force
     }
 
     # We load these because they have assemblies and we need to make sure they get loaded from the global location,
@@ -140,3 +140,5 @@ finally
     Write-Timing ('Initialize-WhiskeyTest.ps1  End')
     $Global:VerbosePreference = $originalVerbosePreference
 }
+
+Get-Module | Format-Table -AutoSize | Out-String | Write-Debug

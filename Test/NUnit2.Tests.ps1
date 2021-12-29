@@ -2,9 +2,12 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+# OpenCover hangs when run on .NET 4.6.2.
+$skip = (Test-Path -Path 'env:APPVEYOR_*') -and $env:APPVEYOR_BUILD_WORKER_IMAGE -eq 'Visual Studio 2013'
+
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\NuGet.exe' -Resolve
+$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 
 $latestNUnit2Version = '2.6.4'
@@ -564,7 +567,7 @@ Describe 'NUnit2.when running NUnit tests' {
         }
     }
     Context 'code coverage' {
-        It 'should run NUnit through OpenCover' {
+        It 'should run NUnit through OpenCover' -Skip:$skip {
             Invoke-NUnitTask -WithRunningTests
         }
     }
@@ -578,7 +581,7 @@ Describe 'NUnit2.when running failing NUnit2 tests' {
         }
     }
     Context 'code coverage' {
-        It 'should run NUnit through OpenCover' {
+        It 'should run NUnit through OpenCover' -Skip:$skip {
             Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError
         }
     }
@@ -624,7 +627,7 @@ Describe 'NUnit2.when running NUnit tests with coverage filters' {
 }
 
 Describe 'NUnit2.when including tests by category' {
-    It 'should pass categories to NUnit' {
+    It 'should pass categories to NUnit' -Skip:$skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
@@ -647,7 +650,7 @@ Describe 'NUnit2.when code coverage is disabled and using category filters with 
 }
 
 Describe 'NUnit2.when excluding tests by category' {
-    It 'should not run excluded tests' {
+    It 'should not run excluded tests' -Skip:$skip {
         Init
         GivenPassingTests
         GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
@@ -658,7 +661,7 @@ Describe 'NUnit2.when excluding tests by category' {
 }
 
 Describe 'NUnit2.when running with custom arguments' {
-    It 'should pass arguments' {
+    It 'should pass arguments' -Skip:$skip {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
@@ -667,7 +670,7 @@ Describe 'NUnit2.when running with custom arguments' {
 }
 
 Describe 'NUnit2.when running under a custom dotNET framework' {
-    It 'should use custom framework' {
+    It 'should use custom framework' -Skip:$skip {
         Init
         GivenPassingTests
         WhenRunningTask @{ 'Framework' = 'net-4.5' }
@@ -697,7 +700,7 @@ Describe 'NUnit2.when running with custom ReportGenerator arguments' {
 }
 
 Describe 'NUnit2.when the Initialize Switch is active' {
-    It 'should install dependencies' {
+    It 'should install dependencies' -Skip:$skip {
         Init
         GivenPassingTests
         WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
@@ -709,7 +712,7 @@ Describe 'NUnit2.when the Initialize Switch is active' {
 }
 
 Describe 'NUnit2.when using custom tool versions' {
-    It 'should use those tool versions' {
+    It 'should use those tool versions' -Skip:$skip {
         Init
         GivenPassingTests
         GivenOpenCoverVersion '4.0.1229'

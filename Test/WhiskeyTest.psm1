@@ -23,6 +23,8 @@ $downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('..\.output\.down
 $downloadCachePath = [IO.Path]::GetFullPath($downloadCachePath)
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
+$testNum = 0
+
 if( -not (Test-Path -Path $downloadCachePath -PathType Container) )
 {
     New-Item -Path $downloadCachePath -ItemType 'Directory' -Force | Out-Null
@@ -97,14 +99,12 @@ function Import-WhiskeyTestModule
     )
 
     $modulesRoot = Join-Path -Path $PSScriptRoot -ChildPath ('..\{0}' -f $TestPSModulesDirectoryName) -Resolve
-    if( $env:PSModulePath -notlike ('{0}{1}*' -f $modulesRoot,[IO.Path]::PathSeparator) )
-    {
-        $env:PSModulePath = '{0}{1}{2}' -f $modulesRoot,[IO.Path]::PathSeparator,$env:PSModulePath
-    }
+
+    Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $modulesRoot }
 
     foreach( $moduleName in $Name )
     {
-        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global -WarningAction Ignore
     }
 }
 
@@ -115,7 +115,7 @@ function Import-WhiskeyTestTaskModule
         return
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve) -Global
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1' -Resolve) -Global -Verbose:$false
 }
 
 function Initialize-WhiskeyTestPSModule
@@ -169,13 +169,17 @@ function Install-Node
 
     $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
     $toolAttr.PathParameterName = 'NodePath'
-    Install-WhiskeyTool -ToolInfo $toolAttr -InstallRoot $downloadCachePath -TaskParameter @{ }
+    Install-WhiskeyTool -ToolInfo $toolAttr `
+                        -InstallRoot $downloadCachePath `
+                        -OutFileRootPath ($downloadCachePath | Split-Path -Parent) `
+                        -TaskParameter @{ }
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
 
     if( -not $BuildRoot )
     {
-        Write-WhiskeyWarning -Message ('Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.')
+        $msg = 'Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.'
+        Write-WhiskeyWarning -Message $msg
         $BuildRoot = $TestDrive.FullName
     }
 
@@ -483,9 +487,15 @@ function New-WhiskeyTestRoot
     # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
     # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5,
     # which will allow running specific `It` blocks.
-    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($script:testNum++)
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
     return $testRoot
+}
+
+function Register-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
 }
 
 function Remove-Node
@@ -530,6 +540,11 @@ function Remove-DotNet
 
 function Reset-WhiskeyTestPSModule
 {
+    if( -not (Test-Path -Path 'variable:TestDrive') )
+    {
+        return
+    }
+
     Get-Module |
         Where-Object { $_.Path -like ('{0}*' -f $TestDrive.FullName) } |
         Remove-Module -Force
@@ -538,12 +553,19 @@ function Reset-WhiskeyTestPSModule
 
 function Reset-WhiskeyPSModulePath
 {
-    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
-    $paths =
-        $env:PSModulePath -split [IO.Path]::PathSeparator | 
-        Where-Object { $_ -notlike '*\*.*\PSModules' } |
-        Where-Object { $_ -ne $whiskeyPSModulesPath }
-    $env:PSModulePath = $paths -join [IO.Path]::PathSeparator
+    if( -not (Test-Path -Path 'variable:TestDrive') )
+    {
+        return
+    }
+
+    $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
+    $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $pesterTestDriveRoot = "$($pesterTestDriveRoot)$([IO.Path]::DirectorySeparatorChar)"
+    $env:PSModulePath -split [IO.Path]::PathSeparator | 
+        Where-Object { $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
+        ForEach-Object {
+            Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $_ }
+        }
 }
 
 function ThenErrorRecord
@@ -583,6 +605,12 @@ function ThenModuleInstalled
 
     Join-Path -Path $InBuildRoot -ChildPath ('{0}\{1}\{2}' -f $TestPSModulesDirectoryName,$Named,$AtVersion) |
         Should -Exist
+}
+
+function Unregister-WhiskeyPSModulesPath
+{
+    $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
+    Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
 }
 
 function Use-CallerPreference

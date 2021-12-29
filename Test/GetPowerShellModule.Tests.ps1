@@ -87,7 +87,10 @@ function WhenTaskRun
 
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name "GetPowerShellModule"
+        Invoke-WhiskeyTask -TaskContext $context `
+                           -Parameter $taskParameter `
+                           -Name 'GetPowerShellModule' `
+                           -InformationAction SilentlyContinue
     }
     catch
     {
@@ -116,7 +119,7 @@ function ThenModuleInstalled
     $modulePath = Join-Path -Path $modulePath -ChildPath ('{0}.psd1' -f $taskParameter['Name'])
     $modulePath | Should -Exist
 
-    $module = Test-ModuleManifest -Path $modulePath
+    $module = Test-ModuleManifest -Path $modulePath -WarningAction SilentlyContinue
     if( $prerelease )
     {
         $module.PrivateData.PSData.Prerelease | Should -Be $prerelease
@@ -178,6 +181,11 @@ function ThenErrorShouldBeThrown
     $Global:Error | Should -Match $Message
 }
 
+function ThenNoErrorWritten
+{
+    $Global:Error | Should -BeNullOrEmpty
+}
+
 Describe 'GetPowerShellModule.when given a module Name' {
     AfterEach { Reset }
     It 'should install the lastest version of that module' {
@@ -187,6 +195,7 @@ Describe 'GetPowerShellModule.when given a module Name' {
         WhenTaskRun
         ThenModuleInstalled
         ThenModuleNotImported 'Zip'
+        ThenNoErrorWritten
     }
 }
 
@@ -197,6 +206,7 @@ Describe 'GetPowerShellModule.when given a module Name and Version' {
         GivenModule 'Pester'
         GivenVersion '3.4.0'
         WhenTaskRun
+        ThenNoErrorWritten
         ThenModuleInstalled -AtVersion '3.4.0'
     }
 }
@@ -209,6 +219,7 @@ Describe 'GetPowerShellModule.when given a Name and a wildcard Version' {
         GivenVersion '3.3.*'
         WhenTaskRun
         ThenModuleInstalled -AtVersion '3.3.9'
+        ThenNoErrorWritten
     }
 }
 
@@ -255,6 +266,7 @@ Describe 'GetPowerShellModule.when called with clean mode' {
         GivenCleanMode
         WhenTaskRun
         ThenModuleNotInstalled
+        ThenNoErrorWritten
     }
 }
 
@@ -267,6 +279,7 @@ Describe 'GetPowerShellModule.when allowing prerelease versions' {
         GivenPrereleaseAllowed
         WhenTaskRun
         ThenModuleInstalled -AtVersion '0.43.0-beta1416'
+        ThenNoErrorWritten
     }
 }
 
@@ -281,6 +294,7 @@ Describe 'GetPowerShellModule.when installing to custom directory' {
         GivenCleanMode
         WhenTaskRun
         ThenModuleNotInstalled -InDirectory 'FubarSnafu'
+        ThenNoErrorWritten
         # Make sure Whiskey doesn't use the install path of this module as the global install path.
         Join-Path -Path $testRoot -ChildPath 'FubarSnafu\PackageManagement' | Should -Not -Exist
         Join-Path -Path $testRoot -ChildPath 'FubarSnafu\PowerShellGet' | Should -Not -Exist
@@ -294,12 +308,13 @@ Describe 'GetPowerShellModule.when importing module after installation' {
         $modulePath = Join-Path -Path $PSScriptRoot -ChildPath '..' -Resolve
         $modulePath = Join-Path -Path $modulePath -ChildPath $TestPSModulesDirectoryName
         $modulePath = Join-Path -Path $modulePath 'Zip' -Resolve
-        Import-Module -Name $modulePath -Force
+        Import-Module -Name $modulePath -Force -WarningAction SilentlyContinue
         GivenImport
         GivenModule 'Zip'
         GivenVersion '0.2.0'
         WhenTaskRun
         ThenModuleInstalled -AtVersion '0.2.0'
         ThenModuleImported 'Zip'
+        ThenNoErrorWritten
     }
 }

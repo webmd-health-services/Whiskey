@@ -55,13 +55,48 @@ function Get-WhiskeyPSModule
     
     Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
     
-    $env:PSModulePath -split [IO.Path]::PathSeparator | Write-WhiskeyDebug
+    Write-WhiskeyDebug '[Get-WhiskeyPSModules]  PSModulePath:'
+    $env:PSModulePath -split [IO.Path]::PathSeparator |
+        ForEach-Object { "  $($_)"} |
+        Write-WhiskeyDebug
     $modules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
     $modules | Out-String | Write-WhiskeyDebug
     $modules |
-        Where-Object { 
-            Write-WhiskeyDebug -Message ("Checking if $($_.Name) module's version $($_.Version) is like ""$($Version)"".")
-            return -not $Version -or $_.Version -like $Version
+        Where-Object {
+            if( -not $Version )
+            {
+                return $true
+            }
+
+            $moduleInfo = $_
+
+            $moduleVersion = $moduleInfo.Version
+            $prerelease = ''
+            if( ($moduleInfo | Get-Member 'PreRelease') )
+            {
+                $prerelease = $moduleInfo.PreRelease
+            }
+            else
+            {
+                $privateData = $moduleInfo.PrivateData
+                if( $privateData )
+                {
+                    $psdata = $privateData['PSData']
+                    if( $psdata )
+                    {
+                        $prerelease = $psdata['Prerelease']
+                    }
+                }
+            }
+
+            if( $prerelease )
+            {
+                $moduleVersion = "$($moduleVersion)-$($prerelease)"
+            }
+
+            $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($Version)""."
+            Write-WhiskeyDebug -Message $msg
+            return $moduleVersion -like $Version
         } |
         Add-Member -Name 'ManifestPath' `
                    -MemberType ScriptProperty `
@@ -77,7 +112,7 @@ function Get-WhiskeyPSModule
             $debugMsg = "Module $($module.Name) $($module.Version) ($($module.ManifestPath)) has "
             try
             {
-                $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore
+                $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore -WarningAction Ignore
                 Write-WhiskeyDebug -Message ("$($debugMsg)a valid manifest.")
             }
             catch
@@ -97,6 +132,10 @@ function Get-WhiskeyPSModule
 
             return $true
         } |
-        Sort-Object -Property 'Version' -Descending |
+        # Get the highest versioned module in the order in which they appear in the PSModulePath environment variable.
+        Group-Object -Property 'Version' |
+        Sort-Object -Property { [Version]$_.Name } -Descending |
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty 'Group' |
         Select-Object -First 1
 }

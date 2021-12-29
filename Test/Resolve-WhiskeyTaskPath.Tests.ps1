@@ -387,8 +387,10 @@ Describe ('Resolve-WhiskeyTaskPath.when given multipe paths') {
 Describe ('Resolve-WhiskeyTaskPath.when a path uses different case to try to reach outside its build root') {
     It ('should fail on case-sensitive platforms and succeed on case-insensitive platforms') {
         Init
-        $tempDir = $testRoot | Split-Path -Parent
-        $buildDirName = $testRoot | Split-Path -Leaf
+        # Make sure we're in a directory that has letters.
+        $buildRoot = Join-Path -Path $testRoot -ChildPath 'fubar'
+        $tempDir = $buildRoot | Split-Path -Parent
+        $buildDirName = $buildRoot | Split-Path -Leaf
         $attackersBuildDirName = $buildDirName.ToUpper()
         $attackersBuildDir = Join-Path -Path $tempDir -ChildPath $attackersBuildDirName
         $attackersFile = Join-Path -Path $attackersBuildDir -ChildPath 'abc.yml'
@@ -398,7 +400,10 @@ Describe ('Resolve-WhiskeyTaskPath.when a path uses different case to try to rea
         {
             $optionalParam['ErrorAction'] = 'SilentlyContinue'
         }
-        WhenRunningTask 'ValidateOptionalNonexistentPathTask' -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } @optionalParam
+        WhenRunningTask 'ValidateOptionalNonexistentPathTask' `
+                        -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } `
+                        @optionalParam `
+                        -BuildRoot $buildRoot
         if( $fsCaseSensitive )
         {
             ThenTaskNotCalled 

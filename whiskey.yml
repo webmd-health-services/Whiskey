@@ -1,6 +1,3 @@
-PublishOn:
-- master
-- prerelease
 
 Build:
 - TaskDefaults:
@@ -10,7 +7,14 @@ Build:
 - Version:
     Path: Whiskey\Whiskey.psd1
     Prerelease:
-    - prerelease: beta$(WHISKEY_BUILD_NUMBER)
+    - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
+    - develop: rc$(WHISKEY_BUILD_NUMBER)
+
+# Update the AppVeyor build/version number.
+- Exec:
+      OnlyBy: BuildServer
+      Path: appveyor
+      Argument: [ UpdateBuild, -Version, $(WHISKEY_SEMVER2) ]
 
 - GetPowerShellModule:
     Name: BuildMasterAutomation
@@ -31,6 +35,12 @@ Build:
 - GetPowerShellModule:
     Name: Zip
     Version: 0.3.*
+
+# Can remove once a Pester 5 task is in place.
+# Currently needed to increase build speed.
+- GetPowerShellModule:
+    Name: Pester
+    Version: 5.*
 
 # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
 # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
@@ -63,6 +73,45 @@ Build:
     TextSeparator: "$(NewLine)$(NewLine)"
     DeleteSourceFiles: true
 
+- CopyFile:
+    Path:
+    - CHANGELOG.md
+    - README.md
+    DestinationDirectory: Whiskey
+
+# PublishPowerShellModule should come *before* we create the ZIP file so that the ZIP file contains a module manifest
+# that has prerelease metadata in it, if needed (which gets added by PublishPowerShellModule).
+- PublishPowerShellModule:
+    Path: Whiskey
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [
+        'PushArtifact',
+        '.output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
+        '-DeploymentName',
+        'PowerShellGallery'
+    ]
+
+- Zip:
+    ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
+    Path: 
+    - Whiskey
+    Exclude:
+    - "*.pdb"
+    - "*.orig"
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [ 'PushArtifact', '.output/Whiskey-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
+
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [ 'PushArtifact', 'Whiskey/build.ps1', '-DeploymentName', 'GitHub' ]
+
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
@@ -72,6 +121,7 @@ Build:
     ExceptOnPlatform: Windows
     Queues:
     - Tasks:
+        # Needs to run in its own Pester task since it loads old versions of Whiskey.
         - Pester4:
             Script:
             - Test\build.ps1.Tests.ps1
@@ -83,7 +133,6 @@ Build:
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
             - Test\Parallel.Tests.ps1
-            - Test\Pester4.Tests.ps1
             - Test\PublishNodeModule.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
             - Test\Version.Tests.ps1
@@ -117,7 +166,6 @@ Build:
             - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
             - "*/Test/MergeFile.Tests.ps1"
             - "*/Test/Parallel.Tests.ps1"
-            - "*/Test/Pester4.Tests.ps1"
             - "*/Test/PowerShell.Tests.ps1"
             - "*/Test/ProGetUniversalPackage.Tests.ps1"
             - "*/Test/PublishNodeModule.Tests.ps1"
@@ -167,8 +215,7 @@ Build:
             - Test\Install-WhiskeyTool.Tests.ps1
             - Test\NuGetPack.Tests.ps1
             - Test\Parallel.Tests.ps1
-            - Test\Pester3.Tests.ps1
-            - Test\Pester4.Tests.ps1
+            - Test\Pester.Tests.ps1
             - Test\PublishNodeModule.Tests.ps1
     - Tasks:
         - Pester4:
@@ -211,8 +258,7 @@ Build:
             - "*\\Test\\NUnit2.Tests.ps1"
             - "*\\Test\\NUnit3.Tests.ps1"
             - "*\\Test\\Parallel.Tests.ps1"
-            - "*\\Test\\Pester3.Tests.ps1"
-            - "*\\Test\\Pester4.Tests.ps1"
+            - "*\\Test\\Pester.Tests.ps1"
             - "*\\Test\\PowerShell.Tests.ps1"
             - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
             - "*\\Test\\PublishNodeModule.Tests.ps1"
@@ -228,47 +274,3 @@ Build:
     Argument:
         Path: ./.output/pester*.xml
         QueueDuration: "00:10:00"
-
-- Zip:
-    ArchivePath: .output\Whiskey.zip
-    Path: 
-    - Whiskey
-    Exclude:
-    - "*.pdb"
-    - "*.orig"
-
-Publish:
-- AppVeyorWaitForBuildJobs:
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    IfExists: env:APPVEYOR_BEARER_TOKEN
-    OnlyOnPlatform: Windows
-    ApiKeyID: AppVeyor
-- PublishPowerShellModule:
-    OnlyOnPlatform: Windows
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    RepositoryName: PSGallery
-    RepositoryUri: https://powershellgallery.com/api/v2/
-    Path: Whiskey
-    ApiKeyID: PowerShellGallery
-- SetVariableFromPowerShellDataFile:
-    Path: Whiskey\Whiskey.psd1
-    Variables:
-        PrivateData:
-            PSData:
-                ReleaseNotes: RELEASE_NOTES
-- GitHubRelease:
-    OnlyOnPlatform: Windows
-    UnlessExists: env:APPVEYOR_PULL_REQUEST_NUMBER
-    RepositoryName: webmd-health-services/Whiskey
-    ApiKeyID: github.com
-    Tag: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
-    Commitish: $(WHISKEY_SCM_COMMIT_ID)
-    Name: $(WHISKEY_SEMVER2_NO_BUILD_METADATA)
-    Description: $(RELEASE_NOTES)
-    Assets:
-    - Path: .output\Whiskey.zip
-      ContentType: application/zip
-      Name: Whiskey-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
-    - Path: Whiskey\build.ps1
-      ContentType: text/plain
-      Name: build.ps1

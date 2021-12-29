@@ -189,7 +189,7 @@ function ThenNodeInstalled
         }
     }
 
-    Join-Path -Path $testRoot -ChildPath ('node-{0}-*-x64.*' -f $NodeVersion) | Should -Exist
+    Join-Path -Path $testRoot -ChildPath ('.output\node-{0}-*-x64.*' -f $NodeVersion) | Should -Exist
 
     $nodePath | Should -Exist
     & $nodePath '--version' | Should -Be $NodeVersion
@@ -306,7 +306,10 @@ function WhenInstallingTool
     Push-Location -path $taskWorkingDirectory
     try
     {
-        Install-WhiskeyTool -ToolInfo $FromAttribute -InstallRoot $testRoot -TaskParameter $Parameter
+        Install-WhiskeyTool -ToolInfo $FromAttribute `
+                            -InstallRoot $testRoot `
+                            -OutFileRootPath (Join-Path -Path $testRoot -ChildPath '.output') `
+                            -TaskParameter $Parameter
     }
     catch
     {

@@ -11,16 +11,82 @@ function Write-Timing
     Write-Debug -Message ('[{0:hh":"mm":"ss"."ff}]  {1}' -f ($now - $startedAt),$Message)
 }
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $powerShellModulesDirectoryName = 'PSModules'
 
 $whiskeyScriptRoot = $PSScriptRoot
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
-$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'NuGet.exe' -Resolve
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'nuget.exe' -Resolve
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+$buildStartedAt = [DateTime]::MinValue
 
 $PSModuleAutoLoadingPreference = 'None'
 
 # The indentation to use when writing task messages.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $taskWriteIndent = '  '
+
+# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
+if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
+{
+    # We only set these variables on platforms where they're not defined.
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+    $IsLinux = $false
+
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+    $IsMacOS = $false
+
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+    $IsWindows = $true
+}
+
+if( -not (Test-Path -Path 'env:WHISKEY_DISABLE_ERROR_FORMAT') )
+{
+    Write-Timing 'Updating formats.'
+    $prependFormats = @(
+                            (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Management.Automation.ErrorRecord.ps1xml'),
+                            (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Exception.ps1xml')
+                        )
+    Update-FormatData -PrependPath $prependFormats
+}
+
+Write-Timing 'Loading assemblies.'
+
+# .NET Framework 4.6.2 won't load netstandard2.0 assemblies.
+$frameworkMoniker = 'netstandard2.0'
+$net4Key = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction Ignore
+$net462Release = 460798
+if( $net4Key -and $net4Key.Release -le $net462Release )
+{
+    $frameworkMoniker = 'net452'
+}
+
+foreach( $assemblyBaseName in @('SemanticVersion', 'YamlDotNet', 'Whiskey') )
+{
+    $assemblyPath = Join-Path -Path $whiskeyBinPath -ChildPath $frameworkMoniker
+    $assemblyPath = Join-Path -Path $assemblyPath -ChildPath "$($assemblyBaseName).dll"
+    $addTypeErrors = @()
+    Add-Type -Path $assemblyPath -ErrorVariable 'addTypeErrors' -ErrorAction Continue
+    if( $addTypeErrors )
+    {
+        $ex = $addTypeErrors | Select-Object -First 1
+        while( $ex.InnerException )
+        {
+            $ex = $ex.InnerException
+        }
+
+        if( $ex | Get-Member 'LoaderExceptions' )
+        {
+            $ex = $ex.LoaderExceptions | Select-Object -First 1
+        }
+
+        Write-Error -Message "Exception loading assembly ""$($assemblyPath)"": $($ex)" -ErrorAction Stop
+    }
+}
+Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
 
 Write-Timing 'Updating serialiazation depths on Whiskey objects.'
 # Make sure our custom objects get serialized/deserialized correctly, otherwise they don't get passed to PowerShell tasks correctly.
@@ -78,7 +144,7 @@ function Assert-Member
     }
 }
 
-Write-Timing 'Checking Whiskey.Context class.'
+Write-Timing 'Checking Whiskey assembly loaded.'
 $context = New-WhiskeyObject -TypeName 'Whiskey.Context'
 Assert-Member -Object $context `
               -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys', 'BuildStopwatch', 'TaskStopwatch' )
@@ -93,6 +159,9 @@ New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -Argumen
 $attr = New-WhiskeyObject -TypeName 'Whiskey.Tasks.ValidatePathAttribute'
 Assert-Member -Object $attr -Property @( 'Create' )
 
+$buildInfo = New-WhiskeyObject -TypeName 'Whiskey.BuildInfo'
+Assert-Member -Object $buildInfo -Property @( 'ScmSourceBranch' )
+
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
 if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [securestring].FullName )
@@ -100,25 +169,11 @@ if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $
     Write-Error -Message  $oldVersionLoadedMsg -ErrorAction Stop 
 }
 
-Write-Timing 'Updating formats.'
-$prependFormats = @(
-                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Management.Automation.ErrorRecord.format.ps1xml'),
-                        (Join-Path -Path $PSScriptRoot -ChildPath 'Formats\System.Exception.format.ps1xml')
-                    )
-Update-FormatData -PrependPath $prependFormats
-
 Write-Timing ('Creating internal module variables.')
-
-# PowerShell 5.1 doesn't have these variables so create them if they don't exist.
-if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
-{
-    $IsLinux = $false
-    $IsMacOS = $false
-    $IsWindows = $true
-}
 
 $dotNetExeName = 'dotnet'
 $nodeExeName = 'node'
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $nodeDirName = 'bin'
 if( $IsWindows )
 {
@@ -127,6 +182,7 @@ if( $IsWindows )
     $nodeDirName = ''
 }
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $CurrentPlatform = [Whiskey.Platform]::Unknown
 if( $IsLinux )
 {

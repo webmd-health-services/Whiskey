@@ -227,8 +227,9 @@ function Invoke-WhiskeyTask
             foreach( $requiredTool in $requiredTools )
             {
                 Install-WhiskeyTool -ToolInfo $requiredTool `
-                                    -InstallRoot $TaskContext.BuildRoot `
+                                    -InstallRoot $TaskContext.BuildRoot.FullName `
                                     -TaskParameter $taskProperties `
+                                    -OutFileRootPath $TaskContext.OutputDirectory.FullName `
                                     -InCleanMode:$inCleanMode `
                                     -ErrorAction Stop
             }

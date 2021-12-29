@@ -24,10 +24,24 @@ function Register-WhiskeyPSModulePath
         $Path = Get-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
     }
 
-    if( ($env:PSModulePath -split [IO.Path]::PathSeparator) -contains $Path )
+    $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator
+    try
     {
-        return
-    }
+        if( $pathBefore -contains $Path )
+        {
+            return
+        }
 
-    $env:PSModulePath = $Path,$env:PSModulePath -join [IO.Path]::PathSeparator
+        $env:PSModulePath = $Path,$env:PSModulePath -join [IO.Path]::PathSeparator
+    }
+    finally
+    {
+        Write-WhiskeyDebug "[Register-WhiskeyPSModulePath]  Changes to PSModulePath:"
+        $pathNow = $env:PSModulePath -split [IO.Path]::PathSeparator
+        $diff = Compare-Object -ReferenceObject $pathBefore -DifferenceObject $pathNow -IncludeEqual
+        if( $diff )
+        {
+            $diff | Format-Table -AutoSize | Out-String | Write-WhiskeyDebug
+        }
+    }
 }

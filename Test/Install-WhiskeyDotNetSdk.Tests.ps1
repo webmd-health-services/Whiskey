@@ -1,7 +1,7 @@
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$dotNetPath = $null
+$output = $null
 $originalPath = $env:PATH
 $globalDotNetDirectory = $null
 $localDotNetDirectory = $null
@@ -10,92 +10,44 @@ if( $IsWindows )
 {
     $dotnetExeName = 'dotnet.exe'
 }
+$testRoot = $null
 
-$tempDotNetPath = $null
-if( $IsLinux )
-{
-    # On the build server, dotnet and curl are in the same directory. Some tests remove the path 
-    # in which dotnet is installed to test that it gets downloaded and installed. Since curl is
-    # at the same path, the download fail because dotnet-install.sh can't find curl. So, we
-    # have to set aside the global dotnet if it exists in the same directory as curl.
-    $sysDotNetPath = Get-Command -Name 'dotnet' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty 'Source' 
-    $dotnetDir = $sysDotNetPath | Split-Path -Parent
-    $curlDir = Get-Command -Name 'curl' -Erroraction SilentlyContinue | Select-Object -ExpandProperty 'Source' | Split-Path -Parent
-    if( $curlDir -eq $dotnetDir )
-    {
-        $tempDotNetName = 'dotnet{0}' -f [IO.Path]::GetRandomFileName()
-        $tempDotNetPath = Join-Path -Path $dotnetDir -ChildPath $tempDotNetName
-        sudo mv $sysDotNetPath $tempDotNetPath
-    }
-}
+$latestSdkVersion = '5.0.209'
+# The first in the major version line matching the latest SDK version.
+$firstSdkVersion = '5.0.100'
+$dotnetInstalled = $false
 
 function Init
 {
     $Global:Error.Clear()
-    $script:dotNetPath = $null
-    $script:globalDotNetDirectory = Join-Path $TestDrive.FullName -ChildPath 'GlobalDotNetSDK'
-    $script:localDotNetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath '.dotnet'
+    $script:output = $null
+    $script:testRoot = New-WhiskeyTestRoot
+    $script:globalDotNetDirectory = Join-Path $script:testRoot -ChildPath 'GlobalDotNetSDK'
+    $script:localDotNetDirectory = Join-Path -Path $script:testRoot -ChildPath '.dotnet'
+    $env:PATH = $originalPath
+    $script:dotnetInstalled = $false
 }
 
-function GivenGlobalDotNet
+function GivenDotNetInstalled
 {
     param(
-        $Version
+        [Parameter(Mandatory)]
+        [Version] $AtVersion
     )
 
-    $dotNetExePath = Join-Path -Path $globalDotNetDirectory -ChildPath $dotnetExeName
+    $installPath = $script:globalDotNetDirectory
+    $script:dotnetInstalled = $true
+
+    $dotNetExePath = Join-Path -Path $installPath -ChildPath $dotnetExeName
     New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
-    $dotNetSdkPath = Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
+    $dotNetSdkPath = Join-Path -Path $installPath -ChildPath "sdk\$($AtVersion)\dotnet.dll"
     New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
-
-    $env:PATH = ('{0}{1}{2}' -f $globalDotNetDirectory,[IO.Path]::PathSeparator,$env:PATH)
-}
-
-function GivenDotNetSuccessfullyInstalls
-{
-    Mock -CommandName 'Invoke-Command' `
-         -ModuleName 'Whiskey' `
-         -ParameterFilter { $dotNetInstallScript -like '*\dotnet-install.ps1' } `
-         -MockWith {
-            $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
-            New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
-
-            $dotNetSdkPath = Join-Path -Path $InstallRoot -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)
-            New-Item -Path $dotNetSdkPath -ItemType File -Force | Out-Null
-        }
-}
-
-function GivenDotNetCommandFailsToInstall
-{
-    Mock -CommandName 'Invoke-Command' `
-         -ModuleName 'Whiskey' `
-         -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' }
-}
-
-function GivenDotNetSdkFailsToInstall
-{
-    Mock -CommandName 'Invoke-Command' `
-         -ModuleName 'Whiskey' `
-         -ParameterFilter { $dotNetInstallScript -like '*[/\]dotnet-install.*' } `
-         -MockWith {
-            $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
-            New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
-
-            $sdkWithoutVersionPath = Join-Path -Path $InstallRoot -ChildPath 'sdk'
-            New-Item -Path $sdkWithoutVersionPath -ItemType Directory -Force | Out-Null
-        }
 }
 
 function GivenDotNetNotInstalled
 {
-    $dotNetInstalls = Get-Command -Name $dotnetExeName -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source' -ErrorAction Ignore
-    foreach ($path in $dotNetInstalls)
-    {
-        $dotNetDirectory = [regex]::Escape(($path | Split-Path -Parent))
-        $dotNetDirectory = ('{0}{1}?' -f $dotNetDirectory,[regex]::Escape([IO.Path]::DirectorySeparatorChar))
-        $env:PATH = $env:PATH -replace $dotNetDirectory,''
-    }
+    $script:dotNetNotInstalled = $true
 }
 
 function ThenRestoreOriginalPathEnvironment
@@ -109,7 +61,7 @@ function ThenErrorIs
         $Message
     )
 
-    $Global:Error | Should -Match $Message
+    $Global:Error | Select-Object -First 1 | Should -Match $Message
 }
 
 function ThenInstalledDotNet
@@ -124,34 +76,32 @@ function ThenInstalledDotNet
     Get-ChildItem $sdkPath | Should -Not -BeNullOrEmpty
 }
 
-function ThenNotInstalledDotNet
+function ThenNotInstalledDotNetLocally
 {
     param(
         $Version
     )
 
     $sdkPath = Join-Path -Path $localDotNetDirectory -ChildPath ('sdk\{0}' -f $Version)
-
     $sdkPath | Should -Not -Exist
 }
 
 function ThenReturnedPathToDotNet
 {
     param(
-        [switch]$Global
+        [switch] $Global
     )
 
-    If ($Global)
+    $output | Should -Not -BeNullOrEmpty
+    $output | Should -HaveCount 1
+    $output | Should -Exist
+    if( $Global )
     {
-        $dotNetPath | Should -Not -BeNullOrEmpty
-        $dotNetPath | Should -Exist
-        $dotNetPath | Should -Be (Join-Path -Path $globalDotNetDirectory -ChildPath $dotnetExeName)
+        $output | Should -Be (Join-Path -Path $globalDotNetDirectory -ChildPath $dotnetExeName)
     }
     else
     {
-        $dotNetPath | Should -Not -BeNullOrEmpty
-        $dotNetPath | Should -Exist
-        $dotNetPath | Should -Be (Join-Path -Path $localDotNetDirectory -ChildPath $dotnetExeName)
+        $output | Should -Be (Join-Path -Path $localDotNetDirectory -ChildPath $dotnetExeName)
     }
 }
 
@@ -164,109 +114,82 @@ function WhenInstallingDotNet
 {
     [CmdletBinding()]
     param(
-        $Version,
-
-        [switch]$Global
+        $Version
     )
 
+    $dotNetRoot = $script:globalDotNetDirectory
+    $exeName = $script:dotNetExeName
+    
+    $mock = { Write-Error -Message 'Command not found.' -ErrorAction $ErrorActionPreference }
+    if( $dotnetInstalled )
+    {
+        $mock = { 
+            $cmd = [pscustomobject]@{ Source = (Join-Path -Path $dotNetRoot -ChildPath $exeName) }
+            Write-Debug $cmd.Source
+            return $cmd
+        }.GetNewClosure()
+    }
+    Mock -CommandName 'Get-Command' -Module 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith $mock
+
     $parameter = $PSBoundParameters
-    $parameter['InstallRoot'] = $localDotNetDirectory;
-    $script:dotNetPath = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyDotNetSdk' -Parameter $parameter
+    $parameter['InstallRoot'] = $localDotNetDirectory
+    $script:output = Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyDotNetSdk' -Parameter $parameter 
 }
 
-Describe 'Install-WhiskeyDotNetSdk.when installing the SDK version "2.0.3"' {
-    It 'should install 2.0.3' {
-        # Leave this test UN-MOCKED so we have at least one test that actually runs dotnet-install.* to ensure it works properly.
-
+Describe "Install-WhiskeyDotNetSdk.when installing" {
+    It "should install " {
         Init
-        WhenInstallingDotNet '2.0.3'
-        ThenInstalledDotNet '2.0.3'
+        WhenInstallingDotNet $firstSdkVersion
+        ThenInstalledDotNet $firstSdkVersion
         ThenReturnedPathToDotNet
     }
 
-    Context 'When installing newer version "2.1.4" of the SDK alongside the old one' {
-        It 'should upgrade existing version' {
-            WhenInstallingDotNet '2.1.4'
-            ThenInstalledDotNet '2.0.3'
-            ThenInstalledDotNet '2.1.4'
+    Context "when installing newer version SDK alongside existing version" {
+        It 'should install side by side' {
+            WhenInstallingDotNet $latestSdkVersion
+            ThenInstalledDotNet $firstSdkVersion
+            ThenInstalledDotNet $latestSdkVersion
             ThenReturnedPathToDotNet
         }
+    }
+}
+
+Describe 'Install-WhiskeyDotNetSdk.when SDK is installed globally' {
+    It 'should not install locally' {
+        Init
+        GivenDotNetInstalled -AtVersion $latestSdkVersion
+        WhenInstallingDotNet $latestSdkVersion
+        ThenNotInstalledDotNetLocally $latestSdkVersion
+        ThenReturnedPathToDotNet -Global
     }
 }
 
 Describe 'Install-WhiskeyDotNetSdk.when cannot find dotnet executable after install' {
     It 'should fail' {
         Init
-        GivenDotNetCommandFailsToInstall
-        WhenInstallingDotNet '1.1.11' -ErrorAction SilentlyContinue
+        Mock -CommandName 'Join-Path' `
+             -Module 'Whiskey' `
+             -ParameterFilter {
+                 $ChildPath -in @('dotnet', 'dotnet.exe') -and $Resolve -and $ErrorActionPreference -eq 'Ignore' } `
+             -MockWith { Write-Error -Message "Path does not exist." -ErrorAction $ErrorActionPreference }
+        WhenInstallingDotNet $latestSdkVersion -ErrorAction SilentlyContinue
         ThenReturnedNothing
-        ThenErrorIs ('"{0}"\ executable\ was\ not\ found' -f [regex]::Escape($dotnetExeName))
+        ThenErrorIs """$([regex]::Escape($dotnetExeName))"" command was not found"
     }
 }
 
 Describe 'Install-WhiskeyDotNetSdk.when installing SDK but desired SDK version was not found after install' {
     It 'should fail' {
         Init
-        GivenDotNetSdkFailsToInstall
-        WhenInstallingDotNet '1.0.4' -ErrorAction SilentlyContinue
+        $installRoot = $script:InstallRoot
+        $version = $latestSdkVersion
+        Mock -CommandName 'Join-Path' `
+             -Module 'Whiskey' `
+             -ParameterFilter {
+                 $ChildPath -eq "sdk\$($version)" -and $Resolve -and $ErrorActionPreference -eq 'Ignore' } `
+             -MockWith { Write-Error -Message "Path does not exist." -ErrorAction $ErrorActionPreference }
+        WhenInstallingDotNet $version -ErrorAction SilentlyContinue
         ThenReturnedNothing
-        ThenErrorIs 'version\ "1.0.4"\ of\ the\ SDK\ was\ not\ found'
+        ThenErrorIs ([regex]::Escape(".NET SDK ""$($version)"" doesn't exist"))
     }
-}
-
-try
-{
-    GivenDotNetNotInstalled
-
-    Describe 'Install-WhiskeyDotNetSdk.when searching globally and SDK not installed anywhere' {
-        It 'should install locally' {
-            Init
-            GivenDotNetSuccessfullyInstalls
-            WhenInstallingDotNet '2.1.4' -Global
-            ThenInstalledDotNet '2.1.4'
-            ThenReturnedPathToDotNet
-        }
-    }
-
-    Describe 'Install-WhiskeyDotNetSdk.when installing SDK version which already exists globally but not searching globally' {
-        It 'should install' {
-            Init
-            GivenDotNetSuccessfullyInstalls
-            GivenGlobalDotNet '1.1.11'
-            WhenInstallingDotNet '1.1.11'
-            ThenInstalledDotNet '1.1.11'
-            ThenReturnedPathToDotNet
-        }
-    }
-
-    Describe 'Install-WhiskeyDotNetSdk.when SDK version already installed globally' {
-        It 'should not install locally' {
-            Init
-            GivenDotNetSuccessfullyInstalls
-            GivenGlobalDotNet '1.1.11'
-            WhenInstallingDotNet '1.1.11' -Global
-            ThenNotInstalledDotNet '1.1.11'
-            ThenReturnedPathToDotNet -Global
-        }
-    }
-
-    Describe 'Install-WhiskeyDotNetSdk.when global SDK install exists but not at correct version' {
-        It 'should install correct version locally' {
-            Init
-            GivenDotNetSuccessfullyInstalls
-            GivenGlobalDotNet '2.1.4'
-            WhenInstallingDotNet '1.1.11' -Global
-            ThenInstalledDotNet '1.1.11'
-            ThenReturnedPathToDotNet
-        }
-    }
-}
-finally
-{
-    ThenRestoreOriginalPathEnvironment
-}
-
-if( $tempDotNetPath )
-{
-    sudo mv $tempDotNetPath $sysDotNetPath
 }

@@ -9,6 +9,7 @@ $taskWorkingDirectory = $null
 $nodePath = $null
 $testRoot = $null
 $outPath = $null
+$avStartedFileName = 'av.started'
 
 function GivenPackageJson
 {
@@ -45,14 +46,15 @@ function Reset
     param(
     )
 
-    Remove-Node -BuildRoot $testRoot
     # Remove any leftover or still running background jobs.
-    Write-Verbose -Message 'Removing leftover jobs.'
+    Write-Verbose -Message "[Reset]  [$((Get-Date).ToString('HH:mm:ss.fff'))]  Removing leftover jobs."
     $DebugPreference = 'Continue'
     $jobs = Get-Job | Where-Object 'Name' -EQ $PSCommandPath
-    $jobs | Receive-Job
-    $jobs | Remove-Job -Force
-    Write-Verbose -Message 'Done removing jobs.'
+    $jobs | Format-Table -Auto | Out-String | Write-Debug
+    $jobs | Receive-Job -AutoRemoveJob -Wait
+    Write-Verbose -Message "[Reset]  [$((Get-Date).ToString('HH:mm:ss.fff'))]  Done removing jobs."
+
+    Remove-Node -BuildRoot $testRoot
     $Global:VerbosePreference = 'SilentlyContinue'
     $Global:DebugPreference = 'SilentlyContinue'
 }
@@ -161,8 +163,8 @@ function WhenInstallingTool
     $Global:Error.Clear()
 
     $parameter = $PSBoundParameters
-    $parameter['InstallRoot'] = $testRoot
-    $parameter['OutputPath'] = $outPath 
+    $parameter['InstallRootPath'] = $testRoot
+    $parameter['OutFileRootPath'] = $outPath 
 
     Push-Location -path $taskWorkingDirectory
     try
@@ -178,44 +180,62 @@ function WhenInstallingTool
 function Lock-File
 {
     param(
-        $Duration,
-        $Path
+        [Parameter(Mandatory)]
+        [TimeSpan] $Duration,
+
+        [Parameter(Mandatory)]
+        [String] $Path,
+
+        [Parameter(Mandatory)]
+        [String] $AVStartedPath
     )
 
     Start-Job -Name $PSCommandPath -ScriptBlock {
 
         $DebugPreference = 'Continue'
 
+        $prefix = '[Lock-File]  '
+
         $parentDir = $using:Path | Split-Path
-        Write-Debug "[$(Get-Date)]  Waiting for ""$($parentDir)"" to exist."
+
+        $msg = "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Signaling that A/V started: creating file " +
+               """$($using:AVStartedPath)""."
+        Write-Debug $msg
+        New-Item -Path $using:AVStartedPath -ItemType 'File'
+
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for ""$($parentDir)"" to exist."
         while(-not (Test-Path -Path $parentDir) )
         {
             Start-Sleep -Milliseconds 1
         }
-        Write-Debug "[$(Get-Date)]  Directory ""$($using:Path)"" exists."
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Directory ""$($parentDir)"" exists."
 
-        Write-Debug "[$(Get-Date)]  Locking ""$($using:Path)""."
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Locking ""$($using:Path)""."
         New-Item -Path $using:Path -ItemType 'File'
-        $file = [IO.File]::Open($using:Path, 'Open', 'Write', 'None')
-        Write-Debug "[$(Get-Date)]  Locked  ""$($using:Path)""."
 
-        Write-Debug -Message "[$(Get-Date)]  Waiting for 7-Zip to finish."
-        while( (Get-Process -Name '7za' -ErrorAction Ignore) )
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for ""$($using:Path)"" to exist."
+        while( -not (Test-Path -Path $using:Path) )
         {
-            Start-Sleep -Milliseconds 100
+            Start-Sleep -Milliseconds 1
         }
-        Write-Debug -Message "[$(Get-Date)]  7-Zip finished."
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  File ""$($using:Path)"" exists."
+
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Locking ""$($using:Path)""."
+        $file = [IO.File]::Open($using:Path, 'Open', 'Write', 'None')
+        Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Locked  ""$($using:Path)""."
 
         try
         {
-            Write-Debug "[$(Get-Date)]  Holding lock on ""$($using:Path)"" for $($using:Duration)."
+            $msg = "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Holding lock on ""$($using:Path)"" for " +
+                   "$($using:Duration)."
+            Write-Debug $msg
             Start-Sleep -Seconds $using:Duration.TotalSeconds
         }
         finally
         {
-            Write-Debug "[$(Get-Date)]  Unlocking/closing ""$($using:Path)""."
+            Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Unlocking/closing ""$($using:Path)""."
             $file.Close()
-            Write-Debug "[$(Get-Date)]  Unlocked ""$($using:Path)""."
+            Write-Debug "$($prefix)[$((Get-Date).ToString('HH:mm:ss.fff'))]  Unlocked ""$($using:Path)""."
         }
     }
 }
@@ -257,16 +277,31 @@ function GivenAntiVirusLockingFiles
     
     $targetFilePath = Join-Path -Path $testRoot -ChildPath $extractedDirName
     $lockSignalPath = Join-Path -Path $targetFilePath -ChildPath '.lock'
+    $avSignalPath = Join-Path -Path $testRoot -ChildPath 'av.started'
 
-    Lock-File -Duration $For -Path $lockSignalPath
+    Lock-File -Duration $For -Path $lockSignalPath -AVStartedPath $avSignalPath
 
     Mock -CommandName 'New-TimeSpan' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
-        Write-WhiskeyDebug "Waiting for background job to lock file ""$($lockSignalPath)""."
+        `$prefix = '[New-TimeSpan]  '
+        
+        `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for A/V to start: looking for file " +
+                """$($avSignalPath)""."
+        Write-WhiskeyDebug `$msg
+        while( -not (Test-Path -Path "$($avSignalPath)") )
+        {
+            Start-Sleep -Milliseconds 1
+        }
+        `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  A/V started: file ""$($avSignalPath)"" exists."
+        Write-WhiskeyDebug `$msg
+
+        `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for background job to create lock " +
+                "file ""$($lockSignalPath)""."
+        Write-WhiskeyDebug `$msg
         while( -not (Test-Path -Path "$($lockSignalPath)") )
         {
             Start-Sleep -Milliseconds 1
         }
-        Write-WhiskeyDebug ("File ""$($lockSignalPath)"" locked.")
+        Write-WhiskeyDebug "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  File ""$($lockSignalPath)"" exists."
         return [TimeSpan]::New(`$Days, `$Hours, `$Minutes, `$Seconds)
 "@))
 }

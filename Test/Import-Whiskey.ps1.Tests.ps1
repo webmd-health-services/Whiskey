@@ -25,7 +25,7 @@ Describe 'Import-WhiskeyPs1 when Whiskey is loaded' {
 
         & (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Import-Whiskey.ps1')
 
-        $Global:Error.Count | Should -Be 0
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 
