@@ -1,0 +1,48 @@
+{
+    "PSModules": [
+        {
+            "Name": "BuildMasterAutomation",
+            "Version": "0.6.*"
+        },
+        {
+            "Name": "ProGetAutomation",
+            "Version": "0.9.*"
+        },
+        {
+            "Name": "BitbucketServerAutomation",
+            "Version": "0.9.*"
+        },
+        {
+            "Name": "Zip",
+            "Version": "0.3.*"
+        },
+        {
+            "Name": "VSSetup",
+            "Version": "2.*"
+        },
+        {
+            "Name": "Pester",
+            "Version": "5.*"
+        },
+        {
+            "Name": "Pester",
+            "Version": "3.*"
+        },
+        {
+            "Name": "Pester",
+            "Version": "4.*"
+        },
+        {
+            "Name": "PackageManagement",
+            "Version": "1.4.7"
+        },
+        {
+            "Name": "PowerShellGet",
+            "Version": "2.2.5"
+        },
+        {
+            "Name": "Glob",
+            "Version": "0.1.*"
+        }
+    ]
+}
