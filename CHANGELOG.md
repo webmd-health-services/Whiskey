@@ -1,3 +1,10 @@
+# 0.49.1
+
+## Fixed
+
+* Fixed: `Invoke-WhiskeyTask` will install required tools before changing task's working directory
+
+
 # 0.49.0
 
 ## Added
