@@ -1,3 +1,10 @@
+# 0.49.1
+
+## Fixed
+
+* Fixed: Whiskey fails to install a task's tool if the task is running with a custom working directory.
+
+
 # 0.49.0
 
 ## Added

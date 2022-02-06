@@ -188,58 +188,59 @@ function Invoke-WhiskeyTask
     [IO.Directory]::SetCurrentDirectory($TaskContext.BuildRoot)
     try
     {
-        $workingDirectory = $TaskContext.BuildRoot
-        if( $Parameter['WorkingDirectory'] )
+        if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
         {
-            # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
-            $workingDirectory =
-                $Parameter['WorkingDirectory'] |
-                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory' -Mandatory -OnlySinglePath -PathType 'Directory' |
-                Resolve-Path |
-                Select-Object -ExpandProperty 'ProviderPath'
+            $result = 'SKIPPED'
+            return
+        }
+
+        $inCleanMode = $TaskContext.ShouldClean
+        if( $inCleanMode )
+        {
+            if( -not $task.SupportsClean )
+            {
+                Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsClean.{0} -ne Build.ShouldClean.{1}' -f $task.SupportsClean,$TaskContext.ShouldClean)
+                $result = 'SKIPPED'
+                return
+            }
+        }
+
+        $requiredTools = Get-RequiredTool -CommandName $task.CommandName
+        foreach( $requiredTool in $requiredTools )
+        {
+            Install-WhiskeyTool -ToolInfo $requiredTool `
+                                -InstallRoot $TaskContext.BuildRoot.FullName `
+                                -TaskParameter $taskProperties `
+                                -OutFileRootPath $TaskContext.OutputDirectory.FullName `
+                                -InCleanMode:$inCleanMode `
+                                -ErrorAction Stop
+        }
+
+        if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
+        {
+            Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsInitialize.{0} -ne Build.ShouldInitialize.{1}' -f $task.SupportsInitialize,$TaskContext.ShouldInitialize)
+            $result = 'SKIPPED'
+            return
         }
 
         $taskTempDirectory = ''
-        $requiredTools = Get-RequiredTool -CommandName $task.CommandName
         $result = 'FAILED'
-        Set-Location -Path $workingDirectory
-        [IO.Directory]::SetCurrentDirectory($workingDirectory)
+
         $originalDebugPreference = $DebugPreference
         try
         {
-            if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
+            $workingDirectory = $TaskContext.BuildRoot
+            if( $Parameter['WorkingDirectory'] )
             {
-                $result = 'SKIPPED'
-                return
+                # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
+                $workingDirectory =
+                    $Parameter['WorkingDirectory'] |
+                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory' -Mandatory -OnlySinglePath -PathType 'Directory' |
+                    Resolve-Path |
+                    Select-Object -ExpandProperty 'ProviderPath'
             }
-
-            $inCleanMode = $TaskContext.ShouldClean
-            if( $inCleanMode )
-            {
-                if( -not $task.SupportsClean )
-                {
-                    Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsClean.{0} -ne Build.ShouldClean.{1}' -f $task.SupportsClean,$TaskContext.ShouldClean)
-                    $result = 'SKIPPED'
-                    return
-                }
-            }
-
-            foreach( $requiredTool in $requiredTools )
-            {
-                Install-WhiskeyTool -ToolInfo $requiredTool `
-                                    -InstallRoot $TaskContext.BuildRoot.FullName `
-                                    -TaskParameter $taskProperties `
-                                    -OutFileRootPath $TaskContext.OutputDirectory.FullName `
-                                    -InCleanMode:$inCleanMode `
-                                    -ErrorAction Stop
-            }
-
-            if( $TaskContext.ShouldInitialize -and -not $task.SupportsInitialize )
-            {
-                Write-WhiskeyVerbose -Context $TaskContext -Message ('SupportsInitialize.{0} -ne Build.ShouldInitialize.{1}' -f $task.SupportsInitialize,$TaskContext.ShouldInitialize)
-                $result = 'SKIPPED'
-                return
-            }
+            Set-Location -Path $workingDirectory
+            [IO.Directory]::SetCurrentDirectory($workingDirectory)
 
             Invoke-Event -EventName 'BeforeTask' -Property $taskProperties
             Invoke-Event -EventName ('Before{0}Task' -f $Name) -Property $taskProperties
