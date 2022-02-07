@@ -493,7 +493,14 @@ if( -not $IsWindows )
 }
 
 $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit3.yml')
-Invoke-WhiskeyBuild -Context $taskContext
+try
+{
+    Invoke-WhiskeyBuild -Context $taskContext
+}
+finally
+{
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+}
 
 Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
 & $nugetPath install OpenCover -OutputDirectory $packagesRoot
