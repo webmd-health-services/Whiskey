@@ -226,6 +226,8 @@ function ThenTaskThrowsAnException
         $ExpectedErrorMessage
     )
 
+    $Global:Error | Format-List * -Force | Write-Verbose -Verbose
+    
     $threwException | Should -BeTrue
     $Global:Error | Should -Not -BeNullOrEmpty
     $lastError = $Global:Error[0]
@@ -234,6 +236,8 @@ function ThenTaskThrowsAnException
 
 function ThenTaskSucceeds
 {
+    $Global:Error | Format-List * -Force | Write-Verbose -Verbose
+
     $threwException | Should -BeFalse
     $Global:Error | Should -BeNullOrEmpty
 }
@@ -247,6 +251,7 @@ function ThenPackagePublished
         $Times = 1
     )
 
+    $Global:Error | Format-List * -Force | Write-Verbose -Verbose
     foreach( $item in $Path )
     {
         $testRoot = $script:testRoot
