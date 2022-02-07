@@ -769,7 +769,7 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined' {
 }
 
 Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and installing a tool' {
-    It 'should install tool in that directory' {
+    It 'should install tool in the build root' {
         Init
         GivenRunByDeveloper
         GivenWorkingDirectory '.output'
@@ -777,12 +777,11 @@ Describe 'Invoke-WhiskeyTask.when WorkingDirectory property is defined and insta
         Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith {
                 #$DebugPreference = 'Continue'
                 $currentPath = (Get-Location).ProviderPath
-                $expectedPath = Join-Path -Path $testRoot -ChildPath '.output'
                 Write-WhiskeyDebug ('Current  Path   {0}' -f $currentPath)
-                Write-WhiskeyDebug ('Expected Path   {0}' -f $expectedPath)
-                if( $currentPath -ne $expectedPath )
+                Write-WhiskeyDebug ('Expected Path   {0}' -f $testRoot)
+                if( $currentPath -ne $testRoot )
                 {
-                    throw 'tool installation didn''t happen in the task''s working directory'
+                    throw 'tool installation didn''t happen in the build root'
                 }
             }.GetNewClosure()
         $parameter = @{ 'WorkingDirectory' = '.output' }
