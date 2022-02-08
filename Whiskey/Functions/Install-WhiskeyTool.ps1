@@ -93,26 +93,36 @@ function Install-WhiskeyTool
 
         if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
         {
-            if( -not $IsWindows )
+            try
             {
-                Write-WhiskeyError -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
-                return
-            }
-            $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
-            $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
-            if( -not $Version )
-            {
-                return
-            }
+                if( -not $IsWindows )
+                {
+                    Write-WhiskeyError -Message ('Unable to install NuGet-based package {0} {1}: NuGet.exe is only supported on Windows.' -f $NuGetPackageName,$Version) -ErrorAction Stop
+                    return
+                }
+                $packagesRoot = Join-Path -Path $DownloadRoot -ChildPath 'packages'
+                $version = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $NuGetPackageName -Version $Version -NugetPath $whiskeyNuGetExePath
+                if( -not $Version )
+                {
+                    return
+                }
 
-            $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
-            $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
-            Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
-            if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
-            {
-               & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
+                $nuGetRootName = '{0}.{1}' -f $NuGetPackageName,$Version
+                $nuGetRoot = Join-Path -Path $packagesRoot -ChildPath $nuGetRootName
+                Set-Item -Path 'env:EnableNuGetPackageRestore' -Value 'true'
+                if( -not (Test-Path -Path $nuGetRoot -PathType Container) )
+                {
+                & $whiskeyNuGetExePath install $NuGetPackageName -version $Version -outputdirectory $packagesRoot | Write-CommandOutput -Description ('nuget.exe install')
+                }
+                return $nuGetRoot
             }
-            return $nuGetRoot
+            finally
+            {
+                if( (Test-Path 'env:APPVEYOR') )
+                {
+                    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+                }
+            }
         }
         elseif( $PSCmdlet.ParameterSetName -eq 'Tool' )
         {
