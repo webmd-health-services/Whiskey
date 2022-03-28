@@ -419,8 +419,8 @@ function New-WhiskeyTestContext
     }
 
     $context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
-    $context.BuildRoot = $ForBuildRoot
-    $context.Environment = 'Verificaiton'
+    $context.BuildRoot = Get-Item -Path $ForBuildRoot
+    $context.Environment = 'Verification'
     $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData
