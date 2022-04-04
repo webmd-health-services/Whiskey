@@ -1,3 +1,9 @@
+
+# 0.49.2
+
+* Fixed: Whiskey fails to resolve a task's tool path if the task is running with a custom working directory.
+
+
 # 0.49.1
 
 ## Fixed

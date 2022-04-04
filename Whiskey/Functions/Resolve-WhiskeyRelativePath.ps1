@@ -18,21 +18,21 @@ function Resolve-WhiskeyRelativePath
             $Path = $realPath
         }
 
-        $buildRoot = (Get-Location).Path
-        $Context = Get-WhiskeyContext
-        if( $Context )
+        if( -not [IO.Path]::IsPathRooted($Path) )
         {
-            $buildRoot = $Context.BuildRoot.FullName
+            $context = Get-WhiskeyContext
+            $Path = Join-Path -Path $Context.BuildRoot.FullName -ChildPath $Path
         }
+
+        $currentDir = (Get-Location).Path
+        $currentDir = $currentDir.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $currentDir = "$($currentDir)$([IO.Path]::DirectorySeparatorChar)"
 
         $ignoreCase = $IsWindows
 
-        $buildRoot = $buildRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-        $buildRoot = "$($buildRoot)$([IO.Path]::DirectorySeparatorChar)"
-        if( $Path.StartsWith($buildRoot, $ignoreCase, [cultureinfo]::CurrentCulture) )
+        if( $Path.StartsWith($currentDir, $ignoreCase, [cultureinfo]::CurrentCulture) )
         {
-            $Path = $Path.Substring(($buildRoot.Length - 1))
-            $Path = ".$($Path)"
+            $Path = ".$($Path.Substring(($currentDir.Length - 1)))"
         }
 
         return $Path

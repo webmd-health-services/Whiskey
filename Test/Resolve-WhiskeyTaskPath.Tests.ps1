@@ -7,7 +7,7 @@ Import-WhiskeyTestTaskModule -Name 'Glob'
 
 [Whiskey.Context]$context = $null
 $fsCaseSensitive = $false
-$testRoot = $null
+$script:testRoot = $null
 
 # Don't let Carbon's alias interfere with our function.
 if( (Test-Path -Path 'alias:Resolve-RelativePath') )
@@ -46,7 +46,11 @@ function GivenDirectory
         $Name
     )
 
-    New-Item -Path (Join-Path -Path $testRoot -ChildPath $Name) -ItemType 'Directory'
+    if( -not ([IO.Path]::IsPathRooted($Name)) )
+    {
+        $Name = Join-Path -Path $testRoot -ChildPath $Name
+    }
+    New-Item -Path $Name -ItemType 'Directory'
 }
 
 function GivenFile
@@ -389,10 +393,13 @@ Describe ('Resolve-WhiskeyTaskPath.when a path uses different case to try to rea
         Init
         # Make sure we're in a directory that has letters.
         $buildRoot = Join-Path -Path $testRoot -ChildPath 'fubar'
+        GivenDirectory $buildRoot
         $tempDir = $buildRoot | Split-Path -Parent
         $buildDirName = $buildRoot | Split-Path -Leaf
         $attackersBuildDirName = $buildDirName.ToUpper()
         $attackersBuildDir = Join-Path -Path $tempDir -ChildPath $attackersBuildDirName
+        $whiskeyYmlFile = JOin-Path -Path $buildRoot -ChildPath 'whiskey.yml'
+        GivenFile $whiskeyYmlFile
         $attackersFile = Join-Path -Path $attackersBuildDir -ChildPath 'abc.yml'
         GivenFile $attackersFile
         $optionalParam = @{}

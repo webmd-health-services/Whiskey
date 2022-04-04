@@ -4,6 +4,10 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+# These tests intermittently fail. Turn on verbose and debug to maybe help locate the problem.
+$DebugPreference = [Management.Automation.ActionPreference]::Continue
+$VerbosePreference = [Management.Automation.ActionPreference]::Continue
+
 $testRoot = $null
 $context = $null
 $nugetUri = $null
@@ -200,8 +204,8 @@ function WhenRunningNuGetPackTask
             $taskParameter['Path'] = 'I\do\not\exist.csproj'
         }
 
-        $Global:error.Clear()
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NuGetPush' | Out-Null 
+        $Global:Error.Clear()
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NuGetPush'
 
     }
     catch
@@ -226,6 +230,8 @@ function ThenTaskThrowsAnException
         $ExpectedErrorMessage
     )
 
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+    
     $threwException | Should -BeTrue
     $Global:Error | Should -Not -BeNullOrEmpty
     $lastError = $Global:Error[0]
@@ -234,6 +240,8 @@ function ThenTaskThrowsAnException
 
 function ThenTaskSucceeds
 {
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+
     $threwException | Should -BeFalse
     $Global:Error | Should -BeNullOrEmpty
 }
@@ -247,6 +255,7 @@ function ThenPackagePublished
         $Times = 1
     )
 
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     foreach( $item in $Path )
     {
         $testRoot = $script:testRoot
