@@ -43,8 +43,7 @@ function Find-WhiskeyPowerShellModule
 
     # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
     # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
-    # * Whiskey\Tasks\PublishPowerShellModule.ps1
-    # * whiskey.yml
+    # * prism.json
     $packageManagementPackages = @{
         'PackageManagement' = '1.4.7';
         'PowerShellGet' = '2.2.5'

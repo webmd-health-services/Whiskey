@@ -1,4 +1,9 @@
 
+# 0.49.3
+
+* Fixed: Parallel task fails if it runs a custom task that was imported from a module.
+
+
 # 0.49.2
 
 * Fixed: Whiskey fails to resolve a task's tool path if the task is running with a custom working directory.

@@ -1,4 +1,3 @@
-
 function Invoke-WhiskeyParallelTask
 {
     [CmdletBinding()]
@@ -64,7 +63,7 @@ function Invoke-WhiskeyParallelTask
 
             $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
 
-            $tasks = 
+            $taskPathsTasks = 
                 $queue['Tasks'] |
                 ForEach-Object { 
                     $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $_ -ErrorAction Stop
@@ -73,6 +72,23 @@ function Invoke-WhiskeyParallelTask
                         Parameter = $taskParameter
                     }
                 }
+
+            $taskModulePaths =
+                Get-WhiskeyTask |
+                ForEach-Object { Get-Command -Name $_.CommandName } |
+                Select-Object -ExpandProperty 'Module' |
+                Select-Object -ExpandProperty 'Path' |
+                Select-Object -Unique
+            if( $taskModulePaths )
+            {
+                $msg = "Found $(($taskModulePaths | Measure-Object).Count) module(s) containing Whiskey tasks:"
+                Write-WhiskeyDebug -Context $TaskContext -Message $msg
+                $taskModulePaths | ForEach-Object { "* $($_)" } | Write-Debug
+            }
+            else
+            {
+                Write-WhiskeyDebug -Context $TaskContext -Message 'Found no loaded modules that contain Whiskey tasks.'
+            }
             $job = Start-Job -Name $queueIdx -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
@@ -95,11 +111,18 @@ function Invoke-WhiskeyParallelTask
                     # Load third-party tasks.
                     foreach( $info in $context.TaskPaths )
                     {
-                        Write-WhiskeyVerbose -Context $context -Message ('Loading tasks from "{0}".' -f $info.FullName)
+                        Write-WhiskeyVerbose -Context $context -Message ('Loading task from "{0}".' -f $info.FullName)
                         . $info.FullName
                     }
 
-                    foreach( $task in $using:tasks )
+                    # Load modules containing third-party tasks.
+                    foreach( $modulePath in $using:taskModulePaths )
+                    {
+                        Write-WhiskeyVerbose -Context $context -Message "Loading task module ""$($modulePath)""."
+                        Import-Module -Name $modulePath -Global
+                    }
+
+                    foreach( $task in $using:taskPathsTasks )
                     {
                         Write-WhiskeyDebug -Context $context -Message ($task.Name)
                         $task.Parameter | ConvertTo-Json -Depth 50 | Write-WhiskeyDebug -Context $context

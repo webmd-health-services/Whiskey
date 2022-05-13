@@ -4,8 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
 # * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
-# * Whiskey\Tasks\PublishPowerShellModule.ps1
-# * whiskey.yml
+# * prism.json
 $packageManagementVersion = '1.4.7'
 $powerShellGetVersion = '2.2.5'
 

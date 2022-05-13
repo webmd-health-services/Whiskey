@@ -34,6 +34,7 @@ function GivenFile
 function Init
 {
     $script:testRoot = New-WhiskeyTestRoot
+    $Global:Error.Clear()
 }
 
 function Invoke-ImportWhiskeyYaml
@@ -391,5 +392,30 @@ PowerShell:
                                       -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
         Invoke-WhiskeyBuild -Context $context
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
+    }
+}
+
+Describe 'Parallel.when module with custom tasks is loaded' {
+    It 'should import module in background job' {
+        Init
+        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1')
+        try
+        {
+            GivenFile 'whiskey.yml' @'
+Build:
+- Parallel:
+    Queues:
+    - Tasks:
+        - WrapsNoOpTask
+'@
+            $context = New-WhiskeyContext -Environment 'Verification' `
+                                          -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+            Invoke-WhiskeyBuild -Context $context
+            $Global:Error | Should -BeNullOrEmpty
+        }
+        finally
+        {
+            Remove-Module 'WhiskeyTestTasks'
+        }
     }
 }
