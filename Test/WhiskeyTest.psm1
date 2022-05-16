@@ -167,12 +167,7 @@ function Install-Node
         [String]$BuildRoot
     )
 
-    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
-    $toolAttr.PathParameterName = 'NodePath'
-    Install-WhiskeyTool -ToolInfo $toolAttr `
-                        -InstallRoot $downloadCachePath `
-                        -OutFileRootPath ($downloadCachePath | Split-Path -Parent) `
-                        -TaskParameter @{ }
+    Install-WhiskeyTool -Name 'Node' -InstallRoot $downloadCachePath
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
 

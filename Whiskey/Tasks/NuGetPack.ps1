@@ -2,6 +2,7 @@
 function New-WhiskeyNuGetPackage
 {
     [Whiskey.Task('NuGetPack',Platform='Windows')]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -11,7 +12,9 @@ function New-WhiskeyNuGetPackage
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File')]
-        [String[]]$Path
+        [String[]]$Path,
+
+        [String] $NuGetPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -26,9 +29,10 @@ function New-WhiskeyNuGetPackage
         $symbolsFileNameSuffix = '.symbols'
     }
 
-    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
-    if( -not $nugetPath )
+    $NuGetPath = Join-Path -Path $NuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
+    if( -not $NuGetPath )
     {
+        Stop-WhiskeyTask -Context $TaskContext -Message "NuGet.exe not found at ""$($nugetPath)""."
         return
     }
 

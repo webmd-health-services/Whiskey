@@ -1,7 +1,13 @@
 
-# 0.49.3
+# 0.50.0
+
+## Fixed
 
 * Fixed: Parallel task fails if it runs a custom task that was imported from a module.
+
+## Removed
+
+* Removed OpenCover support from the NUnit2 and NUnit3 tasks.
 
 
 # 0.49.2

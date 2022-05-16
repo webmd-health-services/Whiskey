@@ -3,8 +3,7 @@ function Invoke-WhiskeyPester3Task
 {
     [Whiskey.Task('Pester3',Platform='Windows', Obsolete,
                   ObsoleteMessage='The "Pester3" task is obsolete and is no longer supported.')]
-    [Whiskey.RequiresPowerShellModule('Pester', ModuleInfoParameterName='PesterModuleInfo', Version='3.*',
-                                      VersionParameterName='Version', SkipImport)]
+    [Whiskey.RequiresPowerShellModule('Pester', ModuleInfoParameterName='PesterModuleInfo', Version='3.*', SkipImport)]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
