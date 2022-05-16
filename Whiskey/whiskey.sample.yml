@@ -49,15 +49,15 @@ Build:
 
     # The prerelease version to use. Usually you only use this if you're also using the
     # Path property.
-    # Prerelease: rc.$(WHISKEY_BUILD_NUMBER)
+    # Prerelease: rc.$(WHISKEY_PRERELEASE_VERSION)
 
     # You can also have different prerelease versions for different branches. Set the 
     # property to a list of key/value pairs. The key should be a wildcard pattern that
     # matches a branch, the value should be the prerelease label to use.
     # 
     # Prelease
-    # - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
-    # - develop: rc.$(WHISKEY_BUILD_NUMBER)
+    # - feature/*: alpha.$(WHISKEY_PRERELEASE_VERSION)
+    # - develop: rc.$(WHISKEY_PRERELEASE_VERSION)
 
     # Any build metadata to add. Usually you only use this if you're using the Prerelease
     # and/or Path properties.

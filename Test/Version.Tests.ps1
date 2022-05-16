@@ -10,6 +10,7 @@ $failed = $false
 $branch = $null
 $initialVersion = $null
 $testNum = 0
+$versions = @()
 
 function Init
 {
@@ -18,6 +19,7 @@ function Init
     $script:failed = $false
     $script:branch = $null
     $script:sourceBranch = $null
+    $script:versions = @()
     $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
                                                           -Parameter @{ 'SemVer' = '0.0.0' }
     $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($testNum++)
@@ -62,6 +64,17 @@ function GivenSourceBranch
     )
 
     $script:sourceBranch = $Named
+}
+
+function GivenUniversalPackageVersions
+{
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyArray()]
+        [String[]] $Version
+    )
+
+    $script:versions = $Version
 }
 
 function ThenErrorIs
@@ -119,11 +132,20 @@ function ThenVersionIs
 
 function WhenRunningTask
 {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='NotUPack')]
     param(
         [switch]$AsDeveloper,
 
-        [String]$WithYaml
+        [String]$WithYaml,
+
+        [Parameter(Mandatory, ParameterSetName='UPack')]
+        [String] $ForUniversalPackage,
+
+        [Parameter(Mandatory, ParameterSetName='UPack')]
+        [String] $At,
+
+        [Parameter(Mandatory, ParameterSetName='UPack')]
+        [String[]] $WithVersions
     )
 
     $forParam = @{ ForBuildServer = $true }
@@ -153,6 +175,16 @@ function WhenRunningTask
     {
         $context.BuildMetadata.ScmSourceBranch = $sourceBranch
         $context.BuildMetadata.IsPullRequest = $true
+    }
+
+    if( $ForUniversalPackage )
+    {
+        $versions = $WithVersions
+        $pkgFeedUrl = "$($At)/packages?name=$($ForUniversalPackage)"
+        Mock -CommandName 'Invoke-RestMethod' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Uri -Eq $pkgFeedUrl } `
+             -MockWith { return [pscustomobject]@{ versions = $versions } }.GetNewClosure()
     }
 
     $Global:Error.Clear()
@@ -309,7 +341,7 @@ Describe 'Version.when pulling version from PowerShell module manifest and versi
         GivenProperty @{ Path = 'manifest.psd1' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenErrorIs 'is\ invalid\ or\ doesn''t contain\ a\ ''ModuleVersion''\ property'
+        ThenErrorIs 'is\ invalid\ or\ doesn''t contain\ a\ "ModuleVersion"\ property'
     }
 }
 
@@ -321,6 +353,18 @@ Describe 'Version.when pulling version from PowerShell module manifest and versi
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'Powershell\ module\ manifest'
+    }
+}
+
+Describe 'Version.when pulling version from PowerShell module manifest and module is in the gallery' {
+    It 'should use prerelease version from the PowerShell Gallery' {
+        Init
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' ; PrivateData = @{ PSData = @{ Prerelease = ''beta.1'' } } }'
+        GivenProperty @{ Path = 'Whiskey.psd1' }
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1-beta1035'
+        ThenSemVer2Is '0.41.1-beta.1035' # The last beta version was 0.41.1-beta1034, so next one should be beta1035.
     }
 }
 
@@ -336,6 +380,20 @@ Describe 'Version.when pulling version from package.json' {
     }
 }
 
+Describe 'Version.when pulling prerelease version from NPM' {
+    It 'should get latest version from NPM registry' {
+        Init
+        Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' `
+                                     -Parameter @{ InstallRootPath = $testRoot ; OutFileRootPath = $testRoot }
+        GivenFile 'package.json' '{ "name": "react-native", "version": "0.68.0-rc.0" }'
+        GivenProperty @{ Path = 'package.json' }
+        WhenRunningTask
+        ThenVersionIs '0.68.0'
+        ThenSemVer1Is '0.68.0-rc5'
+        ThenSemVer2Is '0.68.0-rc.5'
+    }
+}
+
 Describe 'Version.when version in package.json is missing' {
     It 'should fail if version in packageJson file is missing' {
         Init
@@ -343,7 +401,7 @@ Describe 'Version.when version in package.json is missing' {
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenErrorIs '''Version''\ property\ is\ missing'
+        ThenErrorIs '"Version"\ property\ is\ missing'
     }
 }
 
@@ -355,12 +413,12 @@ Describe 'Version.when package.json is invalid JSON' {
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         $Global:Error.RemoveAt($Global:Error.Count -1)
-        ThenErrorIs 'package\.json''\ contains\ invalid\ JSON'
+        ThenErrorIs 'package\.json"\ contains\ invalid\ JSON'
     }
 }
 
 Describe 'Version.when version in package.json is invalid' {
-    It 'should fail when version in packageJson is inalid' {
+    It 'should fail when version in pakageJson is inalid' {
         Init
         GivenFile 'package.json' '{ "Version": "4.2"  }'
         GivenProperty @{ Path = 'package.json' }
@@ -385,6 +443,52 @@ Describe 'Version.when reading version from .csproj file' {
         ThenVersionIs '0.0.2'
         ThenSemVer1Is '0.0.2'
         ThenSemVer2Is '0.0.2'
+    }
+}
+
+Describe 'Version.when dotnet core project and package is published to NuGet' {
+    It 'should use next prerelease version based on what is in NuGet' {
+        Init
+        GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>3.0.0-beta-0</Version>
+    <PackageId>NUnit</PackageId>
+  </PropertyGroup>
+</Project>
+'@
+        GivenProperty @{ Path = 'lib.csproj' }
+        WhenRunningTask
+        ThenVersionIs '3.0.0'
+        if( Get-PackageSource -ProviderName 'NuGet' )
+        {
+            ThenSemVer1Is '3.0.0-beta6'
+            ThenSemVer2Is '3.0.0-beta-6'
+        }
+        else
+        {
+            ThenSemVer1Is '3.0.0-beta0'
+            ThenSemVer2Is '3.0.0-beta-0'
+        }
+    }
+}
+
+Describe 'Version.when dotnet framework project and package is published to NuGet' {
+    It 'should use next prerelease version based on what is in NuGet' {
+        Init
+        GivenProperty @{ Version = '3.0.0-alpha-0' ; NuGetPackageID = 'NUnit' }
+        WhenRunningTask
+        ThenVersionIs '3.0.0'
+        if( Get-PackageSource -ProviderName 'NuGet' )
+        {
+            ThenSemVer1Is '3.0.0-alpha6'
+            ThenSemVer2Is '3.0.0-alpha-6'
+        }
+        else
+        {
+            ThenSemVer1Is '3.0.0-alpha0'
+            ThenSemVer2Is '3.0.0-alpha-0'
+        }
     }
 }
 
@@ -417,7 +521,7 @@ Describe 'Version.when version in .csproj file is missing' {
         GivenProperty @{ Path = 'lib.csproj' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenErrorIs 'element\ ''/Project/PropertyGroup/Version''\ does\ not\ exist'
+        ThenErrorIs 'element\ "/Project/PropertyGroup/Version"\ does\ not\ exist'
     }
 }
 
@@ -450,7 +554,7 @@ Describe 'Version.when version in .csproj is invalid' {
         GivenProperty @{ Path = 'lib.csproj' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
-        ThenErrorIs '\.NET\ \.csproj\ file'
+        ThenErrorIs '\.csproj\ file'
     }
 }
 
@@ -486,6 +590,32 @@ Describe 'Version.when Prerelease is a list of branch maps' {
             ThenVersionIs '1.2.3'
             ThenSemVer1Is '1.2.3-beta2'
             ThenSemVer2Is '1.2.3-beta.2'
+        }
+    }
+}
+
+Describe 'Version.when Prerelease is a list of branch maps and latest prerelease version calculated from package repository' {
+    Context 'by developer' {
+        It 'should not set prerelease metadata' {
+            Init
+            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+            GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+            WhenRunningTask
+            ThenVersionIs '0.41.1'
+            ThenSemVer1Is '0.41.1'
+            ThenSemVer2Is '0.41.1'
+        }
+    }
+    Context 'by build server' {
+        It 'should set prerelease metadata' {
+            Init
+            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+            GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+            GivenBranch 'beta/some-feature'
+            WhenRunningTask
+            ThenVersionIs '0.41.1'
+            ThenSemVer1Is '0.41.1-beta1035'
+            ThenSemVer2Is '0.41.1-beta.1035'
         }
     }
 }
@@ -626,5 +756,87 @@ Describe 'Version.when building a pull request' {
         ThenSemVer1Is '1.0.0-two'
         ThenSemVer2Is '1.0.0-two'
 
+    }
+}
+
+Describe 'Version.when determining prerelease version for universal package' {
+    It 'should use next version number for same version' {
+        Init
+        GivenCurrentVersion '1.0.0-rc.0'
+        GivenProperty @{ UPackName = 'Fu bar' ; UPackFeedUrl = 'https://example.com/upack/Apps' }
+        WhenRunningTask -ForUniversalPackage 'Fu bar' -At 'https://example.com/upack/Apps' -WithVersions @(
+                '1.1.0',
+                '1.0.0',
+                '1.0.0-rc.5',
+                '1.0.0-rc.4',
+                '1.0.0-rc.3',
+                '1.0.0-rc.2',
+                '1.0.0-rc.1',
+                '1.0.0-alpha.1'
+            )
+        ThenVersionIs '1.0.0'
+        ThenSemVer1Is '1.0.0-rc6'
+        ThenSemVer2Is '1.0.0-rc.6'
+    }
+}
+
+Describe 'Version.when determining prerelease version for new universal package' {
+    It 'should use next version number for same version' {
+        Init
+        Mock -CommandName 'Invoke-RestMethod' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Uri -Eq "https://example.com/upack/Apps/packages?name=snafu" } `
+             -MockWith { Invoke-WebRequest -Uri 'https://httpstat.us/404' }
+        GivenCurrentVersion '1.0.0-rc.1'
+        GivenProperty @{ UPackName = 'snafu' ; UPackFeedUrl = 'https://example.com/upack/Apps' }
+        WhenRunningTask
+        ThenVersionIs '1.0.0'
+        ThenSemVer1Is '1.0.0-rc1'
+        ThenSemVer2Is '1.0.0-rc.1'
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Version.when incrementing patch version' {
+    It 'should increment patch based on last published package' {
+        Init
+        GivenCurrentVersion '22.517.0'
+        GivenProperty @{
+            IncrementPatchVersion = $true;
+            UPackName = 'patch';
+            UPackFeedUrl = 'https://example.com/upack/Apps'
+        }
+        WhenRunningTask -ForUniversalPackage 'patch' -At 'https://example.com/upack/Apps' -WithVersions @(
+            '22.518.0',
+            '22.517.3',
+            '22.517.2',
+            '22.517.1',
+            '22.517.0',
+            '22.516.22'
+        )
+        ThenVersionIs '22.517.4'
+        ThenSemVer1Is '22.517.4'
+        ThenSemVer2Is '22.517.4'
+    }
+}
+
+# Make sure the patch number gets set *first* so any prerelease info gets set correctly.
+Describe 'Version.when incrementing patch version and there are prerelease versions' {
+    It 'should set prereleaes to 1' {
+        Init
+        GivenCurrentVersion '22.518.7-rc.4'
+        GivenProperty @{
+            IncrementPatchVersion = $true;
+            UPackName = 'patch';
+            UPackFeedUrl = 'https://example.com/upack/Apps'
+        }
+        WhenRunningTask -ForUniversalPackage 'patch' -At 'https://example.com/upack/Apps' -WithVersions @(
+            '22.5187.7-rc.3',
+            '22.518.7-rc.2',
+            '22.518.7-rc.1'
+        )
+        ThenVersionIs '22.518.8'
+        ThenSemVer1Is '22.518.8-rc1'
+        ThenSemVer2Is '22.518.8-rc.1'
     }
 }

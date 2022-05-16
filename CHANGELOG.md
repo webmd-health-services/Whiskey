@@ -1,6 +1,11 @@
 
 # 0.50.0
 
+## Added
+
+* Whiskey's "Version" task now calculates the next prerelease version number for a package by querying the package's
+  package repository.
+
 ## Fixed
 
 * Fixed: Parallel task fails if it runs a custom task that was imported from a module.

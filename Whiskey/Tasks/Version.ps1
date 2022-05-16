@@ -3,15 +3,27 @@
 {
     [CmdletBinding()]
     [Whiskey.Task('Version')]
+    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.4.7',
+        VersionParameterName='PackageManagementVersion')]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]$TaskContext,
+        [Whiskey.Context] $TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter,
+        [hashtable] $TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [String]$Path
+        [String] $Path,
+
+        [String] $NuGetPackageID,
+
+        [String] $UPackName,
+
+        [Uri] $UPackFeedUrl,
+
+        [switch] $SkipPackageLookup,
+
+        [switch] $IncrementPatchVersion
     )
 
     Set-StrictMode -Version 'Latest'
@@ -19,17 +31,20 @@
 
     function ConvertTo-SemVer
     {
+        [CmdletBinding()]
         param(
             [Parameter(Mandatory,ValueFromPipeline)]
             $InputObject,
+
             $PropertyName,
+
             $VersionSource
         )
 
         process
         {
             [SemVersion.SemanticVersion]$semver = $null
-            if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
+            if( -not [SemVersion.SemanticVersion]::TryParse($InputObject, [ref]$semver) )
             {
                 if( $VersionSource )
                 {
@@ -40,14 +55,19 @@
                 {
                     $optionalParam['PropertyName'] = $PropertyName
                 }
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('''{0}''{1} is not a semantic version. See http://semver.org for documentation on semantic versions.' -f $rawVersion,$VersionSource) @optionalParam
+                $msg = """$($InputObject)""$($VersionSource) is not a semantic version. See https://semver.org for " +
+                       'documentation on semantic versions.'
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg @optionalParam
+                return
             }
             return $semver
         }
     }
 
+    [int]$prereleaseVersion = 1
     [Whiskey.BuildVersion]$buildVersion = $TaskContext.Version
     [SemVersion.SemanticVersion]$semver = $buildVersion.SemVer2
+    [String[]] $versions = @()
 
     if( $TaskParameter[''] )
     {
@@ -59,92 +79,219 @@
         $rawVersion = $TaskParameter['Version']
         $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
-    elseif( $Path )
+    else
     {
-        $fileInfo = Get-Item -Path $Path
-        if( $fileInfo.Extension -eq '.psd1' )
+        if( $Path )
         {
-            $rawVersion =
-                Test-ModuleManifest -Path $Path -ErrorAction Ignore -WarningAction Ignore |
-                Select-Object -ExpandProperty 'Version'
-            if( -not $rawVersion )
+            $fileInfo = Get-Item -Path $Path
+            if( $fileInfo.Extension -eq '.psd1' )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from PowerShell module manifest ''{0}'': the manifest is invalid or doesn''t contain a ''ModuleVersion'' property.' -f $Path)
-                return
-            }
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from PowerShell module manifest ''{1}''.' -f $rawVersion,$Path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from PowerShell module manifest ''{0}''' -f $Path)
-        }
-        elseif( $fileInfo.Name -eq 'package.json' )
-        {
-            try
-            {
-                $rawVersion = Get-Content -Path $Path -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'Version' -ErrorAction Ignore
-            }
-            catch
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Node package.json file ''{0}'' contains invalid JSON.' -f $Path)
-                return
-            }
-            if( -not $rawVersion )
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to read version from Node package.json ''{0}'': the ''Version'' property is missing.' -f $Path)
-                return
-            }
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from Node package.json ''{1}''.' -f $rawVersion,$Path)
-            $semVer = $rawVersion | ConvertTo-SemVer -VersionSource ('from Node package.json file ''{0}''' -f $Path)
-        }
-        elseif( $fileInfo.Extension -eq '.csproj' )
-        {
-            [xml]$csprojXml = $null
-            try
-            {
-                $csprojxml = Get-Content -Path $Path -Raw
-            }
-            catch
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .cspoj file ''{0}'' contains invalid XMl.' -f $Path)
-                return
-            }
-
-            if( $csprojXml.DocumentElement.Attributes['xmlns'] )
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('.NET .csproj file ''{0}'' has an "xmlns" attribute. .NET Core/Standard .csproj files should not have a default namespace anymore (see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" attribute from the root "Project" document element. If this is a .NET framework .csproj, it doesn''t support versioning. Use the Whiskey Version task''s Version property to version your assemblies.' -f $Path)
-                return
-            }
-            $csprojVersionNode = $csprojXml.SelectSingleNode('/Project/PropertyGroup/Version')
-            if( -not $csprojVersionNode )
-            {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Element ''/Project/PropertyGroup/Version'' does not exist in .NET .csproj file ''{0}''. Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version of your assembly.' -f $Path)
-                return
-            }
-            $rawVersion = $csprojVersionNode.InnerText
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version ''{0}'' from .NET Core .csproj ''{1}''.' -f $rawVersion,$Path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from .NET .csproj file ''{0}''' -f $Path)
-        }
-        elseif( $fileInfo.Name -eq 'metadata.rb' )
-        {
-            $metadataContent = Get-Content -Path $Path -Raw
-            $metadataContent = $metadataContent.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
-
-            $rawVersion = $null
-            foreach( $line in $metadataContent )
-            {
-                if( $line -match '^\s*version\s+[''"](\d+\.\d+\.\d+)[''"]' )
+                $moduleManifest = Test-ModuleManifest -Path $Path -ErrorAction Ignore -WarningAction Ignore
+                $rawVersion = $moduleManifest.Version
+                if( -not $rawVersion )
                 {
-                    $rawVersion = $Matches[1]
-                    break
+                    $msg = "Unable to read version from PowerShell module manifest ""$($Path)"": the manifest is invalid " +
+                        'or doesn''t contain a "ModuleVersion" property.'
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+
+                $prerelease = ''
+                if( ($moduleManifest | Get-Member -Name 'Prerelease') )
+                {
+                    $Prerelease = $moduleManifest.Prerelease
+                }
+                elseif( $moduleManifest.PrivateData -and `
+                        $moduleManifest.PrivateData.ContainsKey('PSData') -and `
+                        $moduleManifest.PrivateData['PSData'].ContainsKey('Prerelease') )
+                {
+                    $prerelease = $moduleManifest.PrivateData['PSData']['Prerelease']
+                }
+
+                if( $prerelease )
+                {
+                    $rawVersion = "$($rawVersion)-$($prerelease)"
+                }
+
+                $msg = "Read version ""$($rawVersion)"" from PowerShell module manifest ""$($Path)""."
+                Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from PowerShell module manifest ""$($Path)"""
+
+                if( -not $SkipPackageLookup )
+                {
+                    $msg = "Retrieving versions for PowerShell module $($moduleManifest.Name)."
+                    Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                    Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.BuildRoot
+                    Import-WhiskeyPowerShellModule -Name 'PowerShellGet' -PSModulesRoot $TaskContext.BuildRoot
+                    $allowPrereleaseArg = @{}
+                    if( (Get-Command -Name 'Find-Module' -ParameterName 'AllowPrerelease' -ErrorAction Ignore) )
+                    {
+                        $allowPrereleaseArg['AllowPrerelease'] = $true
+                    }
+                    $versions =
+                        Find-Module -Name $moduleManifest.Name -AllVersions @allowPrereleaseArg -ErrorAction Ignore |
+                        Select-Object -ExpandProperty 'Version'
                 }
             }
-
-            if( -not $rawVersion )
+            elseif( $fileInfo.Name -eq 'package.json' )
             {
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to locate property "version ''x.x.x''" in metadata.rb file "{0}"' -f $Path )
-                return
-            }
+                $npmPackage = [pscustomobject]::New()
+                try
+                {
+                    $npmPackage = Get-Content -Path $Path -Raw | ConvertFrom-Json
+                }
+                catch
+                {
+                    $msg = "Node package.json file ""$($Path)"" contains invalid JSON."
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+                $rawVersion = $npmPackage | Select-Object -ExpandProperty 'Version' -ErrorAction Ignore
+                if( -not $rawVersion )
+                {
+                    $msg = "Unable to read version from Node package.json ""$($Path)"": the ""Version"" property is " +
+                        'missing.'
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+                $msg = "Read version ""$($rawVersion)"" from Node package.json ""$($Path)""."
+                Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                $semVer = $rawVersion | ConvertTo-SemVer -VersionSource "from Node package.json file ""$($Path)"""
 
-            Write-WhiskeyVerbose -Context $TaskContext -Message ('Read version "{0}" from metadata.rb file "{1}".' -f $rawVersion,$Path)
-            $semver = $rawVersion | ConvertTo-SemVer -VersionSource ('from metadata.rb file "{0}"' -f $Path)
+                $pkgName = $npmPackage | Select-Object -ExpandProperty 'name' -ErrorAction Ignore
+                if( $pkgName -and -not $SkipPackageLookup )
+                {
+                    $msg = "Retrieving versions for NPM package $($pkgName)."
+                    Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                    $versions = Invoke-WhiskeyNpmCommand -Name 'show' `
+                                                         -ArgumentList @($pkgName, 'versions', '--json') `
+                                                         -BuildRoot $TaskContext.BuildRoot `
+                                                         -ForDeveloper:($TaskContext.ByDeveloper) `
+                                                         -ErrorAction Ignore 2>$null |
+                        ConvertFrom-Json
+                }
+            }
+            elseif( $fileInfo.Extension -eq '.csproj' )
+            {
+                [xml]$csprojXml = $null
+                try
+                {
+                    $csprojxml = Get-Content -Path $Path -Raw
+                }
+                catch
+                {
+                    $msg = ".NET .csproj file ""$($Path)"" contains invalid XMl."
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+
+                if( $csprojXml.DocumentElement.Attributes['xmlns'] )
+                {
+                    $msg = ".NET .csproj file ""$($Path)"" has an ""xmlns"" attribute. .NET Core/Standard .csproj " +
+                           'files should not have a default namespace anymore ' +
+                           '(see https://docs.microsoft.com/en-us/dotnet/core/migration/). Please remove the "xmlns" ' +
+                           'attribute from the root "Project" document element. If this is a .NET framework .csproj, it ' +
+                           'doesn''t support versioning. Use the Whiskey Version task''s Version property to version ' +
+                           'your assemblies.'
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+
+                $csprojVersionNode = $csprojXml.SelectSingleNode('/Project/PropertyGroup/Version')
+                if( -not $csprojVersionNode )
+                {
+                    $msg = "Element ""/Project/PropertyGroup/Version"" does not exist in .NET .csproj file ""$($Path)"". " +
+                        'Please create this element and set it to the MAJOR.MINOR.PATCH version of the next version ' +
+                        'of your assembly.'
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+                $rawVersion = $csprojVersionNode.InnerText
+                $msg = "Read version ""$($rawVersion)"" from .csproj file ""$($Path)"".'"
+                Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from .csproj file ""$($Path)"""
+
+                if( -not $SkipPackageLookup )
+                {
+                    if( -not $NuGetPackageID )
+                    {
+                        $node = $csprojXml.SelectSingleNode('/Project/PropertyGroup/PackageId')
+                        if( $node )
+                        {
+                            $NuGetPackageID = $node.InnerText
+                        }
+                    }
+
+                    if( $NuGetPackageID )
+                    {
+                        $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                        Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+                        $versions = 
+                            Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions -AllowPrerelease |
+                            Select-Object -ExpandProperty 'Version'
+                    }
+                }
+            }
+            elseif( $fileInfo.Name -eq 'metadata.rb' )
+            {
+                $metadataContent = Get-Content -Path $Path -Raw
+                $metadataContent = $metadataContent.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
+
+                $rawVersion = $null
+                foreach( $line in $metadataContent )
+                {
+                    if( $line -match '^\s*version\s+[''"](\d+\.\d+\.\d+)[''"]' )
+                    {
+                        $rawVersion = $Matches[1]
+                        break
+                    }
+                }
+
+                if( -not $rawVersion )
+                {
+                    $msg = "Unable to locate property ""version 'x.x.x'"" in metadata.rb file ""$($Path)"""
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                    return
+                }
+
+                $msg = "Read version ""$($rawVersion)"" from metadata.rb file ""$($Path)""."
+                Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from metadata.rb file ""$($Path)"""
+            }
+        }
+    }
+
+    if( -not $SkipPackageLookup )
+    {
+        if( $UPackName )
+        {
+            $msg = "Retrieving versions for universal package $($UPackName)."
+            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+            $numErr = $Global:Error.Count
+            try
+            {
+                $versions = 
+                    Invoke-RestMethod -Uri "$($UPackFeedUrl)/packages?name=$([Uri]::EscapeDataString($UpackName))" |
+                    Select-Object -ExpandProperty 'versions'
+            }
+            catch
+            {
+                $versions = @()
+                for( $idx = $Global:Error.Count ; $idx -gt $numErr ; --$idx )
+                {
+                    $Global:Error.RemoveAt(0)
+                }
+            }
+        }
+        elseif( $NuGetPackageID )
+        {
+            $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
+            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+            Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+            $versions = 
+                Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions -AllowPrerelease |
+                Select-Object -ExpandProperty 'Version'
         }
     }
 
@@ -158,20 +305,24 @@
             {
                 if( -not ($map | Get-Member -Name 'Keys') )
                 {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('Unable to find keys in ''[{1}]{0}''. It looks like you''re trying use the Prerelease property to map branches to prerelease versions. If you want a static prerelease version, the syntax should be:
+                    $msg = "Unable to find keys in ""[$($map.GetType().Name)]$($map)"". It looks like you're trying " +
+                           'use the Prerelease property to map branches to prerelease versions. If you want a static ' +
+                           "prerelease version, the syntax should be:
 
     Build:
     - Version:
-        Prerelease: {0}
+        Prerelease: $($map)
 
 If you want certain branches to always have certain prerelease versions, set Prerelease to a list of key/value pairs:
 
     Build:
     - Version:
         Prerelease:
-        - feature/*: alpha.$(WHISKEY_BUILD_NUMBER)
-        - develop: beta.$(WHISKEY_BUILD_NUMBER)
-    ' -f $map,$map.GetType().FullName)
+        - feature/*: alpha.`$(WHISKEY_PRERELEASE_VERSION)
+        - develop: beta.`$(WHISKEY_PRERELEASE_VERSION)
+    "
+    
+                    Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message $msg
                     return
                 }
 
@@ -226,8 +377,64 @@ If you want certain branches to always have certain prerelease versions, set Pre
         $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prerelease,$buildSuffix
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message ('''{0}'' is not a valid prerelease version. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $prerelease)
+            $msg = """$($prerelease)"" is not a valid prerelease version. Only letters, numbers, hyphens, and " +
+                   'periods are allowed. See https://semver.org for full documentation.'
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message $msg
             return
+        }
+    }
+
+    if( $semver.Prerelease -match '(\d+)' )
+    {
+        $prereleaseVersion = $Matches[1]
+    }
+    else
+    {
+        $prereleaseVersion = 1
+    }
+
+    if( $versions )
+    {
+        [SemVersion.SemanticVersion[]] $semVersions = $versions | ConvertTo-SemVer -ErrorAction Ignore
+        $sortedSemVersions = [Collections.Generic.SortedSet[SemVersion.SemanticVersion]]::New($semversions)
+        $semVersions = [SemVersion.SemanticVersion[]]::New($sortedSemVersions.Count)
+        $sortedSemVersions.CopyTo($semVersions)
+        [Array]::Reverse($semVersions)
+
+        $semVersions | Write-WhiskeyDebug -Context $TaskContext
+
+        if( $IncrementPatchVersion )
+        {
+            $patchVersion = 0
+            $baseMajorMinorVersion = @($semver.Major,$semver.Minor) -join '.'
+            $lastVersion = 
+                $semVersions |
+                Where-Object { (@($_.Major,$_.Minor) -join '.') -eq $baseMajorMinorVersion } |
+                Select-Object -First 1
+            if( $lastVersion )
+            {
+                $patchVersion = $lastVersion.Patch + 1
+            }
+
+            $semver = [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $patchVersion, $semver.Prerelease,
+                                                        $semver.Build)
+        }
+        
+        $baseVersion = @($semver.Major, $semver.Minor, $semver.Patch) -join '.'
+        $prereleaseIdentifier = $semver.Prerelease -replace '[^A-Za-z]', ''
+        $lastVersion =
+            $semVersions |
+            Where-Object { (@($_.Major,$_.Minor,$_.Patch) -join '.') -eq $baseVersion } |
+            Where-Object { ($_.Prerelease -replace '[^A-Za-z]', '') -eq $prereleaseIdentifier } |
+            Select-Object -First 1
+        if( $lastVersion -and $lastVersion.Prerelease -match '(\d+)' )
+        {
+            $prereleaseVersion = $Matches[1]
+            $prereleaseVersion += 1
+        }
+        else
+        {
+            $prereleaseVersion = 1
         }
     }
 
@@ -240,11 +447,13 @@ If you want certain branches to always have certain prerelease versions, set Pre
             $prereleaseSuffix = '-{0}' -f $semver.Prerelease
         }
 
-        $build = $build -replace '[^A-Za-z0-9\.-]','-'
+        $build = $build -replace '[^A-Za-z0-9\.-]', '-'
         $rawVersion = '{0}.{1}.{2}{3}+{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prereleaseSuffix,$build
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message ('''{0}'' is not valid build metadata. Only letters, numbers, hyphens, and periods are allowed. See http://semver.org for full documentation.' -f $build)
+            $msg = """$($build)"" is not valid build metadata. Only letters, numbers, hyphens, and periods are " +
+                   'allowed. See https://semver.org for full documentation.'
+            Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message $msg
             return
         }
     }
@@ -252,20 +461,31 @@ If you want certain branches to always have certain prerelease versions, set Pre
     # Build metadata is only available when running under a build server.
     if( $TaskContext.ByDeveloper )
     {
-        $semver = New-Object -TypeName 'SemVersion.SemanticVersion' $semver.Major,$semVer.Minor,$semVer.Patch,$semver.Prerelease
+        $semver = New-Object -TypeName 'SemVersion.SemanticVersion' `
+                             -ArgumentList $semver.Major,$semVer.Minor,$semVer.Patch,$semver.Prerelease
+    }
+
+    if( $prereleaseVersion -and $semver.Prerelease -match '\d+' )
+    {
+        $prerelease = $semver.Prerelease -replace '\d+', $prereleaseVersion
+        $semver =
+            [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $semver.Patch, $prerelease, $semver.Build)
     }
 
     $buildVersion.SemVer2 = $semver
-    Write-WhiskeyInfo -Context $TaskContext -Message ('Building version {0}' -f $semver)
-    $buildVersion.Version = [Version]('{0}.{1}.{2}' -f $semver.Major,$semver.Minor,$semver.Patch)
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('Version                 {0}' -f $buildVersion.Version)
-    $buildVersion.SemVer2NoBuildMetadata = New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver.Prerelease)
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('SemVer2NoBuildMetadata  {0}' -f $buildVersion.SemVer2NoBuildMetadata)
+    Write-WhiskeyInfo -Context $TaskContext -Message "Building version $($semver)"
+    $buildVersion.Version = [Version](@($semver.Major,$semver.Minor,$semver.Patch) -join '.')
+    Write-WhiskeyVerbose -Context $TaskContext -Message "Version                 $($buildVersion.Version)"
+    $buildVersion.SemVer2NoBuildMetadata =
+        New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver.Prerelease)
+    $msg = "SemVer2NoBuildMetadata  $($buildVersion.SemVer2NoBuildMetadata)"
+    Write-WhiskeyVerbose -Context $TaskContext -Message $msg
     $semver1Prerelease = $semver.Prerelease
     if( $semver1Prerelease )
     {
         $semver1Prerelease = $semver1Prerelease -replace '[^A-Za-z0-9]',''
     }
-    $buildVersion.SemVer1 = New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver1Prerelease)
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('SemVer1                 {0}' -f $buildVersion.SemVer1)
+    $buildVersion.SemVer1 =
+        New-Object 'SemVersion.SemanticVersion' ($semver.Major,$semver.Minor,$semver.Patch,$semver1Prerelease)
+    Write-WhiskeyVerbose -Context $TaskContext -Message "SemVer1                 $($buildVersion.SemVer1)"
 }
