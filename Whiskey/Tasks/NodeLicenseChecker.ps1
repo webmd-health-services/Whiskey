@@ -1,6 +1,4 @@
 
-Write-Host 'HERE'
-
 function Invoke-WhiskeyNodeLicenseChecker
 {
     [CmdletBinding()]
@@ -36,5 +34,3 @@ function Invoke-WhiskeyNodeLicenseChecker
     
     Write-WhiskeyDebug -Context $TaskContext -Message ('COMPLETE')
 }
-
-Write-Host 'THERE'
