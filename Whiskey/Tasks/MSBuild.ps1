@@ -1,8 +1,10 @@
 
 function Invoke-WhiskeyMSBuild
 {
-    [Whiskey.Task('MSBuild',SupportsClean,Platform='Windows')]
-    [Whiskey.RequiresPowerShellModule('VSSetup',Version='2.*',VersionParameterName='VSSetupVersion')]
+    [Whiskey.Task('MSBuild', SupportsClean, Platform='Windows')]
+    [Whiskey.RequiresPowerShellModule('VSSetup', Version='2.*', VersionParameterName='VSSetupVersion')]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.*', VersionParameterName='NuGetVersion',
+        PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
         [Whiskey.Context]$TaskContext,
@@ -13,15 +15,15 @@ function Invoke-WhiskeyMSBuild
         [String[]]$Path,
 
         [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='Directory',Create)]
-        [String]$OutputDirectory
+        [String]$OutputDirectory,
+
+        [String] $NuGetPath
     )
 
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     #setup
-    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['NuGetVersion']
-
     $msbuildInfos = Get-MSBuild | Sort-Object -Descending 'Version'
     $version = $TaskParameter['Version']
     if( $version )
@@ -65,6 +67,13 @@ function Invoke-WhiskeyMSBuild
         }
     }
 
+    $NuGetPath = Join-Path -Path $NuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
+    if( -not $NuGetPath )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message "NuGet.exe not found at ""$($nugetPath)""."
+        return
+    }
+
     foreach( $projectPath in $Path )
     {
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $projectPath)
@@ -83,7 +92,7 @@ function Invoke-WhiskeyMSBuild
             else
             {
                 Write-WhiskeyVerbose -Context $TaskContext -Message ('  Restoring NuGet packages.')
-                & $nugetPath restore $projectPath
+                & $NuGetPath restore $projectPath
             }
         }
 

@@ -2,12 +2,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-# If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-# * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
-# * prism.json
-$packageManagementVersion = '1.4.7'
-$powerShellGetVersion = '2.2.5'
-
 $moduleName = $null
 $moduleVersion = $null
 $output = $null
@@ -237,9 +231,7 @@ Describe 'Find-WhiskeyPowerShellModule.when package management modules are not i
     It 'should find it' {
         Init
         GivenName 'Pester'
-        GivenPkgMgmtModulesNotInstalled
         WhenResolvingPowerShellModule
-        ThenPkgManagementModules -Imported -Installed
         ThenReturnedModule 'Pester'
         ThenNoErrors
     }
@@ -251,10 +243,7 @@ Describe 'Find-WhiskeyPowerShellModule.when given module Name "Pester" and Versi
         Init
         GivenName 'Pester'
         GivenVersion '4.3.1'
-        GivenPkgMgmtModulesInstalled
         WhenResolvingPowerShellModule
-        ThenPkgManagementModules -Imported
-        ThenPkgManagementModules -Not -Installed
         ThenReturnedModule 'Pester' -AtVersion '4.3.1'
         ThenNoErrors
     }
@@ -266,10 +255,7 @@ Describe 'Find-WhiskeyPowerShellModule.when given Version wildcard' {
         Init
         GivenName 'Pester'
         GivenVersion '4.3.*'
-        GivenPkgMgmtModulesInstalled
         WhenResolvingPowerShellModule
-        ThenPkgManagementModules -Imported
-        ThenPkgManagementModules -Not -Installed
         ThenReturnedModule 'Pester' -AtVersion '4.3.1'
         ThenNoErrors
     }
@@ -280,10 +266,7 @@ Describe 'Find-WhiskeyPowerShellModule.when given module that does not exist' {
     It 'should fail' {
         Init
         GivenModuleDoesNotExist
-        GivenPkgMgmtModulesInstalled
         WhenResolvingPowerShellModule -ErrorAction SilentlyContinue
-        ThenPkgManagementModules -Imported
-        ThenPkgManagementModules -Not -Installed
         ThenErrorMessage 'Failed to find'
         ThenReturnedNothing
     }
@@ -294,35 +277,8 @@ Describe 'Find-WhiskeyPowerShellModule.when Find-Module returns module from two 
     It 'should pick one' {
         Init
         GivenName 'Pester'
-        GivenPkgMgmtModulesInstalled
         GivenReturnedModuleFromTwoRepositories
         WhenResolvingPowerShellModule
-        ThenPkgManagementModules -Imported
-        ThenPkgManagementModules -Not -Installed
-        ThenReturnedModule 'Pester'
-        ThenNoErrors
-    }
-}
-
-Describe 'Find-WhiskeyPowerShellModule.when module remnants get left behind' {
-    AfterEach { Reset }
-    It 'should clear out the old directory' {
-        Init
-        GivenName 'Pester'
-        GivenPkgMgmtModulesNotInstalled
-        $testModulesRoot = Join-Path -Path $testRoot -ChildPath 'PSModules'
-        $junkPsd1Paths = @(
-            (Join-Path -Path $testModulesRoot -ChildPath "PackageManagement\$($packageManagementVersion)\notinstalled"),
-            (Join-Path -Path $testModulesRoot -ChildPath "PowerShellGet\$($powershellGetVersion)\notinstalled")
-        )
-        foreach( $path in $junkPsd1Paths )
-        {
-            New-Item -Path $path -ItemType 'File' -Force
-        }
-        WhenResolvingPowerShellModule
-        ThenPkgManagementModules -Imported
-        ThenPkgManagementModules 'PackageManagement' -Installed
-        ThenPkgManagementModules 'PowerShellGet' -Installed
         ThenReturnedModule 'Pester'
         ThenNoErrors
     }

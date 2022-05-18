@@ -12,7 +12,7 @@
     RootModule = 'Whiskey.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.49.3'
+    ModuleVersion = '0.50.0'
 
     # ID used to uniquely identify this module
     GUID = '93bd40f1-dee5-45f7-ba98-cb38b7f5b897'
@@ -103,7 +103,6 @@
                             'Register-WhiskeyEvent',
                             'Resolve-WhiskeyNodePath',
                             'Resolve-WhiskeyNodeModulePath',
-                            'Resolve-WhiskeyNuGetPackageVersion',
                             'Resolve-WhiskeyTaskPath',
                             'Resolve-WhiskeyVariable',
                             'Set-WhiskeyBuildStatus',
@@ -155,7 +154,7 @@
             # IconUri = ''
 
             # Any prerelease to use when publishing to a repository.
-            Prerelease = ''
+            Prerelease = 'beta.45'
 
             # ReleaseNotes of this module
             ReleaseNotes = 'https://github.com/webmd-health-services/Whiskey/blob/master/CHANGELOG.md'

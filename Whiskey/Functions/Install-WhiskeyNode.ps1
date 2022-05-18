@@ -181,7 +181,10 @@ function Install-WhiskeyNode
         {
             # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download
             # 7-zip because it can handle long paths.
-            $7zipPackageRoot = Install-WhiskeyTool -NuGetPackageName '7-Zip.CommandLine' -DownloadRoot $InstallRootPath
+            $7zipPackageRoot = Install-WhiskeyTool -Name '7-Zip.CommandLine' `
+                                                   -ProviderName 'NuGet' `
+                                                   -Version '18.*' `
+                                                   -InstallRoot $InstallRootPath
             $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
 
             $archive = [IO.Compression.ZipFile]::OpenRead($nodeZipFilePath)

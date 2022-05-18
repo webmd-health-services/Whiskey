@@ -187,7 +187,6 @@ function WhenPublishing
         }
     }
 
-    Import-WhiskeyTestModule -Name 'PackageManagement','PowerShellGet'
     Mock -CommandName 'Get-PackageProvider' -ModuleName 'Whiskey'
 
     $Global:Error.Clear()

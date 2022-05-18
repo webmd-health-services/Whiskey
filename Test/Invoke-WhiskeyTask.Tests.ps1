@@ -7,7 +7,6 @@ Set-StrictMode -Version 'Latest'
 Import-WhiskeyTestTaskModule
 
 $testRoot = $null
-$whiskeyYmlPath = $null
 $runByDeveloper = $false
 $runByBuildServer = $false
 [Whiskey.Context]$context = $null

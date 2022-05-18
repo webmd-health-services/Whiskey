@@ -104,7 +104,10 @@ function Import-WhiskeyTestModule
 
     foreach( $moduleName in $Name )
     {
-        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global -WarningAction Ignore
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) `
+                      -Force:$Force `
+                      -Global `
+                      -WarningAction Ignore
     }
 }
 
@@ -136,9 +139,6 @@ function Initialize-WhiskeyTestPSModule
     }
 
     $Name = & {
-        # Don't continually download modules.
-        'PackageManagement'
-        'PowerShellGet'
         $Name
     }
 
@@ -167,12 +167,7 @@ function Install-Node
         [String]$BuildRoot
     )
 
-    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
-    $toolAttr.PathParameterName = 'NodePath'
-    Install-WhiskeyTool -ToolInfo $toolAttr `
-                        -InstallRoot $downloadCachePath `
-                        -OutFileRootPath ($downloadCachePath | Split-Path -Parent) `
-                        -TaskParameter @{ }
+    Install-WhiskeyTool -Name 'Node' -InstallRoot $downloadCachePath
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
 

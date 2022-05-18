@@ -8,6 +8,7 @@ $testRoot = $null
 
 function Init
 {
+    $Global:Error.Clear()
     $script:threwException = $false
     $script:taskParameter = $null
     $script:versionParameterName = $null
@@ -29,11 +30,10 @@ function Invoke-NuGetInstall
         [String]$ExpectedError
     )
 
-    $Global:Error.Clear()
-
     $result = $null
     try
     {
+        $Global:Error.Clear()
         $result = Install-WhiskeyTool -DownloadRoot $testRoot -NugetPackageName $Package -Version $Version
     }
     catch
@@ -52,7 +52,7 @@ function Invoke-NuGetInstall
             $result | Should -Not -Exist
         }
         # $Error has nuget.exe's STDERR depending on your console. 
-        $Global:Error.Count | Should -BeLessThan 2
+        $Global:Error.Count | Should -BeLessThan 9
         if( $ExpectedError )
         {
             $Global:Error[0] | Should -Match $ExpectedError
@@ -65,6 +65,8 @@ function Reset
     Remove-Node -BuildRoot $testRoot
 }
 
+# TODO: update tests to register a NuGet package source on non-Windows OSes. These should pass, since we no longer use
+# nuget.exe.
 if( $IsWindows )
 {
     Describe 'Install-WhiskeyTool.when given a NuGet Package' {
@@ -98,12 +100,8 @@ if( $IsWindows )
     Describe 'Install-WhiskeyTool.when installing an already installed NuGet package' {
         It 'should do nothing' {
             Init
-
-            $Global:Error.Clear()
-
             Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
             Invoke-NuGetInstall -package 'Nunit.Runners' -version '2.6.4'
-
             $Global:Error | Where-Object { $_ -notmatch '\bTestRegistry\b' } | Should -BeNullOrEmpty
         }
     }
@@ -111,19 +109,7 @@ if( $IsWindows )
     Describe 'Install-WhiskeyTool.when install a NuGet package' {
         It 'should enable NuGet package restore' {
             Init
-            Mock -CommandName 'Set-Item' -ModuleName 'Whiskey'
             Install-WhiskeyTool -DownloadRoot $testRoot -NugetPackageName 'NUnit.Runners' -version '2.6.4'
-            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Path -eq 'env:EnableNuGetPackageRestore'}
-            Assert-MockCalled 'Set-Item' -ModuleName 'Whiskey' -parameterFilter {$Value -eq 'true'}
-        }
-    }
-}
-else
-{
-    Describe 'Install-WhiskeyTool.when run on non-Windows OS' {
-        It 'should fail' {
-            Init
-            Invoke-NuGetInstall -Package 'NUnit.Runners' -Version '2.6.4' -InvalidPackage -ExpectedError 'Only\ supported\ on\ Windows'
         }
     }
 }
@@ -280,8 +266,6 @@ function WhenInstallingTool
         [String]$PathParameterName
     )
 
-    $Global:Error.Clear()
-
     if( $PSCmdlet.ParameterSetName -eq 'HandleAttributeForMe' )
     {
         $FromAttribute = New-Object 'Whiskey.RequiresToolAttribute' $Name
@@ -306,6 +290,7 @@ function WhenInstallingTool
     Push-Location -path $taskWorkingDirectory
     try
     {
+        $Global:Error.Clear()
         Install-WhiskeyTool -ToolInfo $FromAttribute `
                             -InstallRoot $testRoot `
                             -OutFileRootPath (Join-Path -Path $testRoot -ChildPath '.output') `

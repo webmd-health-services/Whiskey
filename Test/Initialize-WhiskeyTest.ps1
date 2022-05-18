@@ -105,25 +105,6 @@ try
         Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTest.psm1') -Force
     }
 
-    # We load these because they have assemblies and we need to make sure they get loaded from the global location,
-    # otherwise Pester can't delete the test drive (module assemblies are locked) and tests fail.
-    foreach( $name in @( 'PackageManagement', 'PowerShellGet' ) )
-    {
-        if( -not (Test-Import -Name $name) )
-        {
-            continue
-        }
-
-        if( (Get-Module -Name $name) )
-        {
-            Write-Timing ('    Removing {0}' -f $name)
-            Remove-Module -Name $name -Force 
-        }
-
-        Write-Timing ('    Importing {0}' -f $name)
-        Import-WhiskeyTestModule -Name $name -Force
-    }
-
     if( (Get-Module -Name 'WhiskeyTestTasks') )
     {
         Remove-Module -Name 'WhiskeyTestTasks' -Force -ErrorAction Ignore

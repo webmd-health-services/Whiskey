@@ -6,7 +6,8 @@ function ConvertTo-WhiskeySemanticVersion
     Converts an object to a semantic version.
 
     .DESCRIPTION
-    The `ConvertTo-WhiskeySemanticVersion` function converts strings, numbers, and date/time objects to semantic versions. If the conversion fails, it writes an error and you get nothing back. 
+    The `ConvertTo-WhiskeySemanticVersion` function converts strings, numbers, and date/time objects to semantic
+    versions. If the conversion fails, it writes an error and you get nothing back. 
 
     .EXAMPLE
     '1.2.3' | ConvertTo-WhiskeySemanticVersion
@@ -17,7 +18,7 @@ function ConvertTo-WhiskeySemanticVersion
     param(
         [Parameter(ValueFromPipeline)]
         # The object to convert to a semantic version. Can be a version string, number, or date/time.
-        [Object]$InputObject
+        [Object] $InputObject
     )
 
     process
