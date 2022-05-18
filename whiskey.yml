@@ -6,15 +6,16 @@ Build:
 
 - Version:
     Path: Whiskey\Whiskey.psd1
+    PowerShellModuleName: Whiskey
     Prerelease:
-    - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
-    - develop: rc$(WHISKEY_BUILD_NUMBER)
+    - "*/*": alpha1
+    - develop: rc1
 
 # Update the AppVeyor build/version number.
 - Exec:
       OnlyBy: BuildServer
       Path: appveyor
-      Argument: [ UpdateBuild, -Version, $(WHISKEY_SEMVER2) ]
+      Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
 
 - PowerShell:
     ScriptBlock: prism install

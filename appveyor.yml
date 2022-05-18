@@ -54,25 +54,15 @@ for:
     - job_group: ps
   build_script:
   - ps: |
-      # Run in a background job so that old PackageManagement assemblies don't get loaded.
-      $job = Start-Job {
-          $psGalleryRepo = Get-PSRepository -Name 'PSGallery'
-          $repoToUse = $psGalleryRepo.Name
-          # On Windows 2012 R2, Windows PowerShell 5.1, and .NET 4.6.2, PSGallery's URL ends with a '/'.
-          if( -not $psGalleryRepo -or $psgalleryRepo.SourceLocation -ne 'https://www.powershellgallery.com/api/v2' )
-          {
-              $repoToUse = 'PSGallery2'
-              Register-PSRepository -Name $repoToUse `
-                                    -InstallationPolicy Trusted `
-                                    -SourceLocation 'https://www.powershellgallery.com/api/v2' `
-                                    -PackageManagementProvider $psGalleryRepo.PackageManagementProvider
-          }
-          Get-PSRepository | Format-Table -Auto
-          Install-Module -Name 'Prism' -Scope CurrentUser -Repository $repoToUse
+      try
+      {
+          ./init.ps1
+          ./build.ps1
       }
-      $job | Wait-Job | Receive-Job
-      $job | Remove-Job
-  - ps: Write-Host $PID ; .\build.ps1
+      finally
+      {
+          $Global:Error | Format-List * -Force
+      }
 
 # Build in PowerShell
 - matrix:
@@ -80,9 +70,12 @@ for:
     - job_group: pwsh
   build_script:
   - pwsh: |
-      Set-PSRepository -Name 'PSGallery' `
-                       -InstallationPolicy Trusted `
-                       -SourceLocation 'https://www.powershellgallery.com/api/v2'
-      Get-PSRepository | Format-Table -Auto
-      Install-Module -Name 'Prism' -Scope CurrentUser
-  - pwsh: Write-Host $PID ; ./build.ps1
+      try
+      {
+          ./init.ps1
+          ./build.ps1
+      }
+      finally
+      {
+          $Global:Error | Format-List * -Force
+      }

@@ -25,14 +25,6 @@
             "Version": "5.*"
         },
         {
-            "Name": "PackageManagement",
-            "Version": "1.*"
-        },
-        {
-            "Name": "PowerShellGet",
-            "Version": "2.*"
-        },
-        {
             "Name": "Pester",
             "Version": "3.*"
         },

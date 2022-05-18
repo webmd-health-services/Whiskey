@@ -6,7 +6,6 @@ function Register-WhiskeyPSModulePath
     # those global versions instead of the versions we load from inside Whiskey. So,
     # we have to put the ones that ship with Whiskey first. See
     # https://github.com/PowerShell/PowerShellGet/issues/55 .
-
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromUser')]
