@@ -15,14 +15,18 @@ function GivenAnInstalledNuGetPackage
         [String]$WithVersion = '2.6.4',
 
         [String]$WithName = 'NUnit.Runners'
-
     )
-    $WithVersion = Resolve-WhiskeyNuGetPackageVersion -NuGetPackageName $WithName -Version $WithVersion
+
+    $WithVersion =
+        Find-Package -Name $WithName -ProviderName 'NuGet' -AllVersions |
+        Where-Object 'Version' -Like $WithVersion
+        Select-Object -First 1 |
+        Select-Object -ExpandProperty 'Version'
     if( -not $WithVersion )
     {
         return
     }
-    $dirName = '{0}.{1}' -f $WithName, $WithVersion
+    $dirName = "$($WithName).$($WithVersion)"
     $installRoot = Join-Path -Path $testRoot -ChildPath 'packages'
     New-Item -Name $dirName -Path $installRoot -ItemType 'Directory' | Out-Null
 }
@@ -182,15 +186,6 @@ if( $IsWindows )
             ThenNuGetPackageUnInstalled -WithVersion ''
         }
     }
-    
-    Describe 'Uninstall-WhiskeyTool.when given a NuGet Package with a wildcard version' {
-        It 'should fail' {
-            Init
-            GivenAnInstalledNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            WhenUninstallingNuGetPackage -WithVersion '2.*' -ErrorAction SilentlyContinue
-            ThenNuGetPackageNotUnInstalled -WithVersion '2.*' -WithError 'Wildcards are not allowed for NuGet packages'
-        }
-    }    
 }
 
 Describe 'Uninstall-WhiskeyTool.when uninstalling Node and node modules' {

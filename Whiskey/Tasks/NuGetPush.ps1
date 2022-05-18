@@ -1,7 +1,9 @@
 
 function Publish-WhiskeyNuGetPackage
 {
-    [Whiskey.Task('NuGetPush',Platform='Windows',Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),WarnWhenUsingAlias=$true)]
+    [Whiskey.Task('NuGetPush', Platform='Windows', Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),
+        WarnWhenUsingAlias)]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -11,7 +13,9 @@ function Publish-WhiskeyNuGetPackage
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [String[]]$Path
+        [String[]]$Path,
+
+        [String] $NuGetPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -68,9 +72,10 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
     }
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
-    $nuGetPath = Install-WhiskeyNuGet -DownloadRoot $TaskContext.BuildRoot -Version $TaskParameter['Version']
-    if( -not $nugetPath )
+    $NuGetPath = Join-Path -Path $NuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
+    if( -not $NuGetPath )
     {
+        Stop-WhiskeyTask -Context $TaskContext -Message "NuGet.exe not found at ""$($NuGetPath)""."
         return
     }
 
@@ -147,7 +152,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey -NuGetPath $nuGetPath
+        Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey -NuGetPath $NuGetPath
 
         if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
         {

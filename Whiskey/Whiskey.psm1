@@ -18,9 +18,6 @@ $whiskeyScriptRoot = $PSScriptRoot
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-$whiskeyNuGetExePath = Join-Path -Path $whiskeyBinPath -ChildPath 'nuget.exe' -Resolve
-
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $buildStartedAt = [DateTime]::MinValue
 
 $PSModuleAutoLoadingPreference = 'None'
@@ -161,6 +158,8 @@ Assert-Member -Object $attr -Property @( 'Create' )
 
 $buildInfo = New-WhiskeyObject -TypeName 'Whiskey.BuildInfo'
 Assert-Member -Object $buildInfo -Property @( 'ScmSourceBranch' )
+
+New-WhiskeyObject -TypeName 'Whiskey.RequiresNuGetPackageAttribute' -ArgumentList 'NuGet.CommandLine' | Out-Null
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments

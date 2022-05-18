@@ -3,7 +3,7 @@ function Invoke-WhiskeyNpm
 {
     [Whiskey.Task('Npm')]
     [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
-    [Whiskey.RequiresTool('NodeModule::npm',PathParameterName='NpmPath',VersionParameterName='NpmVersion')]
+    [Whiskey.RequiresNodeModule('npm', PathParameterName='NpmPath', VersionParameterName='NpmVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

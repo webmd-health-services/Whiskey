@@ -16,51 +16,8 @@ Build:
       Path: appveyor
       Argument: [ UpdateBuild, -Version, $(WHISKEY_SEMVER2) ]
 
-- GetPowerShellModule:
-    Name: BuildMasterAutomation
-    Version: 0.6.*
-
-- GetPowerShellModule:
-    Name: ProGetAutomation
-    Version: 0.9.*
-
-- GetPowerShellModule:
-    Name: BitbucketServerAutomation
-    Version: 0.9.*
-
-- GetPowerShellModule:
-    Name: VSSetup
-    Version: 2.*
-
-- GetPowerShellModule:
-    Name: Zip
-    Version: 0.3.*
-
-# Can remove once a Pester 5 task is in place.
-# Currently needed to increase build speed.
-- GetPowerShellModule:
-    Name: Pester
-    Version: 5.*
-
-# If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-# * Test\Find-WhiskeyPowerShellModule.Tests.ps1
-# * Whiskey\Functions\Find-WhiskeyPowerShellModule.ps1
-# * Whiskey\Tasks\PublishPowerShellModule.ps1
-- GetPowerShellModule:
-    Name: PackageManagement
-    Version: 1.4.7
-
-- GetPowerShellModule:
-    Name: PowerShellGet
-    Version: 2.2.5
-
-- GetPowerShellModule:
-    Name: Pester
-    Version: 3.*
-
-- GetPowerShellModule:
-    Name: Glob
-    Version: 0.1.*
+- PowerShell:
+    ScriptBlock: prism install
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:

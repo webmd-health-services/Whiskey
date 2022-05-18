@@ -2,55 +2,38 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-# OpenCover hangs when run on .NET 4.6.2.
-$skip = (Test-Path -Path 'env:APPVEYOR_*') -and $env:APPVEYOR_BUILD_WORKER_IMAGE -eq 'Visual Studio 2013'
-
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
 $nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
 $packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
 
-$latestNUnit2Version = '2.6.4'
+$latestNUnit2Version =
+    Find-Package -Name 'NUnit.Runners' -AllVersions |
+    Where-Object 'Version' -Like '2.*' |
+    Where-Object 'Version' -NotLike '*-*' |
+    Select-Object -First 1 |
+    Select-Object -ExpandProperty 'Version'
+
+& $nugetPath install 'NUnit.Runners' -Version $latestNUnit2Version -OutputDirectory $packagesRoot
+
 
 function Assert-NUnitTestsRun
 {
     param(
-        [String]$ReportPath
+        [String] $ReportPath
     )
-    $reports = $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml'
-    $reports | Should -Not -BeNullOrEmpty
 
-    $reports | Select-Object -ExpandProperty 'Name' | Should -Match '^nunit2\+.{8}\..{3}\.xml$'
+    $ReportPath | Should -Exist
+    Join-Path -Path $ReportPath -ChildPath 'nunit2*.xml' | Should -Exist
 }
 
 function Assert-NUnitTestsNotRun
 {
     param(
-        [String]$ReportPath
+        [String] $ReportPath
     )
-    $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
-}
 
-function Assert-OpenCoverRuns
-{
-    param(
-        [String]$OpenCoverDirectoryPath
-    )
-    $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
-    $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
-    $openCoverFilePath | Should -Exist
-    $reportGeneratorFilePath | Should -Exist
-}
-
-function Assert-OpenCoverNotRun
-{
-    param(
-        [String]$OpenCoverDirectoryPath
-    )
-    $openCoverFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'openCover.xml'
-    $reportGeneratorFilePath = Join-Path -Path $OpenCoverDirectoryPath -ChildPath 'index.htm'
-    $openCoverFilePath | Should -Not -Exist
-    $reportGeneratorFilePath | Should -Not -Exist
+    Join-Path -Path $ReportPath -ChildPath 'nunit2*.xml' | Should -Not -Exist
 }
 
 function Invoke-NUnitTask
@@ -64,45 +47,19 @@ function Invoke-NUnitTask
 
         [switch]$WithInvalidPath,
 
-        [switch]$WhenJoinPathResolveFails,
-
         [switch]$WithFailingTests,
 
         [switch]$WithRunningTests,
 
-        [String]$WithError,
-
-        [switch]$WhenRunningClean,
-
-        [switch]$WhenRunningInitialize,
-
-        [switch]$WithDisabledCodeCoverage,
-
-        [String[]]$CoverageFilter,
-
-        [scriptblock]$MockInstallWhiskeyToolWith
+        [String]$WithError
     )
 
     process
     {
 
-        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') -Destination $TestDrive.FullName
+        Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\NUnit2*\bin\*\*') `
+                  -Destination $TestDrive.FullName
         Copy-Item -Path $packagesRoot -Destination $TestDrive.FullName -Recurse -ErrorAction Ignore
-
-        if( -not $MockInstallWhiskeyToolWith )
-        {
-            $MockInstallWhiskeyToolWith = {
-                if( -not $Version )
-                {
-                    $Version = '*'
-                }
-                return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.{1}' -f $NuGetPackageName,$Version))
-            }
-        }
-
-        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith $MockInstallWhiskeyToolWith
-
-        $Global:Error.Clear()
 
         if( $WithNoPath )
         {
@@ -134,26 +91,12 @@ function Invoke-NUnitTask
                               }
         }
 
-        if( $WithDisabledCodeCoverage )
-        {
-            $taskParameter.Add('DisableCodeCoverage', $True)
-            #$optionalParams['DisableCodeCoverage'] = $True
-        }
-        if( $CoverageFilter )
-        {
-            #$optionalParams['CoverageFilter'] = $CoverageFilter
-            $taskParameter.Add('CoverageFilter', $CoverageFilter)
-        }
         $script:context = New-WhiskeyTestContext -ForBuildRoot $TestDrive.FullName -ForBuildServer
-        if( $WhenRunningClean )
-        {
-            $context.RunMode = 'Clean'
-        }
 
-        $Global:Error.Clear()
         $threwException = $false
         try
         {
+            $Global:Error.Clear()
             Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NUnit2'
         }
         catch
@@ -161,66 +104,28 @@ function Invoke-NUnitTask
             $threwException = $true
         }
 
-        if ( $WithError )
+        if( $WithError )
         {
-            if( $WhenJoinPathResolveFails )
-            {
-                $Global:Error[0] | Should -Match ( $WithError )
-            }
-            else
-            {
-                $Global:Error | Should -Match ( $WithError )
-            }
+            $Global:Error | Where-Object { $_ -match $WithError } | Should -Not -BeNullOrEmpty
         }
 
-        $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
-        $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
-        if( $WhenRunningClean )
-        {
-            $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-            $nunitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.4'
-            $oldNUnitPath = Join-Path -Path $packagesPath -ChildPath 'NUnit.Runners.2.6.3'
-            $openCoverPackagePath = Join-Path -Path $packagesPath -ChildPath 'OpenCover.*'
-            $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
-            $threwException | Should -BeFalse
-            $Global:Error | Should -BeNullorEmpty
-            $nunitPath | Should -Not -Exist
-            $oldNUnitPath | should -Exist
-            $openCoverPackagePath | Should -Not -Exist
-            $reportGeneratorPath | Should -Not -Exist
-            Uninstall-WhiskeyTool -NuGetPackageName 'NUnit.Runners' -Version '2.6.3' -BuildRoot $context.BuildRoot
-        }
-        elseif( $ThatFails )
+        if( $ThatFails )
         {
             $threwException | Should -BeTrue
         }
         else
         {
-            (Join-Path -Path $context.BuildRoot -ChildPath 'packages\NUnit.Runners.2.6.4') | Should -Exist
+            (Join-Path -Path $context.BuildRoot -ChildPath "packages\NUnit.Runners.$($latestNUnit2Version)") |
+                Should -Exist
         }
+
         if( $WithFailingTests -or $WithRunningTests )
         {
-            Assert-NUnitTestsRun -ReportPath $ReportPath
-            if( -not $WithDisabledCodeCoverage )
-            {
-                Assert-OpenCoverRuns -OpenCoverDirectoryPath $openCoverPath
-            }
-            else
-            {
-                Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
-            }
+            Assert-NUnitTestsRun -ReportPath $context.OutputDirectory
         }
         else
         {
-            Assert-NUnitTestsNotRun -ReportPath $reportPath
-            Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
-        }
-        if( $CoverageFilter )
-        {
-            $plusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2PassingTest_TestFixture.htm'
-            $minusFilterPath = Join-Path -path $openCoverPath -childpath 'NUnit2FailingTest_TestFixture.htm'
-            $plusFilterPath | Should -Exist
-            $minusFilterPath | Should -Not -Exist
+            Assert-NUnitTestsNotRun -ReportPath $context.OutputDirectory
         }
 
         Remove-Item -Path $context.OutputDirectory -Recurse -Force
@@ -244,13 +149,9 @@ $context = $null
 $threwException = $false
 $thrownError = $null
 $taskParameter = $null
-$openCoverVersion = $null
-$reportGeneratorVersion = $null
 $nunitVersion = $null
-$disableCodeCoverage = $null
 $exclude = $null
 $include = $null
-$CoverageFilter = $null
 
 function GivenPassingTests
 {
@@ -262,11 +163,6 @@ function GivenPassingTests
 function GivenInvalidPath
 {
     $script:assemblyToTest = 'I/do/not/exist'
-}
-
-function GivenCodeCoverageIsDisabled
-{
-    $Script:disableCodeCoverage = $true
 }
 
 function GivenExclude
@@ -285,24 +181,6 @@ function GivenInclude
     $script:include = $value
 }
 
-function GivenReportGeneratorVersion
-{
-    param(
-        $Version
-    )
-
-    $script:reportGeneratorVersion = $Version
-}
-
-function GivenOpenCoverVersion
-{
-    param(
-        $Version
-    )
-
-    $script:openCoverVersion = $Version
-}
-
 function GivenVersion
 {
     param(
@@ -312,22 +190,12 @@ function GivenVersion
     $script:nunitVersion = $Version
 }
 
-function GivenCoverageFilter
-{
-    Param(
-        [String]$Filter
-    )
-    $script:CoverageFilter = $Filter
-}
-
 function Init
 {
-    $script:openCoverVersion = $null
-    $script:reportGeneratorVersion = $null
+    $Global:Error.Clear()
     $script:nunitVersion = $null
     $script:include = $null
     $script:exclude = $null
-    $Script:disableCodeCoverage = $null
 
     if( (Test-Path -Path $packagesRoot -PathType Container) )
     {
@@ -347,7 +215,6 @@ function WhenRunningTask
         [switch]$WhenRunningInitialize
     )
 
-    $Global:Error.Clear()
     $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $TestDrive.FullName
 
     if( $WhenRunningInitialize )
@@ -355,33 +222,10 @@ function WhenRunningTask
         $context.RunMode = 'initialize'
     }
 
-    Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -MockWith {
-        return (Join-Path -Path $DownloadRoot -ChildPath ('packages\{0}.*' -f $NuGetPackageName)) |
-                    Get-Item -ErrorAction Ignore |
-                    Select-Object -First 1 |
-                    Select-Object -ExpandProperty 'FullName'
-    }
-
     try
     {
         $WithParameters['Path'] = $assemblyToTest
-        if( $openCoverVersion )
-        {
-            $WithParameters['OpenCoverVersion'] = $openCoverVersion
-        }
 
-        if( $reportGeneratorVersion )
-        {
-            $WithParameters['ReportGeneratorVersion'] = $reportGeneratorVersion
-        }
-        if( $disableCodeCoverage )
-        {
-            $WithParameters['DisableCodeCoverage'] = $disableCodeCoverage
-        }
-        if( $CoverageFilter )
-        {
-            $WithParameters['CoverageFilter'] = $CoverageFilter
-        }
         if( $exclude )
         {
             $WithParameters['exclude'] = $exclude
@@ -394,6 +238,8 @@ function WhenRunningTask
         {
             $WithParameters['Version'] = $nunitVersion
         }
+
+        $Global:Error.Clear()
         $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameters -Name 'NUnit2' 
         $output | Write-WhiskeyVerbose -Context $context
         $script:threwException = $false
@@ -461,15 +307,14 @@ function ThenTestsPassed
     foreach( $name in $TestName )
     {
         $result = Get-TestCaseResult -TestName $name
+        $result | Should -Not -BeNullOrEmpty
         $result.GetAttribute('result') | ForEach-Object { $_ | Should -Be 'Success' }
     }
-    Assert-OpenCoverRuns -OpenCoverDirectoryPath (Join-Path -path $Script:context.OutputDirectory -ChildPath 'OpenCover')
 }
 
-function ThenItShouldNotRunTests {
-    $ReportPath = Join-Path -Path $context.OutputDirectory -ChildPath ('nunit2-{0:00}.xml' -f $context.TaskIndex)
-
-    $ReportPath | Split-Path | Get-ChildItem -Filter 'nunit2*.xml' | Should -BeNullOrEmpty
+function ThenItShouldNotRunTests
+{
+    $context.OutputDirectory | Get-ChildItem -Filter 'nunit2*.xml' | Should -Not -Exist
 }
 
 function ThenItInstalled {
@@ -479,23 +324,9 @@ function ThenItInstalled {
         [Version]$Version
     )
 
-    $expectedVersion = $Version
-    Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter {
-        #$DebugPreference = 'Continue'
-        Write-WhiskeyDebug -Message ('NuGetPackageName  expected  {0}' -f $Name)
-        Write-WhiskeyDebug -Message ('                  actual    {0}' -f $NuGetPackageName)
-        $NuGetPackageName -eq $Name
-    }
-    Assert-MockCalled -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey' -ParameterFilter { $Version -eq $ExpectedVersion }
+    Join-Path -Path $script:context.BuildRoot -ChildPath "packages\$($Name).$($Version)" | Should -Exist
 }
 
-function ThenItInstalledReportGenerator {
-
-    $packagesPath = Join-Path -Path $context.BuildRoot -ChildPath 'Packages'
-    $reportGeneratorPath = Join-Path -Path $packagesPath -ChildPath 'ReportGenerator.*'
-
-    $reportGeneratorPath | Should -Exist
-}
 function ThenErrorIs {
     param(
         $Regex
@@ -511,11 +342,9 @@ function ThenErrorShouldNotBeThrown {
     $Global:Error | Where-Object { $_ -match $ErrorMessage } | Should -BeNullOrEmpty
 }
 
-function ThenNoErrorShouldBeThrown {
-    $openCoverPath = Join-Path -Path $context.OutputDirectory -ChildPath 'OpenCover'
-    write-host $Global:Error
-    Assert-OpenCoverNotRun -OpenCoverDirectoryPath $openCoverPath
-    $Global:error | Should -BeNullOrEmpty
+function ThenNoErrorShouldBeThrown
+{
+    $Global:Error | Should -BeNullOrEmpty
 }
 
 if( -not $IsWindows )
@@ -531,65 +360,19 @@ if( -not $IsWindows )
     return
 }
 
-$latestOpenCoverVersion,$latestReportGeneratorVersion = & {
-                                                                & $nugetPath list packageid:OpenCover -Source https://www.nuget.org/api/v2/
-                                                                & $nugetPath list packageid:ReportGenerator -Source https://www.nuget.org/api/v2/
-                                                        } |
-                                                        Where-Object { $_ -match ' (\d+\.\d+\.\d+.*)' } |
-                                                        ForEach-Object { $Matches[1] }
-$packages = @{
-                'OpenCover' = $latestOpenCoverVersion;
-                'ReportGenerator' = $latestReportGeneratorVersion;
-                'NUnit.Runners' = $latestNUnit2Version;
-            }
-foreach( $packageID in $packages.Keys )
-{
-    if( -not (Test-Path -Path (Join-Path -Path $packagesRoot -ChildPath ('{0}.{1}' -f $packageID,$packages[$packageID]))) )
-    {
-        & $nugetPath install $packageID -Version $packages[$packageID] -OutputDirectory $packagesRoot
-    }
-}
-
 $taskContext = New-WhiskeyContext -Environment 'Developer' -ConfigurationPath (Join-Path -Path $PSScriptRoot -ChildPath 'Assemblies\whiskey.nunit2.yml')
 Invoke-WhiskeyBuild -Context $taskContext
 
-Describe 'NUnit2.when the Clean Switch is active' {
-    It 'should remove dependent packages' {
-        GivenNuGetPackageInstalled 'NUnit.Runners' -AtVersion '2.6.3'
-        Invoke-NUnitTask -WhenRunningClean
-    }
-}
-
 Describe 'NUnit2.when running NUnit tests' {
-    Context 'no code coverage' {
-        It 'should run NUnit2 directly' {
-            Invoke-NUnitTask -WithRunningTests -WithDisabledCodeCoverage
-        }
-    }
-    Context 'code coverage' {
-        It 'should run NUnit through OpenCover' -Skip:$skip {
-            Invoke-NUnitTask -WithRunningTests
-        }
+    It 'should run NUnit2 directly' {
+        Invoke-NUnitTask -WithRunningTests
     }
 }
 
 Describe 'NUnit2.when running failing NUnit2 tests' {
     $withError = [regex]::Escape('NUnit2 tests failed')
-    Context 'no code coverage' {
-        It 'should run NUnit directly' {
-            Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError -WithDisabledCodeCoverage
-        }
-    }
-    Context 'code coverage' {
-        It 'should run NUnit through OpenCover' -Skip:$skip {
-            Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError
-        }
-    }
-}
-
-Describe 'NUnit2.when Install-WhiskeyTool fails' {
-    It 'should fail the build' {
-        Invoke-NUnitTask -ThatFails -MockInstallWhiskeyToolWith { return $false }
+    It 'should run NUnit directly' {
+        Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError
     }
 }
 
@@ -607,27 +390,19 @@ Describe 'NUnit2.when Path Parameter is invalid' {
     }
 }
 
-Describe 'NUnit2.when NUnit Console Path is invalid and Join-Path -resolve fails' {
+Describe 'NUnit2.when NUnit console not in package' {
     It 'should fail the build' {
-        Mock -CommandName 'Join-Path' -ModuleName 'Whiskey' -MockWith { Write-Error 'Path does not exist!' } -ParameterFilter { $ChildPath -eq 'nunit-console.exe' }
-        $withError = [regex]::Escape('was installed, but couldn''t find nunit-console.exe')
-        Invoke-NUnitTask -ThatFails -WhenJoinPathResolveFails -WithError $withError -ErrorAction SilentlyContinue
-    }
-}
-
-Describe 'NUnit2.when running NUnit tests with coverage filters' {
-    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
-    It 'should pass coverage filters to OpenCover' -Skip {
-        $coverageFilter = (
-                        '-[NUnit2FailingTest]*',
-                        '+[NUnit2PassingTest]*'
-                        )
-        Invoke-NUnitTask -WithRunningTests -CoverageFilter $coverageFilter
+        Mock -CommandName 'Test-Path' `
+             -ModuleName 'Whiskey' `
+             -MockWith { return $false } `
+             -ParameterFilter { $Path -like '*nunit-console.exe' }
+        $withError = [regex]::Escape('doesn''t exist at')
+        Invoke-NUnitTask -ThatFails -WithError $withError -ErrorAction SilentlyContinue
     }
 }
 
 Describe 'NUnit2.when including tests by category' {
-    It 'should pass categories to NUnit' -Skip:$skip {
+    It 'should pass categories to NUnit' {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
@@ -636,21 +411,19 @@ Describe 'NUnit2.when including tests by category' {
     }
 }
 
-Describe 'NUnit2.when code coverage is disabled and using category filters with spaces' {
+Describe 'NUnit2.when using category filters with spaces' {
     It 'should pass categories to NUnit' {
         Init
-        GivenCodeCoverageIsDisabled
         GivenPassingTests
         GivenInclude -Value 'Category with Spaces 1,Category With Spaces 1'
         GivenExclude -Value 'Category with Spaces,Another with spaces'
-        GivenCodeCoverageIsDisabled
         WhenRunningTask
         ThenNoErrorShouldBeThrown
     }
 }
 
 Describe 'NUnit2.when excluding tests by category' {
-    It 'should not run excluded tests' -Skip:$skip {
+    It 'should not run excluded tests' {
         Init
         GivenPassingTests
         GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
@@ -661,7 +434,7 @@ Describe 'NUnit2.when excluding tests by category' {
 }
 
 Describe 'NUnit2.when running with custom arguments' {
-    It 'should pass arguments' -Skip:$skip {
+    It 'should pass arguments' {
         Init
         GivenPassingTests
         WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
@@ -670,7 +443,7 @@ Describe 'NUnit2.when running with custom arguments' {
 }
 
 Describe 'NUnit2.when running under a custom dotNET framework' {
-    It 'should use custom framework' -Skip:$skip {
+    It 'should use custom framework' {
         Init
         GivenPassingTests
         WhenRunningTask @{ 'Framework' = 'net-4.5' }
@@ -678,74 +451,12 @@ Describe 'NUnit2.when running under a custom dotNET framework' {
     }
 }
 
-Describe 'NUnit2.when running with custom OpenCover arguments' {
-    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
-    It 'should pass custom OpenCover arguments' -Skip {
-        Init
-        GivenPassingTests
-        WhenRunningTask -WithParameters @{ 'OpenCoverArgument' = @( '-showunvisited' ) }
-        ThenOutput -Contains '====Unvisited Classes===='
-    }
-}
-
-Describe 'NUnit2.when running with custom ReportGenerator arguments' {
-    # Skip until we there is an OpenCover task and we can deprecate coverage in this task.
-    It 'should pass ReportGenerator arguments' -Skip {
-        Init
-        GivenPassingTests
-        WhenRunningTask -WithParameters @{ 'ReportGeneratorArgument' = @( '-reporttypes:Latex', '-verbosity:Info' ) }
-        ThenOutput -Contains 'Initializing report builders for report types: Latex'
-        ThenOutput -DoesNotContain 'Preprocessing report', 'Initiating parser for OpenCover'
-    }
-}
-
-Describe 'NUnit2.when the Initialize Switch is active' {
-    It 'should install dependencies' -Skip:$skip {
-        Init
-        GivenPassingTests
-        WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
-        ThenItInstalled 'Nunit.Runners' $latestNUnit2Version
-        ThenItInstalled 'OpenCover' $latestOpenCoverVersion
-        ThenItInstalled 'ReportGenerator' $latestReportGeneratorVersion
-        ThenItShouldNotRunTests
-    }
-}
-
 Describe 'NUnit2.when using custom tool versions' {
-    It 'should use those tool versions' -Skip:$skip {
+    It 'should use those tool versions' {
         Init
         GivenPassingTests
-        GivenOpenCoverVersion '4.0.1229'
-        GivenReportGeneratorVersion '2.5.11'
         GivenVersion '2.6.1'
         WhenRunningTask
         ThenItInstalled 'Nunit.Runners' '2.6.1'
-        ThenItInstalled 'OpenCover' '4.0.1229'
-        ThenItInstalled 'ReportGenerator' '2.5.11'
-    }
-}
-
-Describe 'NUnit2.when initializing and no path is included' {
-    It 'should fail' {
-        Init
-        GivenPassingTests
-        GivenInvalidPath
-        WhenRunningTask -WhenRunningInitialize -WithParameters @{ }
-        ThenItInstalled 'NUnit.Runners' $latestNUnit2Version
-        ThenItInstalled 'OpenCover' $latestOpenCoverVersion
-        ThenItInstalled 'ReportGenerator' $latestReportGeneratorVersion
-        ThenItShouldNotRunTests
-        ThenErrorShouldNotBeThrown -ErrorMessage 'do not exist.'
-    }
-}
-
-Describe 'NUnit2.when using version of NUnit that isn''t 2' {
-    It 'should fail' {
-        Init
-        GivenPassingTests
-        GivenVersion '3.7.0'
-        WhenRunningTask
-        ThenItShouldNotRunTests
-        ThenErrorIs 'isn''t\ a\ valid\ 2\.x\ version\ of\ NUnit'
     }
 }

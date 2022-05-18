@@ -167,12 +167,7 @@ function Install-Node
         [String]$BuildRoot
     )
 
-    $toolAttr = New-Object 'Whiskey.RequiresToolAttribute' 'Node'
-    $toolAttr.PathParameterName = 'NodePath'
-    Install-WhiskeyTool -ToolInfo $toolAttr `
-                        -InstallRoot $downloadCachePath `
-                        -OutFileRootPath ($downloadCachePath | Split-Path -Parent) `
-                        -TaskParameter @{ }
+    Install-WhiskeyTool -Name 'Node' -InstallRoot $downloadCachePath
 
     $nodeRoot = Join-Path -Path $downloadCachePath -ChildPath '.node'
 
@@ -419,8 +414,8 @@ function New-WhiskeyTestContext
     }
 
     $context = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyContextObject'
-    $context.BuildRoot = $ForBuildRoot
-    $context.Environment = 'Verificaiton'
+    $context.BuildRoot = Get-Item -Path $ForBuildRoot
+    $context.Environment = 'Verification'
     $context.ConfigurationPath = $ConfigurationPath
     $context.DownloadRoot = $context.BuildRoot
     $context.Configuration = $configData

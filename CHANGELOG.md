@@ -1,3 +1,20 @@
+
+# 0.50.0
+
+## Fixed
+
+* Fixed: Parallel task fails if it runs a custom task that was imported from a module.
+
+## Removed
+
+* Removed OpenCover support from the NUnit2 and NUnit3 tasks.
+
+
+# 0.49.2
+
+* Fixed: Whiskey fails to resolve a task's tool path if the task is running with a custom working directory.
+
+
 # 0.49.1
 
 ## Fixed
