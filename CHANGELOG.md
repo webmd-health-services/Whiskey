@@ -1,10 +1,20 @@
 
 # 0.50.0
 
+## Upgrade Instructions
+
+Whiskey now requires PackageManagement 1.4.7 and PowerShellGet 2.2.5 to be installed on any computer on which it runs.
+Please ensure these modules are installed.
+
 ## Added
 
 * Whiskey's "Version" task now calculates the next prerelease version number for a package by querying the package's
   package repository.
+
+## Changed
+
+* Whiskey now depends on and requires PackageManagement 1.4.7 and PowerShellGet 2.2.5. These must be pre-installed on
+computers running whiskey.
 
 ## Fixed
 

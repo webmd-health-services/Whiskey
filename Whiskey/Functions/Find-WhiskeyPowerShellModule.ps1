@@ -42,85 +42,10 @@ function Find-WhiskeyPowerShellModule
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-    # * Test\Find-WhiskeyPowerShellModule.Tests.ps1
-    # * prism.json
-    $packageManagementPackages = @{
-        'PackageManagement' = '1.4.7';
-        'PowerShellGet' = '2.2.5'
-    }
-    $modulesToInstall = New-Object 'Collections.ArrayList'
-    foreach( $packageName in $packageManagementPackages.Keys )
-    {
-        $packageVersion = $packageManagementPackages[$packageName]
-
-        # Don't install modules if it's already installed.
-        $module = Get-WhiskeyPSModule -Name $packageName -Version $packageVersion -PSModulesRoot $BuildRoot
-        if( $module )
-        {
-            continue
-        }
-
-        $moduleInfo = [pscustomobject]@{ 'Name' = $packageName; 'Version' = $packageVersion; }
-        $msg = "Module ""$($moduleInfo.Name)"" version $($moduleInfo.Version) is not installed."
-        Write-WhiskeyDebug -Message $msg
-        [Void]$modulesToInstall.Add($moduleInfo)
-    }
-
-    if( $modulesToInstall.Count )
-    {
-        $modulesRoot = Get-WhiskeyPSModulePath -PSModulesRoot $BuildRoot -Create
-        Write-WhiskeyDebug -Message ('Installing package management modules to {0}.  BEGIN' -f $modulesRoot)
-        # Install Package Management modules in the background so we can load the new versions. These modules use 
-        # assemblies so once you load an old version, you have to re-launch your process to load a newer version.
-        Start-Job -ScriptBlock {
-            $Global:VerbosePreference = $Global:DebugPreference = 'SilentlyContinue'
-
-            Import-Module -Name 'PackageManagement' -WarningAction Ignore
-            Import-Module -Name 'PowerShellGet' -WarningAction Ignore
-
-            $ErrorActionPreference = $using:ErrorActionPreference
-            $VerbosePreference = $using:VerbosePreference
-            $InformationPreference = $using:InformationPreference
-            $DebugPreference = $using:DebugPreference
-            $ProgressPreference = $using:ProgressPreference
-
-            $modulesToInstall = $using:modulesToInstall
-            $modulesRoot = $using:modulesRoot
-
-            Write-Debug -Message ('Bootstrapping NuGet provider')
-            Get-PackageProvider -Name 'NuGet' -ForceBootstrap | Out-Null
-            # These need to be installed in this order.
-            foreach( $name in @('PackageManagement', 'PowerShellGet') )
-            {
-                $moduleInfo = $modulesToInstall | Where-Object 'Name' -eq $name
-                if( -not $moduleInfo )
-                {
-                    Write-Debug ("  Skipping $($name): already installed.")
-                    continue
-                }
-
-                $module = 
-                    Find-Module -Name $moduleInfo.Name -RequiredVersion $moduleInfo.Version |
-                    Select-Object -First 1
-                if( -not $module )
-                {
-                    Write-Debug -Message "Module $($moduleInfo.Name) $($moduleInfo.Version) not found by Find-Module."
-                    continue
-                }
-
-                Write-Verbose -Message ('Saving PowerShell module {0} {1} to "{2}" from repository {3}.' -f $module.Name,$module.Version,$modulesRoot,$module.Repository)
-                Save-Module -Name $module.Name -RequiredVersion $module.Version -Repository $module.Repository -Path $modulesRoot
-            }
-        } | Receive-Job -Wait -AutoRemoveJob -InformationAction SilentlyContinue | Out-Null
-        Write-WhiskeyDebug -Message ('                                               END')
-    }
-
-    foreach( $moduleName in $packageManagementPackages.Keys )
-    {
-        Import-WhiskeyPowerShellModule -Name $moduleName `
-                                       -Version $packageManagementPackages[$moduleName] `
-                                       -PSModulesRoot $BuildRoot
-    }
+    # * appveyor.yml
+    # * PublishPowerShellModule task
+    Import-Module -Name 'PackageManagement' -RequiredVersion '1.4.7' -Global
+    Import-Module -Name 'PowerShellGet' -RequiredVersion '2.2.5' -Global
 
     Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
     if( $Version )

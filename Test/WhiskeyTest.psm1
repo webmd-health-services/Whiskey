@@ -104,7 +104,10 @@ function Import-WhiskeyTestModule
 
     foreach( $moduleName in $Name )
     {
-        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) -Force:$Force -Global -WarningAction Ignore
+        Import-Module -Name (Join-Path -Path $modulesRoot -ChildPath $moduleName -Resolve) `
+                      -Force:$Force `
+                      -Global `
+                      -WarningAction Ignore
     }
 }
 
@@ -136,9 +139,6 @@ function Initialize-WhiskeyTestPSModule
     }
 
     $Name = & {
-        # Don't continually download modules.
-        'PackageManagement'
-        'PowerShellGet'
         $Name
     }
 
