@@ -62,13 +62,15 @@ function Install-WhiskeyNuGetPackage
 
     $pkg = $pkgVersions | Select-Object -First 1
 
-    $cachePath = Join-Path -Path $BuildRootPath -ChildPath '.output\nuget'
+    $pkgBaseName = "$($Name).$($pkg.Version)"
+
+    # Save-Module downloads dependencies, too. Save everything for a package into its own directory so we know which
+    # packages to install as dependencies.
+    $cachePath = Join-Path -Path $BuildRootPath -ChildPath ".output\nuget\$($pkgBaseName)"
     if( -not (Test-Path -Path $cachePath) )
     {
         New-Item -Path $cachePath -ItemType 'Directory' | Out-Null
     }
-
-    $pkgBaseName = "$($Name).$($pkg.Version)"
 
     $nupkgPath = Join-Path -Path $cachePath -ChildPath "$($pkgBaseName).nupkg"
     if( -not (Test-Path -Path $nupkgPath) )
@@ -78,6 +80,7 @@ function Install-WhiskeyNuGetPackage
         $pkgMgmtErrors = @()
         for( $idx = 0; $idx -lt $numTries; ++$idx )
         {
+            Write-WhiskeyInfo -Message "Downloading NuGet package $($pkg.Name) $($pkg.Version)."
             $pkg | Save-Package -Path $cachePath -ErrorAction SilentlyContinue -ErrorVariable 'pkgMgmtErrors' | Out-Null
 
             if( (Test-Path -Path $nupkgPath) )
@@ -103,17 +106,24 @@ function Install-WhiskeyNuGetPackage
         }
     }
 
-    $pkgPath = Join-Path -Path $BuildRootPath -ChildPath "packages\$($pkgBaseName)"
-    if( -not (Test-Path -Path $pkgPath)  )
+    $packagesPath = Join-Path -Path $BuildRootPath -ChildPath 'packages'
+
+    # Install the package and all its dependencies into 'packages'.
+    foreach( $pkgInfo in (Get-ChildItem -Path $cachePath -Filter '*.nupkg') )
     {
-        New-Item -Path $pkgPath -ItemType 'Directory' -Force | Out-Null
+        $pkgPath = Join-Path -Path $packagesPath -ChildPath $pkgInfo.BaseName
+        if( -not (Test-Path -Path $pkgPath) )
+        {
+            New-Item -Path $pkgPath -ItemType 'Directory' -Force | Out-Null
+        }
+
+        if( -not (Get-ChildItem -LiteralPath $pkgPath) )
+        {
+            Write-WhiskeyInfo -Message "Extracting ""$($pkgInfo.Name)"" to ""$($pkgPath | Resolve-Path -Relative)""."
+            Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
+            [IO.Compression.ZipFile]::ExtractToDirectory($pkgInfo.FullName, $pkgPath)
+        }
     }
 
-    if( -not (Get-ChildItem -LiteralPath $pkgPath) )
-    {
-        Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
-        [IO.Compression.ZipFile]::ExtractToDirectory($nupkgPath, $pkgPath)
-    }
-
-    return $pkgPath
+    return Join-Path -Path $packagesPath -ChildPath $pkgBaseName
 }

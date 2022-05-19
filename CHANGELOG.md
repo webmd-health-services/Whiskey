@@ -1,4 +1,9 @@
 
+# 0.50.1
+
+Fixed: NuGet package dependencies are not installed.
+
+
 # 0.50.0
 
 ## Upgrade Instructions

@@ -114,7 +114,6 @@ Describe 'buildPs1.when repo isn''t bootstrapped' {
         WhenBootstrapping
         ThenWhiskeyInstalled
         ThenNoErrors
-        ThenModule 'PackageManagement','PowerShellGet' -Not -Loaded
         ThenModule 'Whiskey' -Loaded
     }
 }

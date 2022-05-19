@@ -503,6 +503,5 @@ Describe 'NUnit3.when using custom version of NUnit 3' {
         GivenVersion '3.2.1'
         WhenRunningTask
         ThenPackageInstalled 'NUnit.ConsoleRunner' '3.2.1'
-        ThenTaskSucceeded
     }
 }
