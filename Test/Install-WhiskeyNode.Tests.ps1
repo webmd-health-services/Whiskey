@@ -282,6 +282,9 @@ function GivenAntiVirusLockingFiles
     Lock-File -Duration $For -Path $lockSignalPath -AVStartedPath $avSignalPath
 
     Mock -CommandName 'New-TimeSpan' -ModuleName 'Whiskey' -MockWith ([scriptblock]::Create(@"
+        `$DebugPreference = '$($DebugPreference)'
+        `$VerbosePreference = '$($VerbosePreference)'
+        
         `$prefix = '[New-TimeSpan]  '
         
         `$msg = "`$(`$prefix)[`$((Get-Date).ToString('HH:mm:ss.fff'))]  Waiting for A/V to start: looking for file " +
