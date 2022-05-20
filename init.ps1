@@ -36,12 +36,7 @@ $job = Start-Job {
     }
 }
 
-if( (Get-Command -Name 'Receive-Job' -ParameterName 'AutoRemoveJob') )
-{
-    $job | Receive-Job -AutoRemoveJob -Wait
-}
-else
-{
-    $job | Wait-Job | Receive-Job
-    $job | Remove-Job
-}
+$job | Wait-Job -Timeout 60 
+$job | Receive-Job
+$job | Remove-Job -Force
+$job
