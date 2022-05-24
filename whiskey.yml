@@ -3,6 +3,7 @@ Build:
 - TaskDefaults:
     Pester4:
         Verbose: false
+        Version: 4.*
 
 - Version:
     Path: Whiskey\Whiskey.psd1
@@ -77,6 +78,7 @@ Build:
 # queue only takes about 60 seconds and must be run separately.)
 - Parallel:
     ExceptOnPlatform: Windows
+    Timeout: 00:40:00
     Queues:
     - Tasks:
         # Needs to run in its own Pester task since it loads old versions of Whiskey.
@@ -134,6 +136,7 @@ Build:
 
 - Parallel:
     OnlyOnPlatform: Windows
+    Timeout: 00:40:00
     Queues:
     - Tasks:
         # Needs to run in its own Pester task since it loads old versions of Whiskey.

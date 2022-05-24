@@ -1,7 +1,18 @@
 
-# 0.50.2
+# 0.51.0
 
-Fixed: MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
+## Added
+
+* The Parallel task now has a timeout (default is 10 minutes) in which background jobs have to complete. If jobs take
+  longer than the timeout, the build will fail. Use the `Timeout` property to customize the job timeout.
+
+## Changes
+
+* Parallel task now watches each background job in order until it finishes, displaying its output while waiting.
+
+## Fixes
+
+* MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
 
 
 # 0.50.1
