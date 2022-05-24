@@ -1,4 +1,9 @@
 
+# 0.50.2
+
+Fixed: MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
+
+
 # 0.50.1
 
 Fixed: NuGet package dependencies are not installed.
