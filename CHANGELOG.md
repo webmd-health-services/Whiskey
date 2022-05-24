@@ -9,6 +9,8 @@
 ## Changes
 
 * Parallel task now watches each background job in order until it finishes, displaying its output while waiting.
+* When PowerShell task is executing a script block, it now writes the script block to output instead of the path and
+  args to the temporary script used to run the script block.
 
 ## Fixes
 

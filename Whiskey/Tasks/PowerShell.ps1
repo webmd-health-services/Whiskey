@@ -84,6 +84,7 @@ function Invoke-WhiskeyPowerShell
             $whiskeyScriptRoot = $using:whiskeyScriptRoot
             $resultPath = $using:resultPath
             $passTaskContext = $using:passTaskContext
+            $scriptBlockGiven = $using:scriptBlockGiven
 
             Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
@@ -93,17 +94,42 @@ function Invoke-WhiskeyPowerShell
 
             Set-Location $workingDirectory
 
-            $message = Resolve-Path -Path $scriptPath -Relative
-            if( $message.Contains(' ') )
+            $scriptPath = Resolve-Path -Path $scriptPath -Relative
+
+            if( $scriptBlockGiven )
             {
-                $message = '& "{0}"' -f $message
+                $message = ''
+                $lines = Get-Content -Path $scriptPath
+                if( ($lines | Measure-Object).Count -le 1 )
+                {
+                    Write-WhiskeyInfo -Context $context -Message ($lines | Select-Object -First 1)
+                }
+                else
+                {
+                    & {
+                        '' | Write-Output
+                        $lines | Write-Output
+                        '' | Write-Output
+                    } | Write-WhiskeyInfo -NoTiming
+                }
+            }
+            else
+            {
+                $message = $scriptPath
+                if( $message.Contains(' ') )
+                {
+                    $message = '& "{0}"' -f $message
+                }
             }
 
             $contextArgument = @{ }
             if( $passTaskContext )
             {
                 $contextArgument['TaskContext'] = $context
-                $message = '{0} -TaskContext $context' -f $message
+                if( $message )
+                {
+                    $message = '{0} -TaskContext $context' -f $message
+                }
             }
 
             if( $argument )
@@ -131,10 +157,16 @@ function Invoke-WhiskeyPowerShell
                         }
                         Write-Output $_
                     }
-                $message = '{0} {1}' -f $message,($argumentDesc -join ' ')
+                if( $message )
+                {
+                    $message = '{0} {1}' -f $message,($argumentDesc -join ' ')
+                }
             }
 
-            Write-WhiskeyInfo -Context $context -Message $message
+            if( $message )
+            {
+                Write-WhiskeyInfo -Context $context -Message $message
+            }
 
             $Global:LASTEXITCODE = 0
 
