@@ -2,19 +2,23 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-# Build the assemblies that use NUnit3. Only do this once.
-$latestNUnit3Version =
-    Find-Package -Name 'NUnit.Runners' -AllVersions |
-    Where-Object 'Version' -Like '3.*' |
-    Where-Object 'Version' -NotLike '*-*' |
-    Select-Object -First 1 |
-    Select-Object -ExpandProperty 'Version'
+# $packagesCacheRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
+# $nupkgCacheRoot = Join-Path -Path $PSScriptRoot -ChildPath '.output\nuget'
+# foreach( $cachePath in @($packagesCacheRoot, $nupkgCacheRoot) )
+# {
+#     if( -not (Test-Path $cachePath) )
+#     {
+#         New-Item -Path $cachePath -ItemType 'Directory' -Force
+#     }
+#     Get-ChildItem -Path $cachePath | Remove-Item -Recurse -Force -ErrorAction Ignore
+# }
 
-$nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
-$packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
-Remove-Item -Path $packagesRoot -Recurse -Force -ErrorAction Ignore
-& $nugetPath install 'NUnit.Runners' -Version $latestNUnit3Version -OutputDirectory $packagesRoot
-& $nugetPath install 'NUnit.Console' -Version $latestNUnit3Version -OutputDirectory $packagesRoot
+# Get-PackageSource -ProviderName 'NuGet' | Set-PackageSource -Trusted
+
+# Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNuGetPackage' `
+#                              -Parameter @{ Name = 'NUnit.Console'; Version = '3.*' ; BuildRootPath = $PSScriptRoot }
+# Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNuGetPackage' `
+#                              -Parameter @{ Name = 'NUnit.ConsoleRunner'; Version = '3.*' ; BuildRootPath = $PSScriptRoot }
 
 $argument = $null
 $failed = $false
@@ -52,6 +56,10 @@ function Init
         Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath "Assemblies\NUnit$($_)*Test\bin\*\*") `
             -Destination (Join-Path $buildRoot "NUnit$($_)Tests")
     }
+
+    # Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath 'packages') -Destination $buildRoot -Recurse
+
+    # Copy-Item -Path (JOin-Path -Path $PSScriptRoot -ChildPath '.output') -Destination $buildRoot -Recurse
 }
 
 function Get-GeneratedNUnitReport
@@ -166,7 +174,10 @@ function WhenRunningTask
     param(
     )
 
-    $taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $outputDirectory
+    $taskContext = New-WhiskeyTestContext -ForDeveloper `
+                                          -ForBuildRoot $buildRoot `
+                                          -ForOutputDirectory $outputDirectory `
+                                          -WithTaskTool 'NUnit3'
 
     $taskParameter = @{}
 
@@ -200,7 +211,8 @@ function WhenRunningTask
         $taskParameter['Version'] = $nunitVersion
     }
 
-    Copy-Item -Path $packagesRoot -Destination $buildRoot -Recurse -ErrorAction Ignore
+    # Copy-Item -Path $packagesCacheRoot -Destination $buildRoot -Recurse -ErrorAction Ignore
+    # Copy-Item -Path $nupkgCacheRoot -Destination $taskContext.OutputDirectory -Recurse -ErrorAction Ignore
 
     try
     {

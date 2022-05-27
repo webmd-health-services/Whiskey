@@ -335,39 +335,41 @@ function New-MSBuildProject
 function New-WhiskeyTestContext
 {
     param(
-        [String]$ForBuildRoot,
+        [String] $ForBuildRoot,
 
-        [String]$ForTaskName,
+        [String] $ForTaskName,
 
-        [String]$ForOutputDirectory,
+        [String] $ForOutputDirectory,
 
-        [switch]$InReleaseMode,
+        [switch] $InReleaseMode,
 
         [Parameter(Mandatory,ParameterSetName='ByBuildServer')]
         [Alias('ByBuildServer')]
-        [switch]$ForBuildServer,
+        [switch] $ForBuildServer,
 
         [Parameter(Mandatory,ParameterSetName='ByDeveloper')]
         [Alias('ByDeveloper')]
-        [switch]$ForDeveloper,
+        [switch] $ForDeveloper,
 
-        [SemVersion.SemanticVersion]$ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
+        [SemVersion.SemanticVersion] $ForVersion = [SemVersion.SemanticVersion]'1.2.3-rc.1+build',
 
-        [String]$ConfigurationPath,
+        [String] $ConfigurationPath,
 
-        [String]$ForYaml,
+        [String] $ForYaml,
 
-        [hashtable]$TaskParameter = @{},
+        [hashtable] $TaskParameter = @{},
 
-        [String]$DownloadRoot,
+        [String] $DownloadRoot,
 
-        [switch]$IgnoreExistingOutputDirectory,
+        [switch] $IgnoreExistingOutputDirectory,
 
-        [switch]$InCleanMode,
+        [switch] $InCleanMode,
 
-        [switch]$InInitMode,
+        [switch] $InInitMode,
 
-        [String[]]$IncludePSModule
+        [String[]] $IncludePSModule,
+
+        [String] $WithTaskTool
     )
 
     Set-StrictMode -Version 'Latest'
@@ -469,6 +471,40 @@ function New-WhiskeyTestContext
     if( $ForTaskName )
     {
         $context.StartTask($ForTaskName)
+    }
+
+    $outputPath = Join-Path -Path $PSScriptRoot -ChildPath '..\.output' -Resolve
+    $taskToolCachePath = Join-Path -Path $outputPath -ChildPath 't3c' # test task tool cache
+    if( -not (Test-Path -Path $taskToolCachePath) )
+    {
+        New-Item -Path $taskToolCachePath -ItemType 'Directory' -Force | Out-Null
+    }
+
+    if( $WithTaskTool )
+    {
+        $cachePath = Join-Path -Path $taskToolCachePath -ChildPath $WithTaskTool
+        if( -not (Test-Path -Path $cachePath) )
+        {
+            $cacheTempPath = "$($cachePath).temp"
+            $task = Get-WhiskeyTask | Where-Object Name -EQ $WithTaskTool
+            $cmd = Invoke-WhiskeyPrivateCommand -Name 'Get-Command' -Parameter @{ 'Name' = $task.CommandName }
+            $cmd.ScriptBlock.Attributes |
+                Where-Object { $_ -is [Whiskey.RequiresToolAttribute] } |
+                ForEach-Object { 
+                    $requiredTool = $_
+                    Install-WhiskeyTool -ToolInfo $requiredTool `
+                                        -InstallRoot $cacheTempPath `
+                                        -TaskParameter $TaskParameter `
+                                        -OutFileRootPath $outputPath
+                } |
+                Out-Null
+
+            # Atomic installs.
+            Rename-Item -Path $cacheTempPath -NewName ($cachePath | Split-Path -Leaf)
+        }
+
+        Get-ChildItem -Path $cachePath |
+            Copy-Item -Destination $context.BuildRoot.FullName -Recurse -ErrorAction Ignore
     }
 
     return $context
