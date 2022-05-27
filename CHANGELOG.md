@@ -1,4 +1,22 @@
 
+# 0.51.0
+
+## Added
+
+* The Parallel task now has a timeout (default is 10 minutes) in which background jobs have to complete. If jobs take
+  longer than the timeout, the build will fail. Use the `Timeout` property to customize the job timeout.
+
+## Changes
+
+* Parallel task now watches each background job in order until it finishes, displaying its output while waiting.
+* When PowerShell task is executing a script block, it now writes the script block to output instead of the path and
+  args to the temporary script used to run the script block.
+
+## Fixes
+
+* MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
+
+
 # 0.50.1
 
 Fixed: NuGet package dependencies are not installed.

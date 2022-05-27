@@ -8,6 +8,7 @@ $InformationPreference = 'Continue'
 # Run in a background job so that old PackageManagement assemblies don't get loaded.
 $job = Start-Job {
     $InformationPreference = 'Continue'
+    $ProgressPreference = 'SilentlyContinue'
     $psGalleryRepo = Get-PSRepository -Name 'PSGallery'
     $repoToUse = $psGalleryRepo.Name
     # On Windows 2012 R2, Windows PowerShell 5.1, and .NET 4.6.2, PSGallery's URL ends with a '/'.
@@ -26,7 +27,7 @@ $job = Start-Job {
     if( -not (Get-Module -Name 'PackageManagement' -ListAvailable | Where-Object 'Version' -eq '1.4.7') )
     {
         Write-Information -MessageData 'Installing PowerShell module PackageManagement 1.4.7.'
-        Install-Module -Name 'PackageManagement' -RequiredVersion '1.4.7'-Repository $repoToUse -AllowClobber -Force
+        Install-Module -Name 'PackageManagement' -RequiredVersion '1.4.7' -Repository $repoToUse -AllowClobber -Force
     }
 
     if( -not (Get-Module -Name 'PowerShellGet' -ListAvailable | Where-Object 'Version' -eq '2.2.5') )
@@ -36,7 +37,10 @@ $job = Start-Job {
     }
 }
 
-$job | Wait-Job -Timeout 60 
-$job | Receive-Job
+Write-Information "Waiting for job to complete $($job.JobStateInfo.State)."
+$job | Wait-Job -Timeout 60
+Write-Information "Receiving job output $($job.JobStateInfo.State)."
+$job | Receive-Job -InformationAction SilentlyContinue
+Write-Information "Removing job $($job.JobStateInfo.State)."
 $job | Remove-Job -Force
 $job
