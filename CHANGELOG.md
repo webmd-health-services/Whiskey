@@ -1,4 +1,9 @@
 
+# 0.51.1
+
+* Fixed: the `Version` task fails when reading version from a Node.js package.json file.
+
+
 # 0.51.0
 
 ## Added
