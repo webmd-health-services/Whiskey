@@ -390,8 +390,8 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
     It 'should install the version in the attribute' {
         Init
         Install-Node -BuildRoot $testRoot
-        WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.20.0'
-        ThenNodeModuleInstalled 'axios' -AtVersion '0.20.0'
+        WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.21.1'
+        ThenNodeModuleInstalled 'axios' -AtVersion '0.21.1'
     }
 }
 
