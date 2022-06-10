@@ -163,6 +163,8 @@
                 {
                     $msg = "Retrieving versions for NPM package $($pkgName)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                    Install-WhiskeyNode -InstallRootPath $TaskContext.BuildRoot `
+                                        -OutFileRootPath $TaskContext.OutputDirectory
                     $versions = Invoke-WhiskeyNpmCommand -Name 'show' `
                                                          -ArgumentList @($pkgName, 'versions', '--json') `
                                                          -BuildRoot $TaskContext.BuildRoot `
