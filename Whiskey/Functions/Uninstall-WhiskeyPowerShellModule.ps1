@@ -39,7 +39,7 @@ function Uninstall-WhiskeyPowerShellModule
 
     Get-Module -Name $Name | Remove-Module -Force
 
-    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $powerShellModulesDirectoryName
+    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $script:psModulesDirectoryName
     if( $Path )
     {
         $modulesRoot = $Path

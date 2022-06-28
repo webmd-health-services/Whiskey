@@ -664,11 +664,19 @@ Build:
 Describe 'Zip.when Zip module not installed' {
     AfterEach {
         Reset
-        Register-WhiskeyPSModulesPath
+        $whiskeyZipPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Zip.MOVED' -Resolve -ErrorAction Ignore
+        if( $whiskeyZipPath )
+        {
+            Rename-Item -Path $whiskeyZipPath -NewName 'Zip'
+        }
     }
     It 'should install Zip module' {
         Init
-        Unregister-WhiskeyPSModulesPath
+        $whiskeyZipPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Zip' -Resolve -ErrorAction Ignore
+        if( $whiskeyZipPath )
+        {
+            Rename-Item -Path $whiskeyZipPath -NewName 'Zip.MOVED'
+        }
         GivenARepositoryWithItems 'fubar.txt' -AndModuleNotInstalled
         WhenPackaging @'
 Build:
@@ -677,6 +685,6 @@ Build:
     Path: fubar.txt
 '@ -AndModuleNotInstalled
         $latestZip = Find-Module -Name 'Zip' | Select-Object -First 1
-        ThenModuleInstalled 'Zip' -AtVersion $latestZip.Version -InBuildRoot $context.BuildRoot
+        Join-Path -Path $context.BuildRoot -ChildPath "PSModules\Zip\$($latestZip.Version)" | Should -Exist
     }
 }

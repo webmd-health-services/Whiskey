@@ -10,7 +10,6 @@ $latestZip = $allZipVersions | Select-Object -First 1
 $result = $null
 $expectedModuleName = $null
 $expectedModuleVersion = $null
-
 $installedModules = @()
 
 function GivenModule
@@ -46,7 +45,9 @@ function Init
     $script:testRoot = New-WhiskeyTestRoot
     $script:installedModules = @()
 
-    Initialize-WhiskeyTestPSModule -BuildRoot $testRoot
+    Remove-Module -Name 'PackageManagement', 'PowerShellGet' -ErrorAction Ignore
+
+    Initialize-WhiskeyTestPSModule -BuildRoot $testRoot -Name 'PackageManagement', 'PowerShellGet'
 
     Reset-WhiskeyPSModulePath
     Unregister-WhiskeyPSModulesPath
@@ -71,6 +72,7 @@ function Install-PowerShellModule
 
 function Reset
 {
+    Remove-Module -Name 'PackageManagement', 'PowerShellGet' -ErrorAction Ignore
     Reset-WhiskeyTestPSModule
     Reset-WhiskeyPSModulePath
     Register-WhiskeyPSModulesPath

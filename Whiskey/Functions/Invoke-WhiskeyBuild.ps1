@@ -85,6 +85,9 @@ function Invoke-WhiskeyBuild
 
     Register-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
 
+    $psModulesPath = Join-Path -Path $Context.BuildRoot -ChildPath $script:psModulesDirectoryName
+    Install-WhiskeyRequiredModule -PSModulesPath $psModulesPath
+
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
     $succeeded = $false

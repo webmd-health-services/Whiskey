@@ -232,8 +232,8 @@ Describe 'Pester.when not running task in job' {
         GivenTestFile 'PassingTests.Tests.ps1' @"
 Describe 'PassingTests' {
     It 'should run inside Whiskey' {
-        Test-Path -Path 'variable:powershellModulesDirectoryName' | Should -BeTrue
-        `$powerShellModulesDirectoryName | Should -Be "$($TestPSModulesDirectoryName)"
+        Test-Path -Path 'variable:psModulesDirectoryName' | Should -BeTrue
+        `$script:psModulesDirectoryName | Should -Be "$($TestPSModulesDirectoryName)"
     }
 }
 "@

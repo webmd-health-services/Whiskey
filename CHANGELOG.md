@@ -1,4 +1,13 @@
 
+# 0.52.0
+
+* PowerShellGet minimum required version is now 2.0.0.
+* PackageManagement PowerShell module minimum required version is now 1.3.2.
+* If a minimum version of PowerShellGet or PackageManagement isn't installed, Whiskey installs PowerShellGet 2.2.5 and
+  PackageManagement 1.4.7 into the repository's private PSModules directory. So, Whiskey still requires PowerShellGet
+  and PackageManagement, but will install them if needed.
+
+
 # 0.51.1
 
 * Fixed: the `Version` task fails when reading version from a Node.js package.json file.

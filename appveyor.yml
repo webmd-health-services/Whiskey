@@ -28,7 +28,7 @@ environment:
 
   - job_name: Windows PowerShell 5.1/.NET 4.8
     job_group: ps
-    appveyor_build_worker_image: Visual Studio 2019
+    appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
 
   - job_name: PowerShell 6.2 on Windows
     job_group: pwsh
@@ -53,29 +53,11 @@ for:
     only:
     - job_group: ps
   build_script:
-  - ps: |
-      try
-      {
-          ./init.ps1
-          ./build.ps1
-      }
-      finally
-      {
-          $Global:Error | Format-List * -Force
-      }
+  - ps: .\build.ps1
 
 # Build in PowerShell
 - matrix:
     only:
     - job_group: pwsh
   build_script:
-  - pwsh: |
-      try
-      {
-          ./init.ps1
-          ./build.ps1
-      }
-      finally
-      {
-          $Global:Error | Format-List * -Force
-      }
+  - pwsh: ./build.ps1
