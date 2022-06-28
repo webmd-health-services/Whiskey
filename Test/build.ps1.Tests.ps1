@@ -4,11 +4,12 @@ Set-StrictMode -Version 'Latest'
 
 $testRoot = $null
 $buildPs1Path = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\build.ps1' -Resolve
+$script:testNum = 0
 
 function Init
 {
     Get-Module 'PowerShellGet','Whiskey','PackageManagement' | Remove-Module -Force -ErrorAction Ignore
-    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ([IO.Path]::GetRandomFileName())
+    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath($script:testNum++)
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
 }
 
@@ -20,6 +21,7 @@ $releases =
 $latestRelease = 
     $releases |
     Where-Object 'name' -NotLike '*-*' |
+    Where-Object 'name' -NotLike '*+*' |
     Sort-Object -Property 'created_at' -Descending |
     Select-Object -First 1
 
@@ -66,7 +68,7 @@ function ThenNoErrors
 
 function ThenWhiskeyInstalled
 {
-    $moduleDirName = $latestRelease.name -replace '-.*$',''
+    $moduleDirName = $latestRelease.name -replace '(-.*)?(\+.*)?$',''
     $path = Join-Path -Path $testRoot -ChildPath ('PSModules\Whiskey\{0}\Whiskey.ps*1' -f $moduleDirName)
     $path | Should -Exist
     $path | Get-Item | Should -HaveCount 2
