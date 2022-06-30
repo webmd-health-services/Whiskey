@@ -56,9 +56,11 @@ function Invoke-NuGetInstall
 
         if( $WithDependencies )
         {
+            $packagesRoot = Join-Path -Path $testRoot -ChildPath 'packages'
+            Get-ChildItem -Path $packagesRoot | Format-Table | Out-String | Write-Debug
             foreach( $dep in $WithDependencies )
             {
-                Join-Path -Path $testRoot -ChildPath "packages\$($dep)" | Should -Exist
+                Join-Path -Path $packagesRoot -ChildPath $dep | Should -Exist
             }
         }
     }
@@ -91,7 +93,7 @@ if( $IsWindows )
             Init
             Invoke-NuGetInstall -package 'NUnit.Console' -version '3.15.0' -WithDependencies @(
                 'NUnit.Console.3.15.0',
-                'NUnit.ConsoleRunner.3.15.0',
+                'NUnit.ConsoleRunner.3.15.*',
                 'NUnit.Extension.NUnitProjectLoader.3.7.1',
                 'NUnit.Extension.NUnitV2Driver.3.9.0',
                 'NUnit.Extension.NUnitV2ResultWriter.3.7.0',
