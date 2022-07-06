@@ -19,7 +19,14 @@ Build:
       Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
 
 - PowerShell:
-    ScriptBlock: prism install
+    ScriptBlock: |
+        if( -not (Get-Command -Name 'prism' -ErrorAction Ignore) )
+        {
+            $module = Find-Module -Name 'Prism' -MinimumVersion '0.4.0' | Select-Object -First 1
+            Set-PSRepository -Name $module.Repository -InstallationPolicy Trusted
+            $module | Install-Module -AllowClobber -Scope CurrentUser
+        }
+        prism install | Format-Table -Auto
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:

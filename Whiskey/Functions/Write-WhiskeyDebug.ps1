@@ -30,7 +30,7 @@ function Write-WhiskeyDebug
 
     Demonstrates how to pipe messages to `Write-WhiskeyDebug`. 
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='NoIndent')]
     param(
         # The context of the current build.
         [Whiskey.Context]$Context,
@@ -41,13 +41,24 @@ function Write-WhiskeyDebug
         # The message to write. Before being written, the message will be prefixed with the duration of the current build and the current task name (if any). If the current duration can't be determined, then the current time is used.
         #
         # If you pipe multiple messages, they are grouped together.
-        [String]$Message
+        [String]$Message,
+
+        [Parameter(Mandatory, ParameterSetName='Indent')]
+        [switch] $Indent,
+
+        [Parameter(Mandatory, ParameterSetName='Outdent')]
+        [switch] $Outdent
     )
 
     begin
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+        if( $Outdent )
+        {
+            $script:indentLevel -= 1
+        }
 
         $write = $DebugPreference -notin @( [Management.Automation.ActionPreference]::Ignore, [Management.Automation.ActionPreference]::SilentlyContinue )
 
@@ -69,10 +80,29 @@ function Write-WhiskeyDebug
         {
             return
         }
+
+        if( $indentLevel -gt 0 )
+        {
+            $prefix = ' ' * ($indentLevel * 4)
+            foreach( $line in ($Message -split '\n\r?') )
+            {
+                $newMsg = "$($prefix)$($line)"
+
+                if( $PSCmdlet.MyInvocation.ExpectingInput )
+                {
+                    [void]$messages.Add($newMsg)
+                    return
+                }
+            
+                Write-WhiskeyInfo -Context $Context -Message $newMsg -Level 'Debug'
+            }
+
+            return
+        }
         
         if( $PSCmdlet.MyInvocation.ExpectingInput )
         {
-            [Void]$messages.Add($Message)
+            [void]$messages.Add($Message)
             return
         }
        
@@ -81,14 +111,24 @@ function Write-WhiskeyDebug
 
     end
     {
-        if( -not $write )
+        try
         {
-            return
+            if( -not $write )
+            {
+                return
+            }
+            
+            if( $messages )
+            {
+                Write-WhiskeyInfo -Context $Context -Level 'Debug' -Message $messages
+            }
         }
-        
-        if( $messages )
+        finally
         {
-            Write-WhiskeyInfo -Context $Context -Level 'Debug' -Message $messages
+            if( $Indent )
+            {
+                $script:indentLevel += 1
+            }
         }
     }
 }

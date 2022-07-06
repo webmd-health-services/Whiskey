@@ -489,8 +489,18 @@ function New-WhiskeyTestRoot
 
 function Register-WhiskeyPSModulesPath
 {
+    param(
+        # Return $true or $false if the PSModulePath env variable was modified or not, respectively.
+        [switch] $PassThru
+    )
+
+    $pathBefore = $env:PSModulePath
     $whiskeyPSModulesPath = Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules' -Resolve
     Invoke-WhiskeyPrivateCommand -Name 'Register-WhiskeyPSModulePath' -Parameter @{ 'Path' = $whiskeyPSModulesPath }
+    if( $PassThru )
+    {
+        return ($env:PSModulePath -ne $pathBefore)
+    }
 }
 
 function Remove-Node

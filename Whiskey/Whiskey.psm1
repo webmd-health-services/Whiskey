@@ -12,7 +12,7 @@ function Write-Timing
 }
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-$powerShellModulesDirectoryName = 'PSModules'
+$psModulesDirectoryName = 'PSModules'
 
 $whiskeyScriptRoot = $PSScriptRoot
 $whiskeyBinPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'bin' -Resolve
@@ -25,6 +25,9 @@ $PSModuleAutoLoadingPreference = 'None'
 # The indentation to use when writing task messages.
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $taskWriteIndent = '  '
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+$indentLevel = 0
 
 # PowerShell 5.1 doesn't have these variables so create them if they don't exist.
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
@@ -39,6 +42,18 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsWindows = $true
 }
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+[Version] $pkgMgmtMinVersion = '1.3.2'
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+[Version] $pkgMgmtMaxVersion = '1.4.7'
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+[Version] $psGetMinVersion = '2.0.0'
+
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+[Version] $psGetMaxVersion = '2.2.5'
 
 if( -not (Test-Path -Path 'env:WHISKEY_DISABLE_ERROR_FORMAT') )
 {

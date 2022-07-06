@@ -17,30 +17,39 @@ function Register-WhiskeyPSModulePath
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
-    if( $PSCmdlet.ParameterSetName -eq 'FromWhiskey' )
-    {
-        $Path = Get-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
-    }
 
-    $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator
+    Write-WhiskeyDebug '\Register-WhiskeyPSModulePath\' -Indent
+    
     try
     {
-        if( $pathBefore -contains $Path )
+        if( $PSCmdlet.ParameterSetName -eq 'FromWhiskey' )
         {
-            return
+            $Path = Get-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
         }
 
-        $env:PSModulePath = $Path,$env:PSModulePath -join [IO.Path]::PathSeparator
+        $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator
+        try
+        {
+            if( $pathBefore -contains $Path )
+            {
+                return
+            }
+
+            $env:PSModulePath = $Path,$env:PSModulePath -join [IO.Path]::PathSeparator
+        }
+        finally
+        {
+            Write-WhiskeyDebug "Changes to PSModulePath:"
+            $pathNow = $env:PSModulePath -split [IO.Path]::PathSeparator
+            $diff = Compare-Object -ReferenceObject $pathBefore -DifferenceObject $pathNow -IncludeEqual
+            if( $diff )
+            {
+                $diff | Format-Table -AutoSize | Out-String | Write-WhiskeyDebug
+            }
+        }
     }
     finally
     {
-        Write-WhiskeyDebug "[Register-WhiskeyPSModulePath]  Changes to PSModulePath:"
-        $pathNow = $env:PSModulePath -split [IO.Path]::PathSeparator
-        $diff = Compare-Object -ReferenceObject $pathBefore -DifferenceObject $pathNow -IncludeEqual
-        if( $diff )
-        {
-            $diff | Format-Table -AutoSize | Out-String | Write-WhiskeyDebug
-        }
+        Write-WhiskeyDebug '/Register-WhiskeyPSModulePath/' -Outdent
     }
 }

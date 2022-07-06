@@ -81,7 +81,9 @@ function Install-WhiskeyNuGetPackage
         for( $idx = 0; $idx -lt $numTries; ++$idx )
         {
             Write-WhiskeyInfo -Message "Downloading NuGet package $($pkg.Name) $($pkg.Version)."
-            $pkg | Save-Package -Path $cachePath -ErrorAction SilentlyContinue -ErrorVariable 'pkgMgmtErrors' | Out-Null
+            $pkg |
+                Save-Package -Path $cachePath -ErrorAction SilentlyContinue -ErrorVariable 'pkgMgmtErrors' -Force |
+                Out-Null
 
             if( (Test-Path -Path $nupkgPath) )
             {

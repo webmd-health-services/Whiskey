@@ -52,90 +52,102 @@ function Get-WhiskeyPSModule
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
+    Write-WhiskeyDebug '\Get-WhiskeyPSModule\' -Indent
+
     Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
-    
-    Write-WhiskeyDebug '[Get-WhiskeyPSModules]  PSModulePath:'
-    $env:PSModulePath -split [IO.Path]::PathSeparator |
-        ForEach-Object { "  $($_)"} |
-        Write-WhiskeyDebug
-    $modules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
-    $modules | Out-String | Write-WhiskeyDebug
-    $modules |
-        Where-Object {
-            if( -not $Version )
-            {
-                return $true
-            }
 
-            $moduleInfo = $_
+    try
+    {
+        Write-WhiskeyDebug '\env:PSModulePath\' -Indent
+        $env:PSModulePath -split [IO.Path]::PathSeparator | Write-WhiskeyDebug
+        Write-WhiskeyDebug '/env:PSModulePath/' -Outdent
 
-            $moduleVersion = $moduleInfo.Version
-            $prerelease = ''
-            if( ($moduleInfo | Get-Member 'PreRelease') )
-            {
-                $prerelease = $moduleInfo.PreRelease
-            }
-            else
-            {
-                $privateData = $moduleInfo.PrivateData
-                if( $privateData )
+        Write-WhiskeyDebug "\Get-Module -Name ''$($Name)'' -ListAvailable\" -Indent
+        $modules = Get-Module -Name $Name -ListAvailable -ErrorAction Ignore
+        $modules | Out-String | Write-WhiskeyDebug
+        Write-WhiskeyDebug "/Get-Module -Name ''$($Name)'' -ListAvailable/" -Outdent
+
+        $modules |
+            Where-Object {
+                if( -not $Version )
                 {
-                    $psdata = $privateData['PSData']
-                    if( $psdata )
+                    return $true
+                }
+
+                $moduleInfo = $_
+
+                $moduleVersion = $moduleInfo.Version
+                $prerelease = ''
+                if( ($moduleInfo | Get-Member 'PreRelease') )
+                {
+                    $prerelease = $moduleInfo.PreRelease
+                }
+                else
+                {
+                    $privateData = $moduleInfo.PrivateData
+                    if( $privateData )
                     {
-                        $prerelease = $psdata['Prerelease']
+                        $psdata = $privateData['PSData']
+                        if( $psdata )
+                        {
+                            $prerelease = $psdata['Prerelease']
+                        }
                     }
                 }
-            }
 
-            if( $prerelease )
-            {
-                $moduleVersion = "$($moduleVersion)-$($prerelease)"
-            }
-
-            $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($Version)""."
-            Write-WhiskeyDebug -Message $msg
-            return $moduleVersion -like $Version
-        } |
-        Add-Member -Name 'ManifestPath' `
-                   -MemberType ScriptProperty `
-                   -Value { return Join-Path -Path ($_.Path | Split-Path) -ChildPath "$($_.Name).psd1" } `
-                   -Force `
-                   -PassThru |
-        Where-Object {
-            $module = $_
-
-            # Make sure there's a valid module there.
-            $numErrorsBefore = $Global:Error.Count
-            $manifest = $null
-            $debugMsg = "Module $($module.Name) $($module.Version) ($($module.ManifestPath)) has "
-            try
-            {
-                $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore -WarningAction Ignore
-                Write-WhiskeyDebug -Message ("$($debugMsg)a valid manifest.")
-            }
-            catch
-            {
-                Write-WhiskeyDebug -Message ("$($debugMsg)an invalid manifest: $($_).")
-                $numErrorsToRemove = $Global:Error.Count - $numErrorsBefore
-                for( $idx = 0; $idx -lt $numErrorsToRemove; ++$idx )
+                if( $prerelease )
                 {
-                    $Global:Error.RemoveAt(0)
+                    $moduleVersion = "$($moduleVersion)-$($prerelease)"
                 }
-            }
 
-            if( -not $manifest )
-            {
-                return $false
-            }
+                $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($Version)""."
+                Write-WhiskeyDebug -Message $msg
+                return $moduleVersion -like $Version
+            } |
+            Add-Member -Name 'ManifestPath' `
+                    -MemberType ScriptProperty `
+                    -Value { return Join-Path -Path ($_.Path | Split-Path) -ChildPath "$($_.Name).psd1" } `
+                    -Force `
+                    -PassThru |
+            Where-Object {
+                $module = $_
 
-            return $true
-        } |
-        # Get the highest versioned module in the order in which they appear in the PSModulePath environment variable.
-        Group-Object -Property 'Version' |
-        Sort-Object -Property { [Version]$_.Name } -Descending |
-        Select-Object -First 1 |
-        Select-Object -ExpandProperty 'Group' |
-        Select-Object -First 1
+                # Make sure there's a valid module there.
+                $numErrorsBefore = $Global:Error.Count
+                $manifest = $null
+                $debugMsg = "Module $($module.Name) $($module.Version) ($($module.ManifestPath)) has "
+                try
+                {
+                    $manifest = Test-ModuleManifest -Path $module.ManifestPath -ErrorAction Ignore -WarningAction Ignore
+                    Write-WhiskeyDebug -Message ("$($debugMsg)a valid manifest.")
+                }
+                catch
+                {
+                    Write-WhiskeyDebug -Message ("$($debugMsg)an invalid manifest: $($_).")
+                    $numErrorsToRemove = $Global:Error.Count - $numErrorsBefore
+                    for( $idx = 0; $idx -lt $numErrorsToRemove; ++$idx )
+                    {
+                        $Global:Error.RemoveAt(0)
+                    }
+                }
+
+                if( -not $manifest )
+                {
+                    return $false
+                }
+
+                return $true
+            } |
+            # Get the highest versioned module in the order in which they appear in the PSModulePath environment variable.
+            Group-Object -Property 'Version' |
+            Sort-Object -Property { [Version]$_.Name } -Descending |
+            Select-Object -First 1 |
+            Select-Object -ExpandProperty 'Group' |
+            Select-Object -First 1
+    }
+    finally
+    {
+        Write-WhiskeyDebug '/Get-WhiskeyPSModule/' -Outdent
+    }
 }
