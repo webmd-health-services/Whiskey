@@ -1,4 +1,9 @@
 
+# 0.52.1
+
+* Fixed: typo in command name. Mis-typed `Convert-Path` as `ConvertPath`.
+
+
 # 0.52.0
 
 * PowerShellGet minimum required version is now 2.0.0.

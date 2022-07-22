@@ -18,7 +18,7 @@ function Get-MSBuild
             Select-Object -ExpandProperty 'MSBuildToolsPath' -ErrorAction Ignore
         if( -not $toolsPath )
         {
-            $msg = "$($indent)Skipping registry key ""$($Key | ConvertPath)"": key value ""MSBuildToolsPath"" " +
+            $msg = "$($indent)Skipping registry key ""$($Key | Convert-Path)"": key value ""MSBuildToolsPath"" " +
                    'doesn''t exist.'
             Write-WhiskeyVerbose -Message $msg
             return ''
@@ -30,7 +30,7 @@ function Get-MSBuild
             return $path
         }
 
-        $msg = "$($indent)Skipping registry key ""$($Key | ConvertPath)"": key value ""MSBuildToolsPath"" " +
+        $msg = "$($indent)Skipping registry key ""$($Key | Convert-Path)"": key value ""MSBuildToolsPath"" " +
                 "is path ""$($path)"", which doesn't exist."
         Write-WhiskeyVerbose -Message $msg
         return ''
@@ -59,7 +59,7 @@ function Get-MSBuild
         $name = $key.Name | Split-Path -Leaf
         if( -not ($name | Test-Version) )
         {
-            $msg = "$($preindentfix)Skipping registry key ""$($key | ConvertPath)"": name isn't a version number."
+            $msg = "$($preindentfix)Skipping registry key ""$($key | Convert-Path)"": name isn't a version number."
             Write-WhiskeyVerbose -Message $msg
             continue
         }
