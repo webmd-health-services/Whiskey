@@ -3,8 +3,6 @@
 {
     [CmdletBinding()]
     [Whiskey.Task('Version')]
-    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.*',
-        VersionParameterName='PackageManagementVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,

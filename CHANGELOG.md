@@ -1,4 +1,9 @@
 
+# 0.52.2
+
+* Fixed: PowerShellGet and PackageManagement are installed as a requirement at the beginning of a Whiskey build so there is no need for Whiskey tasks to have a `[Whiskey.RequiresPowerShellModule()]` tag for these modules. These requirement have been removed from the following tasks: `Version`, `PublishPowerShellModule`, and `PublishPowerShellScript`.
+
+
 # 0.52.1
 
 * Fixed: typo in command name. Mis-typed `Convert-Path` as `ConvertPath`.

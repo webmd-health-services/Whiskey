@@ -2,8 +2,6 @@
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task('PublishPowerShellModule')]
-    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.*', VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresPowerShellModule('PowerShellGet', Version='2.*', VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
