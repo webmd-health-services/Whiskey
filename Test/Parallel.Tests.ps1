@@ -55,15 +55,17 @@ function WhenRunningTask
 
     $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
 
-    $Global:Error.Clear()
     $script:failed = $false
     $jobCount = Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count'
+    Mock -CommandName 'Start-Sleep' -ModuleName 'Whiskey' # So tests don't take extra time.
     try
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter -ErrorAction Continue
+        $Global:Error.Clear()
+        Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter #-ErrorAction Continue
     }
     catch
     {
+        $_ | Write-Error
         $script:failed = $true
     }
 
@@ -165,7 +167,7 @@ Queues:
 '@
         WhenRunningTask $task -ErrorAction SilentlyContinue
         ThenFailed
-        ThenErrorIs 'Queue\[1\]\ failed\.'
+        ThenErrorIs 'didn''t finish successfully'
     }
 }
 
@@ -188,86 +190,6 @@ Queues:
         ThenCompleted
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
         File 'two.txt' -ContentShouldBe ('2{0}' -f [Environment]::NewLine)
-    }
-}
-
-Describe 'Parallel.when second queue finishes before first queue' {
-    It 'should wait for all queues to finish' {
-        Init
-        $twoPidPath = Join-Path -Path $testRoot -ChildPath 'two.ps1.pid'
-        GivenFile 'one.ps1' @"
-`$pidPath = '$($twoPidPath)'
-`$prefix = "[ONE]  [`$(`$PID)]  "
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for ""`$(`$pidPath)"" to exist."
-`$writeNewline = `$false
-while( -not (Test-Path -Path `$pidPath) )
-{
-    Write-Host '.' -NoNewLine
-    Start-Sleep -Seconds 1
-    `$writeNewline = `$true
-}
-if( `$writeNewline )
-{
-    Write-Host ''
-}
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  ""`$(`$pidPath)"" exists."
-
-`$twoPid = Get-Content -Path `$pidPath -ReadCount 1
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Waiting for process ""`$(`$twoPid)"" exists."
-`$writeNewline = `$false
-while( (Get-Process -Id `$twoPid -ErrorAction Ignore) )
-{
-    Write-Host '.' -NoNewLine
-    Start-Sleep -Seconds 1
-    `$writeNewline = `$true
-}
-if( `$writeNewline )
-{
-    Write-Host ''
-}
-
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Process ""`$(`$twoPid)"" no longer exists."
-if( `$Global:Error )
-{
-    `$Global:Error | Format-List * -Force | Out-String | Write-Host
-}
-# Seen up to four seconds difference between one writing to stdout and two writing to stdout and one's output showing
-# up first. Doubling that then rounded up to 10.
-Start-Sleep -Seconds 10
-
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 1 to output."
-1 | Write-Output
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
-"@
-
-        GivenFile 'two.ps1' @"
-`$prefix = "[TWO]  [`$(`$PID)]  "
-`$pidPath = '$($twoPidPath)'
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Saving PID to ""`$(`$pidPath)""."
-`$PID | Set-Content -Path `$pidPath
-if( `$Global:Error )
-{
-    `$Global:Error | Format-List * -Force | Out-String | Write-Host
-}
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Writing 2 to output."
-2 | Write-Output
-Write-Host "`$(`$prefix)`$((Get-Date).ToString('HH:mm:ss.fff'))  Exiting."
-"@
-        $task = Invoke-ImportWhiskeyYaml -Yaml @'
-Queues:
-- Tasks:
-    - PowerShell:
-        Path: one.ps1
-- Tasks:
-    - PowerShell:
-        Path: two.ps1
-'@
-        [Object[]]$output = WhenRunningTask $task #-ErrorAction SilentlyContinue
-        ThenCompleted
-        $output | Should -HaveCount 2
-        $output[0] | Should -Be 2
-        $output[1] | Should -Be 1
-        ThenNoErrors
     }
 }
 
@@ -417,5 +339,24 @@ Build:
         {
             Remove-Module 'WhiskeyTestTasks'
         }
+    }
+}
+
+Describe 'Parallel.when background tasks take too long' {
+    It 'they should be cancelled and stopped' {
+        Init
+        $task = Invoke-ImportWhiskeyYaml -Yaml @'
+Timeout: 00:00:00.1
+Queues:
+- Tasks:
+    - PowerShell:
+        ScriptBlock: "Start-Sleep -Seconds 10 ; throw 'Fubar'"
+- Tasks:
+    - PowerShell:
+        ScriptBlock: Start-Sleep -Seconds 10 ; throw 'Snafu'"
+'@
+        WhenRunningTask $task -ErrorAction SilentlyContinue
+        ThenFailed
+        ThenErrorIs 'background jobs timed out'
     }
 }

@@ -1,4 +1,3 @@
-
 function Get-MSBuild
 {
     [CmdletBinding()]
@@ -14,9 +13,14 @@ function Get-MSBuild
             [Microsoft.Win32.RegistryKey]$Key
         )
 
-        $toolsPath = Get-ItemProperty -Path $Key.PSPath -Name 'MSBuildToolsPath' -ErrorAction Ignore | Select-Object -ExpandProperty 'MSBuildToolsPath' -ErrorAction Ignore
+        $toolsPath =
+            Get-ItemProperty -Path $Key.PSPath -Name 'MSBuildToolsPath' -ErrorAction Ignore |
+            Select-Object -ExpandProperty 'MSBuildToolsPath' -ErrorAction Ignore
         if( -not $toolsPath )
         {
+            $msg = "$($indent)Skipping registry key ""$($Key | Convert-Path)"": key value ""MSBuildToolsPath"" " +
+                   'doesn''t exist.'
+            Write-WhiskeyVerbose -Message $msg
             return ''
         }
 
@@ -26,6 +30,9 @@ function Get-MSBuild
             return $path
         }
 
+        $msg = "$($indent)Skipping registry key ""$($Key | Convert-Path)"": key value ""MSBuildToolsPath"" " +
+                "is path ""$($path)"", which doesn't exist."
+        Write-WhiskeyVerbose -Message $msg
         return ''
     }
 
@@ -38,8 +45,10 @@ function Get-MSBuild
 
         [Version]$version = $null
         [Version]::TryParse($InputObject,[ref]$version)
-
     }
+
+    Write-WhiskeyVerbose '[Get-MSBuild]'
+    $indent = '  '
 
     $toolsVersionRegPath = 'HKLM:\SOFTWARE\Microsoft\MSBuild\ToolsVersions'
     $toolsVersionRegPath32 = 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions'
@@ -50,6 +59,8 @@ function Get-MSBuild
         $name = $key.Name | Split-Path -Leaf
         if( -not ($name | Test-Version) )
         {
+            $msg = "$($preindentfix)Skipping registry key ""$($key | Convert-Path)"": name isn't a version number."
+            Write-WhiskeyVerbose -Message $msg
             continue
         }
 
@@ -73,11 +84,13 @@ function Get-MSBuild
             }
         }
 
+        Write-WhiskeyVerbose ("$($indent)Found MSBuild $($name) at ""$($msbuildPath)"".")
         [pscustomobject]@{
             Name = $name;
             Version = [Version]$name;
             Path = $msbuildPath;
             Path32 = $msbuildPath32;
+            PathArm64 = '';
         }
     }
 
@@ -86,56 +99,56 @@ function Get-MSBuild
         $msbuildRoot = Join-Path -Path $instance.InstallationPath -ChildPath 'MSBuild'
         if( -not (Test-Path -Path $msbuildRoot -PathType Container) )
         {
-            Write-WhiskeyVerbose -Message ('Skipping {0} {1}: its MSBuild directory ''{2}'' doesn''t exist.' -f $instance.DisplayName,$instance.InstallationVersion,$msbuildRoot)
+            $msg = "$($indent)Skipping $($instance.DisplayName): its MSBuild directory ""$($msbuildRoot)"" doesn''t " +
+                   'exist.'
+            Write-WhiskeyVerbose -Message $msg
             continue
         }
 
-        $versionRoots =
-            Get-ChildItem -Path $msbuildRoot -Directory |
-            Where-Object { Get-ChildItem -Path $_.FullName -Filter 'MSBuild.exe' -Recurse }
-
-        foreach( $versionRoot in $versionRoots )
+        $path32 = Join-Path -Path $msbuildRoot -ChildPath '*\Bin\MSBuild.exe' -Resolve -ErrorAction Ignore
+        if( -not $path32 )
         {
-            $paths = Get-ChildItem -Path $versionRoot.FullName -Filter 'MSBuild.exe' -Recurse
-
-            $path =
-                $paths |
-                Where-Object { $_.Directory.Name -eq 'amd64' } |
-                Select-Object -ExpandProperty 'FullName'
-
-            $path32 =
-                $paths |
-                Where-Object { $_.Directory.Name -ne 'amd64' } |
-                Select-Object -ExpandProperty 'FullName'
-
-            if( -not $path )
-            {
-                $path = $path32
-            }
-
-            if( -not $path )
-            {
-                continue
-            }
-
-            if( -not $path32 )
-            {
-                $path32 = ''
-            }
-
-            $majorVersion =
-                Get-Item -Path $path |
-                Select-Object -ExpandProperty 'VersionInfo' |
-                Select-Object -ExpandProperty 'ProductMajorPart'
-
-            $majorMinor = '{0}.0' -f $majorVersion
-
-            [pscustomobject]@{
-                                Name =  $majorMinor;
-                                Version = [Version]$majorMinor;
-                                Path = $path;
-                                Path32 = $path32;
-                            }
+            $msg = "$($indent)Skipping $($instance.DisplayName): " +
+                   """$(Join-Path -Path $msbuildRoot -ChildPath '*\Bin\MSBuild.exe')"" doesn't exist."
+                   """$($msbuildRoot)"" doesn''t exist."
+            Write-WhiskeyVerbose -Message $msg
+            continue
         }
+
+        $msbuildRoot = $path32 | Split-Path | Split-Path
+        $path = Join-Path -Path $msbuildRoot -ChildPath 'Bin\amd64\MSBuild.exe' -Resolve -ErrorAction Ignore
+        $pathArm64 =
+            Join-Path -Path $msbuildRoot -ChildPath 'Bin\arm64\MSBuild.exe' -Resolve -ErrorAction Ignore
+
+        if( -not $path -and $path32 )
+        {
+            $path = $path32
+        }
+
+        if( -not $path )
+        {
+            $msg = "$($indent)Skipping $($instance.DisplayName) $($instance.InstallationVersion): " +
+                   """$(Join-Path -Path $msbuildRoot -ChildPath 'Bin\amd64\MSBuild.exe')"" doesn't exist."
+                   """$($msbuildRoot)"" doesn''t exist."
+            Write-WhiskeyVerbose -Message $msg
+            continue
+        }
+
+        $majorVersion =
+            Get-Item -Path $path |
+            Select-Object -ExpandProperty 'VersionInfo' |
+            Select-Object -ExpandProperty 'ProductMajorPart'
+
+        $majorMinor = '{0}.0' -f $majorVersion
+
+        Write-WhiskeyVerbose ("$($indent)Found MSBuild $($majorMinor) at ""$($path)"".")
+        [pscustomobject]@{
+            Name =  $majorMinor;
+            Version = [Version]$majorMinor;
+            Path = $path;
+            Path32 = $path32;
+            PathArm64 = $pathArm64;
+        } | Write-Output
     }
+    Write-WhiskeyVerbose '[Get-MSBuild]'
 }

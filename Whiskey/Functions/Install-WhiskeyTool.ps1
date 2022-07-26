@@ -74,157 +74,166 @@ function Install-WhiskeyTool
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $mutexName = $InstallRoot
-    if( $DownloadRoot )
-    {
-        $mutexName = $DownloadRoot
-    }
-    # Back slashes in mutex names are reserved.
-    $mutexName = $mutexName -replace '\\','/'
-    $mutexName = $mutexName -replace '/','-'
-    $startedWaitingAt = Get-Date
-    $startedUsingAt = Get-Date
-    Write-WhiskeyDebug -Message ('Creating mutex "{0}".' -f $mutexName)
-    $installLock = New-Object 'Threading.Mutex' $false,$mutexName
-    #$DebugPreference = 'Continue'
-    Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
+    Write-WhiskeyDebug '\Install-WhiskeyTool\' -Indent
 
     try
     {
+        $mutexName = $InstallRoot
+        if( $DownloadRoot )
+        {
+            $mutexName = $DownloadRoot
+        }
+        # Back slashes in mutex names are reserved.
+        $mutexName = $mutexName -replace '\\','/'
+        $mutexName = $mutexName -replace '/','-'
+        $startedWaitingAt = Get-Date
+        $startedUsingAt = Get-Date
+        Write-WhiskeyDebug -Message ('Creating mutex "{0}".' -f $mutexName)
+        $installLock = New-Object 'Threading.Mutex' $false,$mutexName
+        #$DebugPreference = 'Continue'
+        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" is waiting for mutex "{2}".' -f (Get-Date),$PID,$mutexName)
+
         try
         {
-            [Void]$installLock.WaitOne()
-        }
-        catch [Threading.AbandonedMutexException]
-        {
-            Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
-            $Global:Error.RemoveAt(0)
-        }
-
-        $waitedFor = (Get-Date) - $startedWaitingAt
-        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" obtained mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$waitedFor)
-        #$DebugPreference = 'SilentlyContinue'
-        $startedUsingAt = Get-Date
-
-        if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
-        {
-            $msg = 'The "Install-WhiskeyTool" function''s "NuGetPackage" name parameter is obsolete. Use ' +
-                   '[Whiskey.WhiskeyTool] attribute on your task instead.'
-            Write-Warning -Message $msg
-                
-            Install-WhiskeyNuGetPackage -Name $NuGetPackageName -Version $Version -BuildRootPath $DownloadRoot
-            return
-        }
-
-        if( $PSCmdlet.ParameterSetName -eq 'FromAttribute' )
-        {
-            $ProviderName = $ToolInfo.ProviderName
-            $Name = $ToolInfo.Name
-            $Version = $TaskParameter[$ToolInfo.VersionParameterName]
-            if( -not $Version )
+            try
             {
-                $Version = $ToolInfo.Version
+                [Void]$installLock.WaitOne()
             }
-        }
-
-        if( -not $OutFileRootPath )
-        {
-            $OutFileRootPath = Join-Path -Path $InstallRoot -ChildPath '.output'
-        }
-
-        if( -not (Test-Path -Path $OutFileRootPath) )
-        {
-            New-Item -Path $OutFileRootPath -ItemType 'Directory' | Out-Null
-        }
-
-        if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
-        {
-            $module = Install-WhiskeyPowerShellModule -Name $Name `
-                                                      -Version $Version `
-                                                      -BuildRoot $InstallRoot `
-                                                      -SkipImport:$ToolInfo.SkipImport `
-                                                      -ErrorAction Stop
-
-            if( $ToolInfo.ModuleInfoParameterName )
+            catch [Threading.AbandonedMutexException]
             {
-                $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
+                Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" caught "{2}" exception waiting to acquire mutex "{3}": {4}.' -f (Get-Date),$PID,$_.Exception.GetType().FullName,$mutexName,$_)
+                $Global:Error.RemoveAt(0)
             }
 
-            return
-        }
+            $waitedFor = (Get-Date) - $startedWaitingAt
+            Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" obtained mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$waitedFor)
+            #$DebugPreference = 'SilentlyContinue'
+            $startedUsingAt = Get-Date
 
-        $toolPath = $null
-        switch( $ProviderName )
-        {
-            'NuGet'
+            if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
             {
-                $toolPath = Install-WhiskeyNuGetPackage -Name $Name -Version $Version -BuildRootPath $InstallRoot
+                $msg = 'The "Install-WhiskeyTool" function''s "NuGetPackage" name parameter is obsolete. Use ' +
+                    '[Whiskey.WhiskeyTool] attribute on your task instead.'
+                Write-Warning -Message $msg
+                    
+                Install-WhiskeyNuGetPackage -Name $NuGetPackageName -Version $Version -BuildRootPath $DownloadRoot
+                return
             }
-            'NodeModule'
+
+            if( $PSCmdlet.ParameterSetName -eq 'FromAttribute' )
             {
-                $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
-                if( -not $nodePath )
+                $ProviderName = $ToolInfo.ProviderName
+                $Name = $ToolInfo.Name
+                $Version = $TaskParameter[$ToolInfo.VersionParameterName]
+                if( -not $Version )
                 {
-                    $msg = 'It looks like Node isn''t installed in your repository. Whiskey usually installs Node.js ' +
-                           'for you into a .node directory. If this directory doesn''t exist, this is most likely a ' +
-                           'task authoring error and the author of your task needs to add a `WhiskeyTool` attribute ' +
-                           'declaring it has a dependency on Node.js. If the .node directory exists, the Node ' +
-                           'package is most likely corrupt. Please delete it and re-run your build.'
-                    Write-WhiskeyError -Message $msg -ErrorAction Stop
-                    return
+                    $Version = $ToolInfo.Version
                 }
-                $toolPath = Install-WhiskeyNodeModule -Name $Name `
-                                                      -BuildRootPath $InstallRoot `
-                                                      -Version $Version `
-                                                      -Global `
-                                                      -InCleanMode:$InCleanMode `
-                                                      -ErrorAction Stop
             }
-            default
+
+            if( -not $OutFileRootPath )
             {
-                switch( $Name )
-                {
-                    'Node'
-                    {
-                        $toolPath = Install-WhiskeyNode -InstallRootPath $InstallRoot `
+                $OutFileRootPath = Join-Path -Path $InstallRoot -ChildPath '.output'
+            }
+
+            if( -not (Test-Path -Path $OutFileRootPath) )
+            {
+                New-Item -Path $OutFileRootPath -ItemType 'Directory' | Out-Null
+            }
+
+            if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
+            {
+                $module = Install-WhiskeyPowerShellModule -Name $Name `
                                                         -Version $Version `
+                                                        -BuildRoot $InstallRoot `
+                                                        -SkipImport:$ToolInfo.SkipImport `
+                                                        -ErrorAction Stop
+
+                if( $ToolInfo.ModuleInfoParameterName )
+                {
+                    $TaskParameter[$ToolInfo.ModuleInfoParameterName] = $module
+                }
+
+                return
+            }
+
+            $toolPath = $null
+            switch( $ProviderName )
+            {
+                'NuGet'
+                {
+                    $toolPath = Install-WhiskeyNuGetPackage -Name $Name -Version $Version -BuildRootPath $InstallRoot
+                }
+                'NodeModule'
+                {
+                    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRoot
+                    if( -not $nodePath )
+                    {
+                        $msg = 'It looks like Node isn''t installed in your repository. Whiskey usually installs Node.js ' +
+                            'for you into a .node directory. If this directory doesn''t exist, this is most likely a ' +
+                            'task authoring error and the author of your task needs to add a `WhiskeyTool` attribute ' +
+                            'declaring it has a dependency on Node.js. If the .node directory exists, the Node ' +
+                            'package is most likely corrupt. Please delete it and re-run your build.'
+                        Write-WhiskeyError -Message $msg -ErrorAction Stop
+                        return
+                    }
+                    $toolPath = Install-WhiskeyNodeModule -Name $Name `
+                                                        -BuildRootPath $InstallRoot `
+                                                        -Version $Version `
+                                                        -Global `
                                                         -InCleanMode:$InCleanMode `
-                                                        -OutFileRootPath $OutFileRootPath
-                    }
-                    'DotNet'
+                                                        -ErrorAction Stop
+                }
+                default
+                {
+                    switch( $Name )
                     {
-                        $toolPath = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot `
-                                                              -WorkingDirectory (Get-Location).ProviderPath `
-                                                              -Version $Version `
-                                                              -ErrorAction Stop
-                    }
-                    default
-                    {
-                        throw "Unknown tool ""$($Name)"". The only supported tools are ""Node"" and ""DotNet""."
+                        'Node'
+                        {
+                            $toolPath = Install-WhiskeyNode -InstallRootPath $InstallRoot `
+                                                            -Version $Version `
+                                                            -InCleanMode:$InCleanMode `
+                                                            -OutFileRootPath $OutFileRootPath
+                        }
+                        'DotNet'
+                        {
+                            $toolPath = Install-WhiskeyDotNetTool -InstallRoot $InstallRoot `
+                                                                -WorkingDirectory (Get-Location).ProviderPath `
+                                                                -Version $Version `
+                                                                -ErrorAction Stop
+                        }
+                        default
+                        {
+                            throw "Unknown tool ""$($Name)"". The only supported tools are ""Node"" and ""DotNet""."
+                        }
                     }
                 }
             }
-        }
 
-        if( $PSCmdlet.ParameterSetName -eq 'FromAttribute' -and $ToolInfo.PathParameterName )
+            if( $PSCmdlet.ParameterSetName -eq 'FromAttribute' -and $ToolInfo.PathParameterName )
+            {
+                $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
+            }
+
+            return $toolPath
+        }
+        finally
         {
-            $TaskParameter[$ToolInfo.PathParameterName] = $toolPath
+            #$DebugPreference = 'Continue'
+            $usedFor = (Get-Date) - $startedUsingAt
+            Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" releasing mutex "{2}" after using it for {3}.' -f (Get-Date),$PID,$mutexName,$usedFor)
+            $startedReleasingAt = Get-Date
+            $installLock.ReleaseMutex();
+            $installLock.Dispose()
+            $installLock.Close()
+            $installLock = $null
+            $releasedDuration = (Get-Date) - $startedReleasingAt
+            Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" released mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$releasedDuration)
+            #$DebugPreference = 'SilentlyContinue'
         }
-
-        return $toolPath
     }
     finally
     {
-        #$DebugPreference = 'Continue'
-        $usedFor = (Get-Date) - $startedUsingAt
-        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" releasing mutex "{2}" after using it for {3}.' -f (Get-Date),$PID,$mutexName,$usedFor)
-        $startedReleasingAt = Get-Date
-        $installLock.ReleaseMutex();
-        $installLock.Dispose()
-        $installLock.Close()
-        $installLock = $null
-        $releasedDuration = (Get-Date) - $startedReleasingAt
-        Write-WhiskeyDebug -Message ('[{0:yyyy-MM-dd HH:mm:ss}]  Process "{1}" released mutex "{2}" in {3}.' -f (Get-Date),$PID,$mutexName,$releasedDuration)
-        #$DebugPreference = 'SilentlyContinue'
+        Write-WhiskeyDebug '/Install-WhiskeyTool/' -Outdent
     }
 }

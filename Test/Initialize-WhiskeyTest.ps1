@@ -93,6 +93,17 @@ try
     Write-Timing ('Initialize-WhiskeyTest.ps1  Start')
     # Some tests load ProGetAutomation from a Pester test drive. Forcibly remove the module if it is loaded to avoid errors.
 
+    foreach( $moduleName in @('PackageManagement', 'PowerShellGet') )
+    {
+        $modulePath = Join-Path -Path $PSScriptRoot -ChildPath "..\PSModules\$($moduleName)"
+        if( (Get-Module -Name $moduleName) -or -not (Test-Path -Path $modulePath -PathType Container) )
+        {
+            continue
+        }
+
+        Import-Module -Name $modulePath -Global
+    }
+
     if( Test-Import -Name 'Whiskey' )
     {
         Write-Timing ('    Importing Whiskey')

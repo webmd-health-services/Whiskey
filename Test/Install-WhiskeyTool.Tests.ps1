@@ -27,7 +27,9 @@ function Invoke-NuGetInstall
 
         [switch]$InvalidPackage,
 
-        [String]$ExpectedError
+        [String]$ExpectedError,
+
+        [String[]] $WithDependencies
     )
 
     $result = $null
@@ -42,8 +44,25 @@ function Invoke-NuGetInstall
 
     if( -not $invalidPackage)
     {
+        if( -not $Version )
+        {
+            $Version =
+                Find-Package -Name $Package -ProviderName 'NuGet' |
+                Select-Object -First 1 |
+                Select-Object -ExpandProperty 'Version'
+        }
         $result | Should -Exist
-        $result | Should -BeLike ('{0}\packages\*' -f $testRoot)
+        $result | Should -Be (Join-Path -Path $testRoot -ChildPath "packages\$($Package).$($Version)")
+
+        if( $WithDependencies )
+        {
+            $packagesRoot = Join-Path -Path $testRoot -ChildPath 'packages'
+            Get-ChildItem -Path $packagesRoot | Format-Table | Out-String | Write-Debug
+            foreach( $dep in $WithDependencies )
+            {
+                Join-Path -Path $packagesRoot -ChildPath $dep | Should -Exist
+            }
+        }
     }
     else
     {
@@ -70,9 +89,17 @@ function Reset
 if( $IsWindows )
 {
     Describe 'Install-WhiskeyTool.when given a NuGet Package' {
-        It 'should install the NuGet package' {
+        It 'should install the NuGet package and its dependencies' {
             Init
-            Invoke-NuGetInstall -package 'NUnit.Runners' -version '2.6.4'
+            Invoke-NuGetInstall -package 'NUnit.Console' -version '3.15.0' -WithDependencies @(
+                'NUnit.Console.3.15.0',
+                'NUnit.ConsoleRunner.3.15.*',
+                'NUnit.Extension.NUnitProjectLoader.3.7.1',
+                'NUnit.Extension.NUnitV2Driver.3.9.0',
+                'NUnit.Extension.NUnitV2ResultWriter.3.7.0',
+                'NUnit.Extension.TeamCityEventListener.1.0.7',
+                'NUnit.Extension.VSProjectLoader.3.9.0'
+            )
         }
     }
 
@@ -365,8 +392,8 @@ Describe 'Install-WhiskeyTool.when installing specific version of a Node module 
     It 'should install the version in the attribute' {
         Init
         Install-Node -BuildRoot $testRoot
-        WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.20.0'
-        ThenNodeModuleInstalled 'axios' -AtVersion '0.20.0'
+        WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.21.1'
+        ThenNodeModuleInstalled 'axios' -AtVersion '0.21.1'
     }
 }
 

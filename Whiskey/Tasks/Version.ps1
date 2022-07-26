@@ -123,11 +123,7 @@
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                     Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.BuildRoot
                     Import-WhiskeyPowerShellModule -Name 'PowerShellGet' -PSModulesRoot $TaskContext.BuildRoot
-                    $allowPrereleaseArg = @{}
-                    if( (Get-Command -Name 'Find-Module' -ParameterName 'AllowPrerelease' -ErrorAction Ignore) )
-                    {
-                        $allowPrereleaseArg['AllowPrerelease'] = $true
-                    }
+                    $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease
                     $versions =
                         Find-Module -Name $moduleManifest.Name -AllVersions @allowPrereleaseArg -ErrorAction Ignore |
                         Select-Object -ExpandProperty 'Version'
@@ -163,6 +159,8 @@
                 {
                     $msg = "Retrieving versions for NPM package $($pkgName)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                    Install-WhiskeyNode -InstallRootPath $TaskContext.BuildRoot `
+                                        -OutFileRootPath $TaskContext.OutputDirectory
                     $versions = Invoke-WhiskeyNpmCommand -Name 'show' `
                                                          -ArgumentList @($pkgName, 'versions', '--json') `
                                                          -BuildRoot $TaskContext.BuildRoot `
@@ -227,8 +225,9 @@
                         $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
                         Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                         Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+                        $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
                         $versions = 
-                            Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions -AllowPrerelease |
+                            Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
                             Select-Object -ExpandProperty 'Version'
                     }
                 }
@@ -289,8 +288,9 @@
             $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
             Write-WhiskeyVerbose -Context $TaskContext -Message $msg
             Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+            $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
             $versions = 
-                Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions -AllowPrerelease |
+                Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
                 Select-Object -ExpandProperty 'Version'
         }
     }

@@ -4,10 +4,12 @@ function Invoke-WhiskeyParallelTask
     [Whiskey.Task('Parallel')]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]$TaskContext,
+        [Whiskey.Context] $TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable] $TaskParameter,
+
+        [TimeSpan] $Timeout = (New-TimeSpan -Minutes 10)
     )
 
     Set-StrictMode -Version 'Latest'
@@ -36,6 +38,7 @@ function Invoke-WhiskeyParallelTask
 
         $jobs = New-Object 'Collections.ArrayList'
         $queueIdx = -1
+        $numTimedOut = 0
 
         foreach( $queue in $queues )
         {
@@ -89,13 +92,16 @@ function Invoke-WhiskeyParallelTask
             {
                 Write-WhiskeyDebug -Context $TaskContext -Message 'Found no loaded modules that contain Whiskey tasks.'
             }
-            $job = Start-Job -Name $queueIdx -ScriptBlock {
+
+            Write-WhiskeyInfo -Context $TaskContext -Message "Starting background job #$($queueIdx)."
+            $job = Start-Job -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
 
+                    # Progress bars in background jobs seem to cause problems.
+                    $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
                     $VerbosePreference = $using:VerbosePreference
                     $DebugPreference = $using:DebugPreference
-                    $ProgressPreference = $using:ProgressPreference
                     $WarningPreference = $using:WarningPreference
                     $ErrorActionPreference = $using:ErrorActionPreference
 
@@ -111,14 +117,14 @@ function Invoke-WhiskeyParallelTask
                     # Load third-party tasks.
                     foreach( $info in $context.TaskPaths )
                     {
-                        Write-WhiskeyVerbose -Context $context -Message ('Loading task from "{0}".' -f $info.FullName)
+                        Write-WhiskeyDebug -Context $context -Message ('Loading task from "{0}".' -f $info.FullName)
                         . $info.FullName
                     }
 
                     # Load modules containing third-party tasks.
                     foreach( $modulePath in $using:taskModulePaths )
                     {
-                        Write-WhiskeyVerbose -Context $context -Message "Loading task module ""$($modulePath)""."
+                        Write-WhiskeyDebug -Context $context -Message "Loading task module ""$($modulePath)""."
                         Import-Module -Name $modulePath -Global
                     }
 
@@ -130,50 +136,68 @@ function Invoke-WhiskeyParallelTask
                     }
                 }
 
-                $job |
-                    Add-Member -MemberType NoteProperty -Name 'QueueIndex' -Value $queueIdx -PassThru |
-                    Add-Member -MemberType NoteProperty -Name 'Completed' -Value $false
-                [Void]$jobs.Add($job)
+            $job | Add-Member -MemberType NoteProperty -Name 'QueueIndex' -Value $queueIdx
+            [Void]$jobs.Add($job)
         }
 
-        $lastNotice = (Get-Date).AddSeconds(-61)
-        while( $jobs | Where-Object { -not $_.Completed } )
+        $taskDuration = [Diagnostics.Stopwatch]::StartNew()
+        foreach( $job in $jobs )
         {
-            foreach( $job in $jobs )
+            $msg = "Watching background job #$($job.QueueIndex) $($job.Name)."
+            Write-WhiskeyInfo -Context $TaskContext -Message $msg
+            Write-WhiskeyDebug -Context $TaskContext -Message "Job #$($job.QueueIndex) $($job.Name)"
+            do
             {
-                if( $job.Completed )
-                {
-                    continue
-                }
-
-                if( $lastNotice -lt (Get-Date).AddSeconds(-60) )
-                {
-                    Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  Waiting for queue.' -f $job.QueueIndex,$job.Name)
-                    $notified = $true
-                }
-
+                Write-WhiskeyDebug -Context $TaskContext -Message "  Waiting for 1 second."
                 $completedJob = $job | Wait-Job -Timeout 1
-                if( $completedJob )
+                if( $job.HasMoreData )
                 {
-                    $job.Completed = $true
+                    Write-WhiskeyDebug -Context $TaskContext -Message "  Receiving output."
                     # There's a bug where Write-Host output gets duplicated by Receive-Job if $InformationPreference is set to "Continue".
                     # Since some things use Write-Host, this is a workaround to avoid seeing duplicate host output.
-                    $completedJob | Receive-Job -InformationAction SilentlyContinue
+                    $job | Receive-Job -InformationAction SilentlyContinue
+                }
+                if( $completedJob )
+                {
                     $duration = $job.PSEndTime - $job.PSBeginTime
-                    Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}][{1}]  {2} in {3}' -f $job.QueueIndex,$job.Name,$job.State.ToString().ToUpperInvariant(),$duration)
-                    if( $job.JobStateInfo.State -eq [Management.Automation.JobState]::Failed )
+                    $msg = "Background job #$($job.QueueIndex) $($job.Name) is ""$($job.State.ToString())"" in " +
+                           "$([int]$duration.TotalMinutes)m$($duration.Seconds)s."
+                    Write-WhiskeyInfo -Context $TaskContext -Message $msg
+                    if( $job.JobStateInfo.State -ne [Management.Automation.JobState]::Completed )
                     {
-                        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Queue[{0}] failed. See previous output for error information.' -f $job.Name)
+                        $msg = "Background job #$($job.QueueIndex) $($job.Name) didn't finish successfully but ended " +
+                               "in state ""$($job.State.ToString())""."
+                        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                         return
                     }
-                }
-            }
 
-            if( $notified )
-            {
-                $notified = $false
-                $lastNotice = Get-Date
+                    break
+                }
+
+                if( $taskDuration.Elapsed -gt $Timeout )
+                {
+                    $duration = (Get-Date) - $job.PSBeginTime
+                    $msg = "Background job #$($job.QueueIndex) $($job.Name) is still running after " +
+                           "$([int]$duration.TotalMinutes)m$($duration.Seconds)s which is longer than the " +
+                           "$([int]$Timeout.TotalMinutes)m$($Timeout.Seconds)s timeout. It's final state is " +
+                           """$($job.State.ToString())""."
+                    Write-WhiskeyError -Context $TaskContext -Message $msg
+                    $numTimedOut += 1
+                    break
+                }
+
+                Write-WhiskeyDebug -Context $TaskContext -Message "  Sleeping for 4 seconds."
+                Start-Sleep -Seconds 4
             }
+            while( $true )
+        }
+
+        if( $numTimedOut )
+        {
+            $msg = "$($numTimedOut) background jobs timed out without completing in $([int]$Timeout.TotalMinutes)m" +
+                   "$($Timeout.Seconds)s."
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+            return
         }
     }
     finally

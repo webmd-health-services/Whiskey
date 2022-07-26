@@ -11,13 +11,22 @@ function Get-WhiskeyPSModulePath
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
-    $path = Join-Path -Path $PSModulesRoot -ChildPath 'PSModules' | Write-Output
 
-    if( $Create -and -not (Test-Path -Path $path) )
+    Write-WhiskeyDebug '\Get-WhiskeyPSModulePath\' -Indent
+
+    try
     {
-        New-Item -Path $path -ItemType 'Directory' | Out-Null
-    }
+        $path = Join-Path -Path $PSModulesRoot -ChildPath 'PSModules' | Write-Output
 
-    return $path
+        if( $Create -and -not (Test-Path -Path $path) )
+        {
+            New-Item -Path $path -ItemType 'Directory' | Out-Null
+        }
+
+        return $path
+    }
+    finally
+    {
+        Write-WhiskeyDebug '/Get-WhiskeyPSModulePath/' -Outdent
+    }
 }

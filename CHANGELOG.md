@@ -1,4 +1,46 @@
 
+# 0.52.1
+
+* Fixed: typo in command name. Mis-typed `Convert-Path` as `ConvertPath`.
+
+
+# 0.52.0
+
+* PowerShellGet minimum required version is now 2.0.0.
+* PackageManagement PowerShell module minimum required version is now 1.3.2.
+* If a minimum version of PowerShellGet or PackageManagement isn't installed, Whiskey installs PowerShellGet 2.2.5 and
+  PackageManagement 1.4.7 into the repository's private PSModules directory. So, Whiskey still requires PowerShellGet
+  and PackageManagement, but will install them if needed.
+
+
+# 0.51.1
+
+* Fixed: the `Version` task fails when reading version from a Node.js package.json file.
+
+
+# 0.51.0
+
+## Added
+
+* The Parallel task now has a timeout (default is 10 minutes) in which background jobs have to complete. If jobs take
+  longer than the timeout, the build will fail. Use the `Timeout` property to customize the job timeout.
+
+## Changes
+
+* Parallel task now watches each background job in order until it finishes, displaying its output while waiting.
+* When PowerShell task is executing a script block, it now writes the script block to output instead of the path and
+  args to the temporary script used to run the script block.
+
+## Fixes
+
+* MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
+
+
+# 0.50.1
+
+Fixed: NuGet package dependencies are not installed.
+
+
 # 0.50.0
 
 ## Upgrade Instructions
