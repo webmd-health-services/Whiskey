@@ -33,13 +33,16 @@ function Publish-WhiskeyPowerShellModule
         $manifestPath = $ModuleManifestPath
     }
 
+    Write-Debug -Message 'Testing module manifest path'
     if( -not (Test-Path -Path $manifestPath -PathType Leaf) )
     {
+        Write-Debug -Message 'Failed Testing module manifest path'
         $msg = "Module manifest path ""$($manifestPath)"" either does not exist or is a directory."
         Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
+    Write-Debug -Message 'Testing module manifest'
     $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Ignore -WarningAction Ignore
     if( $TaskContext.Version.SemVer2.Prerelease -and `
         (-not ($manifest.PrivateData) -or `
@@ -59,6 +62,7 @@ function Publish-WhiskeyPowerShellModule
         }
     }
 "
+        Write-Debug -Message 'Failed Testing module manifest'
         Stop-WhiskeyTask -TaskContext $Context -Message $msg
         return
     }
@@ -69,6 +73,9 @@ function Publish-WhiskeyPowerShellModule
     $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
     $manifestContent = $manifestContent -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifestContent | Set-Content $manifest.Path
+
+    Write-Debug -Message 'Publish WHiskey PSObject'
+    
     Publish-WhiskeyPSObject -Context $TaskContext -ModuleInfo $manifest -RepositoryName $RepositoryName `
         -RepositoryLocation $RepositoryLocation -CredentialID $CredentialID -ApiKeyId $ApiKeyID
 }

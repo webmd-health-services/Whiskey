@@ -153,6 +153,7 @@ function Publish-WhiskeyPSObject
         }
         else 
         {
+            Write-Debug -Message 'Publish module'
             Publish-Module -Path $Path -Repository $RepositoryName -Force @apiKeyParam @commonParams -ErrorAction Stop
         }
     }
