@@ -10,6 +10,7 @@ build:
 test: off
 
 environment:
+  # APPVEYOR_RDP_PASSWORD: P@ssW0rd!
   WHISKEY_DISABLE_ERROR_FORMAT: True
   matrix:
   # TODO: Get builds working on PowerShell 7.2 on Windows.
@@ -42,6 +43,9 @@ environment:
     job_group: pwsh
     appveyor_build_worker_image: Visual Studio 2019
 
+# init:
+#     - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 
 artifacts:
 - path: .output\*
@@ -60,4 +64,14 @@ for:
     only:
     - job_group: pwsh
   build_script:
+  - pwsh: |
+      if( -not (Get-Module -Name 'PowerShellGet' -ListAvailable | Where-Object Version -eq ([Version]'2.2.5')) )
+      {
+          $job = Start-Job {
+              Install-Module -Name 'PowerShellGet' -RequiredVersion '2.2.5' -AllowClobber -Force -Scope CurrentUser
+          }
+          $job | Wait-Job
+          $job | Receive-Job
+          $job | Remove-Job
+      }
   - pwsh: ./build.ps1

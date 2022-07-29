@@ -119,8 +119,8 @@
                 {
                     $msg = "Retrieving versions for PowerShell module $($moduleManifest.Name)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-                    Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.BuildRoot
-                    Import-WhiskeyPowerShellModule -Name 'PowerShellGet' -PSModulesRoot $TaskContext.BuildRoot
+                    Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.BuildRoot -MinVersion $script:pkgMgmtMinVersion -MaxVersion $script:pkgMgmtMaxVersion
+                    Import-WhiskeyPowerShellModule -Name 'PowerShellGet' -PSModulesRoot $TaskContext.BuildRoot -MinVersion $script:psGetMinVersion -MaxVersion $script:psGetMaxVersion
                     $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease
                     $versions =
                         Find-Module -Name $moduleManifest.Name -AllVersions @allowPrereleaseArg -ErrorAction Ignore |
@@ -222,7 +222,7 @@
                     {
                         $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
                         Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-                        Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+                        Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot -MinVersion $script:pkgMgmtMinVersion -MaxVersion $script:pkgMgmtMaxVersion
                         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
                         $versions = 
                             Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
@@ -285,7 +285,7 @@
         {
             $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
             Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-            Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
+            Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot -MinVersion $script:pkgMgmtMinVersion -MaxVersion $script:pkgMgmtMaxVersion
             $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
             $versions = 
                 Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |

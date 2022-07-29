@@ -107,7 +107,7 @@ function Install-WhiskeyPowerShellModule
 
         try
         {
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot -Name $Name -Version $Version
+            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot -Name $Name -RequiredVersion $Version
 
             if( $installedModule )
             {
@@ -119,7 +119,9 @@ function Install-WhiskeyPowerShellModule
                 {
                     if( -not $SkipImport )
                     {
-                        Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+                        $DebugPreference = 'Continue'
+                        Write-Debug -Message "Importing installed module $($installedModule.Name) version $($installedModule.Version)"
+                        Import-WhiskeyPowerShellModule -Name $Name -RequiredVersion $installedModule.Version -PSModulesRoot $BuildRoot
                     }
 
                     # Already installed or installed where the user wants it.
@@ -176,7 +178,7 @@ function Install-WhiskeyPowerShellModule
             }
             $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
                                                 -Name $moduleToInstall.Name `
-                                                -Version $moduleToInstall.Version
+                                                -RequiredVersion $moduleToInstall.Version
 
             if( -not $installedModule )
             {
@@ -191,7 +193,9 @@ function Install-WhiskeyPowerShellModule
 
             if( -not $SkipImport )
             {
-                Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+                $DebugPreference = 'Continue'
+                Write-Debug -Message "Importing installed module $($installedModule.Name) version $($installedModule.Version)"
+                Import-WhiskeyPowerShellModule -Name $Name -RequiredVersion $installedModule.Version -PSModulesRoot $BuildRoot
             }
         }
         finally

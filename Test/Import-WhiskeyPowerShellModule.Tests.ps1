@@ -81,7 +81,7 @@ function WhenImportingPowerShellModule
 
     $parameter = @{
         'Name' = $Name;
-        'Version' = $Version;
+        'RequiredVersion' = $Version;
         'PSModulesRoot' = $testRoot;
     }
 

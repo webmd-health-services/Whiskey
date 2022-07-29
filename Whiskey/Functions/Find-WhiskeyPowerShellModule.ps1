@@ -78,6 +78,9 @@ function Find-WhiskeyPowerShellModule
                           -MinimumVersion $MinimumVersion `
                           -MaximumVersion $MaximumVersion `
                           -Global
+                          
+            $DebugPreference = 'Continue'
+            Write-Debug -Message "(Inside Find-WhiskeyPowerShellModule) Importing $($module.Name) version $($module.Version)"
             Write-WhiskeyDebug "Imported module $($Name) $((Get-Module -Name $Name).Version)."
             $importFailed = $false
         }

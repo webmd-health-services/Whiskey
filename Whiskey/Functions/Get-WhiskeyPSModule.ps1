@@ -41,12 +41,24 @@ function Get-WhiskeyPSModule
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, ParameterSetName='RequiredVersion')]
+        [Parameter(Mandatory, ParameterSetName='MinMax')]
         [String]$Name,
 
-        [String]$Version,
+        # The minimum version of the module to import.
+        [Parameter(ParameterSetName='MinMax')]
+        [String] $MinVersion,
 
-        [Parameter(Mandatory)]
+        # The maximum version of the module to import.
+        [Parameter(ParameterSetName='MinMax')]
+        [String] $MaxVersion,
+
+        # The required version of the module to import.
+        [Parameter(ParameterSetName='RequiredVersion')]
+        [String] $RequiredVersion,
+
+        [Parameter(Mandatory, ParameterSetName='RequiredVersion')]
+        [Parameter(Mandatory, ParameterSetName='MinMax')]
         $PSModulesRoot
     )
 
@@ -70,7 +82,7 @@ function Get-WhiskeyPSModule
 
         $modules |
             Where-Object {
-                if( -not $Version )
+                if( -not $RequiredVersion -and -not $MinVersion -and -not $MaxVersion )
                 {
                     return $true
                 }
@@ -101,9 +113,18 @@ function Get-WhiskeyPSModule
                     $moduleVersion = "$($moduleVersion)-$($prerelease)"
                 }
 
-                $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($Version)""."
-                Write-WhiskeyDebug -Message $msg
-                return $moduleVersion -like $Version
+                if( $RequiredVersion )
+                {
+                    $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is like ""$($RequiredVersion)""."
+                    Write-WhiskeyDebug -Message $msg
+                    return $moduleVersion -like $RequiredVersion
+                }
+                else
+                {
+                    $msg = "Checking if $($moduleInfo.Name) module's version $($moduleVersion) is within accepted versions ""$($MinVersion)"" - ""$($MaxVersion)""."
+                    Write-WhiskeyDebug -Message $msg
+                    return ($moduleVersion -le $MaxVersion -and $moduleVersion -ge $MinVersion)                  
+                }
             } |
             Add-Member -Name 'ManifestPath' `
                     -MemberType ScriptProperty `

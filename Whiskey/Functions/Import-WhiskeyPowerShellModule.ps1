@@ -32,15 +32,26 @@ function Import-WhiskeyPowerShellModule
     [CmdletBinding()]
     param(
         # The module names to import.
-        [Parameter(Mandatory)]
-        [String] $Name,
+        [Parameter(Mandatory, ParameterSetName='RequiredVersion')]
+        [Parameter(Mandatory, ParameterSetName='MinMax')]
+        [String]$Name,
 
-        # The version of the module to import.
-        [String] $Version,
+        # The minimum version of the module to import.
+        [Parameter(ParameterSetName='MinMax')]
+        [String] $MinVersion,
+
+        # The maximum version of the module to import.
+        [Parameter(ParameterSetName='MinMax')]
+        [String] $MaxVersion,
+
+        # The required version of the module to import.
+        [Parameter(ParameterSetName='RequiredVersion')]
+        [String] $RequiredVersion,
 
         # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
-        [Parameter(Mandatory)]
-        [String] $PSModulesRoot
+        [Parameter(Mandatory, ParameterSetName='RequiredVersion')]
+        [Parameter(Mandatory, ParameterSetName='MinMax')]
+        $PSModulesRoot
     )
 
     Set-StrictMode -Version 'Latest'
@@ -52,7 +63,13 @@ function Import-WhiskeyPowerShellModule
     {
         $foundModule = & {
             $VerbosePreference = 'SilentlyContinue'
-            $module = Get-WhiskeyPSModule -Name $Name -Version $Version -PSModulesRoot $PSModulesRoot
+            $module = Get-WhiskeyPSModule -Name $Name -RequiredVersion $RequiredVersion -PSModulesRoot $PSModulesRoot
+
+            if( $MinVersion -and $MaxVersion )
+            {
+                $module = Get-WhiskeyPSModule -Name $Name -MinVersion $MinVersion -MaxVersion $MaxVersion -PSModulesRoot $PSModulesRoot
+            }
+
             if( -not $module )
             {
                 return $false
@@ -69,7 +86,9 @@ function Import-WhiskeyPowerShellModule
                 return $true
             }
 
-            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false -WarningAction 'Ignore'
+            $DebugPreference = 'Continue'
+            Write-Debug -Message "Importing $($module.Name) version $($module.Version)"
+            $module | Import-Module -Global -ErrorAction Stop -Verbose:$false -WarningAction 'Ignore' -Force
             return $true
         } 4> $null
     }
