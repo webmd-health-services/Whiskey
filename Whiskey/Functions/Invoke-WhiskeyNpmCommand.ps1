@@ -81,7 +81,7 @@ function Invoke-WhiskeyNpmCommand
             # The ISE bails if processes write anything to STDERR. Node writes notices and warnings to
             # STDERR. We only want to stop a build if the command actually fails.
             $originalEap = $ErrorActionPreference
-            if( $ErrorActionPreference -ne 'SilentlyContinue' -and $ErrorActionPreference -ne 'Ignore' )
+            if( $ErrorActionPreference -ne 'SilentlyContinue' )
             {
                 $ErrorActionPreference = 'Continue'
             }
