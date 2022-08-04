@@ -5,6 +5,7 @@
   directly from filepath.
 * Fixed: Whiskey fails if PackageManagement 1.4.8.1 is installed and more than one task runs that depends on the
 PackageManagement module.
+* Whiskey now supports PackageManagement 1.4.8.1.
 
 
 # 0.52.1

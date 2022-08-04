@@ -23,7 +23,7 @@ Build:
     ScriptBlock: |
         if( -not (Get-Command -Name 'prism' -ErrorAction Ignore) )
         {
-            $module = Find-Module -Name 'Prism' -MinimumVersion '0.4.0' | Select-Object -First 1
+            $module = Find-Module -Name 'Prism' -MinimumVersion '0.5.2' | Select-Object -First 1
             Set-PSRepository -Name $module.Repository -InstallationPolicy Trusted
             $module | Install-Module -AllowClobber -Scope CurrentUser
         }
