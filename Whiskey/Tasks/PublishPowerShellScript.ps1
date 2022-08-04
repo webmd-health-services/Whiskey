@@ -2,8 +2,6 @@
 function Publish-WhiskeyPowerShellScript
 {
     [Whiskey.Task('PublishPowerShellScript')]
-    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.*', VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresPowerShellModule('PowerShellGet', Version='2.*', VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -33,11 +31,11 @@ function Publish-WhiskeyPowerShellScript
         return
     }
 
-    try 
+    try
     {
         $scriptManifest = Test-ScriptFileInfo -Path $Path
     }
-    catch 
+    catch
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message $_
         return

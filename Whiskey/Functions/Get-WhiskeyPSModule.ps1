@@ -68,6 +68,7 @@ function Get-WhiskeyPSModule
         $modules | Out-String | Write-WhiskeyDebug
         Write-WhiskeyDebug "/Get-Module -Name ''$($Name)'' -ListAvailable/" -Outdent
 
+
         $modules |
             Where-Object {
                 if( -not $Version )

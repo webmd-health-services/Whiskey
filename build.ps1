@@ -222,7 +222,7 @@ Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
     ForEach-Object { [pscustomobject]@{ Name = $_ ; Value = [Environment]::$_ } } |
     Format-Table |
     Out-String |
-    Write-Verbose 
+    Write-Verbose
 
 $optionalArgs = @{ }
 if( $Clean )

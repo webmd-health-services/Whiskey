@@ -2,8 +2,6 @@
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task('PublishPowerShellModule')]
-    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.*', VersionParameterName='PackageManagementVersion')]
-    [Whiskey.RequiresPowerShellModule('PowerShellGet', Version='2.*', VersionParameterName='PowerShellGetVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -68,7 +66,7 @@ function Publish-WhiskeyPowerShellModule
     $manifestContent = Get-Content $manifest.Path
     $versionString = 'ModuleVersion = ''{0}.{1}.{2}''' -f ( $TaskContext.Version.SemVer2.Major, $TaskContext.Version.SemVer2.Minor, $TaskContext.Version.SemVer2.Patch )
     $manifestContent = $manifestContent -replace 'ModuleVersion\s*=\s*(''|")[^''"]*(''|")', $versionString
-    $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease  
+    $prereleaseString = 'Prerelease = ''{0}''' -f $TaskContext.Version.SemVer2.Prerelease
     $manifestContent = $manifestContent -replace 'Prerelease\s*=\s*(''|")[^''"]*(''|")', $prereleaseString
     $manifestContent | Set-Content $manifest.Path
     Publish-WhiskeyPSObject -Context $TaskContext -ModuleInfo $manifest -RepositoryName $RepositoryName `

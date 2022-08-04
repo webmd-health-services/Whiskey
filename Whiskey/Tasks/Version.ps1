@@ -3,8 +3,6 @@
 {
     [CmdletBinding()]
     [Whiskey.Task('Version')]
-    [Whiskey.RequiresPowerShellModule('PackageManagement', Version='1.*',
-        VersionParameterName='PackageManagementVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
@@ -121,8 +119,6 @@
                 {
                     $msg = "Retrieving versions for PowerShell module $($moduleManifest.Name)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-                    Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.BuildRoot
-                    Import-WhiskeyPowerShellModule -Name 'PowerShellGet' -PSModulesRoot $TaskContext.BuildRoot
                     $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease
                     $versions =
                         Find-Module -Name $moduleManifest.Name -AllVersions @allowPrereleaseArg -ErrorAction Ignore |
@@ -224,9 +220,8 @@
                     {
                         $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
                         Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-                        Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
                         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
-                        $versions = 
+                        $versions =
                             Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
                             Select-Object -ExpandProperty 'Version'
                     }
@@ -270,7 +265,7 @@
             $numErr = $Global:Error.Count
             try
             {
-                $versions = 
+                $versions =
                     Invoke-RestMethod -Uri "$($UPackFeedUrl)/packages?name=$([Uri]::EscapeDataString($UpackName))" |
                     Select-Object -ExpandProperty 'versions'
             }
@@ -287,9 +282,8 @@
         {
             $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
             Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-            Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $TaskContext.Buildroot
             $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
-            $versions = 
+            $versions =
                 Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
                 Select-Object -ExpandProperty 'Version'
         }
@@ -321,7 +315,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         - feature/*: alpha.`$(WHISKEY_PRERELEASE_VERSION)
         - develop: beta.`$(WHISKEY_PRERELEASE_VERSION)
     "
-    
+
                     Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message $msg
                     return
                 }
@@ -332,7 +326,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
                 {
                     $branch = $buildInfo.ScmSourceBranch
                 }
-                
+
                 foreach( $wildcardPattern in $map.Keys )
                 {
                     if( $branch -like $wildcardPattern )
@@ -407,7 +401,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         {
             $patchVersion = 0
             $baseMajorMinorVersion = @($semver.Major,$semver.Minor) -join '.'
-            $lastVersion = 
+            $lastVersion =
                 $semVersions |
                 Where-Object { (@($_.Major,$_.Minor) -join '.') -eq $baseMajorMinorVersion } |
                 Select-Object -First 1
@@ -419,7 +413,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
             $semver = [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $patchVersion, $semver.Prerelease,
                                                         $semver.Build)
         }
-        
+
         $baseVersion = @($semver.Major, $semver.Minor, $semver.Patch) -join '.'
         $prereleaseIdentifier = $semver.Prerelease -replace '[^A-Za-z]', ''
         $lastVersion =

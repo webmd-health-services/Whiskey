@@ -33,18 +33,19 @@ function Install-WhiskeyRequiredModule
         }
     }
 
-    # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-    # * Find-WhiskeyPowerShellModule
+    # PackageMangement first otherwise a version of PackageManagement gets automatically installed and loaded because
+    # PackageManagement is a dependency of PowerShellGet. The version automatically installed may not be the version
+    # you want.
     $requiredModules = @(
-        [pscustomobject]@{
-            Name = 'PowerShellGet';
-            MinimumVersion = $script:psGetMinVersion;
-            MaximumVersion = $script:psGetMaxVersion;
-        },
         [pscustomobject]@{
             Name = 'PackageManagement';
             MinimumVersion = $script:pkgMgmtMinVersion;
             MaximumVersion = $script:pkgMgmtMaxVersion;
+        },
+        [pscustomobject]@{
+            Name = 'PowerShellGet';
+            MinimumVersion = $script:psGetMinVersion;
+            MaximumVersion = $script:psGetMaxVersion;
         }
     )
 
@@ -71,6 +72,7 @@ function Install-WhiskeyRequiredModule
                 New-Item -Path $PSModulesPath -ItemType 'Directory' | Out-Null
             }
 
+
             Start-Job {
                 $name = $using:requiredModule.Name
                 $version = $using:requiredModule.MaximumVersion
@@ -88,7 +90,19 @@ function Install-WhiskeyRequiredModule
         }
     } | Wait
 
+
     Write-WhiskeyDebug "[Install   Complete]  $(Get-Date)"
+
+    foreach( $requiredModule in $requiredModules )
+    {
+        $msg = "[Import]  $($requiredModule.Name)  $($requiredModule.MinimumVersion) <= " +
+               "$($requiredModule.MaximumVersion)"
+        Write-WhiskeyDebug $msg
+        Import-Module -Name $requiredModule.Name `
+                      -MinimumVersion $requiredModule.MinimumVersion `
+                      -MaximumVersion $requiredModule.MaximumVersion `
+                      -Global
+    }
 
     if( (Test-Path -Path 'env:APPVEYOR') )
     {
