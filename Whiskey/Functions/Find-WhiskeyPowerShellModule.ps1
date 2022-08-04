@@ -2,12 +2,17 @@ function Find-WhiskeyPowerShellModule
 {
     <#
     .SYNOPSIS
-    Searches for a PowerShell module using PowerShellGet to ensure it exists and returns the resulting object from PowerShellGet.
+    Searches for a PowerShell module using PowerShellGet to ensure it exists and returns the resulting object from
+    PowerShellGet.
 
     .DESCRIPTION
-    The `Find-WhiskeyPowerShellModule` function takes a `Name` of a PowerShell module and uses PowerShellGet's `Find-Module` cmdlet to search for the module. If the module is found, the object from `Find-Module` describing the module is returned. If no module is found, an error is written and nothing is returned. If the module is found in multiple PowerShellGet repositories, only the first one from `Find-Module` is returned.
+    The `Find-WhiskeyPowerShellModule` function takes a `Name` of a PowerShell module and uses PowerShellGet's
+    `Find-Module` cmdlet to search for the module. If the module is found, the object from `Find-Module` describing the
+        module is returned. If no module is found, an error is written and nothing is returned. If the module is found
+        in multiple PowerShellGet repositories, only the first one from `Find-Module` is returned.
 
-    If a `Version` is specified then this function will search for that version of the module from all versions returned from `Find-Module`. If the version cannot be found, an error is written and nothing is returned.
+    If a `Version` is specified then this function will search for that version of the module from all versions returned
+    from `Find-Module`. If the version cannot be found, an error is written and nothing is returned.
 
     `Version` supports wildcard patterns.
 
@@ -27,7 +32,8 @@ function Find-WhiskeyPowerShellModule
         # The name of the PowerShell module.
         [String]$Name,
 
-        # The version of the PowerShell module to search for. Must be a three part number, i.e. it must have a MAJOR, MINOR, and BUILD number.
+        # The version of the PowerShell module to search for. Must be a three part number, i.e. it must have a MAJOR,
+        # MINOR, and BUILD number.
         [String]$Version,
 
         [Parameter(Mandatory)]
@@ -70,7 +76,7 @@ function Find-WhiskeyPowerShellModule
             Write-WhiskeyDebug "Removing module $($Name) $($module.Version)."
             $module | Remove-Module -Force
         }
-        
+
         $importFailed = $true
         try
         {
@@ -106,13 +112,6 @@ function Find-WhiskeyPowerShellModule
     {
         Register-WhiskeyPSModulePath -PSModulesRoot $BuildRoot
 
-        # If you want to upgrade the PackageManagement and PowerShellGet versions, you must also update:
-        # * Install-WhiskeyRequiredModule
-        Import -Name 'PackageManagement' `
-               -MinimumVersion $script:pkgMgmtMinVersion `
-               -MaximumVersion $script:pkgMgmtMaxVersion
-        Import -Name 'PowerShellGet' -MinimumVersion $script:psGetMinVersion -MaximumVersion $script:psGetMaxVersion
-
         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease:$AllowPrerelease
 
         Write-WhiskeyDebug -Message ('{0}  {1} ->' -f $Name,$Version)
@@ -131,7 +130,7 @@ function Find-WhiskeyPowerShellModule
             }
 
             Write-WhiskeyDebug -Message "Searching for module $($Name) $($Version)."
-            $module = 
+            $module =
                 Find-Module -Name $Name -AllVersions @allowPrereleaseArg |
                 Where-Object { $_.Version.ToString() -like $Version } |
                 Sort-Object -Property 'Version' -Descending

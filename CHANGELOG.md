@@ -3,6 +3,8 @@
 
 * Fixed: `Ignore` is not allowed as a value in the `$ErrorActionPreference` variable when running `node.exe` executable
   directly from filepath.
+* Fixed: Whiskey fails if PackageManagement 1.4.8.1 is installed and more than one task runs that depends on the
+PackageManagement module.
 
 
 # 0.52.1

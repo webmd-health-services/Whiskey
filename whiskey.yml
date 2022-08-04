@@ -18,6 +18,7 @@ Build:
       Path: appveyor
       Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
 
+
 - PowerShell:
     ScriptBlock: |
         if( -not (Get-Command -Name 'prism' -ErrorAction Ignore) )
@@ -62,7 +63,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
-    Path: 
+    Path:
     - Whiskey
     Exclude:
     - "*.pdb"
@@ -154,8 +155,8 @@ Build:
             Script:
             # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
             # These three tests must be in the same queue.
-            # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance 
-            # Windows test queues. This queue takes the longest so all other queues are optimized to take about this 
+            # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance
+            # Windows test queues. This queue takes the longest so all other queues are optimized to take about this
             # long.
             - Test\MSBuild.Tests.ps1
             - Test\NUnit2.Tests.ps1

@@ -15,8 +15,6 @@ function Install-WhiskeyNuGetPackage
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    Import-WhiskeyPowerShellModule -Name 'PackageManagement' -PSModulesRoot $BuildRootPath
-
     # Sometimes finding packages can be flaky, so we try multiple times.
     $numErrors = $Global:Error.Count
     $numTries = 6

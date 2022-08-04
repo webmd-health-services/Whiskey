@@ -155,7 +155,7 @@ function Install-WhiskeyPowerShellModule
                 }
             }
 
-            $msg = "Saving PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " + 
+            $msg = "Saving PowerShell module ""$($moduleToInstall.Name)"" $($moduleToInstall.Version) from repository " +
                 """$($moduleToInstall.Repository)"" to ""$($installRoot)""."
             Write-WhiskeyVerbose -Message $msg
             $globalProgressPref = $Global:ProgressPreference
