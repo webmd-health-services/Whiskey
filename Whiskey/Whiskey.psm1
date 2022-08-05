@@ -47,7 +47,7 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 [Version] $pkgMgmtMinVersion = '1.3.2'
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-[Version] $pkgMgmtMaxVersion = '1.4.8.1'
+[Version] $pkgMgmtMaxVersion = '1.4.7'
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 [Version] $psGetMinVersion = '2.1.5'
