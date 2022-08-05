@@ -13,7 +13,107 @@ function Install-WhiskeyRequiredModule
 
     $DebugPreference = $VerbosePreference = 'Continue'
 
-    function Wait
+    function Invoke-InstallJob
+    {
+        param(
+            [Parameter(ValueFromPipelineByPropertyName)]
+            [String] $Name,
+
+            [Parameter(ValueFromPipelineByPropertyName)]
+            [Version] $MaximumVersion
+        )
+
+        Write-WhiskeyDebug "Installing $($Name) $($MaximumVersion) in a background job."
+        Start-Job {
+            $DebugPreference = $VerbosePreference = $using:DebugPreference
+            $name = $using:Name
+            $version = $using:MaximumVersion
+            $psModulesPath = $using:PSModulesPath
+
+            if( $name -eq 'PackageManagement' )
+            {
+                # If we previously installed PowerShellGet, it may have installed a too-new for Whiskey version of
+                # PackageManagement. We deleted the too-new version of PackageManagement, which means the version of
+                # PowerShellGet we installed won't import (its dependency is gone), so we try to import the newest
+                # version of PowerShellGet that's installed in order to install PackageManagement
+                $modules =
+                    Get-Module -Name 'PowerShellGet' -ListAvailable | Sort-Object -Property 'Version'
+                foreach( $module in $modules )
+                {
+                    $importError = $null
+                    try
+                    {
+                        Write-Debug "Attempting import of $($module.Name) $($module.Version) from ""$($module.Path)""."
+                        $module | Import-Module -ErrorAction SilentlyContinue -ErrorVariable 'importError'
+                        if( (Get-Module -Name 'PowerShellGet') )
+                        {
+                            Write-Debug "Imported PowerShellGet $($module.Version)."
+                            break
+                        }
+                        if( $importError )
+                        {
+                            Write-Debug "Errors importing $($module.Name) $($module.Version): $($importError)"
+                            $Global:Error.RemoveAt(0)
+                        }
+                    }
+                    catch
+                    {
+                        Write-Debug "Exception importing $($module.Name) $($module.Version): $($_)"
+                    }
+                }
+            }
+
+            Find-Module -Name $name -RequiredVersion $version |
+                Select-Object -First 1 |
+                ForEach-Object {
+                    $msg = "Saving PowerShell module $($name) $($version) to " +
+                            "$($psModulesPath | Resolve-Path -Relative)."
+                    Write-Information $msg
+                    $msg = "Downloading $($_.Name) $($_.Version) from $($_.RepositorySourceLocation) to " +
+                            """$($psModulesPath)""."
+                    Write-Debug $msg
+                    $_ | Save-Module -Path $psModulesPath
+                }
+            } | Wait-InstallJob
+            Write-WhiskeyDebug "$($Name) $($MaximumVersion) installation background job complete."
+    }
+
+    function Test-ModuleInstalled
+    {
+        param(
+            [Parameter(ValueFromPipelineByPropertyName)]
+            [String] $Name,
+
+            [Parameter(ValueFromPipelineByPropertyName)]
+            [Version] $MinimumVersion,
+
+            [Parameter(ValueFromPipelineByPropertyName)]
+            [Version] $MaximumVersion,
+
+            [String] $Path,
+
+            [switch] $PassThru
+        )
+
+        if( $Path )
+        {
+            $Name = Join-Path -Path $Path -ChildPath $Name
+        }
+
+        $module =
+            Get-Module -Name $Name -ListAvailable |
+            Where-Object 'Version' -GE $MinimumVersion |
+            Where-Object 'Version' -LE $MaximumVersion
+
+        if( $PassThru )
+        {
+            return $module
+        }
+
+        return $null -ne $module
+    }
+
+    function Wait-InstallJob
     {
         [CmdletBinding()]
         param(
@@ -35,23 +135,21 @@ function Install-WhiskeyRequiredModule
         }
     }
 
-    $requiredModules = @(
-        [pscustomobject]@{
-            Name = 'PowerShellGet';
-            MinimumVersion = $script:psGetMinVersion;
-            MaximumVersion = $script:psGetMaxVersion;
-        },
-        [pscustomobject]@{
-            Name = 'PackageManagement';
-            MinimumVersion = $script:pkgMgmtMinVersion;
-            MaximumVersion = $script:pkgMgmtMaxVersion;
-        }
-    )
+    $psGet = [pscustomobject]@{
+        Name = 'PowerShellGet';
+        MinimumVersion = $script:psGetMinVersion;
+        MaximumVersion = $script:psGetMaxVersion;
+    }
 
-    Get-Module -Name ($requiredModules | Select-Object -ExpandProperty 'Name') -ListAvailable |
-        Format-Table -Auto |
-        Out-String |
-        Write-WhiskeyDebug
+    $pkgMgmt =  [pscustomobject]@{
+        Name = 'PackageManagement';
+        MinimumVersion = $script:pkgMgmtMinVersion;
+        MaximumVersion = $script:pkgMgmtMaxVersion;
+    }
+
+    $requiredModules = @( $psGet, $pkgMgmt )
+
+    Get-Module -Name $requiredModules.Name -ListAvailable | Format-Table -Auto | Out-String | Write-WhiskeyDebug
 
     if( -not (Test-Path -Path $PSModulesPath) )
     {
@@ -59,85 +157,38 @@ function Install-WhiskeyRequiredModule
         New-Item -Path $PSModulesPath -ItemType 'Directory' | Out-Null
     }
 
-    foreach( $requiredModule in $requiredModules )
+    if( -not ($psGet | Test-ModuleInstalled) )
     {
-        $installedModules =
-            Get-Module -Name $requiredModule.Name -ListAvailable |
-            Where-Object 'Version' -GE $requiredModule.MinimumVersion |
-            Where-Object 'Version' -LE $requiredModule.MaximumVersion
-        if( $installedModules )
-        {
-            $msg = "Module $($requiredModule.Name) $($requiredModule.MinimumVersion) <= " +
-                   "$($requiredModule.MaximumVersion) already installed."
-            Write-WhiskeyDebug $msg
-            $installedModules | Format-Table -Auto | Out-String | Write-WhiskeyDebug
-            continue
-        }
-
-        Write-WhiskeyDebug "[Install   Begin   ]  [$($requiredModule.Name)]"
-        Start-Job {
-            $DebugPreference = $VerbosePreference = 'Continue'
-            $name = $using:requiredModule.Name
-            $version = $using:requiredModule.MaximumVersion
-            $psModulesPath = $using:PSModulesPath
-
-            $destinationPath = Join-Path -Path $psModulesPath -ChildPath $name
-            # We're replacing a module that is already in place. Delete it before PowerShell auto-loads it.
-            if( (Test-Path -Path $destinationPath) )
-            {
-                Write-Debug "Deleting existing $($name) module directory ""$($destinationPath)""."
-                Remove-Item -Path $destinationPath -Recurse -Force
-            }
-
-            # Save to a temporary directory because `Save-Module` also installs dependencies, which we handle,
-            # because otherwise we get into PackageManagement assembly loading hell.
-            $savePath = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
-            if( -not (Test-Path -Path $savePath) )
-            {
-                Write-Debug "Creating temp directory ""$($savePath)"" for downloading $($name)."
-                New-Item -Path $savePath -ItemType 'Directory' | Out-Null
-            }
-
-            try
-            {
-                Write-Debug "  PSModulePath"
-                $env:PSModulePath -split ([IO.Path]::PathSeparator) | ForEach-Object { "    $($_)" } | Write-Debug
-                Get-Module -ListAvailable -Name 'PowerShellGet' | Import-Module -ErrorAction SilentlyContinue
-                Find-Module -Name $name -RequiredVersion $version |
-                    Select-Object -First 1 |
-                    ForEach-Object {
-                        $msg = "Saving PowerShell module $($name) $($version) to " +
-                                "$($psModulesPath | Resolve-Path -Relative)."
-                        Write-Information $msg
-                        $msg = "Downloading $($_.Name) $($_.Version) from $($_.RepositorySourceLocation) to " +
-                                """$($savePath)""."
-                        Write-Debug $msg
-                        $_ | Save-Module -Path $savePath
-                    }
-                $dirsToCopy = Get-ChildItem -Path $savePath
-                Write-Debug "Copying ""$($dirsToCopy.Name -join '", "' )"" modules to ""$($psModulesPath)""."
-                # Remove any pre-existing modules in the destination. Those will be unsupported versions. When we
-                # install PowerShellGet, its dependencies also get installed, always at the highest version. We
-                # may not yet support that version, so must install a version we *do* support.
-                $dirsToCopy |
-                    ForEach-Object { Join-Path -Path $psModulesPath -ChildPath $_.Name } |
-                    Where-Object { Test-Path -Path $_ } |
-                    Remove-Item -Force -Recurse
-                $dirsToCopy | Copy-Item -Destination $psModulesPath -Recurse -Force
-            }
-            finally
-            {
-                if( (Test-Path -Path $savePath) )
-                {
-                    Write-Debug "Deleting temp directory ""$($savePath)""."
-                    Remove-Item -Path $savePath -Recurse -Force -ErrorAction Ignore
-                }
-            }
-        } | Wait
-        Write-WhiskeyDebug "[Install   Complete]  [$($requiredModule.Name)]"
+        $psGet | Invoke-InstallJob
     }
 
-    # PowerShell will auto-import PackageManagement
+    $psGetModule = $psGet | Test-ModuleInstalled -PassThru
+    # Make sure Package Management minimum version matches PowerShellGet's minium version.
+    $pkgMgmt.MinimumVersion =
+        $psGetModule.RequiredModules |
+        Where-Object 'Name' -EQ $pkgMgmt.Name |
+        Select-Object -ExpandProperty 'Version'
+
+    if( -not ($pkgMgmt | Test-ModuleInstalled) )
+    {
+        # PowerShellGet depends on PackageManagement, so Save-Module/Install-Module will install the latest version of
+        # PackageManagement if a version PowerShellGet can use isn't installed. Whiskey may not support the latest version.
+        # So, if Save-Module installed an incompatible version of PackageManagement, we need to remove it.
+        $tooNewPkgMgmtPath = Join-Path -Path $PSModulesPath -ChildPath $pkgMgmt.Name
+        Get-Module -Name $tooNewPkgMgmtPath -ListAvailable -ErrorAction Ignore |
+            Where-Object 'Version' -GT $pkgMgmt.MaximumVersion |
+            ForEach-Object {
+                $pathToDelete = $_ | Split-Path -Parent
+                $msg = "Deleting unsupported $($_.Name) $($_.Version) from " +
+                       """$($pathToDelete | Resolve-Path -Relative)""."
+                Write-Debug $msg
+                Remove-Item -Path $pathToDelete -Recurse -Force
+            }
+
+        $pkgMgmt | Invoke-InstallJob
+    }
+
+    # PowerShell will auto-import PackageManagement because PowerShellGet depends on it.
     Import-Module -Name 'PowerShellGet' `
                   -MinimumVersion $script:psGetMinVersion `
                   -MaximumVersion $script:psGetMaxVersion `
@@ -145,6 +196,7 @@ function Install-WhiskeyRequiredModule
 
     Write-WhiskeyDebug 'Imported PowerShellGet and PackageManagement modules.'
     Get-Module -Name 'PackageManagement','PowerShellGet' | Format-Table -Auto | Out-String | Write-WhiskeyDebug
+
     if( (Test-Path -Path 'env:APPVEYOR') )
     {
         Get-Module -Name ($requiredModules | Select-Object -ExpandProperty 'Name') -ListAvailable |
