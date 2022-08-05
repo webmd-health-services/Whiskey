@@ -1,4 +1,9 @@
 
+# 0.52.3
+
+* Minimum version of PowerShellGet is now 2.1.5. This fixes an issue with the `PublishPowerShellModule` task hanging.
+
+
 # 0.52.2
 
 * Fixed: `Ignore` is not allowed as a value in the `$ErrorActionPreference` variable when running `node.exe` executable
