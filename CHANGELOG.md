@@ -1,7 +1,24 @@
 
-# 0.52.3
+# 0.53.0
 
-* Minimum version of PowerShellGet is now 2.1.5. This fixes an issue with the `PublishPowerShellModule` task hanging.
+## Upgrade Instructions
+
+
+Whiskey no longer installs PackageManagement or PowerShellGet modules (again). On all computers running Whiskey builds
+install a version of:
+
+* PackageManagement from 1.3.2 to 1.4.8.1
+* PowerShellGet from 2.1.5 to 2.2.5
+
+We recommend using Prism for PowerShell module management and to get working package management module's installed. [It
+has a script you can run in your build process to bootstrap package management and Prism
+itself.](https://github.com/webmd-health-services/Prism#adding-to-builds)
+
+## Changes
+
+* Whiskey no longer installs Package Management or PowerShellGet modules. It now uses whatever versions of those modules
+are installed.
+* Please use PowerShellGet 2.1.5 or later. This will fix an issue with the `PublishPowerShellModule` task hanging.
 
 
 # 0.52.2

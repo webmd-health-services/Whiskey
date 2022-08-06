@@ -85,9 +85,6 @@ function Invoke-WhiskeyBuild
 
     Register-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
 
-    $psModulesPath = Join-Path -Path $Context.BuildRoot -ChildPath $script:psModulesDirectoryName
-    Install-WhiskeyRequiredModule -PSModulesPath $psModulesPath
-
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
     $succeeded = $false
@@ -154,9 +151,9 @@ function Invoke-WhiskeyBuild
         Write-WhiskeyInfo -Context $context -Message $msg -NoTiming -NoIndent
     }
 
-    # There are some errors (strict mode validation failures, command not found errors, etc.) that stop a build, but 
-    # even though ErrorActionPreference is Stop, it doesn't stop the current process, which is what causes a build to 
-    # fail the build. If we get here, and the build didn't succeed, we've encountered one of those errors. Throw a 
+    # There are some errors (strict mode validation failures, command not found errors, etc.) that stop a build, but
+    # even though ErrorActionPreference is Stop, it doesn't stop the current process, which is what causes a build to
+    # fail the build. If we get here, and the build didn't succeed, we've encountered one of those errors. Throw a
     # guaranteed terminating error.
     if( -not $succeeded )
     {
