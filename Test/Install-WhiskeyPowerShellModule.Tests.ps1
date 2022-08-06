@@ -97,7 +97,7 @@ function ThenModuleInstalled
         $AtVersion = $expectedModuleVersion,
         $In = $TestPSModulesDirectoryName
     )
-    
+
     $result | Should -Not -BeNullOrEmpty
     $path = $result.Path
     $errors = @()
@@ -108,7 +108,7 @@ function ThenModuleInstalled
     $module | Should -Not -BeNullOrEmpty
     $module.Version | Should -Be $AtVersion
 
-    Join-Path -Path $testRoot -ChildPath "$($In)\$($Name)\$($AtVersion)" | 
+    Join-Path -Path $testRoot -ChildPath "$($In)\$($Name)\$($AtVersion)" |
         Should -Exist
 }
 
@@ -183,10 +183,10 @@ function WhenInstallingPSModule
                 {
                     return $false
                 }
-                
+
                 $whiskeyCallers = Get-PSCallStack | Where-Object 'Command' -like '*-Whiskey*'
                 $whiskeyCallers | Format-Table | Out-String | Write-Debug
-                $whiskeyCaller = $whiskeyCallers | Select-Object -First 1 
+                $whiskeyCaller = $whiskeyCallers | Select-Object -First 1
                 $whiskeyCaller | Format-List | Out-String | Write-Debug
                 $whiskeyCaller.InvocationInfo | Format-List | Out-String | Write-Debug
                 $whiskeyCaller.Arguments | Format-List | Out-String | Write-Debug
@@ -423,7 +423,7 @@ Describe "Install-WhiskeyPowerShellModule.when user installing to custom path bu
     AfterEach { Reset }
     It 'should install module at the custom path' {
         Init
-        $globalModulePath = 
+        $globalModulePath =
             ($env:PSModulePath -split [IO.Path]::PathSeparator) |
             Where-Object { $_ -match '\b(Windows)?PowerShell\b' } |
             Select-Object -First 1
@@ -438,8 +438,13 @@ Describe "Install-WhiskeyPowerShellModule.when user installing to custom path bu
 }
 
 Describe 'Install-WhiskeyPowerShellModule.when module fails to install' {
-    AfterEach { Reset }
+    AfterEach {
+        $Global:Error | Format-List * -Force | Out-String | Write-Debug
+        $Global:DebugPreference = $Global:VerbosePreference = 'SilentlyContinue'
+        Reset
+    }
     It 'should fail' {
+        $Global:DebugPreference = $Global:VerbosePreference = 'Continue'
         Init
         Mock -CommandName 'Save-Module' -ModuleName 'Whiskey'
         { WhenInstallingPSModule 'Zip' -ErrorAction Stop } |
@@ -461,7 +466,7 @@ Describe 'Install-WhiskeyPowerShellModule.when remains of old module still in pl
         Mock -Command 'Remove-Item' -ModuleName 'Whiskey' -ParameterFilter $parameterFilter
         New-Item -Path (Join-Path -Path $testRoot -ChildPath "PSModules\Zip\$($latestZip.Version)") -ItemType 'Directory'
         $slash = [IO.Path]::DirectorySeparatorChar
-        $expectedMsg ="the destination path "".$($slash)PSModules$($slash)Zip$($slash)$($expectedVersion)"" exists" 
+        $expectedMsg ="the destination path "".$($slash)PSModules$($slash)Zip$($slash)$($expectedVersion)"" exists"
         { WhenInstallingPSModule 'Zip' -ErrorAction Stop } | Should -Throw $expectedMsg
         ThenNoModuleInfoReturned
         ThenModuleNotInstalled
