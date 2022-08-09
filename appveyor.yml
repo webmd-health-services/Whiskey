@@ -53,12 +53,15 @@ for:
     only:
     - job_group: ps
   build_script:
-  - ps: .\build.ps1
+  - ps: |
+        iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
+        .\build.ps1
 
 # Build in PowerShell
 - matrix:
     only:
     - job_group: pwsh
   build_script:
-
-  - pwsh: ./build.ps1
+  - pwsh: |
+        iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
+        ./build.ps1
