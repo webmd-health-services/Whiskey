@@ -1,4 +1,9 @@
 
+# 0.53.1
+
+Fixed: Pester task doesn't fail when running in a background job and tests fail.
+
+
 # 0.53.0
 
 ## Upgrade Instructions
