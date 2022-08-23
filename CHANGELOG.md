@@ -1,4 +1,11 @@
 
+# 0.53.2
+
+Fixed: PublishBitbucketServerTag task fails when building a pull request in Jenkins. When building PRs, Jenkins merges
+the source and destination branches together on the build server. This merge only exists on the build server, so can't
+be tagged in Bitbucket Server.
+
+
 # 0.53.1
 
 Fixed: Pester task doesn't fail when running in a background job and tests fail.
