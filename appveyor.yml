@@ -54,8 +54,15 @@ for:
     - job_group: ps
   build_script:
   - ps: |
-        iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
-        .\build.ps1
+        try
+        {
+            iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
+            .\build.ps1
+        }
+        finally
+        {
+            # $Global:Error | Format-List * -Force
+        }
 
 # Build in PowerShell
 - matrix:
@@ -63,5 +70,12 @@ for:
     - job_group: pwsh
   build_script:
   - pwsh: |
-        iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
-        ./build.ps1
+        try
+        {
+            iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
+            ./build.ps1
+        }
+        finally
+        {
+            # $Global:Error | Format-List * -Force
+        }

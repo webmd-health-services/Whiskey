@@ -2,329 +2,331 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-Write-Debug 'PUBLISHBITBUCKETSERVERTAG  PSMODULEPATH'
-$env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
-
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
-
-$context = $null
-$threwException = $false
-$version = $null
-$uri = $null
-$credential = $null
-$credentialID = $null
-$repositoryKey = $null
-$projectKey = $null
-$commitID = $null
-$gitUri = $null
-
-function GivenACommit
-{
-    param(
-        [switch]$ThatIsInvalid
-    )
-
-    if( -not $ThatIsInvalid )
-    {
-        $script:commitID = 'ValidCommitHash'
-    }
-    else
-    {
-        $script:commitID = $null
-    }
-}
-
-function GivenBBServerAt
-{
-    param(
-        $Uri
-    )
-
-    $script:uri = $Uri
-}
-
-function GivenCredential
-{
-    param(
-        $ID,
-        $UserName,
-        $Password
-    )
-
-    $script:credentialID = $ID
-    $script:credential = New-Object 'Management.Automation.PsCredential' $UserName,(ConvertTo-SecureString -AsPlainText -Force -String $Password)
-}
-
-function GivenRepository
-{
-    param(
-        $Named,
-        $InProject
-    )
-
-    $script:projectKey = $InProject
-    $script:repositoryKey = $Named
-}
-
-function GivenGitUrl
-{
-    param(
-        $Uri
-    )
-
-    $script:projectKey = $null
-    $script:repositoryKey = $null
-    $script:gitUri = $Uri
-}
-
-function GivenNoBBServerUri
-{
-    $script:uri = $null
-}
-
-function GivenNoCredential
-{
-    $script:credentialID = $null
-    $script:credential = $null
-}
-
-function GivenNoRepoInformation
-{
-    $script:projectKey = $null
-    $script:repositoryKey = $null
-}
-
-function GivenVersion
-{
-    param(
-        $Version
-    )
-
-    $script:version = $Version
-}
-
-function Init
-{
-    Write-Debug 'PUBLISHBITBUCKETSERVERTAG  INIT  PSMODULEPATH'
+BeforeAll {
+    Write-Debug 'PUBLISHBITBUCKETSERVERTAG  PSMODULEPATH'
     $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
 
-    $script:gitUri = ''
-    $script:testRoot = New-WhiskeyTestRoot
-}
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+    Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
 
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
+    $script:context = $null
+    $script:threwException = $false
+    $script:version = $null
+    $script:uri = $null
+    $script:credential = $null
+    $script:credentialID = $null
+    $script:repositoryKey = $null
+    $script:projectKey = $null
+    $script:commitID = $null
+    $script:gitUri = $null
+    $script:isPullRequest = $false
 
-function WhenTaggingACommit
-{
-    [CmdletBinding()]
-    param(
-        [switch]$ThatWillFail
-    )
-
-    $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' `
-                                             -ForVersion $version `
-                                             -ForBuildServer `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'BitbucketServerAutomation'
-
-    $context.BuildMetadata.ScmUri = $gitUri
-    mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
-
-    $taskParameter = @{ }
-    if( $uri )
+    function GivenACommit
     {
-        $taskParameter['Uri'] = $uri
-    }
+        param(
+            [switch]$ThatIsInvalid
+        )
 
-    if( $credentialID )
-    {
-        $taskParameter['CredentialID'] = $credentialID
-        if( $credential )
+        if( -not $ThatIsInvalid )
         {
-            Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
+            $script:commitID = 'ValidCommitHash'
+        }
+        else
+        {
+            $script:commitID = $null
         }
     }
 
-    if( $projectKey -and $repositoryKey )
+    function GivenBBServerAt
     {
-        $taskParameter['ProjectKey'] = $projectKey
-        $taskParameter['RepositoryKey'] = $repositoryKey
+        param(
+            $Uri
+        )
+
+        $script:uri = $Uri
     }
 
-    $context.BuildMetadata.ScmCommitID = $commitID
-
-    $global:Error.Clear()
-    $script:threwException = $false
-    try
+    function GivenBuildingPullRequest
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name 'PublishBitbucketServerTag' -Parameter $taskParameter
+        $script:isPullRequest = $true
     }
-    catch
+
+    function GivenCredential
     {
-        $script:threwException = $true
-        Write-Error -ErrorRecord $_
+        [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
+        param(
+            $ID,
+            $UserName,
+            $Password
+        )
+
+        $script:credentialID = $ID
+        $script:credential = New-Object 'Management.Automation.PsCredential' $UserName,(ConvertTo-SecureString -AsPlainText -Force -String $Password)
     }
-    finally
+
+    function GivenRepository
     {
-        # Remove so Pester can delete the test drive
-        Remove-Module -Name 'BitbucketServerAutomation' -Force
-        # Re-import so Pester can verify mocks.
-        Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
+        param(
+            $Named,
+            $InProject
+        )
+
+        $script:projectKey = $InProject
+        $script:repositoryKey = $Named
+    }
+
+    function GivenGitUrl
+    {
+        param(
+            $Uri
+        )
+
+        $script:projectKey = $null
+        $script:repositoryKey = $null
+        $script:gitUri = $Uri
+    }
+
+    function GivenNoBBServerUri
+    {
+        $script:uri = $null
+    }
+
+    function GivenNoCredential
+    {
+        $script:credentialID = $null
+        $script:credential = $null
+    }
+
+    function GivenNoRepoInformation
+    {
+        $script:projectKey = $null
+        $script:repositoryKey = $null
+    }
+
+    function GivenVersion
+    {
+        param(
+            $Version
+        )
+
+        $script:version = $Version
+    }
+
+    function WhenTaggingACommit
+    {
+        [CmdletBinding()]
+        param(
+            [switch]$ThatWillFail
+        )
+
+        $script:context = New-WhiskeyTestContext -ForTaskName 'PublishBitbucketServerTag' `
+                                                 -ForVersion $script:version `
+                                                 -ForBuildServer `
+                                                 -ForBuildRoot $script:testRoot `
+                                                 -IncludePSModule 'BitbucketServerAutomation'
+
+        $script:context.BuildMetadata.ScmUri = $script:gitUri
+
+        if( $script:isPullRequest )
+        {
+            $script:context.BuildMetadata.IsPullRequest = $true
+        }
+
+        Mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
+
+        $taskParameter = @{ }
+        if( $script:uri )
+        {
+            $taskParameter['Uri'] = $script:uri
+        }
+
+        if( $script:credentialID )
+        {
+            $taskParameter['CredentialID'] = $script:credentialID
+            if( $script:credential )
+            {
+                Add-WhiskeyCredential -Context $script:context -ID $script:credentialID -Credential $script:credential
+            }
+        }
+
+        if( $script:projectKey -and $script:repositoryKey )
+        {
+            $taskParameter['ProjectKey'] = $script:projectKey
+            $taskParameter['RepositoryKey'] = $script:repositoryKey
+        }
+
+        $script:context.BuildMetadata.ScmCommitID = $script:commitID
+
+        $global:Error.Clear()
+        $script:threwException = $false
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $script:context -Name 'PublishBitbucketServerTag' -Parameter $taskParameter
+        }
+        catch
+        {
+            $script:threwException = $true
+            Write-Error -ErrorRecord $_
+        }
+        finally
+        {
+            # Remove so Pester can delete the test drive
+            Remove-Module -Name 'BitbucketServerAutomation' -Force
+            # Re-import so Pester can verify mocks.
+            Import-WhiskeyTestModule -Name 'BitbucketServerAutomation' -Force
+        }
+    }
+
+    function ThenTaskFails
+    {
+        param(
+            $Pattern
+        )
+
+        $script:threwException | Should -BeTrue
+        $Global:Error | Should -Match $Pattern
+    }
+
+    function ThenTaskSucceeds
+    {
+        $script:threwException | Should -BeFalse
+    }
+
+    function ThenTheCommitShouldBeTagged
+    {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
+        param(
+            [Parameter(Mandatory,Position=0)]
+            $Tag,
+
+            [Parameter(Mandatory)]
+            $InProject,
+
+            [Parameter(Mandatory)]
+            $InRepository,
+
+            [Parameter(Mandatory)]
+            $AtUri,
+
+            [Parameter(Mandatory)]
+            $AsUser,
+
+            [Parameter(Mandatory)]
+            $WithPassword
+        )
+
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-WhiskeyDebug -Message ('Name  expected  {0}' -f $Tag)
+            Write-WhiskeyDebug -Message ('      actual    {0}' -f $Name)
+            $Name -eq $Tag
+        }
+
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            $Connection.Uri -eq $AtUri }
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.UserName -eq $AsUser }
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $WithPassword }
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
+            $ProjectKey -eq $InProject }
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $RepositoryKey -eq $InRepository }
+    }
+
+    function ThenTheCommitShouldNotBeTagged
+    {
+        param(
+            [String]$WithError
+        )
+
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
     }
 }
 
-function ThenTaskFails
-{
-    param(
-        $Pattern
-    )
+Describe 'PublishBitbucketServerTag' {
+    BeforeEach {
+        Write-Debug 'PUBLISHBITBUCKETSERVERTAG  INIT  PSMODULEPATH'
+        $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
 
-    $threwException | Should -BeTrue
-    $Global:Error | Should -Match $Pattern
-}
-
-function ThenTaskSucceeds
-{
-    $threwException | Should -BeFalse
-}
-
-function ThenTheCommitShouldBeTagged
-{
-    param(
-        [Parameter(Mandatory,Position=0)]
-        $Tag,
-
-        [Parameter(Mandatory)]
-        $InProject,
-
-        [Parameter(Mandatory)]
-        $InRepository,
-
-        [Parameter(Mandatory)]
-        $AtUri,
-
-        [Parameter(Mandatory)]
-        $AsUser,
-
-        [Parameter(Mandatory)]
-        $WithPassword
-    )
-
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-        #$DebugPreference = 'Continue'
-        Write-WhiskeyDebug -Message ('Name  expected  {0}' -f $Tag)
-        Write-WhiskeyDebug -Message ('      actual    {0}' -f $Name)
-        $Name -eq $Tag 
+        $script:gitUri = ''
+        $script:testRoot = New-WhiskeyTestRoot
+        $script:isPullRequest = $false
     }
 
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Uri -eq $AtUri }
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.UserName -eq $AsUser }
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $WithPassword }
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ProjectKey -eq $InProject }
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $RepositoryKey -eq $InRepository }
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $ErrorActionPreference -eq [Management.Automation.ActionPreference]::Stop }
-}
+    AfterEach {
+        Reset-WhiskeyTestPSModule
+    }
 
-function ThenTheCommitShouldNotBeTagged
-{
-    param(
-        [String]$WithError
-    )
-
-    Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
-}
-
-Describe 'PublishBitbucketServerTag.when repository cloned using SSH' {
-    AfterEach { Reset }
-    It 'should create the tag' {
-        Init
+    It 'should create the tag when repository cloned using SSH' {
         GivenCredential 'bbservercredential' 'username' 'password'
         GivenBBServerAt 'https://bbserver.example.com'
         GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
-        GivenACommit 
+        GivenACommit
         GivenVersion '1.4.5'
         WhenTaggingACommit
         ThenTheCommitShouldBeTagged '1.4.5' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishBitbucketServerTag.when repository cloned using HTTPS' {
-    AfterEach { Reset }
-    It 'should create the tag' {
-        Init
+    It 'should create the tag when repository cloned using HTTPS' {
         GivenCredential 'bbservercredential' 'username' 'password'
         GivenBBServerAt 'https://bbserver.example.com'
         GivenGitUrl 'https://user@bbserver.example.com/scm/project/repo.git'
-        GivenACommit 
+        GivenACommit
         GivenVersion '34.432.3'
         WhenTaggingACommit
         ThenTheCommitShouldBeTagged '34.432.3' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishBitbucketServerTag.when user provides repository keys' {
-    AfterEach { Reset }
-    It 'should create the tag' {
-        Init
+    It 'should create the tag when user provides repository key' {
         GivenCredential 'bbservercredential' 'username' 'password'
         GivenBBServerAt 'https://bbserver.example.com'
         GivenRepository 'fubar' -InProject 'snafu'
-        GivenACommit 
+        GivenACommit
         GivenVersion '34.432.3'
         WhenTaggingACommit
         ThenTheCommitShouldBeTagged '34.432.3' -InProject 'snafu' -InRepository 'fubar' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishBitbucketServerTag.when attempting to tag without a valid commit' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'should fail when attempting to tag without a valid commit' {
         GivenGitUrl 'does not matter'
         GivenACommit -ThatIsInvalid
         WhenTaggingACommit -ErrorAction SilentlyContinue
         ThenTaskFails 'Unable to identify a valid commit to tag'
         ThenTheCommitShouldNotBeTagged
     }
-}
 
-Describe 'Publsh-WhiskeyBBServerTag.when no credential ID' {
-    AfterEach { Reset }
-    It 'shoudl fail' {
-        Init
+    It 'shoudl fail when no credential ID' {
         GivenNoCredential
         WhenTaggingACommit -ErrorAction SilentlyContinue
         ThenTaskFails '\bCredentialID\b.*\bis\ mandatory\b'
     }
-}
 
-Describe 'Publsh-WhiskeyBBServerTag.when no URI' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'should fail when no URI' {
         GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
         GivenNoBBServerUri
         WhenTaggingACommit -ErrorAction SilentlyContinue
         ThenTaskFails '\bUri\b.*\bis\ mandatory\b'
     }
-}
 
-Describe 'Publsh-WhiskeyBBServerTag.when no repository information' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'should fail when no repository information' {
         GivenNoRepoInformation
         GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
         GivenBBServerAt 'https://bitbucket.example.com'
         GivenACommit 'deadbeedeadbee'
         WhenTaggingACommit -ErrorAction SilentlyContinue
         ThenTaskFails '\bunable\ to\ determine\ the\ repository'
+    }
+
+    It 'should do nothing if building a pull request' {
+        GivenCredential 'bbservercredential' 'username' 'password'
+        GivenBBServerAt 'https://bbserver.example.com'
+        GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
+        GivenACommit
+        GivenVersion '1.4.5'
+        GivenBuildingPullRequest
+        WhenTaggingACommit
+        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
