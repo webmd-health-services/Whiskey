@@ -91,7 +91,8 @@ function WhenResolvingSdkVersion
     [CmdletBinding()]
     param(
         [switch]$LatestLTS,
-        [String]$Version
+        [String]$Version,
+        [WhiskeyDotNetSdkRollForward]$RollForward
     )
 
     $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' `

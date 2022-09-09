@@ -53,6 +53,19 @@ if( -not (Test-Path -Path 'env:WHISKEY_DISABLE_ERROR_FORMAT') )
     Update-FormatData -PrependPath $prependFormats
 }
 
+# Supported .NET global.json RollForward values.
+Enum WhiskeyDotNetSdkRollForward {
+    Patch
+    Feature
+    Minor
+    Major
+    LatestPatch 
+    LatestFeature
+    LatestMinor
+    LatestMajor
+    Disable
+}
+
 Write-Timing 'Loading assemblies.'
 
 # .NET Framework 4.6.2 won't load netstandard2.0 assemblies.
