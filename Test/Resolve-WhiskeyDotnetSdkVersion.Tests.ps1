@@ -92,7 +92,7 @@ function WhenResolvingSdkVersion
     param(
         [switch]$LatestLTS,
         [String]$Version,
-        [WhiskeyDotNetSdkRollForward]$RollForward
+        $RollForward
     )
 
     $script:resolvedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' `
@@ -209,5 +209,210 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when Microsoft moves the index again' 
         WhenResolvingSdkVersion -Version '2.1' -ErrorAction SilentlyContinue
         ThenError 'releases index'
         ThenReturnedNothing
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is diabled and patch is found' {
+    It 'should use specified version' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.000', '3.0.100' -ForRelease '3.0'
+        WhenResolvingSdkVersion -Version '3.0.000' -RollForward Disable
+        ThenResolvedVersion '3.0.000'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is disabled and patch is not found' {
+    It 'should fail' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.100' -ForRelease '3.0'
+        WhenResolvingSdkVersion -Version '3.0.000' -RollForward Disable
+        ThenError -Message 'not be found'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is patch and patch is found' {
+    It 'should use specified version' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.000', '3.0.100' -ForRelease '3.0'
+        WhenResolvingSdkVersion -Version '3.0.000' -RollForward Patch
+        ThenResolvedVersion '3.0.000'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is patch and patch not found, but one greater exists' {
+    It 'should roll forward to latest patch' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.001', '3.0.002' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.000' -RollForward Patch
+        ThenResolvedVersion '3.0.002'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is patch and patch not found' {
+    It 'should fail' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.001', '3.0.002' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.003' -RollForward Patch 
+        ThenError 'not be found'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is feature and specified major minor and feature exist' {
+    It 'should use specified feature with latest patch' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.101', '3.0.102' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.100'  -RollForward Feature
+        ThenResolvedVersion '3.0.102'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is feature and feature band not found, but greater one exists' {
+    It 'should roll up to next feature with latest patch' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.000' -RollForward Feature
+        ThenResolvedVersion '3.0.100'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is feature and no higher feature band found' {
+    It 'should fail' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.300' -RollForward Feature
+        ThenError 'not be found'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature band is found' {
+    It 'should use latest patch' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.100' -RollForward Minor
+        ThenResolvedVersion '3.0.101'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature band not found' {
+    It 'should roll forward to the next feature band' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100',  '3.0.101' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.102' -RollForward Minor
+        ThenResolvedVersion '3.1.000'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and next minor not found' {
+    It 'should fail' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.1.001' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.1.100' -RollForward Minor
+        ThenError 'not be found'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band is found' {
+    It 'should use latest patch' {
+        Init
+        GivenReleases '3.0', '3.1', '4.0'
+        GivenSDKVersions '4.0.000' -ForRelease '4.0'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.100' -RollForward Major
+        ThenResolvedVersion '3.0.101'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band not found' {
+    It 'should roll forward to next feature band' {
+        Init
+        GivenReleases '3.0', '3.1', '4.0'
+        GivenSDKVersions '4.0.000' -ForRelease '4.0'
+        GivenSDKVersions '3.1.000' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.300', '3.0.399' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.200' -RollForward Major
+        ThenResolvedVersion '3.0.399'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and searched major band not found' {
+    It 'should roll forward to the next major' {
+        Init
+        GivenReleases '3.0', '3.1', '4.0'
+        GivenSDKVersions '4.0.000' -ForRelease '4.0'
+        GivenSDKVersions '3.1.001' -ForRelease '3.1'
+        GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.1.100' -RollForward Major
+        ThenResolvedVersion '4.0.000'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and no next major found' {
+    It 'should fail' {
+        Init
+        GivenReleases '3.0', '4.0'
+        GivenSDKVersions '3.0.100', '3.0.200' -ForRelease '3.0'
+        GivenSDKVersions '4.0.000' -ForRelease '4.0'
+        WhenResolvingSdkVersion '4.0.100' -RollForward Major
+        ThenError 'not be found'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestPatch and patch found' {
+    It 'should find latest patch' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.120' -RollForward LatestPatch
+        ThenResolvedVersion '3.0.199'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestFeature and feature found' {
+    It 'should find latest feature' {
+        Init
+        GivenReleases '3.0'
+        GivenSDKVersions '3.0.010', '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
+        WhenResolvingSdkVersion '3.0.010' -RollForward LatestFeature
+        ThenResolvedVersion '3.0.199'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestMinor and minor found' {
+    It 'should use latest minor' {
+        Init
+        GivenReleases '3.0', '3.1'
+        GivenSDKVersions '3.0.010', '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
+        GivenSDKVersions '3.1.100', '3.1.199', '3.1.400' -ForRelease '3.1'
+        WhenResolvingSdkVersion '3.0.010' -RollForward LatestMinor
+        ThenResolvedVersion '3.1.400'
+    }
+}
+
+Describe 'Resolve-WhiskeyDotNetSdkVerison.when RollForward is LatestMajor and major found' {
+    It 'should use latest major' {
+        Init
+        GivenReleases '3.0', '3.1', '4.0'
+        GivenSDKVersions '3.0.010', '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
+        GivenSDKVersions '3.1.100', '3.1.199', '3.1.400' -ForRelease '3.1'
+        GivenSDKVersions '4.0.100', '4.0.499', '4.0.498', '4.0.000' -ForRelease '4.0'
+        WhenResolvingSdkVersion '3.0.010' -RollForward LatestMajor
+        ThenResolvedVersion '4.0.499'
     }
 }
