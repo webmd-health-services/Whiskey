@@ -70,7 +70,17 @@ function Install-WhiskeyDotNetTool
                                  Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
                                  Select-Object -ExpandProperty 'version' -ErrorAction Ignore
         
-        if ($globalJsonVersion)
+        $globalJsonRollForward = $globalJson |
+                           Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
+                           Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
+        $rollForward = [Whiskey.DotNetSdkRollForward]$globalJsonRollForward
+        if ( $globalJsonVersion -and $null -ne $rollForward )
+        {
+            $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value set to '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
+            Write-WhiskeyVerbose -Message $msg
+            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion -RollForward $rollForward
+        }
+        elseif ($globalJsonVersion)
         {
             Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in ''{2}''' -f $MyInvocation.MyCommand,$globalJsonVersion,$globalJsonPath)
             $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion
