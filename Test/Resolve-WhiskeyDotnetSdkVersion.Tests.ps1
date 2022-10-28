@@ -30,6 +30,40 @@ function GivenReleases
          -MockWith { $releasesIndex }.GetNewClosure()
 }
 
+function GivenReleasesWithLatest
+{
+    param (
+        # List of releases
+        $Release,
+        # Should be parallel with Release
+        $LatestRelease
+    )
+    $releaseWithLatest =  @()   
+
+    for ($i = 0; $i -lt $Release.Length; $i++)
+    {
+        $releaseWithLatest += ,@{
+            'release' = $Release[$i]
+            'latest-release' = $LatestRelease[$i]
+        }
+    }
+
+    $releasesIndex = @{
+        'releases-index' = $releaseWithLatest | ForEach-Object {
+            @{
+                'channel-version' = $_.'release'
+                'releases.json'   = ('https://dotnetcli.pester.test.example.com/{0}/releases.json' -f $_.'release')
+                'latest-sdk'  = $_.'latest-release'
+            }
+        }
+    } | ConvertTo-Json -Depth 100 | ConvertFrom-Json
+
+    Mock -CommandName 'Invoke-RestMethod' `
+         -ModuleName 'Whiskey' `
+         -ParameterFilter { $Uri -like '*releases-index.json' } `
+         -MockWith { $releasesIndex }.GetNewClosure()
+}
+
 function GivenSDKVersions
 {
     param(
@@ -297,7 +331,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is feature and no hig
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature band is found' {
     It 'should use latest patch' {
         Init
-        GivenReleases '3.0', '3.1'
+        GivenReleasesWithLatest '3.0', '3.1' -LatestRelease '3.0.200', '3.1.000'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
         WhenResolvingSdkVersion '3.0.100' -RollForward Minor
@@ -308,7 +342,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature band not found' {
     It 'should roll forward to the next feature band' {
         Init
-        GivenReleases '3.0', '3.1'
+        GivenReleasesWithLatest '3.0', '3.1' -LatestRelease '3.0.101', '3.1.000'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100',  '3.0.101' -ForRelease '3.0'
         WhenResolvingSdkVersion '3.0.102' -RollForward Minor
@@ -319,7 +353,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and next minor not found' {
     It 'should fail' {
         Init
-        GivenReleases '3.0', '3.1'
+        GivenReleasesWithLatest '3.0', '3.1' -LatestRelease '3.0.200', '3.1.001'
         GivenSDKVersions '3.1.001' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
         WhenResolvingSdkVersion '3.1.100' -RollForward Minor
@@ -330,7 +364,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and next min
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band is found' {
     It 'should use latest patch' {
         Init
-        GivenReleases '3.0', '3.1', '4.0'
+        GivenReleasesWithLatest '3.0', '3.1', '4.0' -LatestRelease '3.0.200', '3.1.000', '4.0.000'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
@@ -342,7 +376,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band not found' {
     It 'should roll forward to next feature band' {
         Init
-        GivenReleases '3.0', '3.1', '4.0'
+        GivenReleasesWithLatest '3.0', '3.1', '4.0' -LatestRelease '3.0.399', '3.1.000', '4.0.000'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.300', '3.0.399' -ForRelease '3.0'
@@ -354,7 +388,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and searched major band not found' {
     It 'should roll forward to the next major' {
         Init
-        GivenReleases '3.0', '3.1', '4.0'
+        GivenReleasesWithLatest '3.0', '3.1', '4.0' -LatestRelease '3.0.200', '3.1.001', '4.0.000'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         GivenSDKVersions '3.1.001' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
@@ -366,7 +400,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and searched
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and no next major found' {
     It 'should fail' {
         Init
-        GivenReleases '3.0', '4.0'
+        GivenReleasesWithLatest '3.0', '4.0' -LatestRelease '3.0.200', '4.0.000'
         GivenSDKVersions '3.0.100', '3.0.200' -ForRelease '3.0'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         WhenResolvingSdkVersion '4.0.100' -RollForward Major
@@ -397,7 +431,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestFeature and 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestMinor and minor found' {
     It 'should use latest minor' {
         Init
-        GivenReleases '3.0', '3.1'
+        GivenReleasesWithLatest -Release '3.0', '3.1' -LatestRelease '3.0.199', '3.1.400'
         GivenSDKVersions '3.0.010', '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
         GivenSDKVersions '3.1.100', '3.1.199', '3.1.400' -ForRelease '3.1'
         WhenResolvingSdkVersion '3.0.010' -RollForward LatestMinor
@@ -408,7 +442,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestMinor and mi
 Describe 'Resolve-WhiskeyDotNetSdkVerison.when RollForward is LatestMajor and major found' {
     It 'should use latest major' {
         Init
-        GivenReleases '3.0', '3.1', '4.0'
+        GivenReleasesWithLatest -Release '3.0', '3.1', '4.0' -LatestRelease '3.0.199', '3.1.400', '4.0.499'
         GivenSDKVersions '3.0.010', '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
         GivenSDKVersions '3.1.100', '3.1.199', '3.1.400' -ForRelease '3.1'
         GivenSDKVersions '4.0.100', '4.0.499', '4.0.498', '4.0.000' -ForRelease '4.0'

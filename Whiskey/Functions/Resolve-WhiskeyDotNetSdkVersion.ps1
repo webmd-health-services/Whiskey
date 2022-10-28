@@ -84,7 +84,7 @@ function Resolve-WhiskeyDotNetSdkVersion
         else
         {
             $SdkVersionObjs = $SdkVersionObjs | 
-                Where-Object { $_.Feature -eq $Feature -and $_.Patch > $MinimumPatch}
+                Where-Object { $_.Feature -eq $Feature -and $_.Patch -gt $MinimumPatch}
         }
         if ( ($SdkVersionObjs | Measure-Object | Select-Object -ExpandProperty 'Count') -lt 1)
         {
@@ -259,35 +259,41 @@ function Resolve-WhiskeyDotNetSdkVersion
         $matcher = $Matches[0]
 
         $release = $releasesIndex | Where-Object { $_.'channel-version' -like $matcher } | Select-Object -First 1
-        if (-not $release)
+        if (-not $release -and $RollForward -eq [Whiskey.DotNetSdkRollForward]::Disable)
         {
             Write-WhiskeyError -Message ('.NET Core release matching "{0}" could not be found in "{1}"' -f $matcher, $releasesIndexUri)
             return
         }
 
-        $releasesJsonUri = $release | Select-Object -ExpandProperty 'releases.json'
-        Write-WhiskeyVerbose -Message ('[{0}] Resolving .NET Core SDK version "{1}" against known released versions at: "{2}"' -f $MyInvocation.MyCommand,$Version,$releasesJsonUri)
+        $searchingMajorMinor = $RollForward -eq [Whiskey.DotNetSdkRollForward]::Major -or $RollForward -eq [Whiskey.DotNetSdkRollForward]::Minor
 
-        $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
+        $sdkVersions = $null
+        $resolvedVersion = $null
+        $sdkVersionObjs = $null
+        $searchVersionObj = ConvertTo-VersionObject -VersionToConvert $Version
+        if ( -not (-not $release -and $searchingMajorMinor)) 
+        {
+            $releasesJsonUri = $release | Select-Object -ExpandProperty 'releases.json'
+            Write-WhiskeyVerbose -Message ('[{0}] Resolving .NET Core SDK version "{1}" against known released versions at: "{2}"' -f $MyInvocation.MyCommand,$Version,$releasesJsonUri)
 
-        $sdkVersions = & {
-            $releasesJson.releases |
-                Where-Object { $_ | Get-Member -Name 'sdk' } |
-                Select-Object -ExpandProperty 'sdk' |
-                Select-Object -ExpandProperty 'version'
+            $releasesJson = Invoke-RestMethod -Uri $releasesJsonUri -ErrorAction Stop
 
-            $releasesJson.releases |
-                Where-Object { $_ | Get-Member -Name 'sdks' } |
-                Select-Object -ExpandProperty 'sdks' |
-                Select-Object -ExpandProperty 'version'
+            $sdkVersions = & {
+                $releasesJson.releases |
+                    Where-Object { $_ | Get-Member -Name 'sdk' } |
+                    Select-Object -ExpandProperty 'sdk' |
+                    Select-Object -ExpandProperty 'version'
+
+                $releasesJson.releases |
+                    Where-Object { $_ | Get-Member -Name 'sdks' } |
+                    Select-Object -ExpandProperty 'sdks' |
+                    Select-Object -ExpandProperty 'version'
+            }
         }
-
-        if ( $RollForward )
+        if ( $RollForward -and $sdkVersions )
         {
             $sdkVersionObjs = $sdkVersions | ForEach-Object { ConvertTo-VersionObject -VersionToConvert $_ }
-            $searchVersionObj = ConvertTo-VersionObject -VersionToConvert $Version
         }
-        $resolvedVersion = $null
 
         switch ($RollForward)
         {
@@ -296,7 +302,7 @@ function Resolve-WhiskeyDotNetSdkVersion
                 $resolvedVersion = 
                     $sdkVersionObjs | 
                     Where-Object { $_.Text -eq $searchVersionObj.Text } | 
-                    Select-Object -First 1 | 
+                    Select-Object -First 1 |
                     Select-Object -ExpandProperty 'Text'
                 if ( -not $resolvedVersion )
                 {
@@ -329,9 +335,13 @@ function Resolve-WhiskeyDotNetSdkVersion
             }
             Minor
             {
-                $minorVersion = Get-NextMinor -SearchVersionObj $searchVersionObj `
-                                          -SdkVersionObjs $sdkVersionObjs `
-                                          -ReleasesIndex $releasesIndex
+                $minorVersion = $null
+                if ( $sdkVersionObjs )
+                {
+                    $minorVersion = Get-NextMinor -SearchVersionObj $searchVersionObj `
+                                            -SdkVersionObjs $sdkVersionObjs `
+                                            -ReleasesIndex $releasesIndex
+                }
                 if ( -not $minorVersion )
                 {
                     $msg = "A released version of the .NET Core SDK matching major version " +
@@ -345,9 +355,13 @@ function Resolve-WhiskeyDotNetSdkVersion
             }
             Major
             {
-                $minorVersion = Get-NextMinor -SearchVersionObj $searchVersionObj `
-                                          -SdkVersionObjs $sdkVersionObjs `
-                                          -ReleasesIndex $releasesIndex
+                $minorVersion = $null
+                if ( $sdkVersionObjs )
+                {
+                    $minorVersion = Get-NextMinor -SearchVersionObj $searchVersionObj `
+                                            -SdkVersionObjs $sdkVersionObjs `
+                                            -ReleasesIndex $releasesIndex
+                }
                 if ( -not $minorVersion )
                 {
                     $nextMajorMinor = "$($searchVersionObj.Major + 1).0"
@@ -420,23 +434,10 @@ function Resolve-WhiskeyDotNetSdkVersion
                     Select-Object -ExpandProperty 'Maximum'
                 if ( $maxMinor )
                 {
-                    $sdkVersions = Get-NewReleases -Version "$($searchVersionObj.Major).$($maxMinor)" -ReleasesIndex $releasesIndex
-                    $sdkVersionObjs = $sdkVersions | ForEach-Object { ConvertTo-VersionObject -VersionToConvert $_ }
-
-                    $maxFeature = 
-                        $sdkVersionObjs |
-                        ForEach-Object { $_.Feature } |
-                        Measure-Object -Maximum |
-                        Select-Object -ExpandProperty 'Maximum'
-                    if ( $maxFeature )
-                    {
-                        $maxPatch = Get-MaxPatch -Feature $maxFeature -SdkVersionObjs $sdkVersionObjs
-                        if ( $maxPatch )
-                        {
-                            $resolvedVersion = "$($searchVersionObj.Major).$($maxMinor)." + 
-                                            "$($maxFeature)$($maxPatch)"
-                        }
-                    }
+                    $resolvedVersion = $releasesIndex |
+                        Where-Object { $_.'channel-version' -eq "$($searchVersionObj.Major).$($maxMinor)"} |
+                        Select-Object -First 1 |
+                        Select-Object -ExpandProperty 'latest-sdk'
                 }
             }
             LatestMajor
@@ -449,11 +450,11 @@ function Resolve-WhiskeyDotNetSdkVersion
                             Major=[int]$Matches.major
                             Minor=[int]$Matches.minor
                         }
-                    }
+                    } |
+                    Where-Object { $_.Minor -ge $searchVersionObj.Minor -and $_.Major -ge $searchVersionObj.Major }
                 $maxMajor = 
                     $majorMinorOptions |
                     ForEach-Object { $_.Major } |
-                    Get-Unique |
                     Measure-Object -Maximum |
                     Select-Object -ExpandProperty 'Maximum'
                 if ( $null -ne $maxMajor )
@@ -466,22 +467,10 @@ function Resolve-WhiskeyDotNetSdkVersion
                         Select-Object -ExpandProperty 'Maximum'
                     if ($null -ne $maxMinor)
                     {
-                        $sdkVersions = Get-NewReleases -Version "$($maxMajor).$($maxMinor)" -ReleasesIndex $releasesIndex
-                        $sdkVersionObjs = $sdkVersions | ForEach-Object { ConvertTo-VersionObject -VersionToConvert $_ }
-                        $maxFeature = 
-                            $sdkVersionObjs |
-                            ForEach-Object { $_.Feature } |
-                            Measure-Object -Maximum |
-                            Select-Object -ExpandProperty 'Maximum'
-                        if ( $maxFeature )
-                        {
-                            $maxPatch = Get-MaxPatch -Feature $maxFeature -SdkVersionObjs $sdkVersionObjs
-                            if ( $maxPatch )
-                            {
-                                $resolvedVersion = "$($maxMajor).$($maxMinor)." + 
-                                                "$($maxFeature)$($maxPatch)"
-                            }
-                        }
+                        $resolvedVersion = $releasesIndex |
+                            Where-Object { $_.'channel-version' -eq "$($maxMajor).$($maxMinor)"} |
+                            Select-Object -First 1 |
+                            Select-Object -ExpandProperty 'latest-sdk'
                     }
                 }
             }
