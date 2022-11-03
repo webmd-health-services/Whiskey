@@ -36,7 +36,7 @@ environment:
 
   - job_name: PowerShell 7.2 on Ubuntu
     job_group: pwsh
-    appveyor_build_worker_image: Ubuntu
+    appveyor_build_worker_image: Ubuntu2004
 
   - job_name: PowerShell 7.1 on Windows
     job_group: pwsh
