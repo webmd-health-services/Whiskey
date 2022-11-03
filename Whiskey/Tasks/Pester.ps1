@@ -7,7 +7,7 @@ function Invoke-WhiskeyPesterTask
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
-        
+
         [Management.Automation.PSModuleInfo] $PesterModuleInfo,
 
         [switch] $AsJob,
@@ -22,11 +22,14 @@ function Invoke-WhiskeyPesterTask
 
     $pesterManifestPath = $PesterModuleInfo.Path
 
+    $exitCodePath = Join-Path -Path $TaskContext.Temp -ChildPath 'exitcode'
+
     $cmdArgList = @(
         (Get-Location).Path,
         $pesterManifestPath,
         $Configuration,
         $Container,
+        $exitCodePath,
         @{
             'VerbosePreference' = $VerbosePreference;
             'DebugPreference' = $DebugPreference;
@@ -36,13 +39,7 @@ function Invoke-WhiskeyPesterTask
         }
     )
 
-    $cmdName = 'Invoke-Command'
-    if( $AsJob )
-    {
-        $cmdName = 'Start-Job'
-    }
-
-    $result = & $cmdName -ArgumentList $cmdArgList -ScriptBlock {
+    $scriptBlock = {
         param(
             [String] $WorkingDirectory,
 
@@ -51,6 +48,8 @@ function Invoke-WhiskeyPesterTask
             [hashtable] $Configuration,
 
             [hashtable] $Container,
+
+            [String] $ExitCodePath,
 
             [hashtable] $Preference
         )
@@ -61,7 +60,7 @@ function Invoke-WhiskeyPesterTask
                 [Parameter(Mandatory)]
                 [Collections.ICollection] $InputObject
             )
-            
+
             foreach( $entry in @($InputObject.GetEnumerator()) )
             {
                 if( $entry.Value -is [Collections.ICollection] -and $entry.Value.PSobject.Properties.Name -contains 'Values' )
@@ -69,7 +68,7 @@ function Invoke-WhiskeyPesterTask
                     Convert-ArrayList $entry.Value
                     continue
                 }
-                
+
                 # PesterConfiguration only wants arrays for its lists. It doesn't handle any other list object.
                 if( $entry.Value -is [Collections.IList] -and  $entry.Value -isnot [Array] )
                 {
@@ -85,7 +84,7 @@ function Invoke-WhiskeyPesterTask
                 [Parameter(Mandatory)]
                 [Collections.ICollection] $InputObject
             )
-            
+
             foreach( $entry in @($InputObject.GetEnumerator()) )
             {
                 if( $entry.Value -is [Collections.ICollection] -and $entry.Value.PSobject.Properties.Name -contains 'Values' )
@@ -93,7 +92,7 @@ function Invoke-WhiskeyPesterTask
                     Convert-Boolean $entry.Value
                     continue
                 }
-                
+
                 # PesterConfiguration does not accept strings for boolean values. True has to be $true
                 if( $entry.Value -is [String] -and  $entry.Value -eq 'True' -or $entry.Value -eq 'False' )
                 {
@@ -109,7 +108,7 @@ function Invoke-WhiskeyPesterTask
                 [Parameter(Mandatory)]
                 [hashtable] $Container
             )
-            
+
             if( $Container.ContainsKey('Path') )
             {
                 return New-PesterContainer -Path $Container['Path'] -Data $Container['Data']
@@ -123,7 +122,7 @@ function Invoke-WhiskeyPesterTask
                 return New-PesterContainer -ScriptBlock $Container['ScriptBlock'] -Data $Container['Data']
             }
         }
-        
+
         Set-Location -Path $WorkingDirectory
 
         $VerbosePreference = 'SilentlyContinue'
@@ -134,7 +133,7 @@ function Invoke-WhiskeyPesterTask
         $ProgressPreference = $Preference['ProgressPreference']
         $WarningPreference = $Preference['WarningPreference']
         $ErrorActionPreference = $Preference['ErrorActionPreference']
-        
+
         Convert-ArrayList -InputObject $Configuration
         Convert-Boolean -InputObject $Configuration
 
@@ -147,18 +146,40 @@ function Invoke-WhiskeyPesterTask
             $pesterConfiguration.Run.Container = Get-PesterContainer -Container $Container
         }
 
-        Invoke-Pester -Configuration $pesterConfiguration
+        try
+        {
+            $LASTEXITCODE = 0
+            Invoke-Pester -Configuration $pesterConfiguration
+        }
+        finally
+        {
+            Write-Debug "Pester  LASTEXITCODE  $($LASTEXITCODE)"
+            $LASTEXITCODE | Set-Content -Path $ExitCodePath
+        }
     }
-    
-    if( $result -is [Management.Automation.Job] )
+
+    [int] $exitCode = 0
+    if( $AsJob )
     {
-        $result = $result | Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
+        Start-Job -ArgumentList $cmdArgList -ScriptBlock $scriptBlock |
+            Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
+        $exitCode = Get-Content -Path $exitCodePath -ReadCount 1
+    }
+    else
+    {
+        Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $cmdArgList
+        $exitCode = $LASTEXITCODE
     }
 
     if( $Configuration.ContainsKey('TestResult') -and `
-    $Configuration['TestResult'] -is [Collections.ICollection] `
-    -and $Configuration['TestResult'].ContainsKey('OutputPath') )
+        $Configuration['TestResult'] -is [Collections.ICollection] -and `
+        $Configuration['TestResult'].ContainsKey('OutputPath') )
     {
         Publish-WhiskeyPesterTestResult -Path $Configuration['TestResult']['OutputPath']
+    }
+
+    if( $exitCode -ne 0 )
+    {
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message "Tests failed with exit code $($exitCode)."
     }
 }

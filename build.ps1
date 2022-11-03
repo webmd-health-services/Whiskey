@@ -35,7 +35,9 @@ param(
 
     [String] $PipelineName,
 
-    [String] $MSBuildConfiguration = 'Debug'
+    [String] $MSBuildConfiguration = 'Debug',
+
+    [switch] $SkipBootstrap
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,163 +45,166 @@ $ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
 
-$whiskeyPsd1Path = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1'
-# ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
-$manifest = Test-ModuleManifest -Path $whiskeyPsd1Path -ErrorAction Ignore
-if( -not $manifest )
+if( -not $SkipBootstrap )
 {
-    Write-Error -Message ('Unable to load Whiskey''s module manifest.')
-    exit 1
-}
-
-$version = $manifest.Version
-
-$buildInfo = ''
-$prereleaseInfo = ''
-if( Test-Path -Path ('env:APPVEYOR') )
-{
-    $commitID = $env:APPVEYOR_REPO_COMMIT
-    $commitID = $commitID.Substring(0,7)
-
-    $branch = $env:APPVEYOR_REPO_BRANCH
-    $branch = $branch -replace '[^A-Za-z0-9-]','-'
-
-    $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
-
-    if( $branch -eq 'prerelease' )
+    $whiskeyPsd1Path = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Whiskey.psd1'
+    # ErrorAction Ignore because the assemblies haven't been compiled yet and Test-ModuleManifest complains about that.
+    $manifest = Test-ModuleManifest -Path $whiskeyPsd1Path -ErrorAction Ignore
+    if( -not $manifest )
     {
-        $prereleaseInfo = '-beta.{0}' -f $env:APPVEYOR_BUILD_NUMBER
-        $buildInfo = '+{0}.{1}' -f $branch,$commitID
-    }
-
-    $MSBuildConfiguration = 'Release'
-
-    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
-}
-
-if( -not (Get-Variable -Name 'IsWindows' -ErrorAction Ignore) )
-{
-    # Because we only do this on platforms where they don't exist.
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
-    $IsLinux = $false
-
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
-    $IsMacOS = $false
-
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
-    $IsWindows = $true
-}
-
-$whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
-if( -not (Test-Path -Path $whiskeyBinPath) )
-{
-    New-Item -Path $whiskeyBinPath -ItemType 'Directory' | Out-Null
-}
-
-[Uri[]] $binToolUrls = @(
-    'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe',
-    'https://dot.net/v1/dotnet-install.sh',
-    'https://dot.net/v1/dotnet-install.ps1'
-)
-
-foreach( $url in $binToolUrls )
-{
-    $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
-    $msg = "Installing ""$($toolPath)"" from $($url)."
-    Write-Information $msg
-    Invoke-WebRequest -Uri $url -OutFile $toolPath
-}
-
-if( $IsWindows )
-{
-    $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
-    # SDK
-    & $dotnetInstallPath -Channel 'LTS'
-    # Runtime for tests
-    & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
-}
-else
-{
-    if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
-    {
-        $msg = 'Curl is required to install .NET Core. Please install it with this platform''s (or your) ' +
-                'preferred package manager.'
-        Write-Error -Message $msg
+        Write-Error -Message ('Unable to load Whiskey''s module manifest.')
         exit 1
     }
 
-    $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh'
-    $output = @()
-    bash -c @"
+    $version = $manifest.Version
+
+    $buildInfo = ''
+    $prereleaseInfo = ''
+    if( Test-Path -Path ('env:APPVEYOR') )
+    {
+        $commitID = $env:APPVEYOR_REPO_COMMIT
+        $commitID = $commitID.Substring(0,7)
+
+        $branch = $env:APPVEYOR_REPO_BRANCH
+        $branch = $branch -replace '[^A-Za-z0-9-]','-'
+
+        $buildInfo = '+{0}.{1}.{2}' -f $env:APPVEYOR_BUILD_NUMBER,$branch,$commitID
+
+        if( $branch -eq 'prerelease' )
+        {
+            $prereleaseInfo = '-beta.{0}' -f $env:APPVEYOR_BUILD_NUMBER
+            $buildInfo = '+{0}.{1}' -f $branch,$commitID
+        }
+
+        $MSBuildConfiguration = 'Release'
+
+        $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
+    }
+
+    if( -not (Get-Variable -Name 'IsWindows' -ErrorAction Ignore) )
+    {
+        # Because we only do this on platforms where they don't exist.
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+        $IsLinux = $false
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+        $IsMacOS = $false
+
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidAssignmentToAutomaticVariable', '')]
+        $IsWindows = $true
+    }
+
+    $whiskeyBinPath = Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\bin'
+    if( -not (Test-Path -Path $whiskeyBinPath) )
+    {
+        New-Item -Path $whiskeyBinPath -ItemType 'Directory' | Out-Null
+    }
+
+    [Uri[]] $binToolUrls = @(
+        'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe',
+        'https://dot.net/v1/dotnet-install.sh',
+        'https://dot.net/v1/dotnet-install.ps1'
+    )
+
+    foreach( $url in $binToolUrls )
+    {
+        $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
+        $msg = "Installing ""$($toolPath)"" from $($url)."
+        Write-Information $msg
+        Invoke-WebRequest -Uri $url -OutFile $toolPath
+    }
+
+    if( $IsWindows )
+    {
+        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
+        # SDK
+        & $dotnetInstallPath -Channel 'LTS'
+        # Runtime for tests
+        & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
+    }
+    else
+    {
+        if( -not (Get-Command -Name 'curl' -ErrorAction SilentlyContinue) )
+        {
+            $msg = 'Curl is required to install .NET Core. Please install it with this platform''s (or your) ' +
+                    'preferred package manager.'
+            Write-Error -Message $msg
+            exit 1
+        }
+
+        $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.sh'
+        $output = @()
+        bash -c @"
 . '$($dotnetInstallPath)' --channel 'LTS'
 which dotnet
 . '$($dotnetInstallPath)' --channel '6.0' --runtime 'dotnet'
 "@ |
-        Tee-Object -Variable 'output'
+            Tee-Object -Variable 'output'
 
-    $dotnetPath =
-        $output | Where-Object { Test-Path -Path $_ -PathType Leaf } | Select-Object -First 1 | Split-Path -Parent
-    if( -not $dotnetPath )
-    {
-        $msg = "Shell command to install .NET didn't return the path to the dotnet command."
-        Write-Error -Message $msg -ErrorAction Stop
-    }
-    $env:PATH = "$($dotnetPath)$([IO.Path]::PathSeparator)$($env:PATH)"
-}
-
-if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
-{
-    Write-Error -Message '.NET failed to install or wasn''t added to PATH environment variable.'
-    exit 1
-}
-
-$versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
-$productVersion = '{0}{1}' -f $version,$versionSuffix
-Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
-try
-{
-    $outputDirectory = Join-Path -Path $PSScriptRoot -ChildPath '.output'
-    if( -not (Test-Path -Path $outputDirectory -PathType Container) )
-    {
-        New-Item -Path $outputDirectory -ItemType 'Directory'
-    }
-
-    $params = & {
-        "--configuration=$($MSBuildConfiguration)"
-        '/p:Version={0}' -f $productVersion
-        '/p:VersionPrefix={0}' -f $version
-        if( $versionSuffix )
+        $dotnetPath =
+            $output | Where-Object { Test-Path -Path $_ -PathType Leaf } | Select-Object -First 1 | Split-Path -Parent
+        if( -not $dotnetPath )
         {
-            '/p:VersionSuffix={0}' -f $versionSuffix
+            $msg = "Shell command to install .NET didn't return the path to the dotnet command."
+            Write-Error -Message $msg -ErrorAction Stop
         }
-        if( $VerbosePreference -eq 'Continue' )
+        $env:PATH = "$($dotnetPath)$([IO.Path]::PathSeparator)$($env:PATH)"
+    }
+
+    if( -not (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+    {
+        Write-Error -Message '.NET failed to install or wasn''t added to PATH environment variable.'
+        exit 1
+    }
+
+    $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
+    $productVersion = '{0}{1}' -f $version,$versionSuffix
+    Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
+    try
+    {
+        $outputDirectory = Join-Path -Path $PSScriptRoot -ChildPath '.output'
+        if( -not (Test-Path -Path $outputDirectory -PathType Container) )
         {
-            '--verbosity=n'
+            New-Item -Path $outputDirectory -ItemType 'Directory'
         }
-        '/filelogger9'
-        ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+
+        $params = & {
+            "--configuration=$($MSBuildConfiguration)"
+            '/p:Version={0}' -f $productVersion
+            '/p:VersionPrefix={0}' -f $version
+            if( $versionSuffix )
+            {
+                '/p:VersionSuffix={0}' -f $versionSuffix
+            }
+            if( $VerbosePreference -eq 'Continue' )
+            {
+                '--verbosity=n'
+            }
+            '/filelogger9'
+            ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+        }
+
+        Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+        dotnet build $params
+
+        dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build
+        if( $LASTEXITCODE )
+        {
+            Write-Error -Message ('Unit tests failed.')
+        }
+
+        $whiskeyCsprojPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Whiskey.csproj' -Resolve
+        foreach( $framework in @('netstandard2.0', 'net452') )
+        {
+            $outPath = Join-Path -Path $whiskeyBinPath -ChildPath $framework
+            dotnet publish $params -f $framework --no-self-contained --no-build --no-restore -o $outPath $whiskeyCsprojPath
+        }
+
     }
-
-    Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
-    dotnet build $params
-
-    dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build
-    if( $LASTEXITCODE )
+    finally
     {
-        Write-Error -Message ('Unit tests failed.')
+        Pop-Location
     }
-
-    $whiskeyCsprojPath = Join-Path -Path $PSScriptRoot -ChildPath 'Assembly\Whiskey\Whiskey.csproj' -Resolve
-    foreach( $framework in @('netstandard2.0', 'net452') )
-    {
-        $outPath = Join-Path -Path $whiskeyBinPath -ChildPath $framework
-        dotnet publish $params -f $framework --no-self-contained --no-build --no-restore -o $outPath $whiskeyCsprojPath
-    }
-
-}
-finally
-{
-    Pop-Location
 }
 
 $ErrorActionPreference = 'Continue'
@@ -222,7 +227,7 @@ Write-Verbose -Message '# ENVIRONMENT PROPERTIES'
     ForEach-Object { [pscustomobject]@{ Name = $_ ; Value = [Environment]::$_ } } |
     Format-Table |
     Out-String |
-    Write-Verbose 
+    Write-Verbose
 
 $optionalArgs = @{ }
 if( $Clean )

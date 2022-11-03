@@ -21,6 +21,13 @@ function Publish-WhiskeyBBServerTag
             CredentialID: BitbucketServerCredential
             Uri: https://bitbucketserver.example.com'
 
+    if( $TaskContext.BuildMetadata.IsPullRequest )
+    {
+        'Skipping PublishBitbucketServerTag task: can''t tag a pull request commit because it doesn''t exist in the ' +
+        'origin repostory, only on the build server.' | Write-WhiskeyVerbose
+        return
+    }
+
     if( -not $TaskParameter['CredentialID'] )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "Property 'CredentialID' is mandatory. It should be the ID of the credential to use when connecting to Bitbucket Server:
@@ -77,6 +84,14 @@ function Publish-WhiskeyBBServerTag
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
     $connection = New-BBServerConnection -Credential $credential -Uri $TaskParameter['Uri']
     $tag = $TaskContext.Version.SemVer2NoBuildMetadata
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('[{0}]  [{1}]  [{2}]  {3} -> {4}' -f $TaskParameter['Uri'],$projectKey,$repoKey,$commitHash,$tag)
-    New-BBServerTag -Connection $connection -ProjectKey $projectKey -force -RepositoryKey $repoKey -Name $tag -CommitID $commitHash -ErrorAction Stop
+    $msg = "Tagging commit ""$($commitHash)"" with ""$($tag)"" in Bitbucket Server ""$($projectKey)"" project's " +
+           """$($repoKey)"" repository at $($TaskParameter['Uri'])."
+    Write-WhiskeyInfo $msg
+    New-BBServerTag -Connection $connection `
+                    -ProjectKey $projectKey `
+                    -Force `
+                    -RepositoryKey $repoKey `
+                    -Name $tag `
+                    -CommitID $commitHash `
+                    -ErrorAction Stop
 }

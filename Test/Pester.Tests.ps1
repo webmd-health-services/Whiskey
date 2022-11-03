@@ -56,7 +56,7 @@ function Init
                                              -IncludePSModule 'Pester'
 
     $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
-    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore | 
+    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore |
         Where-Object { $_.Name -notlike '5.*' } |
         Remove-Item -Recurse -Force
 }
@@ -79,7 +79,7 @@ function ThenDidNotFail
         Join-Path -Path $context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
     }
-    else 
+    else
     {
         Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -Times 0
     }
@@ -114,9 +114,9 @@ function WhenPesterTaskIsInvoked
                                              -ForBuildRoot $testRoot `
                                              -IncludePSModule 'Pester'
 
-    $taskParameter = 
-        $context.Configuration['Build'] | 
-        Where-Object { $_.ContainsKey('Pester') } | 
+    $taskParameter =
+        $context.Configuration['Build'] |
+        Where-Object { $_.ContainsKey('Pester') } |
         ForEach-Object { $_['Pester'] }
 
     try
@@ -148,7 +148,7 @@ Describe 'One' {
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
+            Configuration:
                 Run:
                     Path : 'PassingTests.Tests.ps1'
 "@
@@ -175,7 +175,7 @@ Describe 'Failing' {
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
+            Configuration:
                 Run:
                     Path : 'FailingTests.Tests.ps1'
                     Throw: true
@@ -211,7 +211,7 @@ Describe 'Passing' {
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
+            Configuration:
                 Run:
                     Path : '*Tests.Tests.ps1'
                     Throw: true
@@ -240,7 +240,7 @@ Describe 'PassingTests' {
         Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith {
             @'
 <test-results errors="0" failures="0" />
-'@ 
+'@
         }
         GivenWhiskeyYml @'
         Build:
@@ -258,7 +258,9 @@ Describe 'PassingTests' {
                 $ArgumentList[2] | Should -BeOfType [hashtable]
                 $ArgumentList[2] | Should -BeNullOrEmpty
                 $ArgumentList[3] | Should -BeNullOrEmpty
-                $ArgumentList[4] | Should -BeOfType [hashtable]
+                $dirSep = [IO.Path]::DirectorySeparatorChar
+                $ArgumentList[4] | Should -BeLike "*$($dirSep).output$($dirSep)Temp*$($dirSep)exitcode"
+                $ArgumentList[5] | Should -BeOfType [hashtable]
                 $prefNames = @(
                     'DebugPreference',
                     'ErrorActionPreference',
@@ -266,7 +268,7 @@ Describe 'PassingTests' {
                     'VerbosePreference',
                     'WarningPreference'
                 ) | Sort-Object
-                $ArgumentList[4].Keys | Sort-Object | Should -Be $prefNames
+                $ArgumentList[5].Keys | Sort-Object | Should -Be $prefNames
                 return $true
             }
             finally
@@ -295,7 +297,7 @@ Describe 'PassingTests'{
             Configuration:
                 Run:
                     Path: 'PassingTests.Tests.ps1'
-                TestResult: 
+                TestResult:
                     Enabled: true
                     OutputPath: '.output\pester.xml'
                     OutputFormat: 'JUnitXml'
@@ -344,9 +346,9 @@ Describe 'ArgTest' {
         - Pester:
             AsJob: true
             Configuration: {}
-            Container: 
+            Container:
                 Path: 'Arg*.Tests.ps1'
-                Data: 
+                Data:
                     One: $($oneValue)
                     Two: $($twoValue)
                     Three: $($threeValue)
@@ -379,8 +381,8 @@ Describe 'Passing' {
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
-                Run: 
+            Configuration:
+                Run:
                     Path: ['PassingTests.ps1', 'PassingTests2.ps1']
 "@
         WhenPesterTaskIsInvoked
@@ -403,8 +405,8 @@ Describe 'Passing' {
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
-                Run: 
+            Configuration:
+                Run:
                     Path: 'PassingTests.ps1'
                 TestResult:
                     Enabled: true
@@ -426,12 +428,12 @@ Describe 'Pester.when passing a script block with data'{
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
+            Configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: $(GetOutputPath)
                     OutputFormat: 'NUnitXml'
-            Container: 
+            Container:
                 ScriptBlock:
                     "param(
                         [Parameter(Mandatory)]
@@ -442,7 +444,7 @@ Describe 'Pester.when passing a script block with data'{
                             `$One | Should -Be '$($oneValue)'
                         }
                     }"
-                Data: 
+                Data:
                     One: $($oneValue)
 "@
         WhenPesterTaskIsInvoked
@@ -458,12 +460,12 @@ Describe 'Pester.when passing a script block with no data'{
         Build:
         - Pester:
             AsJob: true
-            Configuration: 
+            Configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: $(GetOutputPath)
                     OutputFormat: 'NUnitXml'
-            Container: 
+            Container:
                 ScriptBlock:
                     "Describe 'Passing' {
                         It 'should pass' {
@@ -471,7 +473,108 @@ Describe 'Pester.when passing a script block with no data'{
                         }
                     }"
 "@
-        WhenPesterTaskIsInvoked 
+        WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
+    }
+}
+
+Describe 'Pester.when tests fail in background job' {
+    AfterEach{ Reset }
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration:
+                Run:
+                    Exit: false
+                    Throw: false
+            Container:
+                ScriptBlock:
+                    "Describe 'Passing' {
+                        It 'should pass' {
+                            `$false | Should -BeTrue
+                        }
+                    }"
+"@
+        WhenPesterTaskIsInvoked
+        ThenFailed -WithErrorMatching 'failed'
+    }
+
+}
+
+Describe 'Pester.when tests fail in background job and exit configuration option is true' {
+    AfterEach{ Reset }
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration:
+                Run:
+                    Exit: true
+                    Throw: false
+            Container:
+                ScriptBlock:
+                    "Describe 'Passing' {
+                        It 'should pass' {
+                            `$false | Should -BeTrue
+                        }
+                    }"
+"@
+        WhenPesterTaskIsInvoked
+        ThenFailed -WithErrorMatching 'failed'
+    }
+}
+
+Describe 'Pester.when tests fail in background job and throw configuration option is true' {
+    AfterEach{ Reset }
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration:
+                Run:
+                    Exit: false
+                    Throw: true
+            Container:
+                ScriptBlock:
+                    "Describe 'Passing' {
+                        It 'should pass' {
+                            `$false | Should -BeTrue
+                        }
+                    }"
+"@
+        WhenPesterTaskIsInvoked
+        ThenFailed -WithErrorMatching 'failed'
+    }
+}
+
+Describe 'Pester.when tests fail in background job and exit and throw configurations options are true' {
+    AfterEach{ Reset }
+    It 'should fail the build' {
+        Init
+        GivenWhiskeyYml @"
+        Build:
+        - Pester:
+            AsJob: true
+            Configuration:
+                Run:
+                    Exit: true
+                    Throw: true
+            Container:
+                ScriptBlock:
+                    "Describe 'Passing' {
+                        It 'should pass' {
+                            `$false | Should -BeTrue
+                        }
+                    }"
+"@
+        WhenPesterTaskIsInvoked
+        ThenFailed -WithErrorMatching 'failed'
     }
 }

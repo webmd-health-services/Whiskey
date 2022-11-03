@@ -1,8 +1,45 @@
 
+# 0.53.2
+
+Fixed: PublishBitbucketServerTag task fails when building a pull request in Jenkins. When building PRs, Jenkins merges
+the source and destination branches together on the build server. This merge only exists on the build server, so can't
+be tagged in Bitbucket Server.
+
+
+# 0.53.1
+
+Fixed: Pester task doesn't fail when running in a background job and tests fail.
+
+
+# 0.53.0
+
+## Upgrade Instructions
+
+
+Whiskey no longer installs PackageManagement or PowerShellGet modules (again). On all computers running Whiskey builds
+install a version of:
+
+* PackageManagement from 1.3.2 to 1.4.8.1
+* PowerShellGet from 2.1.5 to 2.2.5
+
+We recommend using Prism for PowerShell module management and to get working package management module's installed. [It
+has a script you can run in your build process to bootstrap package management and Prism
+itself.](https://github.com/webmd-health-services/Prism#adding-to-builds)
+
+## Changes
+
+* Whiskey no longer installs Package Management or PowerShellGet modules. It now uses whatever versions of those modules
+are installed.
+* Please use PowerShellGet 2.1.5 or later. This will fix an issue with the `PublishPowerShellModule` task hanging.
+
+
 # 0.52.2
 
 * Fixed: `Ignore` is not allowed as a value in the `$ErrorActionPreference` variable when running `node.exe` executable
   directly from filepath.
+* Fixed: Whiskey fails if PackageManagement 1.4.8.1 is installed and more than one task runs that depends on the
+PackageManagement module.
+* Whiskey now supports PackageManagement 1.4.8.1.
 
 
 # 0.52.1

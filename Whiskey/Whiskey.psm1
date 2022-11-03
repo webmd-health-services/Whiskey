@@ -43,18 +43,6 @@ if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
     $IsWindows = $true
 }
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-[Version] $pkgMgmtMinVersion = '1.3.2'
-
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-[Version] $pkgMgmtMaxVersion = '1.4.7'
-
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-[Version] $psGetMinVersion = '2.0.0'
-
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-[Version] $psGetMaxVersion = '2.2.5'
-
 if( -not (Test-Path -Path 'env:WHISKEY_DISABLE_ERROR_FORMAT') )
 {
     Write-Timing 'Updating formats.'
@@ -162,7 +150,7 @@ Assert-Member -Object $context `
               -Property @( 'TaskPaths', 'MSBuildConfiguration', 'ApiKeys', 'BuildStopwatch', 'TaskStopwatch' )
 
 Write-Timing 'Checking Whiskey.TaskAttribute class.'
-$attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey' 
+$attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey'
 Assert-Member -Object $attr -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage', 'Platform' )
 
 Write-Timing 'Checking for Whiskey.RequiresPowerShellModuleAttribute class.'
@@ -180,7 +168,7 @@ New-WhiskeyObject -TypeName 'Whiskey.RequiresNuGetPackageAttribute' -ArgumentLis
 $apiKeysDictGenericTypes = $apiKeysType.GenericTypeArguments
 if( -not $apiKeysDictGenericTypes -or $apiKeysDictGenericTypes.Count -ne 2 -or $apiKeysDictGenericTypes[1].FullName -ne [securestring].FullName )
 {
-    Write-Error -Message  $oldVersionLoadedMsg -ErrorAction Stop 
+    Write-Error -Message  $oldVersionLoadedMsg -ErrorAction Stop
 }
 
 Write-Timing ('Creating internal module variables.')
@@ -219,8 +207,8 @@ $count = 0
     } |
     Where-Object { Test-Path -Path $_ } |
     Get-ChildItem -Filter '*.ps1' |
-    ForEach-Object { 
+    ForEach-Object {
         $count += 1
-        . $_.FullName 
+        . $_.FullName
     }
 Write-Timing -Message ('Finished dot-sourcing {0} files.' -f $count)

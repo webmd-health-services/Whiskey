@@ -89,6 +89,21 @@ function ConvertTo-Yaml
     }
 }
 
+function Get-TestDrive
+{
+    $tdVar = (Get-Item -Path 'TestDrive:' -ErrorAction Ignore)
+    if( -not $tdVar )
+    {
+        $tdVar = $TestDrive
+    }
+
+    if( $tdVar | Get-Member -Name 'FullName' )
+    {
+        return $tdVar.FullName
+    }
+    return $tdVar
+}
+
 function Import-WhiskeyTestModule
 {
     param(
@@ -175,7 +190,7 @@ function Install-Node
     {
         $msg = 'Install-Node''s BuildRoot parameter will eventually be made mandatory. Please update usages.'
         Write-WhiskeyWarning -Message $msg
-        $BuildRoot = $TestDrive.FullName
+        $BuildRoot = Get-TestDrive
     }
 
     $destinationDir = Join-Path -Path $BuildRoot -ChildPath '.node'
@@ -294,7 +309,7 @@ function New-MSBuildProject
 
     if( -not $BuildRoot )
     {
-        $BuildRoot = (Get-Item -Path 'TestDrive:').FullName
+        $BuildRoot = Get-TestDrive
     }
 
     if( -not (Test-Path -Path $BuildRoot -PathType Container) )
@@ -375,13 +390,13 @@ function New-WhiskeyTestContext
     if( -not $ForBuildRoot )
     {
         Write-WhiskeyWarning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory. Please update usages.')
-        $ForBuildRoot = $TestDrive.FullName
+        $ForBuildRoot = (Get-TestDrive)
     }
 
     if( -not [IO.Path]::IsPathRooted($ForBuildRoot) )
     {
         Write-WhiskeyWarning -Message ('New-WhiskeyTestContext''s "ForBuildRoot" parameter will soon become mandatory and will be required to be an absolute path. Please update usages.')
-        $ForBuildRoot = Join-Path -Path $TestDrive.FullName -ChildPath $ForBuildRoot
+        $ForBuildRoot = Join-Path -Path (Get-TestDrive) -ChildPath $ForBuildRoot
     }
 
     if( $ConfigurationPath )
@@ -482,7 +497,7 @@ function New-WhiskeyTestRoot
     # that they had the whole test drive to themselves. This function exists to give a test its own directory inside the
     # test drive. Today, it doesn't matter. But with it in place, we'll be able to more easily migrate to Pester 5,
     # which will allow running specific `It` blocks.
-    $testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($script:testNum++)
+    $testRoot = Join-Path -Path (Get-TestDrive) -ChildPath ($script:testNum++)
     New-Item -Path $testRoot -ItemType 'Directory' | Out-Null
     return $testRoot
 }
@@ -512,7 +527,7 @@ function Remove-Node
     if( -not $BuildRoot )
     {
         Write-WhiskeyWarning -Message ('Remove-Node''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
-        $BuildRoot = $TestDrive.FullName
+        $BuildRoot = Get-TestDrive
     }
 
     $parameter = @{ 'Path' = (Join-Path -Path $BuildRoot -ChildPath '.node\node_modules') }
@@ -528,7 +543,7 @@ function Remove-DotNet
     if( -not $BuildRoot )
     {
         Write-WhiskeyWarning -Message ('Remove-DotNet''s "BuildRoot" parameter will soon become mandatory. Please update usages.')
-        $BuildRoot = $TestDrive.FullName
+        $BuildRoot = Get-TestDrive
     }
 
     Get-Process -Name 'dotnet' -ErrorAction Ignore |
@@ -551,7 +566,7 @@ function Reset-WhiskeyTestPSModule
     }
 
     Get-Module |
-        Where-Object { $_.Path -like ('{0}*' -f $TestDrive.FullName) } |
+        Where-Object { $_.Path -like ('{0}*' -f (Get-TestDrive)) } |
         Remove-Module -Force
     Reset-WhiskeyPSModulePath
 }
@@ -563,10 +578,10 @@ function Reset-WhiskeyPSModulePath
         return
     }
 
-    $pesterTestDriveRoot = $TestDrive.Fullname | Split-Path
+    $pesterTestDriveRoot = Get-TestDrive | Split-Path
     $pesterTestDriveRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
     $pesterTestDriveRoot = "$($pesterTestDriveRoot)$([IO.Path]::DirectorySeparatorChar)"
-    $env:PSModulePath -split [IO.Path]::PathSeparator | 
+    $env:PSModulePath -split [IO.Path]::PathSeparator |
         Where-Object { $_.StartsWith($pesterTestDriveRoot, [StringComparison]::InvariantCultureIgnoreCase) } |
         ForEach-Object {
             Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'Path' = $_ }
