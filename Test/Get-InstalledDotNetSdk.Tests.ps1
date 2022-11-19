@@ -54,9 +54,7 @@ function ThenResolvedVersion
 
     $ExpectedVersion |
         ForEach-Object {
-            $_ -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
-            $resultingVersion = [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-            $resultingVersion | Should -BeIn $output
+            $_ | Should -BeIn $output
         }
 }
 

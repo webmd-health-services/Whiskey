@@ -10,7 +10,7 @@ function Get-InstalledDotNetSdk
     .EXAMPLE
     Get-InstalledDotNetSdk
 
-    Returns all installed .NET SDK Versions.
+    Returns all installed .NET SDK Versions as a list of strings.
     #>
     $dotnetPaths = Get-Command -Name 'dotnet' -All -ErrorAction Ignore | Select-Object -ExpandProperty 'Source'
     if ( -not $dotnetPaths )
@@ -25,18 +25,13 @@ function Get-InstalledDotNetSdk
         foreach( $dotnetPath in $dotnetPaths )
         {
             $sdkPath = Join-Path -Path ($dotnetPath | Split-Path -Parent) -ChildPath 'sdk'
-            Write-WhiskeyError $sdkPath
             $installedVersions += 
                 Get-ChildItem $sdkPath | 
                 Where-Object {
                     ($_.Name -match '\d+\.\d+\.\d{3,}') -and
                     ( Get-ChildItem -Path $_.FullName )
                 } |
-                ForEach-Object {
-                    $_.Name -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
-                    Write-WhiskeyError $_.Name
-                    [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-                }
+                ForEach-Object { $_.Name }
         }
         if ( $installedVersions.Length -gt 0 )
         {
