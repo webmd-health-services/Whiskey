@@ -66,17 +66,32 @@ function Install-WhiskeyDotNetTool
             return
         }
 
-        $globalJsonVersion = $globalJson |
-                                 Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+        $globalJsonSdkOptions = 
+            $globalJson | 
+            Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore
+
+        $globalJsonVersion = 
+            $globalJsonSdkOptions |
+            Select-Object -ExpandProperty 'version' -ErrorAction Ignore
         
-        $globalJsonRollForward = $globalJson |
-                           Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                           Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
-        $rollForward = [Whiskey.DotNetSdkRollForward]$globalJsonRollForward
+        $globalJsonRollForward = 
+            $globalJsonSdkOptions |
+            Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
+
+
+        $rollForward = [Whiskey.DotNetSdkRollForward] $globalJsonRollForward
+        $validRollForwardValues = [Whiskey.DotNetSdkRollForward].GetEnumNames()
+        if ($globalJsonRollForward -notin $validRollForwardValues)
+        {
+            $msg = "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is " + 
+            "not one of the valid .NET SDK roll forward strategies: $($validRollForwardValues -join ', ')" 
+            Write-WhiskeyError -Message $msg
+            return
+        }
+
         if ( $globalJsonVersion -and $null -ne $rollForward )
         {
-            $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value set to '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
+            $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
             Write-WhiskeyVerbose -Message $msg
             $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion -RollForward $rollForward
         }
