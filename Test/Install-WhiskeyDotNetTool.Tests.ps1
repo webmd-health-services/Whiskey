@@ -268,7 +268,7 @@ Describe 'Install-WhiskeyDotNetTool.when existing global.json contains invalid J
 Describe 'Install-WhiskeyDotNetTool.when installing version from global.json' {
     It 'should use the version in global.json' {
         Init
-        GivenGlobalJsonSdkVersion '2.1.505'
+        GivenGlobalJsonRollForwardAndSdkVersion '2.1.505' -RollForward Disable
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
         ThenGlobalJsonVersion '2.1.505'
