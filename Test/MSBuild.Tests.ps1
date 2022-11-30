@@ -198,7 +198,7 @@ function WhenRunningTask
     $Global:Error.Clear()
     try
     {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' 
+        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild'
         $output | Write-WhiskeyDebug
     }
     catch
@@ -724,7 +724,7 @@ Describe 'MSBuild.when run by developer using a specific version of NuGet' {
     It 'should use that version of NuGet' {
         Init
         GivenProjectsThatCompile
-        GivenNuGetVersion '4.5.0'
+        GivenNuGetVersion '5.9.3'
         WhenRunningTask -AsDeveloper
         ThenSpecificNuGetVersionInstalled
         ThenNuGetPackagesRestored

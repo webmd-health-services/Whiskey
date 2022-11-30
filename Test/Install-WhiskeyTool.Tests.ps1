@@ -70,7 +70,7 @@ function Invoke-NuGetInstall
         {
             $result | Should -Not -Exist
         }
-        # $Error has nuget.exe's STDERR depending on your console. 
+        # $Error has nuget.exe's STDERR depending on your console.
         $Global:Error.Count | Should -BeLessThan 9
         if( $ExpectedError )
         {
@@ -93,7 +93,7 @@ if( $IsWindows )
             Init
             Invoke-NuGetInstall -package 'NUnit.Console' -version '3.15.0' -WithDependencies @(
                 'NUnit.Console.3.15.0',
-                'NUnit.ConsoleRunner.3.15.*',
+                'NUnit.ConsoleRunner.3.*',
                 'NUnit.Extension.NUnitProjectLoader.3.7.1',
                 'NUnit.Extension.NUnitV2Driver.3.9.0',
                 'NUnit.Extension.NUnitV2ResultWriter.3.7.0',
@@ -113,7 +113,7 @@ if( $IsWindows )
     Describe 'Install-WhiskeyTool.when NuGet pack Version is bad' {
         It 'should fail' {
             Init
-            Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
+            Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ExpectedError 'NuGet package Nunit.Runners 0.0.0 does not exist or search request failed.' -ErrorAction silentlyContinue
         }
     }
 
@@ -450,8 +450,8 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and task needs
         $attr.ModuleInfoParameterName = 'ZipModuleInfo'
         $attr.Version = '0.2.0'
         $attr.SkipImport = $true
-        WhenInstallingTool -FromAttribute $attr 
-        $assertMockParams = @{ 
+        WhenInstallingTool -FromAttribute $attr
+        $assertMockParams = @{
             'CommandName' = 'Install-WhiskeyPowerShellModule';
             'ModuleName' = 'Whiskey';
         }
@@ -472,8 +472,8 @@ Describe 'Install-WhiskeyTool.when installing a PowerShell module and task doesn
         $attr = New-Object 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList 'Zip'
         $attr.Version = '0.2.0'
         $attr.SkipImport = $true
-        WhenInstallingTool -FromAttribute $attr 
-        $assertMockParams = @{ 
+        WhenInstallingTool -FromAttribute $attr
+        $assertMockParams = @{
             'CommandName' = 'Install-WhiskeyPowerShellModule';
             'ModuleName' = 'Whiskey';
         }
