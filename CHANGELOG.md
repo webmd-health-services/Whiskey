@@ -1,4 +1,8 @@
 
+# 0.53.3
+
+Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
+
 # 0.53.2
 
 Fixed: PublishBitbucketServerTag task fails when building a pull request in Jenkins. When building PRs, Jenkins merges
