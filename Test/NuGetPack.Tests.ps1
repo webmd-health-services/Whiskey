@@ -75,7 +75,7 @@ function GivenABuiltLibrary
     <Compile Include="NoOp.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
@@ -111,7 +111,7 @@ Build:
     }
 
     Initialize-WhiskeyTestPSModule -Name 'VSSetup' -BuildRoot $testRoot
-    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath 
+    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
     if( $InReleaseMode )
     {
         $context.RunBy = [Whiskey.RunBy]::BuildServer
@@ -131,7 +131,7 @@ function GivenFile
         $Content
     )
 
-    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Name) 
+    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Name)
 }
 
 function GivenRunByBuildServer
@@ -158,7 +158,7 @@ function GivenVersion
     param(
         $version
     )
-    
+
     $script:version = $version
 }
 
@@ -184,9 +184,9 @@ function WhenRunningNuGetPackTask
     {
         $byItDepends['ForDeveloper'] = $true
     }
-            
+
     $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForBuildRoot $testRoot @byItDepends
-    
+
     Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
 
     $taskParameter = @{ }
@@ -200,7 +200,7 @@ function WhenRunningNuGetPackTask
     {
         $taskParameter['Symbols'] = $true
     }
-    
+
     if( $version )
     {
         $taskParameter['Version'] = $version
@@ -366,7 +366,7 @@ Describe 'NuGetPack.when creating multiple packages for publishing' {
         InitTest
         GivenABuiltLibrary
         GivenPath @( $projectName, $projectName )
-        WhenRunningNugetPackTask 
+        WhenRunningNugetPackTask
         ThenPackageCreated
         ThenTaskSucceeds
     }
@@ -376,7 +376,7 @@ Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
     It 'should download and use that version of NuGet' {
         InitTest
         GivenABuiltLibrary
-        GivenVersion '4.5.0'
+        GivenVersion '5.9.3'
         WhenRunningNuGetPackTask
         ThenSpecificNuGetVersionInstalled
         ThenTaskSucceeds

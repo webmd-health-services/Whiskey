@@ -93,7 +93,7 @@ if( $IsWindows )
             Init
             Invoke-NuGetInstall -package 'NUnit.Console' -version '3.15.0' -WithDependencies @(
                 'NUnit.Console.3.15.0',
-                'NUnit.ConsoleRunner.3.15.*',
+                'NUnit.ConsoleRunner.3.*',
                 'NUnit.Extension.NUnitProjectLoader.3.7.1',
                 'NUnit.Extension.NUnitV2Driver.3.9.0',
                 'NUnit.Extension.NUnitV2ResultWriter.3.7.0',
