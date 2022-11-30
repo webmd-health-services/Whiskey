@@ -39,6 +39,11 @@ function Install-WhiskeyNuGetPackage
         $waitMilliseconds = $waitMilliseconds + 2
     }
 
+    if( $Version )
+    {
+        $pkgVersions = $pkgVersions | Where-Object 'Version' -Like $Version
+    }
+
     if( -not $pkgVersions )
     {
         $pkgMgmtErrors | Write-Error
@@ -51,11 +56,6 @@ function Install-WhiskeyNuGetPackage
     for( $idx = 0; $idx -lt $Global:Error.Count - $numErrors; ++$idx )
     {
         $Global:Error.RemoveAt(0)
-    }
-
-    if( $Version )
-    {
-        $pkgVersions = $pkgVersions | Where-Object 'Version' -Like $Version
     }
 
     $pkg = $pkgVersions | Select-Object -First 1
