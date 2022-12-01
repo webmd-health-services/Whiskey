@@ -53,7 +53,7 @@ function GivenReleasesWithLatest
         # Should be parallel with Release
         $LatestSdk
     )
-    $releaseWithLatest =  @()   
+    $releaseWithLatest =  @()
 
     for ($i = 0; $i -lt $Release.Length; $i++)
     {
@@ -322,7 +322,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is patch and patch no
         GivenDotNetNotInstalled
         GivenReleases '3.0'
         GivenSDKVersions '3.0.001', '3.0.002' -ForRelease '3.0'
-        WhenResolvingSdkVersion '3.0.003' -RollForward Patch 
+        WhenResolvingSdkVersion '3.0.003' -RollForward Patch
         ThenError 'not be found'
     }
 }
@@ -366,7 +366,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and feature 
     It 'should use latest patch' {
         Init
         GivenDotNetNotInstalled
-        GivenREleases '3.0', '3.1' 
+        GivenREleases '3.0', '3.1'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
         WhenResolvingSdkVersion '3.0.100' -RollForward Minor
@@ -401,6 +401,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is minor and next min
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band is found' {
     It 'should use latest patch' {
         Init
+        GivenDotNetNotInstalled
         GivenReleases '3.0', '3.1', '4.0'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
@@ -413,7 +414,8 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature band not found' {
     It 'should roll forward to next feature band' {
         Init
-        GivenREleases '3.0', '3.1', '4.0' 
+        GivenDotNetNotInstalled
+        GivenReleases '3.0', '3.1', '4.0'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         GivenSDKVersions '3.1.000' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.300', '3.0.399' -ForRelease '3.0'
@@ -425,7 +427,8 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and feature 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and searched major band not found' {
     It 'should roll forward to the next major' {
         Init
-        GivenReleases '3.0', '3.1', '4.0' 
+        GivenDotNetNotInstalled
+        GivenReleases '3.0', '3.1', '4.0'
         GivenSDKVersions '4.0.100' -ForRelease '4.0'
         GivenSDKVersions '3.1.001' -ForRelease '3.1'
         GivenSDKVersions '3.0.100', '3.0.200', '3.0.101' -ForRelease '3.0'
@@ -437,7 +440,8 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and searched
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and no next major found' {
     It 'should fail' {
         Init
-        GivenReleases '3.0', '4.0' 
+        GivenDotNetNotInstalled
+        GivenReleases '3.0', '4.0'
         GivenSDKVersions '3.0.100', '3.0.200' -ForRelease '3.0'
         GivenSDKVersions '4.0.000' -ForRelease '4.0'
         WhenResolvingSdkVersion '4.0.100' -RollForward Major
@@ -448,6 +452,7 @@ Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is Major and no next 
 Describe 'Resolve-WhiskeyDotNetSdkVersion.when RollForward is LatestPatch and patch found' {
     It 'should find latest patch' {
         Init
+        GivenDotNetNotInstalled
         GivenReleases '3.0'
         GivenSDKVersions '3.0.100', '3.0.189', '3.0.199' -ForRelease '3.0'
         WhenResolvingSdkVersion '3.0.120' -RollForward LatestPatch
