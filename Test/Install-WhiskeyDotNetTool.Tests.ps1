@@ -286,6 +286,19 @@ Describe 'Install-WhiskeyDotNetTool.when no version specified and global.json do
     }
 }
 
+
+Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json has Patch rollforward in global.json' {
+    It 'should install latest patch for version' {
+        Init
+        GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
+        WhenInstallingDotNetTool
+        ThenReturnedValidDotNetPath
+        ThenGlobalJsonVersion '2.1.526'
+        ThenDotNetSdkVersion '2.1.526'
+    }
+}
+
+
 try
 {
     GivenDotNetNotInstalled
@@ -327,17 +340,6 @@ try
             ThenDotNetNotLocallyInstalled
             ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
             ThenGlobalJsonVersion '2.1.505' -Directory $TestDrive.FullName
-        }
-    }
-
-    Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json has Patch rollforward in global.json' {
-        It 'should install latest patch for version' {
-            Init
-            GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
-            WhenInstallingDotNetTool
-            ThenReturnedValidDotNetPath
-            ThenGlobalJsonVersion '2.1.526'
-            ThenDotNetSdkVersion '2.1.526'
         }
     }
 
