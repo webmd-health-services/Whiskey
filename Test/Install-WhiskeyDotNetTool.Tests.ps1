@@ -19,6 +19,7 @@ function Init
     $script:globalDotNetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath 'GlobalDotNetSDK'
     $script:version = $null
     $script:workingDirectory = $null
+    Mock -CommandName 'Get-InstalledDotNetSdk' -ModuleName 'Whiskey'
 }
 
 function Get-DotNetLatestLtsVersion
@@ -197,6 +198,20 @@ function ThenReturnedValidDotNetPath
     $dotnetPath | Should -Exist
 }
 
+function ThenVersionToInstall
+{
+    param(
+        [Version] $ExpectedVersion
+    )
+
+    Assert-MockCalled -CommandName 'Install-WhiskeyDotNetSdk' `
+                      -ModuleName 'Whiskey' `
+                      -ParameterFilter {
+                        $Version | Should -Be $ExpectedVersion
+                        $Version -eq $ExpectedVersion
+                      }
+}
+
 function WhenInstallingDotNetTool
 {
     [CmdletBinding()]
@@ -258,6 +273,7 @@ Describe 'Install-WhiskeyDotNetTool.when given wildcard version' {
 Describe 'Install-WhiskeyDotNetTool.when existing global.json contains invalid JSON' {
     It 'should fail' {
         Init
+        GivenDotNetSuccessfullyInstalls
         GivenBadGlobalJson
         WhenInstallingDotNetTool -ErrorAction SilentlyContinue
         ThenError '\bcontains\ invalid\ JSON'
@@ -279,10 +295,12 @@ Describe 'Install-WhiskeyDotNetTool.when installing version from global.json' {
 Describe 'Install-WhiskeyDotNetTool.when no version specified and global.json does not exist' {
     It 'should install the latest LTS version of .NET Core' {
         Init
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion (Get-DotNetLatestLtsVersion)
-        ThenDotNetSdkVersion (Get-DotNetLatestLtsVersion)
+        ThenVersionToInstall -ExpectedVersion (Get-DotNetLatestLtsVersion)
+        # ThenGlobalJsonVersion (Get-DotNetLatestLtsVersion)
+        # ThenDotNetSdkVersion (Get-DotNetLatestLtsVersion)
     }
 }
 
@@ -291,10 +309,12 @@ Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json has P
     It 'should install latest patch for version' {
         Init
         GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
-        ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.526'
-        ThenDotNetSdkVersion '2.1.526'
+        ThenVersionToInstall -ExpectedVersion '2.1.526'
+        # ThenReturnedValidDotNetPath
+        # ThenGlobalJsonVersion '2.1.526'
+        # ThenDotNetSdkVersion '2.1.526'
     }
 }
 
@@ -346,6 +366,7 @@ try
     Describe 'Install-WhiskeyDotNetTool.when installing DotNet and patch lower is already installed' {
         It 'should use global.json''s version' {
             Init
+            Mock -CommandName 'Get-InstalledDotNetSdk' -MockWith { return '2.1.514' }.GetNewClosure() -ModuleName 'Whiskey'
             GivenGlobalDotNetInstalled '2.1.514'
             GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
             WhenInstallingDotNetTool
