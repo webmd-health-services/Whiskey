@@ -7,6 +7,8 @@ function Resolve-WhiskeyDotNetSdkVersion
 
     .DESCRIPTION
     The `Resolve-WhiskeyDotNetSdkVersion` function ensures a given version is a valid released version of the .NET Core SDK. By default, the function will return the latest LTS version of the SDK. If a `Version` number is given then that version is compared against the list of released SDK versions to ensure the given version is valid. If no valid version is found matching `Version`, then an error is written and nothing is returned.
+    The logic for the provided RollForward value is as follows: For `Patch`, `Feature`, `Major`, and `Minor`, the most recent patch for the specified versions is returned. For `LatestPatch`, the latest patch for the specified major, minor, and feature versions is used. For `LatestFeature`, the latest patch and feature is used for the provided major and minor versions. For `LatestMinor`, the latest minor, feature, and patch are used
+    for the specified major version. For `LatestMajor`, the most recently released version of the .NET Core SDK is used.
 
     .EXAMPLE
     Resolve-WhiskeyDotNetSdkVersion -LatestLTS
@@ -39,53 +41,11 @@ function Resolve-WhiskeyDotNetSdkVersion
         [String] $Version,
 
         # Roll forward preferences for the .NET Core SDK
+        [Parameter(ParameterSetName='Version')]
         [Whiskey.DotNetSdkRollForward] $RollForward = [Whiskey.DotNetSdkRollForward]::Disable
     )
-
-    function Get-AvailableSdkVersions
-    {
-        param (
-            $ReleasesIndex,
-            $TargetMajor,
-            $TargetMinor
-        )
-        $releaseUri =
-            $ReleasesIndex |
-            Where-Object { $_.'channel-version' -like "$($TargetMajor).$($TargetMinor)" } |
-            Select-Object -First 1 |
-            Select-Object -ExpandProperty 'releases.json'
-        if ( -not $releaseUri )
-        {
-            return
-        }
-
-        $releasesJson = Invoke-RestMethod -Uri $releaseUri -ErrorAction Stop
-
-        $sdkVersions = & {
-            $releasesJson.releases |
-                Where-Object { $_ | Get-Member -Name 'sdk' } |
-                Select-Object -ExpandProperty 'sdk' |
-                Select-Object -ExpandProperty 'version'
-
-            $releasesJson.releases |
-                Where-Object { $_ | Get-Member -Name 'sdks' } |
-                Select-Object -ExpandProperty 'sdks' |
-                Select-Object -ExpandProperty 'version'
-        }
-
-        $sortedSdkVersions =
-            $sdkVersions |
-                ForEach-Object {
-                    $_ -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
-                    [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-                } |
-                Sort-Object -Descending
-        return $sortedSdkVersions
-    }
-
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
     $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
 
     if ( $LatestLTS )
@@ -123,6 +83,7 @@ function Resolve-WhiskeyDotNetSdkVersion
         if( $releasesIndex )
         {
             $releasesIndexUri = $uri
+            break
         }
     }
 
@@ -170,31 +131,34 @@ function Resolve-WhiskeyDotNetSdkVersion
 
     $desiredVersion = $null
     $sortedSdkVersions = $null
-    if ( $Version -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' )
+
+    if ([WildcardPattern]::ContainsWildcardCharacters($Version))
     {
-        $desiredVersion = [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-        $sortedSdkVersions =
+        $resolvedVersion =
             $sdkVersions |
-            ForEach-Object {
-                $_ -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
-                [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-            } |
-            Where-Object { $_ -ge $desiredVersion } |
-            Sort-Object -Descending
+            Where-Object { $_ -like $Version} |
+            Sort-Object -Descending |
+            Select-Object -First 1
+        Write-WhiskeyVerbose -Message ('[{0}] SDK version "{1}" resolved to "{2}' -f $MyInvocation.MyCommand, $Version, $resolvedVersion)
+        return $resolvedVersion
     }
 
-    $installedVersions = Get-InstalledDotNetSdk
-    if ( $installedVersions )
+    if ( $Version -notmatch '^(\d+)\.(\d+)\.(\d{1})(\d+)' )
     {
-        $installedVersions = $installedVersions |
-            ForEach-Object {
-                $_ -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
-                [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
-            }
+        $msg = ".NET SDK version ""$($Version)"" is invalid. The SDK version must be in the form of a 3-part version " +
+               "number. See https://learn.microsoft.com/en-us/dotnet/core/versions/ for more information."
+        Write-WhiskeyError -Message $msg
+        return
     }
 
-    Write-Verbose "Installed Versions: $($installedVersions)" -Verbose
-    Write-Verbose "Sorted versions: $($sortedSdkVersions)" -Verbose
+    $desiredVersion = [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
+    $sortedSdkVersions =
+        $sdkVersions |
+        ForEach-Object {
+            $_ -match '^(\d+)\.(\d+)\.(\d{1})(\d+)' | Out-Null
+            [Version] "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
+        } |
+        Sort-Object -Descending
 
     $resolvedVersion = $null
     switch ($RollForward)
@@ -207,123 +171,33 @@ function Resolve-WhiskeyDotNetSdkVersion
                 Sort-Object -Descending |
                 Select-Object -First 1
         }
-        Patch
         {
-            $sortedSdkVersions =
-                $sortedSdkVersions |
-                Where-Object { $_.Build -eq $desiredVersion.Build }
-            $resolvedVersion =
-                $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions } |
-                Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
+            $_ -eq [Whiskey.DotNetSdkRollForward]::Patch -or
+            $_ -eq [Whiskey.DotNetSdkRollForward]::Feature -or
+            $_ -eq [Whiskey.DotNetSdkRollForward]::Major -or
+            $_ -eq [Whiskey.DotNetSdkRollForward]::Minor -or
+            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestPatch
         }
-        Feature
         {
-            $expectedBuild = $sortedSdkVersions | Select-Object -Last 1
-            if ( $expectedBuild )
-            {
-                $sortedSdkVersions =
-                    $sortedSdkVersions |
-                    Where-Object {
-                        $_.Build -eq $expectedBuild.Build
-                    }
-            }
             $resolvedVersion =
                 $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions } |
+                Where-Object {
+                    $_.Major -eq $desiredVersion.Major -and
+                    $_.Minor -eq $desiredVersion.Minor -and
+                    $_.Build -eq $desiredVersion.Build
+                } |
                 Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
-        }
-        Minor
-        {
-            if ( -not $sortedSdkVersions )
-            {
-                $sortedSdkVersions = Get-AvailableSdkVersions -ReleasesIndex $releasesIndex `
-                                                              -TargetMajor $desiredVersion.Major `
-                                                              -TargetMinor ($desiredVersion.Minor + 1)
-                $expectedBuild = [Version] "0.0.1"
-            }
-            else
-            {
-                $expectedBuild = $sortedSdkVersions | Select-Object -Last 1
-            }
-
-            if ( $expectedBuild )
-            {
-                $sortedSdkVersions =
-                    $sortedSdkVersions |
-                    Where-Object { $_.Build -eq $expectedBuild.Build }
-            }
-            $resolvedVersion =
-                $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions } |
-                Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
-        }
-        Major
-        {
-            if ( -not $sortedSdkVersions )
-            {
-                $sortedSdkVersions = Get-AvailableSdkVersions -ReleasesIndex $releasesIndex `
-                                                              -TargetMajor ($desiredVersion.Major + 1)`
-                                                              -TargetMinor 0
-                $expectedBuild = [Version] "0.0.1"
-            }
-            else
-            {
-                $expectedBuild = $sortedSdkVersions | Select-Object -Last 1
-            }
-            if ( $expectedBuild )
-            {
-                $sortedSdkVersions =
-                    $sortedSdkVersions |
-                    Where-Object { $_.Build -eq $expectedBuild.Build }
-            }
-            $resolvedVersion =
-                $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions } |
-                Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
-        }
-        LatestPatch
-        {
-            $sortedSdkVersions =
-                $sortedSdkVersions |
-                Where-Object { $_.Build -eq $desiredVersion.Build }
-            $resolvedVersion =
-                $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions }
-                Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
         }
         LatestFeature
         {
-            $sortedSdkVersions =
-                $sortedSdkVersions
             $resolvedVersion =
                 $sortedSdkVersions |
-                Where-Object { $_ -in $installedVersions }
+                Where-Object {
+                    $_.Major -eq $desiredVersion.Major -and
+                    $_.Minor -eq $desiredVersion.Minor -and
+                    $_.Build -ge $desiredVersion.Build
+                } |
                 Select-Object -First 1
-            if ( -not $resolvedVersion )
-            {
-                $resolvedVersion = $sortedSdkVersions | Select-Object -First 1
-            }
         }
         LatestMinor
         {
