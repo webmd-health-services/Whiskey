@@ -41,7 +41,15 @@ function Invoke-WhiskeyDotNetCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $dotNetExe = $DotNetPath | Resolve-Path -ErrorAction 'Ignore'
+    if ( -not (Test-Path -Path $DotNetPath) )
+    {
+        $dotNetExe = 'dotnet'
+    }
+    else
+    {
+        $dotNetExe = $DotNetPath | Resolve-Path -ErrorAction 'Ignore'
+    }
+
     if (-not $dotNetExe)
     {
         Write-WhiskeyError -Context $TaskContext -Message ('"{0}" does not exist.' -f $DotNetPath)

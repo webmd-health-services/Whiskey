@@ -50,7 +50,7 @@ function Install-WhiskeyDotNetTool
 
     $globalDotNetValid = $false
     $sdkVersion = $null
-    if ( Get-Command -Name 'dotnet' -ErrorAction Ignore )
+    if ( -not $Version -and (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
     {
         # This command prints out the version of the .NET SDK that the "dotnet" command would use after taking into
         # account the global.json file if it exists. Exit code 0 means a compatible SDK was found
