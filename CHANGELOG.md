@@ -1,10 +1,7 @@
 # 0.54.0
 
 * Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core tools and follows Microsoft's policy on rolling forward currently installed .NET Core versions.
-
-# 0.53.3
-
-Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
+* Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
 
 # 0.53.2
 

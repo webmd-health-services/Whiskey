@@ -19,7 +19,12 @@ function Init
     $script:globalDotNetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath 'GlobalDotNetSDK'
     $script:version = $null
     $script:workingDirectory = $null
-    Mock -CommandName 'Get-InstalledDotNetSdk' -ModuleName 'Whiskey'
+    if (Get-Command -Name 'dotnet' -ErrorAction Ignore)
+    {
+        Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith { $null }.GetNewClosure()
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $global:LASTEXITCODE = 1 }.GetNewClosure()
+    }
+    # Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $LASTEXITCODE = 0 }
 }
 
 function Get-DotNetLatestLtsVersion
@@ -37,6 +42,48 @@ function GivenGlobalDotNetInstalled
     New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath $dotnetExeName) -ItemType File -Force | Out-Null
     New-Item -Path (Join-Path -Path $globalDotNetDirectory -ChildPath ('sdk\{0}\dotnet.dll' -f $Version)) -ItemType File -Force | Out-Null
     $env:PATH += ('{0}{1}' -f [IO.Path]::PathSeparator,$globalDotNetDirectory)
+}
+
+function GivenGlobalDotNetHasValidVersion
+{
+    param (
+        $Version
+    )
+
+    if ( $Version )
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { $Version; $global:LASTEXITCODE = 0 }.GetNewClosure()
+    }
+    else
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $global:LASTEXITCODE = 0 }.GetNewClosure()
+    }
+    Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith { 'A response' }.GetNewClosure()
+}
+
+function GivenGlobalDotNetHasInvalidVersion
+{
+    param (
+        [switch] $UseGlobalDirectory
+    )
+
+    if ( $UseGlobalDirectory )
+    {
+        Mock -CommandName 'Get-Command' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Name -eq 'dotnet' } `
+             -MockWith { [PSCustomObject]@{
+                "Source" = $TestDrive.FullName + 'dotnet.exe'
+             } }.GetNewClosure()
+    }
+    else
+    {
+        Mock -CommandName 'Get-Command' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Name -eq 'dotnet' } `
+             -MockWith { 'A response' }.GetNewClosure()
+    }
+    Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $global:LASTEXITCODE = 1 }.GetNewClosure()
 }
 
 function GivenBadGlobalJson
@@ -198,6 +245,11 @@ function ThenReturnedValidDotNetPath
     $dotnetPath | Should -Exist
 }
 
+function ThenReturnedDotNetExecutable
+{
+    $dotnetPath | Should -Be 'dotnet' -Because 'The version should already exist'
+}
+
 function ThenVersionToInstall
 {
     param(
@@ -299,8 +351,6 @@ Describe 'Install-WhiskeyDotNetTool.when no version specified and global.json do
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
         ThenVersionToInstall -ExpectedVersion (Get-DotNetLatestLtsVersion)
-        # ThenGlobalJsonVersion (Get-DotNetLatestLtsVersion)
-        # ThenDotNetSdkVersion (Get-DotNetLatestLtsVersion)
     }
 }
 
@@ -312,9 +362,6 @@ Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json has P
         GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
         ThenVersionToInstall -ExpectedVersion '2.1.526'
-        # ThenReturnedValidDotNetPath
-        # ThenGlobalJsonVersion '2.1.526'
-        # ThenDotNetSdkVersion '2.1.526'
     }
 }
 
@@ -339,10 +386,10 @@ try
         It 'should use global version' {
             Init
             GivenGlobalDotNetInstalled '2.1.505'
+            GivenGlobalDotNetHasValidVersion
             GivenVersion '2.1.505'
             WhenInstallingDotNetTool
-            ThenReturnedValidDotNetPath
-            ThenGlobalJsonVersion '2.1.505'
+            ThenReturnedDotNetExecutable
             ThenDotNetNotLocallyInstalled '2.1.505'
         }
     }
@@ -354,9 +401,11 @@ try
             GivenWorkingDirectory 'app'
             GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
             GivenGlobalJsonSdkVersion '2.1.505' -Directory $TestDrive.FullName
+            GivenGlobalDotNetHasValidVersion
             GivenVersion '1.1.11'
             WhenInstallingDotNetTool
-            ThenReturnedValidDotNetPath
+            # ThenReturnedValidDotNetPath
+            ThenReturnedDotNetExecutable
             ThenDotNetNotLocallyInstalled
             ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
             ThenGlobalJsonVersion '2.1.505' -Directory $TestDrive.FullName
@@ -366,9 +415,9 @@ try
     Describe 'Install-WhiskeyDotNetTool.when installing DotNet and patch lower is already installed' {
         It 'should use global.json''s version' {
             Init
-            Mock -CommandName 'Get-InstalledDotNetSdk' -MockWith { return '2.1.514' }.GetNewClosure() -ModuleName 'Whiskey'
             GivenGlobalDotNetInstalled '2.1.514'
             GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
+            GivenGlobalDotNetHasValidVersion -Version '2.1.514'
             WhenInstallingDotNetTool
             ThenGlobalJsonVersion '2.1.514'
         }
