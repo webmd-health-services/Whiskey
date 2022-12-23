@@ -386,7 +386,7 @@ try
         It 'should use global version' {
             Init
             GivenGlobalDotNetInstalled '2.1.505'
-            GivenGlobalDotNetHasValidVersion
+            GivenGlobalDotNetHasValidVersion -Version '2.1.505'
             GivenVersion '2.1.505'
             WhenInstallingDotNetTool
             ThenReturnedDotNetExecutable
