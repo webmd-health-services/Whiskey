@@ -134,7 +134,6 @@ function Install-WhiskeyDotNetTool
         $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
     }
 
-    Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SdkVersion $sdkVersion
 
     return $dotnetPath
 }

@@ -24,7 +24,6 @@ function Init
         Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith { $null }.GetNewClosure()
         Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $global:LASTEXITCODE = 1 }.GetNewClosure()
     }
-    # Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $LASTEXITCODE = 0 }
 }
 
 function Get-DotNetLatestLtsVersion
@@ -146,8 +145,8 @@ function GivenWorkingDirectory
 function GivenDotNetSuccessfullyInstalls
 {
     Mock -CommandName 'Install-WhiskeyDotNetSdk' `
-         -ModuleName 'Whiskey' `
-         -MockWith {
+        -ModuleName 'Whiskey' `
+        -MockWith {
             $dotNetExePath = Join-Path -Path $InstallRoot -ChildPath $dotnetExeName
             New-Item -Path $dotNetExePath -ItemType File -Force | Out-Null
 
@@ -220,21 +219,6 @@ function ThenError
     $Global:Error[0] | Should -Match $Message
 }
 
-function ThenGlobalJsonVersion
-{
-    param(
-        $Version,
-        $Directory = $TestDrive.FullName
-    )
-
-    $globalJsonVersion = Get-Content -Path (Join-Path -Path $Directory -ChildPath 'global.json') -Raw |
-                            ConvertFrom-Json |
-                            Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                            Select-Object -ExpandProperty 'version' -ErrorAction Ignore
-
-    $globalJsonVersion | Should -Be $Version
-}
-
 function ThenReturnedNothing
 {
     $dotnetPath | Should -BeNullOrEmpty
@@ -259,7 +243,7 @@ function ThenVersionToInstall
     Assert-MockCalled -CommandName 'Install-WhiskeyDotNetSdk' `
                       -ModuleName 'Whiskey' `
                       -ParameterFilter {
-                        $Version | Should -Be $ExpectedVersion
+                        # $Version | Should -Be $ExpectedVersion
                         $Version -eq $ExpectedVersion
                       }
 }
@@ -289,10 +273,10 @@ Describe 'Install-WhiskeyDotNetTool.when installing specific version' {
         Init
         GivenVersion '2.1.505'
         GivenGlobalJsonSdkVersion '2.1.300'
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.505'
-        ThenDotNetSdkVersion '2.1.505'
+        ThenVersionToInstall -ExpectedVersion '2.1.505'
     }
 }
 
@@ -300,13 +284,15 @@ Describe 'Install-WhiskeyDotNetTool.when installing newer version' {
     It 'should overwrite the existing version' {
         Init
         GivenVersion '2.1.300'
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
+        ThenVersionToInstall -ExpectedVersion '2.1.300'
 
         GivenVersion '2.1.505'
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.505'
-        ThenDotNetSdkVersion '2.1.505'
+        ThenVersionToInstall -ExpectedVersion '2.1.505'
     }
 }
 
@@ -314,11 +300,12 @@ Describe 'Install-WhiskeyDotNetTool.when given wildcard version' {
     It 'should install the most recent version' {
         Init
         GivenVersion '2.*'
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
+        Write-Verbose $dotnetPath -Verbose
         ThenReturnedValidDotNetPath
         $expectedVersion = Invoke-WhiskeyPrivateCommand -Name 'Resolve-WhiskeyDotNetSdkVersion' -Parameter @{ 'Version' = '2.*'; }
-        ThenGlobalJsonVersion $expectedVersion
-        ThenDotNetSdkVersion $expectedVersion
+        ThenVersionToInstall -ExpectedVersion $expectedVersion
     }
 }
 
@@ -337,10 +324,10 @@ Describe 'Install-WhiskeyDotNetTool.when installing version from global.json' {
     It 'should use the version in global.json' {
         Init
         GivenGlobalJsonRollForwardAndSdkVersion '2.1.505' -RollForward Disable
+        GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
         ThenReturnedValidDotNetPath
-        ThenGlobalJsonVersion '2.1.505'
-        ThenDotNetSdkVersion '2.1.505'
+        ThenVersionToInstall -ExpectedVersion '2.1.505'
     }
 }
 
@@ -377,7 +364,6 @@ try
             GivenVersion '2.1.505'
             WhenInstallingDotNetTool
             ThenReturnedValidDotNetPath
-            ThenGlobalJsonVersion '2.1.505'
             ThenDotNetLocallyInstalled '2.1.505'
         }
     }
@@ -406,8 +392,6 @@ try
             WhenInstallingDotNetTool
             ThenReturnedDotNetExecutable
             ThenDotNetNotLocallyInstalled
-            ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
-            ThenGlobalJsonVersion '2.1.505' -Directory $TestDrive.FullName
         }
     }
 
@@ -418,7 +402,6 @@ try
             GivenGlobalJsonRollForwardAndSdkVersion -Version '2.1.500' -RollForward Patch
             GivenGlobalDotNetHasValidVersion -Version '2.1.514'
             WhenInstallingDotNetTool
-            ThenGlobalJsonVersion '2.1.514'
         }
     }
 }
