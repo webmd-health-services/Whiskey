@@ -55,6 +55,7 @@ function GivenDotNetPath
 
     $script:dotNetPath = $Path
     Mock -CommandName 'Resolve-Path' -ModuleName 'Whiskey' -MockWith { $Path }
+    Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -MockWith { $Name }
 }
 
 function GivenNonExistentDotNetPath
@@ -200,7 +201,7 @@ function WhenRunningDotNetCommand
     {
         $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testRoot
         $parameter['TaskContext'] = $taskContext
-        Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyDotNetCommand' -Parameter $parameter 
+        Invoke-WhiskeyPrivateCommand -Name 'Invoke-WhiskeyDotNetCommand' -Parameter $parameter
     }
     catch
     {

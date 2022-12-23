@@ -28,18 +28,22 @@ function Invoke-WhiskeyDotNet
 
     $invokeParameters = @{
         TaskContext = $TaskContext;
-        DotNetPath = $dotnetExe;
         Name = $command;
         ArgumentList = $TaskParameter['Argument'];
         NoLog = $NoLog;
+    }
+
+    if ( $TaskParameter.ContainsKey('DotNetPath') )
+    {
+        $invokeParameters['DotNetPath'] = $TaskParameter['DotNetPath']
     }
 
     Write-WhiskeyVerbose -Context $TaskContext -Message ('.NET Core SDK {0}' -f (& $dotnetExe --version))
 
     if( $TaskParameter.ContainsKey('Path') )
     {
-        $projectPaths = 
-            $TaskParameter['Path'] | 
+        $projectPaths =
+            $TaskParameter['Path'] |
             Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path' -PathType 'File' -AllowNonexistent
         if( -not $projectPaths -and (Get-Location).Path -ne $TaskContext.BuildRoot )
         {
