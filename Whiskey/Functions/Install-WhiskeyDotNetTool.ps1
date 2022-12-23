@@ -50,12 +50,12 @@ function Install-WhiskeyDotNetTool
 
     $globalDotNetValid = $false
     $sdkVersion = $null
-    if ( -not $Version -and (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+    if ( (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
     {
         # This command prints out the version of the .NET SDK that the "dotnet" command would use after taking into
         # account the global.json file if it exists. Exit code 0 means a compatible SDK was found
         $possibleVersion = dotnet --version
-        if ($LASTEXITCODE -eq 0)
+        if ( $LASTEXITCODE -eq 0 -or $possibleVersion -eq $Version )
         {
             $msg = "[$($MyInvocation.MyCommand)] A compatible .NET Core SDK Version is already globally installed. " +
                    "Skipping resolution of version to install."

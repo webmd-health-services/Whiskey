@@ -401,10 +401,9 @@ try
             GivenWorkingDirectory 'app'
             GivenGlobalJsonSdkVersion '1.0.1' -Directory $workingDirectory
             GivenGlobalJsonSdkVersion '2.1.505' -Directory $TestDrive.FullName
-            GivenGlobalDotNetHasValidVersion
+            GivenGlobalDotNetHasValidVersion -Version '1.1.11'
             GivenVersion '1.1.11'
             WhenInstallingDotNetTool
-            # ThenReturnedValidDotNetPath
             ThenReturnedDotNetExecutable
             ThenDotNetNotLocallyInstalled
             ThenGlobalJsonVersion '1.1.11' -Directory $workingDirectory
