@@ -102,10 +102,34 @@ function Resolve-WhiskeyDotNetSdkVersion
         } |
         Sort-Object -Property 'channel-version' -Descending
 
-    $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
-    $matcher = $Matches[0]
+    # $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
+    if ($Version -match '^\*|^\d+\.\*')
+    {
+        $matcher = $Matches[0]
+    }
+    elseif ($Version -match '^(\d+)\.(\d+)')
+    {
+        switch ($RollForward)
+        {
+            LatestMajor
+            {
+                $matcher = '*'
+            }
+            LatestMinor
+            {
+                $matcher = "$($Matches[1]).*"
+            }
+            default
+            {
+                $matcher = "$($Matches[1]).$($Matches[2])"
+            }
+        }
+    }
 
-    $release = $releasesIndex | Where-Object { $_.'channel-version' -like $matcher } | Select-Object -First 1
+    $release = $releasesIndex |
+        Sort-Object -Property 'channel-version' -Descending |
+        Where-Object { $_.'channel-version' -like $matcher } |
+        Select-Object -First 1
     if (-not $release -and $RollForward -eq [Whiskey.DotNetSdkRollForward]::Disable)
     {
         Write-WhiskeyError -Message ('.NET Core release matching "{0}" could not be found in "{1}"' -f $matcher, $releasesIndexUri)
@@ -165,10 +189,8 @@ function Resolve-WhiskeyDotNetSdkVersion
     {
         Disable
         {
-            $resolvedVersion =
-                $sdkVersions |
-                Where-Object { $_ -like $Version } |
-                Sort-Object -Descending |
+            $resolvedVersion = $sortedSdkVersions |
+                Where-Object { $_ -eq $desiredVersion } |
                 Select-Object -First 1
         }
         {
@@ -199,44 +221,20 @@ function Resolve-WhiskeyDotNetSdkVersion
                 } |
                 Select-Object -First 1
         }
-        LatestMinor
         {
-            $latestMinorVersion =
-                $releasesIndex |
-                Where-Object { [Version]::TryParse($_.'channel-version', [ref]$null) } |
-                ForEach-Object {
-                    $channelVersion = $_ | Select-Object -ExpandProperty 'channel-version'
-                    $channelVersion -as [Version]
-                } |
-                Where-Object {
-                    $_.Major -eq $desiredVersion.Major -and
-                    $_.Minor -ge $desiredVersion.Minor
-                } |
-                Sort-Object -Descending |
-                Select-Object -First 1
-            $resolvedVersion = $releasesIndex |
-                Where-Object { $_.'channel-version' -like "$($latestMinorVersion.Major).$($latestMinorVersion.Minor)"} |
-                Select-Object -ExpandProperty 'latest-sdk'
+            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestMinor -or
+            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestMajor
         }
-        LatestMajor
         {
-            $latestMinorVersion =
-                $releasesIndex |
-                Where-Object { [Version]::TryParse($_.'channel-version', [ref]$null) } |
-                ForEach-Object {
-                    $channelVersion = $_ | Select-Object -ExpandProperty 'channel-version'
-                    $channelVersion -as [Version]
-                } |
-                Where-Object {
-                    $_.Major -ge $desiredVersion.Major -and
-                    $_.Minor -ge $desiredVersion.Minor
-                } |
-                Sort-Object -Descending |
-                Select-Object -First 1
-            $resolvedVersion = $releasesIndex |
-                Where-Object { $_.'channel-version' -like "$($latestMinorVersion.Major).$($latestMinorVersion.Minor)"} |
-                Select-Object -ExpandProperty 'latest-sdk' |
-                Select-Object -First 1
+            $resolvedVersion = $release | Select-Object -ExpandProperty 'latest-sdk'
+        }
+        Default
+        {
+            $validStrategies = [Whiskey.DotNetSdkRollForward].GetEnumNames()
+            $msg = "Roll forward strategy $($RollForward) is not one of the valid .NET SDK roll forward strategies: " +
+                   "$($validStrategies -join ', ')."
+            Write-WhiskeyError -Message $msg
+            return
         }
     }
 
