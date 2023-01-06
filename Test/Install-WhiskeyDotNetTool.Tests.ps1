@@ -19,8 +19,15 @@ function Init
     $script:globalDotNetDirectory = Join-Path -Path $TestDrive.FullName -ChildPath 'GlobalDotNetSDK'
     $script:version = $null
     $script:workingDirectory = $null
-    Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith { $null }.GetNewClosure()
-    Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; $global:LASTEXITCODE = 1 }.GetNewClosure()
+    Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' }
+    if ( $IsWindows )
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; cmd /c exit 1 }
+    }
+    else
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; bash -c 'exit 1' }
+    }
 }
 
 function Get-DotNetLatestLtsVersion
@@ -46,7 +53,14 @@ function GivenGlobalDotNetHasValidVersion
         $Version
     )
 
-    Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { $Version; $global:LASTEXITCODE = 0 }.GetNewClosure()
+    if ( $IsWindows )
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { $Version; cmd /c exit 0 }
+    }
+    else
+    {
+        Mock -CommandName 'dotnet' -ModuleName 'Whiskey' -MockWith { 'return some strings'; bash -c 'exit 0' }
+    }
     Mock -CommandName 'Get-Command' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'dotnet' } -MockWith { 'A response' }.GetNewClosure()
 }
 
@@ -311,7 +325,7 @@ Describe 'Install-WhiskeyDotNetTool.when installing DotNet and global.json has P
         GivenGlobalJson -Version '2.1.500' -RollForward Patch
         GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
-        # ThenVersionToInstall -ExpectedVersion '2.1.526'
+        ThenVersionToInstall -ExpectedVersion '2.1.526'
     }
 }
 
@@ -343,13 +357,14 @@ Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet does not ex
 }
 
 Describe 'Install-WhiskeyDotNetTool.when specified version of DotNet exists globally' {
-    It 'should use global version' {
+    It 'should install DotNet locally because Version parameter takes precedence' {
         Init
         GivenGlobalDotNetInstalled '2.1.505'
         GivenGlobalDotNetHasValidVersion -Version '2.1.505'
         GivenVersion '2.1.505'
         GivenDotNetSuccessfullyInstalls
         WhenInstallingDotNetTool
+        ThenVersionToInstall '2.1.505'
         ThenDotNetLocallyInstalled '2.1.505'
         ThenReturnedValidDotNetPath
         ThenDotNetWasInstalled
