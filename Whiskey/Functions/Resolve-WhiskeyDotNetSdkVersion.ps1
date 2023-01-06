@@ -102,7 +102,6 @@ function Resolve-WhiskeyDotNetSdkVersion
         } |
         Sort-Object -Property 'channel-version' -Descending
 
-    # $Version -match '^\d+\.(?:\d+|\*)|^\*' | Out-Null
     if ($Version -match '^\*|^\d+\.\*')
     {
         $matcher = $Matches[0]
@@ -189,7 +188,8 @@ function Resolve-WhiskeyDotNetSdkVersion
     {
         Disable
         {
-            $resolvedVersion = $sortedSdkVersions |
+            $resolvedVersion =
+                $sortedSdkVersions |
                 Where-Object { $_ -eq $desiredVersion } |
                 Select-Object -First 1
         }
