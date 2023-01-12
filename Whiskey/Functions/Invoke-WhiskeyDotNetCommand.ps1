@@ -21,7 +21,6 @@ function Invoke-WhiskeyDotNetCommand
         # The `Whiskey.Context` object for the task running the command.
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
         # The path to the `dotnet` executable to run the SDK command with.
         [String]$DotNetPath,
 
@@ -41,8 +40,12 @@ function Invoke-WhiskeyDotNetCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $dotNetExe = $DotNetPath | Resolve-Path -ErrorAction 'Ignore'
-    if (-not $dotNetExe)
+    if ( -not $DotNetPath )
+    {
+        $DotNetPath = 'dotnet'
+    }
+
+    if ( -not (Get-Command -Name $DotNetPath -ErrorAction Ignore) )
     {
         Write-WhiskeyError -Context $TaskContext -Message ('"{0}" does not exist.' -f $DotNetPath)
         return
@@ -72,7 +75,7 @@ function Invoke-WhiskeyDotNetCommand
         $ProjectPath
     }
 
-    Write-WhiskeyCommand -Context $TaskContext -Path $dotNetExe -ArgumentList $commandInfoArgList
+    Write-WhiskeyCommand -Context $TaskContext -Path $DotNetPath -ArgumentList $commandInfoArgList
 
     Invoke-Command -ScriptBlock {
         param(
@@ -85,11 +88,11 @@ function Invoke-WhiskeyDotNetCommand
 
         & $DotNetExe $Command $DotNetArgs $LoggerArgs $Project
 
-    } -ArgumentList $dotNetExe,$Name,$ArgumentList,$loggerArgs,$ProjectPath
+    } -ArgumentList $DotNetPath,$Name,$ArgumentList,$loggerArgs,$ProjectPath
 
     if ($LASTEXITCODE -ne 0)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"{0}" failed with exit code {1}' -f $DotNetExe,$LASTEXITCODE)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"{0}" failed with exit code {1}' -f $DotNetPath,$LASTEXITCODE)
         return
     }
 }
