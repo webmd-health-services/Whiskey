@@ -9,8 +9,9 @@ Build:
     Path: Whiskey\Whiskey.psd1
     PowerShellModuleName: Whiskey
     Prerelease:
-    - "*/*": alpha1
-    - develop: rc1
+    - main: ""
+    - master: ""
+    - "*": rc1
 
 # Update the AppVeyor build/version number.
 - Exec:
