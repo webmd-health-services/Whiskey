@@ -127,11 +127,16 @@ BeforeAll {
             [Parameter(Mandatory, ParameterSetName='UPack')]
             [String] $ForUniversalPackage,
 
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
             [Parameter(Mandatory, ParameterSetName='UPack')]
             [String] $At,
 
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
             [Parameter(Mandatory, ParameterSetName='UPack')]
-            [String[]] $WithVersions
+            [String[]] $WithVersions,
+
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
+            [String] $ForPSModule
         )
 
         $forParam = @{ ForBuildServer = $true }
@@ -171,6 +176,15 @@ BeforeAll {
                  -ModuleName 'Whiskey' `
                  -ParameterFilter { $Uri -Eq $pkgFeedUrl } `
                  -MockWith { return [pscustomobject]@{ versions = $script:versions } } #.GetNewClosure()
+        }
+
+        if ($ForPSModule)
+        {
+            $script:versions = $WithVersions
+            Mock -CommandName 'Find-Module' `
+                 -ModuleName 'Whiskey' `
+                 -ParameterFilter { $Name -eq $ForPSModule } `
+                 -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
         }
 
         $Global:Error.Clear()
@@ -709,5 +723,32 @@ description 'Installs/Configures cookbook_name'
         ThenVersionIs '22.518.8'
         ThenSemVer1Is '22.518.8-rc1'
         ThenSemVer2Is '22.518.8-rc.1'
+    }
+
+    It 'should sort semver 1 prerelease versions' {
+        GivenFile 'Module.psd1' '@{ ModuleVersion = ''4.9.0'' }'
+        $sourceLocation = (Get-PSRepository -Name 'PSGallery').SourceLocation
+        $yaml = @"
+Build:
+- Version:
+    Path: Module.psd1
+    Prerelease:
+    - "*": "rc.1"
+"@
+        WhenRunningTask -WithYaml $yaml -ForPSModule 'Module' -At $sourceLocation -WithVersion @(
+            '4.9.0-rc1',
+            '4.9.0-rc2',
+            '4.9.0-rc3',
+            '4.9.0-rc4',
+            '4.9.0-rc5',
+            '4.9.0-rc6',
+            '4.9.0-rc7',
+            '4.9.0-rc8',
+            '4.9.0-rc9',
+            '4.9.0-rc10'
+        )
+        ThenVersionIs '4.9.0'
+        ThenSemVer1Is '4.9.0-rc11'
+        ThenSemVer2Is '4.9.0-rc.11'
     }
 }
