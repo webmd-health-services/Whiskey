@@ -63,6 +63,8 @@ for:
         {
             # $Global:Error | Format-List * -Force
         }
+  on_finish:
+  - ps: $blockRdp = $true; $nonat = $false ; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 # Build in PowerShell
 - matrix:
@@ -79,3 +81,5 @@ for:
         {
             # $Global:Error | Format-List * -Force
         }
+  on_finish:
+  - ps: $blockRdp = $true; $nonat = $true ; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
