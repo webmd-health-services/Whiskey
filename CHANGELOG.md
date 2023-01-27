@@ -30,6 +30,7 @@ arguments:
 to GitHub's API. If a `GITHUB_BEARER_TOKEN` environment variable exists, the `build.ps1` script will use that value
 unless the `GitHubBearerToken` parameter has a value.
 * Fixed: the `Version` task picks the wrong next prerelease version number if the target package feed uses semver 1.
+* Fixed: Whiskey doesn't tell you when it can't find a version of a NuGet package.
 
 # 0.53.2
 
