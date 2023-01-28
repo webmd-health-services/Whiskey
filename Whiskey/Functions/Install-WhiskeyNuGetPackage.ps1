@@ -101,6 +101,13 @@ function Install-WhiskeyNuGetPackage
     }
 
     $nupkgPath = Join-Path -Path $cachePath -ChildPath "$($pkgBaseName).nupkg"
+
+    $packagesPath = Join-Path -Path $BuildRootPath -ChildPath 'packages'
+    if (-not (Test-Path -Path $packagesPath))
+    {
+        New-Item -Path $packagesPath -ItemType 'Directory' | Out-Null
+    }
+
     if( -not (Test-Path -Path $nupkgPath) )
     {
         $waitMilliseconds = 100
@@ -108,7 +115,9 @@ function Install-WhiskeyNuGetPackage
         $pkgMgmtErrors = @()
         for( $idx = 0; $idx -lt $numTries; ++$idx )
         {
-            Write-WhiskeyInfo -Message "Downloading NuGet package $($pkg.Name) $($pkg.Version)."
+            $destinationPath = [IO.Path]::GetFileNameWithoutExtension($nupkgPath)
+            $destinationPath = Join-Path -Path ($packagesPath | Resolve-Path -Relative) -ChildPath $destinationPath
+            "Saving NuGet package $($pkg.Name) $($pkg.Version) to ""$($destinationPath)""." | Write-WhiskeyInfo
             $pkg |
                 Save-Package -Path $cachePath -ErrorAction SilentlyContinue -ErrorVariable 'pkgMgmtErrors' -Force |
                 Out-Null
@@ -136,7 +145,6 @@ function Install-WhiskeyNuGetPackage
         }
     }
 
-    $packagesPath = Join-Path -Path $BuildRootPath -ChildPath 'packages'
 
     # Install the package and all its dependencies into 'packages'.
     foreach( $pkgInfo in (Get-ChildItem -Path $cachePath -Filter '*.nupkg') )
@@ -149,7 +157,7 @@ function Install-WhiskeyNuGetPackage
 
         if( -not (Get-ChildItem -LiteralPath $pkgPath) )
         {
-            Write-WhiskeyInfo -Message "Extracting ""$($pkgInfo.Name)"" to ""$($pkgPath | Resolve-Path -Relative)""."
+            Write-WhiskeyVerbose -Message "Extracting ""$($pkgInfo.Name)"" to ""$($pkgPath | Resolve-Path -Relative)""."
             Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
             [IO.Compression.ZipFile]::ExtractToDirectory($pkgInfo.FullName, $pkgPath)
         }
