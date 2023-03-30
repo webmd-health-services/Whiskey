@@ -43,7 +43,6 @@ BeforeAll {
             $msg = 'These tests require a version of Whiskey after 0.48.3 when the tests are running on .NET ' +
                 "$($net4Key.Version) or earlier."
             Write-Warning $msg
-            return
         }
     }
 
