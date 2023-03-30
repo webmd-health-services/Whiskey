@@ -161,7 +161,6 @@ Build:
                     - "*/Test/MergeFile.Tests.ps1"
                     - "*/Test/New-WhiskeyContext.Tests.ps1"
                     - "*/Test/NodeLicenseChecker.Tests.ps1"
-                    - "*/Test/Npm.Tests.ps1"
                     - "*/Test/NuGetPack.Tests.ps1"
                     - "*/Test/NuGetPush.Tests.ps1"
                     - "*/Test/NuGetRestore.Tests.ps1"
@@ -231,7 +230,6 @@ Build:
             - "Test/Log.Tests.ps1"
             - "Test/New-WhiskeyContext.Tests.ps1"
             - "Test/NodeLicenseChecker.Tests.ps1"
-            - "Test/Npm.Tests.ps1"
             - "Test/NuGetPack.Tests.ps1"
             - "Test/NuGetPush.Tests.ps1"
             - "Test/NuGetRestore.Tests.ps1"
@@ -317,7 +315,6 @@ Build:
             Script:
             - Test\MergeFile.Tests.ps1
             - Test\NodeLicenseChecker.Tests.ps1
-            - Test\Npm.Tests.ps1
             - Test\NuGetRestore.Tests.ps1
             - Test\PowerShell.Tests.ps1
             - Test\ProGetUniversalPackage.Tests.ps1
@@ -384,7 +381,6 @@ Build:
                     - "*\\Test\\MSBuild.Tests.ps1"
                     - "*\\Test\\New-WhiskeyContext.Tests.ps1"
                     - "*\\Test\\NodeLicenseChecker.Tests.ps1"
-                    - "*\\Test\\Npm.Tests.ps1"
                     - "*\\Test\\NuGetPack.Tests.ps1"
                     - "*\\Test\\NuGetPush.Tests.ps1"
                     - "*\\Test\\NuGetRestore.Tests.ps1"
