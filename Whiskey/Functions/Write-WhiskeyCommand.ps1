@@ -21,8 +21,8 @@ function Write-WhiskeyCommand
             $Path
             $ArgumentList
         } |
-        ForEach-Object { 
-            if( $_ -match '\ ' )
+        ForEach-Object {
+            if( $_ -match '\ |;' )
             {
                 '"{0}"' -f $_.Trim('"',"'")
             }
@@ -32,11 +32,11 @@ function Write-WhiskeyCommand
             }
         }
 
-    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ') -InformationAction Continue
-    Write-WhiskeyDebug -Context $Context -Message $Path -Verbose
+    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ')
+    Write-WhiskeyVerbose -Context $Context -Message $Path
     $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
     {
-        Write-WhiskeyDebug -Context $Context -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
+        Write-WhiskeyVerbose -Context $Context -Message ('{0}{1}' -f $argumentPrefix,$argument)
     }
 }

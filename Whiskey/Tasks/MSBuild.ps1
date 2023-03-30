@@ -77,7 +77,6 @@ function Invoke-WhiskeyMSBuild
     foreach( $projectPath in $Path )
     {
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  {0}' -f $projectPath)
-        $errors = $null
         if( $projectPath -like '*.sln' )
         {
             if( $TaskContext.ShouldClean )
@@ -91,7 +90,7 @@ function Invoke-WhiskeyMSBuild
             }
             else
             {
-                Write-WhiskeyVerbose -Context $TaskContext -Message ('  Restoring NuGet packages.')
+                Write-WhiskeyCommand -Path $NuGetPath -ArgumentList 'restore', $projectPath
                 & $NuGetPath restore $projectPath
             }
         }
@@ -177,13 +176,16 @@ function Invoke-WhiskeyMSBuild
             $value = $value.Trim("'")
             if( $value.EndsWith( '\' ) )
             {
-                $value = '{0}\' -f $value
+                $value = "${value}\"
             }
-            '/p:{0}="{1}"' -f $name,($value -replace ' ','%20')
+            $value = $value -replace ' ', '%20'
+            "/p:${name}=${value}"
         }
 
         $targetArg = '/t:{0}' -f ($target -join ';')
 
+        Write-WhiskeyCommand -Path $msbuildExepath `
+                             -ArgumentList (& { $projectPath ; $targetArg ; $propertyArgs ; $msbuildArgs })
         & $msbuildExePath $projectPath $targetArg $propertyArgs $msbuildArgs /nologo
         if( $LASTEXITCODE -ne 0 )
         {

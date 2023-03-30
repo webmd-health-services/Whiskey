@@ -1,3 +1,11 @@
+# 0.55.0
+
+## Changed
+
+* MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
+* Commands written to the output stream now quote arguments that contain a semicolon.
+* Fixed: MSBuild task fails when property arguments contain quote characters.
+
 # 0.54.0
 
 * Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core tools and follows Microsoft's policy on rolling forward currently installed .NET Core versions.
