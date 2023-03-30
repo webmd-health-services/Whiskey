@@ -7,7 +7,7 @@ function Write-WhiskeyCommand
 
         [String] $Path,
 
-        [String[]] $ArgumentList
+        [Object[]] $ArgumentList
     )
 
     Set-StrictMode -Version 'Latest'
@@ -19,7 +19,8 @@ function Write-WhiskeyCommand
                 '&'
             }
             $Path
-            $ArgumentList
+            # Might have passed array of arrays.
+            $ArgumentList | ForEach-Object { $_ | Write-Output }
         } |
         ForEach-Object {
             if( $_ -match '\ |;' )

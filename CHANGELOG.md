@@ -15,6 +15,7 @@ requests to the GitHub API.
 
 * MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
 * Commands written to the output stream now quote arguments that contain a semicolon.
+* NPM task now writes the commands it runs to the information stream.
 
 ## Fixed
 

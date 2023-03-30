@@ -79,16 +79,16 @@ BeforeAll {
     }
 }
 
-Describe 'Npm.when command succeeds' {
+Describe 'Npm' {
     BeforeEach {
         $script:failed = $false
         $script:testRoot = New-WhiskeyTestRoot
     }
 
     It 'should run command' {
-        WhenRunningCommand 'config' -WithArguments 'set','fubar','snafu','--userconfig','.npmrc'
+        WhenRunningCommand 'config' -WithArguments 'set','heading','auto','--userconfig','.npmrc'
         ThenFile '.npmrc' -Is @'
-fubar=snafu
+heading=auto
 '@
     }
 
