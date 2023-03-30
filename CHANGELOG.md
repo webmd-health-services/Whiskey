@@ -1,9 +1,23 @@
+<!--markdownlint-disable MD012 no-multiple-blanks -->
+<!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
+
 # 0.55.0
+
+## Added
+
+The `build.ps1` can now authenticate requests to GitHub when determing the version of Whiskey to download.
+
+* Added parameter `GitHubBearerToken` to authenticate requests to the GitHub releases API, if needed.
+* If a `GITHUB_BEARER_TOKEN` environment variable exists, the `build.ps1` script will use its value to authenticate
+requests to the GitHub API.
 
 ## Changed
 
 * MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
 * Commands written to the output stream now quote arguments that contain a semicolon.
+
+## Fixed
+
 * Fixed: MSBuild task fails when property arguments contain quote characters.
 
 # 0.54.0

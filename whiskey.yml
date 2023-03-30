@@ -82,11 +82,6 @@ Build:
     Timeout: 00:40:00
     Queues:
     - Tasks:
-        # Needs to run in its own Pester task since it loads old versions of Whiskey.
-        - Pester4:
-            Script:
-            - Test\build.ps1.Tests.ps1
-    - Tasks:
         - Pester4:
             Script:
             - Test\DotNet.Tests.ps1
@@ -126,7 +121,6 @@ Build:
                     - "*/Test/Add-WhiskeyApiKey.Tests.ps1"
                     - "*/Test/Add-WhiskeyTaskDefault.Tests.ps1"
                     - "*/Test/AppVeyorWaitForBuildJobs.Tests.ps1"
-                    - "*/Test/build.ps1.Tests.ps1"
                     - "*/Test/Convert-WhiskeyPathDirectorySeparator.Tests.ps1"
                     - "*/Test/ConvertFrom-WhiskeyContext.Tests.ps1"
                     - "*/Test/ConvertFrom-WhiskeyYamlScalar.Tests.ps1"
@@ -272,10 +266,6 @@ Build:
     Timeout: 00:40:00
     Queues:
     - Tasks:
-        # Needs to run in its own Pester task since it loads old versions of Whiskey.
-        - Pester4:
-            Script: Test\build.ps1.Tests.ps1
-    - Tasks:
         # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
         # These three tests must be in the same queue.
         # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance
@@ -353,7 +343,6 @@ Build:
                     - "*\\Test\\Add-WhiskeyApiKey.Tests.ps1"
                     - "*\\Test\\Add-WhiskeyTaskDefault.Tests.ps1"
                     - "*\\Test\\AppVeyorWaitForBuildJobs.Tests.ps1"
-                    - "*\\Test\\build.ps1.Tests.ps1"
                     - "*\\Test\\Convert-WhiskeyPathDirectorySeparator.Tests.ps1"
                     - "*\\Test\\ConvertFrom-WhiskeyContext.Tests.ps1"
                     - "*\\Test\\ConvertFrom-WhiskeyYamlScalar.Tests.ps1"
