@@ -164,7 +164,6 @@ Build:
                     - "*/Test/NuGetPack.Tests.ps1"
                     - "*/Test/NuGetPush.Tests.ps1"
                     - "*/Test/NuGetRestore.Tests.ps1"
-                    - "*/Test/NUnit2.Tests.ps1"
                     - "*/Test/NUnit3.Tests.ps1"
                     - "*/Test/Parallel.Tests.ps1"
                     - "*/Test/Pester.Tests.ps1"
@@ -233,7 +232,6 @@ Build:
             - "Test/NuGetPack.Tests.ps1"
             - "Test/NuGetPush.Tests.ps1"
             - "Test/NuGetRestore.Tests.ps1"
-            - "Test/NUnit2.Tests.ps1"
             - "Test/NUnit3.Tests.ps1"
             - "Test/Pester.Tests.ps1"
             - "Test/Pipeline.Tests.ps1"
@@ -277,13 +275,14 @@ Build:
                     OutputPath: .output\pester-msbuild.xml
                     TestSuiteName: Whiskey
                 Run:
-                    Path: Test\MSBuild.Tests.ps1
+                    Path:
+                    - Test\MSBuild.Tests.ps1
+                    - Test\NUnit2.Tests.ps1
                 Output:
                     Verbosity: Detailed
 
         - Pester4:
             Script:
-            - Test\NUnit2.Tests.ps1
             - Test\NUnit3.Tests.ps1
     - Tasks:
         - Pester4:
