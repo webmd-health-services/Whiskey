@@ -118,6 +118,8 @@ Build:
                     Enabled: true
                     OutputPath: .output\pester.xml
                     TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
                 Run:
                     Path: "Test/*.Tests.ps1"
                     ExcludePath:
@@ -163,7 +165,6 @@ Build:
                     - "*/Test/LoadTask.Tests.ps1"
                     - "*/Test/Log.Tests.ps1"
                     - "*/Test/MergeFile.Tests.ps1"
-                    - "*/Test/MSBuild.Tests.ps1"
                     - "*/Test/New-WhiskeyContext.Tests.ps1"
                     - "*/Test/NodeLicenseChecker.Tests.ps1"
                     - "*/Test/Npm.Tests.ps1"
@@ -234,7 +235,6 @@ Build:
             - "Test/Invoke-WhiskeyPipelineTask.Tests.ps1"
             - "Test/LoadTask.Tests.ps1"
             - "Test/Log.Tests.ps1"
-            - "Test/MSBuild.Tests.ps1"
             - "Test/New-WhiskeyContext.Tests.ps1"
             - "Test/NodeLicenseChecker.Tests.ps1"
             - "Test/Npm.Tests.ps1"
@@ -276,14 +276,25 @@ Build:
         - Pester4:
             Script: Test\build.ps1.Tests.ps1
     - Tasks:
+        # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
+        # These three tests must be in the same queue.
+        # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance
+        # Windows test queues. This queue takes the longest so all other queues are optimized to take about this
+        # long.
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester-msbuild.xml
+                    TestSuiteName: Whiskey
+                Run:
+                    Path: Test\MSBuild.Tests.ps1
+                Output:
+                    Verbosity: Detailed
+
         - Pester4:
             Script:
-            # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
-            # These three tests must be in the same queue.
-            # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance
-            # Windows test queues. This queue takes the longest so all other queues are optimized to take about this
-            # long.
-            - Test\MSBuild.Tests.ps1
             - Test\NUnit2.Tests.ps1
             - Test\NUnit3.Tests.ps1
     - Tasks:
@@ -334,6 +345,8 @@ Build:
                     Enabled: true
                     OutputPath: .output\pester.xml
                     TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
                 Run:
                     Path: Test\\*.Tests.ps1
                     ExcludePath:
