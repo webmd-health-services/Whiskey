@@ -121,6 +121,7 @@ Build:
                     # Windows-only, so don't run.
                     - "*/MSBuild.Tests.ps1"
                     - "*/NuGetPack.Tests.ps1"
+                    - "*/NuGetPush.Tests.ps1"
                     - "*/NUnit2.Tests.ps1"
                     - "*/NUnit3.Tests.ps1"
                     # Still Pester 4.
@@ -167,7 +168,6 @@ Build:
                     - "*/Test/MergeFile.Tests.ps1"
                     - "*/Test/New-WhiskeyContext.Tests.ps1"
                     - "*/Test/NodeLicenseChecker.Tests.ps1"
-                    - "*/Test/NuGetPush.Tests.ps1"
                     - "*/Test/NuGetRestore.Tests.ps1"
                     - "*/Test/Parallel.Tests.ps1"
                     - "*/Test/Pester.Tests.ps1"
@@ -233,7 +233,6 @@ Build:
             - "Test/Log.Tests.ps1"
             - "Test/New-WhiskeyContext.Tests.ps1"
             - "Test/NodeLicenseChecker.Tests.ps1"
-            - "Test/NuGetPush.Tests.ps1"
             - "Test/NuGetRestore.Tests.ps1"
             - "Test/Pester.Tests.ps1"
             - "Test/Pipeline.Tests.ps1"
@@ -299,7 +298,6 @@ Build:
             - Test\Install-WhiskeyNodeModule.Tests.ps1
             - Test\Invoke-WhiskeyBuild.Tests.ps1
             - Test\Invoke-WhiskeyTask.Tests.ps1
-            - Test\NuGetPush.Tests.ps1
     - Tasks:
         - Pester4:
             Script:
@@ -378,7 +376,6 @@ Build:
                     - "*\\Test\\MSBuild.Tests.ps1"
                     - "*\\Test\\New-WhiskeyContext.Tests.ps1"
                     - "*\\Test\\NodeLicenseChecker.Tests.ps1"
-                    - "*\\Test\\NuGetPush.Tests.ps1"
                     - "*\\Test\\NuGetRestore.Tests.ps1"
                     - "*\\Test\\NUnit2.Tests.ps1"
                     - "*\\Test\\NUnit3.Tests.ps1"
