@@ -22,8 +22,9 @@ function Write-WhiskeyCommand
             # Might have passed array of arrays.
             $ArgumentList | ForEach-Object { $_ | Write-Output }
         } |
+        Where-Object { $null -ne $_ } |
         ForEach-Object {
-            if( $_ -match '\ |;' )
+            if ($_ -match '\ |;' -or $_ -eq '')
             {
                 '"{0}"' -f $_.Trim('"',"'")
             }

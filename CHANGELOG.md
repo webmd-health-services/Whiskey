@@ -20,6 +20,7 @@ requests to the GitHub API.
 ## Fixed
 
 * Fixed: MSBuild task fails when property arguments contain quote characters.
+* Fixed: NUnit2 task fails to properly parse include/exclude params.
 
 # 0.54.0
 
