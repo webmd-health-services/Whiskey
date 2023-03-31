@@ -1,44 +1,32 @@
 
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeDiscovery {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+}
 
-Import-WhiskeyTestModule 'VSSetup'
+BeforeAll {
+    Import-WhiskeyTestModule 'VSSetup'
 
-$testRoot = $null
-$projectName = 'NuGetPack.csproj'
-$context = $null
-$nugetUri = $null
-$apiKey = $null
-$publishFails = $false
-$packageExistsCheckFails = $false
-$threwException = $false
-$byBuildServer = $false
-$version = $null
-
-function InitTest
-{
-    param(
-    )
-
-    $script:nugetUri = 'https://nuget.org'
-    $script:apiKey = 'fubar:snafu'
+    $script:testRoot = $null
+    $script:projectName = 'NuGetPack.csproj'
+    $script:context = $null
+    $script:nugetUri = $null
+    $script:apiKey = $null
     $script:publishFails = $false
     $script:packageExistsCheckFails = $false
-    $script:path = $projectName
+    $script:threwException = $false
     $script:byBuildServer = $false
     $script:version = $null
 
-    $script:testRoot = New-WhiskeyTestRoot
-}
+    function GivenABuiltLibrary
+    {
+        param(
+            [switch]$ThatDoesNotExist,
 
-function GivenABuiltLibrary
-{
-    param(
-        [switch]$ThatDoesNotExist,
-
-        [switch]$InReleaseMode
-    )
+            [switch]$InReleaseMode
+        )
 
     @'
 <?xml version="1.0" encoding="utf-8"?>
@@ -83,20 +71,20 @@ function GivenABuiltLibrary
   </Target>
   -->
 </Project>
-'@ | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $projectName)
+'@ | Set-Content -Path (Join-Path -Path $script:testRoot -ChildPath $script:projectName)
 
-    @'
+        @'
 namespace NuGetPack
 {
     public sealed class NoOp
     {
     }
 }
-'@ | Set-Content -Path (Join-Path -Path $testRoot -ChildPath 'NoOp.cs')
+'@ | Set-Content -Path (Join-Path -Path $script:testRoot -ChildPath 'NoOp.cs')
 
-    # Make sure output directory gets created by the task
-    $whiskeyYmlPath = Join-Path -Path $testRoot -ChildPath 'whiskey.yml'
-    @'
+        # Make sure output directory gets created by the task
+        $whiskeyYmlPath = Join-Path -Path $script:testRoot -ChildPath 'whiskey.yml'
+        @'
 Build:
 - Version:
     Version: 0.0.0
@@ -104,304 +92,293 @@ Build:
     Path: NuGetPack.csproj
 '@ | Set-Content -Path $whiskeyYmlPath
 
-    $propertyArg = @{}
-    if( $InReleaseMode )
-    {
-        $propertyArg['Property'] = 'Configuration=Release'
+        $propertyArg = @{}
+        if( $InReleaseMode )
+        {
+            $propertyArg['Property'] = 'Configuration=Release'
+        }
+
+        Initialize-WhiskeyTestPSModule -Name 'VSSetup' -BuildRoot $script:testRoot
+        $script:context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
+        if( $InReleaseMode )
+        {
+            $script:context.RunBy = [Whiskey.RunBy]::BuildServer
+        }
+        else
+        {
+            $script:context.RunBy = [Whiskey.RunBy]::Developer
+        }
+        Invoke-WhiskeyBuild -Context $script:context | Out-String | Write-WhiskeyVerbose
+        Reset-WhiskeyTestPSModule
     }
 
-    Initialize-WhiskeyTestPSModule -Name 'VSSetup' -BuildRoot $testRoot
-    $context = New-WhiskeyContext -Environment 'Verification' -ConfigurationPath $whiskeyYmlPath
-    if( $InReleaseMode )
+    function GivenFile
     {
-        $context.RunBy = [Whiskey.RunBy]::BuildServer
+        param(
+            $Name,
+            $Content
+        )
+
+        $Content | Set-Content -Path (Join-Path -Path $script:testRoot -ChildPath $Name)
     }
-    else
+
+    function GivenRunByBuildServer
     {
-        $context.RunBy = [Whiskey.RunBy]::Developer
+        $script:byBuildServer = $true
     }
-    Invoke-WhiskeyBuild -Context $context | Out-String | Write-WhiskeyVerbose
-    Reset-WhiskeyTestPSModule
+
+    function GivenPath
+    {
+        param(
+            [String[]]$Path
+        )
+
+        $script:path = $Path
+    }
+
+    function GivenNoPath
+    {
+        $script:path = $null
+    }
+
+    function GivenVersion
+    {
+        param(
+            $script:version
+        )
+
+        $script:version = $script:version
+    }
+
+    function WhenRunningNuGetPackTask
+    {
+        [CmdletBinding()]
+        param(
+            [switch]$Symbols,
+
+            $Property,
+
+            $ID,
+
+            $PackageVersion
+        )
+
+        $byItDepends = @{}
+        if( $script:byBuildServer )
+        {
+            $byItDepends['ForBuildServer'] = $true
+        }
+        else
+        {
+            $byItDepends['ForDeveloper'] = $true
+        }
+
+        $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForBuildRoot $script:testRoot @byItDepends
+
+        Get-ChildItem -Path $script:context.OutputDirectory | Remove-Item -Recurse -Force
+
+        $taskParameter = @{ }
+
+        if( $path )
+        {
+            $taskParameter['Path'] = $path
+        }
+
+        if( $Symbols )
+        {
+            $taskParameter['Symbols'] = $true
+        }
+
+        if( $script:version )
+        {
+            $taskParameter['Version'] = $script:version
+        }
+
+        if( $Property )
+        {
+            $taskParameter['Properties'] = $Property
+        }
+
+        if( $PackageVersion )
+        {
+            $taskParameter['PackageVersion'] = $PackageVersion
+        }
+
+        if( $ID )
+        {
+            $taskParameter['PackageID'] = $ID
+        }
+
+        $optionalParams = @{ }
+        $script:threwException = $false
+        try
+        {
+            $Global:error.Clear()
+            Invoke-WhiskeyTask -TaskContext $script:context -Parameter $taskParameter -Name 'NuGetPack'
+        }
+        catch
+        {
+            $script:threwException = $true
+            Write-Error $_
+        }
+    }
+
+    function ThenFile
+    {
+        param(
+            $InPackage,
+            $FileName,
+            $Is
+        )
+
+        $packagePath = Join-Path -Path $script:testRoot -ChildPath '.output'
+        $packagePath = Join-Path -Path $packagePath -ChildPath $InPackage
+
+        $extractDir = Join-Path -Path $script:testRoot -ChildPath '.output\extracted'
+        [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractDir)
+
+        Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
+    }
+
+    function ThenSpecificNuGetVersionInstalled
+    {
+        $nugetVersion = 'NuGet.CommandLine.{0}' -f $script:version
+
+        Join-Path -Path $script:context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
+    }
+
+    function ThenTaskThrowsAnException
+    {
+        param(
+            $ExpectedErrorMessage
+        )
+
+        $script:threwException | Should -BeTrue
+
+        $Global:Error | Should -Not -BeNullOrEmpty
+        $lastError = $Global:Error[0]
+        $lastError | Should -Match $ExpectedErrorMessage
+    }
+
+    function ThenTaskSucceeds
+    {
+        $script:threwException | Should -BeFalse
+        $Global:Error | Should -BeNullOrEmpty
+    }
+
+    function ThenPackageCreated
+    {
+        param(
+            $Name = 'NuGetPack',
+
+            $script:Version = $script:context.Version.SemVer1,
+
+            [switch]$Symbols
+        )
+
+        $symbolsPath = Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$script:Version)
+        $nonSymbolsPath = Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$script:Version)
+        if( $Symbols )
+        {
+            $symbolsPath | Should -Exist
+            $nonSymbolsPath | Should -Exist
+        }
+        else
+        {
+            $nonSymbolsPath | Should -Exist
+            $symbolsPath | Should -Not -Exist
+        }
+    }
+
+    function ThenPackageNotCreated
+    {
+        (Join-Path -Path $script:context.OutputDirectory -ChildPath '*.nupkg') | Should -Not -Exist
+    }
 }
 
-function GivenFile
-{
-    param(
-        $Name,
-        $Content
-    )
+Describe 'NuGetPack' {
+    BeforeEach {
+        $script:nugetUri = 'https://nuget.org'
+        $script:apiKey = 'fubar:snafu'
+        $script:publishFails = $false
+        $script:packageExistsCheckFails = $false
+        $script:path = $script:projectName
+        $script:byBuildServer = $false
+        $script:version = $null
+        $script:testRoot = New-WhiskeyTestRoot
+     }
 
-    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Name)
-}
-
-function GivenRunByBuildServer
-{
-    $script:byBuildServer = $true
-}
-
-function GivenPath
-{
-    param(
-        [String[]]$Path
-    )
-
-    $script:path = $Path
-}
-
-function GivenNoPath
-{
-    $script:path = $null
-}
-
-function GivenVersion
-{
-    param(
-        $version
-    )
-
-    $script:version = $version
-}
-
-function WhenRunningNuGetPackTask
-{
-    [CmdletBinding()]
-    param(
-        [switch]$Symbols,
-
-        $Property,
-
-        $ID,
-
-        $PackageVersion
-    )
-
-    $byItDepends = @{}
-    if( $byBuildServer )
-    {
-        $byItDepends['ForBuildServer'] = $true
-    }
-    else
-    {
-        $byItDepends['ForDeveloper'] = $true
-    }
-
-    $script:context = New-WhiskeyTestContext -ForVersion '1.2.3+buildstuff' -ForBuildRoot $testRoot @byItDepends
-
-    Get-ChildItem -Path $context.OutputDirectory | Remove-Item -Recurse -Force
-
-    $taskParameter = @{ }
-
-    if( $path )
-    {
-        $taskParameter['Path'] = $path
-    }
-
-    if( $Symbols )
-    {
-        $taskParameter['Symbols'] = $true
-    }
-
-    if( $version )
-    {
-        $taskParameter['Version'] = $version
-    }
-
-    if( $Property )
-    {
-        $taskParameter['Properties'] = $Property
-    }
-
-    if( $PackageVersion )
-    {
-        $taskParameter['PackageVersion'] = $PackageVersion
-    }
-
-    if( $ID )
-    {
-        $taskParameter['PackageID'] = $ID
-    }
-
-    $optionalParams = @{ }
-    $script:threwException = $false
-    try
-    {
-        $Global:error.Clear()
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'NuGetPack'
-    }
-    catch
-    {
-        $script:threwException = $true
-        Write-Error $_
-    }
-}
-
-function ThenFile
-{
-    param(
-        $InPackage,
-        $FileName,
-        $Is
-    )
-
-    $packagePath = Join-Path -Path $testRoot -ChildPath '.output'
-    $packagePath = Join-Path -Path $packagePath -ChildPath $InPackage
-
-    $extractDir = Join-Path -Path $testRoot -ChildPath '.output\extracted'
-    [IO.Compression.ZipFile]::ExtractToDirectory($packagePath, $extractDir)
-
-    Get-Content -Path (Join-Path -Path $extractDir -ChildPath $FileName) -Raw | Should -Be $Is
-}
-
-function ThenSpecificNuGetVersionInstalled
-{
-    $nugetVersion = 'NuGet.CommandLine.{0}' -f $version
-
-    Join-Path -Path $context.BuildRoot -ChildPath ('packages\{0}' -f $nugetVersion) | Should -Exist
-}
-
-function ThenTaskThrowsAnException
-{
-    param(
-        $ExpectedErrorMessage
-    )
-
-    $threwException | Should Be $true
-
-    $Global:Error | Should Not BeNullOrEmpty
-    $lastError = $Global:Error[0]
-    $lastError | Should -Match $ExpectedErrorMessage
-}
-
-function ThenTaskSucceeds
-{
-    $threwException | Should Be $false
-    $Global:Error | Should BeNullOrEmpty
-}
-
-function ThenPackageCreated
-{
-    param(
-        $Name = 'NuGetPack',
-
-        $Version = $context.Version.SemVer1,
-
-        [switch]$Symbols
-    )
-
-    $symbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Version)
-    $nonSymbolsPath = Join-Path -Path $Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Version)
-    if( $Symbols )
-    {
-        $symbolsPath | Should -Exist
-        $nonSymbolsPath | Should -Exist
-    }
-    else
-    {
-        $nonSymbolsPath | Should -Exist
-        $symbolsPath | Should -Not -Exist
-    }
- }
-
-function ThenPackageNotCreated
-{
-    (Join-Path -Path $context.OutputDirectory -ChildPath '*.nupkg') | Should Not Exist
-}
-
-if( -not $IsWindows )
-{
-    Describe 'NuGetPack.when run on non-Windows platform' {
+    Context 'Not Windows' -Skip:$IsWindows {
         It 'should fail' {
-            InitTest
             WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
             ThenTaskThrowsAnException 'Windows\ platform'
         }
     }
-    return
-}
 
-Describe 'NuGetPack.when creating a NuGet package with an invalid project' {
-    It 'should fail' {
-        InitTest
-        GivenABuiltLibrary
-        GivenPath -Path 'I\do\not\exist.csproj'
-        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-        ThenPackageNotCreated
-        ThenTaskThrowsAnException 'does not exist'
-    }
-}
+    Context 'Windows' -Skip:(-not $IsWindows) {
+        It 'should fail' {
+            GivenABuiltLibrary
+            GivenPath -Path 'I\do\not\exist.csproj'
+            WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+            ThenPackageNotCreated
+            ThenTaskThrowsAnException 'does not exist'
+        }
 
-Describe 'NuGetPack.when creating a NuGet package' {
-    It 'should create the package' {
-        InitTest
-        GivenABuiltLibrary
-        WhenRunningNuGetPackTask
-        ThenTaskSucceeds
-        ThenPackageCreated
-    }
-}
+        It 'should create package' {
+            GivenABuiltLibrary
+            WhenRunningNuGetPackTask
+            ThenTaskSucceeds
+            ThenPackageCreated
+        }
 
-Describe 'NuGetPack.when creating a symbols NuGet package' {
-    It 'should include symbols in the package' {
-        InitTest
-        GivenABuiltLibrary
-        WhenRunningNuGetPackTask -Symbols
-        ThenTaskSucceeds
-        ThenPackageCreated -Symbols
-    }
-}
+        It 'should include symbols in the package' {
+            GivenABuiltLibrary
+            WhenRunningNuGetPackTask -Symbols
+            ThenTaskSucceeds
+            ThenPackageCreated -Symbols
+        }
 
-Describe 'NuGetPack.when creating a package built in release mode' {
-    It 'create the package' {
-        InitTest
-        GivenABuiltLibrary -InReleaseMode
-        GivenRunByBuildServer
-        WhenRunningNugetPackTask
-        ThenTaskSucceeds
-        ThenPackageCreated
-    }
-}
+        It 'create release mode package' {
+            GivenABuiltLibrary -InReleaseMode
+            GivenRunByBuildServer
+            WhenRunningNugetPackTask
+            ThenTaskSucceeds
+            ThenPackageCreated
+        }
 
-Describe 'NuGetPack.when creating multiple packages for publishing' {
-    It 'should create all the packages' {
-        InitTest
-        GivenABuiltLibrary
-        GivenPath @( $projectName, $projectName )
-        WhenRunningNugetPackTask
-        ThenPackageCreated
-        ThenTaskSucceeds
-    }
-}
+        It 'should create multiple packages' {
+            GivenABuiltLibrary
+            GivenPath @( $script:projectName, $script:projectName )
+            WhenRunningNugetPackTask
+            ThenPackageCreated
+            ThenTaskSucceeds
+        }
 
-Describe 'NuGetPack.when creating a package using a specifc version of NuGet' {
-    It 'should download and use that version of NuGet' {
-        InitTest
-        GivenABuiltLibrary
-        GivenVersion '5.9.3'
-        WhenRunningNuGetPackTask
-        ThenSpecificNuGetVersionInstalled
-        ThenTaskSucceeds
-        ThenPackageCreated
-    }
-}
+        It 'should use custom version of NuGet' {
+            GivenABuiltLibrary
+            GivenVersion '5.9.3'
+            WhenRunningNuGetPackTask
+            ThenSpecificNuGetVersionInstalled
+            ThenTaskSucceeds
+            ThenPackageCreated
+        }
 
-Describe 'NuGetPack.when creating package from .nuspec file' {
-    It 'should create the package' {
-        InitTest
-        GivenFile 'package.nuspec' @'
+        It 'should create package from nuspec file' {
+            GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
     <id>package</id>
-    <version>$Version$</version>
+    <version>$script:Version$</version>
     <authors>$Authors$</authors>
     <description>$Description$</description>
   </metadata>
 </package>
 '@
-        GivenPath 'package.nuspec'
-        WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
-        ThenPackageCreated 'package'
-        ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
+            GivenPath 'package.nuspec'
+            WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
+            ThenPackageCreated 'package'
+            ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -413,13 +390,10 @@ Describe 'NuGetPack.when creating package from .nuspec file' {
   </metadata>
 </package>
 "@
-    }
-}
+         }
 
-Describe 'NuGetPack.when package ID is different than path' {
-    It 'should leave the ID alone' {
-        InitTest
-        GivenFile 'FileName.nuspec' @'
+        It 'should use ID in nuspec file' {
+            GivenFile 'FileName.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -431,10 +405,10 @@ Describe 'NuGetPack.when package ID is different than path' {
   </metadata>
 </package>
 '@
-        GivenPath 'FileName.nuspec'
-        WhenRunningNuGetPackTask -ID 'ID'
-        ThenPackageCreated 'ID'
-        ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
+            GivenPath 'FileName.nuspec'
+            WhenRunningNuGetPackTask -ID 'ID'
+            ThenPackageCreated 'ID'
+            ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -447,13 +421,10 @@ Describe 'NuGetPack.when package ID is different than path' {
   </metadata>
 </package>
 "@
-    }
-}
+        }
 
-Describe 'NuGetPack.when customizing version' {
-    It 'should change the version in the .nuspec file' {
-        InitTest
-        GivenFile 'package.nuspec' @'
+        It 'should customize package version' {
+            GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
@@ -464,10 +435,10 @@ Describe 'NuGetPack.when customizing version' {
   </metadata>
 </package>
 '@
-        GivenPath 'package.nuspec'
-        WhenRunningNuGetPackTask -PackageVersion '2.2.2'
-        ThenPackageCreated 'package' -Version '2.2.2'
-        ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
+            GivenPath 'package.nuspec'
+            WhenRunningNuGetPackTask -PackageVersion '2.2.2'
+            ThenPackageCreated 'package' -Version '2.2.2'
+            ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
@@ -479,26 +450,24 @@ Describe 'NuGetPack.when customizing version' {
   </metadata>
 </package>
 "@
-    }
-}
+        }
 
-Describe 'NuGetPack.when Properties property is invalid' {
-    It 'should fail' {
-        InitTest
-        GivenFile 'package.nuspec' @'
+        It 'should validate properties' {
+            GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
   <metadata>
     <id>package</id>
-    <version>$Version$</version>
+    <version>$script:Version$</version>
     <authors>$Authors$</authors>
     <description>$Description$</description>
   </metadata>
 </package>
 '@
-        GivenPath 'package.nuspec'
-        WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
-        ThenPackageNotCreated
-        ThenTaskThrowsAnException 'Property\ is\ invalid'
+            GivenPath 'package.nuspec'
+            WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
+            ThenPackageNotCreated
+            ThenTaskThrowsAnException 'Property\ is\ invalid'
+        }
     }
 }
