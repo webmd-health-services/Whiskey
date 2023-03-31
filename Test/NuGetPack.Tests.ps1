@@ -2,11 +2,9 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-BeforeDiscovery {
-    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-}
-
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
     Import-WhiskeyTestModule 'VSSetup'
 
     $script:testRoot = $null
@@ -209,7 +207,6 @@ Build:
             $taskParameter['PackageID'] = $ID
         }
 
-        $optionalParams = @{ }
         $script:threwException = $false
         try
         {
@@ -310,166 +307,157 @@ Describe 'NuGetPack' {
         $script:testRoot = New-WhiskeyTestRoot
      }
 
-    Context 'Not Windows' -Skip:$IsWindows {
-        It 'should fail' {
-            WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-            ThenTaskThrowsAnException 'Windows\ platform'
-        }
+    It 'should fail' {
+        GivenABuiltLibrary
+        GivenPath -Path 'I\do\not\exist.csproj'
+        WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskThrowsAnException 'does not exist'
     }
 
-    Context 'Windows' -Skip:(-not $IsWindows) {
-        It 'should fail' {
-            GivenABuiltLibrary
-            GivenPath -Path 'I\do\not\exist.csproj'
-            WhenRunningNuGetPackTask -ErrorAction SilentlyContinue
-            ThenPackageNotCreated
-            ThenTaskThrowsAnException 'does not exist'
-        }
+    It 'should create package' {
+        GivenABuiltLibrary
+        WhenRunningNuGetPackTask
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 
-        It 'should create package' {
-            GivenABuiltLibrary
-            WhenRunningNuGetPackTask
-            ThenTaskSucceeds
-            ThenPackageCreated
-        }
+    It 'should include symbols in the package' {
+        GivenABuiltLibrary
+        WhenRunningNuGetPackTask -Symbols
+        ThenTaskSucceeds
+        ThenPackageCreated -Symbols
+    }
 
-        It 'should include symbols in the package' {
-            GivenABuiltLibrary
-            WhenRunningNuGetPackTask -Symbols
-            ThenTaskSucceeds
-            ThenPackageCreated -Symbols
-        }
+    It 'create release mode package' {
+        GivenABuiltLibrary -InReleaseMode
+        GivenRunByBuildServer
+        WhenRunningNugetPackTask
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 
-        It 'create release mode package' {
-            GivenABuiltLibrary -InReleaseMode
-            GivenRunByBuildServer
-            WhenRunningNugetPackTask
-            ThenTaskSucceeds
-            ThenPackageCreated
-        }
+    It 'should create multiple packages' {
+        GivenABuiltLibrary
+        GivenPath @( $script:projectName, $script:projectName )
+        WhenRunningNugetPackTask
+        ThenPackageCreated
+        ThenTaskSucceeds
+    }
 
-        It 'should create multiple packages' {
-            GivenABuiltLibrary
-            GivenPath @( $script:projectName, $script:projectName )
-            WhenRunningNugetPackTask
-            ThenPackageCreated
-            ThenTaskSucceeds
-        }
+    It 'should use custom version of NuGet' {
+        GivenABuiltLibrary
+        GivenVersion '5.9.3'
+        WhenRunningNuGetPackTask
+        ThenSpecificNuGetVersionInstalled
+        ThenTaskSucceeds
+        ThenPackageCreated
+    }
 
-        It 'should use custom version of NuGet' {
-            GivenABuiltLibrary
-            GivenVersion '5.9.3'
-            WhenRunningNuGetPackTask
-            ThenSpecificNuGetVersionInstalled
-            ThenTaskSucceeds
-            ThenPackageCreated
-        }
-
-        It 'should create package from nuspec file' {
-            GivenFile 'package.nuspec' @'
+    It 'should create package from nuspec file' {
+        GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
-  <metadata>
-    <id>package</id>
-    <version>$Version$</version>
-    <authors>$Authors$</authors>
-    <description>$Description$</description>
-  </metadata>
+<metadata>
+<id>package</id>
+<version>$Version$</version>
+<authors>$Authors$</authors>
+<description>$Description$</description>
+</metadata>
 </package>
 '@
-            GivenPath 'package.nuspec'
-            WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
-            ThenPackageCreated 'package'
-            ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -Property @{ 'Version' = 'Snafu Version'; 'Authors' = 'Fizz Author' ; 'Description' = 'Buzz Desc' }
+        ThenPackageCreated 'package'
+        ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-  <metadata>
-    <id>package</id>
-    <version>1.2.3</version>
-    <authors>Fizz Author</authors>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Buzz Desc</description>
-  </metadata>
-</package>
-"@
-         }
-
-        It 'should use ID in nuspec file' {
-            GivenFile 'FileName.nuspec' @'
-<?xml version="1.0"?>
-<package >
-  <metadata>
-    <id>ID</id>
-    <title>Title</title>
-    <version>9.9.9</version>
-    <authors>Somebody</authors>
-    <description>Description</description>
-  </metadata>
-</package>
-'@
-            GivenPath 'FileName.nuspec'
-            WhenRunningNuGetPackTask -ID 'ID'
-            ThenPackageCreated 'ID'
-            ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-  <metadata>
-    <id>ID</id>
-    <version>1.2.3</version>
-    <title>Title</title>
-    <authors>Somebody</authors>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Description</description>
-  </metadata>
+<metadata>
+<id>package</id>
+<version>1.2.3</version>
+<authors>Fizz Author</authors>
+<requireLicenseAcceptance>false</requireLicenseAcceptance>
+<description>Buzz Desc</description>
+</metadata>
 </package>
 "@
         }
 
-        It 'should customize package version' {
-            GivenFile 'package.nuspec' @'
+    It 'should use ID in nuspec file' {
+        GivenFile 'FileName.nuspec' @'
 <?xml version="1.0"?>
 <package >
-  <metadata>
-    <id>package</id>
-    <version>9.9.9</version>
-    <authors>Somebody</authors>
-    <description>Description</description>
-  </metadata>
+<metadata>
+<id>ID</id>
+<title>Title</title>
+<version>9.9.9</version>
+<authors>Somebody</authors>
+<description>Description</description>
+</metadata>
 </package>
 '@
-            GivenPath 'package.nuspec'
-            WhenRunningNuGetPackTask -PackageVersion '2.2.2'
-            ThenPackageCreated 'package' -Version '2.2.2'
-            ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
+        GivenPath 'FileName.nuspec'
+        WhenRunningNuGetPackTask -ID 'ID'
+        ThenPackageCreated 'ID'
+        ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-  <metadata>
-    <id>package</id>
-    <version>2.2.2</version>
-    <authors>Somebody</authors>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Description</description>
-  </metadata>
+<metadata>
+<id>ID</id>
+<version>1.2.3</version>
+<title>Title</title>
+<authors>Somebody</authors>
+<requireLicenseAcceptance>false</requireLicenseAcceptance>
+<description>Description</description>
+</metadata>
 </package>
 "@
-        }
+    }
 
-        It 'should validate properties' {
-            GivenFile 'package.nuspec' @'
+    It 'should customize package version' {
+        GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
-  <metadata>
-    <id>package</id>
-    <version>$script:Version$</version>
-    <authors>$Authors$</authors>
-    <description>$Description$</description>
-  </metadata>
+<metadata>
+<id>package</id>
+<version>9.9.9</version>
+<authors>Somebody</authors>
+<description>Description</description>
+</metadata>
 </package>
 '@
-            GivenPath 'package.nuspec'
-            WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
-            ThenPackageNotCreated
-            ThenTaskThrowsAnException 'Property\ is\ invalid'
-        }
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -PackageVersion '2.2.2'
+        ThenPackageCreated 'package' -Version '2.2.2'
+        ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<metadata>
+<id>package</id>
+<version>2.2.2</version>
+<authors>Somebody</authors>
+<requireLicenseAcceptance>false</requireLicenseAcceptance>
+<description>Description</description>
+</metadata>
+</package>
+"@
+    }
+
+    It 'should validate properties' {
+        GivenFile 'package.nuspec' @'
+<?xml version="1.0"?>
+<package >
+<metadata>
+<id>package</id>
+<version>$script:Version$</version>
+<authors>$Authors$</authors>
+<description>$Description$</description>
+</metadata>
+</package>
+'@
+        GivenPath 'package.nuspec'
+        WhenRunningNuGetPackTask -Property 'Fubar' -ErrorAction SilentlyContinue
+        ThenPackageNotCreated
+        ThenTaskThrowsAnException 'Property\ is\ invalid'
     }
 }

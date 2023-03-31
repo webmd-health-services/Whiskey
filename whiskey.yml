@@ -118,6 +118,12 @@ Build:
                 Run:
                     Path: "Test/*.Tests.ps1"
                     ExcludePath:
+                    # Windows-only, so don't run.
+                    - "*/MSBuild.Tests.ps1"
+                    - "*/NuGetPack.Tests.ps1"
+                    - "*/NUnit2.Tests.ps1"
+                    - "*/NUnit3.Tests.ps1"
+                    # Still Pester 4.
                     - "*/Test/Add-WhiskeyApiKey.Tests.ps1"
                     - "*/Test/Add-WhiskeyTaskDefault.Tests.ps1"
                     - "*/Test/AppVeyorWaitForBuildJobs.Tests.ps1"

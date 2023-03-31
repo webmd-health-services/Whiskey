@@ -2,11 +2,9 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-BeforeDiscovery {
-    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-}
-
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
     $script:nugetPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\bin\nuget.exe' -Resolve
     $script:packagesRoot = Join-Path -Path $PSScriptRoot -ChildPath 'packages'
     $script:testNum = 0
@@ -373,83 +371,73 @@ Describe 'NUnit2' {
         $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     }
 
-    Context 'Not Windows' -Skip:$IsWindows {
-        It 'should fail' {
-            GivenPassingTests
-            WhenRunningTask
-            ThenErrorIs 'Windows\ platform'
-        }
+    It 'should run NUnit2' {
+        Invoke-NUnitTask -WithRunningTests
     }
 
-    Context 'Windows' -Skip:(-not $IsWindows) {
-        It 'should run NUnit2' {
-            Invoke-NUnitTask -WithRunningTests
-        }
+    It 'should fail build' {
+        $withError = [regex]::Escape('NUnit2 tests failed')
+        Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError
+    }
 
-        It 'should fail build' {
-            $withError = [regex]::Escape('NUnit2 tests failed')
-            Invoke-NUnitTask -WithFailingTests -ThatFails -WithError $withError
-        }
+    It 'should require Path parameter' {
+        $withError = [regex]::Escape('Property "Path" is mandatory')
+        Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
+    }
 
-        It 'should require Path parameter' {
-            $withError = [regex]::Escape('Property "Path" is mandatory')
-            Invoke-NUnitTask -ThatFails -WithNoPath -WithError $withError
-        }
+    It 'should validate Path exists' {
+        $withError = [regex]::Escape('do not exist.')
+        Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
+    }
 
-        It 'should validate Path exists' {
-            $withError = [regex]::Escape('do not exist.')
-            Invoke-NUnitTask -ThatFails -WithInvalidPath -WithError $withError
-        }
+    It 'should validate NUnit package' {
+        Mock -CommandName 'Test-Path' `
+            -ModuleName 'Whiskey' `
+            -MockWith { return $false } `
+            -ParameterFilter { $Path -like '*nunit-console.exe' }
+        $withError = [regex]::Escape('doesn''t exist at')
+        Invoke-NUnitTask -ThatFails -WithError $withError -ErrorAction SilentlyContinue
+    }
 
-        It 'should validate NUnit package' {
-            Mock -CommandName 'Test-Path' `
-                -ModuleName 'Whiskey' `
-                -MockWith { return $false } `
-                -ParameterFilter { $Path -like '*nunit-console.exe' }
-            $withError = [regex]::Escape('doesn''t exist at')
-            Invoke-NUnitTask -ThatFails -WithError $withError -ErrorAction SilentlyContinue
-        }
+    It 'should pass categories' {
+        GivenPassingTests
+        WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
+        ThenTestsPassed 'HasCategory1','HasCategory2'
+        ThenTestsNotRun 'ShouldPass'
+    }
 
-        It 'should pass categories' {
-            GivenPassingTests
-            WhenRunningTask -WithParameters @{ 'Include' = '"Category with Spaces 1,Category with Spaces 2"' }
-            ThenTestsPassed 'HasCategory1','HasCategory2'
-            ThenTestsNotRun 'ShouldPass'
-        }
+    It 'should pass categories with spaces' {
+        GivenPassingTests
+        GivenInclude -Value 'Category with Spaces 1,Category With Spaces 1'
+        GivenExclude -Value 'Category with Spaces,Another with spaces'
+        WhenRunningTask
+        ThenNoErrorShouldBeThrown
+    }
 
-        It 'should pass categories with spaces' {
-            GivenPassingTests
-            GivenInclude -Value 'Category with Spaces 1,Category With Spaces 1'
-            GivenExclude -Value 'Category with Spaces,Another with spaces'
-            WhenRunningTask
-            ThenNoErrorShouldBeThrown
-        }
+    It 'should exclude tests' {
+        GivenPassingTests
+        GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
+        WhenRunningTask
+        ThenTestsNotRun 'HasCategory1','HasCategory2'
+        ThenTestsPassed 'ShouldPass'
+    }
 
-        It 'should exclude tests' {
-            GivenPassingTests
-            GivenExclude '"Category with Spaces 1,Category with Spaces 2"'
-            WhenRunningTask
-            ThenTestsNotRun 'HasCategory1','HasCategory2'
-            ThenTestsPassed 'ShouldPass'
-        }
+    It 'should pass custom arguments' {
+        GivenPassingTests
+        WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
+        ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','^\.{2,}'
+    }
 
-        It 'should pass custom arguments' {
-            GivenPassingTests
-            WhenRunningTask -WithParameters @{ 'Argument' = @( '/nologo', '/nodots' ) }
-            ThenOutput -DoesNotContain 'NUnit-Console\ version\ ','^\.{2,}'
-        }
+    It 'should use custom dotNet framework' {
+        GivenPassingTests
+        WhenRunningTask @{ 'Framework' = 'net-4.5' }
+        ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
+    }
 
-        It 'should use custom dotNet framework' {
-            GivenPassingTests
-            WhenRunningTask @{ 'Framework' = 'net-4.5' }
-            ThenOutput -Contains 'Execution\ Runtime:\ net-4\.5'
-        }
-
-        It 'should use custom tool versions' {
-            GivenPassingTests
-            GivenVersion '2.6.1'
-            WhenRunningTask
-            ThenItInstalled 'Nunit.Runners' '2.6.1'
-        }
+    It 'should use custom tool versions' {
+        GivenPassingTests
+        GivenVersion '2.6.1'
+        WhenRunningTask
+        ThenItInstalled 'Nunit.Runners' '2.6.1'
     }
 }

@@ -1,10 +1,8 @@
 Set-StrictMode -Version 'Latest'
 
-BeforeDiscovery {
-    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-}
-
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
     # Build the assemblies that use NUnit3. Only do this once.
     $latestNUnit3Version =
         Find-Package -Name 'NUnit.Runners' -AllVersions |
@@ -67,17 +65,12 @@ BeforeAll {
 
     function Get-PassingTestPath
     {
-        return Join-Path 'NUnit3Tests' 'NUnit3PassingTest.dll'
-    }
-
-    function Get-PassingNUnit2TestPath
-    {
-        return Join-Path 'NUnit2Tests' 'NUnit2PassingTest.dll'
+        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3PassingTest.dll' -Resolve
     }
 
     function Get-FailingTestPath
     {
-        return Join-Path 'NUnit3Tests' 'NUnit3FailingTest.dll'
+        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3FailingTest.dll' -Resolve
     }
 
     function GivenArgument
@@ -154,7 +147,9 @@ BeforeAll {
         param(
         )
 
-        $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $buildRoot -ForOutputDirectory $script:outputDirectory
+        $script:taskContext = New-WhiskeyTestContext -ForDeveloper `
+                                                     -ForBuildRoot $script:buildRoot `
+                                                     -ForOutputDirectory $script:outputDirectory
 
         $taskParameter = @{}
 
@@ -188,7 +183,7 @@ BeforeAll {
             $taskParameter['Version'] = $nunitVersion
         }
 
-        Copy-Item -Path $script:packagesRoot -Destination $buildRoot -Recurse -ErrorAction Ignore
+        Copy-Item -Path $script:packagesRoot -Destination $script:buildRoot -Recurse -ErrorAction Ignore
 
         try
         {
@@ -208,7 +203,7 @@ BeforeAll {
             $Version = '*'
         )
 
-        Join-Path -Path $buildRoot -ChildPath "packages\$($PackageName).$($Version)" | Should -Exist
+        Join-Path -Path $script:buildRoot -ChildPath "packages\$($PackageName).$($Version)" | Should -Exist
     }
 
     function ThenPackageNotInstalled
@@ -217,7 +212,7 @@ BeforeAll {
             $PackageName
         )
 
-        Join-Path -Path $buildRoot -ChildPath "packages\$($PackageName).*" | Should -Not -Exist
+        Join-Path -Path $script:buildRoot -ChildPath "packages\$($PackageName).*" | Should -Not -Exist
     }
 
     function ThenRanNUnitWithNoHeaderArgument
@@ -339,133 +334,124 @@ Describe 'NUnit3' {
         $script:buildRoot = Join-Path -Path $TestDrive -ChildPath $script:testNum
         New-Item -Path $script:buildRoot -ItemType 'Directory'
 
-        $script:outputDirectory = Join-Path -Path $buildRoot -ChildPath '.output'
+        $script:outputDirectory = Join-Path -Path $script:buildRoot -ChildPath '.output'
 
         # Test assemblies in separate folders to avoid cross-reference of NUnit Framework assembly versions
         @(3, 2) | ForEach-Object  {
-            New-Item (Join-Path $buildRoot "NUnit$($_)Tests") -Type Directory
+            New-Item (Join-Path $script:buildRoot "NUnit$($_)Tests") -Type Directory
             Copy-Item -Path (Join-Path -Path $PSScriptRoot -ChildPath "Assemblies\NUnit$($_)*Test\bin\*\*") `
-                -Destination (Join-Path $buildRoot "NUnit$($_)Tests")
+                -Destination (Join-Path $script:buildRoot "NUnit$($_)Tests")
         }
     }
 
     AfterEach {
         $script:testNum += 1
-        $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+        $Global:Error | Format-List * -Force | Out-String | Write-Verbose # -Verbose
     }
 
-    Context 'Not Windows' -Skip:$IsWindows {
-        It 'should fail' {
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenTaskFailedWithMessage 'Windows\ platform'
-        }
+    It 'should validate path parameter provided' {
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'Property "Path" is mandatory'
     }
 
-    Context 'Windows' -Skip:(-not $IsWindows) {
-        It 'should validate path parameter provided' {
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenTaskFailedWithMessage 'Property "Path" is mandatory'
-        }
+    It 'should validate path exists' {
+        GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3FailingTest.dll', 'nonexistentfile'
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'does not exist.'
+    }
 
-        It 'should validate path exists' {
-            GivenPath 'NUnit3PassingTest\bin\Debug\NUnit3FailingTest.dll', 'nonexistentfile'
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenTaskFailedWithMessage 'does not exist.'
-        }
+    It 'should validate NUnit executable exists' {
+        Mock -CommandName 'Get-ChildItem' `
+                -ModuleName 'Whiskey' `
+                -ParameterFilter { $Filter -eq 'nunit3-console.exe' }
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenTaskFailedWithMessage 'Unable to find .nunit3-console\.exe.'
+    }
 
-        It 'should validate NUnit executable exists' {
-            Mock -CommandName 'Get-ChildItem' `
-                    -ModuleName 'Whiskey' `
-                    -ParameterFilter { $Filter -eq 'nunit3-console.exe' }
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenTaskFailedWithMessage 'Unable to find .nunit3-console\.exe.'
-        }
+    It 'should run NUnit' {
+        GivenPassingPath
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenTaskSucceeded
+    }
 
-        It 'should run NUnit' {
-            GivenPassingPath
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenTaskSucceeded
-        }
+    It 'should run multiple test assemblies' {
+        GivenPath (Get-PassingTestPath), (Get-PassingTestPath)
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenTaskSucceeded
+    }
 
-        It 'should run multiple test assemblies' {
-            GivenPath (Get-PassingTestPath), (Get-PassingTestPath)
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenTaskSucceeded
-        }
+    It 'should fail the build' {
+        GivenPath (Get-FailingTestPath), (Get-PassingTestPath)
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenNUnitReportGenerated
+        ThenTaskFailedWithMessage 'NUnit tests failed'
+    }
 
-        It 'should fail the build' {
-            GivenPath (Get-FailingTestPath), (Get-PassingTestPath)
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenNUnitReportGenerated
-            ThenTaskFailedWithMessage 'NUnit tests failed'
-        }
+    It 'should run tests with specific dotNET framework' {
+        GivenPassingPath
+        GivenFramework 'net-4.5'
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenRanWithSpecifiedFramework 'net-4.5'
+        ThenTaskSucceeded
+    }
 
-        It 'should run tests with specific dotNET framework' {
-            GivenPassingPath
-            GivenFramework 'net-4.5'
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenRanWithSpecifiedFramework 'net-4.5'
-            ThenTaskSucceeded
-        }
+    It 'should generate nunit3 output' {
+        GivenPath (Get-PassingTestPath)
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenTaskSucceeded
+    }
 
-        It 'should generate nunit3 output' {
-            GivenPath (Get-PassingNUnit2TestPath)
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenTaskSucceeded
-        }
+    It 'should generate nunit2 output' {
+        GivenPath (Get-PassingTestPath)
+        GivenResultFormat 'nunit2'
+        WhenRunningTask
+        ThenNUnitReportGenerated -ResultFormat 'nunit2'
+        ThenTaskSucceeded
+    }
 
-        It 'should generate nunit2 output' {
-            GivenPath (Get-PassingNUnit2TestPath)
-            GivenResultFormat 'nunit2'
-            WhenRunningTask
-            ThenNUnitReportGenerated -ResultFormat 'nunit2'
-            ThenTaskSucceeded
-        }
+    It 'should pass extra arguments' {
+        GivenPassingPath
+        GivenArgument '--noheader','--dispose-runners'
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenRanNUnitWithNoHeaderArgument
+        ThenTaskSucceeded
+    }
 
-        It 'should pass extra arguments' {
-            GivenPassingPath
-            GivenArgument '--noheader','--dispose-runners'
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenRanNUnitWithNoHeaderArgument
-            ThenTaskSucceeded
-        }
+    It 'should pass bad args to NUnit' {
+        GivenPassingPath
+        GivenArgument '-badarg'
+        WhenRunningTask -ErrorAction SilentlyContinue
+        ThenNUnitShouldNotRun
+        ThenTaskFailedWithMessage 'NUnit didn''t run successfully'
+    }
 
-        It 'should pass bad args to NUnit' {
-            GivenPassingPath
-            GivenArgument '-badarg'
-            WhenRunningTask -ErrorAction SilentlyContinue
-            ThenNUnitShouldNotRun
-            ThenTaskFailedWithMessage 'NUnit didn''t run successfully'
-        }
+    It 'should pass test filter' {
+        GivenPassingPath
+        GivenTestFilter "cat == 'Category with Spaces 1'"
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenRanOnlySpecificTest 'HasCategory1'
+        ThenTaskSucceeded
+    }
 
-        It 'should pass test filter' {
-            GivenPassingPath
-            GivenTestFilter "cat == 'Category with Spaces 1'"
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenRanOnlySpecificTest 'HasCategory1'
-            ThenTaskSucceeded
-        }
+    It 'should pass multiple test filters' {
+        GivenPassingPath
+        GivenTestFilter "cat == 'Category with Spaces 1'", "cat == 'Category with Spaces 2'"
+        WhenRunningTask
+        ThenNUnitReportGenerated
+        ThenRanOnlySpecificTest 'HasCategory1','HasCategory2'
+        ThenTaskSucceeded
+    }
 
-        It 'should pass multiple test filters' {
-            GivenPassingPath
-            GivenTestFilter "cat == 'Category with Spaces 1'", "cat == 'Category with Spaces 2'"
-            WhenRunningTask
-            ThenNUnitReportGenerated
-            ThenRanOnlySpecificTest 'HasCategory1','HasCategory2'
-            ThenTaskSucceeded
-        }
-
-        It 'should customize version of NUnit' {
-            GivenPassingPath
-            GivenVersion '3.2.1'
-            WhenRunningTask
-            ThenPackageInstalled 'NUnit.ConsoleRunner' '3.2.1'
-        }
+    It 'should customize version of NUnit' {
+        GivenPassingPath
+        GivenVersion '3.2.1'
+        WhenRunningTask
+        ThenPackageInstalled 'NUnit.ConsoleRunner' '3.2.1'
     }
 }
