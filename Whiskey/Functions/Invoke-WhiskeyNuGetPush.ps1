@@ -7,7 +7,7 @@ function Invoke-WhiskeyNuGetPush
         [String]$Path,
 
         [Parameter(Mandatory)]
-        [String]$Uri,
+        [String]$Url,
 
         [Parameter(Mandatory)]
         [String]$ApiKey,
@@ -19,6 +19,6 @@ function Invoke-WhiskeyNuGetPush
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
-    & $NuGetPath push $Path -Source $Uri -ApiKey $ApiKey
-
+    Write-WhiskeyCommand -Path $NuGetPath -ArgumentList $Path, $Uri, $ApiKey
+    & $NuGetPath push $Path -Source $Url -ApiKey $ApiKey
 }

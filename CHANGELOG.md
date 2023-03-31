@@ -14,13 +14,14 @@ requests to the GitHub API.
 ## Changed
 
 * MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
-* Commands written to the output stream now quote arguments that contain a semicolon.
+* Commands written to the information stream now quote arguments that contain a semicolon.
 * NPM task now writes the commands it runs to the information stream.
+* NuGetPush task writes `nuget push` command to the information stream.
 
 ## Fixed
 
 * Fixed: Many commands fail running under new versions of PowerShell, which changed the way variables are passed as
-command arguments. Iff the variable's value is an empty string, PowerShell passes a double-quoted string. If the
+command arguments. If the variable's value is an empty string, PowerShell passes a double-quoted string. If the
 variable's value is `$null`, the variable is omitted. Updated the following tasks to work with this new behavior:
   * MSBuild
   * NUnit2
