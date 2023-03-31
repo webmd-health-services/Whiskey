@@ -34,7 +34,7 @@ BeforeAll {
     $script:targetResultFormat = $null
     $script:initialize = $null
     $script:output = $null
-    $script:path = $null
+    $script:assembliesToTest = $null
     $script:testFilter = $null
 
     $script:outputDirectory = $null
@@ -65,12 +65,12 @@ BeforeAll {
 
     function Get-PassingTestPath
     {
-        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3PassingTest.dll' -Resolve
+        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3PassingTest.dll'
     }
 
     function Get-FailingTestPath
     {
-        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3FailingTest.dll' -Resolve
+        return Join-Path -Path 'NUnit3Tests' -ChildPath 'NUnit3FailingTest.dll'
     }
 
     function GivenArgument
@@ -89,10 +89,10 @@ BeforeAll {
     function GivenPath
     {
         param(
-            $script:Path
+            $Path
         )
 
-        $script:path = $script:Path
+        $script:assembliesToTest = $Path
     }
 
     function GivenPassingPath
@@ -153,9 +153,9 @@ BeforeAll {
 
         $taskParameter = @{}
 
-        if ($script:path)
+        if ($script:assembliesToTest)
         {
-            $taskParameter['Path'] = $script:path
+            $taskParameter['Path'] = $script:assembliesToTest
         }
 
         if ($script:framework)
@@ -326,7 +326,7 @@ Describe 'NUnit3' {
         $script:targetResultFormat = $null
         $script:initialize = $null
         $script:output = $null
-        $script:path = $null
+        $script:assembliesToTest = $null
         $script:testFilter = $null
         $script:nunitVersion = $null
         $script:supportNUnit2 = $false
