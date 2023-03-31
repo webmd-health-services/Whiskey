@@ -19,9 +19,13 @@ requests to the GitHub API.
 
 ## Fixed
 
-* Fixed: MSBuild task fails when property arguments contain quote characters.
-* Fixed: NUnit2 task fails to properly parse include/exclude params.
-* Fixed: NUnit3 task fails to properly exclude empty args from argument list.
+* Fixed: Many commands fail running under new versions of PowerShell, which changed the way variables are passed as
+command arguments. Iff the variable's value is an empty string, PowerShell passes a double-quoted string. If the
+variable's value is `$null`, the variable is omitted. Updated the following tasks to work with this new behavior:
+  * MSBuild
+  * NUnit2
+  * NUnit3
+  * NuGetPack
 
 # 0.54.0
 

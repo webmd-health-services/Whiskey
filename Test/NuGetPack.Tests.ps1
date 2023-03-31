@@ -271,13 +271,15 @@ Build:
         param(
             $Name = 'NuGetPack',
 
-            $script:Version = $script:context.Version.SemVer1,
+            $Version = $script:context.Version.SemVer1,
 
             [switch]$Symbols
         )
 
-        $symbolsPath = Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$script:Version)
-        $nonSymbolsPath = Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$script:Version)
+        $symbolsPath =
+             Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.symbols.nupkg' -f $Name,$Version)
+        $nonSymbolsPath =
+            Join-Path -Path $script:Context.OutputDirectory -ChildPath ('{0}.{1}.nupkg' -f $Name,$Version)
         if( $Symbols )
         {
             $symbolsPath | Should -Exist
@@ -369,7 +371,7 @@ Describe 'NuGetPack' {
 <package >
   <metadata>
     <id>package</id>
-    <version>$script:Version$</version>
+    <version>$Version$</version>
     <authors>$Authors$</authors>
     <description>$Description$</description>
   </metadata>

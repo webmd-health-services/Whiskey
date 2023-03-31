@@ -21,9 +21,9 @@ function New-WhiskeyNuGetPackage
     Use-CallerPreference -Cmdlet $PSCmdlet -Session $ExecutionContext.SessionState
 
     $symbols = $TaskParameter['Symbols'] | ConvertFrom-WhiskeyYamlScalar
-    $symbolsArg = ''
+    $symbolsArg = $null
     $symbolsFileNameSuffix = ''
-    if( $symbols )
+    if ($symbols)
     {
         $symbolsArg = '-Symbols'
         $symbolsFileNameSuffix = '.symbols'
@@ -53,7 +53,7 @@ function New-WhiskeyNuGetPackage
                                 }
     }
 
-    foreach( $pathItem in $Path )
+    foreach ($pathItem in $Path)
     {
         $projectName = $TaskParameter['PackageID']
         if( -not $projectName )
@@ -61,7 +61,7 @@ function New-WhiskeyNuGetPackage
             $projectName = [IO.Path]::GetFileNameWithoutExtension(($pathItem | Split-Path -Leaf))
         }
         $packageVersion = $TaskParameter['PackageVersion']
-        if( -not $packageVersion )
+        if (-not $packageVersion)
         {
             $packageVersion = $TaskContext.Version.SemVer1
         }
@@ -69,7 +69,26 @@ function New-WhiskeyNuGetPackage
         # Create NuGet package
         $configuration = Get-WhiskeyMSBuildConfiguration -Context $TaskContext
 
-        & $nugetPath pack -Version $packageVersion -OutputDirectory $TaskContext.OutputDirectory $symbolsArg -Properties ('Configuration={0}' -f $configuration) $propertiesArgs $pathItem
+        $configPropertyArg = "Configuration=${configuration}"
+        Write-WhiskeyCommand -Path $NuGetPath `
+                             -ArgumentList @(
+                                'pack',
+                                '-Version',
+                                $packageVersion,
+                                '-OutputDirectory',
+                                $TaskContext.OutputDirectory,
+                                $symbolsArg,
+                                $configPropertyArg,
+                                $propertiesArgs,
+                                $pathItem
+                             )
+        & $nugetPath pack `
+                     -Version $packageVersion `
+                     -OutputDirectory $TaskContext.OutputDirectory `
+                     $symbolsArg `
+                     -Properties ('Configuration={0}' -f $configuration) `
+                     $propertiesArgs `
+                     $pathItem
 
         # Make sure package was created.
         $filename = '{0}.{1}{2}.nupkg' -f $projectName,$packageVersion,$symbolsFileNameSuffix
