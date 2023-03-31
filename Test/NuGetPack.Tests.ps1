@@ -357,13 +357,13 @@ Describe 'NuGetPack' {
     It 'should create package from nuspec file' {
         GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
-<package >
-<metadata>
-<id>package</id>
-<version>$Version$</version>
-<authors>$Authors$</authors>
-<description>$Description$</description>
-</metadata>
+<package>
+    <metadata>
+        <id>package</id>
+        <version>$Version$</version>
+        <authors>$Authors$</authors>
+        <description>$Description$</description>
+    </metadata>
 </package>
 '@
         GivenPath 'package.nuspec'
@@ -372,13 +372,13 @@ Describe 'NuGetPack' {
         ThenFile 'package.nuspec' -InPackage 'package.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-<metadata>
-<id>package</id>
-<version>1.2.3</version>
-<authors>Fizz Author</authors>
-<requireLicenseAcceptance>false</requireLicenseAcceptance>
-<description>Buzz Desc</description>
-</metadata>
+  <metadata>
+    <id>package</id>
+    <version>1.2.3</version>
+    <authors>Fizz Author</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Buzz Desc</description>
+  </metadata>
 </package>
 "@
         }
@@ -386,14 +386,14 @@ Describe 'NuGetPack' {
     It 'should use ID in nuspec file' {
         GivenFile 'FileName.nuspec' @'
 <?xml version="1.0"?>
-<package >
-<metadata>
-<id>ID</id>
-<title>Title</title>
-<version>9.9.9</version>
-<authors>Somebody</authors>
-<description>Description</description>
-</metadata>
+<package>
+    <metadata>
+        <id>ID</id>
+        <title>Title</title>
+        <version>9.9.9</version>
+        <authors>Somebody</authors>
+        <description>Description</description>
+    </metadata>
 </package>
 '@
         GivenPath 'FileName.nuspec'
@@ -402,14 +402,14 @@ Describe 'NuGetPack' {
         ThenFile 'ID.nuspec' -InPackage 'ID.1.2.3.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-<metadata>
-<id>ID</id>
-<version>1.2.3</version>
-<title>Title</title>
-<authors>Somebody</authors>
-<requireLicenseAcceptance>false</requireLicenseAcceptance>
-<description>Description</description>
-</metadata>
+  <metadata>
+    <id>ID</id>
+    <version>1.2.3</version>
+    <title>Title</title>
+    <authors>Somebody</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Description</description>
+  </metadata>
 </package>
 "@
     }
@@ -417,13 +417,13 @@ Describe 'NuGetPack' {
     It 'should customize package version' {
         GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
-<package >
-<metadata>
-<id>package</id>
-<version>9.9.9</version>
-<authors>Somebody</authors>
-<description>Description</description>
-</metadata>
+<package>
+  <metadata>
+    <id>package</id>
+    <version>9.9.9</version>
+    <authors>Somebody</authors>
+    <description>Description</description>
+  </metadata>
 </package>
 '@
         GivenPath 'package.nuspec'
@@ -432,13 +432,13 @@ Describe 'NuGetPack' {
         ThenFile 'package.nuspec' -InPackage 'package.2.2.2.nupkg' -Is @"
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-<metadata>
-<id>package</id>
-<version>2.2.2</version>
-<authors>Somebody</authors>
-<requireLicenseAcceptance>false</requireLicenseAcceptance>
-<description>Description</description>
-</metadata>
+  <metadata>
+    <id>package</id>
+    <version>2.2.2</version>
+    <authors>Somebody</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Description</description>
+  </metadata>
 </package>
 "@
     }
@@ -447,12 +447,12 @@ Describe 'NuGetPack' {
         GivenFile 'package.nuspec' @'
 <?xml version="1.0"?>
 <package >
-<metadata>
-<id>package</id>
-<version>$script:Version$</version>
-<authors>$Authors$</authors>
-<description>$Description$</description>
-</metadata>
+    <metadata>
+        <id>package</id>
+        <version>$script:Version$</version>
+        <authors>$Authors$</authors>
+        <description>$Description$</description>
+    </metadata>
 </package>
 '@
         GivenPath 'package.nuspec'
