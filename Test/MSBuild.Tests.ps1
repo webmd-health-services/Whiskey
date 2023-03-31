@@ -424,11 +424,11 @@ BeforeAll {
         $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
     }
 
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
 }
 
 AfterAll {
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
 }
 
 Describe 'MSBuild' {

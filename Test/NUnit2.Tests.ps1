@@ -368,7 +368,7 @@ Describe 'NUnit2' {
     AfterEach {
         $script:testNum += 1
 
-        $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
+        $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
     }
 
     It 'should run NUnit2' {
