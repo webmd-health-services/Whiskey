@@ -20,9 +20,10 @@ requests to the GitHub API.
 
 ## Fixed
 
-* Fixed: Many commands fail running under new versions of PowerShell, which changed the way variables are passed as
-command arguments. If the variable's value is an empty string, PowerShell passes a double-quoted string. If the
-variable's value is `$null`, the variable is omitted. Updated the following tasks to work with this new behavior:
+* Fixed: tasks fail that pass empty strings as arguments to console commands. PowerShell 7.3 changed the way variables
+are passed as command arguments. A variable whose value is an empty string, is passed to the command as a
+double-quoted string and `$null` values are ommitted. Updated the following tasks to no longer pass empty strings as
+arguments:
   * MSBuild
   * NUnit2
   * NUnit3
