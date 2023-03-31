@@ -369,6 +369,8 @@ Describe 'NUnit2' {
 
     AfterEach {
         $script:testNum += 1
+
+        $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
     }
 
     Context 'Not Windows' -Skip:$IsWindows {
