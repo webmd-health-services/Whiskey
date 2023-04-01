@@ -10,16 +10,16 @@ function Invoke-WhiskeyTask
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
+        [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
 
-        [Parameter(Mandatory)]
         # The name of the task.
+        [Parameter(Mandatory)]
         [String] $Name,
 
-        [Parameter(Mandatory)]
         # The parameters/configuration to use to run the task.
+        [Parameter(Mandatory)]
         [hashtable] $Parameter
     )
 
