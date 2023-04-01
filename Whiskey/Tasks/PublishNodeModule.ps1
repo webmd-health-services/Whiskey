@@ -20,10 +20,10 @@ function Publish-WhiskeyNodeModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if (-not $NpmRegistryUri) 
+    if (-not $NpmRegistryUri)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Property ''NpmRegistryUri'' is mandatory and must be a URI. It should be the URI to the registry where the module should be published. E.g.,
-        
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: https://registry.npmjs.org/
@@ -34,12 +34,12 @@ function Publish-WhiskeyNodeModule
     if( -not $CredentialID )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
-    
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: {0}
         CredentialID: NpmCredential
-    
+
     Use the `Add-WhiskeyCredential` function to add the credential to the build.
     ' -f $NpmRegistryUri)
         return
@@ -50,7 +50,7 @@ function Publish-WhiskeyNodeModule
     if( -not $EmailAddress )
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
-    
+
     Build:
     - PublishNodeModule:
         NpmRegistryUri: {0}
@@ -89,9 +89,9 @@ function Publish-WhiskeyNodeModule
 
         Copy-Item -Path $originalPackageJsonPath -Destination $backupPackageJsonPath
         Invoke-WhiskeyNpmCommand -Name 'version' `
-                                -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version', '--allow-same-version' `
-                                -BuildRootPath $TaskContext.BuildRoot `
-                                -ErrorAction Stop
+                                 -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version', '--allow-same-version' `
+                                 -BuildRootPath $TaskContext.BuildRoot `
+                                 -ErrorAction Stop
 
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
 
