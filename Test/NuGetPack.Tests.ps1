@@ -449,7 +449,7 @@ Describe 'NuGetPack' {
 <package >
     <metadata>
         <id>package</id>
-        <version>$script:Version$</version>
+        <version>$Version$</version>
         <authors>$Authors$</authors>
         <description>$Description$</description>
     </metadata>

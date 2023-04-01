@@ -3,6 +3,8 @@
 Set-StrictMode -Version 'Latest'
 
 BeforeAll {
+    Set-StrictMode -Version 'Latest'
+
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     # Load this module here so that it's assemblies get loaded into memory. Otherwise, the test will load
@@ -17,8 +19,7 @@ BeforeAll {
     $script:assembly = $null
     $script:version = $null
     $script:nuGetVersion = $null
-    $script:use32bit = $null
-
+    $script:use32Bit = $null
     $script:procArchProject = @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -28,10 +29,11 @@ BeforeAll {
 </Project>
 "@
 
-    $assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
+
+    $script:assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
     foreach( $item in @( 'bin', 'obj', 'packages' ) )
     {
-        Get-ChildItem -Path $assemblyRoot -Filter $item -Recurse -Directory |
+        Get-ChildItem -Path $script:assemblyRoot -Filter $item -Recurse -Directory |
             Remove-Item -Recurse -Force
     }
 
@@ -113,33 +115,19 @@ BeforeAll {
     function GivenVersion
     {
         param(
-            $script:version
+            $Version
         )
 
-        $script:version = $script:version
+        $script:version = $Version
     }
 
     function GivenNuGetVersion
     {
         param(
-            $script:nuGetVersion
+            $NuGetVersion
         )
 
-        $script:nuGetVersion = $script:nuGetVersion
-    }
-
-    function Init
-    {
-        $script:version = $null
-        $script:nuGetVersion = $null
-        $script:use32Bit = $false
-
-        $script:testRoot = New-WhiskeyTestRoot
-    }
-
-    function Reset
-    {
-        Reset-WhiskeyTestPSModule
+        $script:nuGetVersion = $NuGetVersion
     }
 
     function WhenRunningTask
@@ -201,29 +189,21 @@ BeforeAll {
             $WithParameter['NuGetVersion'] = $script:nuGetVersion
         }
 
-        if( $script:use32bit )
+        if( $script:use32Bit )
         {
-            $WithParameter['Use32Bit'] = $script:use32bit
+            $WithParameter['Use32Bit'] = $script:use32Bit
         }
 
         $Global:Error.Clear()
-        $output = $null
-        Push-Location (Get-BuildRoot)
         try
         {
-            Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' |
-                Tee-Object -Variable 'output'
+            $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild'
+            $script:output | Write-WhiskeyDebug
         }
         catch
         {
             $script:threwException = $true
             Write-Error $_
-        }
-        finally
-        {
-            Pop-Location
-            $script:output = $output
-            $script:output | Write-WhiskeyDebug
         }
     }
 
@@ -305,10 +285,10 @@ BeforeAll {
 
         if( $To )
         {
-            $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $To
+            $script:outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $To
             foreach( $item in $script:assembly )
             {
-                (Join-Path -Path $outputRoot -ChildPath $item) | Should -Exist
+                (Join-Path -Path $script:outputRoot -ChildPath $item) | Should -Exist
             }
             Get-ChildItem -Path (Get-BuildRoot) -Include 'bin' -Directory -Recurse |
                 Get-ChildItem -Include $script:assembly -File -Recurse |
@@ -373,7 +353,7 @@ BeforeAll {
             {
                 $desc = '[empty]'
             }
-            $fullOutput.Trim() | Should -Match ('^{0}$' -f $Is)
+            $fullOutput | Should -Match ('^{0}$' -f $Is)
         }
 
         if( $DoesNotContain )
@@ -423,17 +403,21 @@ BeforeAll {
 
         $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
     }
-
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
-}
-
-AfterAll {
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
 }
 
 Describe 'MSBuild' {
-    BeforeEach { Init }
-    AfterEach { Reset }
+    BeforeEach {
+        $script:version = $null
+        $script:nuGetVersion = $null
+        $script:use32Bit = $false
+
+        $script:testRoot = New-WhiskeyTestRoot
+    }
+
+    AfterEach {
+        Reset-WhiskeyTestPSModule
+    }
+
 
     It 'should compile project' {
         GivenAProjectThatCompiles
@@ -526,7 +510,6 @@ Describe 'MSBuild' {
     }
 
     It 'should multi-CPU build' {
-        Init
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
         ThenOutput -Contains '\n\ {5}\d>'
