@@ -1,7 +1,7 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
-# 0.55.0
+# 0.54.0
 
 ## Added
 
@@ -13,6 +13,7 @@ requests to the GitHub API.
 
 ## Changed
 
+* Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core toolsfollows Microsoft's policy on rolling forward currently installed .NET Core versions.
 * MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
 * Commands written to the information stream now quote arguments that contain a semicolon.
 * NPM task now writes the commands it runs to the information stream.
@@ -20,6 +21,7 @@ requests to the GitHub API.
 
 ## Fixed
 
+* Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
 * Fixed: tasks fail that pass empty strings as arguments to console commands. PowerShell 7.3 changed the way variables
 are passed as command arguments. A variable whose value is an empty string, is passed to the command as a
 double-quoted string and `$null` values are ommitted. Updated the following tasks to no longer pass empty strings as
@@ -28,11 +30,6 @@ arguments:
   * NUnit2
   * NUnit3
   * NuGetPack
-
-# 0.54.0
-
-* Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core tools and follows Microsoft's policy on rolling forward currently installed .NET Core versions.
-* Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
 
 # 0.53.2
 
