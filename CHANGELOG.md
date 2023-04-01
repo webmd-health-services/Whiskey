@@ -5,11 +5,7 @@
 
 ## Added
 
-The `build.ps1` can now authenticate requests to GitHub when determing the version of Whiskey to download.
-
-* Added parameter `GitHubBearerToken` to authenticate requests to the GitHub releases API, if needed.
-* If a `GITHUB_BEARER_TOKEN` environment variable exists, the `build.ps1` script will use its value to authenticate
-requests to the GitHub API.
+The `build.ps1` can now authenticate requests to GitHub when determining the version of Whiskey to download.
 
 ## Changed
 
@@ -30,6 +26,9 @@ arguments:
   * NUnit2
   * NUnit3
   * NuGetPack
+* Fixed: build.ps1 fails if it exceeds your GitHub API rate limits. Added parameter `GitHubBearerToken` to authenticate
+to GitHub's API. If a `GITHUB_BEARER_TOKEN` environment variable exists, the `build.ps1` script will use that value
+unless the `GitHubBearerToken` parameter has a value.
 
 # 0.53.2
 
