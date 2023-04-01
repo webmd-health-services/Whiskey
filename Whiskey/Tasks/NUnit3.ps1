@@ -47,7 +47,7 @@ function Invoke-WhiskeyNUnit3Task
     $frameworkParam = '--framework={0}' -f $framework
 
     $testFilter = ''
-    $testFilterParam = ''
+    $testFilterParam = $null
     if ($TaskParameter['TestFilter'])
     {
         $testFilter = $TaskParameter['TestFilter'] | ForEach-Object { '({0})' -f $_ }
@@ -55,7 +55,7 @@ function Invoke-WhiskeyNUnit3Task
         $testFilterParam = '--where={0}' -f $testFilter
     }
 
-    $nunitExtraArgument = ''
+    $nunitExtraArgument = $null
     if ($TaskParameter['Argument'])
     {
         $nunitExtraArgument = $TaskParameter['Argument']
@@ -95,7 +95,6 @@ function Invoke-WhiskeyNUnit3Task
         }
     }
 
-
     $separator = '{0}VERBOSE:                       ' -f [Environment]::NewLine
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path -join $separator))
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $framework)
@@ -105,15 +104,8 @@ function Invoke-WhiskeyNUnit3Task
 
     $nunitExitCode = 0
 
-    $msg = & {
-            $nunitConsolePath | Resolve-Path -Relative
-            $Path | Resolve-Path -Relative
-            $frameworkParam
-            $testFilterParam
-            $nunitReportParam
-            $nunitExtraArgument
-        } | Format-Command
-    Write-WhiskeyInfo -Context $TaskContext -Message $msg
+    Write-WhiskeyCommand -Path $nunitConsolePath `
+                         -ArgumentList $Path, $frameworkParam, $testFilterParam, $nunitReportParam, $nunitExtraArgument
     & $nunitConsolePath $Path $frameworkParam $testFilterParam $nunitReportParam $nunitExtraArgument
     $nunitExitCode = $LASTEXITCODE
     if( $nunitExitCode -ne 0 )

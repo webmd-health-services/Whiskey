@@ -5,7 +5,14 @@
 Starts a Whiskey build.
 
 .DESCRIPTION
-The `build.ps1` script starts a Whiskey build in the script's root directory. It will first download the latest `0.*` version of Whiskey from Whiskey's GitHub [Releases](https://github.com/webmd-health-services/Whiskey/releases) and place it into a `PSModules/Whiskey` directory. The script will look for a `whiskey.yml` file in the same directory as itself. If one doesn't exit, it will create a new starter `whiskey.yml` file with empty `Build` and `Publish` pipelines. Finally, `Invoke-WhiskeyBuild` is called to run the build tasks specified in the `whiskey.yml`.
+The `build.ps1` script starts a Whiskey build in the script's directory. It first download the latest `0.*` version of
+Whiskey from Whiskey's GitHub [Releases](https://github.com/webmd-health-services/Whiskey/releases) and place it into a
+`PSModules/Whiskey` directory. The script will look for a `whiskey.yml` file in the same directory as itself. If one
+doesn't exit, it will create a new starter `whiskey.yml` file with empty `Build` and `Publish` pipelines. Finally,
+`Invoke-WhiskeyBuild` is called to run the build tasks specified in the `whiskey.yml`.
+
+Pass the token to use to authenticate to GitHub to the `GitHubBearerToken` parameter. Or, you can set the a
+`GITHUB_BEARER_TOKEN` environment variable to the bearer token to use.
 
 To download all the tools that are required for a build, use the `-Initialize` switch.
 
@@ -34,7 +41,11 @@ param(
 
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [switch]$Initialize
+    [switch]$Initialize,
+
+    # The bearer token to use to authenticate with the GitHub API when getting the Whiskey releases. The default value
+    # is the `GITHUB_BEARER_TOKEN` environment variable.
+    [String] $GitHubBearerToken
 )
 
 #Requires -Version 5.1
@@ -42,7 +53,7 @@ $ErrorActionPreference = 'Stop'
 
 Set-StrictMode -Version Latest
 
-# Set to a specific version to use a specific version of Whiskey. 
+# Set to a specific version to use a specific version of Whiskey.
 $whiskeyVersion = '0.*'
 $allowPrerelease = $false
 
@@ -51,9 +62,20 @@ $whiskeyModuleRoot = Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Whiskey
 
 if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
 {
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
-    $release = 
-        Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' |
+    $headers = @{ 'Content-Type' = 'application/json' }
+    if (-not $GitHubBearerToken -and $env:GITHUB_BEARER_TOKEN)
+    {
+        $GitHubBearerToken = $env:GITHUB_BEARER_TOKEN
+        $headers['Authorization'] = "Bearer ${GitHubBearerToken}"
+    }
+    if ($GitHubBearerToken)
+    {
+        $headers['Authorization'] = "Bearer ${GitHubBearerToken}"
+    }
+    [System.Net.ServicePointManager]::SecurityProtocol =
+        [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+    $release =
+        Invoke-RestMethod -Uri 'https://api.github.com/repos/webmd-health-services/Whiskey/releases' -Headers $headers |
         ForEach-Object { $_ } |
         Where-Object { $_.name -like $whiskeyVersion } |
         Where-Object {
@@ -72,12 +94,12 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
         return
     }
 
-    $zipUri = 
+    $zipUri =
         $release.assets |
         ForEach-Object { $_ } |
         Where-Object { $_.name -like 'Whiskey*.zip' } |
         Select-Object -ExpandProperty 'browser_download_url'
-    
+
     if( -not $zipUri )
     {
         Write-Error -Message ('URI to Whiskey ZIP file does not exist.') -ErrorAction Stop
@@ -130,7 +152,7 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
     Import-Module -Name $whiskeyModuleRoot -Force
 }
 
-$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' 
+$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml'
 if( -not (Test-Path -Path $configPath -PathType 'Leaf') )
 {
     @'

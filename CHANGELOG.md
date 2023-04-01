@@ -1,7 +1,34 @@
+<!--markdownlint-disable MD012 no-multiple-blanks -->
+<!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
+
 # 0.54.0
 
-* Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core tools and follows Microsoft's policy on rolling forward currently installed .NET Core versions.
+## Added
+
+The `build.ps1` can now authenticate requests to GitHub when determining the version of Whiskey to download.
+
+## Changed
+
+* Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core toolsfollows Microsoft's policy on rolling forward currently installed .NET Core versions.
+* MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
+* Commands written to the information stream now quote arguments that contain a semicolon.
+* NPM task now writes the commands it runs to the information stream.
+* NuGetPush task writes `nuget push` command to the information stream.
+
+## Fixed
+
 * Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
+* Fixed: tasks fail that pass empty strings as arguments to console commands. PowerShell 7.3 changed the way variables
+are passed as command arguments. A variable whose value is an empty string, is passed to the command as a
+double-quoted string and `$null` values are ommitted. Updated the following tasks to no longer pass empty strings as
+arguments:
+  * MSBuild
+  * NUnit2
+  * NUnit3
+  * NuGetPack
+* Fixed: build.ps1 fails if it exceeds your GitHub API rate limits. Added parameter `GitHubBearerToken` to authenticate
+to GitHub's API. If a `GITHUB_BEARER_TOKEN` environment variable exists, the `build.ps1` script will use that value
+unless the `GitHubBearerToken` parameter has a value.
 
 # 0.53.2
 
