@@ -565,7 +565,6 @@ Describe 'MSBuild' {
     }
 
     It 'should use custom version of MSBuild' {
-        ThenNoErrors
         GivenProject @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
