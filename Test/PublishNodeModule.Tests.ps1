@@ -343,44 +343,40 @@ Describe 'PublishNodeModule' {
         ThenTaskFailed '\bEmailAddress\b.*\bmandatory\b'
     }
 
-    Context 'mocked "npm version" command' {
-        It 'should publish module with the prerelease version' {
-            GivenPackageJson @"
-            {
-                "name": "publishnodemodule_test",
-                "version": "1.2.0"
-            }
-"@
-            GivenPrerelease 'alpha.1'
-            Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
-            WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                     -WithEmailAddress 'somebody@example.com' `
-                                     -WithNpmRegistryUri 'http://registry@example.com'
-            ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
-            ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
-            ThenNpmPackagesPruned
-            ThenNodeModulePublished
-            ThenPublishedWithTag 'alpha'
+    It 'should publish module with the prerelease version' {
+        GivenPackageJson @"
+        {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
         }
+"@
+        GivenPrerelease 'alpha.1'
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq 'version' }
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com'
+        ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
+        ThenNodeModuleVersionUpdated -To '1.2.0-alpha.1'
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
+        ThenPublishedWithTag 'alpha'
     }
 
-    Context 'un-mocked "npm version" command' {
-        It 'should restore non-prerelease version in package.json after publishing' {
-            GivenPackageJson @"
-            {
-                "name": "publishnodemodule_test",
-                "version": "1.2.0"
-            }
-"@
-            GivenPrerelease 'alpha.1'
-            WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
-                                     -WithEmailAddress 'somebody@example.com' `
-                                     -WithNpmRegistryUri 'http://registry@example.com'
-            ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
-            ThenNpmPackagesPruned
-            ThenNodeModulePublished
-            ThenPackageJsonVersion -Is '1.2.0'
+    It 'should restore non-prerelease version in package.json after publishing' {
+        GivenPackageJson @"
+        {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
         }
+"@
+        GivenPrerelease 'alpha.1'
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                    -WithEmailAddress 'somebody@example.com' `
+                                    -WithNpmRegistryUri 'http://registry@example.com'
+        ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
+        ThenNpmPackagesPruned
+        ThenNodeModulePublished
+        ThenPackageJsonVersion -Is '1.2.0'
     }
 
     It 'should publish the module with tag' {
