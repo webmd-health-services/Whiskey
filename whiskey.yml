@@ -330,6 +330,11 @@ Build:
                 Run:
                     Path: Test\\*.Tests.ps1
                     ExcludePath:
+                    # Run in other queues.
+                    - "*\\Test\\MSBuild.Tests.ps1"
+                    - "*\\Test\\NUnit2.Tests.ps1"
+                    - "*\\Test\\NUnit3.Tests.ps1"
+                    # Still in Pester 4.
                     - "*\\Test\\Add-WhiskeyApiKey.Tests.ps1"
                     - "*\\Test\\Add-WhiskeyTaskDefault.Tests.ps1"
                     - "*\\Test\\AppVeyorWaitForBuildJobs.Tests.ps1"
@@ -371,12 +376,9 @@ Build:
                     - "*\\Test\\LoadTask.Tests.ps1"
                     - "*\\Test\\Log.Tests.ps1"
                     - "*\\Test\\MergeFile.Tests.ps1"
-                    - "*\\Test\\MSBuild.Tests.ps1"
                     - "*\\Test\\New-WhiskeyContext.Tests.ps1"
                     - "*\\Test\\NodeLicenseChecker.Tests.ps1"
                     - "*\\Test\\NuGetRestore.Tests.ps1"
-                    - "*\\Test\\NUnit2.Tests.ps1"
-                    - "*\\Test\\NUnit3.Tests.ps1"
                     - "*\\Test\\Parallel.Tests.ps1"
                     - "*\\Test\\Pester.Tests.ps1"
                     - "*\\Test\\Pipeline.Tests.ps1"
