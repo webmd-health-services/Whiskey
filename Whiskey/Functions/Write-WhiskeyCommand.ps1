@@ -7,7 +7,7 @@ function Write-WhiskeyCommand
 
         [String] $Path,
 
-        [String[]] $ArgumentList
+        [Object[]] $ArgumentList
     )
 
     Set-StrictMode -Version 'Latest'
@@ -19,10 +19,12 @@ function Write-WhiskeyCommand
                 '&'
             }
             $Path
-            $ArgumentList
+            # Might have passed array of arrays.
+            $ArgumentList | ForEach-Object { $_ | Write-Output }
         } |
-        ForEach-Object { 
-            if( $_ -match '\ ' )
+        Where-Object { $null -ne $_ } |
+        ForEach-Object {
+            if ($_ -match '\ |;' -or $_ -eq '')
             {
                 '"{0}"' -f $_.Trim('"',"'")
             }
@@ -32,11 +34,11 @@ function Write-WhiskeyCommand
             }
         }
 
-    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ') -InformationAction Continue
-    Write-WhiskeyDebug -Context $Context -Message $Path -Verbose
+    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ')
+    Write-WhiskeyVerbose -Context $Context -Message $Path
     $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
     {
-        Write-WhiskeyDebug -Context $Context -Message ('{0}{1}' -f $argumentPrefix,$argument) -Verbose
+        Write-WhiskeyVerbose -Context $Context -Message ('{0}{1}' -f $argumentPrefix,$argument)
     }
 }

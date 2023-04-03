@@ -10,17 +10,17 @@ function Install-WhiskeyDotNetTool
 
     .EXAMPLE
     Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src' -Version '2.1.4'
-    
+
     Demonstrates installing version '2.1.4' of the .NET Core SDK to a '.dotnet' directory in the 'C:\Build\Project' directory.
 
     .EXAMPLE
     Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src' -Version '2.*'
-    
+
     Demonstrates installing the latest '2.*' version of the .NET Core SDK to a '.dotnet' directory in the 'C:\Build\Project' directory.
 
     .EXAMPLE
     Install-WhiskeyDotNetTool -InstallRoot 'C:\Build\Project' -WorkingDirectory 'C:\Build\Project\src'
-    
+
     Demonstrates installing the version of the .NET Core SDK specified in the `sdk.version` property of the `global.json` file found in either the `WorkingDirectory` or the `InstallRoot` paths.
     #>
     [CmdletBinding()]
@@ -42,19 +42,36 @@ function Install-WhiskeyDotNetTool
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    if ($Version)
+    {
+        $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
+        $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+        return Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
+    }
+
+    if ( (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+    {
+        # This command prints out the version of the .NET SDK that the "dotnet" command would use after taking into
+        # account the global.json file if it exists. Exit code 0 means a compatible SDK was found
+        $possibleVersion = dotnet --version 2>&1
+        if ( $LASTEXITCODE -eq 0 )
+        {
+            $msg = "[$($MyInvocation.MyCommand)] Using globally installed .NET SDK version $($possibleVersion)"
+            Write-WhiskeyVerbose -Message $msg
+            return 'dotnet'
+        }
+    }
+
     $globalJsonPath = Join-Path -Path $WorkingDirectory -ChildPath 'global.json'
-    if (-not (Test-Path -Path $globalJsonPath -PathType Leaf))
+    if ( -not (Test-Path -Path $globalJsonPath -PathType Leaf) )
     {
         $globalJsonPath = Join-Path -Path $InstallRoot -ChildPath 'global.json'
     }
-    
+
+
+
     $sdkVersion = $null
-    if ($Version)
-    {
-        Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in whiskey.yml' -f $MyInvocation.MyCommand,$Version)
-        $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
-    }
-    elseif (Test-Path -Path $globalJsonPath -PathType Leaf)
+    if ( Test-Path -Path $globalJsonPath -PathType Leaf )
     {
         try
         {
@@ -62,22 +79,50 @@ function Install-WhiskeyDotNetTool
         }
         catch
         {
-            Write-WhiskeyError -Message ('global.json file ''{0}'' contains invalid JSON.' -f $globalJsonPath)
+            Write-WhiskeyError -Message "global.json file ""$($globalJsonPath)"" contains invalid JSON."
             return
         }
 
-        $globalJsonVersion = $globalJson |
-                                 Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore |
-                                 Select-Object -ExpandProperty 'version' -ErrorAction Ignore
-        
-        if ($globalJsonVersion)
+        $globalJsonSdkOptions =
+            $globalJson |
+            Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore
+
+        $globalJsonVersion =
+            $globalJsonSdkOptions |
+            Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+
+        $globalJsonRollForward =
+            $globalJsonSdkOptions |
+            Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
+
+
+        $rollForwardStrategy = [Whiskey.DotNetSdkRollForward]::Disable
+        $validRollForwardValues = [Whiskey.DotNetSdkRollForward].GetEnumNames()
+        if ($globalJsonRollForward -notin $validRollForwardValues)
         {
-            Write-WhiskeyVerbose -Message ('[{0}] .NET Core SDK version ''{1}'' found in ''{2}''' -f $MyInvocation.MyCommand,$globalJsonVersion,$globalJsonPath)
-            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion
+            $msg = "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is not " +
+            "one of the valid .NET SDK roll forward strategies: $($validRollForwardValues -join ', ')." +
+            "$(([Environment]::NewLine)*2)If ""$($globalJsonRollForward)"" is a new valid .NET SDK roll forward strategy " +
+            "then submit a Whiskey issue (https://github.com/webmd-health-services/Whiskey/issues) asking us to add " +
+            "support for it.$(([Environment]::NewLine)*2)Defaulting roll forward strategy to ""$($rollForwardStrategy)""."
+            Write-Warning -Message $msg
         }
+        else
+        {
+            $rollForwardStrategy = [Whiskey.DotNetSdkRollForward] $globalJsonRollForward
+        }
+
+
+        if ( $globalJsonVersion )
+        {
+            $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
+            Write-WhiskeyVerbose -Message $msg
+            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion -RollForward $rollForwardStrategy
+        }
+
     }
 
-    if (-not $sdkVersion)
+    if ( -not $sdkVersion )
     {
         Write-WhiskeyVerbose -Message ('[{0}] No specific .NET Core SDK version found in whiskey.yml or global.json. Using latest LTS version.' -f $MyInvocation.MyCommand)
         $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
@@ -85,8 +130,5 @@ function Install-WhiskeyDotNetTool
 
     $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
     $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
-
-    Set-WhiskeyDotNetGlobalJson -Directory ($globalJsonPath | Split-Path -Parent) -SdkVersion $sdkVersion
-
     return $dotnetPath
 }

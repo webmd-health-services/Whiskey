@@ -2,329 +2,312 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-[Whiskey.Context]$context = $null
-$property = $null
-$failed = $false
-$branch = $null
-$initialVersion = $null
-$testNum = 0
-$versions = @()
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function Init
-{
-    $script:context = $null
-    $script:version = $null
+    [Whiskey.Context]$script:context = $null
+    $script:property = $null
     $script:failed = $false
     $script:branch = $null
-    $script:sourceBranch = $null
+    $script:initialVersion = $null
+    $script:testNum = 0
     $script:versions = @()
-    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
-                                                          -Parameter @{ 'SemVer' = '0.0.0' }
-    $script:testRoot = Join-Path -Path $TestDrive.FullName -ChildPath ($testNum++)
-    if( -not (Test-Path -Path $script:testRoot) )
+
+    function GivenFile
     {
-        New-Item -Path $script:testRoot -ItemType 'Directory'
+        param(
+            $Name,
+            $Content
+        )
+
+        $Content | Set-Content -Path (Join-Path -Path $script:testRoot -ChildPath $Name)
+    }
+
+    function GivenProperty
+    {
+        param(
+            $script:property
+        )
+
+        $script:property = $script:property
+    }
+
+    function GivenBranch
+    {
+        param(
+            [String] $Named
+        )
+
+        $script:branch = $Named
+    }
+
+    function GivenSourceBranch
+    {
+        param(
+            [String] $Named
+        )
+
+        $script:sourceBranch = $Named
+    }
+
+    function GivenUniversalPackageVersions
+    {
+        param(
+            [Parameter(Mandatory)]
+            [AllowEmptyArray()]
+            [String[]] $Version
+        )
+
+        $script:versions = $Version
+    }
+
+    function ThenErrorIs
+    {
+        param(
+            $Regex
+        )
+
+        $Global:Error | Should -Match $Regex
+    }
+
+    function GivenCurrentVersion
+    {
+        param(
+            $Version
+        )
+
+        $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                              -Parameter @{ 'SemVer' = $Version }
+    }
+
+    function ThenSemVer2Is
+    {
+        param(
+            [SemVersion.SemanticVersion]$ExpectedVersion
+        )
+
+        $script:context.Version.SemVer2.ToString() | Should -Be $ExpectedVersion.ToString()
+        $ExpectedVersion = New-Object 'SemVersion.SemanticVersion' ($ExpectedVersion.Major,$ExpectedVersion.Minor,$ExpectedVersion.Patch,$ExpectedVersion.Prerelease)
+        $script:context.Version.SemVer2NoBuildMetadata.ToString() | Should -Be $ExpectedVersion.ToString()
+    }
+
+    function ThenSemVer1Is
+    {
+        param(
+            [SemVersion.SemanticVersion]$ExpectedVersion
+        )
+
+        $script:context.Version.SemVer1.ToString() | Should -Be $ExpectedVersion.ToString()
+    }
+
+    function ThenTaskFailed
+    {
+        $script:failed | Should -Be $true
+    }
+
+    function ThenVersionIs
+    {
+        param(
+            [Version]$ExpectedVersion
+        )
+
+        $script:context.Version.Version | Should -Be $ExpectedVersion
+    }
+
+    function WhenRunningTask
+    {
+        [CmdletBinding(DefaultParameterSetName='NotUPack')]
+        param(
+            [switch]$AsDeveloper,
+
+            [String]$WithYaml,
+
+            [Parameter(Mandatory, ParameterSetName='UPack')]
+            [String] $ForUniversalPackage,
+
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
+            [Parameter(Mandatory, ParameterSetName='UPack')]
+            [String] $At,
+
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
+            [Parameter(Mandatory, ParameterSetName='UPack')]
+            [String[]] $WithVersions,
+
+            [Parameter(Mandatory, ParameterSetName='PSModule')]
+            [String] $ForPSModule
+        )
+
+        $forParam = @{ ForBuildServer = $true }
+        if( $AsDeveloper )
+        {
+            $forParam = @{ ForDeveloper = $true }
+        }
+        $forParam['ForBuildRoot'] = $script:testRoot
+
+        if( $WithYaml )
+        {
+            $script:context = New-WhiskeyTestContext -ForYaml $WithYaml @forParam
+            $script:property = $script:context.Configuration['Build'][0]['Version']
+        }
+        else
+        {
+            $script:context = New-WhiskeyTestContext @forParam
+        }
+
+        $script:context.Version = $script:initialVersion
+        if( $script:branch )
+        {
+            $script:context.BuildMetadata.ScmBranch = $script:branch
+        }
+
+        if( $sourceBranch )
+        {
+            $script:context.BuildMetadata.ScmSourceBranch = $sourceBranch
+            $script:context.BuildMetadata.IsPullRequest = $true
+        }
+
+        if( $ForUniversalPackage )
+        {
+            $script:versions = $WithVersions
+            $pkgFeedUrl = "$($At)/packages?name=$($ForUniversalPackage)"
+            Mock -CommandName 'Invoke-RestMethod' `
+                 -ModuleName 'Whiskey' `
+                 -ParameterFilter { $Uri -Eq $pkgFeedUrl } `
+                 -MockWith { return [pscustomobject]@{ versions = $script:versions } } #.GetNewClosure()
+        }
+
+        if ($ForPSModule)
+        {
+            $script:versions = $WithVersions
+            Mock -CommandName 'Find-Module' `
+                 -ModuleName 'Whiskey' `
+                 -ParameterFilter { $Name -eq $ForPSModule } `
+                 -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
+        }
+
+        $Global:Error.Clear()
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $script:context `
+                               -Name 'Version' `
+                               -Parameter $script:property `
+                               -InformationAction SilentlyContinue
+        }
+        catch
+        {
+            $script:failed = $true
+            Write-Error -ErrorRecord $_
+
+        }
     }
 }
 
-function GivenFile
-{
-    param(
-        $Name,
-        $Content
-    )
-
-    $Content | Set-Content -Path (Join-Path -Path $script:testRoot -ChildPath $Name)
-}
-
-function GivenProperty
-{
-    param(
-        $Property
-    )
-
-    $script:property = $Property
-}
-
-function GivenBranch
-{
-    param(
-        [String] $Named
-    )
-
-    $script:branch = $Named
-}
-
-function GivenSourceBranch
-{
-    param(
-        [String] $Named
-    )
-
-    $script:sourceBranch = $Named
-}
-
-function GivenUniversalPackageVersions
-{
-    param(
-        [Parameter(Mandatory)]
-        [AllowEmptyArray()]
-        [String[]] $Version
-    )
-
-    $script:versions = $Version
-}
-
-function ThenErrorIs
-{
-    param(
-        $Regex
-    )
-
-    $Global:Error | Should -Match $Regex
-}
-
-function GivenCurrentVersion
-{
-    param(
-        $Version
-    )
-
-    $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
-                                                          -Parameter @{ 'SemVer' = $Version }
-}
-
-function ThenSemVer2Is
-{
-    param(
-        [SemVersion.SemanticVersion]$ExpectedVersion
-    )
-
-    $context.Version.SemVer2.ToString() | Should -Be $ExpectedVersion.ToString()
-    $ExpectedVersion = New-Object 'SemVersion.SemanticVersion' ($ExpectedVersion.Major,$ExpectedVersion.Minor,$ExpectedVersion.Patch,$ExpectedVersion.Prerelease)
-    $context.Version.SemVer2NoBuildMetadata.ToString() | Should -Be $ExpectedVersion.ToString()
-}
-
-function ThenSemVer1Is
-{
-    param(
-        [SemVersion.SemanticVersion]$ExpectedVersion
-    )
-
-    $context.Version.SemVer1.ToString() | Should -Be $ExpectedVersion.ToString()
-}
-
-function ThenTaskFailed
-{
-    $failed | Should -Be $true
-}
-
-function ThenVersionIs
-{
-    param(
-        [Version]$ExpectedVersion
-    )
-
-    $context.Version.Version | Should -Be $ExpectedVersion
-}
-
-function WhenRunningTask
-{
-    [CmdletBinding(DefaultParameterSetName='NotUPack')]
-    param(
-        [switch]$AsDeveloper,
-
-        [String]$WithYaml,
-
-        [Parameter(Mandatory, ParameterSetName='UPack')]
-        [String] $ForUniversalPackage,
-
-        [Parameter(Mandatory, ParameterSetName='UPack')]
-        [String] $At,
-
-        [Parameter(Mandatory, ParameterSetName='UPack')]
-        [String[]] $WithVersions
-    )
-
-    $forParam = @{ ForBuildServer = $true }
-    if( $AsDeveloper )
-    {
-        $forParam = @{ ForDeveloper = $true }
-    }
-    $forParam['ForBuildRoot'] = $script:testRoot
-
-    if( $WithYaml )
-    {
-        $script:context = New-WhiskeyTestContext -ForYaml $WithYaml @forParam
-        $script:property = $context.Configuration['Build'][0]['Version']
-    }
-    else
-    {
-        $script:context = New-WhiskeyTestContext @forParam
+Describe 'Version' {
+    BeforeEach {
+        $script:context = $null
+        $script:version = $null
+        $script:failed = $false
+        $script:branch = $null
+        $script:sourceBranch = $null
+        $script:versions = @()
+        $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
+                                                                -Parameter @{ 'SemVer' = '0.0.0' }
+        $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        if( -not (Test-Path -Path $script:testRoot) )
+        {
+            New-Item -Path $script:testRoot -ItemType 'Directory'
+        }
     }
 
-    $context.Version = $initialVersion
-    if( $branch )
-    {
-        $context.BuildMetadata.ScmBranch = $branch
-    }
-
-    if( $sourceBranch )
-    {
-        $context.BuildMetadata.ScmSourceBranch = $sourceBranch
-        $context.BuildMetadata.IsPullRequest = $true
-    }
-
-    if( $ForUniversalPackage )
-    {
-        $versions = $WithVersions
-        $pkgFeedUrl = "$($At)/packages?name=$($ForUniversalPackage)"
-        Mock -CommandName 'Invoke-RestMethod' `
-             -ModuleName 'Whiskey' `
-             -ParameterFilter { $Uri -Eq $pkgFeedUrl } `
-             -MockWith { return [pscustomobject]@{ versions = $versions } }.GetNewClosure()
-    }
-
-    $Global:Error.Clear()
-    try
-    {
-        Invoke-WhiskeyTask -TaskContext $context `
-                           -Name 'Version' `
-                           -Parameter $property `
-                           -InformationAction SilentlyContinue
-    }
-    catch
-    {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_
-
-    }
-}
-
-Describe 'Version.when using simplified syntax' {
     It 'should use YAML node value as version' {
-        Init
         GivenProperty @{ '' = '4.4.5-rc.5+branch.deadbee' }
         WhenRunningTask
         ThenSemVer2Is '4.4.5-rc.5+branch.deadbee'
         ThenSemVer1Is '4.4.5-rc5'
         ThenVersionIs '4.4.5'
     }
-}
 
-Describe 'Version.when running as a developer' {
     It 'should not use build metadata' {
-        Init
         GivenProperty @{ '' = '4.4.5-rc.5+branch.deadbee' }
         WhenRunningTask -AsDeveloper
         ThenSemVer2Is '4.4.5-rc.5'
         ThenSemVer1Is '4.4.5-rc5'
         ThenVersionIs '4.4.5'
     }
-}
 
-Describe 'Version.when using Version property' {
     It 'should use the version property value as the version' {
-        Init
         GivenProperty @{ 'Version' = '4.4.5-rc.5+branch.deadbee' }
         WhenRunningTask
         ThenSemVer2Is '4.4.5-rc.5+branch.deadbee'
         ThenSemVer1Is '4.4.5-rc5'
         ThenVersionIs '4.4.5'
     }
-}
 
-Describe 'Version.when Version is invalid' {
     It 'should fail' {
-        Init
         GivenProperty @{ 'Version' = '4.5' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'is\ not\ a\ semantic\ version'
     }
-}
 
-Describe 'Version.when Version has no metadata' {
     It 'should have no metadata in build version' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6' }
         WhenRunningTask
         ThenSemVer2Is '4.5.6'
         ThenSemVer1Is '4.5.6'
         ThenVersionIs '4.5.6'
     }
-}
 
-Describe 'Version.when Version has no build metadata' {
     It 'should have no build metadata' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6-rc.5' }
         WhenRunningTask
         ThenSemVer2Is '4.5.6-rc.5'
         ThenSemVer1Is '4.5.6-rc5'
         ThenVersionIs '4.5.6'
     }
-}
 
-Describe 'Version.when Version has no prerelease version' {
     It 'should not have prerelease in the version' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6+branch.commit' }
         WhenRunningTask
         ThenSemVer2Is '4.5.6+branch.commit'
         ThenSemVer1Is '4.5.6'
         ThenVersionIs '4.5.6'
     }
-}
 
-Describe 'Version.when using Prerelease property to set prerelease version' {
     It 'should use prerelease property value for prerelease' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6-rc.1' ; 'Prerelease' = 'rc.2' }
         WhenRunningTask
         ThenSemVer2Is '4.5.6-rc.2'
         ThenSemVer1Is '4.5.6-rc2'
         ThenVersionIs '4.5.6'
     }
-}
 
-Describe 'Version.when Prerelease property is not a valid prerelease version' {
     It 'should fail' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6-rc.1' ; 'Prerelease' = '~!@#$%^&*()_+' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'not\ a\ valid\ prerelease\ version'
     }
-}
 
-Describe 'Version.when using Build property to set build metadata' {
-    It 'should use build propertyas build metadata' {
-        Init
+    It 'should use build property as build metadata' {
         GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = 'branch2.commit2' }
         WhenRunningTask
         ThenSemVer2Is '4.5.6+branch2.commit2'
         ThenSemVer1Is '4.5.6'
         ThenVersionIs '4.5.6'
     }
-}
 
-Describe 'Version.when Build property is not a valid build metadata' {
     It 'should convert to valid value' {
-        Init
         GivenProperty @{ 'Version' = '4.5.6+branch.commit' ; 'Build' = 'feature/fubar-snafu.deadbee' }
         WhenRunningTask
         ThenVersionIs '4.5.6'
         ThenSemVer1Is '4.5.6'
         ThenSemVer2Is '4.5.6+feature-fubar-snafu.deadbee'
     }
-}
 
-Describe 'Version.when pulling version from PowerShell module manifest' {
     It 'should set version from PowerShell module manifest' {
-        Init
         GivenFile 'manifest.psd1' '@{ ModuleVersion = ''4.2.3'' }'
         GivenProperty @{ Path = 'manifest.psd1' }
         WhenRunningTask
@@ -332,33 +315,24 @@ Describe 'Version.when pulling version from PowerShell module manifest' {
         ThenSemVer1Is '4.2.3'
         ThenSemVer2Is '4.2.3'
     }
-}
 
-Describe 'Version.when pulling version from PowerShell module manifest and version is missing' {
     It 'should fail when version is missing from PowerShell module manifest' {
-        Init
         GivenFile 'manifest.psd1' '@{ }'
         GivenProperty @{ Path = 'manifest.psd1' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'is\ invalid\ or\ doesn''t contain\ a\ "ModuleVersion"\ property'
     }
-}
 
-Describe 'Version.when pulling version from PowerShell module manifest and version is invalid' {
     It 'should fail when version in PowerShell module manifest is invalid' {
-        Init
         GivenFile 'manifest.psd1' '@{ ModuleVersion = ''4.2'' }'
         GivenProperty @{ Path = 'manifest.psd1' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'Powershell\ module\ manifest'
     }
-}
 
-Describe 'Version.when pulling version from PowerShell module manifest and module is in the gallery' {
     It 'should use prerelease version from the PowerShell Gallery' {
-        Init
         GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' ; PrivateData = @{ PSData = @{ Prerelease = ''beta.1'' } } }'
         GivenProperty @{ Path = 'Whiskey.psd1' }
         WhenRunningTask
@@ -366,11 +340,8 @@ Describe 'Version.when pulling version from PowerShell module manifest and modul
         ThenSemVer1Is '0.41.1-beta1035'
         ThenSemVer2Is '0.41.1-beta.1035' # The last beta version was 0.41.1-beta1034, so next one should be beta1035.
     }
-}
 
-Describe 'Version.when pulling version from package.json' {
     It 'should read version from packageJson file' {
-        Init
         GivenFile 'package.json' '{ "Version": "4.2.3-rc.1" }'
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask
@@ -378,11 +349,8 @@ Describe 'Version.when pulling version from package.json' {
         ThenSemVer1Is '4.2.3-rc1'
         ThenSemVer2Is '4.2.3-rc.1'
     }
-}
 
-Describe 'Version.when pulling prerelease version from NPM' {
     It 'should get latest version from NPM registry' {
-        Init
         Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' `
                                      -Parameter @{ InstallRootPath = $testRoot ; OutFileRootPath = $testRoot }
         GivenFile 'package.json' '{ "name": "react-native", "version": "0.68.0-rc.0" }'
@@ -392,22 +360,16 @@ Describe 'Version.when pulling prerelease version from NPM' {
         ThenSemVer1Is '0.68.0-rc5'
         ThenSemVer2Is '0.68.0-rc.5'
     }
-}
 
-Describe 'Version.when version in package.json is missing' {
     It 'should fail if version in packageJson file is missing' {
-        Init
         GivenFile 'package.json' '{ }'
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs '"Version"\ property\ is\ missing'
     }
-}
 
-Describe 'Version.when package.json is invalid JSON' {
     It 'should fail if packageJson file is invalid JSON' {
-        Init
         GivenFile 'package.json' '{ "Version" =  }'
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask -ErrorAction SilentlyContinue
@@ -415,22 +377,16 @@ Describe 'Version.when package.json is invalid JSON' {
         $Global:Error.RemoveAt($Global:Error.Count -1)
         ThenErrorIs 'package\.json"\ contains\ invalid\ JSON'
     }
-}
 
-Describe 'Version.when version in package.json is invalid' {
     It 'should fail when version in pakageJson is inalid' {
-        Init
         GivenFile 'package.json' '{ "Version": "4.2"  }'
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'from\ Node\ package\.json'
     }
-}
 
-Describe 'Version.when reading version from .csproj file' {
     It 'should read version from csproj file' {
-        Init
         GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -444,11 +400,8 @@ Describe 'Version.when reading version from .csproj file' {
         ThenSemVer1Is '0.0.2'
         ThenSemVer2Is '0.0.2'
     }
-}
 
-Describe 'Version.when dotnet core project and package is published to NuGet' {
     It 'should use next prerelease version based on what is in NuGet' {
-        Init
         GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -471,11 +424,8 @@ Describe 'Version.when dotnet core project and package is published to NuGet' {
             ThenSemVer2Is '3.0.0-beta-0'
         }
     }
-}
 
-Describe 'Version.when dotnet framework project and package is published to NuGet' {
     It 'should use next prerelease version based on what is in NuGet' {
-        Init
         GivenProperty @{ Version = '3.0.0-alpha-0' ; NuGetPackageID = 'NUnit' }
         WhenRunningTask
         ThenVersionIs '3.0.0'
@@ -490,11 +440,8 @@ Describe 'Version.when dotnet framework project and package is published to NuGe
             ThenSemVer2Is '3.0.0-alpha-0'
         }
     }
-}
 
-Describe 'Version.when reading version from .csproj file that has namespace' {
     It 'should read from from csproj file that has an XML namespace' {
-        Init
         GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
@@ -507,11 +454,8 @@ Describe 'Version.when reading version from .csproj file that has namespace' {
         ThenTaskFailed
         ThenErrorIs 'remove\ the\ "xmlns"\ attribute'
     }
-}
 
-Describe 'Version.when version in .csproj file is missing' {
     It 'should fail when version in csproj file is missing' {
-        Init
      GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -523,11 +467,8 @@ Describe 'Version.when version in .csproj file is missing' {
         ThenTaskFailed
         ThenErrorIs 'element\ "/Project/PropertyGroup/Version"\ does\ not\ exist'
     }
-}
 
-Describe 'Version.when .csproj contains invalid XML' {
     It 'should fail when csproj file contains invalid XML' {
-        Init
       GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -539,11 +480,8 @@ Describe 'Version.when .csproj contains invalid XML' {
         $Global:Error.RemoveAt($Global:Error.Count - 1)
         ThenErrorIs 'contains\ invalid\ xml'
     }
-}
 
-Describe 'Version.when version in .csproj is invalid' {
     It 'should fail when version in csproj file is invalid' {
-        Init
      GivenFile 'lib.csproj' @'
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -556,11 +494,8 @@ Describe 'Version.when version in .csproj is invalid' {
         ThenTaskFailed
         ThenErrorIs '\.csproj\ file'
     }
-}
 
-Describe 'Version.when file and whiskey.yml both contain build and prerelease metadata' {
     It 'should use version information from YAML over version information in another file' {
-        Init
         GivenFile 'package.json' '{ "Version": "4.2.3-rc.1+fubar.snafu" }'
         GivenProperty @{ Path = 'package.json' ; Prerelease = 'rc.5' ; Build = 'fizz.buzz' }
         WhenRunningTask
@@ -568,13 +503,10 @@ Describe 'Version.when file and whiskey.yml both contain build and prerelease me
         ThenSemVer1Is '4.2.3-rc5'
         ThenSemVer2Is '4.2.3-rc.5+fizz.buzz'
     }
-}
 
-Describe 'Version.when Prerelease is a list of branch maps' {
     Context 'by developer' {
         It 'should not set prerelease metadata' {
-            Init
-            GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+                GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             WhenRunningTask
             ThenVersionIs '1.2.3'
             ThenSemVer1Is '1.2.3'
@@ -583,8 +515,7 @@ Describe 'Version.when Prerelease is a list of branch maps' {
     }
     Context 'by build server' {
         It 'should set prerelease metadata' {
-            Init
-            GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+                GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             GivenBranch 'beta/some-feature'
             WhenRunningTask
             ThenVersionIs '1.2.3'
@@ -592,13 +523,10 @@ Describe 'Version.when Prerelease is a list of branch maps' {
             ThenSemVer2Is '1.2.3-beta.2'
         }
     }
-}
 
-Describe 'Version.when Prerelease is a list of branch maps and latest prerelease version calculated from package repository' {
     Context 'by developer' {
         It 'should not set prerelease metadata' {
-            Init
-            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+                GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
             GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             WhenRunningTask
             ThenVersionIs '0.41.1'
@@ -608,8 +536,7 @@ Describe 'Version.when Prerelease is a list of branch maps and latest prerelease
     }
     Context 'by build server' {
         It 'should set prerelease metadata' {
-            Init
-            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+                GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
             GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             GivenBranch 'beta/some-feature'
             WhenRunningTask
@@ -618,11 +545,8 @@ Describe 'Version.when Prerelease is a list of branch maps and latest prerelease
             ThenSemVer2Is '0.41.1-beta.1035'
         }
     }
-}
 
-Describe 'Version.when Prerelease is a branch map' {
     It 'should use prerelease for a specific branch' {
-        Init
         GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @{ 'alpha/*' = 'alpha.1'; 'beta/*' = 'beta.2' } }
         GivenBranch 'beta/fubar'
         WhenRunningTask
@@ -630,11 +554,8 @@ Describe 'Version.when Prerelease is a branch map' {
         ThenSemVer1Is '1.2.3-beta2'
         ThenSemVer2Is '1.2.3-beta.2'
     }
-}
 
-Describe 'Version.when Prerelease contains multiple matches' {
     It 'should use the correct prerelease when there are different ids for different branches' {
-        Init
        GivenBranch 'feature/fubar-test'
        WhenRunningTask -WithYaml @'
 Build:
@@ -649,22 +570,16 @@ Build:
         ThenSemVer1Is '1.2.3-fubar1'
         ThenSemVer2Is '1.2.3-fubar.1'
     }
-}
 
-Describe 'Version.when Prerelease branch map isn''t a map' {
     It 'should fail when prerelease map is not a map' {
-        Init
         GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( 'alpha/*' ) }
         GivenBranch 'beta/fubar'
         WhenRunningTask -ErrorAction SilentlyContinue
         ThenTaskFailed
         ThenErrorIs 'unable\ to\ find\ keys'
     }
-}
 
-Describe 'Version.when setting just prerelease' {
     It 'should allow prerelease property to be a prerelease label' {
-        Init
         GivenCurrentVersion '0.0.0-prerelease+build'
         GivenProperty @{ 'Prerelease' = 'alpha' }
         WhenRunningTask
@@ -672,11 +587,8 @@ Describe 'Version.when setting just prerelease' {
         ThenSemVer1Is '0.0.0-alpha'
         ThenSemVer2Is '0.0.0-alpha+build'
     }
-}
 
-Describe 'Version.when setting just build' {
     It 'should only set build metadata on the current version' {
-        Init
         GivenCurrentVersion '0.0.0-prerelease+build'
         GivenProperty @{ 'Build' = 'fubar' }
         WhenRunningTask
@@ -684,11 +596,8 @@ Describe 'Version.when setting just build' {
         ThenSemVer1Is '0.0.0-prerelease'
         ThenSemVer2Is '0.0.0-prerelease+fubar'
     }
-}
 
-Describe 'Version.when setting just version' {
     It 'should ignore prerelese and build metadata if only setting version' {
-        Init
         GivenCurrentVersion '0.0.0-prerelease+build'
         GivenProperty @{ 'Version' = '1.1.1' }
         WhenRunningTask
@@ -696,11 +605,8 @@ Describe 'Version.when setting just version' {
         ThenSemVer1Is '1.1.1'
         ThenSemVer2Is '1.1.1'
     }
-}
 
-Describe 'Version.when setting just version from path' {
     It 'should overwrite prerelease and build metadata if reading from from an external file' {
-        Init
         GivenCurrentVersion '0.0.0-prerelease+build'
         GivenFile 'package.json' '{ "Version": "1.1.1" }'
         GivenProperty @{ Path = 'package.json' ; }
@@ -709,11 +615,8 @@ Describe 'Version.when setting just version from path' {
         ThenSemVer1Is '1.1.1'
         ThenSemVer2Is '1.1.1'
     }
-}
 
-Describe 'Version.when getting version from Chef cookbook metadata.rb file' {
     It 'should read version from a Chef cookbook metadataRb file' {
-        Init
         GivenFile 'metadata.rb' @'
 name 'cookbook_name'
 description 'Installs/Configures cookbook_name'
@@ -728,11 +631,8 @@ chef_version '>= 12.14' if respond_to?(:chef_version)
         ThenSemVer1Is '0.1.0'
         ThenSemVer2Is '0.1.0'
     }
-}
 
-Describe 'Version.when Chef cookbook metadata.rb doesn''t contain a "version" property' {
     It 'should fail when Chef cookbook metadataRb file does not have a version property' {
-        Init
         GivenFile 'metadata.rb' @'
 name 'cookbook_name'
 description 'Installs/Configures cookbook_name'
@@ -742,11 +642,8 @@ description 'Installs/Configures cookbook_name'
         ThenTaskFailed
         ThenErrorIs ([regex]::Escape('Unable to locate property "version ''x.x.x''" in metadata.rb file'))
     }
-}
 
-Describe 'Version.when building a pull request' {
     It 'should use source branch name for prerelease branch matching when building a pull request' {
-        Init
         GivenCurrentVersion '1.0.0'
         GivenBranch 'one'
         GivenSourceBranch 'two'
@@ -757,11 +654,8 @@ Describe 'Version.when building a pull request' {
         ThenSemVer2Is '1.0.0-two'
 
     }
-}
 
-Describe 'Version.when determining prerelease version for universal package' {
     It 'should use next version number for same version' {
-        Init
         GivenCurrentVersion '1.0.0-rc.0'
         GivenProperty @{ UPackName = 'Fu bar' ; UPackFeedUrl = 'https://example.com/upack/Apps' }
         WhenRunningTask -ForUniversalPackage 'Fu bar' -At 'https://example.com/upack/Apps' -WithVersions @(
@@ -778,11 +672,8 @@ Describe 'Version.when determining prerelease version for universal package' {
         ThenSemVer1Is '1.0.0-rc6'
         ThenSemVer2Is '1.0.0-rc.6'
     }
-}
 
-Describe 'Version.when determining prerelease version for new universal package' {
-    It 'should use next version number for same version' {
-        Init
+    It 'should use same version for unpublished package' {
         Mock -CommandName 'Invoke-RestMethod' `
              -ModuleName 'Whiskey' `
              -ParameterFilter { $Uri -Eq "https://example.com/upack/Apps/packages?name=snafu" } `
@@ -795,11 +686,8 @@ Describe 'Version.when determining prerelease version for new universal package'
         ThenSemVer2Is '1.0.0-rc.1'
         $Global:Error | Should -BeNullOrEmpty
     }
-}
 
-Describe 'Version.when incrementing patch version' {
     It 'should increment patch based on last published package' {
-        Init
         GivenCurrentVersion '22.517.0'
         GivenProperty @{
             IncrementPatchVersion = $true;
@@ -818,12 +706,9 @@ Describe 'Version.when incrementing patch version' {
         ThenSemVer1Is '22.517.4'
         ThenSemVer2Is '22.517.4'
     }
-}
 
-# Make sure the patch number gets set *first* so any prerelease info gets set correctly.
-Describe 'Version.when incrementing patch version and there are prerelease versions' {
-    It 'should set prereleaes to 1' {
-        Init
+    # Make sure the patch number gets set *first* so any prerelease info gets set correctly.
+    It 'should set prerelease to 1' {
         GivenCurrentVersion '22.518.7-rc.4'
         GivenProperty @{
             IncrementPatchVersion = $true;
@@ -838,5 +723,32 @@ Describe 'Version.when incrementing patch version and there are prerelease versi
         ThenVersionIs '22.518.8'
         ThenSemVer1Is '22.518.8-rc1'
         ThenSemVer2Is '22.518.8-rc.1'
+    }
+
+    It 'should sort semver 1 prerelease versions' {
+        GivenFile 'Module.psd1' '@{ ModuleVersion = ''4.9.0'' }'
+        $sourceLocation = (Get-PSRepository -Name 'PSGallery').SourceLocation
+        $yaml = @"
+Build:
+- Version:
+    Path: Module.psd1
+    Prerelease:
+    - "*": "rc.1"
+"@
+        WhenRunningTask -WithYaml $yaml -ForPSModule 'Module' -At $sourceLocation -WithVersion @(
+            '4.9.0-rc1',
+            '4.9.0-rc2',
+            '4.9.0-rc3',
+            '4.9.0-rc4',
+            '4.9.0-rc5',
+            '4.9.0-rc6',
+            '4.9.0-rc7',
+            '4.9.0-rc8',
+            '4.9.0-rc9',
+            '4.9.0-rc10'
+        )
+        ThenVersionIs '4.9.0'
+        ThenSemVer1Is '4.9.0-rc11'
+        ThenSemVer2Is '4.9.0-rc.11'
     }
 }

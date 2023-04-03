@@ -23,13 +23,13 @@ function Invoke-WhiskeyNUnit2Task
     $includeParam = $null
     if( $TaskParameter.ContainsKey('Include') )
     {
-        $includeParam = '/include={0}' -f $TaskParameter['Include']
+        $includeParam = '/include={0}' -f $TaskParameter['Include'].Trim('"')
     }
 
     $excludeParam = $null
     if( $TaskParameter.ContainsKey('Exclude') )
     {
-        $excludeParam = '/exclude={0}' -f $TaskParameter['Exclude']
+        $excludeParam = '/exclude={0}' -f $TaskParameter['Exclude'].Trim('"')
     }
 
     $frameworkParam = '4.0'
@@ -40,7 +40,7 @@ function Invoke-WhiskeyNUnit2Task
     $frameworkParam = '/framework={0}' -f $frameworkParam
 
     $nunitToolsRoot = Join-Path -Path $NUnitPath -ChildPath 'tools'
-    $nunitConsolePath = Join-Path -Path $nunitToolsRoot -ChildPath 'nunit-console.exe' 
+    $nunitConsolePath = Join-Path -Path $nunitToolsRoot -ChildPath 'nunit-console.exe'
     if( -not (Test-Path -Path $nunitConsolePath) )
     {
         $msg = "NUnit doesn't exist at ""$($nunitConsolePath)""."
@@ -72,7 +72,7 @@ function Invoke-WhiskeyNUnit2Task
                             -ChildPath ('nunit2+{0}.xml' -f [IO.Path]::GetRandomFileName())
 
     $extraArgs = $TaskParameter['Argument'] | Where-Object { $_ }
-    
+
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Path                {0}' -f ($Path | Select-Object -First 1))
     $Path | Select-Object -Skip 1 | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
     Write-WhiskeyVerbose -Context $TaskContext -Message ('  Framework           {0}' -f $frameworkParam)
@@ -82,16 +82,8 @@ function Invoke-WhiskeyNUnit2Task
     $extraArgs | ForEach-Object { Write-WhiskeyVerbose -Context $TaskContext -Message ('                      {0}' -f $_) }
 
     Write-WhiskeyDebug -Context $TaskContext -Message ('Running NUnit')
-    $msg = & {
-            $nunitConsolePath | Resolve-Path -Relative
-            $Path | Resolve-Path -Relative
-            $frameworkParam
-            $includeParam
-            $excludeParam
-            $extraArgs
-            "/xml=$($reportPath)"
-        } | Format-Command
-    Write-WhiskeyInfo -Context $TaskContext -Message $msg
+    Write-WhiskeyCommand -Path $nunitConsolePath `
+                         -ArgumentList $Path,$frameworkParam,$includeParam,$excludeParam,$extraArgs,"/xml=${reportPath}"
     & $nunitConsolePath $Path $frameworkParam $includeParam $excludeParam $extraArgs ('/xml={0}' -f $reportPath)
     Write-WhiskeyVerbose -Message "$($nunitConsolePath | Resolve-Path -Relative) exited with code $($LastExitCode)."
     if( $LastExitCode )

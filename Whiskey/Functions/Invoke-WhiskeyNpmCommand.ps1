@@ -4,7 +4,7 @@ function Invoke-WhiskeyNpmCommand
     <#
     .SYNOPSIS
     Runs `npm` with given command and argument.
-    
+
     .DESCRIPTION
     The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the build root to the `BuildRootPath` parameter. The function will use the copy of Node and NPM installed in the `.node`  directory in the build root.
 
@@ -23,14 +23,14 @@ function Invoke-WhiskeyNpmCommand
     .EXAMPLE
     Invoke-WhiskeyNpmCommand -Name 'install' -BuildRootPath $TaskParameter.BuildRoot -ForDeveloper:$Context.ByDeveloper
 
-    Demonstrates how to run the `npm install` command from a task. 
+    Demonstrates how to run the `npm install` command from a task.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         # The NPM command to execute, e.g. `install`, `prune`, `run-script`, etc.
         [String]$Name,
-        
+
         # An array of arguments to be given to the NPM command being executed.
         [String[]]$ArgumentList,
 
@@ -87,7 +87,7 @@ function Invoke-WhiskeyNpmCommand
             }
             try
             {
-                Write-WhiskeyVerbose ('{0} {1} {2} {3}' -f $nodePath,$npmPath,$commandName,($commandArgs -join ' '))
+                Write-WhiskeyCommand -Path $nodePath -ArgumentList $npmPath,$commandName,$commandArgs
                 & $nodePath $npmPath $commandName $commandArgs
             }
             finally

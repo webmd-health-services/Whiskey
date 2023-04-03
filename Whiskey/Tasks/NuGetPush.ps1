@@ -23,7 +23,7 @@ function Publish-WhiskeyNuGetPackage
 
     if( -not $Path )
     {
-        $Path = 
+        $Path =
             Join-Path -Path $TaskContext.OutputDirectory.FullName -ChildPath '*.nupkg' |
             Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PathType 'File' -PropertyName 'Path'
     }
@@ -152,7 +152,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $packagePath -Uri $source -ApiKey $apiKey -NuGetPath $NuGetPath
+        Invoke-WhiskeyNuGetPush -Path $packagePath -Url $source -ApiKey $apiKey -NuGetPath $NuGetPath
 
         if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
         {

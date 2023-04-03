@@ -389,7 +389,18 @@ If you want certain branches to always have certain prerelease versions, set Pre
 
     if( $versions )
     {
-        [SemVersion.SemanticVersion[]] $semVersions = $versions | ConvertTo-SemVer -ErrorAction Ignore
+        [SemVersion.SemanticVersion[]] $semVersions =
+            $versions |
+            ConvertTo-SemVer -ErrorAction Ignore |
+            ForEach-Object {
+                if ($_.Prerelease -notmatch '^([A-Za-z-]+)(\d+)$')
+                {
+                    return $_
+                }
+
+                $prerelease = "$($Matches[1]).$($Matches[2])"
+                return [SemVersion.SemanticVersion]::New($_.Major, $_.Minor, $_.Patch, $prerelease, $_.Build)
+            }
         $sortedSemVersions = [Collections.Generic.SortedSet[SemVersion.SemanticVersion]]::New($semversions)
         $semVersions = [SemVersion.SemanticVersion[]]::New($sortedSemVersions.Count)
         $sortedSemVersions.CopyTo($semVersions)

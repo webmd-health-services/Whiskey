@@ -4,7 +4,7 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-[Environment]::SetEnvironmentVariable( 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE', 'true', [EnvironmentVariableTarget]::Process ) 
+[Environment]::SetEnvironmentVariable( 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE', 'true', [EnvironmentVariableTarget]::Process )
 
 $testRoot = $null
 $argument = $null
@@ -70,14 +70,14 @@ function ThenLogFile
     $fullPath = Join-Path -Path $fullPath -ChildPath $Name
     if( $Not )
     {
-        if ('should not create build log file') 
+        if ('should not create build log file')
         {
             $fullPath | Should -Not -Exist
         }
     }
     else
     {
-        if ('should create build log file') 
+        if ('should create build log file')
         {
             $fullPath | Should -Exist
         }
