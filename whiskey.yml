@@ -9,8 +9,9 @@ Build:
     Path: Whiskey\Whiskey.psd1
     PowerShellModuleName: Whiskey
     Prerelease:
-    - "*/*": alpha1
-    - develop: rc1
+    - main: ""
+    - master: ""
+    - "*": rc1
 
 # Update the AppVeyor build/version number.
 - Exec:
@@ -82,23 +83,45 @@ Build:
     Timeout: 00:40:00
     Queues:
     - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-one.xml
+                    TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
+                Run:
+                    Path:
+                    - Test\Invoke-WhiskeyTask.Tests.ps1
+                    - Test\PublishNodeModule.Tests.ps1
+                    - Test\Version.Tests.ps1
         - Pester4:
             Script:
             - Test\DotNet.Tests.ps1
-            - Test\Invoke-WhiskeyTask.Tests.ps1
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
             - Test\Parallel.Tests.ps1
-            - Test\PublishNodeModule.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
-            - Test\Version.Tests.ps1
     - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-two.xml
+                    TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
+                Run:
+                    Path:
+                    - Test\Install-WhiskeyNode.Tests.ps1
+                    - Test\Install-WhiskeyTool.Tests.ps1
         - Pester4:
             Script:
             - Test\GetPowerShellModule.Tests.ps1
-            - Test\Install-WhiskeyNode.Tests.ps1
             - Test\Install-WhiskeyPowerShellModule.Tests.ps1
-            - Test\Install-WhiskeyTool.Tests.ps1
             - Test\Invoke-WhiskeyBuild.Tests.ps1
             - Test\MergeFile.Tests.ps1
             - Test\PowerShell.Tests.ps1
@@ -111,19 +134,25 @@ Build:
             Configuration:
                 TestResult:
                     Enabled: true
-                    OutputPath: .output\pester.xml
+                    OutputPath: .output\pester5-three.xml
                     TestSuiteName: Whiskey
                 Output:
                     Verbosity: Detailed
                 Run:
                     Path: "Test/*.Tests.ps1"
                     ExcludePath:
-                    # Windows-only, so don't run.
+                    # Windows-only.
                     - "*/MSBuild.Tests.ps1"
                     - "*/NuGetPack.Tests.ps1"
                     - "*/NuGetPush.Tests.ps1"
                     - "*/NUnit2.Tests.ps1"
                     - "*/NUnit3.Tests.ps1"
+                    # Run in other queues.
+                    - "*/Test/Install-WhiskeyNode.Tests.ps1"
+                    - "*/Test/Install-WhiskeyTool.Tests.ps1"
+                    - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
+                    - "*/Test/PublishNodeModule.Tests.ps1"
+                    - "*/Test/Version.Tests.ps1"
                     # Still Pester 4.
                     - "*/Test/Add-WhiskeyApiKey.Tests.ps1"
                     - "*/Test/Add-WhiskeyTaskDefault.Tests.ps1"
@@ -156,13 +185,11 @@ Build:
                     - "*/Test/Install-WhiskeyNode.Tests.ps1"
                     - "*/Test/Install-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
-                    - "*/Test/Install-WhiskeyTool.Tests.ps1"
                     - "*/Test/InstallNode.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyBuild.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyDotNetCommand.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyNpmCommand.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyPipelineTask.Tests.ps1"
-                    - "*/Test/Invoke-WhiskeyTask.Tests.ps1"
                     - "*/Test/LoadTask.Tests.ps1"
                     - "*/Test/Log.Tests.ps1"
                     - "*/Test/MergeFile.Tests.ps1"
@@ -174,8 +201,6 @@ Build:
                     - "*/Test/Pipeline.Tests.ps1"
                     - "*/Test/PowerShell.Tests.ps1"
                     - "*/Test/ProGetUniversalPackage.Tests.ps1"
-                    - "*/Test/PublishBuildMasterPackage.Tests.ps1"
-                    - "*/Test/PublishNodeModule.Tests.ps1"
                     - "*/Test/PublishPowerShellModule.Tests.ps1"
                     - "*/Test/PublishPowerShellScript.Tests.ps1"
                     - "*/Test/PublishProGetAsset.Tests.ps1"
@@ -195,7 +220,6 @@ Build:
                     - "*/Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyTool.Tests.ps1"
-                    - "*/Test/Version.Tests.ps1"
                     - "*/Test/Write-WhiskeyError.Tests.ps1"
                     - "*/Test/Write-WhiskeyInfo.Tests.ps1"
                     - "*/Test/Zip.Tests.ps1"
@@ -236,7 +260,6 @@ Build:
             - "Test/NuGetRestore.Tests.ps1"
             - "Test/Pester.Tests.ps1"
             - "Test/Pipeline.Tests.ps1"
-            - "Test/PublishBuildMasterPackage.Tests.ps1"
             - "Test/PublishPowerShellScript.Tests.ps1"
             - "Test/PublishProGetAsset.Tests.ps1"
             - "Test/PublishProGetUniversalPackage.Tests.ps1"
@@ -273,23 +296,46 @@ Build:
             Configuration:
                 TestResult:
                     Enabled: true
-                    OutputPath: .output\pester-msbuild.xml
+                    OutputPath: .output\pester5-four.xml
                     TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
                 Run:
                     Path:
                     - Test\MSBuild.Tests.ps1
                     - Test\NUnit2.Tests.ps1
                     - Test\NUnit3.Tests.ps1
+    - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-five.xml
+                    TestSuiteName: Whiskey
                 Output:
                     Verbosity: Detailed
-    - Tasks:
+                Run:
+                    Path:
+                    - Test\Install-WhiskeyNode.Tests.ps1
         - Pester4:
             Script:
             - Test\AppVeyorWaitForBuildJobs.Tests.ps1
             - Test\Install-WhiskeyDotNetTool.Tests.ps1
-            - Test\Install-WhiskeyNode.Tests.ps1
             - Test\Install-WhiskeyPowerShellModule.Tests.ps1
     - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-six.xml
+                    TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
+                Run:
+                    Path:
+                    - Test\Invoke-WhiskeyTask.Tests.ps1
         - Pester4:
             Script:
             - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
@@ -297,15 +343,37 @@ Build:
             - Test\GetPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
             - Test\Invoke-WhiskeyBuild.Tests.ps1
-            - Test\Invoke-WhiskeyTask.Tests.ps1
     - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-seven.xml
+                    TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
+                Run:
+                    Path:
+                    - Test\Install-WhiskeyTool.Tests.ps1
+                    - Test\PublishNodeModule.Tests.ps1
         - Pester4:
             Script:
-            - Test\Install-WhiskeyTool.Tests.ps1
             - Test\Parallel.Tests.ps1
             - Test\Pester.Tests.ps1
-            - Test\PublishNodeModule.Tests.ps1
     - Tasks:
+        - Pester:
+            AsJob: true
+            Configuration:
+                TestResult:
+                    Enabled: true
+                    OutputPath: .output\pester5-eight.xml
+                    TestSuiteName: Whiskey
+                Output:
+                    Verbosity: Detailed
+                Run:
+                    Path:
+                    - Test\Version.Tests.ps1
         - Pester4:
             Script:
             - Test\MergeFile.Tests.ps1
@@ -317,7 +385,6 @@ Build:
             - Test\Resolve-WhiskeyNodePath.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
             - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
-            - Test\Version.Tests.ps1
             - Test\Zip.Tests.ps1
     - Tasks:
         - Pester:
@@ -325,13 +392,25 @@ Build:
             Configuration:
                 TestResult:
                     Enabled: true
-                    OutputPath: .output\pester.xml
+                    OutputPath: .output\pester5-nine.xml
                     TestSuiteName: Whiskey
                 Output:
                     Verbosity: Detailed
                 Run:
                     Path: Test\\*.Tests.ps1
                     ExcludePath:
+                    # Run in other queues.
+                    - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
+                    - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
+                    - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
+                    - "*\\Test\\MSBuild.Tests.ps1"
+                    - "*\\Test\\Npm.Tests.ps1"
+                    - "*\\Test\\NuGetPush.Tests.ps1"
+                    - "*\\Test\\NUnit2.Tests.ps1"
+                    - "*\\Test\\NUnit3.Tests.ps1"
+                    - "*\\Test\\PublishNodeModule.Tests.ps1"
+                    - "*\\Test\\Version.Tests.ps1"
+                    # Still in Pester 4.
                     - "*\\Test\\Add-WhiskeyApiKey.Tests.ps1"
                     - "*\\Test\\Add-WhiskeyTaskDefault.Tests.ps1"
                     - "*\\Test\\AppVeyorWaitForBuildJobs.Tests.ps1"
@@ -363,29 +442,22 @@ Build:
                     - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
-                    - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
                     - "*\\Test\\InstallNode.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyBuild.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyDotNetCommand.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyNpmCommand.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyPipelineTask.Tests.ps1"
-                    - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
                     - "*\\Test\\LoadTask.Tests.ps1"
                     - "*\\Test\\Log.Tests.ps1"
                     - "*\\Test\\MergeFile.Tests.ps1"
-                    - "*\\Test\\MSBuild.Tests.ps1"
                     - "*\\Test\\New-WhiskeyContext.Tests.ps1"
                     - "*\\Test\\NodeLicenseChecker.Tests.ps1"
                     - "*\\Test\\NuGetRestore.Tests.ps1"
-                    - "*\\Test\\NUnit2.Tests.ps1"
-                    - "*\\Test\\NUnit3.Tests.ps1"
                     - "*\\Test\\Parallel.Tests.ps1"
                     - "*\\Test\\Pester.Tests.ps1"
                     - "*\\Test\\Pipeline.Tests.ps1"
                     - "*\\Test\\PowerShell.Tests.ps1"
                     - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
-                    - "*\\Test\\PublishBuildMasterPackage.Tests.ps1"
-                    - "*\\Test\\PublishNodeModule.Tests.ps1"
                     - "*\\Test\\PublishPowerShellModule.Tests.ps1"
                     - "*\\Test\\PublishPowerShellScript.Tests.ps1"
                     - "*\\Test\\PublishProGetAsset.Tests.ps1"
@@ -405,7 +477,6 @@ Build:
                     - "*\\Test\\Uninstall-WhiskeyNodeModule.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyTool.Tests.ps1"
-                    - "*\\Test\\Version.Tests.ps1"
                     - "*\\Test\\Write-WhiskeyError.Tests.ps1"
                     - "*\\Test\\Write-WhiskeyInfo.Tests.ps1"
                     - "*\\Test\\Zip.Tests.ps1"
@@ -433,10 +504,8 @@ Build:
             - "Test\\Import-WhiskeyPowerShellModule.Tests.ps1"
             - "Test\\Import-WhiskeyYaml.Tests.ps1"
             - "Test\\Install-WhiskeyDotNetSdk.Tests.ps1"
-            - "Test\\Install-WhiskeyNode.Tests.ps1"
             - "Test\\Install-WhiskeyNodeModule.Tests.ps1"
             - "Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
-            - "Test\\Install-WhiskeyTool.Tests.ps1"
             - "Test\\InstallNode.Tests.ps1"
             - "Test\\Invoke-WhiskeyDotNetCommand.Tests.ps1"
             - "Test\\Invoke-WhiskeyNpmCommand.Tests.ps1"
@@ -445,7 +514,6 @@ Build:
             - "Test\\Log.Tests.ps1"
             - "Test\\New-WhiskeyContext.Tests.ps1"
             - "Test\\Pipeline.Tests.ps1"
-            - "Test\\PublishBuildMasterPackage.Tests.ps1"
             - "Test\\PublishPowerShellScript.Tests.ps1"
             - "Test\\PublishProGetAsset.Tests.ps1"
             - "Test\\PublishProGetUniversalPackage.Tests.ps1"

@@ -128,7 +128,7 @@ function Install-WhiskeyNode
         if( -not (Test-Path -Path $nodeZipFilePath -PathType Leaf) )
         {
             $uri = 'https://nodejs.org/dist/{0}/{1}' -f $nodeVersionToInstall.version,$filename
-    
+
             if( -not (Test-Path -Path $OutFileRootPath) )
             {
                 Write-WhiskeyDebug -Message "Creating output directory ""$($OutFileRootPath)""."
@@ -141,7 +141,7 @@ function Install-WhiskeyNode
             {
                 Remove-Item -Path $preExistingPkgPath -Force -ErrorAction Ignore
             }
-    
+
             try
             {
                 $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
@@ -165,7 +165,7 @@ function Install-WhiskeyNode
                     Write-WhiskeyError -Message "Exception downloading ""$($uri)"": $($_)"
                     $responseInfo = ' Please see previous error for more information.'
                 }
-    
+
                 $errorMsg = "Failed to download Node $($nodeVersionToInstall.version) from $($uri).$($responseInfo)"
                 if( $notFound )
                 {
@@ -255,13 +255,14 @@ function Install-WhiskeyNode
     $npmVersion = & $nodePath $npmPath '--version'
     if( $npmVersion -ne $npmVersionToInstall )
     {
-        Write-WhiskeyVerbose ('Installing npm@{0}.' -f $npmVersionToInstall)
+        Write-WhiskeyInfo ('Installing npm@{0}.' -f $npmVersionToInstall)
         # Bug in NPM 5 that won't delete these files in the node home directory.
         Get-ChildItem -Path (Join-Path -Path $nodeRoot -ChildPath '*') -Include 'npm.cmd','npm','npx.cmd','npx' | Remove-Item
-        & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g' | Write-WhiskeyVerbose
+        & $nodePath $npmPath 'install' ('npm@{0}' -f $npmVersionToInstall) '-g'
         if( $LASTEXITCODE )
         {
-            throw ('Failed to update to NPM {0}. Please see previous output for details.' -f $npmVersionToInstall)
+            "Failed to update to NPM $($npmVersionToInstall). See previous output for details." |
+                Write-WhiskeyError
         }
     }
 

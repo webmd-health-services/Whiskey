@@ -89,6 +89,16 @@ function ConvertTo-Yaml
     }
 }
 
+function Get-WhiskeyPreviousMajorNuGetPackage
+{
+    $nugetPkgs = Find-Package -Name 'NuGet.CommandLine' -ProviderName 'NuGet' -AllVersions
+    $nugetLatestPkg = $nugetPkgs | Where-Object { [version]$_.Version } | Select-Object -First 1
+    $nugetPkgs |
+        Where-Object 'Version' -NotLike "$(([Version]$nugetLatestPkg.Version).Major).*" |
+        Select-Object -First 1 |
+        Write-Output
+}
+
 function Get-TestDrive
 {
     $tdVar = (Get-Item -Path 'TestDrive:' -ErrorAction Ignore)

@@ -19,19 +19,25 @@ function Install-WhiskeyNuGetPackage
     $numErrors = $Global:Error.Count
     $numTries = 6
     $waitMilliseconds = 100
-    $pkgVersions = @()
+    $allPkgs = @()
     $pkgMgmtErrors = @{}
     for( $idx = 0; $idx -lt $numTries; ++$idx )
     {
-        $pkgVersions =
+        $allPkgs =
             Find-Package -Name $Name `
                          -ProviderName 'NuGet' `
                          -AllVersions `
                          -ErrorAction SilentlyContinue `
                          -ErrorVariable 'pkgMgmtErrors' |
             Where-Object { $_ -notmatch '-' }
-        if( $pkgVersions )
+
+        if( $allPkgs )
         {
+            Write-WhiskeyVerbose "Found $(($allPkgs | Measure-Object).Count) $($Name) packages:"
+            foreach ($pkg in $allPkgs)
+            {
+                Write-WhiskeyVerbose "  $($pkg.Name) $($pkg.Version) from $($pkg.Source) [$($pkg.GetType().FullName)]"
+            }
             break
         }
 
@@ -39,12 +45,7 @@ function Install-WhiskeyNuGetPackage
         $waitMilliseconds = $waitMilliseconds + 2
     }
 
-    if( $Version )
-    {
-        $pkgVersions = $pkgVersions | Where-Object 'Version' -Like $Version
-    }
-
-    if( -not $pkgVersions )
+    if (-not $allPkgs)
     {
         $pkgMgmtErrors | Write-Error
 
@@ -53,14 +54,43 @@ function Install-WhiskeyNuGetPackage
         return
     }
 
-    for( $idx = 0; $idx -lt $Global:Error.Count - $numErrors; ++$idx )
+    for ($idx = 0; $idx -lt $Global:Error.Count - $numErrors; ++$idx)
     {
         $Global:Error.RemoveAt(0)
     }
 
-    $pkg = $pkgVersions | Select-Object -First 1
+    $pkg = $allPkgs | Select-Object -First 1
+    if ($Version)
+    {
+        $pkgVersions = $allPkgs | Where-Object 'Version' -Like $Version
+        if (-not $pkgVersions)
+        {
+            # Some package versions have build metadata at the end.
+            $pkgVersions = $allPkgs | Where-Object 'Version' -Like "$($Version)+*"
+        }
 
-    $pkgBaseName = "$($Name).$($pkg.Version)"
+        if (-not $pkgVersions)
+        {
+            "Failed to install NuGet package $($Name) $($Version) because that version does not exist. Available " +
+                'versions are:' + [Environment]::NewLine +
+                [Environment]::NewLine +
+                "* $(($allPkgs | Select-Object -ExpandProperty 'Version') -join "$([Environment]::NewLine)* ")" |
+                Write-WhiskeyError
+            return
+        }
+
+        Write-WhiskeyVerbose "Found $(($pkgVersions | Measure-Object).Count) $($Name) $($Version) packages:"
+        foreach ($pkg in $pkgVersions)
+        {
+            Write-WhiskeyVerbose "  $($pkg.Name) $($pkg.Version) from $($pkg.Source) [$($pkg.GetType().FullName)]"
+        }
+
+        $pkg = $pkgVersions | Select-Object -First 1
+    }
+
+    "Found package $($pkg.Name) $($pkg.Version) from $($pkg.Source)." | Write-WhiskeyVerbose
+
+    $pkgBaseName = "$($Name).$($pkg.Version -replace '\+.*$', '')"
 
     # Save-Module downloads dependencies, too. Save everything for a package into its own directory so we know which
     # packages to install as dependencies.
@@ -71,6 +101,13 @@ function Install-WhiskeyNuGetPackage
     }
 
     $nupkgPath = Join-Path -Path $cachePath -ChildPath "$($pkgBaseName).nupkg"
+
+    $packagesPath = Join-Path -Path $BuildRootPath -ChildPath 'packages'
+    if (-not (Test-Path -Path $packagesPath))
+    {
+        New-Item -Path $packagesPath -ItemType 'Directory' | Out-Null
+    }
+
     if( -not (Test-Path -Path $nupkgPath) )
     {
         $waitMilliseconds = 100
@@ -78,7 +115,9 @@ function Install-WhiskeyNuGetPackage
         $pkgMgmtErrors = @()
         for( $idx = 0; $idx -lt $numTries; ++$idx )
         {
-            Write-WhiskeyInfo -Message "Downloading NuGet package $($pkg.Name) $($pkg.Version)."
+            $destinationPath = [IO.Path]::GetFileNameWithoutExtension($nupkgPath)
+            $destinationPath = Join-Path -Path ($packagesPath | Resolve-Path -Relative) -ChildPath $destinationPath
+            "Saving NuGet package $($pkg.Name) $($pkg.Version) to ""$($destinationPath)""." | Write-WhiskeyInfo
             $pkg |
                 Save-Package -Path $cachePath -ErrorAction SilentlyContinue -ErrorVariable 'pkgMgmtErrors' -Force |
                 Out-Null
@@ -106,7 +145,6 @@ function Install-WhiskeyNuGetPackage
         }
     }
 
-    $packagesPath = Join-Path -Path $BuildRootPath -ChildPath 'packages'
 
     # Install the package and all its dependencies into 'packages'.
     foreach( $pkgInfo in (Get-ChildItem -Path $cachePath -Filter '*.nupkg') )
@@ -119,7 +157,7 @@ function Install-WhiskeyNuGetPackage
 
         if( -not (Get-ChildItem -LiteralPath $pkgPath) )
         {
-            Write-WhiskeyInfo -Message "Extracting ""$($pkgInfo.Name)"" to ""$($pkgPath | Resolve-Path -Relative)""."
+            Write-WhiskeyVerbose -Message "Extracting ""$($pkgInfo.Name)"" to ""$($pkgPath | Resolve-Path -Relative)""."
             Add-Type -AssemblyName 'System.IO.Compression.FileSystem'
             [IO.Compression.ZipFile]::ExtractToDirectory($pkgInfo.FullName, $pkgPath)
         }

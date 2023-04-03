@@ -3,6 +3,8 @@
 Set-StrictMode -Version 'Latest'
 
 BeforeAll {
+    Set-StrictMode -Version 'Latest'
+
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     # Load this module here so that it's assemblies get loaded into memory. Otherwise, the test will load
@@ -17,8 +19,7 @@ BeforeAll {
     $script:assembly = $null
     $script:version = $null
     $script:nuGetVersion = $null
-    $script:use32bit = $null
-
+    $script:use32Bit = $null
     $script:procArchProject = @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -28,10 +29,11 @@ BeforeAll {
 </Project>
 "@
 
-    $assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
+
+    $script:assemblyRoot = Join-Path -Path $PSScriptRoot 'Assemblies'
     foreach( $item in @( 'bin', 'obj', 'packages' ) )
     {
-        Get-ChildItem -Path $assemblyRoot -Filter $item -Recurse -Directory |
+        Get-ChildItem -Path $script:assemblyRoot -Filter $item -Recurse -Directory |
             Remove-Item -Recurse -Force
     }
 
@@ -66,7 +68,7 @@ BeforeAll {
             $Project
         )
 
-        $script:path = Join-Path -Path $script:testRoot -ChildPath 'BuildRoot\project.msbuild'
+        $script:path = Join-Path -Path (Get-BuildRoot) -ChildPath 'project.msbuild'
         New-Item -Path $script:path -ItemType 'File' -Force
         $Project | Set-Content -Path $script:path -Force
         $script:path = $script:path | Split-Path -Leaf
@@ -113,33 +115,19 @@ BeforeAll {
     function GivenVersion
     {
         param(
-            $script:version
+            $Version
         )
 
-        $script:version = $script:version
+        $script:version = $Version
     }
 
     function GivenNuGetVersion
     {
         param(
-            $script:nuGetVersion
+            $NuGetVersion
         )
 
-        $script:nuGetVersion = $script:nuGetVersion
-    }
-
-    function Init
-    {
-        $script:version = $null
-        $script:nuGetVersion = $null
-        $script:use32Bit = $false
-
-        $script:testRoot = New-WhiskeyTestRoot
-    }
-
-    function Reset
-    {
-        Reset-WhiskeyTestPSModule
+        $script:nuGetVersion = $NuGetVersion
     }
 
     function WhenRunningTask
@@ -201,29 +189,21 @@ BeforeAll {
             $WithParameter['NuGetVersion'] = $script:nuGetVersion
         }
 
-        if( $script:use32bit )
+        if( $script:use32Bit )
         {
-            $WithParameter['Use32Bit'] = $script:use32bit
+            $WithParameter['Use32Bit'] = $script:use32Bit
         }
 
         $Global:Error.Clear()
-        $output = $null
-        Push-Location (Get-BuildRoot)
         try
         {
-            Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild' |
-                Tee-Object -Variable 'output'
+            $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild'
+            $script:output | Write-WhiskeyDebug
         }
         catch
         {
             $script:threwException = $true
             Write-Error $_
-        }
-        finally
-        {
-            Pop-Location
-            $script:output = $output
-            $script:output | Write-WhiskeyDebug
         }
     }
 
@@ -274,6 +254,11 @@ BeforeAll {
         Join-Path -Path (Get-BuildRoot) -ChildPath '*.build' | Should -Exist
     }
 
+    function ThenNoErrors
+    {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+
     function ThenNuGetPackagesRestored
     {
         foreach( $item in $script:path )
@@ -305,10 +290,10 @@ BeforeAll {
 
         if( $To )
         {
-            $outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $To
+            $script:outputRoot = Join-Path -Path (Get-BuildRoot) -ChildPath $To
             foreach( $item in $script:assembly )
             {
-                (Join-Path -Path $outputRoot -ChildPath $item) | Should -Exist
+                (Join-Path -Path $script:outputRoot -ChildPath $item) | Should -Exist
             }
             Get-ChildItem -Path (Get-BuildRoot) -Include 'bin' -Directory -Recurse |
                 Get-ChildItem -Include $script:assembly -File -Recurse |
@@ -373,7 +358,7 @@ BeforeAll {
             {
                 $desc = '[empty]'
             }
-            $fullOutput.Trim() | Should -Match ('^{0}$' -f $Is)
+            $fullOutput | Should -Match ('^{0}$' -f $Is)
         }
 
         if( $DoesNotContain )
@@ -402,9 +387,13 @@ BeforeAll {
 
     function ThenSpecificNuGetVersionInstalled
     {
-        $nuGetPackageVersion = 'NuGet.CommandLine.{0}' -f $script:nuGetVersion
+        $nuGetPackageVersion = "NuGet.CommandLine.$($script:nuGetVersion)"
 
-        Join-Path -Path (Get-BuildRoot) -ChildPath ('packages\{0}' -f $nugetPackageVersion) | Should -Exist
+        Get-ChildItem -Path (Join-Path -Path (Get-BuildRoot) -ChildPath 'packages') |
+            Out-String |
+            Write-Debug
+
+        Join-Path -Path (Get-BuildRoot) -ChildPath "packages\$($nugetPackageVersion)" | Should -Exist
     }
 
     function ThenTaskFailed
@@ -423,21 +412,26 @@ BeforeAll {
 
         $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
     }
-
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
-}
-
-AfterAll {
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose #-Verbose
 }
 
 Describe 'MSBuild' {
-    BeforeEach { Init }
-    AfterEach { Reset }
+    BeforeEach {
+        $script:version = $null
+        $script:nuGetVersion = $null
+        $script:use32Bit = $false
+
+        $script:testRoot = New-WhiskeyTestRoot
+    }
+
+    AfterEach {
+        Reset-WhiskeyTestPSModule
+    }
+
 
     It 'should compile project' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenNuGetPackagesRestored
         ThenProjectsCompiled
         ThenAssembliesAreNotVersioned
@@ -447,6 +441,7 @@ Describe 'MSBuild' {
     It 'should build multiple projects' {
         GivenProjectsThatCompile
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenNuGetPackagesRestored
         ThenProjectsCompiled
         ThenAssembliesAreNotVersioned
@@ -455,6 +450,7 @@ Describe 'MSBuild' {
     It 'should version with build metadata' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsBuildServer -AtVersion '1.5.9-rc.45+1034.master.deadbee'
+        ThenNoErrors
         ThenNuGetPackagesRestored
         ThenProjectsCompiled
         ThenAssembliesAreVersioned -ProductVersion '1.5.9-rc.45+1034.master.deadbee' -FileVersion '1.5.9'
@@ -490,63 +486,73 @@ Describe 'MSBuild' {
     It 'should run clean target in clean mode' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenProjectsCompiled
         WhenRunningTask -InCleanMode -AsDeveloper
+        ThenNoErrors
         ThenBinsAreEmpty
     }
 
     It 'should customize output verbosity' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'q'; }
+        ThenNoErrors
         ThenOutputIsEmpty
     }
 
     It 'should use minimal verbosity' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenOutputIsMinimal
     }
 
     It 'should pass extra build properties' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Property' = @( 'Fubar=Snafu' ) ; 'Verbosity' = 'diag' }
+        ThenNoErrors
         ThenOutput -Contains 'Fubar=Snafu'
     }
 
     It 'should pass custom arguments' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/nologo', '/version' ) }
+        ThenNoErrors
         ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
     }
 
     It 'should pass a single custom argument' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Argument' = @( '/version' ) }
+        ThenNoErrors
         ThenOutput -Contains '\d+\.\d+\.\d+\.\d+'
     }
 
     It 'should multi-CPU build' {
-        Init
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Verbosity' = 'n' }
+        ThenNoErrors
         ThenOutput -Contains '\n\ {5}\d>'
     }
 
     It 'should pass CPU argument' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'CpuCount' = 1; 'Verbosity' = 'n' }
+        ThenNoErrors
         ThenOutput -DoesNotContain '^\ {5}\d>'
     }
 
     It 'should use custom output directory' {
         GivenAProjectThatCompiles
         WhenRunningTask -AsDeveloper -WithParameter @{ 'OutputDirectory' = '.myoutput' }
+        ThenNoErrors
         ThenProjectsCompiled -To '.myoutput'
     }
 
     It 'should build custom targets' {
         GivenCustomMSBuildScriptWithMultipleTargets
         WhenRunningTask -AsDeveloper -WithParameter @{ 'Target' = 'clean','build' ; 'Verbosity' = 'diag' }
+        ThenNoErrors
         ThenBothTargetsRun
     }
 
@@ -614,6 +620,7 @@ Describe 'MSBuild' {
         }
         GivenVersion $script:version
         WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true ; 'NoFileLogger' = $true; }
+        ThenNoErrors
         ThenOutput -Contains ([regex]::Escape($msbuildRoot.TrimEnd('\')))
     }
 
@@ -626,6 +633,7 @@ Describe 'MSBuild' {
 </Project>
 "@
         WhenRunningTask -AsDeveloper -WithParameter @{ 'NoMaxCpuCountArgument' = $true; Verbosity = 'diag' }
+        ThenNoErrors
         ThenOutput -Contains ('MSBuildNodeCount = 1')
     }
 
@@ -638,6 +646,7 @@ Describe 'MSBuild' {
 </Project>
 "@
         WhenRunningTask -AsDeveloper -WithParameter @{ 'NoFileLogger' = $true }
+        ThenNoErrors
         ThenOutputNotLogged
     }
 
@@ -645,6 +654,7 @@ Describe 'MSBuild' {
         GivenProjectsThatCompile
         GivenNuGetVersion '5.9.3'
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenSpecificNuGetVersionInstalled
         ThenNuGetPackagesRestored
     }
@@ -652,6 +662,7 @@ Describe 'MSBuild' {
     It 'should use 64-bit MSBuild' {
         GivenProject $procArchProject
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = AMD64'
     }
 
@@ -659,6 +670,7 @@ Describe 'MSBuild' {
         GivenProject $procArchProject
         GivenUse32BitIs 'true'
         WhenRunningTask -AsDeveloper
+        ThenNoErrors
         ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
     }
 }
