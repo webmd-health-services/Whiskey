@@ -1,4 +1,6 @@
 
+using namespace System.Collections.Generic;
+
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
@@ -15,6 +17,29 @@ BeforeAll {
     $script:testNum = 0
     $script:versions = @()
     $script:getVersionsCmdName = $null
+    $script:credentials = [Dictionary[String,pscredential]]::New()
+    $script:apikeys = [Dictionary[String,String]]::New()
+
+    function GivenApiKey
+    {
+        param(
+            [String] $ApiKey,
+            [String] $WithID
+        )
+
+        $script:apikeys[$WithID] = $ApiKey
+    }
+
+    function GivenCredential
+    {
+        param(
+            [pscredential] $Credential,
+            [String] $WithID
+        )
+
+        $script:credentials[$WithID] = $Credential
+    }
+
 
     function GivenFile
     {
@@ -219,6 +244,16 @@ BeforeAll {
             Mock -CommandName $script:getVersionsCmdName -ModuleName 'Whiskey' -MockWith { $script:versions }
         }
 
+        foreach ($credID in $script:credentials.Keys)
+        {
+            Add-WhiskeyCredential -Context $script:context -ID $credID -Credential $script:credentials[$credID]
+        }
+
+        foreach ($apikeyID in $script:apikeys.Keys)
+        {
+            Add-WhiskeyApiKey -Context $script:context -ID $apikeyID -Value $script:apikeys[$apikeyID]
+        }
+
         $Global:Error.Clear()
         try
         {
@@ -245,6 +280,8 @@ Describe 'Version' {
         $script:sourceBranch = $null
         $script:versions = @()
         $script:getVersionsCmdName = $null
+        $script:apikeys.Clear()
+        $script:credentials.Clear()
         $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
                                                                 -Parameter @{ 'SemVer' = '0.0.0' }
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
@@ -782,6 +819,61 @@ description 'Installs/Configures cookbook_name'
             Url = 'https://example.com';
             FeedName = 'Apps';
             Name = 'patchfirst';
+        }
+    }
+
+    It 'should authenticate to universal packager feed' {
+        GivenApiKey 'apikey' -WithID 'progetapikey'
+        $cred = [pscredential]::New('username', (ConvertTo-SecureString -String 'password' -AsPlainText -Force))
+        GivenCredential $cred -WithID 'progetcreds'
+        GivenCurrentVersion '0.54.1-rc.1'
+        GivenUniversalPackageVersions @(
+            '0.54.0',
+            '0.54.1-rc.1'
+        )
+        WhenRunningTask -WithProperties @{
+            IncrementPatchVersion = $true;
+            UPackName = 'creds';
+            ProGetUrl = 'https://example.com/';
+            UPackFeedName = 'Apps';
+            UPackFeedCredentialID = 'progetcreds';
+            UPackFeedApiKeyID = 'progetapikey';
+        }
+
+        ThenVersionIs '0.54.2'
+        ThenSemVer1Is '0.54.2-rc1'
+        ThenSemVer2Is '0.54.2-rc.1'
+        ThenGotUPackVersions @{
+            Url = 'https://example.com';
+            FeedName = 'Apps';
+            Name = 'creds';
+            Credential = $cred;
+            ApiKey = 'apikey';
+        }
+    }
+
+    It 'should support universal package groups' {
+        GivenCurrentVersion '0.54.0'
+        GivenUniversalPackageVersions @(
+            '0.54.0',
+            '0.54.1-rc.1'
+        )
+        WhenRunningTask -WithProperties @{
+            IncrementPatchVersion = $true;
+            UPackName = 'group';
+            ProGetUrl = 'https://example.com/';
+            UPackFeedName = 'Apps';
+            UPackGroupName = 'modules'
+        }
+
+        ThenVersionIs '0.54.2'
+        ThenSemVer1Is '0.54.2'
+        ThenSemVer2Is '0.54.2'
+        ThenGotUPackVersions @{
+            Url = 'https://example.com';
+            FeedName = 'Apps';
+            GroupName = 'modules'
+            Name = 'group';
         }
     }
 

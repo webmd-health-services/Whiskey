@@ -1,6 +1,13 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.55.0
+
+## Added
+
+* The `Version` task now supports setting patch/prerelease version numbers from a universal package that's in a group.
+* The `Version` task now supports authenticating to ProGet to get universal packages.
+
 # 0.54.0
 
 ## Added

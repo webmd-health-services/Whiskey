@@ -2,6 +2,7 @@
  function Set-WhiskeyVersion
 {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
     [Whiskey.Task('Version')]
     param(
         [Parameter(Mandatory)]
@@ -15,9 +16,19 @@
 
         [String] $NuGetPackageID,
 
-        [String] $UPackName,
-
         [Uri] $UPackFeedUrl,
+
+        [Uri] $ProGetUrl,
+
+        [String] $UPackFeedName,
+
+        [String] $UPackFeedCredentialID,
+
+        [String] $UPackFeedApiKeyID,
+
+        [String] $UPackGroupName,
+
+        [String] $UPackName,
 
         [switch] $SkipPackageLookup,
 
@@ -260,14 +271,51 @@
     {
         if( $UPackName )
         {
+            Import-Module -Name (Join-Path -Path $script:internalPSModulesPath -ChildPath 'ProGetAutomation' -Resolve) `
+                          -Function @('New-ProGetSession', 'Get-ProGetUniversalPackage') `
+                          -Prefix 'W'
+
+            $credArgs = @{}
+            if ($UPackFeedCredentialID)
+            {
+                $credArgs['Credential'] = Get-WhiskeyCredential -Context $TaskContext `
+                                                                -ID $UPackFeedCredentialID `
+                                                                -PropertyName 'UPackFeedCredentialID'
+            }
+            if ($UPackFeedApiKeyID)
+            {
+                $credArgs['ApiKey'] =
+                    Get-WhiskeyApiKey -Context $TaskContext -ID $UPackFeedApiKeyID -PropertyName 'UPackFeedApiKeyID'
+            }
+
+            if ($UPackFeedUrl)
+            {
+                $msg = 'The "UPackFeedUrl" property is obsolete. Use the "ProGetUrl" and "UPackFeedName" properties ' +
+                       'instead.'
+                Write-WhiskeyWarning $msg
+
+                $ProGetUrl = "$($UPackFeedUrl.Scheme)://$($UPackFeedUrl.Authority)"
+                $UPackFeedName = $UPackFeedUrl.Segments[-1]
+            }
+
+            $pgSession = New-WProGetSession -Url $ProGetUrl @credArgs
+
+            $groupArg = @{}
+            if ($UPackGroupName)
+            {
+                $groupArg['GroupName'] = $UPackGroupName
+            }
+
             $msg = "Retrieving versions for universal package $($UPackName)."
             Write-WhiskeyVerbose -Context $TaskContext -Message $msg
             $numErr = $Global:Error.Count
             try
             {
-                $versions =
-                    Invoke-RestMethod -Uri "$($UPackFeedUrl)/packages?name=$([Uri]::EscapeDataString($UpackName))" |
-                    Select-Object -ExpandProperty 'versions'
+                $versions = Get-WProGetUniversalPackage -Session $pgSession `
+                                                        -FeedName $UPackFeedName `
+                                                        -Name $UPackName `
+                                                        @groupArg |
+                                Select-Object -ExpandProperty 'versions'
             }
             catch
             {

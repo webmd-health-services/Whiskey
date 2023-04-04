@@ -19,7 +19,6 @@ Build:
       Path: appveyor
       Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
 
-
 - PowerShell:
     ScriptBlock: prism install | Format-Table -Auto
 
@@ -39,6 +38,10 @@ Build:
     - CHANGELOG.md
     - README.md
     DestinationDirectory: Whiskey
+
+- Delete:
+    OnlyBy: BuildServer
+    Path: Whiskey/prism*.json
 
 # PublishPowerShellModule should come *before* we create the ZIP file so that the ZIP file contains a module manifest
 # that has prerelease metadata in it, if needed (which gets added by PublishPowerShellModule).
