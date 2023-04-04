@@ -14,6 +14,7 @@ BeforeAll {
     $script:initialVersion = $null
     $script:testNum = 0
     $script:versions = @()
+    $script:getVersionsCmdName = $null
 
     function GivenFile
     {
@@ -56,11 +57,12 @@ BeforeAll {
     {
         param(
             [Parameter(Mandatory)]
-            [AllowEmptyArray()]
+            [AllowEmptyCollection()]
             [String[]] $Version
         )
 
-        $script:versions = $Version
+        $script:versions = [pscustomobject]@{ versions = $Version }
+        $script:getVersionsCmdName = 'Get-WProGetUniversalPackage'
     }
 
     function ThenErrorIs
@@ -70,6 +72,32 @@ BeforeAll {
         )
 
         $Global:Error | Should -Match $Regex
+    }
+
+    function ThenGotUPackVersions
+    {
+        param(
+            [hashtable] $WithArgs
+        )
+
+        $shouldArgs = @{
+            CommandName = $script:getVersionsCmdName;
+            ModuleName = 'Whiskey';
+            Times = 1;
+            Exactly = $true;
+        }
+
+        if (-not $WithArgs.ContainsKey('ApiKey'))
+        {
+            $WithArgs['ApiKey'] = ''
+        }
+
+        Should -Invoke @shouldArgs -ParameterFilter { [Uri]$WithArgs['Url'] -eq $Session.Url }
+        Should -Invoke @shouldArgs -ParameterFilter { $WithArgs['Credential'] -eq $Session.Credential }
+        Should -Invoke @shouldArgs -ParameterFilter { $WithArgs['ApiKey'] -eq $Session.ApiKey }
+        Should -Invoke @shouldArgs -ParameterFilter { $WithArgs['FeedName'] -eq $FeedName }
+        Should -Invoke @shouldArgs -ParameterFilter { $WithArgs['Name'] -eq $Name }
+        Should -Invoke @shouldArgs -ParameterFilter { $WithArgs['GroupName'] -eq $GroupName }
     }
 
     function GivenCurrentVersion
@@ -136,8 +164,12 @@ BeforeAll {
             [String[]] $WithVersions,
 
             [Parameter(Mandatory, ParameterSetName='PSModule')]
-            [String] $ForPSModule
+            [String] $ForPSModule,
+
+            [Parameter(Mandatory, ParameterSetName='Properties')]
+            [hashtable] $WithProperties
         )
+
 
         $forParam = @{ ForBuildServer = $true }
         if( $AsDeveloper )
@@ -168,23 +200,23 @@ BeforeAll {
             $script:context.BuildMetadata.IsPullRequest = $true
         }
 
-        if( $ForUniversalPackage )
+        if (-not $WithProperties)
         {
-            $script:versions = $WithVersions
-            $pkgFeedUrl = "$($At)/packages?name=$($ForUniversalPackage)"
-            Mock -CommandName 'Invoke-RestMethod' `
-                 -ModuleName 'Whiskey' `
-                 -ParameterFilter { $Uri -Eq $pkgFeedUrl } `
-                 -MockWith { return [pscustomobject]@{ versions = $script:versions } } #.GetNewClosure()
+            if ($ForPSModule)
+            {
+                $script:versions = $WithVersions
+                Mock -CommandName 'Find-Module' `
+                    -ModuleName 'Whiskey' `
+                    -ParameterFilter { $Name -eq $ForPSModule } `
+                    -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
+            }
+            $WithProperties = $script:property
         }
 
-        if ($ForPSModule)
+        if ($script:getVersionsCmdName)
         {
-            $script:versions = $WithVersions
-            Mock -CommandName 'Find-Module' `
-                 -ModuleName 'Whiskey' `
-                 -ParameterFilter { $Name -eq $ForPSModule } `
-                 -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
+            Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Modules\ProGetAutomation') -Prefix 'W'
+            Mock -CommandName $script:getVersionsCmdName -ModuleName 'Whiskey' -MockWith { $script:versions }
         }
 
         $Global:Error.Clear()
@@ -192,7 +224,7 @@ BeforeAll {
         {
             Invoke-WhiskeyTask -TaskContext $script:context `
                                -Name 'Version' `
-                               -Parameter $script:property `
+                               -Parameter $WithProperties `
                                -InformationAction SilentlyContinue
         }
         catch
@@ -212,6 +244,7 @@ Describe 'Version' {
         $script:branch = $null
         $script:sourceBranch = $null
         $script:versions = @()
+        $script:getVersionsCmdName = $null
         $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
                                                                 -Parameter @{ 'SemVer' = '0.0.0' }
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
@@ -378,7 +411,7 @@ Describe 'Version' {
         ThenErrorIs 'package\.json"\ contains\ invalid\ JSON'
     }
 
-    It 'should fail when version in pakageJson is inalid' {
+    It 'should fail when version in packageJson is inalid' {
         GivenFile 'package.json' '{ "Version": "4.2"  }'
         GivenProperty @{ Path = 'package.json' }
         WhenRunningTask -ErrorAction SilentlyContinue
@@ -506,7 +539,7 @@ Describe 'Version' {
 
     Context 'by developer' {
         It 'should not set prerelease metadata' {
-                GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+            GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             WhenRunningTask
             ThenVersionIs '1.2.3'
             ThenSemVer1Is '1.2.3'
@@ -515,7 +548,7 @@ Describe 'Version' {
     }
     Context 'by build server' {
         It 'should set prerelease metadata' {
-                GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+            GivenProperty @{ 'Version' = '1.2.3'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             GivenBranch 'beta/some-feature'
             WhenRunningTask
             ThenVersionIs '1.2.3'
@@ -526,7 +559,7 @@ Describe 'Version' {
 
     Context 'by developer' {
         It 'should not set prerelease metadata' {
-                GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
             GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             WhenRunningTask
             ThenVersionIs '0.41.1'
@@ -536,7 +569,7 @@ Describe 'Version' {
     }
     Context 'by build server' {
         It 'should set prerelease metadata' {
-                GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+            GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
             GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
             GivenBranch 'beta/some-feature'
             WhenRunningTask
@@ -655,46 +688,55 @@ description 'Installs/Configures cookbook_name'
 
     }
 
-    It 'should use next version number for same version' {
+    It 'should use universal package next version number for same version' {
         GivenCurrentVersion '1.0.0-rc.0'
-        GivenProperty @{ UPackName = 'Fu bar' ; UPackFeedUrl = 'https://example.com/upack/Apps' }
-        WhenRunningTask -ForUniversalPackage 'Fu bar' -At 'https://example.com/upack/Apps' -WithVersions @(
-                '1.1.0',
-                '1.0.0',
-                '1.0.0-rc.5',
-                '1.0.0-rc.4',
-                '1.0.0-rc.3',
-                '1.0.0-rc.2',
-                '1.0.0-rc.1',
-                '1.0.0-alpha.1'
-            )
+        GivenUniversalPackageVersions @(
+            '1.1.0',
+            '1.0.0',
+            '1.0.0-rc.5',
+            '1.0.0-rc.4',
+            '1.0.0-rc.3',
+            '1.0.0-rc.2',
+            '1.0.0-rc.1',
+            '1.0.0-alpha.1'
+        )
+        WhenRunningTask -WithProperties @{
+            UPackName = 'Fu bar';
+            ProGetUrl = 'https://example.com:3344';
+            UPackFeedName = 'Apps';
+        }
         ThenVersionIs '1.0.0'
         ThenSemVer1Is '1.0.0-rc6'
         ThenSemVer2Is '1.0.0-rc.6'
+        ThenGotUPackVersions @{
+            Url = 'https://example.com:3344';
+            FeedName = 'Apps';
+            Name = 'Fu bar';
+        }
     }
 
-    It 'should use same version for unpublished package' {
-        Mock -CommandName 'Invoke-RestMethod' `
-             -ModuleName 'Whiskey' `
-             -ParameterFilter { $Uri -Eq "https://example.com/upack/Apps/packages?name=snafu" } `
-             -MockWith { Invoke-WebRequest -Uri 'https://httpstat.us/404' }
+    It 'should use same version for unpublished universal package' {
         GivenCurrentVersion '1.0.0-rc.1'
-        GivenProperty @{ UPackName = 'snafu' ; UPackFeedUrl = 'https://example.com/upack/Apps' }
-        WhenRunningTask
+        GivenUniversalPackageVersions @()
+        WhenRunningTask -WithProperties @{
+            UPackName = 'snafu';
+            ProGetUrl = 'https://example.com';
+            UPackFeedName = 'Apps';
+        }
         ThenVersionIs '1.0.0'
         ThenSemVer1Is '1.0.0-rc1'
         ThenSemVer2Is '1.0.0-rc.1'
         $Global:Error | Should -BeNullOrEmpty
+        ThenGotUPackVersions @{
+            Url = 'https://example.com';
+            FeedName = 'Apps';
+            Name = 'snafu';
+        }
     }
 
-    It 'should increment patch based on last published package' {
+    It 'should increment patch based on last published universal package' {
         GivenCurrentVersion '22.517.0'
-        GivenProperty @{
-            IncrementPatchVersion = $true;
-            UPackName = 'patch';
-            UPackFeedUrl = 'https://example.com/upack/Apps'
-        }
-        WhenRunningTask -ForUniversalPackage 'patch' -At 'https://example.com/upack/Apps' -WithVersions @(
+        GivenUniversalPackageVersions @(
             '22.518.0',
             '22.517.3',
             '22.517.2',
@@ -702,27 +744,45 @@ description 'Installs/Configures cookbook_name'
             '22.517.0',
             '22.516.22'
         )
+        WhenRunningTask -WithProperties @{
+            IncrementPatchVersion = $true;
+            UPackName = 'patch';
+            ProGetUrl = 'https://example.com';
+            UPackFeedName = 'Apps';
+        }
         ThenVersionIs '22.517.4'
         ThenSemVer1Is '22.517.4'
         ThenSemVer2Is '22.517.4'
+        ThenGotUPackVersions @{
+            Url = 'https://example.com';
+            FeedName = 'Apps';
+            Name = 'patch';
+        }
     }
 
     # Make sure the patch number gets set *first* so any prerelease info gets set correctly.
-    It 'should set prerelease to 1' {
+    It 'should set universal package prerelease to 1' {
         GivenCurrentVersion '22.518.7-rc.4'
-        GivenProperty @{
-            IncrementPatchVersion = $true;
-            UPackName = 'patch';
-            UPackFeedUrl = 'https://example.com/upack/Apps'
-        }
-        WhenRunningTask -ForUniversalPackage 'patch' -At 'https://example.com/upack/Apps' -WithVersions @(
+        GivenUniversalPackageVersions @(
             '22.5187.7-rc.3',
             '22.518.7-rc.2',
             '22.518.7-rc.1'
         )
+        WhenRunningTask -WithProperties @{
+            IncrementPatchVersion = $true;
+            UPackName = 'patchfirst';
+            ProGetUrl = 'https://example.com/';
+            UPackFeedName = 'Apps';
+        }
+
         ThenVersionIs '22.518.8'
         ThenSemVer1Is '22.518.8-rc1'
         ThenSemVer2Is '22.518.8-rc.1'
+        ThenGotUPackVersions @{
+            Url = 'https://example.com';
+            FeedName = 'Apps';
+            Name = 'patchfirst';
+        }
     }
 
     It 'should sort semver 1 prerelease versions' {
