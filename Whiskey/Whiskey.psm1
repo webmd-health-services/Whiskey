@@ -199,6 +199,8 @@ elseif( $IsWindows )
     $CurrentPlatform = [Whiskey.Platform]::Windows
 }
 
+$script:internalPSModulesPath = Join-Path -Path $whiskeyScriptRoot -ChildPath 'Modules' -Resolve
+
 Write-Timing -Message ('Dot-sourcing files.')
 $count = 0
 & {
