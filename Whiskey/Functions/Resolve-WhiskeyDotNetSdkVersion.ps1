@@ -42,7 +42,7 @@ function Resolve-WhiskeyDotNetSdkVersion
 
         # Roll forward preferences for the .NET Core SDK
         [Parameter(ParameterSetName='Version')]
-        [Whiskey.DotNetSdkRollForward] $RollForward = [Whiskey.DotNetSdkRollForward]::Disable
+        [WhiskeyDotNetSdkRollForward] $RollForward = [WhiskeyDotNetSdkRollForward]::Disable
     )
     Set-StrictMode -version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -129,7 +129,7 @@ function Resolve-WhiskeyDotNetSdkVersion
         Sort-Object -Property 'channel-version' -Descending |
         Where-Object { $_.'channel-version' -like $matcher } |
         Select-Object -First 1
-    if (-not $release -and $RollForward -eq [Whiskey.DotNetSdkRollForward]::Disable)
+    if (-not $release -and $RollForward -eq [WhiskeyDotNetSdkRollForward]::Disable)
     {
         Write-WhiskeyError -Message ('.NET Core release matching "{0}" could not be found in "{1}"' -f $matcher, $releasesIndexUri)
         return
@@ -194,11 +194,11 @@ function Resolve-WhiskeyDotNetSdkVersion
                 Select-Object -First 1
         }
         {
-            $_ -eq [Whiskey.DotNetSdkRollForward]::Patch -or
-            $_ -eq [Whiskey.DotNetSdkRollForward]::Feature -or
-            $_ -eq [Whiskey.DotNetSdkRollForward]::Major -or
-            $_ -eq [Whiskey.DotNetSdkRollForward]::Minor -or
-            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestPatch
+            $_ -eq [WhiskeyDotNetSdkRollForward]::Patch -or
+            $_ -eq [WhiskeyDotNetSdkRollForward]::Feature -or
+            $_ -eq [WhiskeyDotNetSdkRollForward]::Major -or
+            $_ -eq [WhiskeyDotNetSdkRollForward]::Minor -or
+            $_ -eq [WhiskeyDotNetSdkRollForward]::LatestPatch
         }
         {
             $resolvedVersion =
@@ -222,15 +222,15 @@ function Resolve-WhiskeyDotNetSdkVersion
                 Select-Object -First 1
         }
         {
-            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestMinor -or
-            $_ -eq [Whiskey.DotNetSdkRollForward]::LatestMajor
+            $_ -eq [WhiskeyDotNetSdkRollForward]::LatestMinor -or
+            $_ -eq [WhiskeyDotNetSdkRollForward]::LatestMajor
         }
         {
             $resolvedVersion = $release | Select-Object -ExpandProperty 'latest-sdk'
         }
         Default
         {
-            $validStrategies = [Whiskey.DotNetSdkRollForward].GetEnumNames()
+            $validStrategies = [WhiskeyDotNetSdkRollForward].GetEnumNames()
             $msg = "Roll forward strategy $($RollForward) is not one of the valid .NET SDK roll forward strategies: " +
                    "$($validStrategies -join ', ')."
             Write-WhiskeyError -Message $msg

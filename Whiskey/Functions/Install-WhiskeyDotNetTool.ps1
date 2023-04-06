@@ -96,8 +96,8 @@ function Install-WhiskeyDotNetTool
             Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
 
 
-        $rollForwardStrategy = [Whiskey.DotNetSdkRollForward]::Disable
-        $validRollForwardValues = [Whiskey.DotNetSdkRollForward].GetEnumNames()
+        $rollForwardStrategy = [WhiskeyDotNetSdkRollForward]::Disable
+        $validRollForwardValues = [WhiskeyDotNetSdkRollForward].GetEnumNames()
         if ($globalJsonRollForward -notin $validRollForwardValues)
         {
             $msg = "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is not " +
@@ -109,7 +109,7 @@ function Install-WhiskeyDotNetTool
         }
         else
         {
-            $rollForwardStrategy = [Whiskey.DotNetSdkRollForward] $globalJsonRollForward
+            $rollForwardStrategy = [WhiskeyDotNetSdkRollForward] $globalJsonRollForward
         }
 
 
