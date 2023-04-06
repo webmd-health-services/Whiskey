@@ -1,7 +1,13 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
-# 0.56.1
+# 0.57.0
+
+## Added
+
+* Whiskey's verbose and debug messages now include timing information like information messages.
+
+## Fixed
 
 * Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
 version.

@@ -10,7 +10,7 @@ function Write-WhiskeyInfo
     The `Write-WhiskeyInfo` function writes informational messages during a build using PowerShell's `Write-Information`
     cmdlet. Pass the current build's context object to the `Context` parameter and the message to write to the `Message`
     parameter. Messages are prefixed with the duration of the current build and current task.
-    
+
     By default, Whiskey sets the `InformationPreference` to `Continue` for all builds so all information messages will
     be visible. To hide information messages, you must call `Invoke-WhiskeyBuild` with `-InformationAction` set to
     `Ignore`.
@@ -37,23 +37,26 @@ function Write-WhiskeyInfo
     [CmdletBinding()]
     param(
         # The context for the current build. If not provided, Whiskey will search up the call stack looking for it.
-        [Whiskey.Context]$Context,
+        [Whiskey.Context] $Context,
 
         [ValidateSet('Error', 'Warning', 'Info', 'Verbose', 'Debug')]
-        # INTERNAL. DO NOT USE. To log at different levels, use `Write-WhiskeyError`, `Write-WhiskeyWarning`, `Write-WhiskeyVerbose`, or `Write-WhiskeyDebug`
-        [String]$Level = 'Info',
+        # INTERNAL. DO NOT USE. To log at different levels, use `Write-WhiskeyError`, `Write-WhiskeyWarning`,
+        # `Write-WhiskeyVerbose`, or `Write-WhiskeyDebug`
+        [String] $Level = 'Info',
 
         [Parameter(Mandatory,ValueFromPipeline,Position=0)]
         [AllowNull()]
         [AllowEmptyString()]
-        # The message to write. Before being written, the message will be prefixed with the duration of the current build and the current task name (if any). If the current duration can't be determined, then the current time is used.
+        # The message to write. Before being written, the message will be prefixed with the duration of the current
+        # build and the current task name (if any). If the current duration can't be determined, then the current time
+        # is used.
         #
         # If you pipe multiple messages, they are grouped together.
-        [String[]]$Message,
+        [String[]] $Message,
 
-        [switch]$NoIndent,
+        [switch] $NoIndent,
 
-        [switch]$NoTiming
+        [switch] $NoTiming
     )
 
     begin
@@ -61,21 +64,26 @@ function Write-WhiskeyInfo
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+        $isError = $Level -eq 'Error'
+        $isInfo = $Level -eq 'Info'
+        $isWarn = $Level -eq 'Warning'
+        $isVerbose = $Level -eq 'Verbose'
+        $isDebug = $Level -eq 'Debug'
+
         # Only write if absolutely necessary as it can be expensive.
         # Since silent errors, warnings, and info can be captured, we still have to output when their prefs are silent.
         # Silent verbose and debug messages are currently capturable, so don't even bother to write them.
-        $write = ($Level -eq 'Error' -and $ErrorActionPreference -ne [Management.Automation.ActionPreference]::Ignore) -or 
-                 ($Level -eq 'Warning' -and $WarningPreference -ne [Management.Automation.ActionPreference]::Ignore) -or
-                 ($Level -eq 'Info' -and $InformationPreference -ne [Management.Automation.ActionPreference]::Ignore) -or
-                 ($Level -eq 'Verbose' -and $VerbosePreference -notin @([Management.Automation.ActionPreference]::Ignore,[Management.Automation.ActionPreference]::SilentlyContinue)) -or
-                 ($Level -eq 'Debug' -and $DebugPreference -notin @([Management.Automation.ActionPreference]::Ignore,[Management.Automation.ActionPreference]::SilentlyContinue))
+        $write = ($isError -and $ErrorActionPreference -ne [Management.Automation.ActionPreference]::Ignore) -or
+                 ($IsWarn -and $WarningPreference -ne [Management.Automation.ActionPreference]::Ignore) -or
+                 ($isInfo -and $InformationPreference -ne [Management.Automation.ActionPreference]::Ignore) -or
+                 ($isVerbose -and $VerbosePreference -notin @([Management.Automation.ActionPreference]::Ignore,[Management.Automation.ActionPreference]::SilentlyContinue)) -or
+                 ($isDebug -and $DebugPreference -notin @([Management.Automation.ActionPreference]::Ignore,[Management.Automation.ActionPreference]::SilentlyContinue))
 
         if( -not $write )
         {
             return
         }
 
-        $isError = $Level -eq 'Error'
         $errorMsgs = [Collections.ArrayList]::New()
 
         if( $isError )
@@ -83,7 +91,11 @@ function Write-WhiskeyInfo
             return
         }
 
-        $isInfo = $Level -eq 'Info'
+        # Don't put timings in error or warning messages
+        if ($IsError -or $isWarn)
+        {
+            $NoTiming = $true
+        }
 
         $writeCmd = 'Write-{0}' -f $Level
         if( $isInfo )
@@ -120,14 +132,9 @@ function Write-WhiskeyInfo
                 continue
             }
 
-            if( -not $isInfo )
-            {
-                & $writeCmd $msg
-                continue
-            }
-
             $prefix = ''
-            if( -not $NoTiming )
+
+            if (-not $NoTiming)
             {
                 if( $Context )
                 {
@@ -142,9 +149,14 @@ function Write-WhiskeyInfo
 
             $separator = '  '
             $thisMsgIndent = $indent
-            if( -not $msg )
+            if (-not $msg)
             {
                 $separator = ''
+                $thisMsgIndent = ''
+            }
+
+            if (-not $isInfo)
+            {
                 $thisMsgIndent = ''
             }
 
