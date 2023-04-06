@@ -1,6 +1,11 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.56.1
+
+* Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
+version.
+
 # 0.56.0
 
 ## Changed
