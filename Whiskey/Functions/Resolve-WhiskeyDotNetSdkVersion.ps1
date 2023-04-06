@@ -162,7 +162,7 @@ function Resolve-WhiskeyDotNetSdkVersion
             Where-Object { $_ -like $Version} |
             Sort-Object -Descending |
             Select-Object -First 1
-        Write-WhiskeyVerbose -Message ('[{0}] SDK version "{1}" resolved to "{2}' -f $MyInvocation.MyCommand, $Version, $resolvedVersion)
+        Write-WhiskeyVerbose -Message ('[{0}] SDK version "{1}" resolved to "{2}"' -f $MyInvocation.MyCommand, $Version, $resolvedVersion)
         return $resolvedVersion
     }
 

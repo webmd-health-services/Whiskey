@@ -14,6 +14,7 @@ BeforeDiscovery {
 
 BeforeAll {
     Set-StrictMode -Version 'Latest'
+
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     $script:testDir = $null
@@ -24,12 +25,6 @@ BeforeAll {
     $script:workingDirectory = $null
     $script:installSdkReturnValue = $null
     $script:threwTerminatingError = $false
-
-    $script:dotnetExeName = 'dotnet'
-    if( $IsWindows )
-    {
-        $script:dotnetExeName = 'dotnet.exe'
-    }
 
     function Get-DotNetLatestLtsVersion
     {
@@ -199,13 +194,19 @@ BeforeAll {
 
         Should -Invoke 'Install-WhiskeyDotNetSdk' `
                -ModuleName 'Whiskey' `
-               -ParameterFilter { $InstallRoot -eq $InDirectory }
+               -ParameterFilter {
+                    Write-Debug "InstallRoot  actual    ${InstallRoot}"
+                    Write-Debug "             expected  ${InDirectory}"
+                    $InstallRoot -eq $InDirectory
+                }
 
         if ($AtVersion)
         {
             Should -Invoke 'Install-WhiskeyDotNetSdk' `
                    -ModuleName 'Whiskey' `
                    -ParameterFilter {
+                        Write-Debug "Version  actual    ${Version}"
+                        Write-Debug "         expected  ${AtVersion}"
                         $Version -eq $AtVersion
                     }
         }
@@ -260,6 +261,12 @@ BeforeAll {
 
 Describe 'Install-WhiskeyDotNetTool' {
     BeforeEach {
+        $script:vPref = $Global:VerbosePreference
+        $script:dbgPref = $Global:DebugPreference
+
+        $Global:DebugPreference = 'Continue'
+        $Global:VerbosePreference = 'Continue'
+
         $script:testDir = Join-Path -Path $TestDrive -ChildPath $script:testNum
         New-Item -Path $script:testDir -ItemType Directory
 
@@ -270,6 +277,8 @@ Describe 'Install-WhiskeyDotNetTool' {
     }
 
     AfterEach {
+        $Global:DebugPreference = $script:dbgPref
+        $Global:VerbosePreference = $script:vPref
         $script:testNum += 1
     }
 
@@ -305,10 +314,10 @@ Describe 'Install-WhiskeyDotNetTool' {
     }
 
     It 'should determine version to install from globalJson' {
-        GivenGlobalJson '2.1.505' -RollForward Disable
+        GivenGlobalJson '2.1.520' -RollForward Disable
         WhenInstallingDotNetTool
         ThenReturnedDotNetPath
-        ThenDotNetInstalled -AtVersion '2.1.505'
+        ThenDotNetInstalled -AtVersion '2.1.520'
     }
 
     It 'should install the latest LTS version of dotNET' {
@@ -319,7 +328,7 @@ Describe 'Install-WhiskeyDotNetTool' {
     }
 
     It 'should install latest patch version' {
-        GivenGlobalJson -Version '2.1.500' -RollForward Patch
+        GivenGlobalJson -Version '2.1.523' -RollForward Patch
         WhenInstallingDotNetTool
         ThenDotNetInstalled -AtVersion '2.1.526'
     }
