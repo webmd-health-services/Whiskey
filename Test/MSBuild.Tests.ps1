@@ -335,7 +335,7 @@ BeforeAll {
         )
 
         # remove the NuGet output
-        $fullOutput = $script:output -join [Environment]::NewLine #($script:output | Where-Object { $_ -notmatch ('^(Installing|Successfully installed)\b') }) -join [Environment]::NewLine
+        $fullOutput = $script:output -join [Environment]::NewLine
         $needle = " to packages.config projects"
         $indexOfNeedle = $fullOutput.IndexOf($needle, [StringComparison]::InvariantCultureIgnoreCase)
         if( $indexOfNeedle -ge 0 )
@@ -366,7 +366,7 @@ BeforeAll {
             {
                 $desc = '[empty]'
             }
-            $fullOutput | Should -Match ('^{0}$' -f $Is)
+            $fullOutput.Trim() | Should -Match ('^{0}$' -f $Is)
         }
 
         if( $DoesNotContain )
