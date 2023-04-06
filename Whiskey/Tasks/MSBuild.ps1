@@ -169,17 +169,21 @@ function Invoke-WhiskeyMSBuild
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  Property    {0}' -f ($property -join $separator))
         Write-WhiskeyVerbose -Context $TaskContext -Message ('  Argument    {0}' -f ($msbuildArgs -join $separator))
 
-        $propertyArgs = $property | ForEach-Object {
-            $item = $_
-            $name,$value = $item -split '=',2
-            $value = $value.Trim('"')
-            $value = $value.Trim("'")
-            if( $value.EndsWith( '\' ) )
+        $propertyArgs = & {
+            if ($property)
             {
-                $value = "${value}\"
+                Write-WhiskeyVerbose "Escaping MSBuild property values."
             }
-            $value = $value -replace ' ', '%20'
-            "/p:${name}=${value}"
+
+            foreach ($item in $property)
+            {
+                $name,$value = $item -split '=',2
+                # Unescape first in case the there's already an escaped character in there.
+                $value = [Uri]::UnescapeDataString($value)
+                $value = [Uri]::EscapeDataString($value)
+                Write-WhiskeyVerbose "  ${item} -> ${name}=${value}"
+                "/p:${name}=${value}"
+            }
         }
 
         $targetArg = '/t:{0}' -f ($target -join ';')

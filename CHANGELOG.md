@@ -1,6 +1,18 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.56.0
+
+## Changed
+
+* `MSBuild` task no longer strips double/single quotes from around property values or adds a backslash if a property
+value ends with a backslash. Instead, the `MSBuild` task escapes values using MSBuild's internal rules (i.e.
+it URL-encodes the value). If you have quotes around property values, remove them.
+
+## Fixed
+
+* Fixed: `MSBuild` task fails if a property value contains a semi-colon.
+
 # 0.55.0
 
 ## Added

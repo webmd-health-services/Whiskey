@@ -20,6 +20,7 @@ BeforeAll {
     $script:version = $null
     $script:nuGetVersion = $null
     $script:use32Bit = $null
+    $script:exitCode = $null
     $script:procArchProject = @"
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -198,6 +199,7 @@ BeforeAll {
         try
         {
             $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $WithParameter -Name 'MSBuild'
+            $script:exitCode = $LASTEXITCODE
             $script:output | Write-WhiskeyDebug
         }
         catch
@@ -231,6 +233,12 @@ BeforeAll {
                 $_.ProductVersion | Should -Be '0.0.0.0'
                 $_.FileVersion | Should -Be '0.0.0.0'
             }
+    }
+
+    function ThenSucceeded
+    {
+        ThenNoErrors
+        $script:exitCode | Should -Be 0
     }
 
     function ThenOutputLogged
@@ -419,6 +427,7 @@ Describe 'MSBuild' {
         $script:version = $null
         $script:nuGetVersion = $null
         $script:use32Bit = $false
+        $script:exitCode = $null
 
         $script:testRoot = New-WhiskeyTestRoot
     }
@@ -672,5 +681,23 @@ Describe 'MSBuild' {
         WhenRunningTask -AsDeveloper
         ThenNoErrors
         ThenOutput -Contains 'PROCESSOR_ARCHITECTURE = x86'
+    }
+
+    It 'should escape property values' {
+        GivenProject @"
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Target Name="Build">
+    <Message Importance="High" Text="`$(EscapedDoubleQuoteProperty)" />
+    <Message Importance="High" Text="`$(EscapedSemicolon)" />
+</Target>
+</Project>
+"@
+        GivenVersion $script:version
+        WhenRunningTask -AsDeveloper `
+                        -WithParameter @{ 'Property' = @('EscapedDoubleQuoteProperty=double"quote"', 'EscapedSemicolon=semicolon;escapedsemicolon%3B') }
+        $LASTEXITCODE | Should -Be 0
+        ThenOutput -Contains ([regex]::escape('double"quote"'))
+        ThenOutput -Contains ([regex]::escape('semicolon;escapedsemicolon;'))
     }
 }
