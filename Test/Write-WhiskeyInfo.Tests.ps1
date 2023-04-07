@@ -140,7 +140,7 @@ Describe 'Write-WhiskeyInfo' {
 
     Context 'Write-Whiskey<_>' -ForEach @('Error','Warning','Info','Verbose','Debug') {
         It 'should bookend all piped messages and indent each piped message' -TestCases $_ {
-            $Level = $_
+            $script:level = $_
 
             $context = [Whiskey.Context]::New()
             $context.StartBuild()
@@ -175,12 +175,12 @@ Describe 'Write-WhiskeyInfo' {
 
             $output =
                 @(1,2,3) |
-                & ('Write-Whiskey{0}' -f $level) -Context $context `
+                & ('Write-Whiskey{0}' -f $script:level) -Context $context `
                                                     -ErrorVariable 'errors' `
                                                     -WarningVariable 'warnings' `
                                                     -InformationVariable 'info' `
                                                     4>&1 5>&1
-            switch( $Level )
+            switch( $script:level )
             {
                 'Error'
                 {
@@ -221,13 +221,13 @@ Describe 'Write-WhiskeyInfo' {
         }
 
         Context '<_>' -ForEach ([Enum]::GetValues([Management.Automation.ActionPreference]) |
-                                    Where-Object { $_ -ne [Management.Automation.ActionPreference]::Inquire }) {
+                                    Where-Object { $_ -notin @('Inquire', 'Break', 'Suspend')}) {
             It 'should only write if necessary' -TestCases $_ {
                 $preferenceValue = $_
                 $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  =
                     $DebugPreference = $preferenceValue
 
-                if( $level -eq 'Info' )
+                if( $script:level -eq 'Info' )
                 {
                     $mockedCmdName = 'Write-Information'
                 }
@@ -237,11 +237,11 @@ Describe 'Write-WhiskeyInfo' {
                 }
 
                 Mock -CommandName $mockedCmdName -ModuleName 'Whiskey'
-                & ('Write-Whiskey{0}' -f $level) -Message $level
+                & ('Write-Whiskey{0}' -f $script:level) -Message $script:level
 
                 $prefsThatSkipWriting = & {
                     [Management.Automation.ActionPreference]::Ignore
-                    if( $level -in @('Verbose','Debug') )
+                    if( $script:level -in @('Verbose','Debug') )
                     {
                         [Management.Automation.ActionPreference]::SilentlyContinue
                     }
@@ -264,18 +264,18 @@ Describe 'Write-WhiskeyInfo' {
                 $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  =
                     $DebugPreference = $preferenceValue
 
-                $mockedCmdName = 'Write-{0}' -f $level
-                if( $level -eq 'Info' )
+                $mockedCmdName = 'Write-{0}' -f $script:level
+                if( $script:level -eq 'Info' )
                 {
                     $mockedCmdName = 'Write-Information'
                 }
 
                 Mock -CommandName $mockedCmdName -ModuleName 'Whiskey'
-                Write-WhiskeyInfo -Level $level -Message $level
+                Write-WhiskeyInfo -Level $script:level -Message $script:level
 
                 $prefsThatSkipWriting = & {
                     [Management.Automation.ActionPreference]::Ignore
-                    if( $level -in @('Verbose','Debug') )
+                    if( $script:level -in @('Verbose','Debug') )
                     {
                         [Management.Automation.ActionPreference]::SilentlyContinue
                     }
