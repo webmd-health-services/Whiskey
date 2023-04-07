@@ -149,7 +149,7 @@ function Write-WhiskeyInfo
 
             $separator = '  '
             $thisMsgIndent = $indent
-            if (-not $msg)
+            if (-not $msg -or $isWarn)
             {
                 $separator = ''
                 $thisMsgIndent = ''

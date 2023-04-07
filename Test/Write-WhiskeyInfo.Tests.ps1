@@ -23,8 +23,8 @@ Describe 'Write-WhiskeyInfo' {
             $errors | Should -Be 'Error!'
             $warnings | Should -Be 'Warning!'
             $info | Should -CMatch '^\[23:59:59\]    Info!$'
-            $verbose | Should -Be 'Verbose!'
-            $debug | Should -Be 'Debug!'
+            $verbose | Should -Be '[23:59:59]  Verbose!'
+            $debug | Should -Be '[23:59:59]  Debug!'
         }
     }
 
@@ -50,8 +50,8 @@ Describe 'Write-WhiskeyInfo' {
                     $warnings | Should -Be 'Warning!'
                     $durationRegex = '\[ \dm\d\ds\]  \[ \dm\d\ds\]'
                     $info | Should -CMatch "^$($durationRegex)    Info!$"
-                    $verbose | Should -Be "Verbose!"
-                    $debug | Should -Be "Debug!"
+                    $verbose | Should -CMatch "^$($durationRegex)  Verbose!"
+                    $debug | Should -CMatch "^$($durationRegex)  Debug!"
                 }
 
                 $context = New-Object 'Whiskey.Context'
@@ -69,7 +69,7 @@ Describe 'Write-WhiskeyInfo' {
             Mock -CommandName 'Write-Error' -ModuleName 'Whiskey'
             $output = Write-WhiskeyError -Message 'Nada'
             $output | Should -BeNullOrEmpty
-            Assert-MockCalled 'Write-Error' -ModuleName 'Whiskey' -Times 0
+            Should -Invoke 'Write-Error' -ModuleName 'Whiskey' -Times 0
         }
 
         It 'should not output at warning level when warning action is turned off' {
@@ -77,7 +77,7 @@ Describe 'Write-WhiskeyInfo' {
             Mock -CommandName 'Write-Warning' -ModuleName 'Whiskey'
             $output = Write-WhiskeyWarning -Message 'Nada'
             $output | Should -BeNullOrEmpty
-            Assert-MockCalled 'Write-Warning' -ModuleName 'Whiskey' -Times 0
+            Should -Invoke 'Write-Warning' -ModuleName 'Whiskey' -Times 0
         }
 
         It 'should not output at information level when information action is turned off' {
@@ -85,7 +85,7 @@ Describe 'Write-WhiskeyInfo' {
             Mock -CommandName 'Write-Information' -ModuleName 'Whiskey'
             $output = Write-WhiskeyInfo -Message 'Nada'
             $output | Should -BeNullOrEmpty
-            Assert-MockCalled 'Write-Information' -ModuleName 'Whiskey' -Times 0
+            Should -Invoke 'Write-Information' -ModuleName 'Whiskey' -Times 0
         }
 
         It 'should not output at verbose level when verbose action is turned off' {
@@ -93,7 +93,7 @@ Describe 'Write-WhiskeyInfo' {
             Mock -CommandName 'Write-Verbose' -ModuleName 'Whiskey'
             $output = Write-WhiskeyVerbose -Message 'Nada'
             $output | Should -BeNullOrEmpty
-            Assert-MockCalled 'Write-Verbose' -ModuleName 'Whiskey' -Times 0
+            Should -Invoke 'Write-Verbose' -ModuleName 'Whiskey' -Times 0
         }
 
         It 'should not output at debug level when debug action is turned off' {
@@ -101,7 +101,7 @@ Describe 'Write-WhiskeyInfo' {
             Mock -CommandName 'Write-Debug' -ModuleName 'Whiskey'
             $output = Write-WhiskeyDebug -Message 'Nada'
             $output | Should -BeNullOrEmpty
-            Assert-MockCalled 'Write-Debug' -ModuleName 'Whiskey' -Times 0
+            Should -Invoke 'Write-Debug' -ModuleName 'Whiskey' -Times 0
         }
     }
 
@@ -208,14 +208,14 @@ Describe 'Write-WhiskeyInfo' {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output -NoDuration -NoIndent
+                    ThenOutputAsGroup $output -NoIndent
                 }
                 'Debug'
                 {
                     $errors | Should -BeNullOrEmpty
                     $warnings | Should -BeNullOrEmpty
                     $info | Should -BeNullOrEmpty
-                    ThenOutputAsGroup $output -NoDuration -NoIndent
+                    ThenOutputAsGroup $output -NoIndent
                 }
             }
         }
@@ -248,11 +248,11 @@ Describe 'Write-WhiskeyInfo' {
                 }
                 if( $preferenceValue -in $prefsThatSkipWriting )
                 {
-                    Assert-MockCalled -CommandName $mockedCmdName -ModuleName 'Whiskey' -Times 0 -Exactly
+                    Should -Invoke -CommandName $mockedCmdName -ModuleName 'Whiskey' -Times 0 -Exactly
                 }
                 else
                 {
-                    Assert-MockCalled -CommandName $mockedCmdName `
+                    Should -Invoke -CommandName $mockedCmdName `
                                       -ModuleName 'Whiskey' `
                                       -Times 1 `
                                       -Exactly
@@ -282,11 +282,11 @@ Describe 'Write-WhiskeyInfo' {
                 }
                 if( $preferenceValue -in $prefsThatSkipWriting )
                 {
-                    Assert-MockCalled -CommandName $mockedCmdName -ModuleName 'Whiskey' -Times 0 -Exactly
+                    Should -Invoke -CommandName $mockedCmdName -ModuleName 'Whiskey' -Times 0 -Exactly
                 }
                 else
                 {
-                    Assert-MockCalled -CommandName $mockedCmdName `
+                    Should -Invoke -CommandName $mockedCmdName `
                                       -ModuleName 'Whiskey' `
                                       -Times 1 `
                                       -Exactly
