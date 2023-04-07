@@ -2,342 +2,361 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$testRoot = $null
-$progetUri = $null
-$credentialID = $null
-$credential = $null
-$feedName = $null
-$path = $null
-$threwException = $false
-$noAccessToProGet = $null
-$myTimeout = $null
-$packageExists = $false
-$overwrite = $false
-$properties = @{ }
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function GivenProperty
-{
-    param(
-        $Name,
-        $Is
-    )
-
-    $properties[$Name] = $Is
-}
-
-function GivenOverwrite
-{
-    $script:overwrite = $true
-}
-
-function GivenNoPath
-{
-    $script:path = $null
-}
-
-function GivenPackageExists
-{
-    $script:packageExists = $true
-}
-
-function GivenPath
-{
-    param(
-        $Path
-    )
-
-    $script:path = $Path
-}
-
-function GivenProGetIsAt
-{
-    param(
-        $Uri
-    )
-
-    $script:progetUri = $Uri
-}
-
-function GivenCredential
-{
-    param(
-        [Parameter(Mandatory,Position=0)]
-        $Credential,
-
-        [Parameter(Mandatory)]
-        $WithID
-    )
-
-    $script:noAccessToProGet = $false
-    $password = ConvertTo-SecureString -AsPlainText -Force -String $Credential
-    $script:credential = New-Object 'Management.Automation.PsCredential' $Credential,$password
-    $script:credentialID = $WithID
-}
-
-function GivenNoAccessToProGet
-{
-    $script:noAccessToProGet = $true
-}
-
-function GivenNoParameters
-{
+    $script:testRoot = $null
+    $script:progetUri = $null
     $script:credentialID = $null
+    $script:credential = $null
     $script:feedName = $null
     $script:path = $null
-    $script:progetUri = $null
-    $script:credential = $null
-}
-
-function GivenTimeout
-{
-    param(
-        $Timeout
-    )
-
-    $script:myTimeout = $Timeout
-}
-
-function GivenUniversalFeed
-{
-    param(
-        $Named
-    )
-
-    $script:feedName = $Named
-}
-
-function GivenUpackFile
-{
-    param(
-        $Name
-    )
-
-    New-Item -Path (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $Name)) -Force -ItemType 'File'
-}
-
-function Init
-{
+    $script:threwException = $false
+    $script:noAccessToProGet = $null
     $script:myTimeout = $null
     $script:packageExists = $false
+    $script:overwrite = $false
     $script:properties = @{ }
 
-    Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
-
-    $script:testRoot = New-WhiskeyTestRoot
-}
-
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
-
-function ThenPackageOverwritten
-{
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { 
-                          #$DebugPreference = 'continue'
-                          Write-WhiskeyDebug -Message ('Force  expected  true')
-                          Write-WhiskeyDebug -Message ('       actual    false' -f $Force)
-                          $Force.ToBool()
-                      }
-}
-
-function ThenPackageNotPublished
-{
-    param(
-        $FileName
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { $PackagePath -eq (Join-Path -Path $testRoot -ChildPath ('.output\{0}' -f $FileName)) } `
-                      -Times 0
-}
-
-function ThenPackagePublished
-{
-    param(
-        $FileName
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { 
-                          $expectedPath = Join-Path -Path '.\.output' -ChildPath $FileName
-                          Write-Debug ('PackagePath  expected  {0}' -f $expectedPath)
-                          Write-Debug ('             actual    {0}' -f $PackagePath)
-                          $PackagePath -eq $expectedPath
-                      }
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-function ThenPackagePublishedAs
-{
-    param(
-        $Credential
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { $Session.Credential.UserName -eq $Credential }
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { $Session.Credential.GetNetworkCredential().Password -eq $Credential }
-}
-
-function ThenPackagePublishedAt
-{
-    param(
-        $Uri
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-        #$DebugPreference = 'Continue'
-        Write-WhiskeyDebug -Message ('Uri  expected  {0}' -f $Uri)
-        Write-WhiskeyDebug -Message ('     actual    {0}' -f $Session.Uri)
-        $session | Format-List | Out-String | Write-WhiskeyDebug
-        $Session.Uri -eq $Uri
-    }
-}
-
-function ThenPackagePublishedToFeed
-{
-    param(
-        $Named
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' `
-                      -ModuleName 'Whiskey' `
-                      -ParameterFilter { $FeedName -eq $Named }
-}
-
-function ThenPackagePublishedWithTimeout
-{
-    param(
-        $ExpectedTimeout
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
-        #$DebugPreference = 'Continue'
-        Write-WhiskeyDebug -Message ('Timeout  expected  {0}' -f $Timeout)
-        Write-WhiskeyDebug -Message ('         actual    {0}' -f $ExpectedTimeout)
-        $Timeout -eq $ExpectedTimeout 
-    }
-}
-
-function ThenPackagePublishedWithDefaultTimeout
-{
-    param(
-    )
-
-    Assert-MockCalled -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $Timeout -eq $null }
-}
-
-function ThenTaskCompleted
-{
-    param(
-    )
-
-    $threwException | Should -BeFalse
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-function ThenTaskFailed
-{
-    param(
-        $Pattern
-    )
-
-    $threwException | Should -BeTrue
-    $Global:Error | Should -Match $Pattern
-}
-
-function WhenPublishingPackage
-{
-    [CmdletBinding()]
-    param(
-        $Excluding
-    )
-
-    $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' `
-                                      -ForBuildServer `
-                                      -IgnoreExistingOutputDirectory `
-                                      -IncludePSModule 'ProGetAutomation' `
-                                      -ForBuildRoot $testRoot
-
-    if( $credentialID )
+    function GivenProperty
     {
-        $properties['CredentialID'] = $credentialID
-        if( $credential )
-        {
-            Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
+        param(
+            $Name,
+            $Is
+        )
+
+        $script:properties[$Name] = $Is
+    }
+
+    function GivenOverwrite
+    {
+        $script:overwrite = $true
+    }
+
+    function GivenNoPath
+    {
+        $script:path = $null
+    }
+
+    function GivenPackageExists
+    {
+        $script:packageExists = $true
+    }
+
+    function GivenPath
+    {
+        param(
+            $Path
+        )
+
+        $script:path = $Path
+    }
+
+    function GivenProGetIsAt
+    {
+        param(
+            $Uri
+        )
+
+        $script:progetUri = $Uri
+    }
+
+    function GivenCredential
+    {
+        [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
+        param(
+            [Parameter(Mandatory,Position=0)]
+            $Credential,
+
+            [Parameter(Mandatory)]
+            $WithID
+        )
+
+        $script:noAccessToProGet = $false
+        $password = ConvertTo-SecureString -AsPlainText -Force -String $Credential
+        $script:credential = New-Object 'Management.Automation.PsCredential' $Credential,$password
+        $script:credentialID = $WithID
+    }
+
+    function GivenNoAccessToProGet
+    {
+        $script:noAccessToProGet = $true
+    }
+
+    function GivenNoParameters
+    {
+        $script:credentialID = $null
+        $script:feedName = $null
+        $script:path = $null
+        $script:progetUri = $null
+        $script:credential = $null
+    }
+
+    function GivenTimeout
+    {
+        param(
+            $Timeout
+        )
+
+        $script:myTimeout = $Timeout
+    }
+
+    function GivenUniversalFeed
+    {
+        param(
+            $Named
+        )
+
+        $script:feedName = $Named
+    }
+
+    function GivenUpackFile
+    {
+        param(
+            $Name
+        )
+
+        New-Item -Path (Join-Path -Path $script:testRoot -ChildPath ('.output\{0}' -f $Name)) -Force -ItemType 'File'
+    }
+
+    function ThenPackageOverwritten
+    {
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter {
+                            #$DebugPreference = 'continue'
+                            Write-WhiskeyDebug -Message ('Force  expected  true')
+                            Write-WhiskeyDebug -Message ('       actual    false' -f $Force)
+                            $Force.ToBool()
+                        }
+    }
+
+    function ThenPackageNotPublished
+    {
+        param(
+            $FileName
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $PackagePath -eq (Join-Path -Path $script:testRoot -ChildPath ('.output\{0}' -f $FileName)) } `
+                        -Times 0
+    }
+
+    function ThenPackagePublished
+    {
+        param(
+            $FileName
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter {
+                            $expectedPath = Join-Path -Path '.\.output' -ChildPath $FileName
+                            Write-Debug ('PackagePath  expected  {0}' -f $expectedPath)
+                            Write-Debug ('             actual    {0}' -f $PackagePath)
+                            $PackagePath -eq $expectedPath
+                        }
+        $Global:Error | Should -BeNullOrEmpty
+    }
+
+    function ThenPackagePublishedAs
+    {
+        [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
+        param(
+            $Credential
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Session.Credential.UserName -eq $Credential }
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $Session.Credential.GetNetworkCredential().Password -eq $Credential }
+    }
+
+    function ThenPackagePublishedAt
+    {
+        param(
+            $Uri
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-WhiskeyDebug -Message ('Uri  expected  {0}' -f $Uri)
+            Write-WhiskeyDebug -Message ('     actual    {0}' -f $Session.Uri)
+            $session | Format-List | Out-String | Write-WhiskeyDebug
+            $Session.Uri -eq $Uri
         }
     }
 
-    if( $progetUri )
+    function ThenPackagePublishedToFeed
     {
-        $properties['Uri'] = $progetUri
+        param(
+            $Named
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' `
+                        -ModuleName 'Whiskey' `
+                        -ParameterFilter { $FeedName -eq $Named }
     }
 
-    if( $feedName )
+    function ThenPackagePublishedWithTimeout
     {
-        $properties['FeedName'] = $feedName
+        param(
+            $ExpectedTimeout
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
+            #$DebugPreference = 'Continue'
+            Write-WhiskeyDebug -Message ('Timeout  expected  {0}' -f $Timeout)
+            Write-WhiskeyDebug -Message ('         actual    {0}' -f $ExpectedTimeout)
+            $Timeout -eq $ExpectedTimeout
+        }
     }
 
-    if( $path )
+    function ThenPackagePublishedWithDefaultTimeout
     {
-        $properties['Path'] = $path
+        param(
+        )
+
+        Should -Invoke 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter { $null -eq $Timeout }
     }
 
-    if( $myTimeout )
+    function ThenTaskCompleted
     {
-        $properties['Timeout'] = $myTimeout
+        param(
+        )
+
+        $script:threwException | Should -BeFalse
+        $Global:Error | Should -BeNullOrEmpty
     }
 
-    if( $overwrite )
+    function ThenTaskFailed
     {
-        # String to ensure parsed to a boolean.
-        $properties['Overwrite'] = 'true'
+        param(
+            $Pattern
+        )
+
+        $script:threwException | Should -BeTrue
+        $Global:Error | Should -Match $Pattern
     }
 
-    if( $Excluding )
+    function WhenPublishingPackage
     {
-        $properties['Exclude'] = $Excluding
-    }
+        [CmdletBinding()]
+        param(
+            $Excluding
+        )
 
-    $mock = { }
-    if( $noAccessToProGet )
-    {
-        $mock = { Write-Error -Message 'Failed to upload package to some uri.' }
-    }
-    elseif( $packageExists )
-    {
-        $mock = { if( -not $Force ) { Write-Error -Message ('Package already exists!') } }
-    }
+        $context = New-WhiskeyTestContext -ForTaskName 'PublishProGetUniversalPackage' `
+                                        -ForBuildServer `
+                                        -IgnoreExistingOutputDirectory `
+                                        -IncludePSModule 'ProGetAutomation' `
+                                        -ForBuildRoot $script:testRoot
 
-    Import-WhiskeyTestModule -Name 'ProGetAutomation'
-    Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
+        if( $script:credentialID )
+        {
+            $script:properties['CredentialID'] = $script:credentialID
+            if( $script:credential )
+            {
+                Add-WhiskeyCredential -Context $context -ID $script:credentialID -Credential $script:credential
+            }
+        }
 
-    $script:threwException = $false
-    try
-    {
-        $Global:Error.Clear()
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $properties -Name 'PublishProGetUniversalPackage'
-    }
-    catch
-    {
-        $script:threwException = $true
-        Write-Error -ErrorRecord $_
+        if( $script:progetUri )
+        {
+            $script:properties['Uri'] = $script:progetUri
+        }
+
+        if( $script:feedName )
+        {
+            $script:properties['FeedName'] = $script:feedName
+        }
+
+        if( $script:path )
+        {
+            $script:properties['Path'] = $script:path
+        }
+
+        if( $script:myTimeout )
+        {
+            $script:properties['Timeout'] = $script:myTimeout
+        }
+
+        if( $script:overwrite )
+        {
+            # String to ensure parsed to a boolean.
+            $script:properties['Overwrite'] = 'true'
+        }
+
+        if( $Excluding )
+        {
+            $script:properties['Exclude'] = $Excluding
+        }
+
+        $mock = { }
+        if( $script:noAccessToProGet )
+        {
+            $mock = {
+                $eaArg = @{}
+                if ($PesterBoundParameters.ContainsKey('ErrorAction'))
+                {
+                    $eaArg['ErrorAction'] = $PesterBoundParameters['ErrorAction']
+                }
+                Write-Error -Message 'Failed to upload package to some uri.' @eaArg
+            }
+        }
+        elseif( $script:packageExists )
+        {
+            $mock = {
+                if( -not $Force )
+                {
+                    $eaArg = @{}
+                    if ($PesterBoundParameters.ContainsKey('ErrorAction'))
+                    {
+                        $eaArg['ErrorAction'] = $PesterBoundParameters['ErrorAction']
+                    }
+                    Write-Error -Message ('Package already exists!') @eaArg
+                }
+            }
+        }
+
+        Import-WhiskeyTestModule -Name 'ProGetAutomation'
+        Mock -CommandName 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith $mock
+
+        $script:threwException = $false
+        try
+        {
+            $Global:Error.Clear()
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $script:properties -Name 'PublishProGetUniversalPackage'
+        }
+        catch
+        {
+            $script:threwException = $true
+            Write-Error -ErrorRecord $_
+        }
     }
 }
 
-Describe 'PublishProGetUniversalPackage.when user publishes default files' {
-    AfterEach { Reset }
-    It 'should publish files' {
-        Init
+Describe 'PublishProGetUniversalPackage' {
+    BeforeEach {
+        $script:myTimeout = $null
+        $script:packageExists = $false
+        $script:properties = @{ }
+
+        Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
+
+        $script:testRoot = New-WhiskeyTestRoot
+    }
+
+    AfterEach {
+        Reset-WhiskeyTestPSModule
+    }
+
+    It 'publishes all upack files in output directory' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
         GivenProGetIsAt 'my uri'
@@ -351,12 +370,8 @@ Describe 'PublishProGetUniversalPackage.when user publishes default files' {
         ThenPackagePublishedAs 'fubar'
         ThenPackagePublishedWithDefaultTimeout
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when user excludes files' {
-    AfterEach { Reset }
-    It 'should not package those fils' {
-        Init
+    It 'does not publish excluded files' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
         GivenProGetIsAt 'my uri'
@@ -366,12 +381,8 @@ Describe 'PublishProGetUniversalPackage.when user excludes files' {
         ThenPackagePublished 'myfile1.upack'
         ThenPackageNotPublished 'myfile2.upack'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
-    AfterEach { Reset }
-    It 'should package just those files' {
-        Init
+    It 'publishes only included files' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
         GivenProGetIsAt 'my uri'
@@ -382,12 +393,8 @@ Describe 'PublishProGetUniversalPackage.when user specifies files to publish' {
         ThenPackagePublished 'myfile1.upack'
         ThenPackageNotPublished 'myfile2.upack'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when user specifies files to publish and excluding some' {
-    AfterEach { Reset }
-    It 'should include the files and not include the excluded files' {
-        Init
+    It 'does not publish excluded files that match an include wildcard' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
         GivenProGetIsAt 'my uri'
@@ -398,57 +405,37 @@ Describe 'PublishProGetUniversalPackage.when user specifies files to publish and
         ThenPackageNotPublished 'myfile1.upack'
         ThenPackagePublished 'myfile2.upack'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when CredentialID property is missing' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires Credential ID' {
         GivenNoParameters
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when Uri property is missing' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires Uri property' {
         GivenNoParameters
         GivenCredential 'somecredential' -WithID 'fubar'
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when FeedName property is missing' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires FeedName properyt' {
         GivenNoParameters
         GivenCredential 'somecredential' -WithID 'fubar'
         GivenProGetIsAt 'some uri'
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when there are no upack files' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires at least one file to publish' {
         GivenProGetIsAt 'my uri'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed ([regex]::Escape('Found no packages to publish'))
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when there are no upack files in the output directory and the user says that''s OK' {
-    AfterEach { Reset }
-    It 'should not fail' {
-        Init
+    It 'allows no files to publish' {
         GivenProGetIsAt 'my uri'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
@@ -457,12 +444,8 @@ Describe 'PublishProGetUniversalPackage.when there are no upack files in the out
         ThenTaskCompleted
         ThenPackageNotPublished
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack files and the user says that''s OK' {
-    AfterEach { Reset }
-    It 'should not fail' {
-        Init
+    It 'allows no included files to be published' {
         GivenProGetIsAt 'my uri'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
@@ -472,25 +455,18 @@ Describe 'PublishProGetUniversalPackage.when Path doesn''t resolve to any upack 
         ThenTaskCompleted
         ThenPackageNotPublished
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when user does not have permission' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'surfaces ProGet no permission to publish error' {
         GivenProGetIsAt 'my uri'
         GivenUpackFile 'my.upack'
         GivenCredential 'fubatr' -WithID 'id'
+        GivenUniversalFeed 'noaccess'
         GivenNoAccessToProGet
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFAiled 'Failed to upload'
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when uploading a large package' {
-    AfterEach { Reset }
-    It 'should allow custom upload timeout' {
-        Init
+    It 'customizes upload timeout' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
         GivenProGetIsAt 'my uri'
@@ -500,12 +476,8 @@ Describe 'PublishProGetUniversalPackage.when uploading a large package' {
         WhenPublishingPackage
         ThenPackagePublishedWithTimeout 600
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when package already exists' {
-    AfterEach { Reset }
-    It 'shoudl fail' {
-        Init
+    It 'rejects package that already exists' {
         GivenUpackFile 'my.upack'
         GivenProGetIsAt 'proget.example.com'
         GivenCredential 'fubar' -WithID 'progetid'
@@ -514,12 +486,8 @@ Describe 'PublishProGetUniversalPackage.when package already exists' {
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed
     }
-}
 
-Describe 'PublishProGetUniversalPackage.when replacing existing package' {
-    AfterEach { Reset }
-    It 'shouldd overwrite package' {
-        Init
+    It 'can overwrite existing package' {
         GivenUpackFile 'my.upack'
         GivenProGetIsAt 'proget.example.com'
         GivenCredential 'fubar' -WithID 'progetid'
