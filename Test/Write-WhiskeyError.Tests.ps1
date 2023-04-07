@@ -2,126 +2,128 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-function GivenAnError
-{
-    function Write-MeAnError
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+
+    function GivenAnError
     {
-        Write-MeAnErrorUnder
-    }
-
-    function Write-MeAnErrorUnder
-    {
-        Write-Error -Message 'ZOMG! Terrible things!' -ErrorAction SilentlyContinue
-    }
-
-    Write-MeAnError -ErrorVariable 'myError'
-}
-
-function Init
-{
-    $Global:Error.Clear()
-}
-
-function New-Context
-{
-
-    $context = [Whiskey.Context]::new()
-    $context.StartBuild()
-    $context.StartTask('MyTask')
-    return $context
-}
-
-function ShouldBeBookended
-{
-    param(
-        [Parameter(ValueFromPipeline)]
-        [String]$Output,
-
-        [String]$WithTaskName
-    )
-
-    begin
-    {
-        $lastMessage = $null
-        if( $WithTaskName )
+        function Write-MeAnError
         {
-            $WithTaskName = '  \[{0}\]' -f [regex]::escape($WithTaskName)
-        }
-        $pattern = '^\[\d\d:\d\d:\d\d.\d\d\]  \[ERROR  \]{0}$' -f $WithTaskName
-    }
-    process
-    {
-        if( -not $lastMessage )
-        {
-            $Output | Should -CMatch $pattern
-        }
-        $lastMessage = $Output
-    }
-    end
-    {
-        $lastMessage | Should -CMatch $pattern
-    }
-}
-
-function ShouldHaveMessage
-{
-    param(
-        [Parameter(Mandatory,ValueFromPipeline)]
-        [String]$Output,
-
-        [Parameter(Mandatory,Position=0)]
-        [String]$Message
-    )
-
-    begin
-    {
-        $lineCount = 0
-    }
-
-    process
-    {
-        if( $lineCount++ -gt 2 )
-        {
-            continue
+            Write-MeAnErrorUnder
         }
 
-        if( $lineCount -eq 2 )
+        function Write-MeAnErrorUnder
         {
-            $Output | Should -Match ('^    {0}$' -f [regex]::Escape($Message))
+            Write-Error -Message 'ZOMG! Terrible things!' -ErrorAction SilentlyContinue
+        }
+
+        Write-MeAnError -ErrorVariable 'myError'
+    }
+
+    function New-Context
+    {
+
+        $context = [Whiskey.Context]::new()
+        $context.StartBuild()
+        $context.StartTask('MyTask')
+        return $context
+    }
+
+    function ShouldBeBookended
+    {
+        param(
+            [Parameter(ValueFromPipeline)]
+            [String]$Output,
+
+            [String]$WithTaskName
+        )
+
+        begin
+        {
+            $lastMessage = $null
+            if( $WithTaskName )
+            {
+                $WithTaskName = '  \[{0}\]' -f [regex]::escape($WithTaskName)
+            }
+            $pattern = '^\[\d\d:\d\d:\d\d.\d\d\]  \[ERROR  \]{0}$' -f $WithTaskName
+        }
+        process
+        {
+            if( -not $lastMessage )
+            {
+                $Output | Should -CMatch $pattern
+            }
+            $lastMessage = $Output
+        }
+        end
+        {
+            $lastMessage | Should -CMatch $pattern
         }
     }
-}
 
-function ShouldHaveStackTrace
-{
-    param(
-        [Parameter(ValueFromPipeline)]
-        [String]$Output
-    )
-
-    begin
+    function ShouldHaveMessage
     {
-        $lines = [Collections.ArrayList]::new()
+        param(
+            [Parameter(Mandatory,ValueFromPipeline)]
+            [String]$Output,
+
+            [Parameter(Mandatory,Position=0)]
+            [String]$Message
+        )
+
+        begin
+        {
+            $lineCount = 0
+        }
+
+        process
+        {
+            if( $lineCount++ -gt 2 )
+            {
+                continue
+            }
+
+            if( $lineCount -eq 2 )
+            {
+                $Output | Should -Match ('^    {0}$' -f [regex]::Escape($Message))
+            }
+        }
     }
 
-    process
+    function ShouldHaveStackTrace
     {
-        [Void]$lines.Add($Output)
-    }
+        param(
+            [Parameter(ValueFromPipeline)]
+            [String]$Output
+        )
 
-    end
-    {
-        $stackTraceSize = (Get-PSCallStack | Measure-Object).Count + 2
-        $lines[2..$stackTraceSize] | Should -Match ('^      at\ [^,]+,\ .+:\ line\ \d+$')
+        begin
+        {
+            $lines = [Collections.ArrayList]::new()
+        }
+
+        process
+        {
+            [Void]$lines.Add($Output)
+        }
+
+        end
+        {
+            $stackTraceSize = (Get-PSCallStack | Measure-Object).Count + 2
+            $lines[2..$stackTraceSize] | Should -Match ('^      at\ [^,]+,\ .+:\ line\ \d+$')
+        }
     }
 }
 
 Describe 'Write-WhiskeyError' {
+    BeforeEAch {
+        $Global:Error.Clear()
+    }
+
     Context 'No Context' {
         It 'should use Write-Error' {
-            Init
             Write-WhiskeyError -Message 'Something bad happened' -ErrorVariable 'errors' -ErrorAction SilentlyContinue
             $errors | Should -HaveCount 1
             $errors | Should -Match '^Something bad happened$'
@@ -130,7 +132,6 @@ Describe 'Write-WhiskeyError' {
 
     Context 'Context' {
         It 'should use Write-Error' {
-            Init
             $context = New-Context
             Write-WhiskeyError -Context $context `
                                -Message 'Something bad happened' `
@@ -140,11 +141,8 @@ Describe 'Write-WhiskeyError' {
             $errors | Should -Match '^Something bad happened$'
         }
     }
-}
 
-Describe 'Write-WhiskeyError.when error action is stop' {
     It 'should use Write-Error and stop the build' {
-        Init
         $failed = $false
         try
         {

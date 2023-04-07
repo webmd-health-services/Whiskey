@@ -2,19 +2,23 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
+
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+}
 
 Describe 'Write-WhiskeyInfo' {
     Context 'no context' {
         It 'should write at different levels without a context' {
-            Mock -CommandName 'Get-Date' -ModuleName 'Whiskey' -MockWith { return [DateTime]::MaxValue } 
+            Mock -CommandName 'Get-Date' -ModuleName 'Whiskey' -MockWith { return [DateTime]::MaxValue }
             $ErrorActionPreference = $WarningPreference = $InformationPreference =  'SilentlyContinue'
             Write-WhiskeyError 'Error!' -ErrorVariable 'errors'
             Write-WhiskeyWarning 'Warning!' -WarningVariable 'warnings'
             Write-WhiskeyInfo 'Info!' -InformationVariable 'info'
-            $verbose = Write-WhiskeyVerbose 'Verbose!' -Verbose 4>&1 
+            $verbose = Write-WhiskeyVerbose 'Verbose!' -Verbose 4>&1
             $DebugPreference = 'Continue'
-            $debug = Write-WhiskeyDebug 'Debug!' 5>&1 
+            $debug = Write-WhiskeyDebug 'Debug!' 5>&1
 
             $errors | Should -Be 'Error!'
             $warnings | Should -Be 'Warning!'
@@ -133,16 +137,15 @@ Describe 'Write-WhiskeyInfo' {
         $output[1] | Should -CMatch ('^(\[ \dm\d\ds\]  ){2}  Two$')
         $output[2] | Should -CMatch ('^(\[ \dm\d\ds\]  ){2}  Three$')
     }
-}
 
-foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
-{
-    Describe ('Write-Whiskey{0}.when piped messages' -f $level) {
-        It ('should bookend all messages and indent each message') {
+    Context 'Write-Whiskey<_>' -ForEach @('Error','Warning','Info','Verbose','Debug') {
+        It 'should bookend all piped messages and indent each piped message' -TestCases $_ {
+            $Level = $_
+
             $context = [Whiskey.Context]::New()
             $context.StartBuild()
             $context.StartTask('Fubar')
-            $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  = 
+            $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  =
                 $DebugPreference = 'Continue'
 
             function ThenOutputAsGroup
@@ -171,12 +174,12 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
             }
 
             $output =
-                @(1,2,3) | 
+                @(1,2,3) |
                 & ('Write-Whiskey{0}' -f $level) -Context $context `
-                                                 -ErrorVariable 'errors' `
-                                                 -WarningVariable 'warnings' `
-                                                 -InformationVariable 'info' `
-                                                 4>&1 5>&1
+                                                    -ErrorVariable 'errors' `
+                                                    -WarningVariable 'warnings' `
+                                                    -InformationVariable 'info' `
+                                                    4>&1 5>&1
             switch( $Level )
             {
                 'Error'
@@ -216,22 +219,16 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                 }
             }
         }
-    }
 
-    foreach( $preferenceValue in [Enum]::GetValues([Management.Automation.ActionPreference]) )
-    {
-        if( $preferenceValue -eq [Management.Automation.ActionPreference]::Inquire )
-        {
-            continue
-        }
-
-        Describe ('Write-Whiskey{0}.when preference is {1} and not piping messages' -f $level,$preferenceValue) {
-            It ('should only write if necessary') {
-                $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  = 
+        Context '<_>' -ForEach ([Enum]::GetValues([Management.Automation.ActionPreference]) |
+                                    Where-Object { $_ -ne [Management.Automation.ActionPreference]::Inquire }) {
+            It 'should only write if necessary' -TestCases $_ {
+                $preferenceValue = $_
+                $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  =
                     $DebugPreference = $preferenceValue
 
                 if( $level -eq 'Info' )
-                { 
+                {
                     $mockedCmdName = 'Write-Information'
                 }
                 else
@@ -239,8 +236,8 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     $mockedCmdName = 'Write-WhiskeyInfo'
                 }
 
-                Mock -CommandName $mockedCmdName -ModuleName 'Whiskey' 
-                & ('Write-Whiskey{0}' -f $level) -Message $level 
+                Mock -CommandName $mockedCmdName -ModuleName 'Whiskey'
+                & ('Write-Whiskey{0}' -f $level) -Message $level
 
                 $prefsThatSkipWriting = & {
                     [Management.Automation.ActionPreference]::Ignore
@@ -258,24 +255,23 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     Assert-MockCalled -CommandName $mockedCmdName `
                                       -ModuleName 'Whiskey' `
                                       -Times 1 `
-                                      -Exactly 
+                                      -Exactly
                 }
             }
-        }
 
-        Describe ('Write-WhiskeyInfo.when preference is {1}' -f $level,$preferenceValue) {
-            It ('should only write when necessary') {
-                $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  = 
+            It 'should only write when necessary' -TestCases $_ {
+                $preferenceValue = $_
+                $ErrorActionPreference = $WarningPreference = $InformationPreference = $VerbosePreference  =
                     $DebugPreference = $preferenceValue
 
                 $mockedCmdName = 'Write-{0}' -f $level
                 if( $level -eq 'Info' )
-                { 
+                {
                     $mockedCmdName = 'Write-Information'
                 }
 
-                Mock -CommandName $mockedCmdName -ModuleName 'Whiskey' 
-                Write-WhiskeyInfo -Level $level -Message $level 
+                Mock -CommandName $mockedCmdName -ModuleName 'Whiskey'
+                Write-WhiskeyInfo -Level $level -Message $level
 
                 $prefsThatSkipWriting = & {
                     [Management.Automation.ActionPreference]::Ignore
@@ -293,7 +289,7 @@ foreach( $level in @('Error','Warning','Info','Verbose','Debug') )
                     Assert-MockCalled -CommandName $mockedCmdName `
                                       -ModuleName 'Whiskey' `
                                       -Times 1 `
-                                      -Exactly 
+                                      -Exactly
                 }
             }
         }
