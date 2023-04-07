@@ -2,6 +2,10 @@ function Invoke-WhiskeyParallelTask
 {
     [CmdletBinding()]
     [Whiskey.Task('Parallel')]
+    [Whiskey.RequiresPowerShellModule('ThreadJob',
+                                        Version='2.0.3',
+                                        ModuleInfoParameterName='ThreadJobModuleInfo',
+                                        VersionParameterName='ThreadJobVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
@@ -66,9 +70,9 @@ function Invoke-WhiskeyParallelTask
 
             $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
 
-            $taskPathsTasks = 
+            $taskPathsTasks =
                 $queue['Tasks'] |
-                ForEach-Object { 
+                ForEach-Object {
                     $taskName,$taskParameter = ConvertTo-WhiskeyTask -InputObject $_ -ErrorAction Stop
                     [pscustomobject]@{
                         Name = $taskName;
@@ -94,7 +98,7 @@ function Invoke-WhiskeyParallelTask
             }
 
             Write-WhiskeyInfo -Context $TaskContext -Message "Starting background job #$($queueIdx)."
-            $job = Start-Job -ScriptBlock {
+            $job = Start-ThreadJob -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
 

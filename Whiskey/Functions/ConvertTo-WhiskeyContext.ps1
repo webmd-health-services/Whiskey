@@ -4,20 +4,23 @@ function ConvertTo-WhiskeyContext
     <#
     .SYNOPSIS
     Converts an `Whiskey.Context` returned by `ConvertFrom-WhiskeyContext` back into a `Whiskey.Context` object.
-    
+
     .DESCRIPTION
-    Some tasks need to run in background jobs and need access to Whiskey's context. This function converts an object returned by `ConvertFrom-WhiskeyContext` back into a `Whiskey.Context` object. 
+    Some tasks need to run in background jobs and need access to Whiskey's context. This function converts an object
+    returned by `ConvertFrom-WhiskeyContext` back into a `Whiskey.Context` object.
 
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
-        $job = Start-Job {
+        $job = Start-ThreadJob {
                     Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
                                             # Or wherever your project keeps Whiskey relative to your task definition.
                                             Import-Module -Name (Join-Path -Path $using:PSScriptRoot -ChildPath '..\Whiskey' -Resolve -ErrorAction Stop)
                                         }
-                    [Whiskey.Context]$context = $using:serializableContext | ConvertTo-WhiskeyContext 
+                    [Whiskey.Context]$context = $using:serializableContext | ConvertTo-WhiskeyContext
                     # Run your task
               }
+
+    The `Start-Job` cmdlet is also supported but not recommended.
 
     .EXAMPLE
     $serializedContext | ConvertTo-WhiskeyContext
@@ -31,7 +34,7 @@ function ConvertTo-WhiskeyContext
         [Object]$InputObject
     )
 
-    process 
+    process
     {
         Set-StrictMode -Version 'Latest'
         Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
@@ -55,9 +58,9 @@ function ConvertTo-WhiskeyContext
                     Where-Object { $ExcludeProperty -notcontains $_.Name } |
                     Where-Object { $_.GetSetMethod($false) } |
                     Select-Object -ExpandProperty 'Name' |
-                    ForEach-Object { 
+                    ForEach-Object {
                         Write-WhiskeyDebug ('{0}  {1} -> {2}' -f $_,$Destination.$_,$Source.$_)
-                                
+
                         $propertyType = $destinationType.GetProperty($_).PropertyType
                         if( $propertyType.IsSubclassOf([IO.FileSystemInfo]) )
                         {
@@ -69,7 +72,7 @@ function ConvertTo-WhiskeyContext
                         }
                         else
                         {
-                            $Destination.$_ = $Source.$_ 
+                            $Destination.$_ = $Source.$_
                         }
                     }
 

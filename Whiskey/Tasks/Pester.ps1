@@ -2,7 +2,8 @@
 function Invoke-WhiskeyPesterTask
 {
     [Whiskey.Task('Pester')]
-    [Whiskey.RequiresPowerShellModule('Pester', ModuleInfoParameterName='PesterModuleInfo', Version='5.*', SkipImport)]
+    [Whiskey.RequiresPowerShellModule('Pester', Version='5.*', ModuleInfoParameterName='PesterModuleInfo', SkipImport)]
+    [Whiskey.RequiresPowerShellModule('ThreadJob', Version='2.0.3', VersionParameterName='ThreadJobVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -161,7 +162,7 @@ function Invoke-WhiskeyPesterTask
     [int] $exitCode = 0
     if( $AsJob )
     {
-        Start-Job -ArgumentList $cmdArgList -ScriptBlock $scriptBlock |
+        Start-ThreadJob -ArgumentList $cmdArgList -ScriptBlock $scriptBlock |
             Receive-Job -Wait -AutoRemoveJob -InformationAction Ignore
         $exitCode = Get-Content -Path $exitCodePath -ReadCount 1
     }

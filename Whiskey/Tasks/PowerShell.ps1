@@ -1,7 +1,8 @@
 
 function Invoke-WhiskeyPowerShell
 {
-    [Whiskey.Task('PowerShell',SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('PowerShell', SupportsClean, SupportsInitialize)]
+    [Whiskey.RequiresPowerShellModule('ThreadJob', Version='2.0.3', VersionParameterName='ThreadJobVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -66,7 +67,7 @@ function Invoke-WhiskeyPowerShell
 
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-RunResult-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
-        $job = Start-Job -ScriptBlock {
+        $job = Start-ThreadJob -ScriptBlock {
 
             Set-StrictMode -Version 'Latest'
 

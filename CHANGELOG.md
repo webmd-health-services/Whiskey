@@ -11,10 +11,16 @@ whiskey.yml file.
 * Parameter `ConfigurationPath` to Whiskey's default build.ps1 script, which allows running a build using a specific
 whiskey.yml file.
 
+## Changed
+
+* Updated the `Parallel`, `Pester`, and `PowerShell` tasks to use `Start-ThreadJob` to run background jobs instead of
+`Start-Job`. [There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407), which causes "call depth overflow" exceptions during builds.
+
 ## Fixed
 
 * Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
 version.
+* Fixed: The `Parallel`, `Pester`, and `PowerShell` tasks sometimes fail with "call depth overflow" exceptions.
 
 # 0.56.0
 
