@@ -6,6 +6,10 @@
 ## Added
 
 * Whiskey's verbose and debug messages now include timing information like information messages.
+* Parameter `PipelineName` to Whiskey's default build.ps1 script, which allows running a specific pipeline from a
+whiskey.yml file.
+* Parameter `ConfigurationPath` to Whiskey's default build.ps1 script, which allows running a build using a specific
+whiskey.yml file.
 
 ## Fixed
 

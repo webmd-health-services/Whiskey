@@ -16,6 +16,11 @@ Pass the token to use to authenticate to GitHub to the `GitHubBearerToken` param
 
 To download all the tools that are required for a build, use the `-Initialize` switch.
 
+To run a specific pipeline from the whiskey.yml file, pass the pipeline name to the `PipelineName` parameter. By
+default, runs the `Build` pipeline.
+
+To run a build using a specific whiskey.yml file, use the `ConfigurationPath` parameter.
+
 To cleanup downloaded build tools and artifacts created from previous builds, use the `-Clean` switch.
 
 .EXAMPLE
@@ -32,6 +37,17 @@ Demonstrates how to use Whiskey to clean up any downloaded build tools and previ
 ./build.ps1 -Initialize
 
 Demonstrates how to initialize the build root with any tools that are required by tasks in the `whiskey.yml` file.
+
+.EXAMPLE
+./build.ps1 -PipelineName Test
+
+Demonstrates how to run a specific pipeline from the whiskey.yml file. In this example, the `Test` pipeline is run.
+
+.EXAMPLE
+./build.ps1 -ConfigurationPath '../whiskey.yml'
+
+Demonstrates how to run a build using a specific whiskey.yml file. In this example, the whiskey.yml file in the
+current directory's parent directory will be used.
 #>
 [CmdletBinding(DefaultParameterSetName='Build')]
 param(
@@ -42,6 +58,13 @@ param(
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
     [switch]$Initialize,
+
+    # Run a specific pipeline. The default is to run the `Build` pipeline.
+    [String] $PipelineName,
+
+    # Run a build using a specific whiskey.yml file. The default is to use a whiskey.yml file in the same directory
+    # as this script.
+    [String] $ConfigurationPath,
 
     # The bearer token to use to authenticate with the GitHub API when getting the Whiskey releases. The default value
     # is the `GITHUB_BEARER_TOKEN` environment variable.
@@ -152,17 +175,20 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
     Import-Module -Name $whiskeyModuleRoot -Force
 }
 
-$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml'
-if( -not (Test-Path -Path $configPath -PathType 'Leaf') )
+if (-not $ConfigurationPath)
 {
-    @'
+    $ConfigurationPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml'
+    if( -not (Test-Path -Path $ConfigurationPath -PathType 'Leaf') )
+    {
+        @'
 Build:
 - Version:
     Version: 0.0.0
 
 Publish:
 
-'@ | Set-Content -Path $configPath
+'@ | Set-Content -Path $ConfigurationPath
+    }
 }
 
 $optionalArgs = @{ }
@@ -176,5 +202,10 @@ if( $Initialize )
     $optionalArgs['Initialize'] = $true
 }
 
-$context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $configPath
+if ($PipelineName)
+{
+    $optionalArgs['PipelineName'] = $PipelineName
+}
+
+$context = New-WhiskeyContext -Environment 'Dev' -ConfigurationPath $ConfigurationPath
 Invoke-WhiskeyBuild -Context $context @optionalArgs
