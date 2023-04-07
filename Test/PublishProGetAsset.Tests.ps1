@@ -14,11 +14,11 @@ BeforeAll {
     function GivenContext
     {
         $script:taskParameter = @{ }
-        $script:taskParameter['Uri'] = 'TestURI'
+        $script:taskParameter['Url'] = 'TestUrl'
         Import-WhiskeyTestModule -Name 'ProGetAutomation'
-        $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
+        $script:session = New-ProGetSession -Uri $TaskParameter['Url']
         $Global:globalTestSession = $session
-        $Script:Context = New-WhiskeyTestContext -ForBuildServer `
+        $Script:context = New-WhiskeyTestContext -ForBuildServer `
                                                 -ForTaskName 'PublishProGetAsset' `
                                                 -ForBuildRoot $script:testDirPath `
                                                 -IncludePSModule 'ProGetAutomation'
@@ -106,9 +106,14 @@ BeforeAll {
         param(
             [String[]]$AssetName
         )
+
         foreach( $file in $AssetName )
         {
-            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $file }
+            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter {
+                Write-Debug "Path  expected  ${file}"
+                Write-Debug "      actual    ${Path}"
+                $Path -eq $file
+            }
         }
     }
 
@@ -119,7 +124,12 @@ BeforeAll {
         )
         foreach( $file in $AssetName )
         {
-            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file } -Times 0
+            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
+                Write-Debug "Path  expected  ${file}"
+                Write-Debug "      actual    ${Path}"
+                $Path -eq $file
+                $Name -eq $file
+            }
         }
     }
 

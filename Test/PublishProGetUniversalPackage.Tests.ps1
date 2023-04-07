@@ -8,7 +8,7 @@ BeforeAll {
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     $script:testRoot = $null
-    $script:progetUri = $null
+    $script:progetUrl = $null
     $script:credentialID = $null
     $script:credential = $null
     $script:feedName = $null
@@ -57,10 +57,10 @@ BeforeAll {
     function GivenProGetIsAt
     {
         param(
-            $Uri
+            $Url
         )
 
-        $script:progetUri = $Uri
+        $script:progetUrl = $Url
     }
 
     function GivenCredential
@@ -90,7 +90,7 @@ BeforeAll {
         $script:credentialID = $null
         $script:feedName = $null
         $script:path = $null
-        $script:progetUri = $null
+        $script:progetUrl = $null
         $script:credential = $null
     }
 
@@ -180,15 +180,15 @@ BeforeAll {
     function ThenPackagePublishedAt
     {
         param(
-            $Uri
+            $Url
         )
 
         Should -Invoke 'Publish-ProGetUniversalPackage' -ModuleName 'Whiskey' -ParameterFilter {
             #$DebugPreference = 'Continue'
-            Write-WhiskeyDebug -Message ('Uri  expected  {0}' -f $Uri)
+            Write-WhiskeyDebug -Message ('Url  expected  {0}' -f $Url)
             Write-WhiskeyDebug -Message ('     actual    {0}' -f $Session.Uri)
             $session | Format-List | Out-String | Write-WhiskeyDebug
-            $Session.Uri -eq $Uri
+            $Session.Uri -eq $Url
         }
     }
 
@@ -266,9 +266,9 @@ BeforeAll {
             }
         }
 
-        if( $script:progetUri )
+        if( $script:progetUrl )
         {
-            $script:properties['Uri'] = $script:progetUri
+            $script:properties['Url'] = $script:progetUrl
         }
 
         if( $script:feedName )
@@ -306,7 +306,7 @@ BeforeAll {
                 {
                     $eaArg['ErrorAction'] = $PesterBoundParameters['ErrorAction']
                 }
-                Write-Error -Message 'Failed to upload package to some uri.' @eaArg
+                Write-Error -Message 'Failed to upload package to some URL.' @eaArg
             }
         }
         elseif( $script:packageExists )
@@ -359,13 +359,13 @@ Describe 'PublishProGetUniversalPackage' {
     It 'publishes all upack files in output directory' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubar' -WithID 'progetid'
         GivenUniversalFeed 'universalfeed'
         WhenPublishingPackage
         ThenPackagePublished 'myfile1.upack'
         ThenPackagePublished 'myfile2.upack'
-        ThenPackagePublishedAt 'my uri'
+        ThenPackagePublishedAt 'my url'
         ThenPackagePublishedToFeed 'universalfeed'
         ThenPackagePublishedAs 'fubar'
         ThenPackagePublishedWithDefaultTimeout
@@ -374,7 +374,7 @@ Describe 'PublishProGetUniversalPackage' {
     It 'does not publish excluded files' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubar' -WithID 'progetid'
         GivenUniversalFeed 'universalfeed'
         WhenPublishingPackage -Excluding '*2.upack'
@@ -385,7 +385,7 @@ Describe 'PublishProGetUniversalPackage' {
     It 'publishes only included files' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubar' -WithID 'progetid'
         GivenUniversalFeed 'universalfeed'
         GivenPath '.output\myfile1.upack'
@@ -397,7 +397,7 @@ Describe 'PublishProGetUniversalPackage' {
     It 'does not publish excluded files that match an include wildcard' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubar' -WithID 'progetid'
         GivenUniversalFeed 'universalfeed'
         GivenPath '.output\*.upack'
@@ -412,23 +412,23 @@ Describe 'PublishProGetUniversalPackage' {
         ThenTaskFailed '\bCredentialID\b.*\bis\ a\ mandatory\b'
     }
 
-    It 'requires Uri property' {
+    It 'requires Url property' {
         GivenNoParameters
         GivenCredential 'somecredential' -WithID 'fubar'
         WhenPublishingPackage -ErrorAction SilentlyContinue
-        ThenTaskFailed '\bUri\b.*\bis\ a\ mandatory\b'
+        ThenTaskFailed '\bUrl\b.*\bis\ a\ mandatory\b'
     }
 
     It 'requires FeedName properyt' {
         GivenNoParameters
         GivenCredential 'somecredential' -WithID 'fubar'
-        GivenProGetIsAt 'some uri'
+        GivenProGetIsAt 'some url'
         WhenPublishingPackage -ErrorAction SilentlyContinue
         ThenTaskFailed '\bFeedName\b.*\bis\ a\ mandatory\b'
     }
 
     It 'requires at least one file to publish' {
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
         WhenPublishingPackage -ErrorAction SilentlyContinue
@@ -436,7 +436,7 @@ Describe 'PublishProGetUniversalPackage' {
     }
 
     It 'allows no files to publish' {
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
         GivenProperty 'AllowMissingPackage' -Is 'true'
@@ -446,7 +446,7 @@ Describe 'PublishProGetUniversalPackage' {
     }
 
     It 'allows no included files to be published' {
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'universal'
         GivenProperty 'AllowMissingPackage' -Is 'true'
@@ -457,7 +457,7 @@ Describe 'PublishProGetUniversalPackage' {
     }
 
     It 'surfaces ProGet no permission to publish error' {
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenUpackFile 'my.upack'
         GivenCredential 'fubatr' -WithID 'id'
         GivenUniversalFeed 'noaccess'
@@ -469,7 +469,7 @@ Describe 'PublishProGetUniversalPackage' {
     It 'customizes upload timeout' {
         GivenUpackFile 'myfile1.upack'
         GivenUpackFile 'myfile2.upack'
-        GivenProGetIsAt 'my uri'
+        GivenProGetIsAt 'my url'
         GivenCredential 'fubar' -WithID 'progetid'
         GivenUniversalFeed 'universalfeed'
         GivenTimeout 600

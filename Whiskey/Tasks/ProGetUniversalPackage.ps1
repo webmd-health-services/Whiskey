@@ -3,7 +3,9 @@ function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('ProGetUniversalPackage')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',
+                                        Version='1.*',
+                                        VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
@@ -66,7 +68,7 @@ function New-WhiskeyProGetUniversalPackage
     else
     {
         $version = $TaskContext.Version
-        # ProGet uses build metadata to distinguish different versions (i.e. 2.0.1+build.1 is different than 
+        # ProGet uses build metadata to distinguish different versions (i.e. 2.0.1+build.1 is different than
         # 2.0.1+build.2), which means users could inadvertently release multiple versions of a package. Remove the
         # build metadata to prevent this. This should be what people expect most of the time.
         $packageVersion = $version.SemVer2NoBuildMetadata.ToString()
@@ -131,9 +133,9 @@ function New-WhiskeyProGetUniversalPackage
                 $pathparam = 'ThirdPartyPath'
             }
 
-            $sourcePaths = 
-                $sourcePath | 
-                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam 
+            $sourcePaths =
+                $sourcePath |
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam
             if( -not $sourcePaths )
             {
                 return
@@ -204,15 +206,15 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( $override )
                 {
-                    $overrideBasePath = 
-                        Resolve-Path -Path $sourcePath | 
+                    $overrideBasePath =
+                        Resolve-Path -Path $sourcePath |
                         Select-Object -ExpandProperty 'ProviderPath'
 
                     if( (Test-Path -Path $overrideBasePath -PathType Leaf) )
                     {
                         $overrideBasePath = Split-Path -Parent -Path $overrideBasePath
                     }
-                    $addParams['BasePath'] = $overrideBasePath 
+                    $addParams['BasePath'] = $overrideBasePath
                     $addParams.Remove('PackageItemName')
                     $overrideInfo = ' -> {0}' -f $destinationItemName
 

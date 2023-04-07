@@ -10,11 +10,18 @@
 whiskey.yml file.
 * Parameter `ConfigurationPath` to Whiskey's default build.ps1 script, which allows running a build using a specific
 whiskey.yml file.
+* The `PublishProGetAsset` and `PublishProGetUniversalPackage` tasks now write what they're publishing to the
+information stream.
 
 ## Changed
 
 * Updated the `Parallel`, `Pester`, and `PowerShell` tasks to use `Start-ThreadJob` to run background jobs instead of
-`Start-Job`. [There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407), which causes "call depth overflow" exceptions during builds.
+`Start-Job`. [There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407),
+which causes "call depth overflow" exceptions during builds.
+* Updated the `ProGetUniversalPackage`, `PublishProGetAsset`, `PublishProGetUniversalPackage` tasks to use the latest
+ProGetAutomation version that matches wildcard `1.*` (excluding prerelease versions). They were using version `0.10.*`.
+* Updated `Version` task to no longer use a privately packaged version of ProGetAutomation and instead use the same
+version as the `ProGetUniversalPackage`, `PublishProGetAsset`, and `PublishProGetUniversalPackage` tasks.
 
 ## Fixed
 

@@ -3,7 +3,7 @@ function Publish-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('PublishProGetUniversalPackage')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation', Version='1.*', VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
@@ -11,8 +11,11 @@ function Publish-WhiskeyProGetUniversalPackage
         [Parameter(Mandatory)]
         [hashtable]$TaskParameter,
 
-        [Whiskey.Tasks.ValidatePath(AllowNonexistent,PathType='File')]
-        [String[]]$Path
+        [Whiskey.Tasks.ValidatePath(AllowNonexistent, PathType='File')]
+        [String[]]$Path,
+
+        [Alias('Uri')]
+        [Uri] $Url
     )
 
     Set-StrictMode -Version 'Latest'
@@ -21,7 +24,7 @@ function Publish-WhiskeyProGetUniversalPackage
     $exampleTask = 'Publish:
         - PublishProGetUniversalPackage:
             CredentialID: ProGetCredential
-            Uri: https://proget.example.com
+            Url: https://proget.example.com
             FeedName: UniversalPackages'
 
 
@@ -35,12 +38,14 @@ function Publish-WhiskeyProGetUniversalPackage
         return
     }
 
-    if( -not $TaskParameter['Uri'] )
+    if (-not $Url)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message "Uri is a mandatory property. It should be the URI to the ProGet instance where you want to publish your package:
+        $msg = 'Url is a mandatory property. It should be the URL to the ProGet instance where you want to publish ' +
+               "your package:
 
-        $exampleTask
-        "
+    $exampleTask
+               "
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
@@ -53,13 +58,14 @@ function Publish-WhiskeyProGetUniversalPackage
         return
     }
 
-    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
+    $credential =
+        Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
 
-    $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
+    $session = New-ProGetSession -Uri $Url -Credential $credential -WarningAction Ignore
 
     if( -not $Path )
     {
-        $Path = 
+        $Path =
             Join-Path -Path $TaskContext.OutputDirectory -ChildPath '*.upack' |
             Resolve-WhiskeyTaskPath -TaskContext $TaskContext -AllowNonexistent -PropertyName 'Path' -PathType 'File'
     }
@@ -70,7 +76,7 @@ function Publish-WhiskeyProGetUniversalPackage
         $allowMissingPackages = $TaskParameter['AllowMissingPackage'] | ConvertFrom-WhiskeyYamlScalar
     }
 
-    $packages = 
+    $packages =
         $Path |
         Where-Object {
             if( -not $TaskParameter.ContainsKey('Exclude') )
@@ -103,7 +109,6 @@ function Publish-WhiskeyProGetUniversalPackage
     }
 
     $feedName = $TaskParameter['FeedName']
-    $taskPrefix = '[{0}]  [{1}]' -f $session.Uri,$feedName
 
     $optionalParam = @{ }
     if( $TaskParameter['Timeout'] )
@@ -115,10 +120,10 @@ function Publish-WhiskeyProGetUniversalPackage
         $optionalParam['Force'] = $TaskParameter['Overwrite'] | ConvertFrom-WhiskeyYamlScalar
     }
 
-    Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}' -f $taskPrefix)
+    Write-WhiskeyInfo -Context $TaskContext -Message "${Url}  ${feedName}"
     foreach( $package in $packages )
     {
-        Write-WhiskeyVerbose -Context $TaskContext -Message ('{0}  {1}' -f (' ' * $taskPrefix.Length),$package)
+        Write-WhiskeyInfo -Context $TaskContext -Message "  $($package | Resolve-WhiskeyRelativePath)"
         Publish-ProGetUniversalPackage -Session $session -FeedName $feedName -PackagePath $package @optionalParam -ErrorAction Stop
     }
 }

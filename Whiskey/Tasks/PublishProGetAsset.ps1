@@ -3,14 +3,19 @@
 function Publish-WhiskeyProGetAsset
 {
     [Whiskey.Task('PublishProGetAsset')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',
+                                        Version='1.*',
+                                        VersionParameterName='ProGetAutomationVersion')]
     [CmdletBinding()]
     param(
         # The context this task is operating in. Use `New-WhiskeyContext` to create context objects.
         [Whiskey.Context]$TaskContext,
 
         # The parameters/configuration to use to run the task.
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Alias('Uri')]
+        [Uri] $Url
     )
 
 
@@ -24,7 +29,7 @@ function Publish-WhiskeyProGetAsset
         Path:
         - ""path/to/file.txt""
         - ""path/to/anotherfile.txt""
-        Uri: http://proget.dev.webmd.com/
+        Url: http://proget.dev.webmd.com/
         AssetPath:
         - ""path/to/exampleAsset""
         - ""path/toanother/file.txt""
@@ -50,9 +55,12 @@ function Publish-WhiskeyProGetAsset
 
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $TaskParameter['CredentialID'] -PropertyName 'CredentialID'
 
-    $session = New-ProGetSession -Uri $TaskParameter['Uri'] -Credential $credential
+    $session = New-ProGetSession -Uri $Url -Credential $credential -WarningAction Ignore
 
-    foreach($path in $TaskParameter['Path']){
+    $assetDirName = $TaskParameter['AssetDirectory']
+    Write-WhiskeyInfo $Url
+    foreach($path in $TaskParameter['Path'])
+    {
         if( $TaskParameter['AssetPath'] -and @($TaskParameter['AssetPath']).count -eq @($TaskParameter['Path']).count){
             $name = @($TaskParameter['AssetPath'])[$TaskParameter['Path'].indexOf($path)]
         }
@@ -61,6 +69,8 @@ function Publish-WhiskeyProGetAsset
             Stop-WhiskeyTask -TaskContext $TaskContext -Message ("There must be the same number of `Path` items as `AssetPath` Items. Each asset must have both a `Path` and an `AssetPath` in the whiskey.yml file." + $message)
             return
         }
-        Set-ProGetAsset -Session $session -DirectoryName $TaskParameter['AssetDirectory'] -Path $name -FilePath $path
+
+        Write-WhiskeyInfo "  $($path | Resolve-WhiskeyRelativePath) -> ${assetDirName}/${name}"
+        Set-ProGetAsset -Session $session -DirectoryName $assetDirName -Path $name -FilePath $path
     }
 }

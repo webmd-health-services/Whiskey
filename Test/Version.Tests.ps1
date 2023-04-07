@@ -16,7 +16,6 @@ BeforeAll {
     $script:initialVersion = $null
     $script:testNum = 0
     $script:versions = @()
-    $script:getVersionsCmdName = $null
     $script:credentials = [Dictionary[String,pscredential]]::New()
     $script:apikeys = [Dictionary[String,String]]::New()
 
@@ -87,7 +86,6 @@ BeforeAll {
         )
 
         $script:versions = [pscustomobject]@{ versions = $Version }
-        $script:getVersionsCmdName = 'Get-WProGetUniversalPackage'
     }
 
     function ThenErrorIs
@@ -106,7 +104,7 @@ BeforeAll {
         )
 
         $shouldArgs = @{
-            CommandName = $script:getVersionsCmdName;
+            CommandName = 'Get-ProGetUniversalPackage';
             ModuleName = 'Whiskey';
             Times = 1;
             Exactly = $true;
@@ -238,12 +236,12 @@ BeforeAll {
             $WithProperties = $script:property
         }
 
-        if ($script:getVersionsCmdName)
+        if (-not (Get-Module -Name 'ProGetAutomation'))
         {
-            Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Whiskey\Modules\ProGetAutomation') -Prefix 'W'
-            Mock -CommandName $script:getVersionsCmdName -ModuleName 'Whiskey' -MockWith { $script:versions }
+            Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\ProGetAutomation')
         }
-
+        Mock -CommandName 'Get-ProGetUniversalPackage' -ModuleName 'Whiskey' -MockWith { $script:versions }
+`
         foreach ($credID in $script:credentials.Keys)
         {
             Add-WhiskeyCredential -Context $script:context -ID $credID -Credential $script:credentials[$credID]
@@ -279,7 +277,6 @@ Describe 'Version' {
         $script:branch = $null
         $script:sourceBranch = $null
         $script:versions = @()
-        $script:getVersionsCmdName = $null
         $script:apikeys.Clear()
         $script:credentials.Clear()
         $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `

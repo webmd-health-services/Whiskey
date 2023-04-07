@@ -1,9 +1,0 @@
-{
-  "PSModules": [
-    {
-      "Name": "ProGetAutomation",
-      "Version": "1.*"
-    }
-  ],
-  "PSModulesDirectoryName": "Modules"
-}
