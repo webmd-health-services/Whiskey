@@ -2,104 +2,105 @@
 #Requires -Version 4
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
-
-$failed = $false
-$testRoot = $null
-
-function File
-{
-    param(
-        $Path,
-        $ContentShouldBe
-    )
-
-    $fullPath = Join-Path -Path $testRoot -ChildPath $Path
-    $fullPath | Should -Exist
-    Get-Content -Path $fullPath -Raw | Should -Be $ContentShouldBe
-}
-
-function GivenFile
-{
-    param(
-        $Path,
-        $Content
-    )
-
-    Write-Debug $Path
-    Write-Debug $Content
-    $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
-}
-
-function Init
-{
-    $script:testRoot = New-WhiskeyTestRoot
-    $Global:Error.Clear()
-}
-
-function Invoke-ImportWhiskeyYaml
-{
-    param(
-        [String]$Yaml
-    )
-
-    Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $Yaml }
-}
-
-function WhenRunningTask
-{
-    [CmdletBinding()]
-    param(
-        $Parameter
-    )
-
-    $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     $script:failed = $false
-    $jobCount = Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count'
-    Mock -CommandName 'Start-Sleep' -ModuleName 'Whiskey' # So tests don't take extra time.
-    try
+    $script:testDir = $null
+
+    function File
     {
+        param(
+            $Path,
+            $ContentShouldBe
+        )
+
+        $fullPath = Join-Path -Path $script:testDir -ChildPath $Path
+        $fullPath | Should -Exist
+        Get-Content -Path $fullPath -Raw | Should -Be $ContentShouldBe
+    }
+
+    function GivenFile
+    {
+        param(
+            $Path,
+            $Content
+        )
+
+        Write-Debug $Path
+        Write-Debug $Content
+        $Content | Set-Content -Path (Join-Path -Path $script:testDir -ChildPath $Path)
+    }
+
+    function Invoke-ImportWhiskeyYaml
+    {
+        param(
+            [String]$Yaml
+        )
+
+        Invoke-WhiskeyPrivateCommand -Name 'Import-WhiskeyYaml' -Parameter @{ 'Yaml' = $Yaml }
+    }
+
+    function WhenRunningTask
+    {
+        [CmdletBinding()]
+        param(
+            $Parameter
+        )
+
+        $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testDir
+
+        $script:failed = $false
+        $jobCount = Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count'
+        Mock -CommandName 'Start-Sleep' -ModuleName 'Whiskey' # So tests don't take extra time.
+        try
+        {
+            $Global:Error.Clear()
+            Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter #-ErrorAction Continue
+        }
+        catch
+        {
+            $_ | Write-Error
+            $script:failed = $true
+        }
+
+        Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count' | Should -Be $jobCount
+    }
+
+    function ThenCompleted
+    {
+        $script:failed | Should -BeFalse
+    }
+
+    function ThenErrorIs
+    {
+        param(
+            $Regex
+        )
+
+        $Global:Error[0] | Should -Match $Regex
+    }
+
+    function ThenFailed
+    {
+        $script:failed | Should -BeTrue
+    }
+
+    function ThenNoErrors
+    {
+        $Global:Error | Format-List * -Force | Out-String | Write-Verbose
+        $Global:Error | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Parallel' {
+    BeforeEach {
+        $script:testDir = New-WhiskeyTestRoot
         $Global:Error.Clear()
-        Invoke-WhiskeyTask -TaskContext $context -Name 'Parallel' -Parameter $Parameter #-ErrorAction Continue
-    }
-    catch
-    {
-        $_ | Write-Error
-        $script:failed = $true
     }
 
-    Get-Job | Measure-Object | Select-Object -ExpandProperty 'Count' | Should -Be $jobCount
-}
-
-function ThenCompleted
-{
-    $failed | Should -Be $false
-}
-
-function ThenErrorIs
-{
-    param(
-        $Regex
-    )
-
-    $Global:Error[0] | Should -Match $Regex
-}
-
-function ThenFailed
-{
-    $failed | Should -Be $true
-}
-
-function ThenNoErrors
-{
-    $Global:Error | Format-List * -Force | Out-String | Write-Verbose -Verbose
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-Describe 'Parallel.when running multiple queues' {
-    It 'should run tasks in each queue' {
-        Init
+    It 'should run multiple queues' {
         GivenFile 'one.ps1' '1 | Set-Content one.txt'
         GivenFile 'two.ps1' '2 | Set-Content two.txt'
         GivenFile 'three.ps1' '3 | Set-Content three.txt'
@@ -120,27 +121,21 @@ Queues:
         File 'two.txt' -ContentShouldBe   ('2{0}' -f [Environment]::NewLine)
         File 'three.txt' -ContentShouldBe ('3{0}' -f [Environment]::NewLine)
     }
-}
 
-Describe 'Parallel.when no queues' {
-    It 'should fail' {
-        Init
+    It 'should reject no queues' {
         WhenRunningTask @{ } -ErrorAction SilentlyContinue
         ThenFailed
         ThenErrorIs 'Property\ "Queues"\ is\ mandatory'
     }
-}
 
-Describe 'Parallel.when queue missing task' {
-    It 'should fail' {
-        Init
+    It 'should validate queue has at least one task' {
         GivenFile 'one.ps1' 'Start-Sleep -Seconds 1 ; 1'
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
     - PowerShell:
         Path: one.ps1
-- 
+-
     - PowerShell:
         Path: two.ps1
 '@
@@ -149,11 +144,8 @@ Queues:
         ThenErrorIs 'Queue\[1\]:\ Property\ "Tasks"\ is\ mandatory'
         $result | Should -BeNullOrEmpty
     }
-}
 
-Describe 'Parallel.when one queue fails' {
-    It 'should fail' {
-        Init
+    It 'should fail when one queue fails' {
         GivenFile 'one.ps1' 'throw "fubar!"'
         GivenFile 'two.ps1' 'Start-Sleep -Seconds 10'
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
@@ -169,12 +161,8 @@ Queues:
         ThenFailed
         ThenErrorIs 'didn''t finish successfully'
     }
-}
 
-
-Describe 'Parallel.when one queue writes an error' {
-    It 'should run other tasks' {
-        Init
+    It 'should ignore errors written by other queues' {
         GivenFile 'one.ps1' 'Write-Error "fubar!" ; 1 | Set-Content "one.txt"'
         GivenFile 'two.ps1' '2 | Set-Content "two.txt"'
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
@@ -191,11 +179,8 @@ Queues:
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
         File 'two.txt' -ContentShouldBe ('2{0}' -f [Environment]::NewLine)
     }
-}
 
-Describe 'Parallel.when multiple tasks per queue' {
     It 'should run all the tasks in each queue' {
-        Init
         GivenFile 'one.ps1' '1'
         GivenFile 'two.ps1' '2'
         GivenFile 'three.ps1' '3'
@@ -213,30 +198,24 @@ Queues:
         [Object[]]$output = WhenRunningTask $task
         ThenCompleted
         $output.Count | Should -Be 3
-        $output -contains 1 | Should -Be $true
-        $output -contains 2 | Should -Be $true
-        $output -contains 3 | Should -Be $true
+        $output -contains 1 | Should -BeTrue
+        $output -contains 2 | Should -BeTrue
+        $output -contains 3 | Should -BeTrue
         ThenNoErrors
     }
-}
 
-Describe 'Parallel.when a task definition is invalid' {
-    It 'should fail' {
-        Init
+    It 'should validate task definition' {
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Queues:
 - Tasks:
-    - 
+    -
 '@
         WhenRunningTask $task -ErrorAction SilentlyContinue
         ThenFailed
         $Global:Error[0] | Should -Match 'Invalid\ task\ YAML'
     }
-}
 
-Describe 'Parallel.when API keys, variables, credentials, and task defaults are defined' {
-    It 'should preserve everything to parallel tasks' {
-        Init
+    It 'should preserve Whiskey context in tasks' {
         GivenFile 'one.ps1' -Content @'
 param(
     [Object]$TaskContext
@@ -285,18 +264,15 @@ Build:
             Argument:
                 VariableValue: $(Fubar)
 '@
-        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml -ForBuildRoot $script:testRoot
+        $context = New-WhiskeyTestContext -ForBuildServer -ForYaml $yaml -ForBuildRoot $script:testDir
         Add-WhiskeyApiKey -Context $context -ID 'ApiKey' -Value 'ApiKey'
         Add-WhiskeyCredential -Context $context -ID 'Credential' -Credential (New-Object 'PsCredential' ('cred',(ConvertTo-SecureString -String 'cred' -AsPlainText -Force)))
         $Global:Error.Clear()
         Invoke-WhiskeyBuild -Context $context
         $Global:Error | Should -BeNullOrEmpty
     }
-}
 
-Describe 'Parallel.when running pipeline task' {
-    It 'should run the pipeline tasks correctly' {
-        Init
+    It 'should pipeline task' {
         GivenFile 'one.ps1' '1 | Set-Content one.txt'
         GivenFile 'whiskey.yml' @'
 Build:
@@ -311,15 +287,12 @@ PowerShell:
     Path: one.ps1
 '@
         $context = New-WhiskeyContext -Environment 'Verification' `
-                                      -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+                                      -ConfigurationPath (Join-Path -Path $script:testDir -ChildPath 'whiskey.yml')
         Invoke-WhiskeyBuild -Context $context
         File 'one.txt' -ContentShouldBe ('1{0}' -f [Environment]::NewLine)
     }
-}
 
-Describe 'Parallel.when module with custom tasks is loaded' {
-    It 'should import module in background job' {
-        Init
+    It 'should run custom tasks from a module' {
         Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'WhiskeyTestTasks.psm1')
         try
         {
@@ -331,7 +304,7 @@ Build:
         - WrapsNoOpTask
 '@
             $context = New-WhiskeyContext -Environment 'Verification' `
-                                          -ConfigurationPath (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
+                                          -ConfigurationPath (Join-Path -Path $script:testDir -ChildPath 'whiskey.yml')
             Invoke-WhiskeyBuild -Context $context
             $Global:Error | Should -BeNullOrEmpty
         }
@@ -340,11 +313,8 @@ Build:
             Remove-Module 'WhiskeyTestTasks'
         }
     }
-}
 
-Describe 'Parallel.when background tasks take too long' {
-    It 'they should be cancelled and stopped' {
-        Init
+    It 'should cancel and stop long-running tasks' {
         $task = Invoke-ImportWhiskeyYaml -Yaml @'
 Timeout: 00:00:00.1
 Queues:

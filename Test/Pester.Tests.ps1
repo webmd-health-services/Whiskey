@@ -1,139 +1,141 @@
+
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$testRoot = $null
-$context = $null
-$version = $null
-$failed = $false
-$failureMessage = $null
-$output = $null
-$whiskeyYamlPath = $null
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function GetOutputPath
-{
-    $outputFileRoot = $context.OutputDirectory.Name
-    return Join-Path -Path $outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
-}
-
-function GivenTestFile
-{
-    param(
-        [String] $Path,
-
-        [String] $Content
-    )
-
-    if( -not [IO.Path]::IsPathRooted($Path) )
-    {
-        $Content | Set-Content -Path (Join-Path -Path $testRoot -ChildPath $Path)
-    }
-}
-
-function GivenWhiskeyYml
-{
-    param(
-        $Content
-    )
-
-    $script:whiskeyYamlPath = (Join-Path -Path $testRoot -ChildPath 'whiskey.yml')
-    $Content | Set-Content -Path $whiskeyYamlPath
-}
-
-function Init
-{
+    $script:testDir = $null
+    $script:context = $null
     $script:version = $null
     $script:failed = $false
     $script:failureMessage = $null
+    $script:output = $null
     $script:whiskeyYamlPath = $null
-    $Global:Error.Clear()
 
-    $script:testRoot = New-WhiskeyTestRoot
+    function GetOutputPath
+    {
+        $script:outputFileRoot = $script:context.OutputDirectory.Name
+        return Join-Path -Path $script:outputFileRoot -ChildPath ('pester+{0}.xml' -f [IO.Path]::GetRandomFileName())
+    }
 
-    $script:context = New-WhiskeyTestContext -ForTaskName 'Pester' `
-                                             -ForDeveloper `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'Pester'
+    function GivenTestFile
+    {
+        param(
+            [String] $Path,
 
-    $pesterModuleRoot = Join-Path -Path $testRoot -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
-    Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore |
-        Where-Object { $_.Name -notlike '5.*' } |
-        Remove-Item -Recurse -Force
+            [String] $Content
+        )
+
+        if( -not [IO.Path]::IsPathRooted($Path) )
+        {
+            $Content | Set-Content -Path (Join-Path -Path $script:testDir -ChildPath $Path)
+        }
+    }
+
+    function GivenWhiskeyYml
+    {
+        param(
+            $Content
+        )
+
+        $script:whiskeyYamlPath = (Join-Path -Path $script:testDir -ChildPath 'whiskey.yml')
+        $Content | Set-Content -Path $script:whiskeyYamlPath
+    }
+
+    function ThenDidNotFail
+    {
+        param(
+            [Switch] $AndPublishedTestResult
+        )
+
+        $script:failed | Should -Be $false
+
+        if( $AndPublishedTestResult )
+        {
+            Join-Path -Path $script:context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+        }
+        else
+        {
+            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -Times 0
+        }
+    }
+
+    function ThenFailed
+    {
+        param(
+            [String] $WithErrorMatching
+        )
+
+        $script:failed | Should -BeTrue
+        if( $WithErrorMatching )
+        {
+            $Global:Error | Should -Match $WithErrorMatching
+        }
+    }
+
+    function WhenPesterTaskIsInvoked
+    {
+        [CmdletBinding()]
+        param(
+        )
+
+        $script:failed = $false
+        $Global:Error.Clear()
+
+        Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+
+        $script:context = New-WhiskeyTestContext -ForDeveloper `
+                                                -ConfigurationPath $script:whiskeyYamlPath `
+                                                -ForBuildRoot $script:testDir `
+                                                -IncludePSModule 'Pester'
+
+        $taskParameter =
+            $script:context.Configuration['Build'] |
+            Where-Object { $_.ContainsKey('Pester') } |
+            ForEach-Object { $_['Pester'] }
+
+        try
+        {
+            $script:output = Invoke-WhiskeyTask -TaskContext $script:context -Parameter $taskParameter -Name 'Pester'
+        }
+        catch
+        {
+            $script:failed = $true
+            Write-Error -ErrorRecord $_
+        }
+    }
 }
 
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
+Describe 'Pester' {
+    BeforeEach {
+        $script:version = $null
+        $script:failed = $false
+        $script:failureMessage = $null
+        $script:whiskeyYamlPath = $null
+        $Global:Error.Clear()
 
-function ThenDidNotFail
-{
-    param(
-        [Switch] $AndPublishedTestResult
-    )
+        $script:testDir = New-WhiskeyTestRoot
 
-    $script:failed | Should -Be $false
+        $script:context = New-WhiskeyTestContext -ForTaskName 'Pester' `
+                                                -ForDeveloper `
+                                                -ForBuildRoot $script:testDir `
+                                                -IncludePSModule 'Pester'
 
-    if( $AndPublishedTestResult )
-    {
-        Join-Path -Path $context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
-        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
+        $pesterModuleRoot = Join-Path -Path $script:testDir -ChildPath ('{0}\Pester' -f $TestPSModulesDirectoryName)
+        Get-ChildItem -Path $pesterModuleRoot -ErrorAction Ignore |
+            Where-Object { $_.Name -notlike '5.*' } |
+            Remove-Item -Recurse -Force
     }
-    else
-    {
-        Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -Times 0
+
+    AfterEach {
+        Reset-WhiskeyTestPSModule
     }
-}
 
-function ThenFailed
-{
-    param(
-        [String] $WithErrorMatching
-    )
-
-    $script:failed | Should -BeTrue
-    if( $WithErrorMatching )
-    {
-        $Global:Error | Should -Match $WithErrorMatching
-    }
-}
-
-function WhenPesterTaskIsInvoked
-{
-    [CmdletBinding()]
-    param(
-    )
-
-    $failed = $false
-    $Global:Error.Clear()
-
-    Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
-
-    $script:context = New-WhiskeyTestContext -ForDeveloper `
-                                             -ConfigurationPath $whiskeyYamlPath `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'Pester'
-
-    $taskParameter =
-        $context.Configuration['Build'] |
-        Where-Object { $_.ContainsKey('Pester') } |
-        ForEach-Object { $_['Pester'] }
-
-    try
-    {
-        $script:output = Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'Pester'
-    }
-    catch
-    {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_
-    }
-}
-
-Describe 'Pester.when running passing Pester tests' {
-    AfterEach { Reset }
-    It 'should run the tests' {
-        Init
+    It 'succeeds when no failing tests' {
         GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'One' {
     It 'should pass 1' {
@@ -155,12 +157,8 @@ Describe 'One' {
         WhenPesterTaskIsInvoked
         ThenDidNotFail
     }
-}
 
-Describe 'Pester.when running failing Pester tests' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'fails build when any tests file' {
         GivenTestFile 'FailingTests.Tests.ps1' @'
 Describe 'Failing' {
     It 'should fail 1' {
@@ -181,18 +179,14 @@ Describe 'Failing' {
                     Throw: true
 "@
         WhenPesterTaskIsInvoked -ErrorVariable failureMessage
-        if( $null -ne ($failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
+        if( $null -ne ($script:failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
         {
             $script:failed = $true
         }
         ThenFailed
     }
-}
 
-Describe 'Pester.when running multiple test scripts' {
-    AfterEach { Reset }
-    It 'should run all the scripts' {
-        Init
+    It 'runs multiple test scripts' {
         GivenTestFile 'FailingTests.Tests.ps1' @'
 Describe 'Failing' {
     It 'should fail' {
@@ -217,18 +211,14 @@ Describe 'Passing' {
                     Throw: true
 "@
         WhenPesterTaskIsInvoked -ErrorVariable failureMessage
-        if( $null -ne ($failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
+        if( $null -ne ($script:failureMessage | Where-Object {$_ -match 'Pester run failed'}) )
         {
             $script:failed = $true
         }
         ThenFailed
     }
-}
 
-Describe 'Pester.when not running task in job' {
-    AfterEach { Reset }
-    It 'should pass' {
-        Init
+    It 'runs tests in background jobs' {
         GivenTestFile 'PassingTests.Tests.ps1' @"
 Describe 'PassingTests' {
     It 'should run inside Whiskey' {
@@ -249,10 +239,10 @@ Describe 'PassingTests' {
 '@
         WhenPesterTaskIsInvoked
         Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-            Push-Location $testRoot
+            Push-Location $script:testDir
             try
             {
-                $ArgumentList[0] | Should -Be $testRoot
+                $ArgumentList[0] | Should -Be $script:testDir
                 $expectedManifestPath = Join-Path -Path '*' -ChildPath (Join-Path -Path '5.*' -ChildPath 'Pester.psd1')
                 $ArgumentList[1] | Should -BeLike $expectedManifestPath
                 $ArgumentList[2] | Should -BeOfType [hashtable]
@@ -277,12 +267,8 @@ Describe 'PassingTests' {
             }
         }
     }
-}
 
-Describe 'Pester.when passing custom arguments' {
-    AfterEach { Reset }
-    It 'should pass the arguments' {
-        Init
+    It 'passes custom arguments to Pester' {
         GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'PassingTests'{
     It 'should pass' {
@@ -305,12 +291,8 @@ Describe 'PassingTests'{
         WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
-}
 
-Describe 'Pester.when passing named arguments to script' {
-    AfterEach { Reset }
-    It 'should pass arguments' {
-        Init
+    It 'passes arguments to test script' {
         $oneValue = [Guid]::NewGuid()
         $twoValue = [Guid]::NewGuid()
         $threeValue = [Guid]::NewGuid()
@@ -357,12 +339,8 @@ Describe 'ArgTest' {
         WhenPesterTaskIsInvoked
         ThenDidNotFail
     }
-}
 
-Describe 'Pester.when passing an array list'{
-    AfterEach { Reset }
-    It 'should get converted correctly'{
-        Init
+    It 'passes list of paths correctly'{
         GivenTestFile 'PassingTests.ps1' @'
 Describe 'Failing' {
     It 'should fail' {
@@ -388,12 +366,8 @@ Describe 'Passing' {
         WhenPesterTaskIsInvoked
         ThenDidNotFail
     }
-}
 
-Describe 'Pester.when passing a string boolean value'{
-    AfterEach { Reset }
-    It 'should get converted correctly and return test results'{
-        Init
+    It 'passes and converts boolean paramers to Pester'{
         GivenTestFile 'PassingTests.ps1' @'
 Describe 'Passing' {
     It 'should pass' {
@@ -416,12 +390,8 @@ Describe 'Passing' {
         WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
-}
 
-Describe 'Pester.when passing a script block with data'{
-    AfterEach{ Reset }
-    It 'should pass script block correctly'{
-        Init
+    It 'passes parameters to script blocks'{
         $oneValue = [Guid]::NewGuid()
 
         GivenWhiskeyYml @"
@@ -450,12 +420,8 @@ Describe 'Pester.when passing a script block with data'{
         WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
-}
 
-Describe 'Pester.when passing a script block with no data'{
-    AfterEach{ Reset }
-    It 'should pass script block correctly'{
-        Init
+    It 'runs parameter-less script blocks'{
         GivenWhiskeyYml @"
         Build:
         - Pester:
@@ -476,12 +442,8 @@ Describe 'Pester.when passing a script block with no data'{
         WhenPesterTaskIsInvoked
         ThenDidNotFail -AndPublishedTestResult
     }
-}
 
-Describe 'Pester.when tests fail in background job' {
-    AfterEach{ Reset }
-    It 'should fail the build' {
-        Init
+    It 'fails build when background tests fail and exit and throw options are false' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
@@ -502,12 +464,7 @@ Describe 'Pester.when tests fail in background job' {
         ThenFailed -WithErrorMatching 'failed'
     }
 
-}
-
-Describe 'Pester.when tests fail in background job and exit configuration option is true' {
-    AfterEach{ Reset }
-    It 'should fail the build' {
-        Init
+    It 'fails build when tests run in background job and options exit is true and throw is true' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
@@ -527,12 +484,8 @@ Describe 'Pester.when tests fail in background job and exit configuration option
         WhenPesterTaskIsInvoked
         ThenFailed -WithErrorMatching 'failed'
     }
-}
 
-Describe 'Pester.when tests fail in background job and throw configuration option is true' {
-    AfterEach{ Reset }
-    It 'should fail the build' {
-        Init
+    It 'fails build when tests run in background job and options exit is false and throw is true' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
@@ -552,12 +505,8 @@ Describe 'Pester.when tests fail in background job and throw configuration optio
         WhenPesterTaskIsInvoked
         ThenFailed -WithErrorMatching 'failed'
     }
-}
 
-Describe 'Pester.when tests fail in background job and exit and throw configurations options are true' {
-    AfterEach{ Reset }
-    It 'should fail the build' {
-        Init
+    It 'fails build when run in background job and exit and throw options are true' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
