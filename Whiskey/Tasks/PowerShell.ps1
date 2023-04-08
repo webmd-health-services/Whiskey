@@ -67,7 +67,7 @@ function Invoke-WhiskeyPowerShell
 
         $resultPath = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('PowerShell-{0}-RunResult-{1}' -f ($scriptPath | Split-Path -Leaf),([IO.Path]::GetRandomFileName()))
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
-        $job = Start-ThreadJob -ScriptBlock {
+        $job = Start-Job -ScriptBlock {
 
             Set-StrictMode -Version 'Latest'
 

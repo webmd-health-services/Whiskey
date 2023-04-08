@@ -218,56 +218,6 @@ Describe 'Passing' {
         ThenFailed
     }
 
-    It 'runs tests in background jobs' {
-        GivenTestFile 'PassingTests.Tests.ps1' @"
-Describe 'PassingTests' {
-    It 'should run inside Whiskey' {
-        Test-Path -Path 'variable:psModulesDirectoryName' | Should -BeTrue
-        `$script:psModulesDirectoryName | Should -Be "$($TestPSModulesDirectoryName)"
-    }
-}
-"@
-        Mock -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -MockWith {
-            @'
-<test-results errors="0" failures="0" />
-'@
-        }
-        GivenWhiskeyYml @'
-        Build:
-        - Pester:
-            Configuration: {}
-'@
-        WhenPesterTaskIsInvoked
-        Assert-MockCalled -CommandName 'Invoke-Command' -ModuleName 'Whiskey' -ParameterFilter {
-            Push-Location $script:testDir
-            try
-            {
-                $ArgumentList[0] | Should -Be $script:testDir
-                $expectedManifestPath = Join-Path -Path '*' -ChildPath (Join-Path -Path '5.*' -ChildPath 'Pester.psd1')
-                $ArgumentList[1] | Should -BeLike $expectedManifestPath
-                $ArgumentList[2] | Should -BeOfType [hashtable]
-                $ArgumentList[2] | Should -BeNullOrEmpty
-                $ArgumentList[3] | Should -BeNullOrEmpty
-                $dirSep = [IO.Path]::DirectorySeparatorChar
-                $ArgumentList[4] | Should -BeLike "*$($dirSep).output$($dirSep)Temp*$($dirSep)exitcode"
-                $ArgumentList[5] | Should -BeOfType [hashtable]
-                $prefNames = @(
-                    'DebugPreference',
-                    'ErrorActionPreference',
-                    'ProgressPreference',
-                    'VerbosePreference',
-                    'WarningPreference'
-                ) | Sort-Object
-                $ArgumentList[5].Keys | Sort-Object | Should -Be $prefNames
-                return $true
-            }
-            finally
-            {
-                Pop-Location
-            }
-        }
-    }
-
     It 'passes custom arguments to Pester' {
         GivenTestFile 'PassingTests.Tests.ps1' @'
 Describe 'PassingTests'{

@@ -78,8 +78,6 @@ Build:
 # more than three queues doesn't help, sadly. (We have four because the first
 # queue only takes about 60 seconds and must be run separately.)
 - Parallel:
-    Verbose: true
-    Debug: true
     ExceptOnPlatform: Windows
     Timeout: 00:40:00
     Queues:
@@ -273,8 +271,6 @@ Build:
             - "Test/Uninstall-WhiskeyTool.Tests.ps1"
 
 - Parallel:
-    Debug: true
-    Verbose: true
     OnlyOnPlatform: Windows
     Timeout: 00:40:00
     Queues:

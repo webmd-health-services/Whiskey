@@ -10,7 +10,7 @@ function ConvertTo-WhiskeyContext
     returned by `ConvertFrom-WhiskeyContext` back into a `Whiskey.Context` object.
 
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
-        $job = Start-ThreadJob {
+        $job = Start-Job {
                     Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
                                             # Or wherever your project keeps Whiskey relative to your task definition.
@@ -19,8 +19,6 @@ function ConvertTo-WhiskeyContext
                     [Whiskey.Context]$context = $using:serializableContext | ConvertTo-WhiskeyContext
                     # Run your task
               }
-
-    The `Start-Job` cmdlet is also supported but not recommended.
 
     .EXAMPLE
     $serializedContext | ConvertTo-WhiskeyContext

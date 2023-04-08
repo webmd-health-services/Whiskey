@@ -3,7 +3,7 @@
 
 # 0.57.0
 
-> Released 2023-04-07
+> Released 2023-04-10
 
 ## Added
 
@@ -17,9 +17,10 @@ information stream.
 
 ## Changed
 
-* Updated the `Parallel`, `Pester`, and `PowerShell` tasks to use `Start-ThreadJob` to run background jobs instead of
-`Start-Job`. [There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407),
-which causes "call depth overflow" exceptions during builds.
+* Updated the `Pester` task to no longer run tests in a background job.
+[There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407),
+which causes "call depth overflow" exceptions during some Pester tests. The `Pester` task now runs tests in a
+seperate PowerShell process.
 * Updated the `ProGetUniversalPackage`, `PublishProGetAsset`, `PublishProGetUniversalPackage` tasks to use the latest
 ProGetAutomation version that matches wildcard `1.*` (excluding prerelease versions). They were using version `0.10.*`.
 * Updated `Version` task to no longer use a privately packaged version of ProGetAutomation and instead use the same
@@ -29,7 +30,11 @@ version as the `ProGetUniversalPackage`, `PublishProGetAsset`, and `PublishProGe
 
 * Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
 version.
-* Fixed: The `Parallel`, `Pester`, and `PowerShell` tasks sometimes fail with "call depth overflow" exceptions.
+* Fixed: The `Pester` tasks sometimes fail with "call depth overflow" exceptions.
+
+## Removed
+
+* The `Pester` task's `AsJob` switch. The `Pester` task now runs tests in a seperate PowerShell process.
 
 
 # 0.56.0

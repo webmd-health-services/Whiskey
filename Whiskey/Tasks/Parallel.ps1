@@ -98,7 +98,7 @@ function Invoke-WhiskeyParallelTask
             }
 
             Write-WhiskeyInfo -Context $TaskContext -Message "Starting background job #$($queueIdx)."
-            $job = Start-ThreadJob -ScriptBlock {
+            $job = Start-Job -ScriptBlock {
 
                     Set-StrictMode -Version 'Latest'
 
@@ -106,6 +106,7 @@ function Invoke-WhiskeyParallelTask
                     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
                     $VerbosePreference = $using:VerbosePreference
                     $DebugPreference = $using:DebugPreference
+                    $InformationPreference = $using:InformationPreference
                     $WarningPreference = $using:WarningPreference
                     $ErrorActionPreference = $using:ErrorActionPreference
 
@@ -152,8 +153,8 @@ function Invoke-WhiskeyParallelTask
             Write-WhiskeyDebug -Context $TaskContext -Message "Job #$($job.QueueIndex) $($job.Name)"
             do
             {
-                Write-WhiskeyDebug -Context $TaskContext -Message "  Waiting for 1 second."
-                $completedJob = $job | Wait-Job -Timeout 1
+                Write-WhiskeyDebug -Context $TaskContext -Message "  Waiting for 9 seconds."
+                $completedJob = $job | Wait-Job -Timeout 9
                 if( $job.HasMoreData )
                 {
                     Write-WhiskeyDebug -Context $TaskContext -Message "  Receiving output."
@@ -189,9 +190,6 @@ function Invoke-WhiskeyParallelTask
                     $numTimedOut += 1
                     break
                 }
-
-                Write-WhiskeyDebug -Context $TaskContext -Message "  Sleeping for 4 seconds."
-                Start-Sleep -Seconds 4
             }
             while( $true )
         }

@@ -8,11 +8,11 @@ function ConvertFrom-WhiskeyContext
     .DESCRIPTION
     Some tasks need to run in background jobs and need access to Whiskey's context. This function converts a
     `Whiskey.Context` object into an object that can be serialized by PowerShell across platforms. The object returned
-    by this function can be passed to a `Start-ThreadJob` script block. Inside that script block you should import Whiskey and
+    by this function can be passed to a `Start-Job` script block. Inside that script block you should import Whiskey and
      pass the serialized context to `ConvertTo-WhiskeyContext`.
 
         $serializableContext = $TaskContext | ConvertFrom-WhiskeyContext
-        $job = Start-ThreadJob {
+        $job = Start-Job {
                     Invoke-Command -ScriptBlock {
                                             $VerbosePreference = 'SilentlyContinue';
                                             # Or wherever your project keeps Whiskey relative to your task definition.
@@ -26,8 +26,6 @@ function ConvertFrom-WhiskeyContext
     key so it can encrypt/decrypt credentials. Once it decrypts the credentials, it deletes the key from memory. If you
     use the same context object between jobs, one job will clear the key and other jobs will fail because the key will
     be gone.
-
-    The `Start-Job` cmdlet is also supported but not recommended.
 
     .EXAMPLE
     $TaskContext | ConvertFrom-WhiskeyContext
