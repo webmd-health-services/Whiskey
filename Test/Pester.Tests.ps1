@@ -158,7 +158,7 @@ Describe 'One' {
         ThenDidNotFail
     }
 
-    It 'fails build when any tests file' {
+    It 'fails build when any tests fail' {
         GivenTestFile 'FailingTests.Tests.ps1' @'
 Describe 'Failing' {
     It 'should fail 1' {
@@ -229,7 +229,6 @@ Describe 'PassingTests'{
         GivenWhiskeyYml @'
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Path: 'PassingTests.Tests.ps1'
@@ -308,7 +307,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Path: ['PassingTests.ps1', 'PassingTests2.ps1']
@@ -328,7 +326,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Path: 'PassingTests.ps1'
@@ -347,7 +344,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 TestResult:
                     Enabled: true
@@ -375,7 +371,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 TestResult:
                     Enabled: true
@@ -397,7 +392,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Exit: false
@@ -418,7 +412,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Exit: true
@@ -439,7 +432,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Exit: false
@@ -460,7 +452,6 @@ Describe 'Passing' {
         GivenWhiskeyYml @"
         Build:
         - Pester:
-            AsJob: true
             Configuration:
                 Run:
                     Exit: true
