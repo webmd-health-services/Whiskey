@@ -3,7 +3,6 @@ function Invoke-WhiskeyPesterTask
 {
     [Whiskey.Task('Pester')]
     [Whiskey.RequiresPowerShellModule('Pester', Version='5.*', ModuleInfoParameterName='PesterModuleInfo', SkipImport)]
-    [Whiskey.RequiresPowerShellModule('ThreadJob', Version='2.0.3', VersionParameterName='ThreadJobVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

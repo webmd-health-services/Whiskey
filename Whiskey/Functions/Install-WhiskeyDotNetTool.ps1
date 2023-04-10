@@ -112,7 +112,7 @@ function Install-WhiskeyDotNetTool
 
             if ($globalJsonRollForward)
             {
-                if ($globalJsonRollForward -and $globalJsonRollForward -notin $validRollForwardValues)
+                if ($globalJsonRollForward -notin $validRollForwardValues)
                 {
                     $msg = "Using default roll forward strategy ""$($rollForwardStrategy)"" because the " +
                            "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is not " +

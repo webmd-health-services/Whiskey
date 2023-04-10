@@ -2,10 +2,6 @@ function Invoke-WhiskeyParallelTask
 {
     [CmdletBinding()]
     [Whiskey.Task('Parallel')]
-    [Whiskey.RequiresPowerShellModule('ThreadJob',
-                                        Version='2.0.3',
-                                        ModuleInfoParameterName='ThreadJobModuleInfo',
-                                        VersionParameterName='ThreadJobVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,

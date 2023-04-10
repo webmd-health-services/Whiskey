@@ -2,7 +2,6 @@
 function Invoke-WhiskeyPowerShell
 {
     [Whiskey.Task('PowerShell', SupportsClean, SupportsInitialize)]
-    [Whiskey.RequiresPowerShellModule('ThreadJob', Version='2.0.3', VersionParameterName='ThreadJobVersion')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

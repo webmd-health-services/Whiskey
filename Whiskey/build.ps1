@@ -53,11 +53,11 @@ current directory's parent directory will be used.
 param(
     [Parameter(Mandatory,ParameterSetName='Clean')]
     # Runs the build in clean mode, which removes any files, tools, packages created by previous builds.
-    [switch]$Clean,
+    [switch] $Clean,
 
     [Parameter(Mandatory,ParameterSetName='Initialize')]
     # Initializes the repository.
-    [switch]$Initialize,
+    [switch] $Initialize,
 
     # Run a specific pipeline. The default is to run the `Build` pipeline.
     [String] $PipelineName,

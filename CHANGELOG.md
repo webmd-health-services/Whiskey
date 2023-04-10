@@ -30,6 +30,7 @@ version as the `ProGetUniversalPackage`, `PublishProGetAsset`, and `PublishProGe
 
 * Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
 version.
+* Fixed: Installing .NET fails when the global.json file does not contain a `rollForward` property.
 * Fixed: The `Pester` tasks sometimes fail with "call depth overflow" exceptions.
 
 ## Removed
