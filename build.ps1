@@ -210,7 +210,6 @@ which dotnet
 $ErrorActionPreference = 'Continue'
 
 prism install | Format-Table -AutoSize
-prism install -Path '.\Whiskey' | Format-Table -AutoSize
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Whiskey\Import-Whiskey.ps1' -Resolve)
 

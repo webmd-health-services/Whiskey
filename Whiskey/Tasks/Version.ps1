@@ -4,6 +4,10 @@
     [CmdletBinding()]
     [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
     [Whiskey.Task('Version')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',
+                                        Version='1.*',
+                                        VersionParameterName='ProGetAutomationVersion',
+                                        ModuleInfoParameterName='ProGetAutomationModuleInfo')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
@@ -271,10 +275,6 @@
     {
         if( $UPackName )
         {
-            Import-Module -Name (Join-Path -Path $script:internalPSModulesPath -ChildPath 'ProGetAutomation' -Resolve) `
-                          -Function @('New-ProGetSession', 'Get-ProGetUniversalPackage') `
-                          -Prefix 'W'
-
             $credArgs = @{}
             if ($UPackFeedCredentialID)
             {
@@ -298,7 +298,7 @@
                 $UPackFeedName = $UPackFeedUrl.Segments[-1]
             }
 
-            $pgSession = New-WProGetSession -Url $ProGetUrl @credArgs
+            $pgSession = New-ProGetSession -Url $ProGetUrl @credArgs
 
             $groupArg = @{}
             if ($UPackGroupName)
@@ -311,7 +311,7 @@
             $numErr = $Global:Error.Count
             try
             {
-                $versions = Get-WProGetUniversalPackage -Session $pgSession `
+                $versions = Get-ProGetUniversalPackage -Session $pgSession `
                                                         -FeedName $UPackFeedName `
                                                         -Name $UPackName `
                                                         @groupArg |
