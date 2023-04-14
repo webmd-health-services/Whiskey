@@ -731,6 +731,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -ThatIncludes '*.html' `
                                                 -HasRootItems $dirNames `
                                                 -HasFiles 'html.html'
+        ThenTaskSucceeds
     }
 
     It 'packages root files' {
@@ -741,6 +742,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -WithThirdPartyRootItem $thirdPartyFile `
                                                 -HasThirdPartyRootItem $thirdPartyFile `
                                                 -HasRootItems $file
+        ThenTaskSucceeds
     }
 
     It 'packges only whitelisted files' {
@@ -752,6 +754,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -HasRootItems $dirNames `
                                                 -HasFiles 'html.html','style.css' `
                                                 -NotHasFiles 'code.cs'
+        ThenTaskSucceeds
     }
 
     It 'packages multiple directories' {
@@ -763,6 +766,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -HasRootItems $dirNames `
                                                 -HasFiles 'html.html' `
                                                 -NotHasFiles 'code.cs'
+        ThenTaskSucceeds
     }
 
     It 'excludes files that match an include wildcard' {
@@ -775,6 +779,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -HasRootItems 'dir1' `
                                                 -HasFiles 'html.html' `
                                                 -NotHasFiles 'html2.html','sub'
+        ThenTaskSucceeds
     }
 
     It 'rejects paths that do not exist' {
@@ -799,6 +804,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -WithThirdPartyRootItem 'thirdparty','thirdpart2' `
                                                 -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                                                 -HasThirdPartyFile 'thirdparty.txt'
+        ThenTaskSucceeds
     }
 
     It 'requires <_> property' -TestCases @('Name', 'Description') {
@@ -861,6 +867,7 @@ Describe 'ProGetUniversalPackage' {
                                                 -HasThirdPartyRootItem 'thirdparty','thirdpart2' `
                                                 -HasThirdPartyFile 'thirdparty.txt' `
                                                 -FromSourceRoot 'app'
+        ThenTaskSucceeds
     }
 
     It 'requires custom application directory to exist' {
@@ -892,6 +899,7 @@ Describe 'ProGetUniversalPackage' {
 
         Initialize-Test -DirectoryName $directory -FileName $file
         Assert-NewWhiskeyProGetUniversalPackage -ForPath $path -HasRootItems $path
+        ThenTaskSucceeds
     }
 
     It 'customizes file path in package' {
@@ -902,6 +910,7 @@ Describe 'ProGetUniversalPackage' {
 
         Initialize-Test -DirectoryName $directory -FileName $file
         Assert-NewWhiskeyProGetUniversalPackage -ForPath $forPath -HasRootItems $file
+        ThenTaskSucceeds
     }
 
     It 'customizes directory path in package' {
@@ -936,18 +945,21 @@ Build:
     It 'allows an empty package' {
         GivenARepositoryWIthItems 'file.txt'
         WhenPackaging -WithWhitelist "*.txt"
+        ThenTaskSucceeds
         ThenPackageShouldInclude
     }
 
     It 'allows wildcards in paths' {
         GivenARepositoryWIthItems 'one.ps1','two.ps1','three.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist '*.txt'
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'one.ps1','two.ps1','three.ps1'
     }
 
     It 'uses whitelist to filter directories' {
         GivenARepositoryWIthItems 'dir1\subdir\file.txt'
         WhenPackaging -Paths 'dir1\subdir\' -WithWhitelist "*.txt"
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'dir1\subdir\file.txt'
         ThenPackageShouldNotInclude ('dir1\{0}' -f $script:defaultPackageName)
     }
@@ -955,6 +967,7 @@ Build:
     It 'handles spaces in directory names' {
         GivenARepositoryWIthItems 'dir 1\sub dir\file.txt'
         WhenPackaging -Paths 'dir 1\sub dir' -WithWhitelist "*.txt"
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
         ThenPackageShouldNotInclude ('dir 1\{0}' -f $script:defaultPackageName)
     }
@@ -962,6 +975,7 @@ Build:
     It 'handles directory paths with space and trailing backslash' {
         GivenARepositoryWIthItems 'dir 1\sub dir\file.txt'
         WhenPackaging -Paths 'dir 1\sub dir\' -WithWhitelist "*.txt"
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'dir 1\sub dir\file.txt'
         ThenPackageShouldNotInclude ('dir 1\{0}' -f $script:defaultPackageName)
     }
@@ -970,6 +984,7 @@ Build:
         $compressionlevel = $_
         GivenARepositoryWIthItems 'one.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
+        ThenTaskSucceeds
         ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8500
     }
 
@@ -977,12 +992,14 @@ Build:
         $compressionLevel = $_
         GivenARepositoryWIthItems 'one.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1" -CompressionLevel $compressionLevel
+        ThenTaskSucceeds
         ThenPackageShouldBeCompressed 'one.ps1' -GreaterThan 8500
     }
 
     It 'compresses optimally by default' {
         GivenARepositoryWIthItems 'one.ps1'
         WhenPackaging -Paths '*.ps1' -WithWhitelist "*.ps1"
+        ThenTaskSucceeds
         ThenPackageShouldBeCompressed 'one.ps1' -LessThanOrEqualTo 8500
     }
 
@@ -996,12 +1013,14 @@ Build:
         GivenARepositoryWithItems 'root.ps1','dir1\one.ps1','dir1\emptyDir2\text.txt'
         GivenARepositoryWithItems 'dir1\emptyDir1' -ItemType 'Directory'
         WhenPackaging -Paths '.' -WithWhitelist '*.ps1' -ThatExcludes '.output'
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'root.ps1','dir1\one.ps1'
         ThenPackageShouldNotInclude 'dir1\emptyDir1', 'dir1\emptyDir2'
     }
 
     It 'packages JSON files' {
         GivenARepositoryWIthItems 'my.json'
+        ThenTaskSucceeds
         WhenPackaging -Paths '.' -WithWhitelist '*.json' -ThatExcludes '.output'
         ThenPackageShouldInclude 'my.json','version.json'
     }
@@ -1009,6 +1028,7 @@ Build:
     It 'packages only files and unfiltered paths' {
         GivenARepositoryWithItems 'my.json','dir\yours.json', 'my.txt'
         WhenPackaging -WithThirdPartyPath 'dir' -Paths 'my.json'
+        ThenTaskSucceeds
         ThenPackageShouldInclude 'version.json','dir\yours.json', 'my.json'
         ThenPackageShouldNotInclude 'my.txt'
     }
@@ -1154,4 +1174,46 @@ Build:
         ThenTaskSucceeds
         ThenPackageArchive 'TestPackage' -ContainsPath 'package\file.txt'
     }
+
+    It 'excludes using full path wildcard' {
+        GivenARepositoryWithItems @(
+            'dir\webroot\bin\assembly.dll',
+            'dir\webroot\excbywildcard\alsothis\image.png',
+            'dir\webroot\excbywildcard\web.config',
+            'dir\webroot\excbywildcard\web.config',
+            'dir\webroot\excbywildcard2\web.config',
+            'dir\webroot\excbywildcard3\web.co',
+            'dir\webroot\excluded\alsothis\image.png',
+            'dir\webroot\excluded\web.config',
+            'dir\webroot\included\excbywildcard\not',
+            'dir\webroot\included\excbywildcard\not.css',
+            'dir\webroot\included\excluded\excluded',
+            'dir\webroot\included\excluded\morestyles.css',
+            'dir\webroot\included\styles.css',
+            'dir\webroot\web.config'
+        )
+        WhenPackaging -Paths @{ 'dir\webroot' = '.' } `
+                      -ThatExcludes 'dir\webroot\excluded', 'dir\webroot\excby*' `
+                      -WithWhitelist '*'
+        ThenTaskSucceeds
+        ThenPackageShouldInclude @(
+            'bin\assembly.dll',
+            'included\excbywildcard\not.css',
+            'included\excbywildcard\not',
+            'included\excluded\excluded',
+            'included\excluded\morestyles.css',
+            'included\styles.css',
+            'web.config'
+        )
+        ThenPackageShouldNotInclude @(
+            'excluded\web.config',
+            'excluded\alsothis\image.png',
+            'excbywildcard\alsothis\image.png',
+            'excbywildcard\web.config',
+            'excbywildcard\web.config',
+            'excbywildcard2\web.config',
+            'excbywildcard3\web.co'
+        )
+    }
+
 }
