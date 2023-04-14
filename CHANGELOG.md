@@ -1,6 +1,14 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.58.0
+
+> Releaesd 14 Apr 2023
+
+`ProGetUniversalPackage` now includes/excludes items using paths. If any item in the `Include` or `Exclude` property
+contains a directory separator character (e.g. `/` or `\`), it is matched against the path of each file/directory,
+relative to the current working directory.
+
 # 0.57.0
 
 > Released 2023-04-10
