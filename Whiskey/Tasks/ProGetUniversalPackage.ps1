@@ -3,7 +3,9 @@ function New-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('ProGetUniversalPackage')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation',Version='0.10.*',VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',
+                                        Version='1.*',
+                                        VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
@@ -12,7 +14,11 @@ function New-WhiskeyProGetUniversalPackage
         [hashtable]$TaskParameter,
 
         [Whiskey.Tasks.ValidatePath(PathType='Directory')]
-        [String]$SourceRoot
+        [String]$SourceRoot,
+
+        [String[]] $Include,
+
+        [String[]] $Exclude
     )
 
     Set-StrictMode -Version 'Latest'
@@ -66,7 +72,7 @@ function New-WhiskeyProGetUniversalPackage
     else
     {
         $version = $TaskContext.Version
-        # ProGet uses build metadata to distinguish different versions (i.e. 2.0.1+build.1 is different than 
+        # ProGet uses build metadata to distinguish different versions (i.e. 2.0.1+build.1 is different than
         # 2.0.1+build.2), which means users could inadvertently release multiple versions of a package. Remove the
         # build metadata to prevent this. This should be what people expect most of the time.
         $packageVersion = $version.SemVer2NoBuildMetadata.ToString()
@@ -98,19 +104,84 @@ function New-WhiskeyProGetUniversalPackage
         }
     }
 
+    $Include = $Include | Where-Object { $_ }
+    if ($null -eq $Include)
+    {
+        $Include = @()
+    }
+
+    $Exclude = $Exclude | Where-Object { $_ }
+    if ($null -eq $Exclude)
+    {
+        $Exclude = @()
+    }
+
+    function Write-PackagedItemInfo
+    {
+        [CmdletBinding(DefaultParameterSetName='Path')]
+        param(
+            [Parameter(Mandatory)]
+            [String] $Path,
+
+            [switch] $Unfiltered,
+
+            [String] $DestinationPath,
+
+            [Parameter(Mandatory, ParameterSetName='Included')]
+            [switch] $Included,
+
+            [Parameter(Mandatory, ParameterSetName='Excluded')]
+            [switch] $Excluded
+        )
+
+        $flag = ''
+        if ($Included -or $Excluded)
+        {
+            $flag = '  + '
+            if ($Excluded)
+            {
+                $flag = '  - '
+            }
+        }
+
+        if (Test-Path -Path $Path -PathType Container)
+        {
+            $childPath = '\'
+            if ($Unfiltered)
+            {
+                $childPath = '\**'
+            }
+            $Path = Join-Path -Path $Path -ChildPath $childPath
+
+            if ($Path -eq '.\')
+            {
+                $Path = '.'
+            }
+        }
+
+        $destinationMsg = ''
+        if ($DestinationPath)
+        {
+            $destinationMsg = " → ${DestinationPath}"
+        }
+        $msg = "  ${flag}${Path}${destinationMsg}"
+        Write-WhiskeyInfo -Context $TaskContext -Message $msg
+
+    }
+
     function Copy-ToPackage
     {
         param(
             [Parameter(Mandatory)]
-            [Object[]]$Path,
+            [Object[]] $Path,
 
-            [switch]$AsThirdPartyItem
+            [switch] $AsThirdPartyItem
         )
 
-        foreach( $item in $Path )
+        foreach ($item in $Path)
         {
-            $override = $False
-            if( (Get-Member -InputObject $item -Name 'Keys') )
+            $override = $false
+            if (Get-Member -InputObject $item -Name 'Keys')
             {
                 $sourcePath = $null
                 $override = $true
@@ -131,9 +202,9 @@ function New-WhiskeyProGetUniversalPackage
                 $pathparam = 'ThirdPartyPath'
             }
 
-            $sourcePaths = 
-                $sourcePath | 
-                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam 
+            $sourcePaths =
+                $sourcePath |
+                Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName $pathparam
             if( -not $sourcePaths )
             {
                 return
@@ -143,17 +214,17 @@ function New-WhiskeyProGetUniversalPackage
             foreach( $sourcePath in $sourcePaths )
             {
                 $addParams = @{ BasePath = $basePath }
-                $overrideInfo = ''
+                $destPathMsgArg = @{}
                 if( $override )
                 {
                     $addParams = @{ PackageItemName = $destinationItemName }
-                    $overrideInfo = ' -> {0}' -f $destinationItemName
+                    $destPathMsgArg['DestinationPath'] = $destinationItemName
                 }
                 $addParams['CompressionLevel'] = $compressionLevel
 
                 if( $AsThirdPartyItem )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging unfiltered item    {0}{1}' -f $sourcePath,$overrideInfo)
+                    Write-PackagedItemInfo -Path $sourcePath @destPathMsgArg -Unfiltered
                     Get-Item -Path $sourcePath |
                         Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
                     continue
@@ -161,16 +232,38 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( (Test-Path -Path $sourcePath -PathType Leaf) )
                 {
-                    Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging file               {0}{1}' -f $sourcePath,$overrideInfo)
+                    Write-PackagedItemInfo -Path $sourcePath @destPathMsgArg
                     Add-ProGetUniversalPackageFile -PackagePath $outFile -InputObject $sourcePath @addParams -ErrorAction Stop
                     continue
                 }
 
-                if( -not $TaskParameter['Include'] )
+                if (-not $Include)
                 {
-                    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Include" is mandatory because "{0}" is in your "Path" property and it is a directory. The "Include" property is a whitelist of files (wildcards supported) to include in your package. Only files in directories that match an item in the "Include" list will be added to your package.' -f $sourcePath)
+                    $msg = "Property ""Include"" is mandatory because ""${sourcePath}"" is in your ""Path"" property " +
+                           'and it is a directory. The "Include" property is a whitelist of files (wildcards ' +
+                           'supported) to include in your package. Only files in directories that match an item in ' +
+                           'the "Include" list will be added to your package.'
+                    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                     return
                 }
+
+                # include/exclude items that contain directory seperators should be matched against an item's path
+                $nameIncPatterns = $Include | Where-Object { -not ($_ | Split-Path) }
+                $pathIncPatterns =
+                    $Include |
+                    Where-Object { $_ | Split-Path } |
+                    ForEach-Object { [wildcardpattern]::Unescape($_) } |
+                    ForEach-Object { [wildcardpattern]::Escape($_) } |
+                    Resolve-WhiskeyRelativePath |
+                    ForEach-Object { [wildcardpattern]::Unescape($_) }
+                $nameExcPatterns = $Exclude | Where-Object { -not ($_ | Split-Path) }
+                $pathExcPatterns =
+                    $Exclude |
+                    Where-Object { $_ | Split-Path } |
+                    ForEach-Object { [wildcardpattern]::Unescape($_) } |
+                    ForEach-Object { [wildcardpattern]::Escape($_) } |
+                    Resolve-WhiskeyRelativePath |
+                    ForEach-Object { [wildcardpattern]::Unescape($_) }
 
                 function Find-Item
                 {
@@ -186,10 +279,53 @@ function New-WhiskeyProGetUniversalPackage
 
                     $Path = Join-Path -Path $Path -ChildPath '*'
                     & {
-                            Get-ChildItem -Path $Path -Include $TaskParameter['Include'] -Exclude $TaskParameter['Exclude'] -File
-                            Get-Item -Path $Path -Exclude $TaskParameter['Exclude'] |
-                                Where-Object { $_.PSIsContainer }
+                            Get-ChildItem -Path $Path -Include $nameIncPatterns -Exclude $nameExcPatterns -File
+                            Get-Item -Path $Path -Exclude $nameExcPatterns | Where-Object { $_.PSIsContainer }
                         }  |
+                        ForEach-Object {
+                            if ($pathIncPatterns -or $pathExcPatterns)
+                            {
+                                # Resolve path-based include and exclude patterns using relative paths.
+                                $_ | Add-Member -Name 'RelativePath' `
+                                                -MemberType NoteProperty `
+                                                -Value ($_ | Resolve-WhiskeyRelativePath)
+                            }
+                            return $_
+                        } |
+                        Where-Object {
+                            if (-not $pathIncPatterns)
+                            {
+                                return $true
+                            }
+
+                            foreach ($pattern in $pathIncPatterns)
+                            {
+                                if ($_.RelativePath -like $pattern)
+                                {
+                                    return $true
+                                }
+                            }
+
+                            Write-PackagedItemInfo -Path $_.RelativePath -Excluded
+                            return $false
+                        } |
+                        Where-Object {
+                            if (-not $pathExcPatterns)
+                            {
+                                return $true
+                            }
+
+                            foreach ($pattern in $pathExcPatterns)
+                            {
+                                if ($_.RelativePath -like $pattern)
+                                {
+                                    Write-PackagedItemInfo -Path $_.RelativePath -Excluded
+                                    return $false
+                                }
+                            }
+
+                            return $true
+                        } |
                         ForEach-Object {
                             if( $_.PSIsContainer )
                             {
@@ -204,15 +340,15 @@ function New-WhiskeyProGetUniversalPackage
 
                 if( $override )
                 {
-                    $overrideBasePath = 
-                        Resolve-Path -Path $sourcePath | 
+                    $overrideBasePath =
+                        Resolve-Path -Path $sourcePath |
                         Select-Object -ExpandProperty 'ProviderPath'
 
                     if( (Test-Path -Path $overrideBasePath -PathType Leaf) )
                     {
                         $overrideBasePath = Split-Path -Parent -Path $overrideBasePath
                     }
-                    $addParams['BasePath'] = $overrideBasePath 
+                    $addParams['BasePath'] = $overrideBasePath
                     $addParams.Remove('PackageItemName')
                     $overrideInfo = ' -> {0}' -f $destinationItemName
 
@@ -222,7 +358,7 @@ function New-WhiskeyProGetUniversalPackage
                     }
                 }
 
-                Write-WhiskeyInfo -Context $TaskContext -Message ('  packaging filtered directory {0}{1}' -f $sourcePath,$overrideInfo)
+                Write-PackagedItemInfo -Path $sourcePath @destPathMsgArg
                 Find-Item -Path $sourcePath |
                     Add-ProGetUniversalPackageFile -PackagePath $outFile @addParams -ErrorAction Stop
             }

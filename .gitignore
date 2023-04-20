@@ -9,7 +9,9 @@
 *.orig
 /packages
 /Test/.downloadcache-*
-/Whiskey/bin/
+/Whiskey/bin/**
+!/Whiskey/bin/*.ps1
+/Whiskey/bin/dotnet-install.ps1
 /Assembly/**/obj/**
 /Assembly/**/bin/**
 **/.vs/**

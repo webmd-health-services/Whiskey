@@ -2,142 +2,154 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$testRoot = $null
-$username = 'testusername'
-$credentialID = 'TestCredential'
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function GivenContext
-{
-    $script:taskParameter = @{ }
-    $script:taskParameter['Uri'] = 'TestURI'
-    Import-WhiskeyTestModule -Name 'ProGetAutomation'
-    $script:session = New-ProGetSession -Uri $TaskParameter['Uri']
-    $Global:globalTestSession = $session
-    $Script:Context = New-WhiskeyTestContext -ForBuildServer `
-                                             -ForTaskName 'PublishProGetAsset' `
-                                             -ForBuildRoot $testRoot `
-                                             -IncludePSModule 'ProGetAutomation'
-    Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
-    Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
-}
+    $script:testDirPath = $null
+    $script:username = 'testusername'
+    $script:credentialID = 'TestCredential'
 
-function GivenCredentials
-{
-    $password = ConvertTo-SecureString -AsPlainText -Force -String $username
-    $script:credential = New-Object 'Management.Automation.PsCredential' $username,$password
-    Add-WhiskeyCredential -Context $context -ID $credentialID -Credential $credential
-
-    $taskParameter['CredentialID'] = $credentialID
-}
-
-function GivenAsset
-{
-    param(
-        [String[]]$Name,
-        [String]$directory,
-        [String[]]$FilePath
-    )
-    $script:taskParameter['AssetPath'] = $name
-    $script:taskParameter['AssetDirectory'] = $directory
-    $script:taskParameter['Path'] = @()
-    foreach($file in $FilePath){
-        $script:taskParameter['Path'] += (Join-Path -Path $testRoot -ChildPath $file)
-        New-Item -Path (Join-Path -Path $testRoot -ChildPath $file) -ItemType 'File' -Force
-    }
-}
-
-function GivenAssetWithInvalidDirectory
-{
-    param(
-        [String]$Name,
-        [String]$directory,
-        [String]$FilePath
-    )
-    # $script:taskParameter['Name'] = $name
-    $script:taskParameter['AssetDirectory'] = $directory
-    $script:taskParameter['Path'] = (Join-Path -Path $testRoot -ChildPath $FilePath)
-    New-Item -Path (Join-Path -Path $testRoot -ChildPath $FilePath) -ItemType 'File' -Force
-    Mock -CommandName 'Test-ProGetFeed' -ModuleName 'Whiskey' -MockWith { return $false }
-}
-
-function GivenAssetThatDoesntExist
-{
-    param(
-        [String]$Name,
-        [String]$directory,
-        [String]$FilePath
-
-    )
-    $script:taskParameter['AssetPath'] = $name
-    $script:taskParameter['AssetDirectory'] = $directory
-    $script:taskParameter['Path'] = $testRoot,$FilePath -join '\'
-}
-
-function Init
-{
-    $script:testRoot = New-WhiskeyTestRoot
-    Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
-}
-
-function Reset
-{
-    Reset-WhiskeyTestPSModule
-}
-
-function WhenAssetIsUploaded
-{
-    $Global:Error.Clear()
-    $script:threwException = $false
-
-    try
+    function GivenContext
     {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'PublishProGetAsset' -ErrorAction SilentlyContinue
+        $script:taskParameter = @{ }
+        $script:taskParameter['Url'] = 'TestUrl'
+        Import-WhiskeyTestModule -Name 'ProGetAutomation'
+        $script:session = New-ProGetSession -Uri $TaskParameter['Url']
+        $Global:globalTestSession = $session
+        $Script:context = New-WhiskeyTestContext -ForBuildServer `
+                                                -ForTaskName 'PublishProGetAsset' `
+                                                -ForBuildRoot $script:testDirPath `
+                                                -IncludePSModule 'ProGetAutomation'
+        Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
+        Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
     }
-    catch
+
+    function GivenCredentials
     {
-        $script:threwException = $true
+        $password = ConvertTo-SecureString -AsPlainText -Force -String $script:username
+        $script:credential = New-Object 'Management.Automation.PsCredential' $script:username,$password
+        Add-WhiskeyCredential -Context $context -ID $script:credentialID -Credential $credential
+
+        $taskParameter['CredentialID'] = $script:credentialID
+    }
+
+    function GivenAsset
+    {
+        param(
+            [String[]]$Name,
+            [String]$directory,
+            [String[]]$FilePath
+        )
+        $script:taskParameter['AssetPath'] = $name
+        $script:taskParameter['AssetDirectory'] = $directory
+        $script:taskParameter['Path'] = @()
+        foreach($file in $FilePath){
+            $script:taskParameter['Path'] += (Join-Path -Path $script:testDirPath -ChildPath $file)
+            New-Item -Path (Join-Path -Path $script:testDirPath -ChildPath $file) -ItemType 'File' -Force
+        }
+    }
+
+    function GivenAssetWithInvalidDirectory
+    {
+        param(
+            [String]$Name,
+            [String]$directory,
+            [String]$FilePath
+        )
+        # $script:taskParameter['Name'] = $name
+        $script:taskParameter['AssetDirectory'] = $directory
+        $script:taskParameter['Path'] = (Join-Path -Path $script:testDirPath -ChildPath $FilePath)
+        New-Item -Path (Join-Path -Path $script:testDirPath -ChildPath $FilePath) -ItemType 'File' -Force
+        Mock -CommandName 'Test-ProGetFeed' -ModuleName 'Whiskey' -MockWith { return $false }
+    }
+
+    function GivenAssetThatDoesntExist
+    {
+        param(
+            [String]$Name,
+            [String]$directory,
+            [String]$FilePath
+
+        )
+        $script:taskParameter['AssetPath'] = $name
+        $script:taskParameter['AssetDirectory'] = $directory
+        $script:taskParameter['Path'] = $script:testDirPath,$FilePath -join '\'
+    }
+
+    function WhenAssetIsUploaded
+    {
+        $Global:Error.Clear()
+        $script:threwException = $false
+
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'PublishProGetAsset' -ErrorAction SilentlyContinue
+        }
+        catch
+        {
+            $script:threwException = $true
+        }
+    }
+
+    function ThenTaskFails
+    {
+        Param(
+            [String]$ExpectedError
+        )
+        $Global:Error | Where-Object {$_ -match $ExpectedError } |  Should -Not -BeNullOrEmpty
+    }
+
+    function ThenAssetShouldExist
+    {
+        param(
+            [String[]]$AssetName
+        )
+
+        foreach( $file in $AssetName )
+        {
+            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter {
+                Write-Debug "Path  expected  ${file}"
+                Write-Debug "      actual    ${Path}"
+                $Path -eq $file
+            }
+        }
+    }
+
+    function ThenAssetShouldNotExist
+    {
+        param(
+            [String[]]$AssetName
+        )
+        foreach( $file in $AssetName )
+        {
+            Should -Invoke 'Set-ProGetAsset' -ModuleName 'Whiskey' -Times 0 -ParameterFilter {
+                Write-Debug "Path  expected  ${file}"
+                Write-Debug "      actual    ${Path}"
+                $Path -eq $file
+                $Name -eq $file
+            }
+        }
+    }
+
+    function ThenTaskSucceeds
+    {
+        $Global:Error | Should -BeNullOrEmpty
     }
 }
 
-function ThenTaskFails 
-{
-    Param(
-        [String]$ExpectedError
-    )
-    $Global:Error | Where-Object {$_ -match $ExpectedError } |  Should -Not -BeNullOrEmpty
-}
-
-function ThenAssetShouldExist
-{
-    param(
-        [String[]]$AssetName
-    )
-    foreach( $file in $AssetName ){
-        Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Path -eq $file }.getNewClosure()
+Describe 'PublishProGetAsset' {
+    BeforeEach {
+        $script:testDirPath = New-WhiskeyTestRoot
+        Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
     }
-}
 
-function ThenAssetShouldNotExist
-{
-    param(
-        [String[]]$AssetName
-    )
-    foreach( $file in $AssetName ){
-        Assert-mockCalled -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $file } -Times 0
+    AfterEach {
+        Reset-WhiskeyTestPSModule
     }
-}
 
-function ThenTaskSucceeds 
-{
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-Describe 'PublishProGetAsset.when Asset is uploaded' {
-    AfterEach { Reset }
-    It 'should upload the asset' {
-        Init
+    It 'uploads asset' {
         GivenContext
         GivenCredentials
         GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
@@ -145,12 +157,8 @@ Describe 'PublishProGetAsset.when Asset is uploaded' {
         ThenAssetShouldExist -AssetName 'foo.txt'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishProGetAsset.when Asset is uploaded to a subdirectory' {
-    AfterEach { Reset }
-    It 'should upload into the sub-directory' {
-        Init
+    It 'uploads asset to sub-folder' {
         GivenContext
         GivenCredentials
         GivenAsset -Name 'boo/foo.txt' -directory 'bar' -FilePath 'foo.txt'
@@ -158,38 +166,26 @@ Describe 'PublishProGetAsset.when Asset is uploaded to a subdirectory' {
         ThenAssetShouldExist -AssetName 'boo/foo.txt'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishProGetAsset.when multiple Assets are uploaded'{
-    AfterEach { Reset }
-    It 'should upload all the assets' {
-        Init
+    It 'uploads multiple assets' {
         GivenContext
         GivenCredentials
         GivenAsset -Name 'foo.txt','bar.txt' -directory 'bar' -FilePath 'foo.txt','bar.txt'
         WhenAssetIsUploaded
-        ThenAssetShouldExist -AssetName 'foo.txt','bar.txt' 
+        ThenAssetShouldExist -AssetName 'foo.txt','bar.txt'
         ThenTaskSucceeds
     }
-}
 
-Describe 'PublishProGetAsset.when Asset Name parameter does not exist'{
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires asset name' {
         GivenContext
         GivenCredentials
         GivenAsset -Directory 'bar' -FilePath 'fooboo.txt'
         WhenAssetIsUploaded
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'    
+        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
     }
-}
 
-Describe 'PublishProGetAsset.when there are less names than paths'{
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires each path to have a name' {
         GivenContext
         GivenCredentials
         GivenAsset -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
@@ -197,12 +193,8 @@ Describe 'PublishProGetAsset.when there are less names than paths'{
         ThenAssetShouldNotExist -AssetName 'fooboo.txt','bar.txt'
         ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
     }
-}
 
-Describe 'PublishProGetAsset.when there are less paths than names'{
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires each name to have a path' {
         GivenContext
         GivenCredentials
         GivenAsset -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
@@ -210,24 +202,16 @@ Describe 'PublishProGetAsset.when there are less paths than names'{
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
         ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
     }
-}
 
-Describe 'PublishProGetAsset.when credentials are not given'{
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'requires credentials' {
         GivenContext
         GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
         WhenAssetIsUploaded
         ThenAssetShouldNotExist -AssetName 'foo.txt'
         ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
     }
-}
 
-Describe 'PublishProGetAsset.when Asset already exists'{
-    AfterEach { Reset }
-    It 'should replace the asset' {
-        Init
+    It 'replaces existing assets' {
         GivenContext
         GivenCredentials
         GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'

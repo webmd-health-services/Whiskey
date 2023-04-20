@@ -101,7 +101,7 @@ function New-WhiskeyZipArchive
         return
     }
 
-    New-ZipArchive -Path $ArchivePath @behaviorParams -Force
+    New-ZipArchive -Path $ArchivePath @behaviorParams -Force | Out-Null
 
     if( $SourceRoot )
     {
@@ -130,8 +130,8 @@ function New-WhiskeyZipArchive
                 $sourcePath = $item
             }
 
-            $sourcePaths = 
-                $sourcePath | 
+            $sourcePaths =
+                $sourcePath |
                 Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'Path'
             if( -not $sourcePaths )
             {
@@ -188,8 +188,8 @@ function New-WhiskeyZipArchive
 
                 if( $override )
                 {
-                    $overrideBasePath = 
-                        Resolve-Path -Path $sourcePath | 
+                    $overrideBasePath =
+                        Resolve-Path -Path $sourcePath |
                         Select-Object -ExpandProperty 'ProviderPath'
 
                     if( (Test-Path -Path $overrideBasePath -PathType Leaf) )

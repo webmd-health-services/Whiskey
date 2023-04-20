@@ -1,7 +1,79 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.58.0
+
+> Releaesd 14 Apr 2023
+
+`ProGetUniversalPackage` now includes/excludes items using paths. If any item in the `Include` or `Exclude` property
+contains a directory separator character (e.g. `/` or `\`), it is matched against the path of each file/directory,
+relative to the current working directory.
+
+# 0.57.0
+
+> Released 2023-04-10
+
+## Added
+
+* Whiskey's verbose and debug messages now include timing information like information messages.
+* Parameter `PipelineName` to Whiskey's default build.ps1 script, which allows running a specific pipeline from a
+whiskey.yml file.
+* Parameter `ConfigurationPath` to Whiskey's default build.ps1 script, which allows running a build using a specific
+whiskey.yml file.
+* The `PublishProGetAsset` and `PublishProGetUniversalPackage` tasks now write what they're publishing to the
+information stream.
+
+## Changed
+
+* Updated the `Pester` task to no longer run tests in a background job.
+[There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407),
+which causes "call depth overflow" exceptions during some Pester tests. The `Pester` task now runs tests in a
+seperate PowerShell process.
+* Updated the `ProGetUniversalPackage`, `PublishProGetAsset`, `PublishProGetUniversalPackage` tasks to use the latest
+ProGetAutomation version that matches wildcard `1.*` (excluding prerelease versions). They were using version `0.10.*`.
+* Updated `Version` task to no longer use a privately packaged version of ProGetAutomation and instead use the same
+version as the `ProGetUniversalPackage`, `PublishProGetAsset`, and `PublishProGetUniversalPackage` tasks.
+
+## Fixed
+
+* Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
+version.
+* Fixed: Installing .NET fails when the global.json file does not contain a `rollForward` property.
+* Fixed: The `Pester` tasks sometimes fail with "call depth overflow" exceptions.
+
+## Removed
+
+* The `Pester` task's `AsJob` switch. The `Pester` task now runs tests in a seperate PowerShell process.
+
+
+# 0.56.0
+
+> Released 2023-04-06
+
+## Changed
+
+* `MSBuild` task no longer strips double/single quotes from around property values or adds a backslash if a property
+value ends with a backslash. Instead, the `MSBuild` task escapes values using MSBuild's internal rules (i.e.
+it URL-encodes the value). If you have quotes around property values, remove them.
+
+## Fixed
+
+* Fixed: `MSBuild` task fails if a property value contains a semi-colon.
+
+
+# 0.55.0
+
+> Released 2023-04-05
+
+## Added
+
+* The `Version` task now supports setting patch/prerelease version numbers from a universal package that's in a group.
+* The `Version` task now supports authenticating to ProGet to get universal packages.
+
+
 # 0.54.0
+
+> Released 2023-04-03
 
 ## Added
 
@@ -32,7 +104,10 @@ unless the `GitHubBearerToken` parameter has a value.
 * Fixed: the `Version` task picks the wrong next prerelease version number if the target package feed uses semver 1.
 * Fixed: Whiskey doesn't tell you when it can't find a version of a NuGet package.
 
+
 # 0.53.2
+
+> Released 2022-08-23
 
 Fixed: PublishBitbucketServerTag task fails when building a pull request in Jenkins. When building PRs, Jenkins merges
 the source and destination branches together on the build server. This merge only exists on the build server, so can't
@@ -41,10 +116,14 @@ be tagged in Bitbucket Server.
 
 # 0.53.1
 
+> Released 2022-08-12
+
 Fixed: Pester task doesn't fail when running in a background job and tests fail.
 
 
 # 0.53.0
+
+> Released 2022-08-09
 
 ## Upgrade Instructions
 
@@ -68,6 +147,8 @@ are installed.
 
 # 0.52.2
 
+> Released 2022-08-04
+
 * Fixed: `Ignore` is not allowed as a value in the `$ErrorActionPreference` variable when running `node.exe` executable
   directly from filepath.
 * Fixed: Whiskey fails if PackageManagement 1.4.8.1 is installed and more than one task runs that depends on the
@@ -77,10 +158,14 @@ PackageManagement module.
 
 # 0.52.1
 
+> Released 2022-07-25
+
 * Fixed: typo in command name. Mis-typed `Convert-Path` as `ConvertPath`.
 
 
 # 0.52.0
+
+> Released 2022-07-05
 
 * PowerShellGet minimum required version is now 2.0.0.
 * PackageManagement PowerShell module minimum required version is now 1.3.2.
@@ -91,10 +176,14 @@ PackageManagement module.
 
 # 0.51.1
 
+> Released 2022-06-10
+
 * Fixed: the `Version` task fails when reading version from a Node.js package.json file.
 
 
 # 0.51.0
+
+> Released 2022-05-26
 
 ## Added
 
@@ -114,10 +203,14 @@ PackageManagement module.
 
 # 0.50.1
 
+> Released 2022-05-19
+
 Fixed: NuGet package dependencies are not installed.
 
 
 # 0.50.0
+
+> Released 2022-05-18
 
 ## Upgrade Instructions
 
@@ -150,12 +243,16 @@ computers running whiskey.
 
 # 0.49.1
 
+> Released 2022-02-08
+
 ## Fixed
 
 * Fixed: Whiskey fails to install a task's tool if the task is running with a custom working directory.
 
 
 # 0.49.0
+
+> Released 2021-12-30
 
 ## Added
 
@@ -208,22 +305,30 @@ publishes to `RepositoryLocation`, publishes to it, then unregisters the reposit
 
 # 0.48.3
 
+> Released 2021-03-23
+
 * Verbose and debug build output messages no longer have timestamp prefixes (hard to recognize info output).
 * Warning build output no longer has a task name prefix (hard to recognize info output).
 
 
 # 0.48.2
 
+> Released 2021-03-22
+
 * Fixed: the Context object's TaskName property isn't public/settable.
 
 
 # 0.48.1
+
+> Released 2021-03-19
 
 * Fixed: Whiskey's build output doesn't show timings when a task ends.
 * Fixed: the Context object's StartedAt property isn't public/settable.
 
 
 # 0.48.0
+
+> Released 2021-03-19
 
 * Fixed: installing Node.js during a build can fail if you've got an aggressive virus scanner running.
 * Fixed: builds fail when run under a Jenkins PR build.

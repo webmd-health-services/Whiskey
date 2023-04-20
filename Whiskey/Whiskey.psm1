@@ -1,4 +1,6 @@
 
+using module '.\Whiskey.Types.psm1'
+
 $startedAt = Get-Date
 function Write-Timing
 {
@@ -198,6 +200,7 @@ elseif( $IsWindows )
 {
     $CurrentPlatform = [Whiskey.Platform]::Windows
 }
+
 
 Write-Timing -Message ('Dot-sourcing files.')
 $count = 0

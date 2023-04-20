@@ -27,11 +27,12 @@ function Install-WhiskeyDotNetTool
     param(
         [Parameter(Mandatory)]
         # Path where the `.dotnet` directory will be installed containing the .NET Core SDK.
-        [String]$InstallRoot,
+        [String] $InstallRoot,
 
         [Parameter(Mandatory)]
-        # The working directory of the task requiring the .NET Core SDK tool. This path is used for searching for an existing `global.json` file containing an SDK version value.
-        [String]$WorkingDirectory,
+        # The working directory of the task requiring the .NET Core SDK tool. This path is used for searching for an
+        # existing `global.json` file containing an SDK version value.
+        [String] $WorkingDirectory,
 
         [AllowEmptyString()]
         [AllowNull()]
@@ -42,93 +43,114 @@ function Install-WhiskeyDotNetTool
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if ($Version)
+    $WorkingDirectory = Resolve-Path -Path $WorkingDirectory
+    if (-not $WorkingDirectory)
     {
-        $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
+        return
+    }
+
+    Push-Location $WorkingDirectory
+    try
+    {
+        if ($Version)
+        {
+            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $Version
+            $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
+            return Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
+        }
+
+        if ((Get-Command -Name 'dotnet' -ErrorAction Ignore))
+        {
+            # This command prints out the version of the .NET SDK that the "dotnet" command would use after taking into
+            # account the global.json file if it exists. Exit code 0 means a compatible SDK was found
+            $possibleVersion = Invoke-Command -ScriptBlock {
+                $ErrorActionPreference = 'Continue'
+                dotnet --version 2>$null
+            }
+            if ( $LASTEXITCODE -eq 0 )
+            {
+                $msg = "[$($MyInvocation.MyCommand)] Using globally installed .NET SDK version $($possibleVersion)"
+                Write-WhiskeyVerbose -Message $msg
+                return 'dotnet'
+            }
+        }
+
+        $globalJsonPath = Join-Path -Path $WorkingDirectory -ChildPath 'global.json'
+        if ( -not (Test-Path -Path $globalJsonPath -PathType Leaf) )
+        {
+            $globalJsonPath = Join-Path -Path $InstallRoot -ChildPath 'global.json'
+        }
+
+        $sdkVersion = $null
+        if ( Test-Path -Path $globalJsonPath -PathType Leaf )
+        {
+            try
+            {
+                $globalJson = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json
+            }
+            catch
+            {
+                $msg = "Failed to install .NET because global.json file ""$($globalJsonPath)"" contains invalid JSON."
+                Write-WhiskeyError -Message $msg
+                return
+            }
+
+            $globalJsonSdkOptions =
+                $globalJson |
+                Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore
+
+            $globalJsonVersion =
+                $globalJsonSdkOptions |
+                Select-Object -ExpandProperty 'version' -ErrorAction Ignore
+
+            $globalJsonRollForward =
+                $globalJsonSdkOptions |
+                Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
+
+            $rollForwardStrategy = [WhiskeyDotNetSdkRollForward]::Disable
+            $validRollForwardValues = [WhiskeyDotNetSdkRollForward].GetEnumNames()
+
+            if ($globalJsonRollForward)
+            {
+                if ($globalJsonRollForward -notin $validRollForwardValues)
+                {
+                    $msg = "Using default roll forward strategy ""$($rollForwardStrategy)"" because the " +
+                           "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is not " +
+                           "recognized. Accepted values are: $($validRollForwardValues -join ', ')." +
+                           [Environment]::NewLine + [Environment]::NewLine +
+                           "If ""$($globalJsonRollForward)"" is a new roll forward strategy, " +
+                           '[submit a Whiskey issue](https://github.com/webmd-health-services/Whiskey/issues) ' +
+                           'requesting that we add it.'
+                    Write-Warning -Message $msg
+                }
+                else
+                {
+                    $rollForwardStrategy = [WhiskeyDotNetSdkRollForward] $globalJsonRollForward
+                }
+            }
+
+            if ( $globalJsonVersion )
+            {
+                $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
+                Write-WhiskeyVerbose -Message $msg
+                $sdkVersion =
+                    Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion -RollForward $rollForwardStrategy
+            }
+
+        }
+
+        if ( -not $sdkVersion )
+        {
+            Write-WhiskeyVerbose -Message ('[{0}] No specific .NET Core SDK version found in whiskey.yml or global.json. Using latest LTS version.' -f $MyInvocation.MyCommand)
+            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
+        }
+
         $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
-        return Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
+        $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
+        return $dotnetPath
     }
-
-    if ( (Get-Command -Name 'dotnet' -ErrorAction Ignore) )
+    finally
     {
-        # This command prints out the version of the .NET SDK that the "dotnet" command would use after taking into
-        # account the global.json file if it exists. Exit code 0 means a compatible SDK was found
-        $possibleVersion = dotnet --version 2>&1
-        if ( $LASTEXITCODE -eq 0 )
-        {
-            $msg = "[$($MyInvocation.MyCommand)] Using globally installed .NET SDK version $($possibleVersion)"
-            Write-WhiskeyVerbose -Message $msg
-            return 'dotnet'
-        }
+        Pop-Location
     }
-
-    $globalJsonPath = Join-Path -Path $WorkingDirectory -ChildPath 'global.json'
-    if ( -not (Test-Path -Path $globalJsonPath -PathType Leaf) )
-    {
-        $globalJsonPath = Join-Path -Path $InstallRoot -ChildPath 'global.json'
-    }
-
-
-
-    $sdkVersion = $null
-    if ( Test-Path -Path $globalJsonPath -PathType Leaf )
-    {
-        try
-        {
-            $globalJson = Get-Content -Path $globalJsonPath -Raw | ConvertFrom-Json
-        }
-        catch
-        {
-            Write-WhiskeyError -Message "global.json file ""$($globalJsonPath)"" contains invalid JSON."
-            return
-        }
-
-        $globalJsonSdkOptions =
-            $globalJson |
-            Select-Object -ExpandProperty 'sdk' -ErrorAction Ignore
-
-        $globalJsonVersion =
-            $globalJsonSdkOptions |
-            Select-Object -ExpandProperty 'version' -ErrorAction Ignore
-
-        $globalJsonRollForward =
-            $globalJsonSdkOptions |
-            Select-Object -ExpandProperty 'rollForward' -ErrorAction Ignore
-
-
-        $rollForwardStrategy = [Whiskey.DotNetSdkRollForward]::Disable
-        $validRollForwardValues = [Whiskey.DotNetSdkRollForward].GetEnumNames()
-        if ($globalJsonRollForward -notin $validRollForwardValues)
-        {
-            $msg = "sdk.rollForward value ""$($globalJsonRollForward)"" in ""$($globalJsonPath)"" is not " +
-            "one of the valid .NET SDK roll forward strategies: $($validRollForwardValues -join ', ')." +
-            "$(([Environment]::NewLine)*2)If ""$($globalJsonRollForward)"" is a new valid .NET SDK roll forward strategy " +
-            "then submit a Whiskey issue (https://github.com/webmd-health-services/Whiskey/issues) asking us to add " +
-            "support for it.$(([Environment]::NewLine)*2)Defaulting roll forward strategy to ""$($rollForwardStrategy)""."
-            Write-Warning -Message $msg
-        }
-        else
-        {
-            $rollForwardStrategy = [Whiskey.DotNetSdkRollForward] $globalJsonRollForward
-        }
-
-
-        if ( $globalJsonVersion )
-        {
-            $msg = "[$($MyInvocation.MyCommand)] .NET Core SDK version '$($globalJsonVersion)' with rollforward value '$($globalJsonRollForward)' found in '$($globalJsonPath)'"
-            Write-WhiskeyVerbose -Message $msg
-            $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -Version $globalJsonVersion -RollForward $rollForwardStrategy
-        }
-
-    }
-
-    if ( -not $sdkVersion )
-    {
-        Write-WhiskeyVerbose -Message ('[{0}] No specific .NET Core SDK version found in whiskey.yml or global.json. Using latest LTS version.' -f $MyInvocation.MyCommand)
-        $sdkVersion = Resolve-WhiskeyDotNetSdkVersion -LatestLTS
-    }
-
-    $installRoot = Join-Path -Path $InstallRoot -ChildPath '.dotnet'
-    $dotnetPath = Install-WhiskeyDotNetSdk -InstallRoot $installRoot -Version $sdkVersion
-    return $dotnetPath
 }
