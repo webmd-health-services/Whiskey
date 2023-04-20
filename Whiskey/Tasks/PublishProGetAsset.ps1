@@ -29,7 +29,7 @@ function Publish-WhiskeyProGetAsset
         Path:
         - ""path/to/file.txt""
         - ""path/to/anotherfile.txt""
-        Url: http://proget.dev.webmd.com/
+        Url: http://proget.inedo.com/
         AssetPath:
         - ""path/to/exampleAsset""
         - ""path/toanother/file.txt""
