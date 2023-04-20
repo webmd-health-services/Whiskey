@@ -108,18 +108,18 @@ Describe 'Parallel' {
         {
             try
             {
-                Rename-Item -Path $script:testDir -NewName ".$($script:testDir | Split-Path -Leaf)" -ErrorAction Ignore
+                $newName = ".$($script:testDir | Split-Path -Leaf)"
+                Rename-Item -Path $script:testDir -NewName $newName -ErrorAction Ignore
             }
             catch
             {
-                Write-Warning "Test directory ""$($script:testDir)"" still in use."
+                Write-Warning "Failed to rename ""$($script:testDir)"": $($_)."
             }
 
             if (-not (Test-Path -Path $script:testDir))
             {
                 break
             }
-
             Start-Sleep -Milliseconds 100
         }
     }
