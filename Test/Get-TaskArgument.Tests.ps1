@@ -2,181 +2,166 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-Import-WhiskeyTestTaskModule
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-[Whiskey.Context]$context = $null
-$testRoot = $null
+    Import-WhiskeyTestTaskModule
 
-function GivenDirectory
-{
-    param(
-        $Name
-    )
+    [Whiskey.Context]$script:context = $null
+    $script:testDirPath = $null
 
-    New-Item -Path (Join-Path -Path $testRoot -ChildPath $Name) -ItemType 'Directory'
-}
-
-function GivenFile
-{
-    param(
-        $Name
-    )
-
-    New-Item -Path (Join-Path -Path $testRoot -ChildPath $Name) -ItemType 'File'
-}
-
-function Init
-{
-    $script:context = $null
-    $script:testRoot = New-WhiskeyTestRoot
-    Clear-LastTaskBoundParameter
-}
-
-function ThenPipelineSucceeded
-{
-    $Global:Error | Should -BeNullOrEmpty
-    $threwException | Should -BeFalse
-}
-
-function ThenTaskCalled
-{
-    param(
-        [hashtable]$WithParameter,
-
-        [String]$TaskContextParameterName,
-
-        [String]$TaskParameterParameterName
-    )
-
-    $taskParameters = Get-LastTaskBoundParameter
-    $null -eq $taskParameters | Should -BeFalse
-
-    if( $WithParameter )
+    function GivenDirectory
     {
-        $taskParameters.Count | Should -Be $WithParameter.Count
-        foreach( $key in $WithParameter.Keys )
+        param(
+            $Name
+        )
+
+        New-Item -Path (Join-Path -Path $script:testDirPath -ChildPath $Name) -ItemType 'Directory'
+    }
+
+    function GivenFile
+    {
+        param(
+            $Name
+        )
+
+        New-Item -Path (Join-Path -Path $script:testDirPath -ChildPath $Name) -ItemType 'File'
+    }
+
+    function ThenPipelineSucceeded
+    {
+        $Global:Error | Should -BeNullOrEmpty
+        $threwException | Should -BeFalse
+    }
+
+    function ThenTaskCalled
+    {
+        param(
+            [hashtable] $WithParameter,
+
+            [String] $TaskContextParameterName,
+
+            [String] $TaskParameterParameterName
+        )
+
+        $taskParameters = Get-LastTaskBoundParameter
+        $null -eq $taskParameters | Should -BeFalse
+
+        if( $WithParameter )
         {
-            $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
+            $taskParameters.Count | Should -Be $WithParameter.Count
+            foreach( $key in $WithParameter.Keys )
+            {
+                $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
+            }
+        }
+
+        if( $TaskContextParameterName )
+        {
+            $taskParameters[$TaskContextParameterName] | Should -BeOfType ([Whiskey.Context])
+        }
+
+        if( $TaskParameterParameterName )
+        {
+            $taskParameters[$TaskParameterParameterName] | Should -BeOfType ([hashtable])
         }
     }
 
-    if( $TaskContextParameterName )
+    function ThenTaskNotCalled
     {
-        $taskParameters[$TaskContextParameterName] | Should -BeOfType ([Whiskey.Context])
+        $taskCalled | Should -BeFalse
+        $taskParameters | Should -BeNullOrEmpty
     }
 
-    if( $TaskParameterParameterName )
+    function ThenThrewException
     {
-        $taskParameters[$TaskParameterParameterName] | Should -BeOfType ([hashtable])
+        param(
+            $Pattern
+        )
+
+        $threwException | Should -BeTrue
+        $Global:Error | Should -Match $Pattern
     }
-}
 
-function ThenTaskNotCalled
-{
-    $taskCalled | Should -BeFalse
-    $taskParameters | Should -BeNullOrEmpty
-}
-
-function ThenThrewException
-{
-    param(
-        $Pattern
-    )
-
-    $threwException | Should -BeTrue
-    $Global:Error | Should -Match $Pattern
-}
-
-function WhenRunningTask
-{
-    [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [String]$Named,
-
-        [hashtable]$Parameter,
-
-        [String]$BuildRoot
-    )
-
-    $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
-    $context.PipelineName = 'Build'
-    $context.TaskIndex = 1
-
-    $Global:Error.Clear()
-    $script:threwException = $false
-    try
+    function WhenRunningTask
     {
-        Invoke-WhiskeyTask -TaskContext $context -Name $Named -Parameter $Parameter
-    }
-    catch
-    {
-        $script:threwException = $true
-        Write-Error $_
+        [Diagnostics.CodeAnalysis.SuppressMessage('PSShouldProcess', '')]
+        [CmdletBinding(SupportsShouldProcess)]
+        param(
+            [String]$Named,
+
+            [hashtable]$Parameter,
+
+            [String]$BuildRoot
+        )
+
+        $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testDirPath
+        $script:context.PipelineName = 'Build'
+        $script:context.TaskIndex = 1
+
+        $Global:Error.Clear()
+        $script:threwException = $false
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $script:context -Name $Named -Parameter $Parameter
+        }
+        catch
+        {
+            $script:threwException = $true
+            Write-Error $_
+        }
     }
 }
 
-Describe ('Get-TaskArgument.when task uses named parameters') {
-    It ('should pass named parameters') {
-        Init
+Describe 'Get-TaskArgument' {
+    BeforeEach {
+        $script:context = $null
+        $script:testDirPath = New-WhiskeyTestRoot
+        Clear-LastTaskBoundParameter
+    }
+
+    It 'passes arguments using named parameters' {
         WhenRunningTask 'NamedParametersTask' -Parameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' }
     }
-}
 
-Describe ('Get-TaskArgument.when task uses named parameters but user doesn''t pass any') {
-    It ('should not pass named parameters') {
-        Init
+    It 'handles missing argument for named parameter' {
         WhenRunningTask 'NamedParametersTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameters @{ }
     }
-}
 
-Describe ('Get-TaskArgument.when using alternate names for context and parameters') {
-    It 'should pass context and parameters to the task' {
-        Init
+    It 'allows Context and Parameter as argument names for context and arguments' {
         WhenRunningTask 'AlternateStandardParameterNamesTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -TaskContextParameterName 'Context' -TaskParameterParameterName 'Parameter'
     }
-}
 
-Describe ('Get-TaskArgument.when task parameter should come from a Whiskey variable') {
-    It ('should pass the variable''s value to the parameter') {
-        Init
+    It 'uses Whiskey variable as argument value' {
         WhenRunningTask 'ParameterValueFromVariableTask' -Parameter @{ }
         ThenPipelineSucceeded
-        ThenTaskCalled -WithParameter @{ 'Environment' = $context.Environment }
+        ThenTaskCalled -WithParameter @{ 'Environment' = $script:context.Environment }
     }
-}
 
-Describe ('Get-TaskArgument.when task parameter value uses a Whiskey variable member') {
-    It 'should evaluate the member''s value' {
-        Init
+    It 'can use Whiskey variable member as argument value' {
         WhenRunningTask 'ParameterValueFromVariablePropertyTask' -Parameter @{ }
         ThenPipelineSucceeded
-        ThenTaskCalled -WithParameter @{ 'Environment' = $Context.Environment.Length }
+        ThenTaskCalled -WithParameter @{ 'Environment' = $script:context.Environment.Length }
     }
-}
 
-Describe ('Get-TaskArgument.when passing typed parameters') {
-    It ('should convert original values to boolean values') {
-        Init
+    It 'converts properties to bool, switch, and int argument' {
         WhenRunningTask 'NamedParametersTask' -Parameter @{ 'SwitchOne' = 'true' ; 'SwitchTwo' = 'false'; 'Bool' = 'true' ; 'Int' = '1' }
         ThenTaskCalled -WithParameter @{ 'SwitchOne' = $true ; 'SwitchTwo' = $false; 'Bool' = $true ; 'Int' = 1 }
     }
-}
 
-Describe ('Get-TaskArgument.when passing common parameters that map to preference values') {
-    It ('should convert common parameters to preference values') {
+    It 'convert common arguments to preference values' {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
-        Init
         $parameters = @{
             'Verbose' = 'true' ;
             'Debug' = 'true';
@@ -201,15 +186,12 @@ Describe ('Get-TaskArgument.when passing common parameters that map to preferenc
         $Global:WhatIfPreference | Should -Be $origWhatIf
         $Global:InformationPreference | Should -Be $originalInfo
     }
-}
 
-Describe ('Get-TaskArgument.when turning off preference values') {
-    It ('should convert common parameters to preference values') {
+    It 'allows users to turn preferences off' {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
-        Init
         $parameters = @{
             'Verbose' = 'false' ;
             'Debug' = 'false';
@@ -241,10 +223,8 @@ Describe ('Get-TaskArgument.when turning off preference values') {
         $Global:WhatIfPreference | Should -Be $origWhatIf
         $Global:InformationPreference | Should -Be $originalInfo
     }
-}
 
-Describe ('Get-TaskArgument.when turning off global preference values') {
-    It ('should convert common parameters to preference values') {
+    It 'does not change global preferences' {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
         $origWhatIf = $Global:WhatIfPreference
@@ -258,7 +238,6 @@ Describe ('Get-TaskArgument.when turning off global preference values') {
             $Global:InformationPreference = 'Continue'
             $Global:ErrorActionPreference = 'Continue'
 
-            Init
             $parameters = @{
                 'Verbose' = 'false' ;
                 'Debug' = 'false';
@@ -294,14 +273,13 @@ Describe ('Get-TaskArgument.when turning off global preference values') {
             $Global:ErrorActionPreference = $originalError
         }
     }
-}
 
-Describe 'Get-TaskArgument.when using property alias' {
-    It 'should write a warning and pass the value' {
-        Init
+    It 'passes argument using parameter alias' {
         $one = [Guid]::NewGuid()
         $two = [Guid]::NewGuid()
-        WhenRunningTask 'TaskWithParameterAliases' -Parameter @{ 'OldOne' = $one ; 'ReallyOldTwo' = $two } -WarningVariable 'warnings'
+        WhenRunningTask 'TaskWithParameterAliases' `
+                        -Parameter @{ 'OldOne' = $one ; 'ReallyOldTwo' = $two } `
+                        -WarningVariable 'warnings'
         ThenTaskCalled -WithParameter @{ 'One' = $one ; 'Two' = $two ; }
         $warnings | Should -HaveCount 2
         $warnings | Should -Match 'Property "(OldOne|ReallyOldTwo)" is deprecated.'
