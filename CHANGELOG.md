@@ -1,18 +1,13 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
-# 0.59.1
+# 0.59.0
 
 > Released 21 Apr 2023
 
-Fixed: arguments aren't passed to nested tasks.
+* Updated Whiskey to use ProGetAutomation `2.*` by default.
+* Fixed: arguments aren't passed to nested tasks.
 
-
-# 0.59.0
-
-> Released 19 Apr 2023
-
-Updated Whiskey to use ProGetAutomation `2.*` by default.
 
 
 # 0.58.0
