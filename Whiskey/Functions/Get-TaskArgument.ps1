@@ -5,15 +5,15 @@ function Get-TaskArgument
     param(
         # The name of the command.
         [Parameter(Mandatory)]
-        [String]$Name,
+        [String] $Name,
 
         # The properties from the tasks's YAML.
         [Parameter(Mandatory)]
-        [hashtable]$TaskProperty,
+        [hashtable] $Property,
 
         # The current context.
         [Parameter(Mandatory)]
-        [Whiskey.Context]$Context
+        [Whiskey.Context] $Context
     )
 
     Set-StrictMode -Version 'Latest'
@@ -25,7 +25,7 @@ function Get-TaskArgument
         Select-Object -ExpandProperty 'Parameters'
 
     # Parameters to pass to the command.
-    $taskParameters = @{ }
+    $taskArgs = @{ }
 
     [Management.Automation.ParameterMetadata]$cmdParameter = $null
 
@@ -33,13 +33,13 @@ function Get-TaskArgument
     {
         $propertyName = $cmdParameter.Name
 
-        $value = $TaskProperty[$propertyName]
+        $value = $Property[$propertyName]
 
         if( -not $value )
         {
             foreach( $aliasName in $cmdParameter.Aliases )
             {
-                $value = $TaskProperty[$aliasName]
+                $value = $Property[$aliasName]
                 if( $value )
                 {
                     Write-WhiskeyWarning -Context $Context -Message ('Property "{0}" is deprecated. Rename to "{1}" instead.' -f $aliasName,$propertyName)
@@ -74,24 +74,23 @@ function Get-TaskArgument
 
             $params['CmdParameter'] = $cmdParameter
             $params['ValidatePathAttribute'] = $validatePathAttribute
-            $value = $value | Resolve-WhiskeyTaskPath -TaskContext $Context -TaskParameter $TaskProperty @params
+            $value = $value | Resolve-WhiskeyTaskPath -TaskContext $Context -TaskParameter $Property @params
         }
 
         # If the user didn't provide a value and we couldn't find one, don't pass anything.
-        if( -not $TaskProperty.ContainsKey($propertyName) -and -not $value )
+        if( -not $Property.ContainsKey($propertyName) -and -not $value )
         {
             continue
         }
 
-        $taskParameters[$propertyName] = $value
-        $TaskProperty.Remove($propertyName)
+        $taskArgs[$propertyName] = $value
     }
 
     foreach( $name in @( 'TaskContext', 'Context' ) )
     {
         if( $cmdParameters.ContainsKey($name) )
         {
-            $taskParameters[$name] = $Context
+            $taskArgs[$name] = $Context
         }
     }
 
@@ -99,9 +98,9 @@ function Get-TaskArgument
     {
         if( $cmdParameters.ContainsKey($name) )
         {
-            $taskParameters[$name] = $TaskProperty
+            $taskArgs[$name] = $Property
         }
     }
 
-    return $taskParameters
+    return $taskArgs
 }

@@ -255,21 +255,21 @@ function Invoke-WhiskeyTask
                 New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
             }
 
-            $parameter = Get-TaskArgument -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+            $taskArgs = Get-TaskArgument -Name $task.CommandName -Property $taskProperties -Context $TaskContext
 
-            # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a build
-            # to hang, so let's set it to Continue so users can see debug output.
-            if( $parameter['Debug'] )
+            # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a
+            # build to hang, so let's set it to Continue so users can see debug output.
+            if( $taskArgs['Debug'] )
             {
                 $DebugPreference = 'Continue'
-                $parameter.Remove('Debug')
+                $taskArgs.Remove('Debug')
             }
 
             $outVariable = $commonProperties['OutVariable']
 
             if ($outVariable)
             {
-                $taskOutput = & $task.CommandName @parameter
+                $taskOutput = & $task.CommandName @taskArgs
 
                 if (-not $taskOutput)
                 {
@@ -280,7 +280,7 @@ function Invoke-WhiskeyTask
             }
             else
             {
-                & $task.CommandName @parameter
+                & $task.CommandName @taskArgs
             }
 
             $result = 'COMPLETED'
