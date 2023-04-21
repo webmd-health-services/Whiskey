@@ -100,6 +100,28 @@ Describe 'Parallel' {
         $Global:Error.Clear()
     }
 
+    AfterEach {
+        $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+        while ($stopwatch.Elapsed -lt [TimeSpan]'00:00:10')
+        {
+            try
+            {
+                $newName = ".$($script:testDir | Split-Path -Leaf)"
+                Rename-Item -Path $script:testDir -NewName $newName -ErrorAction Ignore
+            }
+            catch
+            {
+                Write-Warning "Failed to rename ""$($script:testDir)"": $($_)."
+            }
+
+            if (-not (Test-Path -Path $script:testDir))
+            {
+                break
+            }
+            Start-Sleep -Seconds 1
+        }
+    }
+
     It 'should run multiple queues' {
         GivenFile 'one.ps1' '1 | Set-Content one.txt'
         GivenFile 'two.ps1' '2 | Set-Content two.txt'

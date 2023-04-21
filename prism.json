@@ -6,7 +6,7 @@
         },
         {
             "Name": "ProGetAutomation",
-            "Version": "0.9.*"
+            "Version": "2.*"
         },
         {
             "Name": "BitbucketServerAutomation",

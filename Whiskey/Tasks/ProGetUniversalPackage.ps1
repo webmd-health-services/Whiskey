@@ -4,7 +4,7 @@ function New-WhiskeyProGetUniversalPackage
     [CmdletBinding()]
     [Whiskey.Task('ProGetUniversalPackage')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
-                                        Version='1.*',
+                                        Version='2.*',
                                         VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]

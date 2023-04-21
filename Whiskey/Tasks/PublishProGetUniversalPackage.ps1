@@ -3,7 +3,9 @@ function Publish-WhiskeyProGetUniversalPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('PublishProGetUniversalPackage')]
-    [Whiskey.RequiresPowerShellModule('ProGetAutomation', Version='1.*', VersionParameterName='ProGetAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('ProGetAutomation',
+                                      Version='2.*',
+                                      VersionParameterName='ProGetAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,

@@ -242,7 +242,7 @@ function SupportsCleanAndInitializeTask
     )
 }
 
-function SupportsCleanTask 
+function SupportsCleanTask
 {
     [Whiskey.TaskAttribute('SupportsCleanTask',SupportsClean)]
     param(
@@ -251,7 +251,7 @@ function SupportsCleanTask
     )
 }
 
-function SupportsInitializeTask 
+function SupportsInitializeTask
 {
     [Whiskey.TaskAttribute('SupportsInitializeTask',SupportsInitialize)]
     param(
@@ -380,7 +380,7 @@ function ValidateOptionalPathTask
 
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
-        
+
 function WindowsOnlyTask
 {
     [Whiskey.Task('WindowsOnlyTask',Platform='Windows')]
@@ -501,6 +501,38 @@ function CreateMissingItemwithPathTypeMissingTask
         [Whiskey.Tasks.ValidatePath(Mandatory,AllowNonexistent,Create)]
         [String[]]$Path
     )
+}
+
+function WrappedTask
+{
+    [Whiskey.Task('WrappedTask')]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+
+        [hashtable] $TaskParameter,
+
+        [String] $Property1
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}
+
+function NestedTask
+{
+    [Whiskey.Task('NestedTask')]
+    [CmdletBinding()]
+    param(
+        $TaskContext,
+
+        [hashtable]$TaskParameter,
+
+        [String] $Property1,
+
+        [String] $Property2
+    )
+
+    Invoke-WhiskeyTask -TaskContext $TaskContext -Parameter $TaskParameter -Name 'WrappedTask'
 }
 
 function ValidatePathWithGlobTask

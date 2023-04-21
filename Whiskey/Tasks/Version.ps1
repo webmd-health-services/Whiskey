@@ -5,7 +5,7 @@
     [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
     [Whiskey.Task('Version')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
-                                        Version='1.*',
+                                        Version='2.*',
                                         VersionParameterName='ProGetAutomationVersion',
                                         ModuleInfoParameterName='ProGetAutomationModuleInfo')]
     param(

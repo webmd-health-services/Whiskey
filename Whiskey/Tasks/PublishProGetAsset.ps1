@@ -4,7 +4,7 @@ function Publish-WhiskeyProGetAsset
 {
     [Whiskey.Task('PublishProGetAsset')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
-                                        Version='1.*',
+                                        Version='2.*',
                                         VersionParameterName='ProGetAutomationVersion')]
     [CmdletBinding()]
     param(
@@ -29,7 +29,7 @@ function Publish-WhiskeyProGetAsset
         Path:
         - ""path/to/file.txt""
         - ""path/to/anotherfile.txt""
-        Url: http://proget.dev.webmd.com/
+        Url: http://proget.inedo.com/
         AssetPath:
         - ""path/to/exampleAsset""
         - ""path/toanother/file.txt""
