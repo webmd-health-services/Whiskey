@@ -117,7 +117,7 @@ function WhenRunningTask
     }
 }
 
-Describe ('Get-TaskParameter.when task uses named parameters') {
+Describe ('Get-TaskArgument.when task uses named parameters') {
     It ('should pass named parameters') {
         Init
         WhenRunningTask 'NamedParametersTask' -Parameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' }
@@ -126,7 +126,7 @@ Describe ('Get-TaskParameter.when task uses named parameters') {
     }
 }
 
-Describe ('Get-TaskParameter.when task uses named parameters but user doesn''t pass any') {
+Describe ('Get-TaskArgument.when task uses named parameters but user doesn''t pass any') {
     It ('should not pass named parameters') {
         Init
         WhenRunningTask 'NamedParametersTask' -Parameter @{ }
@@ -135,7 +135,7 @@ Describe ('Get-TaskParameter.when task uses named parameters but user doesn''t p
     }
 }
 
-Describe ('Get-TaskParameter.when using alternate names for context and parameters') {
+Describe ('Get-TaskArgument.when using alternate names for context and parameters') {
     It 'should pass context and parameters to the task' {
         Init
         WhenRunningTask 'AlternateStandardParameterNamesTask' -Parameter @{ }
@@ -144,7 +144,7 @@ Describe ('Get-TaskParameter.when using alternate names for context and paramete
     }
 }
 
-Describe ('Get-TaskParameter.when task parameter should come from a Whiskey variable') {
+Describe ('Get-TaskArgument.when task parameter should come from a Whiskey variable') {
     It ('should pass the variable''s value to the parameter') {
         Init
         WhenRunningTask 'ParameterValueFromVariableTask' -Parameter @{ }
@@ -153,7 +153,7 @@ Describe ('Get-TaskParameter.when task parameter should come from a Whiskey vari
     }
 }
 
-Describe ('Get-TaskParameter.when task parameter value uses a Whiskey variable member') {
+Describe ('Get-TaskArgument.when task parameter value uses a Whiskey variable member') {
     It 'should evaluate the member''s value' {
         Init
         WhenRunningTask 'ParameterValueFromVariablePropertyTask' -Parameter @{ }
@@ -162,7 +162,7 @@ Describe ('Get-TaskParameter.when task parameter value uses a Whiskey variable m
     }
 }
 
-Describe ('Get-TaskParameter.when passing typed parameters') {
+Describe ('Get-TaskArgument.when passing typed parameters') {
     It ('should convert original values to boolean values') {
         Init
         WhenRunningTask 'NamedParametersTask' -Parameter @{ 'SwitchOne' = 'true' ; 'SwitchTwo' = 'false'; 'Bool' = 'true' ; 'Int' = '1' }
@@ -170,7 +170,7 @@ Describe ('Get-TaskParameter.when passing typed parameters') {
     }
 }
 
-Describe ('Get-TaskParameter.when passing common parameters that map to preference values') {
+Describe ('Get-TaskArgument.when passing common parameters that map to preference values') {
     It ('should convert common parameters to preference values') {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
@@ -203,7 +203,7 @@ Describe ('Get-TaskParameter.when passing common parameters that map to preferen
     }
 }
 
-Describe ('Get-TaskParameter.when turning off preference values') {
+Describe ('Get-TaskArgument.when turning off preference values') {
     It ('should convert common parameters to preference values') {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
@@ -243,7 +243,7 @@ Describe ('Get-TaskParameter.when turning off preference values') {
     }
 }
 
-Describe ('Get-TaskParameter.when turning off global preference values') {
+Describe ('Get-TaskArgument.when turning off global preference values') {
     It ('should convert common parameters to preference values') {
         $origVerbose = $Global:VerbosePreference
         $origDebug = $Global:DebugPreference
@@ -296,7 +296,7 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
     }
 }
 
-Describe 'Get-TaskParameter.when using property alias' {
+Describe 'Get-TaskArgument.when using property alias' {
     It 'should write a warning and pass the value' {
         Init
         $one = [Guid]::NewGuid()

@@ -1,5 +1,5 @@
 
-function Get-TaskParameter
+function Get-TaskArgument
 {
     [CmdletBinding()]
     param(

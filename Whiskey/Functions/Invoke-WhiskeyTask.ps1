@@ -255,7 +255,7 @@ function Invoke-WhiskeyTask
                 New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
             }
 
-            $parameter = Get-TaskParameter -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
+            $parameter = Get-TaskArgument -Name $task.CommandName -TaskProperty $taskProperties -Context $TaskContext
 
             # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a build
             # to hang, so let's set it to Continue so users can see debug output.
