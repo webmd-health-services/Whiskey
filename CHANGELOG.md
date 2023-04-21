@@ -1,6 +1,13 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.59.1
+
+> Released 21 Apr 2023
+
+Fixed: arguments aren't passed to nested tasks.
+
+
 # 0.59.0
 
 > Released 19 Apr 2023

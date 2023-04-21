@@ -49,9 +49,14 @@ BeforeAll {
         $taskParameters = Get-LastTaskBoundParameter
         $null -eq $taskParameters | Should -BeFalse
 
+        $taskArgCount =
+            $taskParameters.Keys |
+            Where-Object { $_ -notin @('Context', 'TaskContext', 'Parameter', 'TaskParameter') } |
+            Measure-Object |
+            Select-Object -ExpandProperty 'Count'
         if( $WithParameter )
         {
-            $taskParameters.Count | Should -Be $WithParameter.Count
+            $taskArgCount | Should -Be $WithParameter.Count
             foreach( $key in $WithParameter.Keys )
             {
                 $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
@@ -283,5 +288,15 @@ Describe 'Get-TaskArgument' {
         ThenTaskCalled -WithParameter @{ 'One' = $one ; 'Two' = $two ; }
         $warnings | Should -HaveCount 2
         $warnings | Should -Match 'Property "(OldOne|ReallyOldTwo)" is deprecated.'
+    }
+
+    It 'passes parameters to wrapped tasks' {
+        WhenRunningTask 'NestedTask' -Parameter @{ 'Property1' = 'value1'; 'Property2' = 'value2' }
+        ThenTaskCalled -WithParameter @{ 'Property1' = 'value1' }
+        $boundArgs = Get-LastTaskBoundParameter
+        $taskParamArg = $boundArgs['TaskParameter']
+        $taskParamArg | Should -Not -BeNullOrEmpty
+        $taskParamArg['Property1'] | Should -Be 'value1'
+        $taskParamArg['Property2'] | Should -Be 'value2'
     }
 }
