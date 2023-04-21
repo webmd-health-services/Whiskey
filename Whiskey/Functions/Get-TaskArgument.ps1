@@ -18,7 +18,7 @@ function Get-TaskParameter
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     # Parameters of the actual command.
     $cmdParameters =
         Get-Command -Name $task.CommandName |

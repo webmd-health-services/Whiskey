@@ -49,7 +49,7 @@ function ThenTaskCalled
 
         [String]$TaskParameterParameterName
     )
-    
+
     $taskParameters = Get-LastTaskBoundParameter
     $null -eq $taskParameters | Should -BeFalse
 
@@ -120,7 +120,7 @@ function WhenRunningTask
 Describe ('Get-TaskParameter.when task uses named parameters') {
     It ('should pass named parameters') {
         Init
-        WhenRunningTask 'NamedParametersTask' -Parameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' } 
+        WhenRunningTask 'NamedParametersTask' -Parameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameter @{ 'Yolo' = 'Fizz' ; 'Fubar' = 'Snafu' }
     }
@@ -129,7 +129,7 @@ Describe ('Get-TaskParameter.when task uses named parameters') {
 Describe ('Get-TaskParameter.when task uses named parameters but user doesn''t pass any') {
     It ('should not pass named parameters') {
         Init
-        WhenRunningTask 'NamedParametersTask' -Parameter @{ } 
+        WhenRunningTask 'NamedParametersTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameters @{ }
     }
@@ -138,7 +138,7 @@ Describe ('Get-TaskParameter.when task uses named parameters but user doesn''t p
 Describe ('Get-TaskParameter.when using alternate names for context and parameters') {
     It 'should pass context and parameters to the task' {
         Init
-        WhenRunningTask 'AlternateStandardParameterNamesTask' -Parameter @{ } 
+        WhenRunningTask 'AlternateStandardParameterNamesTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -TaskContextParameterName 'Context' -TaskParameterParameterName 'Parameter'
     }
@@ -147,7 +147,7 @@ Describe ('Get-TaskParameter.when using alternate names for context and paramete
 Describe ('Get-TaskParameter.when task parameter should come from a Whiskey variable') {
     It ('should pass the variable''s value to the parameter') {
         Init
-        WhenRunningTask 'ParameterValueFromVariableTask' -Parameter @{ } 
+        WhenRunningTask 'ParameterValueFromVariableTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameter @{ 'Environment' = $context.Environment }
     }
@@ -156,7 +156,7 @@ Describe ('Get-TaskParameter.when task parameter should come from a Whiskey vari
 Describe ('Get-TaskParameter.when task parameter value uses a Whiskey variable member') {
     It 'should evaluate the member''s value' {
         Init
-        WhenRunningTask 'ParameterValueFromVariablePropertyTask' -Parameter @{ } 
+        WhenRunningTask 'ParameterValueFromVariablePropertyTask' -Parameter @{ }
         ThenPipelineSucceeded
         ThenTaskCalled -WithParameter @{ 'Environment' = $Context.Environment.Length }
     }
@@ -177,16 +177,16 @@ Describe ('Get-TaskParameter.when passing common parameters that map to preferen
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
         Init
-        $parameters = @{ 
-            'Verbose' = 'true' ; 
-            'Debug' = 'true'; 
-            'WhatIf' = 'true'; 
+        $parameters = @{
+            'Verbose' = 'true' ;
+            'Debug' = 'true';
+            'WhatIf' = 'true';
             'InformationAction' = 'Continue';
             'ErrorAction' = 'Stop';
         }
         WhenRunningTask 'CapturesCommonPreferencesTask' -Parameter $parameters
-        ThenTaskCalled -WithParameter @{ 
-            'Verbose' = $true ; 
+        ThenTaskCalled -WithParameter @{
+            'Verbose' = $true ;
             'VerbosePreference' = 'Continue'
             'DebugPreference' = 'Continue'
             'WhatIf' = $true;
@@ -210,7 +210,7 @@ Describe ('Get-TaskParameter.when turning off preference values') {
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
         Init
-        $parameters = @{ 
+        $parameters = @{
             'Verbose' = 'false' ;
             'Debug' = 'false';
             'WhatIf' = 'false';
@@ -224,8 +224,8 @@ Describe ('Get-TaskParameter.when turning off preference values') {
                         -WhatIf `
                         -InformationAction Continue `
                         -ErrorAction Continue
-        ThenTaskCalled -WithParameter @{ 
-            'Verbose' = $false ; 
+        ThenTaskCalled -WithParameter @{
+            'Verbose' = $false ;
             'VerbosePreference' = 'SilentlyContinue'
             'Debug' = $false;
             'DebugPreference' = 'SilentlyContinue';
@@ -259,7 +259,7 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
             $Global:ErrorActionPreference = 'Continue'
 
             Init
-            $parameters = @{ 
+            $parameters = @{
                 'Verbose' = 'false' ;
                 'Debug' = 'false';
                 'WhatIf' = 'true';
@@ -267,7 +267,7 @@ Describe ('Get-TaskParameter.when turning off global preference values') {
                 'ErrorAction' = 'Ignore';
             }
             WhenRunningTask 'CapturesCommonPreferencesTask' -Parameter $parameters
-            ThenTaskCalled -WithParameter @{ 
+            ThenTaskCalled -WithParameter @{
                                                 'Verbose' = $false;
                                                 'VerbosePreference' = 'SilentlyContinue';
                                                 'Debug' = $false;
