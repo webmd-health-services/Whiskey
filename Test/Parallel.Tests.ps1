@@ -100,6 +100,30 @@ Describe 'Parallel' {
         $Global:Error.Clear()
     }
 
+    AfterEach {
+        $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+        # Rename the test directory to make sure PowerShell processes are terminated so that Pester can delete the
+        # TestDrive.
+        while ($stopwatch.Elapsed -lt [timespan]'00:00:10')
+        {
+            try
+            {
+                Rename-Item -Path $script:testDir -NewName ".$($script:testDir | Split-Path -Leaf)" -ErrorAction Ignore
+            }
+            catch
+            {
+                Write-Warning "Test directory ""$($script:testDir)"" still in use."
+            }
+
+            if (-not (Test-Path -Path $script:testDir))
+            {
+                break
+            }
+
+            Start-Sleep -Milliseconds 100
+        }
+    }
+
     It 'should run multiple queues' {
         GivenFile 'one.ps1' '1 | Set-Content one.txt'
         GivenFile 'two.ps1' '2 | Set-Content two.txt'
