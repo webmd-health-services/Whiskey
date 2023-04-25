@@ -451,6 +451,9 @@ Describe 'Install-WhiskeyNode' {
     # These tests fail intermittently on the build server despite my best efforts. I'm going to say this functionality
     # works, so no need to run them regularlary, just when a developer runs them locally.
     $skipAVTests = -not $IsWindows -or (Test-Path -Path 'env:WHS_CI')
+    Write-Information "IsWindows?              ${IsWindows}" -InformationAction Continue
+    Write-Information "WHS_CI                  ${env:WHS_CI}" -InformationAction Continue
+    Write-Information "Skip anti-virus tests?  ${skipAVTests}" -InformationAction Continue
     It 'should handle aggressive anti-virus' -Skip:$skipAVTests {
         $Global:VerbosePreference = 'Continue'
         $Global:DebugPreference = 'Continue'
