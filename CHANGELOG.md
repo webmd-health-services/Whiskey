@@ -1,13 +1,21 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.60.0
+
+> Released 03 Oct 2023
+
+* The `Version` task will no longer retrieve the next patch and prerelease versions by default. The
+`IncrementPatchVersion` and `IncrementPrereleaseVersion` parameters can be passed to this task to retrieve their
+respective versions.
+
+
 # 0.59.0
 
 > Released 21 Apr 2023
 
 * Updated Whiskey to use ProGetAutomation `2.*` by default.
 * Fixed: arguments aren't passed to nested tasks.
-
 
 
 # 0.58.0
