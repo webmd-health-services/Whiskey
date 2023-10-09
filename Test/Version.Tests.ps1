@@ -408,6 +408,15 @@ Describe 'Version' {
         ThenSemVer2Is '0.41.1-beta.1035' # The last beta version was 0.41.1-beta1034, so next one should be beta1035.
     }
 
+    It 'should not increment prerelease when the increment prerelease switch is false' {
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' ; PrivateData = @{ PSData = @{ Prerelease = ''beta.1'' } } }'
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $false; }
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1-beta1'
+        ThenSemVer2Is '0.41.1-beta.1'
+    }
+
     It 'should read version from packageJson file' {
         GivenFile 'package.json' '{ "Version": "4.2.3-rc.1" }'
         GivenProperty @{ Path = 'package.json' }

@@ -3,7 +3,7 @@
 
 # 0.60.0
 
-> Released 03 Oct 2023
+> Released 09 Oct 2023
 
 * The `Version` task will no longer retrieve the next patch and prerelease versions by default. The
 `IncrementPatchVersion` and `IncrementPrereleaseVersion` parameters can be passed to this task to retrieve their
