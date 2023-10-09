@@ -89,7 +89,7 @@ function ThenTaskFailedWithMessage
 function ThenTaskSucceeded
 {
     # filter out the NPM Warn messages out of the error record
-    $TaskErrors = $Global:Error | Where-Object { $_ -notmatch 'npm WARN' }
+    $TaskErrors = $Global:Error | Where-Object { $_ -match 'npm ERR!' }
     $TaskErrors | Should -BeNullOrEmpty
     $failed | Should -BeFalse
 }

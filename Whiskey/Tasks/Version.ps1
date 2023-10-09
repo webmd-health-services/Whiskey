@@ -1,5 +1,5 @@
 
- function Set-WhiskeyVersion
+function Set-WhiskeyVersion
 {
     [CmdletBinding()]
     [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
@@ -34,9 +34,9 @@
 
         [String] $UPackName,
 
-        [switch] $SkipPackageLookup,
+        [switch] $IncrementPatchVersion,
 
-        [switch] $IncrementPatchVersion
+        [switch] $IncrementPrereleaseVersion
     )
 
     Set-StrictMode -Version 'Latest'
@@ -77,10 +77,11 @@
         }
     }
 
-    [int]$prereleaseVersion = 1
+    [int]$nextPrereleaseVersion = 1
     [Whiskey.BuildVersion]$buildVersion = $TaskContext.Version
     [SemVersion.SemanticVersion]$semver = $buildVersion.SemVer2
     [String[]] $versions = @()
+    [bool] $skipPackageLookup = -not $IncrementPatchVersion -and -not $IncrementPrereleaseVersion
 
     if( $TaskParameter[''] )
     {
@@ -109,28 +110,28 @@
                     return
                 }
 
-                $prerelease = ''
+                $nextPrerelease = ''
                 if( ($moduleManifest | Get-Member -Name 'Prerelease') )
                 {
-                    $Prerelease = $moduleManifest.Prerelease
+                    $nextPrerelease = $moduleManifest.Prerelease
                 }
                 elseif( $moduleManifest.PrivateData -and `
                         $moduleManifest.PrivateData.ContainsKey('PSData') -and `
                         $moduleManifest.PrivateData['PSData'].ContainsKey('Prerelease') )
                 {
-                    $prerelease = $moduleManifest.PrivateData['PSData']['Prerelease']
+                    $nextPrerelease = $moduleManifest.PrivateData['PSData']['Prerelease']
                 }
 
-                if( $prerelease )
+                if( $nextPrerelease )
                 {
-                    $rawVersion = "$($rawVersion)-$($prerelease)"
+                    $rawVersion = "$($rawVersion)-$($nextPrerelease)"
                 }
 
                 $msg = "Read version ""$($rawVersion)"" from PowerShell module manifest ""$($Path)""."
                 Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                 $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from PowerShell module manifest ""$($Path)"""
 
-                if( -not $SkipPackageLookup )
+                if( -not $skipPackageLookup )
                 {
                     $msg = "Retrieving versions for PowerShell module $($moduleManifest.Name)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
@@ -166,7 +167,7 @@
                 $semVer = $rawVersion | ConvertTo-SemVer -VersionSource "from Node package.json file ""$($Path)"""
 
                 $pkgName = $npmPackage | Select-Object -ExpandProperty 'name' -ErrorAction Ignore
-                if( $pkgName -and -not $SkipPackageLookup )
+                if( $pkgName -and -not $skipPackageLookup )
                 {
                     $msg = "Retrieving versions for NPM package $($pkgName)."
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
@@ -220,7 +221,7 @@
                 Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                 $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from .csproj file ""$($Path)"""
 
-                if( -not $SkipPackageLookup )
+                if( -not $skipPackageLookup )
                 {
                     if( -not $NuGetPackageID )
                     {
@@ -271,7 +272,7 @@
         }
     }
 
-    if( -not $SkipPackageLookup )
+    if( -not $skipPackageLookup )
     {
         if( $UPackName )
         {
@@ -337,11 +338,11 @@
         }
     }
 
-    $prerelease = $TaskParameter['Prerelease']
-    if( $prerelease -isnot [String] )
+    $nextPrerelease = $TaskParameter['Prerelease']
+    if( $nextPrerelease -isnot [String] )
     {
         $foundLabel = $false
-        foreach( $object in $prerelease )
+        foreach( $object in $nextPrerelease )
         {
             foreach( $map in $object )
             {
@@ -381,7 +382,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
                     {
                         Write-WhiskeyVerbose -Context $TaskContext -Message "$($branch)     -like  $($wildcardPattern)"
                         $foundLabel = $true
-                        $prerelease = $map[$wildcardPattern]
+                        $nextPrerelease = $map[$wildcardPattern]
                         break
                     }
                     else
@@ -404,11 +405,11 @@ If you want certain branches to always have certain prerelease versions, set Pre
 
         if( -not $foundLabel )
         {
-            $prerelease = ''
+            $nextPrerelease = ''
         }
     }
 
-    if( $prerelease )
+    if( $nextPrerelease )
     {
         $buildSuffix = ''
         if( $semver.Build )
@@ -416,10 +417,10 @@ If you want certain branches to always have certain prerelease versions, set Pre
             $buildSuffix = '+{0}' -f $semver.Build
         }
 
-        $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prerelease,$buildSuffix
+        $rawVersion = '{0}.{1}.{2}-{3}{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$nextPrerelease,$buildSuffix
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            $msg = """$($prerelease)"" is not a valid prerelease version. Only letters, numbers, hyphens, and " +
+            $msg = """$($nextPrerelease)"" is not a valid prerelease version. Only letters, numbers, hyphens, and " +
                    'periods are allowed. See https://semver.org for full documentation.'
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Prerelease' -Message $msg
             return
@@ -428,11 +429,11 @@ If you want certain branches to always have certain prerelease versions, set Pre
 
     if( $semver.Prerelease -match '(\d+)' )
     {
-        $prereleaseVersion = $Matches[1]
+        $nextPrereleaseVersion = $Matches[1]
     }
     else
     {
-        $prereleaseVersion = 1
+        $nextPrereleaseVersion = 1
     }
 
     if( $versions )
@@ -446,8 +447,8 @@ If you want certain branches to always have certain prerelease versions, set Pre
                     return $_
                 }
 
-                $prerelease = "$($Matches[1]).$($Matches[2])"
-                return [SemVersion.SemanticVersion]::New($_.Major, $_.Minor, $_.Patch, $prerelease, $_.Build)
+                $nextPrerelease = "$($Matches[1]).$($Matches[2])"
+                return [SemVersion.SemanticVersion]::New($_.Major, $_.Minor, $_.Patch, $nextPrerelease, $_.Build)
             }
         $sortedSemVersions = [Collections.Generic.SortedSet[SemVersion.SemanticVersion]]::New($semversions)
         $semVersions = [SemVersion.SemanticVersion[]]::New($sortedSemVersions.Count)
@@ -469,25 +470,36 @@ If you want certain branches to always have certain prerelease versions, set Pre
                 $patchVersion = $lastVersion.Patch + 1
             }
 
-            $semver = [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $patchVersion, $semver.Prerelease,
+            $nextPrerelease = $semver.Prerelease -replace '\d+', 1
+            $semver = [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $patchVersion, $nextPrerelease,
                                                         $semver.Build)
         }
 
-        $baseVersion = @($semver.Major, $semver.Minor, $semver.Patch) -join '.'
-        $prereleaseIdentifier = $semver.Prerelease -replace '[^A-Za-z]', ''
-        $lastVersion =
-            $semVersions |
-            Where-Object { (@($_.Major,$_.Minor,$_.Patch) -join '.') -eq $baseVersion } |
-            Where-Object { ($_.Prerelease -replace '[^A-Za-z]', '') -eq $prereleaseIdentifier } |
-            Select-Object -First 1
-        if( $lastVersion -and $lastVersion.Prerelease -match '(\d+)' )
+        if ($IncrementPrereleaseVersion)
         {
-            $prereleaseVersion = $Matches[1]
-            $prereleaseVersion += 1
-        }
-        else
-        {
-            $prereleaseVersion = 1
+            $baseVersion = @($semver.Major, $semver.Minor, $semver.Patch) -join '.'
+            $prereleaseIdentifier = $semver.Prerelease -replace '[^A-Za-z]', ''
+            $lastVersion =
+                $semVersions |
+                Where-Object { (@($_.Major,$_.Minor,$_.Patch) -join '.') -eq $baseVersion } |
+                Where-Object { ($_.Prerelease -replace '[^A-Za-z]', '') -eq $prereleaseIdentifier } |
+                Select-Object -First 1
+
+            $nextPrereleaseVersion = 1
+            if ($lastVersion -and $lastVersion.Prerelease -match '(\d+)')
+            {
+                $nextPrereleaseVersion = [int]$Matches[1]
+                $nextPrereleaseVersion += 1
+            }
+
+            $nextPrerelease = "$($semver.Prerelease).${nextPrereleaseVersion}"
+            if ($semver.Prerelease -match '\d+')
+            {
+                $nextPrerelease = $semver.Prerelease -replace '\d+', $nextPrereleaseVersion
+            }
+
+            $semver = [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $semver.Patch, $nextPrerelease,
+                                                        $semver.Build)
         }
     }
 
@@ -516,13 +528,6 @@ If you want certain branches to always have certain prerelease versions, set Pre
     {
         $semver = New-Object -TypeName 'SemVersion.SemanticVersion' `
                              -ArgumentList $semver.Major,$semVer.Minor,$semVer.Patch,$semver.Prerelease
-    }
-
-    if( $prereleaseVersion -and $semver.Prerelease -match '\d+' )
-    {
-        $prerelease = $semver.Prerelease -replace '\d+', $prereleaseVersion
-        $semver =
-            [SemVersion.SemanticVersion]::New($semver.Major, $semver.Minor, $semver.Patch, $prerelease, $semver.Build)
     }
 
     $buildVersion.SemVer2 = $semver

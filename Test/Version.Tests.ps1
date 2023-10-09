@@ -401,11 +401,20 @@ Describe 'Version' {
 
     It 'should use prerelease version from the PowerShell Gallery' {
         GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' ; PrivateData = @{ PSData = @{ Prerelease = ''beta.1'' } } }'
-        GivenProperty @{ Path = 'Whiskey.psd1' }
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $true; }
         WhenRunningTask
         ThenVersionIs '0.41.1'
         ThenSemVer1Is '0.41.1-beta1035'
         ThenSemVer2Is '0.41.1-beta.1035' # The last beta version was 0.41.1-beta1034, so next one should be beta1035.
+    }
+
+    It 'should not increment prerelease when the increment prerelease switch is false' {
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' ; PrivateData = @{ PSData = @{ Prerelease = ''beta.1'' } } }'
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $false; }
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1-beta1'
+        ThenSemVer2Is '0.41.1-beta.1'
     }
 
     It 'should read version from packageJson file' {
@@ -421,7 +430,7 @@ Describe 'Version' {
         Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' `
                                      -Parameter @{ InstallRootPath = $testRoot ; OutFileRootPath = $testRoot }
         GivenFile 'package.json' '{ "name": "react-native", "version": "0.68.0-rc.0" }'
-        GivenProperty @{ Path = 'package.json' }
+        GivenProperty @{ Path = 'package.json'; IncrementPrereleaseVersion = $true; }
         WhenRunningTask
         ThenVersionIs '0.68.0'
         ThenSemVer1Is '0.68.0-rc5'
@@ -477,7 +486,7 @@ Describe 'Version' {
   </PropertyGroup>
 </Project>
 '@
-        GivenProperty @{ Path = 'lib.csproj' }
+        GivenProperty @{ Path = 'lib.csproj'; IncrementPrereleaseVersion = $true;  }
         WhenRunningTask
         ThenVersionIs '3.0.0'
         if( Get-PackageSource -ProviderName 'NuGet' )
@@ -493,7 +502,7 @@ Describe 'Version' {
     }
 
     It 'should use next prerelease version based on what is in NuGet' {
-        GivenProperty @{ Version = '3.0.0-alpha-0' ; NuGetPackageID = 'NUnit' }
+        GivenProperty @{ Version = '3.0.0-alpha-0' ; NuGetPackageID = 'NUnit'; IncrementPrereleaseVersion = $true;  }
         WhenRunningTask
         ThenVersionIs '3.0.0'
         if( Get-PackageSource -ProviderName 'NuGet' )
@@ -604,7 +613,7 @@ Describe 'Version' {
     Context 'by build server' {
         It 'should set prerelease metadata' {
             GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
-            GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ) }
+            GivenProperty @{ 'Path' = 'Whiskey.psd1'; Prerelease = @( @{ 'alpha/*' = 'alpha.1' } ), @( @{ 'beta/*' = 'beta.2' } ); IncrementPrereleaseVersion = $true; }
             GivenBranch 'beta/some-feature'
             WhenRunningTask
             ThenVersionIs '0.41.1'
@@ -738,6 +747,7 @@ description 'Installs/Configures cookbook_name'
             UPackName = 'Fu bar';
             ProGetUrl = 'https://example.com:3344';
             UPackFeedName = 'Apps';
+            IncrementPrereleaseVersion = $true;
         }
         ThenVersionIs '1.0.0'
         ThenSemVer1Is '1.0.0-rc6'
@@ -753,6 +763,7 @@ description 'Installs/Configures cookbook_name'
         GivenCurrentVersion '1.0.0-rc.1'
         GivenUniversalPackageVersions @()
         WhenRunningTask -WithProperties @{
+            IncrementPrereleaseVersion = $true;
             UPackName = 'snafu';
             ProGetUrl = 'https://example.com';
             UPackFeedName = 'Apps';
@@ -883,6 +894,7 @@ Build:
     Path: Module.psd1
     Prerelease:
     - "*": "rc.1"
+    IncrementPrereleaseVersion: true
 "@
         WhenRunningTask -WithYaml $yaml -ForPSModule 'Module' -At $sourceLocation -WithVersion @(
             '4.9.0-rc1',
