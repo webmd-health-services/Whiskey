@@ -126,6 +126,11 @@ function Set-WhiskeyVersion
                 {
                     $rawVersion = "$($rawVersion)-$($nextPrerelease)"
                 }
+                
+                if (-not $nextPrerelease -and -not $TaskParameter['Prerelease'])
+                {
+                    $IncrementPrereleaseVersion = $false
+                }
 
                 $msg = "Read version ""$($rawVersion)"" from PowerShell module manifest ""$($Path)""."
                 Write-WhiskeyVerbose -Context $TaskContext -Message $msg

@@ -417,6 +417,15 @@ Describe 'Version' {
         ThenSemVer2Is '0.41.1-beta.1'
     }
 
+    It 'should not increment prerelease version when the prerelease tag doesn''t exist' {
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $true; }
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1'
+        ThenSemVer2Is '0.41.1'
+    }
+
     It 'should read version from packageJson file' {
         GivenFile 'package.json' '{ "Version": "4.2.3-rc.1" }'
         GivenProperty @{ Path = 'package.json' }

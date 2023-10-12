@@ -1,6 +1,13 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.60.1
+
+> Released 11 Oct 2023
+
+Fixed: The `Version` task incremments the prerelease version even though a prerelease label doesn't exist.
+
+
 # 0.60.0
 
 > Released 09 Oct 2023
