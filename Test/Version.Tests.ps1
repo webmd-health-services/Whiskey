@@ -921,4 +921,24 @@ Build:
         ThenSemVer1Is '4.9.0-rc11'
         ThenSemVer2Is '4.9.0-rc.11'
     }
+
+    It 'should not increment prerelease version when the prerelease tag doesn''t exist for current branch' {
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $true; Prerelease = @( @{ 'main' = '' }, @{ 'feature/branch' = 'beta1' }) }
+        GivenBranch 'main'
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1'
+        ThenSemVer2Is '0.41.1'
+    }
+
+    It 'should increment prerelease version when the prerelease tag exists for current branch' {
+        GivenFile 'Whiskey.psd1' '@{ ModuleVersion = ''0.41.1'' }'
+        GivenProperty @{ Path = 'Whiskey.psd1'; IncrementPrereleaseVersion = $true; Prerelease = @( @{ 'main' = '' }, @{ 'feature/branch' = 'beta1' }) }
+        GivenBranch 'feature/branch'
+        WhenRunningTask
+        ThenVersionIs '0.41.1'
+        ThenSemVer1Is '0.41.1-beta1035'
+        ThenSemVer2Is '0.41.1-beta1035'
+    }
 }

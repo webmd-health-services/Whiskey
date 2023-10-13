@@ -127,11 +127,6 @@ function Set-WhiskeyVersion
                     $rawVersion = "$($rawVersion)-$($nextPrerelease)"
                 }
                 
-                if (-not $nextPrerelease -and -not $TaskParameter['Prerelease'])
-                {
-                    $IncrementPrereleaseVersion = $false
-                }
-
                 $msg = "Read version ""$($rawVersion)"" from PowerShell module manifest ""$($Path)""."
                 Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                 $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from PowerShell module manifest ""$($Path)"""
@@ -480,7 +475,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
                                                         $semver.Build)
         }
 
-        if ($IncrementPrereleaseVersion)
+        if ($IncrementPrereleaseVersion -and $semver.Prerelease)
         {
             $baseVersion = @($semver.Major, $semver.Minor, $semver.Patch) -join '.'
             $prereleaseIdentifier = $semver.Prerelease -replace '[^A-Za-z]', ''
