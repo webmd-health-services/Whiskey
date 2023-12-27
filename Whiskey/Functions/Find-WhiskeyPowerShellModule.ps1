@@ -110,6 +110,15 @@ function Find-WhiskeyPowerShellModule
 
     try
     {
+        $pwshGetModule = Get-Module -Name 'PowerShellGet' -ErrorAction Ignore
+        if( $pwshGetModule -and $pwshGetModule.Version -lt [Version]'2.0.10' )
+        {
+            $msg = "The currently installed version of PowerShellGet $($pwshGetModule.Version) is less than the " +
+                   'minimum recommended version 2.0.10. If you run into issues with resolving PowerShell modules, ' +
+                   'please update PowerShellGet to the latest version using the following command: ' +
+                   '"Install-Module -Name ''PowerShellGet'' -Force -AllowClobber"'
+            Write-WhiskeyWarning -Message $msg
+        }
         Register-WhiskeyPSModulePath -PSModulesRoot $BuildRoot
 
         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease:$AllowPrerelease

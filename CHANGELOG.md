@@ -1,6 +1,12 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
+# 0.60.3
+
+> Released 27 Dec 2023
+
+Fixed: Whiskey now displays a warning if it cannot find `PowerShellGet` with a version higher than `2.0.10`.
+
 # 0.60.2
 
 > Released 12 Oct 2023
