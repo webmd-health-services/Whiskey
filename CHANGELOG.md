@@ -3,6 +3,13 @@
 
 # Whiskey Changelog
 
+## 0.60.4
+
+> Released 5 Feb 2024
+
+Fixed: the `Delete` task can incorrectly fail a build.
+
+
 ## 0.60.3
 
 > Released 27 Dec 2023

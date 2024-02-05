@@ -4,32 +4,57 @@ function Invoke-WhiskeyRobocopy
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [String]$Source,
+        [String] $Source,
 
         [Parameter(Mandatory)]
-        [String]$Destination,
+        [String] $Destination,
 
-        [String[]]$WhiteList,
+        [String[]] $WhiteList,
 
-        [String[]]$Exclude,
-
-        [String]$LogPath
+        [String[]] $Exclude
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $numRobocopyThreads = Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -ExpandProperty 'NumberOfLogicalProcessors' | Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
+    $numRobocopyThreads =
+        Get-CimInstance -ClassName 'Win32_Processor' |
+        Select-Object -ExpandProperty 'NumberOfLogicalProcessors' |
+        Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
     $numRobocopyThreads *= 2
 
-    $logParam = ''
-    if ($LogPath)
-    {
-        $logParam = '/LOG:{0}' -f $LogPath
-    }
+    $logPathFileName = "robocopy-$([IO.Path]::GetRandomFileName() -replace '\.','').log"
+    $logPath = Join-Path -Path (Get-WhiskeyTempPath) -ChildPath $logPathFileName
 
     $excludeParam = $Exclude | ForEach-Object { '/XF' ; $_ ; '/XD' ; $_ }
-    Write-WhiskeyDebug ('robocopy  BEGIN  {0} -> {1}' -f $Source,$Destination)
-    robocopy $Source $Destination '/PURGE' '/S' '/NP' '/R:0' '/NDL' '/NFL' '/NS' ('/MT:{0}' -f $numRobocopyThreads) $WhiteList $excludeParam $logParam
-    Write-WhiskeyDebug ('robocopy  END')
+    robocopy $Source `
+             $Destination `
+             '/PURGE' `
+             '/S' `
+             '/R:0' `
+             "/LOG:${logPath}" `
+             "/MT:${numRobocopyThreads}" `
+             $WhiteList `
+             $excludeParam
+
+    try
+    {
+        if ($LASTEXITCODE -ge 8)
+        {
+            Get-Content -Path $logPath
+            $msg = "The command ""robocopy.exe '${Source}' '${Destination}'"" failed with exit code ${LASTEXITCODE}."
+            Write-WhiskeyError $msg
+            return
+        }
+
+        # Make sure one of Robocopy's success exit codes doesn't fail the build.
+        $Global:LASTEXITCODE = $LASTEXITCODE = 0
+    }
+    finally
+    {
+        if (Test-Path -Path $logPath)
+        {
+            Remove-Item -Path $logPath -Force
+        }
+    }
 }
