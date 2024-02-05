@@ -1,27 +1,30 @@
 <!--markdownlint-disable MD012 no-multiple-blanks -->
 <!--markdownlint-disable MD024 no-duplicate-heading/no-duplicate-header -->
 
-# 0.60.3
+# Whiskey Changelog
+
+## 0.60.3
 
 > Released 27 Dec 2023
 
 Fixed: Whiskey now displays a warning if it cannot find `PowerShellGet` with a version higher than `2.0.10`.
 
-# 0.60.2
+
+## 0.60.2
 
 > Released 12 Oct 2023
 
 Fixed: The `Version` tasks increments the prerelease version even though it's label is null or empty.
 
 
-# 0.60.1
+## 0.60.1
 
 > Released 11 Oct 2023
 
 Fixed: The `Version` task incremments the prerelease version even though a prerelease label doesn't exist.
 
 
-# 0.60.0
+## 0.60.0
 
 > Released 09 Oct 2023
 
@@ -30,7 +33,7 @@ Fixed: The `Version` task incremments the prerelease version even though a prere
 respective versions.
 
 
-# 0.59.0
+## 0.59.0
 
 > Released 21 Apr 2023
 
@@ -38,7 +41,7 @@ respective versions.
 * Fixed: arguments aren't passed to nested tasks.
 
 
-# 0.58.0
+## 0.58.0
 
 > Releaesd 14 Apr 2023
 
@@ -47,11 +50,11 @@ contains a directory separator character (e.g. `/` or `\`), it is matched agains
 relative to the current working directory.
 
 
-# 0.57.0
+## 0.57.0
 
 > Released 2023-04-10
 
-## Added
+### Added
 
 * Whiskey's verbose and debug messages now include timing information like information messages.
 * Parameter `PipelineName` to Whiskey's default build.ps1 script, which allows running a specific pipeline from a
@@ -61,7 +64,7 @@ whiskey.yml file.
 * The `PublishProGetAsset` and `PublishProGetUniversalPackage` tasks now write what they're publishing to the
 information stream.
 
-## Changed
+### Changed
 
 * Updated the `Pester` task to no longer run tests in a background job.
 [There's about a 6x reduction in the stack size of PowerShell processes started by `Start-Job`](https://github.com/PowerShell/PowerShell/issues/17407),
@@ -72,52 +75,52 @@ ProGetAutomation version that matches wildcard `1.*` (excluding prerelease versi
 * Updated `Version` task to no longer use a privately packaged version of ProGetAutomation and instead use the same
 version as the `ProGetUniversalPackage`, `PublishProGetAsset`, and `PublishProGetUniversalPackage` tasks.
 
-## Fixed
+### Fixed
 
 * Fixed: Installing .NET fails if the global.json file requests a version of .NET that is newer than any installed
 version.
 * Fixed: Installing .NET fails when the global.json file does not contain a `rollForward` property.
 * Fixed: The `Pester` tasks sometimes fail with "call depth overflow" exceptions.
 
-## Removed
+### Removed
 
 * The `Pester` task's `AsJob` switch. The `Pester` task now runs tests in a seperate PowerShell process.
 
 
-# 0.56.0
+## 0.56.0
 
 > Released 2023-04-06
 
-## Changed
+### Changed
 
 * `MSBuild` task no longer strips double/single quotes from around property values or adds a backslash if a property
 value ends with a backslash. Instead, the `MSBuild` task escapes values using MSBuild's internal rules (i.e.
 it URL-encodes the value). If you have quotes around property values, remove them.
 
-## Fixed
+### Fixed
 
 * Fixed: `MSBuild` task fails if a property value contains a semi-colon.
 
 
-# 0.55.0
+## 0.55.0
 
 > Released 2023-04-05
 
-## Added
+### Added
 
 * The `Version` task now supports setting patch/prerelease version numbers from a universal package that's in a group.
 * The `Version` task now supports authenticating to ProGet to get universal packages.
 
 
-# 0.54.0
+## 0.54.0
 
 > Released 2023-04-03
 
-## Added
+### Added
 
 The `build.ps1` can now authenticate requests to GitHub when determining the version of Whiskey to download.
 
-## Changed
+### Changed
 
 * Whiskey now checks .NET's `global.json` files for their RollForward value before installing .NET Core toolsfollows Microsoft's policy on rolling forward currently installed .NET Core versions.
 * MSBuild task now writes NuGet restore and MSBuild commands to the information stream.
@@ -125,7 +128,7 @@ The `build.ps1` can now authenticate requests to GitHub when determining the ver
 * NPM task now writes the commands it runs to the information stream.
 * NuGetPush task writes `nuget push` command to the information stream.
 
-## Fixed
+### Fixed
 
 * Fixed: MSBuild task throws an unhelpful internal error when given a `NuGetVersion` that does not exist.
 * Fixed: tasks fail that pass empty strings as arguments to console commands. PowerShell 7.3 changed the way variables
@@ -143,7 +146,7 @@ unless the `GitHubBearerToken` parameter has a value.
 * Fixed: Whiskey doesn't tell you when it can't find a version of a NuGet package.
 
 
-# 0.53.2
+## 0.53.2
 
 > Released 2022-08-23
 
@@ -152,18 +155,18 @@ the source and destination branches together on the build server. This merge onl
 be tagged in Bitbucket Server.
 
 
-# 0.53.1
+## 0.53.1
 
 > Released 2022-08-12
 
 Fixed: Pester task doesn't fail when running in a background job and tests fail.
 
 
-# 0.53.0
+## 0.53.0
 
 > Released 2022-08-09
 
-## Upgrade Instructions
+### Upgrade Instructions
 
 
 Whiskey no longer installs PackageManagement or PowerShellGet modules (again). On all computers running Whiskey builds
@@ -176,14 +179,14 @@ We recommend using Prism for PowerShell module management and to get working pac
 has a script you can run in your build process to bootstrap package management and Prism
 itself.](https://github.com/webmd-health-services/Prism#adding-to-builds)
 
-## Changes
+### Changes
 
 * Whiskey no longer installs Package Management or PowerShellGet modules. It now uses whatever versions of those modules
 are installed.
 * Please use PowerShellGet 2.1.5 or later. This will fix an issue with the `PublishPowerShellModule` task hanging.
 
 
-# 0.52.2
+## 0.52.2
 
 > Released 2022-08-04
 
@@ -194,14 +197,14 @@ PackageManagement module.
 * Whiskey now supports PackageManagement 1.4.8.1.
 
 
-# 0.52.1
+## 0.52.1
 
 > Released 2022-07-25
 
 * Fixed: typo in command name. Mis-typed `Convert-Path` as `ConvertPath`.
 
 
-# 0.52.0
+## 0.52.0
 
 > Released 2022-07-05
 
@@ -212,87 +215,87 @@ PackageManagement module.
   and PackageManagement, but will install them if needed.
 
 
-# 0.51.1
+## 0.51.1
 
 > Released 2022-06-10
 
 * Fixed: the `Version` task fails when reading version from a Node.js package.json file.
 
 
-# 0.51.0
+## 0.51.0
 
 > Released 2022-05-26
 
-## Added
+### Added
 
 * The Parallel task now has a timeout (default is 10 minutes) in which background jobs have to complete. If jobs take
   longer than the timeout, the build will fail. Use the `Timeout` property to customize the job timeout.
 
-## Changes
+### Changes
 
 * Parallel task now watches each background job in order until it finishes, displaying its output while waiting.
 * When PowerShell task is executing a script block, it now writes the script block to output instead of the path and
   args to the temporary script used to run the script block.
 
-## Fixes
+### Fixes
 
 * MSBuild task returns multiple paths to Visual Studio 2022's 32-bit MSBuild.exe.
 
 
-# 0.50.1
+## 0.50.1
 
 > Released 2022-05-19
 
 Fixed: NuGet package dependencies are not installed.
 
 
-# 0.50.0
+## 0.50.0
 
 > Released 2022-05-18
 
-## Upgrade Instructions
+### Upgrade Instructions
 
 Whiskey now requires PackageManagement 1.4.7 and PowerShellGet 2.2.5 to be installed on any computer on which it runs.
 Please ensure these modules are installed.
 
-## Added
+### Added
 
 * Whiskey's "Version" task now calculates the next prerelease version number for a package by querying the package's
   package repository.
 
-## Changed
+### Changed
 
 * Whiskey now depends on and requires PackageManagement 1.4.7 and PowerShellGet 2.2.5. These must be pre-installed on
 computers running whiskey.
 
-## Fixed
+### Fixed
 
 * Fixed: Parallel task fails if it runs a custom task that was imported from a module.
 
-## Removed
+### Removed
 
 * Removed OpenCover support from the NUnit2 and NUnit3 tasks.
 
 
-# 0.49.2
+## 0.49.2
 
 * Fixed: Whiskey fails to resolve a task's tool path if the task is running with a custom working directory.
 
 
-# 0.49.1
+## 0.49.1
 
 > Released 2022-02-08
 
-## Fixed
+### Fixed
 
 * Fixed: Whiskey fails to install a task's tool if the task is running with a custom working directory.
 
 
-# 0.49.0
+## 0.49.0
 
 > Released 2021-12-30
 
-## Added
+### Added
 
 * Added a `NoLog` parameter to the `DotNet` task to turn off logging.
 * Whiskey now supports publishing PowerShell modules with AppVeyor deployments instead of directly from/by Whiskey. Use
@@ -303,7 +306,7 @@ PowerShell Gallery, or other PowerShell NuGet-based feed.
 PowerShell's default error view is hard to recognize and read in non-colorized build output. To **not** use Whiskey's
 format, set the `WHISKEY_DISABLE_ERROR_FORMAT` environment variable to `True` **before** importing Whiskey.
 
-## Changed
+### Changed
 
 * The `PublishPowerShellModule` task's default behavior is now to publish a module to a .nupkg file in the current
 build's output directory. This allows another tool/process to publish the module (i.e. you can remove your deploy logic
@@ -317,11 +320,11 @@ publishing.
 * The `PublishPowerShellModule` task will fail if no repository with the same name as the `RepositoryName` property
 exists and the `RepositoryLocation` property doesn't have a value.
 
-## Deprecated
+### Deprecated
 
 * The `Pester3` and `Pester4` tasks are obsolete and no longer supported. Use the `Pester` task instead.
 
-## Fixed
+### Fixed
 
 * Fixed: Whiskey build doesn't fail if Whiskey configuration file contains invalid YAML.
 * Fixed: Whiskey fails to run on AppVeyor's Visual Studio 2013 build image, i.e. on .NET 4.6.2 or earlier.
@@ -333,7 +336,7 @@ being searched has no upper or lower case letters.
 validating parameters.
 * Fixed: `GetPowerShellModule` writes an error and fails a build if getting a prerelease version of a module.
 
-## Removed
+### Removed
 
 * Warnings written by `Import-Module` are now hidden.
 * The `PublishPowerShellModule` no longer registers permanent PowerShell repositories. If no repository exists that
@@ -341,7 +344,7 @@ matches either of the `RepositoryName` or `RepositoryLocation` properties, the t
 publishes to `RepositoryLocation`, publishes to it, then unregisters the repository.
 
 
-# 0.48.3
+## 0.48.3
 
 > Released 2021-03-23
 
@@ -349,14 +352,14 @@ publishes to `RepositoryLocation`, publishes to it, then unregisters the reposit
 * Warning build output no longer has a task name prefix (hard to recognize info output).
 
 
-# 0.48.2
+## 0.48.2
 
 > Released 2021-03-22
 
 * Fixed: the Context object's TaskName property isn't public/settable.
 
 
-# 0.48.1
+## 0.48.1
 
 > Released 2021-03-19
 
@@ -364,7 +367,7 @@ publishes to `RepositoryLocation`, publishes to it, then unregisters the reposit
 * Fixed: the Context object's StartedAt property isn't public/settable.
 
 
-# 0.48.0
+## 0.48.0
 
 > Released 2021-03-19
 
