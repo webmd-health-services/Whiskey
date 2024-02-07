@@ -47,28 +47,18 @@ function Remove-WhiskeyFileSystemItem
     {
         if( $IsWindows )
         {
-            $logPath = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ('whiskey.robocopy.{0}.log' -f ([IO.Path]::GetRandomFileName()))
-            $emptyDir = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
-            $deleteLog = $true
-            New-Item -Path $emptyDir -ItemType 'Directory' | Out-Null
+            $emptyDir = Get-WhiskeyTempPath -Name 'Empty'
             try
             {
-                Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $Path -LogPath $logPath | Out-Null
-                if( $LASTEXITCODE -ge 8 )
-                {
-                    $deleteLog = $false
-                    Write-WhiskeyError -Message ('Failed to remove directory "{0}". See "{1}" for more information.' -f $Path,$logPath)
-                    return
-                }
+                Invoke-WhiskeyRobocopy -Source $emptyDir -Destination $Path
                 Remove-Item -Path $Path -Recurse -Force
             }
             finally
             {
-                if( $deleteLog )
+                if (Test-Path -Path $emptyDir)
                 {
-                    Remove-Item -Path $logPath -ErrorAction Ignore -Force
+                    Remove-Item -Path $emptyDir -Recurse -Force
                 }
-                Remove-Item -Path $emptyDir -Recurse -Force
             }
         }
         else
