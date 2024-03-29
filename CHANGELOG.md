@@ -3,6 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.60.5
+
+> Released 2 Apr 2024
+
+Fixed: Version task fails when incrementing a Node Module's prerelease version but no version of the module has been
+published to the registry yet.
+Fixed: Some verbose output does not unroll nested arrays.
+
 ## 0.60.4
 
 > Released 5 Feb 2024
