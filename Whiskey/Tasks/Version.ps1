@@ -126,7 +126,7 @@ function Set-WhiskeyVersion
                 {
                     $rawVersion = "$($rawVersion)-$($nextPrerelease)"
                 }
-                
+
                 $msg = "Read version ""$($rawVersion)"" from PowerShell module manifest ""$($Path)""."
                 Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                 $semver = $rawVersion | ConvertTo-SemVer -VersionSource "from PowerShell module manifest ""$($Path)"""
@@ -173,12 +173,36 @@ function Set-WhiskeyVersion
                     Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                     Install-WhiskeyNode -InstallRootPath $TaskContext.BuildRoot `
                                         -OutFileRootPath $TaskContext.OutputDirectory
-                    $versions = Invoke-WhiskeyNpmCommand -Name 'show' `
-                                                         -ArgumentList @($pkgName, 'versions', '--json') `
-                                                         -BuildRoot $TaskContext.BuildRoot `
-                                                         -ForDeveloper:($TaskContext.ByDeveloper) `
-                                                         -ErrorAction Ignore 2>$null |
+                    $packageVersions =
+                        Invoke-WhiskeyNpmCommand -Name 'show' `
+                                                 -ArgumentList @($pkgName, 'versions', '--json') `
+                                                 -BuildRoot $TaskContext.BuildRoot `
+                                                 -ForDeveloper:($TaskContext.ByDeveloper) `
+                                                 -ErrorAction Ignore 2>$null |
                         ConvertFrom-Json
+
+                    if ($packageVersions | Get-Member -Name 'error')
+                    {
+                        $errCode = $packageVersions.error | Select-Object -ExpandProperty 'code' -ErrorAction 'Ignore'
+                        $errSummary = $packageVersions.error | Select-Object -ExpandProperty 'summary' -ErrorAction 'Ignore'
+
+                        if ($errCode -eq 'E404')
+                        {
+                            $msg = "NPM package ""${pkgName}"" has never been published to the registry. No existing versions."
+                        }
+                        else
+                        {
+                            $msg = "Failed to retrieve versions for NPM package ""${pkgName}"": [${errCode}] ${errSummary}"
+                        }
+
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
+                        $IncrementPrereleaseVersion = $false
+                        $versions = $semver
+                    }
+                    else
+                    {
+                        $versions = $packageVersions
+                    }
                 }
             }
             elseif( $fileInfo.Extension -eq '.csproj' )

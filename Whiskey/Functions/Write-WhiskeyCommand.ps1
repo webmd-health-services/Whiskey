@@ -13,14 +13,18 @@ function Write-WhiskeyCommand
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    # Might have passed array of arrays.
+    $ArgumentList = & {
+        $ArgumentList | ForEach-Object { $_ | Write-Output }
+    }
+
     $logArgumentList = & {
             if( $Path -match '\ ' )
             {
                 '&'
             }
             $Path
-            # Might have passed array of arrays.
-            $ArgumentList | ForEach-Object { $_ | Write-Output }
+            $ArgumentList
         } |
         Where-Object { $null -ne $_ } |
         ForEach-Object {

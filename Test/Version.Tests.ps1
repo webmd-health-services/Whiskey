@@ -446,6 +446,27 @@ Describe 'Version' {
         ThenSemVer2Is '0.68.0-rc.5'
     }
 
+    It 'should not fail if package does not exist in NPM registry' {
+        Mock -CommandName 'Install-WhiskeyNode' -ModuleName 'Whiskey'
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' `
+             -ModuleName 'Whiskey' `
+             -Mockwith {
+                @{
+                    error = @{
+                        code    = 'E404';
+                        summary = 'Not Found';
+                    }
+                } | ConvertTo-Json
+             }
+
+        GivenFile 'package.json' '{ "name": "this-package-has-not-been-published-yet", "version": "0.0.0-rc.0" }'
+        GivenProperty @{ Path = 'package.json'; IncrementPrereleaseVersion = $true; }
+        WhenRunningTask
+        ThenVersionIs '0.0.0'
+        ThenSemVer1Is '0.0.0-rc0'
+        ThenSemVer2Is '0.0.0-rc.0'
+    }
+
     It 'should fail if version in packageJson file is missing' {
         GivenFile 'package.json' '{ }'
         GivenProperty @{ Path = 'package.json' }
