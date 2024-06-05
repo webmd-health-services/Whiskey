@@ -143,6 +143,7 @@ Describe 'PublishProGetAsset' {
     BeforeEach {
         $script:testDirPath = New-WhiskeyTestRoot
         Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
     }
 
     AfterEach {
