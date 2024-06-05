@@ -21,7 +21,9 @@ function Publish-WhiskeyProGetAsset
         [String] $CredentialID,
 
         [Alias('Uri')]
-        [Uri] $Url
+        [Uri] $Url,
+
+        [String] $ContentType
     )
 
     Set-StrictMode -Version 'Latest'
@@ -63,12 +65,19 @@ function Publish-WhiskeyProGetAsset
 
     $session = New-ProGetSession -Uri $Url -Credential $credential -WarningAction Ignore
 
+    $optionalArgs = @{}
+
+    if ($ContentType)
+    {
+        $optionalArgs['ContentType'] = $ContentType
+    }
+
     $assetDirName = $AssetDirectory
     Write-WhiskeyInfo $Url
 
     foreach($pathItem in $Path)
     {
-        if ($AssetPath -and @($AssetPath).count -eq ($Path | Measure-Object).Count) {
+        if ($AssetPath -and (($AssetPath | Measure-Object).Count -eq ($Path | Measure-Object).Count)) {
             $name = @($AssetPath)[$Path.indexOf($pathItem)]
         }
         else
@@ -78,6 +87,6 @@ function Publish-WhiskeyProGetAsset
         }
 
         Write-WhiskeyInfo "  $($pathItem | Resolve-WhiskeyRelativePath) -> ${assetDirName}/${name}"
-        Set-ProGetAsset -Session $session -DirectoryName $assetDirName -Path $name -FilePath $pathItem
+        Set-ProGetAsset -Session $session -DirectoryName $assetDirName -Path $name -FilePath $pathItem @optionalArgs
     }
 }
