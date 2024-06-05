@@ -45,13 +45,13 @@ function Publish-WhiskeyProGetAsset
 
     if (-not $Path)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid Path Parameter to your whiskey.yml file:" + $message)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid Path property to your whiskey.yml file:" + $message)
         return
     }
 
     if (-not $AssetDirectory)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid Directory Parameter to your whiskey.yml file:" + $message)
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid AssetDirectory property to your whiskey.yml file:" + $message)
         return
     }
 
