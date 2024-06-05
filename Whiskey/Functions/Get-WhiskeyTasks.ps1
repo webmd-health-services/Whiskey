@@ -27,12 +27,12 @@ function Get-WhiskeyTask
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     [Management.Automation.FunctionInfo]$functionInfo = $null;
-    
-    foreach( $functionInfo in (Get-Command -CommandType Function) )
+
+    foreach ($functionInfo in (Get-ChildItem -Path 'Function:\'))
     {
-        $functionInfo.ScriptBlock.Attributes | 
+        $functionInfo.ScriptBlock.Attributes |
             Where-Object { $_ -is [Whiskey.TaskAttribute] } |
             ForEach-Object {
                 $_.CommandName = $functionInfo.Name
