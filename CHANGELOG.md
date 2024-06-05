@@ -3,6 +3,25 @@
 
 # Whiskey Changelog
 
+## 0.61.0
+
+> Released 12 June 2024
+
+### Added
+
+* Added `ContentType` property to `PublishProGetAsset` task for setting the published asset's MIME type. Defaults to
+  `application/octet-stream`.
+
+### Changed
+
+* Updated ProGetAutomation dependency version to `3.*` (from `2.*`).
+* Improved `PublishProGetAsset` task error messages.
+* Improved speed of Whiskey build by more efficiently searching for available Whiskey task functions.
+
+### Fixed
+
+* Wrong property name in `PublishProGetAsset` task error message.
+
 ## 0.60.5
 
 > Released 2 Apr 2024
