@@ -3,7 +3,7 @@ function Publish-WhiskeyProGetAsset
 {
     [Whiskey.Task('PublishProGetAsset')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
-                                        Version='2.*',
+                                        Version='3.*',
                                         VersionParameterName='ProGetAutomationVersion')]
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
