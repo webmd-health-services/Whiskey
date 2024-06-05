@@ -29,35 +29,29 @@ function Publish-WhiskeyProGetAsset
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $message = "
-    Build:
-    - PublishProGetAsset:
-        CredentialID: ProGetCredential
-        Path:
-        - ""path/to/file.txt""
-        - ""path/to/anotherfile.txt""
-        Url: http://proget.inedo.com/
-        AssetPath:
-        - ""path/to/exampleAsset""
-        - ""path/toanother/file.txt""
-        AssetDirectory: 'versions'
-        "
+    $documentationMsg = "See the PublishProGetAsset task documentation for details: https://github.com/webmd-health-services/Whiskey/wiki/PublishProGetAsset-Task"
 
     if (-not $Path)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid Path property to your whiskey.yml file:" + $message)
+        $msg = """Path"" is a mandatory property. It must be a list of relative paths to the files/directories to " +
+               "upload to ProGet. Paths are relative to the whiskey.yml file. ${documentationMsg}"
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
     if (-not $AssetDirectory)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("Please add a valid AssetDirectory property to your whiskey.yml file:" + $message)
+        $msg = """AssetDirectory"" is a mandatory property. It must be the root asset directory in ProGet where the item " +
+               "will be uploaded to. ${documentationMsg}"
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
     if (-not $CredentialID)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ("CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet. Add the credential with the `Add-WhiskeyCredential` function:" + $message)
+        $msg = """CredentialID"" is a mandatory property. It should be the ID of the Whiskey credential to use when " +
+               "connecting to ProGet. Add the credential to your build with the `Add-WhiskeyCredential` function. ${documentationMsg}"
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
@@ -82,7 +76,10 @@ function Publish-WhiskeyProGetAsset
         }
         else
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ("There must be the same number of `Path` items as `AssetPath` Items. Each asset must have both a `Path` and an `AssetPath` in the whiskey.yml file." + $message)
+            $msg = "There must be the same number of ""Path"" items as ""AssetPath"" items. For each asset ""Path"" " +
+                   "there must be a respective ""AssetPath"" item which will be the item's path within the ProGet " +
+                   "asset directory. ${documentationMsg}"
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
             return
         }
 

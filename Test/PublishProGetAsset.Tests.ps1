@@ -90,7 +90,7 @@ BeforeAll {
         }
     }
 
-    function ThenTaskFails
+    function ThenTaskFailsWith
     {
         Param(
             [String]$ExpectedError
@@ -212,7 +212,7 @@ Describe 'PublishProGetAsset' {
         GivenAsset -Directory 'bar' -FilePath 'fooboo.txt'
         WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires each path to have a name' {
@@ -221,7 +221,7 @@ Describe 'PublishProGetAsset' {
         GivenAsset -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
         WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt','bar.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires each name to have a path' {
@@ -230,7 +230,7 @@ Describe 'PublishProGetAsset' {
         GivenAsset -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
         WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires credentials' {
@@ -238,7 +238,7 @@ Describe 'PublishProGetAsset' {
         GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
         WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'foo.txt'
-        ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
+        ThenTaskFailsWith '"CredentialID" is a mandatory property.'
     }
 
     It 'replaces existing assets' {
@@ -267,5 +267,34 @@ Build:
         ThenAssetShouldExist 'asset.txt'
         ThenAssetContentType 'application/json'
         ThenTaskSucceeds
+    }
+
+    It 'requires the Path property when its missing' {
+        GivenCredential 'ProGetCredential'
+        WhenPublishProGetAsset -WithYml @'
+Build:
+- PublishProGetAsset:
+    AssetPath:
+    - asset.txt
+    AssetDirectory: Assets
+    Url: http://proget.example.com
+    CredentialID: ProGetCredential
+'@ -ErrorAction SilentlyContinue
+        ThenTaskFailsWith '"Path" is a mandatory property.'
+    }
+
+    It 'requires the AssetDirectory property when its missing' {
+        GivenCredential 'ProGetCredential'
+        WhenPublishProGetAsset -WithYml @'
+Build:
+- PublishProGetAsset:
+    Path:
+    - file.txt
+    AssetPath:
+    - asset.txt
+    Url: http://proget.example.com
+    CredentialID: ProGetCredential
+'@ -ErrorAction SilentlyContinue
+        ThenTaskFailsWith '"AssetDirectory" is a mandatory property.'
     }
 }
