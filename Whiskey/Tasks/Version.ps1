@@ -5,7 +5,7 @@ function Set-WhiskeyVersion
     [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
     [Whiskey.Task('Version')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
-                                        Version='2.*',
+                                        Version='3.*',
                                         VersionParameterName='ProGetAutomationVersion',
                                         ModuleInfoParameterName='ProGetAutomationModuleInfo')]
     param(

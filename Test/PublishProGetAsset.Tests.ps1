@@ -7,32 +7,32 @@ BeforeAll {
 
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-    $script:testDirPath = $null
-    $script:username = 'testusername'
-    $script:credentialID = 'TestCredential'
+    Remove-Module -Name 'ProGetAutomation' -Force
+    Import-WhiskeyTestModule -Name 'ProGetAutomation'
 
     function GivenContext
     {
-        $script:taskParameter = @{ }
         $script:taskParameter['Url'] = 'TestUrl'
-        Import-WhiskeyTestModule -Name 'ProGetAutomation'
-        $script:session = New-ProGetSession -Uri $TaskParameter['Url']
-        $Global:globalTestSession = $session
         $Script:context = New-WhiskeyTestContext -ForBuildServer `
                                                 -ForTaskName 'PublishProGetAsset' `
                                                 -ForBuildRoot $script:testDirPath `
                                                 -IncludePSModule 'ProGetAutomation'
-        Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { return $globalTestSession }
-        Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -MockWith { return $true }
     }
 
-    function GivenCredentials
+    function GivenCredential
     {
+        param(
+            [String] $CredentialID
+        )
+
+        if ($CredentialID)
+        {
+            $script:credentialID = $CredentialID
+        }
+
         $password = ConvertTo-SecureString -AsPlainText -Force -String $script:username
         $script:credential = New-Object 'Management.Automation.PsCredential' $script:username,$password
-        Add-WhiskeyCredential -Context $context -ID $script:credentialID -Credential $credential
-
-        $taskParameter['CredentialID'] = $script:credentialID
+        $script:taskParameter['CredentialID'] = $script:credentialID
     }
 
     function GivenAsset
@@ -78,22 +78,19 @@ BeforeAll {
         $script:taskParameter['Path'] = $script:testDirPath,$FilePath -join '\'
     }
 
-    function WhenAssetIsUploaded
+    function ThenAssetContentType
     {
-        $Global:Error.Clear()
-        $script:threwException = $false
+        param(
+            [String] $ExpectedContentType
+        )
 
-        try
-        {
-            Invoke-WhiskeyTask -TaskContext $context -Parameter $taskParameter -Name 'PublishProGetAsset' -ErrorAction SilentlyContinue
-        }
-        catch
-        {
-            $script:threwException = $true
+        Should -Invoke -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey' -ParameterFilter {
+            $ContentType | Should -Be $ExpectedContentType -Because 'it should set the ContentType'
+            return $true
         }
     }
 
-    function ThenTaskFails
+    function ThenTaskFailsWith
     {
         Param(
             [String]$ExpectedError
@@ -137,12 +134,45 @@ BeforeAll {
     {
         $Global:Error | Should -BeNullOrEmpty
     }
+
+    function WhenPublishProGetAsset
+    {
+        [CmdletBinding()]
+        param(
+            [String] $WithYml
+        )
+
+        if ($WithYml)
+        {
+            $script:context = New-WhiskeyTestContext -ForYaml $WithYml -ForBuildServer -ForBuildRoot $script:testDirPath
+            $script:taskParameter = $script:context.Configuration['Build'][0]['PublishProGetAsset']
+        }
+
+        Add-WhiskeyCredential -Context $script:context -ID $script:credentialID -Credential $script:credential
+
+        $Global:Error.Clear()
+
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $script:context -Parameter $script:taskParameter -Name 'PublishProGetAsset'
+        }
+        catch
+        {
+            Write-Error -ErrorRecord $_
+        }
+    }
 }
 
 Describe 'PublishProGetAsset' {
     BeforeEach {
+        Mock -CommandName 'Install-WhiskeyTool' -ModuleName 'Whiskey'
+        Mock -CommandName 'New-ProGetSession' -ModuleName 'Whiskey' -MockWith { [pscustomobject]@{ Url = 'Mocked' } }
+        Mock -CommandName 'Set-ProGetAsset' -ModuleName 'Whiskey'
+
         $script:testDirPath = New-WhiskeyTestRoot
-        Remove-Module -Name 'ProGetAutomation' -Force -ErrorAction Ignore
+        $script:username = 'testusername'
+        $script:credentialID = 'TestCredential'
+        $script:taskParameter = @{ }
     }
 
     AfterEach {
@@ -151,72 +181,120 @@ Describe 'PublishProGetAsset' {
 
     It 'uploads asset' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -Name 'foo.txt' -directory 'bar' -FilePath 'foo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset
         ThenAssetShouldExist -AssetName 'foo.txt'
         ThenTaskSucceeds
     }
 
     It 'uploads asset to sub-folder' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -Name 'boo/foo.txt' -directory 'bar' -FilePath 'foo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset
         ThenAssetShouldExist -AssetName 'boo/foo.txt'
         ThenTaskSucceeds
     }
 
     It 'uploads multiple assets' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -Name 'foo.txt','bar.txt' -directory 'bar' -FilePath 'foo.txt','bar.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset
         ThenAssetShouldExist -AssetName 'foo.txt','bar.txt'
         ThenTaskSucceeds
     }
 
     It 'requires asset name' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -Directory 'bar' -FilePath 'fooboo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires each path to have a name' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -name 'singlename' -Directory 'bar' -FilePath 'fooboo.txt','bar.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt','bar.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires each name to have a path' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -name 'multiple','names' -Directory 'bar' -FilePath 'fooboo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'fooboo.txt'
-        ThenTaskFails -ExpectedError 'There must be the same number of Path items as AssetPath Items. Each Asset must have both a Path and an AssetPath in the whiskey.yml file.'
+        ThenTaskFailsWith 'There must be the same number of "Path" items as "AssetPath" items.'
     }
 
     It 'requires credentials' {
         GivenContext
         GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'fooboo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset -ErrorAction SilentlyContinue
         ThenAssetShouldNotExist -AssetName 'foo.txt'
-        ThenTaskFails -ExpectedError 'CredentialID is a mandatory property. It should be the ID of the credential to use when connecting to ProGet'
+        ThenTaskFailsWith '"CredentialID" is a mandatory property.'
     }
 
     It 'replaces existing assets' {
         GivenContext
-        GivenCredentials
+        GivenCredential
         GivenAsset -Name 'foo.txt' -Directory 'bar' -FilePath 'foo.txt'
-        WhenAssetIsUploaded
+        WhenPublishProGetAsset
         ThenAssetShouldExist -AssetName 'foo.txt'
         ThenTaskSucceeds
+    }
+
+    It 'sets asset content type when given ContentType property' {
+        GivenCredential 'ProGetCredential'
+        WhenPublishProGetAsset -WithYml @'
+Build:
+- PublishProGetAsset:
+    Path:
+    - file.txt
+    AssetPath:
+    - asset.txt
+    AssetDirectory: Assets
+    Url: http://proget.example.com
+    CredentialID: ProGetCredential
+    ContentType: application/json
+'@
+        ThenAssetShouldExist 'asset.txt'
+        ThenAssetContentType 'application/json'
+        ThenTaskSucceeds
+    }
+
+    It 'requires the Path property when its missing' {
+        GivenCredential 'ProGetCredential'
+        WhenPublishProGetAsset -WithYml @'
+Build:
+- PublishProGetAsset:
+    AssetPath:
+    - asset.txt
+    AssetDirectory: Assets
+    Url: http://proget.example.com
+    CredentialID: ProGetCredential
+'@ -ErrorAction SilentlyContinue
+        ThenTaskFailsWith '"Path" is a mandatory property.'
+    }
+
+    It 'requires the AssetDirectory property when its missing' {
+        GivenCredential 'ProGetCredential'
+        WhenPublishProGetAsset -WithYml @'
+Build:
+- PublishProGetAsset:
+    Path:
+    - file.txt
+    AssetPath:
+    - asset.txt
+    Url: http://proget.example.com
+    CredentialID: ProGetCredential
+'@ -ErrorAction SilentlyContinue
+        ThenTaskFailsWith '"AssetDirectory" is a mandatory property.'
     }
 }
