@@ -6,15 +6,15 @@ function Publish-WhiskeyNodeModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]$TaskContext,
+        [Whiskey.Context] $TaskContext,
 
-        [String]$CredentialID,
+        [String] $CredentialID,
 
-        [String]$EmailAddress,
+        [String] $EmailAddress,
 
-        [Uri]$NpmRegistryUri,
+        [Uri] $NpmRegistryUri,
 
-        [String]$Tag
+        [String] $Tag
     )
 
     Set-StrictMode -Version 'Latest'
@@ -31,7 +31,7 @@ function Publish-WhiskeyNodeModule
         return
     }
 
-    if( -not $CredentialID )
+    if (-not $CredentialID)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''CredentialID'' is mandatory. It should be the ID of the credential to use when publishing to ''{0}'', e.g.
 
@@ -47,7 +47,7 @@ function Publish-WhiskeyNodeModule
 
     $credential = Get-WhiskeyCredential -Context $TaskContext -ID $CredentialID -PropertyName 'CredentialID'
     $npmUserName = $credential.UserName
-    if( -not $EmailAddress )
+    if (-not $EmailAddress)
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''EmailAddress'' is mandatory. It should be the e-mail address of the user publishing the module, e.g.
 
@@ -78,7 +78,7 @@ function Publish-WhiskeyNodeModule
         Write-WhiskeyVerbose -Context $TaskContext -Message ('Creating .npmrc at {0}.' -f $packageNpmrc)
         Get-Content -Path $packageNpmrc |
             ForEach-Object {
-                if( $_ -match '_password' )
+                if ($_ -match '_password')
                 {
                     return $_ -replace '=(.*)$','=********'
                 }
@@ -89,19 +89,19 @@ function Publish-WhiskeyNodeModule
 
         Copy-Item -Path $originalPackageJsonPath -Destination $backupPackageJsonPath
         Invoke-WhiskeyNpmCommand -Name 'version' `
-                                 -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version', '--allow-same-version' `
+                                 -ArgumentList $TaskContext.Version.SemVer2NoBuildMetadata, '--no-git-tag-version' `
                                  -BuildRootPath $TaskContext.BuildRoot `
                                  -ErrorAction Stop
 
         Invoke-WhiskeyNpmCommand -Name 'prune' -ArgumentList '--production' -BuildRootPath $TaskContext.BuildRoot -ErrorAction Stop
 
         $publishArgumentList = @(
-            if( $Tag )
+            if ($Tag)
             {
                 '--tag'
                 $Tag
             }
-            elseif( $TaskContext.Version.SemVer2.Prerelease )
+            elseif ($TaskContext.Version.SemVer2.Prerelease)
             {
                 '--tag'
                 Resolve-WhiskeyVariable -Context $TaskContext -Name 'WHISKEY_SEMVER2_PRERELEASE_ID'

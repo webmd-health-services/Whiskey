@@ -40,7 +40,7 @@ BeforeAll {
                             -Times 1 `
                             -Exactly `
                             -ParameterFilter {
-                                if( $Name -ne 'publish' )
+                                if ($Name -ne 'publish')
                                 {
                                     return $false
                                 }
@@ -72,15 +72,14 @@ BeforeAll {
                             -Times 1 `
                             -Exactly `
                             -ParameterFilter {
-                                if( $Name -ne 'version')
+                                if ($Name -ne 'version')
                                 {
                                     return $false
                                 }
 
                                 $Version | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should be called with expected version'
                                 '--no-git-tag-version' | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should not create a new git commit and tag'
-                                '--allow-same-version' | Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "version" should not fail when version in package.json matches given version'
-                                $ArgumentList | Should -HaveCount 3 -Because 'Invoke-NpmCommand "version" shouldn''t be called with extra arguments'
+                                $ArgumentList | Should -HaveCount 2 -Because 'Invoke-NpmCommand "version" shouldn''t be called with extra arguments'
                                 $PesterBoundParameters['ErrorAction'] |
                                     Should -Be 'Stop' -Because 'Invoke-NpmCommand "version" should throw a terminating error if it fails'
 
@@ -95,7 +94,7 @@ BeforeAll {
                             -Times 1 `
                             -Exactly `
                             -ParameterFilter {
-                                if( $Name -ne 'prune')
+                                if ($Name -ne 'prune')
                                 {
                                     return $false
                                 }
@@ -111,8 +110,8 @@ BeforeAll {
     function ThenNpmrcCreated
     {
         param(
-            [String]$WithEmail,
-            [Uri]$WithRegistry
+            [String] $WithEmail,
+            [Uri] $WithRegistry
         )
 
         $buildRoot = $script:context.BuildRoot
@@ -161,19 +160,19 @@ BeforeAll {
         [CmdletBinding(DefaultParameterSetName='ExpectedTag')]
         param(
             [Parameter(Mandatory,Position=0,ParameterSetName='ExpectedTag')]
-            [String]$ExpectedTag,
+            [String] $ExpectedTag,
 
             [Parameter(ParameterSetName='None')]
-            [switch]$None
+            [switch] $None
         )
 
         $parameterFilter = {
-            if( $Name -ne 'publish')
+            if ($Name -ne 'publish')
             {
                 return $false
             }
 
-            if( $ExpectedTag )
+            if ($ExpectedTag)
             {
                 '--tag' |
                     Should -BeIn $ArgumentList -Because 'Invoke-NpmCommand "publish" missing "--tag" argument'
@@ -182,7 +181,7 @@ BeforeAll {
                 $ArgumentList |
                     Should -HaveCount 2 -Because 'Invoke-NpmCommand "publish" shouldn''t be called with extra arguments'
             }
-            elseif( $None )
+            elseif ($None)
             {
                 $ArgumentList |
                     Should -HaveCount 0 -Because 'Invoke-NpmCommand "publish" has tag arguments'
@@ -216,10 +215,11 @@ BeforeAll {
     {
         [CmdletBinding()]
         param(
-            [String]$WithCredentialID,
-            [String]$WithEmailAddress,
-            [String]$WithNpmRegistryUri,
-            [String]$WithTag
+            [String] $WithCredentialID,
+            [String] $WithEmailAddress,
+            [String] $WithNpmRegistryUri,
+            [String] $WithTag,
+            [String] $WithVersion
         )
 
         Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -ParameterFilter { $Name -ne 'version' }
@@ -227,7 +227,13 @@ BeforeAll {
 
         $version =
             Get-Content -Path $script:packageJsonPath -Raw | ConvertFrom-Json | Select-Object -ExpandProperty 'version'
-        if( $script:prerelease )
+        
+        if ($WithVersion)
+        {
+            $version = $WithVersion
+        }
+
+        if ($script:prerelease)
         {
             $version = '{0}-{1}' -f $version, $script:prerelease
         }
@@ -235,23 +241,23 @@ BeforeAll {
         $script:context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot -ForVersion $version
 
         $parameter = @{ }
-        if( $WithCredentialID )
+        if ($WithCredentialID)
         {
             $parameter['CredentialID'] = $WithCredentialID
             Add-WhiskeyCredential -Context $script:context -ID $WithCredentialID -Credential $script:credential
         }
 
-        if( $WithEmailAddress )
+        if ($WithEmailAddress)
         {
             $parameter['EmailAddress'] = $WithEmailAddress
         }
 
-        if( $WithNpmRegistryUri )
+        if ($WithNpmRegistryUri)
         {
             $parameter['NpmRegistryUri'] = $WithNpmRegistryuri
         }
 
-        if( $WithTag )
+        if ($WithTag)
         {
             $parameter['Tag'] = $WithTag
         }
@@ -288,7 +294,7 @@ Describe 'PublishNodeModule' {
         Remove-Node -BuildRoot $script:testRoot
     }
 
-    It 'should publish the module' {
+    It 'should publish the module when it''s version is updated.' {
         GivenPackageJson @"
         {
             "name": "publishnodemodule_test",
@@ -297,11 +303,39 @@ Describe 'PublishNodeModule' {
 "@
         WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
                                  -WithEmailAddress 'somebody@example.com' `
-                                 -WithNpmRegistryUri 'http://registry@example.com'
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -WithVersion '1.2.1'
         ThenNpmrcCreated -WithEmail 'somebody@example.com' -WithRegistry 'http://registry@example.com'
         ThenNpmPackagesPruned
         ThenNodeModulePublished
         ThenPublishedWithTag -None
+    }
+
+    It 'should fail when module version hasn''t been updated.' {
+        GivenPackageJson @"
+        {
+            "name": "publishnodemodule_test",
+            "version": "1.2.0"
+        }
+"@
+        WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
+                                 -WithEmailAddress 'somebody@example.com' `
+                                 -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -ErrorAction SilentlyContinue
+        ThenTaskFailed 'failed with exit code 1'
+
+        # Check Npm cache logs for actual npm error
+        if ($IsWindows)
+        {
+            $npmLogPath = Join-Path -Path $env:LOCALAPPDATA -ChildPath 'npm-cache\_logs'
+        }
+        else
+        {
+            $npmLogPath = '\home\appveyor\.npm\_logs'
+        }
+
+        $logContent = Get-ChildItem -Path $npmLogPath | Sort-Object -Property LastWriteTime | Select-Object -Last 1 | Get-Content -Raw
+        $logContent | Should -Match 'error Version not changed'
     }
 
     It 'should validate NPM registry URI property' {
@@ -389,6 +423,7 @@ Describe 'PublishNodeModule' {
         WhenPublishingNodeModule -WithCredentialID 'NpmCred' `
                                  -WithEmailAddress 'somebody@example.com' `
                                  -WithNpmRegistryUri 'http://registry@example.com' `
+                                 -WithVersion '1.2.1' `
                                  -WithTag 'mytag'
         ThenNodeModulePublished
         ThenPublishedWithTag 'mytag'

@@ -3,6 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.61.1
+
+> Released 25 Jun 2024
+
+### Fixed
+
+* The `PublishNodeModule` task will no longer allow publishing of node modules while retaining the same version.
+
 ## 0.61.0
 
 > Released 12 June 2024
