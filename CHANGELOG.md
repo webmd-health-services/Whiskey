@@ -3,6 +3,27 @@
 
 # Whiskey Changelog
 
+## 0.62.0
+
+### Added
+
+Support for simplified YAML syntax for tasks that have default properties. Instead of:
+
+```yaml
+Build:
+- Task:
+    DefaultProperty: DefaultValue
+    SomeOtherProperty: SomeOtherValue
+```
+
+You can now:
+
+```yaml
+Build:
+- Task: DefaultValue
+  SomeOtherProperty: SomeOtherValue
+```
+
 ## 0.61.0
 
 > Released 12 June 2024

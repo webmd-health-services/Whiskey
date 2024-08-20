@@ -14,13 +14,10 @@ Build:
     - "*": rc1
 
 # Update the AppVeyor build/version number.
-- Exec:
-      OnlyBy: BuildServer
-      Path: appveyor
-      Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
+- Exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
+  OnlyBy: BuildServer
 
-- PowerShell:
-    ScriptBlock: prism install | Format-Table -Auto
+- ps: prism install | Format-Table -Auto
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
@@ -44,15 +41,8 @@ Build:
 - PublishPowerShellModule:
     Path: Whiskey
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [
-        'PushArtifact',
-        '.output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
-        '-DeploymentName',
-        'PowerShellGallery'
-    ]
+- Exec: appveyor PushArtifact ".output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg" -DeploymentName PowerShellGallery
+  OnlyBy: BuildServer
 
 - Zip:
     ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
@@ -62,15 +52,11 @@ Build:
     - "*.pdb"
     - "*.orig"
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [ 'PushArtifact', '.output/Whiskey-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
+- Exec: appveyor PushArtifact ".output/Whiskey-$(WHISKEY_SEMVER2).zip" -DeploymentName GitHub
+  OnlyBy: BuildServer
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [ 'PushArtifact', 'Whiskey/build.ps1', '-DeploymentName', 'GitHub' ]
+- Exec: appveyor PushArtifact 'Whiskey/build.ps1' -DeploymentName GitHub
+  OnlyBy: BuildServer
 
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
