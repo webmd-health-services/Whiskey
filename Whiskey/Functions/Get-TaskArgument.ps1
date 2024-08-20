@@ -3,9 +3,9 @@ function Get-TaskArgument
 {
     [CmdletBinding()]
     param(
-        # The name of the command.
+        # The task who's arguments to get.
         [Parameter(Mandatory)]
-        [String] $Name,
+        [Whiskey.TaskAttribute] $Task,
 
         # The properties from the tasks's YAML.
         [Parameter(Mandatory)]
@@ -21,7 +21,7 @@ function Get-TaskArgument
 
     # Parameters of the actual command.
     $cmdParameters =
-        Get-Command -Name $task.CommandName |
+        Get-Command -Name $Task.CommandName |
         Select-Object -ExpandProperty 'Parameters'
 
     # Parameters to pass to the command.
@@ -33,17 +33,29 @@ function Get-TaskArgument
     {
         $propertyName = $cmdParameter.Name
 
-        $value = $Property[$propertyName]
+        $value = $null
 
-        if( -not $value )
+        if ($Property.ContainsKey($propertyName))
         {
-            foreach( $aliasName in $cmdParameter.Aliases )
+            $value = $Property[$propertyName]
+        }
+        else
+        {
+            if ($propertyName -eq $Task.DefaultParameterName -and $Property.ContainsKey(''))
             {
-                $value = $Property[$aliasName]
-                if( $value )
+                $value = $Property['']
+            }
+            else
+            {
+                foreach ($aliasName in $cmdParameter.Aliases)
                 {
-                    Write-WhiskeyWarning -Context $Context -Message ('Property "{0}" is deprecated. Rename to "{1}" instead.' -f $aliasName,$propertyName)
-                    break
+                    $value = $Property[$aliasName]
+                    if ($Property.ContainsKey($aliasName))
+                    {
+                        $msg = "Property ""${aliasName}"" is deprecated. Rename to ""${propertyName}"" instead."
+                        Write-WhiskeyWarning -Context $Context -Message $msg
+                        break
+                    }
                 }
             }
         }

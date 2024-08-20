@@ -62,7 +62,7 @@ function ConvertTo-WhiskeyTask
             else
             {
                 $taskName = $InputObject.Keys | Select-Object -First 1
-                $parameter = @{}
+                $parameter = @{ '' = $InputObject[$taskName] }
                 $InputObject.Keys | Select-Object -Skip 1 | ForEach-Object { $parameter[$_] = $InputObject[$_] }
             }
 

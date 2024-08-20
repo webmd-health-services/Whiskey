@@ -1,37 +1,45 @@
 
 function Invoke-WhiskeyPowerShell
 {
-    [Whiskey.Task('PowerShell', SupportsClean, SupportsInitialize)]
+    [Whiskey.Task('PowerShell', SupportsClean, SupportsInitialize, DefaultParameterName='ScriptBlock')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [Whiskey.Context]$TaskContext,
+        [Whiskey.Context] $TaskContext,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
-        [String[]]$Path,
+        [String[]] $Path,
 
-        [String]$ScriptBlock,
+        [String] $ScriptBlock,
 
-        [Object]$Argument = @()
+        [Object] $Argument = @()
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $scriptBlockGiven = $PSCmdlet.MyInvocation.BoundParameters.ContainsKey('ScriptBlock')
+    $scriptBlockGiven = $PSBoundParameters.ContainsKey('ScriptBlock')
 
-    if( -not $Path -and -not $scriptBlockGiven )
+    if ((-not $Path -and -not $scriptBlockGiven) -or ($Path -and $scriptBlockGiven))
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Missing required property. Task must use one of "Path" or "ScriptBlock".'
+        $msg = 'Property "Path" or "ScriptBlock" is mandatory, but not both. Path should be the path to a script to ' +
+               'run, passing arguments to the "Argument" parameter. ScriptBlock should be a string of raw PowerShell ' +
+               'to execute, e.g.,
+
+    Build:
+    - PowerShell: Write-Output ''HELLO WORLD''
+    - PowerShell:
+        ScriptBlock: Write-Output ''HELLO WORLD''
+    - PowerShell:
+        Path: hello-world.ps1
+        Argument: [ ''arg1'', ''arg2'' ]
+
+        '
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
-    elseif( $Path -and $scriptBlockGiven )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message 'Task uses both "Path" and "ScriptBlocK" properties. Only one of these properties is allowed.'
-        return
-    }
 
-    if( $scriptBlockGiven )
+    if ($scriptBlockGiven)
     {
         $Path = Join-Path -Path $TaskContext.Temp.FullName -ChildPath 'scriptblock.ps1'
         Set-Content -Path $Path -Value $ScriptBlock -Force

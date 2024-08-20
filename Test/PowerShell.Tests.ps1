@@ -30,7 +30,11 @@ BeforeAll {
 
     function GivenAPassingScript
     {
-        GivenAScript ''
+        param(
+            [String] $Named
+        )
+
+        GivenAScript '' -Named $Named
     }
 
     function GivenAScript
@@ -39,10 +43,17 @@ BeforeAll {
             [Parameter(Position=0)]
             [String]$Script,
 
+            [String] $Named = 'myscript.ps1',
+
             [String]$WithParam = 'param([Parameter(Mandatory)][Object]$TaskContext)'
         )
 
-        $script:scriptName = 'myscript.ps1'
+        if (-not $Named)
+        {
+            $Named = 'myscript.ps1'
+        }
+
+        $script:scriptName = $Named
         $scriptPath = Join-Path -Path $script:testDir -ChildPath $script:scriptName
 
         @"
@@ -156,17 +167,19 @@ BeforeAll {
     {
         [CmdletBinding()]
         param(
-            [Object]$WithArgument,
+            [Object] $WithArgument,
 
-            [switch]$InCleanMode,
+            [switch] $InCleanMode,
 
-            [switch]$InInitMode
+            [switch] $InInitMode,
+
+            [String] $WithDefaultProperty
         )
 
         $context = New-WhiskeyTestContext -ForDeveloper `
-                                        -InCleanMode:$InCleanMode `
-                                        -InInitMode:$InInitMode `
-                                        -ForBuildRoot $script:testDir
+                                          -InCleanMode:$InCleanMode `
+                                          -InInitMode:$InInitMode `
+                                          -ForBuildRoot $script:testDir
 
         $taskParameter = @{}
 
@@ -192,6 +205,13 @@ BeforeAll {
         if( $WithArgument )
         {
             $taskParameter['Argument'] = $WithArgument
+        }
+
+        if ($WithDefaultProperty)
+        {
+            $taskParameter.Remove('Path')
+            $taskParameter.Remove('Argument')
+            $taskParameter[''] = $WithDefaultProperty
         }
 
         $script:failed = $false
@@ -241,6 +261,14 @@ Describe 'PowerShell' {
 
             Start-Sleep -Milliseconds 100
         }
+    }
+
+    It 'interprets zero exit code and no error as successful' {
+        GivenAPassingScript
+        GivenNoWorkingDirectory
+        WhenTheTaskRuns
+        ThenTheScriptRan
+        ThenTheTaskPasses
     }
 
     It 'interprets zero exit code and no error as successful' {
@@ -443,7 +471,7 @@ param(
     It 'requires Path or ScriptBlock property' {
         WhenTheTaskRuns -ErrorAction SilentlyContinue
         ThenTheTaskFails
-        ThenTheLastErrorMatches ([regex]::Escape('Missing required property. Task must use one of "Path" or "ScriptBlock".'))
+        ThenTheLastErrorMatches ([regex]::Escape('Property "Path" or "ScriptBlock" is mandatory'))
     }
 
     It 'requires only one of Path and ScriptBlock property' {
@@ -451,7 +479,7 @@ param(
         GivenScriptBlock ''
         WhenTheTaskRuns -ErrorAction SilentlyContinue
         ThenTheTaskFails
-        ThenTheLastErrorMatches ([regex]::Escape('Task uses both "Path" and "ScriptBlocK" properties. Only one of these properties is allowed.'))
+        ThenTheLastErrorMatches ([regex]::Escape('Property "Path" or "ScriptBlock" is mandatory'))
     }
 
     It 'runs script blocks' {
@@ -500,4 +528,12 @@ if (-not $PSCmdlet.MyInvocation.BoundParameters.ContainsKey('TaskContext') )
         WhenTheTaskRuns
         ThenTheTaskPasses
     }
+
+    It 'runs a script block by default' {
+        GivenNoWorkingDirectory
+        WhenTheTaskRuns -WithDefaultProperty 'Write-Warning "ranme!"' -WarningVariable 'warnings'
+        ThenTheTaskPasses
+        $warnings | Should -Be 'ranme!'
+    }
+
 }

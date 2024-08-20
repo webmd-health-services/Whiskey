@@ -202,10 +202,14 @@ Build:
 Build:
 - Exec: This is a default property
 "@
-        Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'This is a default property' }
+        Mock -CommandName 'Invoke-WhiskeyExec' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Command -eq 'This is a default property' }
         WhenRunningPipeline 'Build'
         ThenPipelineSucceeded
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'This is a default property' }
+        Should -Invoke 'Invoke-WhiskeyExec' `
+               -ModuleName 'Whiskey' `
+               -ParameterFilter { $Command -eq 'This is a default property' }
     }
 
     It 'parses default properties correctly' {
@@ -213,10 +217,14 @@ Build:
 Build:
 - Exec: someexec somearg
 "@
-        Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec somearg' }
+        Mock -CommandName 'Invoke-WhiskeyExec' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Command -eq 'someexec somearg' }
         WhenRunningPipeline 'Build'
         ThenPipelineSucceeded
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec somearg' }
+        Should -Invoke 'Invoke-WhiskeyExec' `
+               -ModuleName 'Whiskey' `
+               -ParameterFilter { $Command -eq 'someexec somearg' }
     }
 
     It 'parses default properties with quoted strings' {
@@ -224,10 +232,14 @@ Build:
 Build:
 - Exec: 'someexec "some arg"'
 "@
-        Mock -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec "some arg"' }
+        Mock -CommandName 'Invoke-WhiskeyExec' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Command -eq 'someexec "some arg"' }
         WhenRunningPipeline 'Build'
         ThenPipelineSucceeded
-        Assert-MockCalled -CommandName 'Invoke-WhiskeyExec' -ModuleName 'Whiskey' -ParameterFilter { $TaskParameter[''] -eq 'someexec "some arg"' }
+        Should -Invoke 'Invoke-WhiskeyExec' `
+               -ModuleName 'Whiskey' `
+               -ParameterFilter { $Command -eq 'someexec "some arg"' }
     }
 
     It 'validates pipeline exists' {

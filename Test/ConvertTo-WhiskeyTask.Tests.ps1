@@ -53,6 +53,7 @@ Build:
 
         $script:task[2] | Should -Be 'Task2'
         $script:task[3]['Task2'] | Should -BeNullOrEmpty
+        $script:task[3][''] | Should -Be 'Value3'
         $script:task[3]['Property4'] | Should -Be 'Value4'
 
         $script:task[4] | Should -Be 'Value5'
@@ -81,7 +82,7 @@ Build:
 '@
 
         $script:task[0] | Should -Be 'unwieldy'
-        $script:task[1].Count | Should -Be 12
+        $script:task[1].Count | Should -Be 13
 
     }
 }

@@ -529,12 +529,6 @@ Describe 'Invoke-WhiskeyTask' {
         Remove-Item -Path 'function:\Invoke-PostTaskPlugin'
     }
 
-    It 'should validate task exists' {
-        WhenRunningTask 'Fubar' -Parameter @{ } -ErrorAction SilentlyContinue
-        ThenPipelineFailed
-        ThenThrewException 'not\ exist'
-    }
-
     It 'should fail builds' {
         WhenRunningTask 'FailingTask' -ErrorAction SilentlyContinue
         ThenPipelineFailed
@@ -1212,6 +1206,23 @@ Describe 'Invoke-WhiskeyTask' {
         $script:output | Should -BeNullOrEmpty
         $script:context.Variables.ContainsKey('TASK_OUTPUT') | Should -BeTrue
         $script:context.Variables['TASK_OUTPUT'] | Should -Be 'task output text'
+    }
+
+    $notOnWindows = (Test-Path -Path 'variable:IsWindows') -and -not $IsWindows
+    It 'runs commands' -Skip:$notOnWindows {
+        WhenRunningTask "cmd /C echo Hello, World! > helloworld.txt"
+        ThenPipelineSucceeded
+        $outputFilePath = Join-Path -Path $script:testRoot -ChildPath 'helloworld.txt'
+        $outputFilePath | Should -Exist
+        Get-Content -Path $outputFilePath | Should -Be 'Hello, World! '
+    }
+
+    It 'runs commands with default properties' -Skip:$notOnWindows {
+        WhenRunningTask 'Exec' -Parameter @{ '' = "cmd /C echo Hello, World 2! > helloworld2.txt" }
+        ThenPipelineSucceeded
+        $outputFilePath = Join-Path -Path $script:testRoot -ChildPath 'helloworld2.txt'
+        $outputFilePath | Should -Exist
+        Get-Content -Path $outputFilePath | Should -Be 'Hello, World 2! '
     }
 }
 

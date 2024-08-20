@@ -112,25 +112,41 @@ function Invoke-WhiskeyTask
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
 
-    if( -not $task )
+    if (-not $task)
     {
         $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
         $taskCount = ($task | Measure-Object).Count
-        if( $taskCount -gt 1 )
+        if ($taskCount -gt 1)
         {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks with alias "{1}". Please update to use one of these task names: {2}.' -f $taskCount,$Name,(($task | Select-Object -ExpandProperty 'Name') -join ', '))
+            $msg = "Found ${taskCount} tasks with alias ""{Name}"". Please update to use one of these task names: " +
+                   "$(($task | Select-Object -ExpandProperty 'Name') -join ', ')"
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
             return
         }
         if( $task -and $task.WarnWhenUsingAlias )
         {
-            Write-WhiskeyWarning -Context $TaskContext -Message ('Task "{0}" is an alias to task "{1}". Please update "{2}" to use the task''s actual name, "{1}", instead of the alias.' -f $Name,$task.Name,$TaskContext.ConfigurationPath)
+            $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
+                   """$($TaskContext.ConfigurationPath)"" to use the task''s actual name, ""$($task.Name)"", instead " +
+                   'of the alias.'
+            Write-WhiskeyWarning -Context $TaskContext -Message $msg
         }
     }
 
-    if( -not $task )
+    if (-not $task -and ($Parameter.Count -eq 0 -or $Parameter.ContainsKey('')))
+    {
+        # By default, assume task is an executable command.
+        $task = $knownTasks | Where-Object 'Name' -eq 'Exec'
+        $Parameter[''] = $Name
+        $Name = 'Exec'
+    }
+
+    if (-not $task)
     {
         $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object
-        throw ('{0}: {1}[{2}]: ''{3}'' task does not exist. Supported tasks are:{4} * {5}' -f $TaskContext.ConfigurationPath,$Name,$TaskContext.TaskIndex,$Name,[Environment]::NewLine,($knownTaskNames -join ('{0} * ' -f [Environment]::NewLine)))
+        $msg = "$($TaskContext.ConfigurationPath): ${Name}[$($TaskContext.TaskIndex)]: ""${Name}"" task does not " +
+               "exist. Supported tasks are:$([Environment]::NewLine) " +
+               "$($knownTaskNames -join "$([Environment]::NewLine) * ")"
+        throw $msg
     }
 
     $taskCount = ($task | Measure-Object).Count
@@ -247,7 +263,10 @@ function Invoke-WhiskeyTask
 
             Write-WhiskeyVerbose -Context $TaskContext -Message ''
             $TaskContext.StartTask($Name)
-            Write-WhiskeyInfo -Context $TaskContext -Message "$($Name)" -NoIndent
+            if ($Name -ne 'Exec')
+            {
+                Write-WhiskeyInfo -Context $TaskContext -Message "$($Name)" -NoIndent
+            }
             $taskTempDirectory = Join-Path -Path $TaskContext.OutputDirectory -ChildPath ('Temp.{0}.{1}' -f $Name,[IO.Path]::GetRandomFileName())
             $TaskContext.Temp = $taskTempDirectory
             if( -not (Test-Path -Path $TaskContext.Temp -PathType Container) )
@@ -255,7 +274,7 @@ function Invoke-WhiskeyTask
                 New-Item -Path $TaskContext.Temp -ItemType 'Directory' -Force | Out-Null
             }
 
-            $taskArgs = Get-TaskArgument -Name $task.CommandName -Property $taskProperties -Context $TaskContext
+            $taskArgs = Get-TaskArgument -Task $task -Property $taskProperties -Context $TaskContext
 
             # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a
             # build to hang, so let's set it to Continue so users can see debug output.

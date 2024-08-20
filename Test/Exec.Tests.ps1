@@ -138,9 +138,9 @@ exit $ExitCode
         }
 
         $context = New-WhiskeyTestContext -ForDeveloper `
-                                        -ForBuildRoot (Get-BuildRoot) `
-                                        -InCleanMode:$InCleanMode `
-                                        -InInitMode:$InInitializeMode
+                                          -ForBuildRoot (Get-BuildRoot) `
+                                          -InCleanMode:$InCleanMode `
+                                          -InInitMode:$InInitializeMode
 
         try
         {
@@ -235,7 +235,7 @@ Describe 'Exec' {
         $script:testRoot = New-WhiskeyTestRoot
     }
 
-    It 'should pass build' {
+    It 'runs executable without arguments' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         WhenRunningExecutable
@@ -244,7 +244,7 @@ Describe 'Exec' {
         ThenTaskSuccess
     }
 
-    It 'should pass argument to command' {
+    It 'passes arguments to command' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenArgument 'Arg1'
@@ -333,7 +333,7 @@ Describe 'Exec' {
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
 
-    It 'should pass build' {
+    It 'uses >= for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '500'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>=500'
@@ -353,7 +353,7 @@ Describe 'Exec' {
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
 
-    It 'should pass build' {
+    It 'uses <= for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '9'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<= 9'
@@ -373,7 +373,7 @@ Describe 'Exec' {
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
 
-    It 'should pass build' {
+    It 'uses > for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '91'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>90'
@@ -393,7 +393,7 @@ Describe 'Exec' {
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
 
-    It 'should pass build' {
+    It 'uses < for success exit codes' {
         GivenPowerShellFile 'exec.ps1' '89'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<90'
@@ -455,5 +455,13 @@ Describe 'Exec' {
         GivenPath 'exec*.ps1'
         WhenRunningExecutable #-ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage ([regex]::Escape('contains wildcards and resolves to the following files'))
+    }
+
+    It 'allows single-line syntax' {
+        GivenPowerShellFile 'exec.ps1' '0'
+        GivenTaskDefaultProperty 'exec.ps1 0'
+        WhenRunningExecutable
+        ThenTaskSuccess
+        ThenExecutableRan
     }
 }

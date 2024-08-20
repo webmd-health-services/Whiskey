@@ -16,8 +16,10 @@ Build:
 # Update the AppVeyor build/version number.
 - Exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
   OnlyBy: BuildServer
+  Debug: true
+  Verbose: true
 
-- ps: prism install | Format-Table -Auto
+- PowerShell: prism install | Format-Table -Auto
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
