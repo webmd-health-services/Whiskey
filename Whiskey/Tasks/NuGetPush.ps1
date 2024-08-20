@@ -3,7 +3,7 @@ function Publish-WhiskeyNuGetPackage
 {
     [Whiskey.Task('NuGetPush', Platform='Windows', Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),
         WarnWhenUsingAlias)]
-    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.*', PathParameterName='NuGetPath')]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
