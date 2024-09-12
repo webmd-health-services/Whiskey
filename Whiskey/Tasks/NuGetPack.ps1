@@ -2,7 +2,7 @@
 function New-WhiskeyNuGetPackage
 {
     [Whiskey.Task('NuGetPack',Platform='Windows')]
-    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.*', PathParameterName='NuGetPath')]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

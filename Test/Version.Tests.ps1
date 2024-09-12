@@ -229,9 +229,9 @@ BeforeAll {
             {
                 $script:versions = $WithVersions
                 Mock -CommandName 'Find-Module' `
-                    -ModuleName 'Whiskey' `
-                    -ParameterFilter { $Name -eq $ForPSModule } `
-                    -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
+                     -ModuleName 'Whiskey' `
+                     -ParameterFilter { $Name -eq $ForPSModule } `
+                     -MockWith { return $script:versions | ForEach-Object { [pscustomobject]@{ Version = $_ } } }
             }
             $WithProperties = $script:property
         }

@@ -2,27 +2,10 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-$testRoot = $null
-$argument = $null
-$failed = $false
-$path = $null
-$successExitCode = $null
-$workingDirectory = $null
-$defaultProperty = $null
-
-function Get-BuildRoot
-{
-   $buildRoot = (Join-Path -Path $testRoot -ChildPath 'BuildRoot')
-   New-Item -Path $buildRoot -ItemType 'Directory' -Force | Out-Null
-
-   return $buildRoot
-}
-
-function Init
-{
-    $Global:Error.Clear()
+    $script:testRoot = $null
     $script:argument = $null
     $script:failed = $false
     $script:path = $null
@@ -30,41 +13,46 @@ function Init
     $script:workingDirectory = $null
     $script:defaultProperty = $null
 
-    $script:testRoot = New-WhiskeyTestRoot
-}
-
-function GivenArgument
-{
-    param(
-        $Argument
-    )
-
-    $script:argument = $Argument
-}
-
-function GivenADirectory
-{
-    param(
-        $DirectoryPath
-    )
-
-    New-Item -Path (Join-Path -Path (Get-BuildRoot) -ChildPath $DirectoryPath) -ItemType 'Directory' -Force | Out-Null
-}
-
-function GivenPowerShellFile
-{
-    param(
-        $Path,
-        $ExitCode
-    )
-
-    $parentPath = $Path | Split-Path
-    if ($parentPath)
+    function Get-BuildRoot
     {
-        GivenADirectory $parentPath
+        $buildRoot = (Join-Path -Path $script:testRoot -ChildPath 'BuildRoot')
+        New-Item -Path $buildRoot -ItemType 'Directory' -Force | Out-Null
+
+        return $buildRoot
     }
 
-    $Content = @"
+    function GivenArgument
+    {
+        param(
+            $Argument
+        )
+
+        $script:argument = $Argument
+    }
+
+    function GivenADirectory
+    {
+        param(
+            $DirectoryPath
+        )
+
+        New-Item -Path (Join-Path -Path (Get-BuildRoot) -ChildPath $DirectoryPath) -ItemType 'Directory' -Force | Out-Null
+    }
+
+    function GivenPowerShellFile
+    {
+        param(
+            $Path,
+            $ExitCode
+        )
+
+        $parentPath = $Path | Split-Path
+        if ($parentPath)
+        {
+            GivenADirectory $parentPath
+        }
+
+        $Content = @"
 #`$DebugPreference = 'Continue'
 Write-WhiskeyDebug `$PWD.Path
 Write-WhiskeyDebug ([IO.Directory]::GetCurrentDirectory())
@@ -74,180 +62,189 @@ Write-WhiskeyDebug ([IO.Directory]::GetCurrentDirectory())
 exit $ExitCode
 "@
 
-    Set-Content -Path (Join-Path -Path (Get-BuildRoot) -ChildPath $Path) -Value $Content
-}
-
-function GivenPath
-{
-    param(
-        $Path
-    )
-
-    $script:path = $Path
-}
-
-function GivenWorkingDirectory
-{
-    param(
-        $WorkingDirectory
-    )
-
-    $script:workingDirectory = $WorkingDirectory
-}
-
-function GivenSuccessExitCode
-{
-    param(
-        $SuccessExitCode
-    )
-
-    $script:successExitCode = $SuccessExitCode
-}
-
-function GivenTaskDefaultProperty
-{
-    param(
-        $Property
-    )
-
-    $script:defaultProperty = $Property
-}
-
-function WhenRunningExecutable
-{
-    [CmdletBinding()]
-    param(
-        [switch]$InCleanMode,
-
-        [switch]$InInitializeMode
-    )
-
-    $TaskParameter = @{}
-
-    if( $path )
-    {
-        $TaskParameter['Path'] = $path
+        Set-Content -Path (Join-Path -Path (Get-BuildRoot) -ChildPath $Path) -Value $Content
     }
 
-    if ( $argument )
+    function GivenPath
     {
-        $TaskParameter['Argument'] = $argument
+        param(
+            $Path
+        )
+
+        $script:path = $Path
     }
 
-    if ( $workingDirectory )
+    function GivenWorkingDirectory
     {
-        $TaskParameter['WorkingDirectory'] = $workingDirectory
+        param(
+            $WorkingDirectory
+        )
+
+        $script:workingDirectory = $WorkingDirectory
     }
 
-    if ( $successExitCode )
+    function GivenSuccessExitCode
     {
-        $TaskParameter['SuccessExitCode'] = $successExitCode
+        param(
+            $SuccessExitCode
+        )
+
+        $script:successExitCode = $SuccessExitCode
     }
 
-    if ( $defaultProperty )
+    function GivenTaskDefaultProperty
     {
-        $TaskParameter[''] = $defaultProperty
+        param(
+            $Property
+        )
+
+        $script:defaultProperty = $Property
     }
 
-    $context = New-WhiskeyTestContext -ForDeveloper `
-                                      -ForBuildRoot (Get-BuildRoot) `
-                                      -InCleanMode:$InCleanMode `
-                                      -InInitMode:$InInitializeMode
-
-    try 
+    function WhenRunningExecutable
     {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
-    }
-    catch
-    {
-        Write-Error -ErrorRecord $_
-        $script:failed = $true
-    }
-}
+        [CmdletBinding()]
+        param(
+            [switch]$InCleanMode,
 
-function ThenExecutableRan
-{
-    $taskDir = Get-BuildRoot
-    if( $workingDirectory )
-    {
-        $taskDir = Join-Path -Path $taskDir -ChildPath $workingDirectory
-    }
+            [switch]$InInitializeMode
+        )
 
-    $executableRanResult = Get-ChildItem -Path $taskDir -Filter 'ItRan.txt' -Recurse
+        $TaskParameter = @{}
 
-    $executableRanResult | Should -Not -BeNullOrEmpty
-}
-
-function ThenSpecifiedArgumentsWerePassed
-{
-    param(
-        [String[]]$Arguments = @()
-    )
-
-    [String[]]$argumentsResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'Arguments.txt' -Recurse | Get-Content
-    if( -not $argumentsResult )
-    {
-        $argumentsResult = @()
-    }
-
-    if ( -not $Arguments )
-    {
-        $argumentsResult | Should -BeNullOrEmpty
-    }
-    else
-    {
-        $argCount = $argumentsResult.Length
-        $argCount | Should -Be $Arguments.Length
-        for( $idx = 0; $idx -lt $argCount; ++$idx )
+        if( $script:path )
         {
-            $argumentsResult[$idx] | Should -Be $Arguments[$idx]
+            $TaskParameter['Path'] = $script:path
+        }
+
+        if ( $script:argument )
+        {
+            $TaskParameter['Argument'] = $script:argument
+        }
+
+        if ( $script:workingDirectory )
+        {
+            $TaskParameter['WorkingDirectory'] = $script:workingDirectory
+        }
+
+        if ( $script:successExitCode )
+        {
+            $TaskParameter['SuccessExitCode'] = $script:successExitCode
+        }
+
+        if ( $script:defaultProperty )
+        {
+            $TaskParameter[''] = $script:defaultProperty
+        }
+
+        $context = New-WhiskeyTestContext -ForDeveloper `
+                                          -ForBuildRoot (Get-BuildRoot) `
+                                          -InCleanMode:$InCleanMode `
+                                          -InInitMode:$InInitializeMode
+
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
+        }
+        catch
+        {
+            Write-Error -ErrorRecord $_
+            $script:failed = $true
         }
     }
-}
 
-function ThenRanInWorkingDirectory
-{
-    param(
-        $WorkingDirectory = $script:workingDirectory
-    )
+    function ThenExecutableRan
+    {
+        $taskDir = Get-BuildRoot
+        if( $script:workingDirectory )
+        {
+            $taskDir = Join-Path -Path $taskDir -ChildPath $script:workingDirectory
+        }
 
-    $WorkingDirectory = Join-Path -Path (Get-BuildRoot) -ChildPath $WorkingDirectory -Resolve
-    $workDirPath = Join-Path -Path $WorkingDirectory -ChildPath 'WorkingDirectory.txt'
+        $executableRanResult = Get-ChildItem -Path $taskDir -Filter 'ItRan.txt' -Recurse
 
-    $workDirPath | Should -Exist
-    Get-Content -Path $workDirPath | Should -Be $WorkingDirectory
-}
+        $executableRanResult | Should -Not -BeNullOrEmpty
+    }
 
-function ThenTaskSuccess
-{
-    $failed | Should -BeFalse
-}
+    function ThenSpecifiedArgumentsWerePassed
+    {
+        param(
+            [String[]]$script:arguments = @()
+        )
 
-function ThenTaskFailedWithMessage
-{
-    param(
-        $Message
-    )
+        [String[]]$script:argumentsResult = Get-ChildItem -Path (Get-BuildRoot) -Filter 'Arguments.txt' -Recurse | Get-Content
+        if( -not $script:argumentsResult )
+        {
+            $script:argumentsResult = @()
+        }
 
-    $failed | Should -BeTrue
-    $Global:Error[0] | Should -Match $Message
-}
+        if ( -not $script:arguments )
+        {
+            $script:argumentsResult | Should -BeNullOrEmpty
+        }
+        else
+        {
+            $argCount = $script:argumentsResult.Length
+            $argCount | Should -Be $script:arguments.Length
+            for( $idx = 0; $idx -lt $argCount; ++$idx )
+            {
+                $script:argumentsResult[$idx] | Should -Be $script:arguments[$idx]
+            }
+        }
+    }
 
-Describe 'Exec.when running an executable with no arguments' {
-    It 'should pass build' {
-        Init
+    function ThenRanInWorkingDirectory
+    {
+        param(
+            $WorkingDirectory = $script:workingDirectory
+        )
+
+        $WorkingDirectory = Join-Path -Path (Get-BuildRoot) -ChildPath $WorkingDirectory -Resolve
+        $workDirPath = Join-Path -Path $WorkingDirectory -ChildPath 'WorkingDirectory.txt'
+
+        $workDirPath | Should -Exist
+        Get-Content -Path $workDirPath | Should -Be $WorkingDirectory
+    }
+
+    function ThenTaskSuccess
+    {
+        $script:failed | Should -BeFalse
+    }
+
+    function ThenTaskFailedWithMessage
+    {
+        param(
+            $Message
+        )
+
+        $script:failed | Should -BeTrue
+        $Global:Error[0] | Should -Match $Message
+    }
+    }
+
+Describe 'Exec' {
+    BeforeEach {
+        $Global:Error.Clear()
+        $script:argument = $null
+        $script:failed = $false
+        $script:path = $null
+        $script:successExitCode = $null
+        $script:workingDirectory = $null
+        $script:defaultProperty = $null
+
+        $script:testRoot = New-WhiskeyTestRoot
+    }
+
+    It 'runs executable without arguments' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         WhenRunningExecutable
         ThenExecutableRan
-        ThenSpecifiedArgumentsWerePassed 
+        ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when running an executable with an argument' {
-    It 'should pass argument to command' {
-        Init
+    It 'passes arguments to command' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenArgument 'Arg1'
@@ -256,11 +253,8 @@ Describe 'Exec.when running an executable with an argument' {
         ThenSpecifiedArgumentsWerePassed 'Arg1'
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when running an executable with multiple arguments' {
     It 'should pass all the arguments to the command' {
-        Init
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenArgument 'Arg1','Arg2'
@@ -269,11 +263,8 @@ Describe 'Exec.when running an executable with multiple arguments' {
         ThenSpecifiedArgumentsWerePassed 'Arg1','Arg2'
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when utilizing default task property to define executable and arguments' {
     It 'should use values from default task' {
-        Init
         GivenPowerShellFile 'exec.ps1' '0'
         GivenTaskDefaultProperty '.\exec.ps1 Arg1 Arg2 "Arg 3" ''Arg 4'''
         WhenRunningExecutable
@@ -281,28 +272,19 @@ Describe 'Exec.when utilizing default task property to define executable and arg
         ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', 'Arg 3', 'Arg 4'
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when missing Path parameter' {
     It 'should fail' {
-        Init
         WhenRunningExecutable -ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage '"Path" is mandatory.'
     }
-}
 
-Describe 'Exec.when given bad path' {
     It 'should fail' {
-        Init
         GivenPath 'nonexistent.exe'
         WhenRunningExecutable -ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage 'Executable "nonexistent.exe" does not exist.'
     }
-}
 
-Describe 'Exec.when Path has spaces' {
     It 'should still run command' {
-        Init
         GivenPowerShellFile 'e x e c.ps1' '0'
         GivenPath 'e x e c.ps1'
         WhenRunningExecutable
@@ -310,11 +292,8 @@ Describe 'Exec.when Path has spaces' {
         ThenRanInWorkingDirectory '.'
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given success exit codes' {
     It 'should pass' {
-        Init
         GivenPowerShellFile 'exec.ps1' '123'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '123'
@@ -323,24 +302,18 @@ Describe 'Exec.when given success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when executable exits with non-success exit code' {
     It 'should fail build' {
-        Init
         GivenPowerShellFile 'exec.ps1' '42'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '0','1','123'
         WhenRunningExecutable -ErrorAction SilentlyContinue
         ThenExecutableRan
-        ThenSpecifiedArgumentsWerePassed 
+        ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a range ".." of success exit codes' {
     It 'should pass build if exit code within that range' {
-        Init
         GivenPowerShellFile 'exec.ps1' '123'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '120..130'
@@ -349,11 +322,8 @@ Describe 'Exec.when given a range ".." of success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given a range ".." and exits with code outside success range' {
     It 'should fail the build' {
-        Init
         GivenPowerShellFile 'exec.ps1' '133'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '120..130'
@@ -362,11 +332,8 @@ Describe 'Exec.when given a range ".." and exits with code outside success range
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a range ">=" of success exit codes' {
-    It 'should pass build' {
-        Init
+    It 'uses >= for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '500'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>=500'
@@ -375,11 +342,8 @@ Describe 'Exec.when given a range ">=" of success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given a range ">=" and exits with code outside success range' {
     It 'should fail' {
-        Init
         GivenPowerShellFile 'exec.ps1' '85'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>=500'
@@ -388,11 +352,8 @@ Describe 'Exec.when given a range ">=" and exits with code outside success range
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a range "<=" of success exit codes' {
-    It 'should pass build' {
-        Init
+    It 'uses <= for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '9'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<= 9'
@@ -401,11 +362,8 @@ Describe 'Exec.when given a range "<=" of success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given a range "<=" and exits with code outside success range' {
     It 'should fail build' {
-        Init
         GivenPowerShellFile 'exec.ps1' '10'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<= 9'
@@ -414,11 +372,8 @@ Describe 'Exec.when given a range "<=" and exits with code outside success range
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a range ">" of success exit codes' {
-    It 'should pass build' {
-        Init
+    It 'uses > for evaluating success exit codes' {
         GivenPowerShellFile 'exec.ps1' '91'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>90'
@@ -427,11 +382,8 @@ Describe 'Exec.when given a range ">" of success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given a range ">" and exits with code outside success range' {
     It 'should fail build' {
-        Init
         GivenPowerShellFile 'exec.ps1' '90'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>90'
@@ -440,11 +392,8 @@ Describe 'Exec.when given a range ">" and exits with code outside success range'
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a range "<" of success exit codes' {
-    It 'should pass build' {
-        Init
+    It 'uses < for success exit codes' {
         GivenPowerShellFile 'exec.ps1' '89'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<90'
@@ -453,11 +402,8 @@ Describe 'Exec.when given a range "<" of success exit codes' {
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given a range "<" and exits with code outside success range' {
     It 'should fail build' {
-        Init
         GivenPowerShellFile 'exec.ps1' '90'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<90'
@@ -466,11 +412,8 @@ Describe 'Exec.when given a range "<" and exits with code outside success range'
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
     }
-}
 
-Describe 'Exec.when given a working directory' {
     It 'should run command in that directory' {
-        Init
         GivenADirectory 'workdir'
         GivenPowerShellFile 'workdir\exec.ps1' '0'
         GivenPath 'exec.ps1'
@@ -480,49 +423,45 @@ Describe 'Exec.when given a working directory' {
         ThenRanInWorkingDirectory
         ThenTaskSuccess
     }
-}
 
-Describe 'Exec.when given bad working directory' {
     It 'should fail' {
-        Init
         GivenADirectory 'workdir'
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenWorkingDirectory 'badworkdir'
         WhenRunningExecutable -ErrorAction SilentlyContinue
-        ThenTaskFailedWithMessage 'Build.+WorkingDirectory.+does not exist.'    
+        ThenTaskFailedWithMessage 'Build.+WorkingDirectory.+does not exist.'
     }
-}
 
-Describe 'Exec.when running in Clean mode' {
     It 'should run command' {
-        Init
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         WhenRunningExecutable -InCleanMode
         ThenTaskSuccess
         ThenExecutableRan
     }
-}
 
-Describe 'Exec.when running in Initialize mode' {
     It 'should run command' {
-        Init
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         WhenRunningExecutable -InInitializeMode
         ThenTaskSuccess
         ThenExecutableRan
     }
-}
 
-Describe 'Exec.when path has wildcards and resolves to multiple files' {
-    It 'should fail' {
-        Init
+    It 'validates path resolves to single command' {
         GivenPowerShellFile 'exec1.ps1' '1'
         GivenPowerShellFile 'exec2.ps1' '2'
         GivenPath 'exec*.ps1'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecutable #-ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage ([regex]::Escape('contains wildcards and resolves to the following files'))
+    }
+
+    It 'allows single-line syntax' {
+        GivenPowerShellFile 'exec.ps1' '0'
+        GivenTaskDefaultProperty 'exec.ps1 0'
+        WhenRunningExecutable
+        ThenTaskSuccess
+        ThenExecutableRan
     }
 }

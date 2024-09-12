@@ -3,7 +3,7 @@ function Set-WhiskeyVersion
 {
     [CmdletBinding()]
     [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
-    [Whiskey.Task('Version')]
+    [Whiskey.Task('Version', DefaultParameterName='Version')]
     [Whiskey.RequiresPowerShellModule('ProGetAutomation',
                                         Version='3.*',
                                         VersionParameterName='ProGetAutomationVersion',
@@ -12,8 +12,11 @@ function Set-WhiskeyVersion
         [Parameter(Mandatory)]
         [Whiskey.Context] $TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable] $TaskParameter,
+        [String] $Version,
+
+        [Object] $Prerelease,
+
+        [String] $Build,
 
         [Whiskey.Tasks.ValidatePath(PathType='File')]
         [String] $Path,
@@ -83,14 +86,9 @@ function Set-WhiskeyVersion
     [String[]] $versions = @()
     [bool] $skipPackageLookup = -not $IncrementPatchVersion -and -not $IncrementPrereleaseVersion
 
-    if( $TaskParameter[''] )
+    if ($Version)
     {
-        $rawVersion = $TaskParameter['']
-        $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
-    }
-    elseif( $TaskParameter['Version'] )
-    {
-        $rawVersion = $TaskParameter['Version']
+        $rawVersion = $Version
         $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
     }
     else
@@ -362,7 +360,7 @@ function Set-WhiskeyVersion
         }
     }
 
-    $nextPrerelease = $TaskParameter['Prerelease']
+    $nextPrerelease = $Prerelease
     if( $nextPrerelease -isnot [String] )
     {
         $foundLabel = $false
@@ -527,8 +525,7 @@ If you want certain branches to always have certain prerelease versions, set Pre
         }
     }
 
-    $build = $TaskParameter['Build']
-    if( $build )
+    if ($Build)
     {
         $prereleaseSuffix = ''
         if( $semver.Prerelease )
@@ -536,11 +533,11 @@ If you want certain branches to always have certain prerelease versions, set Pre
             $prereleaseSuffix = '-{0}' -f $semver.Prerelease
         }
 
-        $build = $build -replace '[^A-Za-z0-9\.-]', '-'
-        $rawVersion = '{0}.{1}.{2}{3}+{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prereleaseSuffix,$build
+        $Build = $Build -replace '[^A-Za-z0-9\.-]', '-'
+        $rawVersion = '{0}.{1}.{2}{3}+{4}' -f $semver.Major,$semver.Minor,$semver.Patch,$prereleaseSuffix,$Build
         if( -not [SemVersion.SemanticVersion]::TryParse($rawVersion,[ref]$semver) )
         {
-            $msg = """$($build)"" is not valid build metadata. Only letters, numbers, hyphens, and periods are " +
+            $msg = """$($Build)"" is not valid build metadata. Only letters, numbers, hyphens, and periods are " +
                    'allowed. See https://semver.org for full documentation.'
             Stop-WhiskeyTask -TaskContext $TaskContext -PropertyName 'Build' -Message $msg
             return

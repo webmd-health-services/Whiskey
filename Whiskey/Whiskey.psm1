@@ -153,7 +153,9 @@ Assert-Member -Object $context `
 
 Write-Timing 'Checking Whiskey.TaskAttribute class.'
 $attr = New-WhiskeyObject -TypeName 'Whiskey.TaskAttribute' -ArgumentList 'Whiskey'
-Assert-Member -Object $attr -Property @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage', 'Platform' )
+$taskAttrMemberNames =
+    @( 'Aliases', 'WarnWhenUsingAlias', 'Obsolete', 'ObsoleteMessage', 'Platform', 'DefaultParameterName' )
+Assert-Member -Object $attr -Property $taskAttrMemberNames
 
 Write-Timing 'Checking for Whiskey.RequiresPowerShellModuleAttribute class.'
 New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -ArgumentList ('Whiskey') | Out-Null

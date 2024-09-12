@@ -1,217 +1,216 @@
 
-#Requires -Version 4
+#Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$packagesConfigPath = $null
-$version = $null
-$argument = $null
-$failed = $false
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function GivenArgument
-{
-    param(
-        $Argument
-    )
-
-    $script:argument = $Argument
-}
-
-function GivenFile
-{
-    param(
-        $Path,
-        $Content
-    )
-
-    $fullPath = Join-Path -Path $TestDrive.FullName -ChildPath $Path
-    New-Item -Path $fullPath -ItemType 'File' -Force
-    $Content | Set-Content -Path $fullPath
-}
-
-function GivenSolution
-{
-    param(
-        $Name
-    )
-
-    $sourcePath = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $Name)
-    Copy-Item -Path (Join-Path -Path $sourcePath -ChildPath '*') -Destination $TestDrive.FullName -Recurse
-}
-
-function GivenPath
-{
-    param(
-        $Path
-    )
-
-    $script:packagesConfigPath = $Path
-}
-
-function GivenVersion
-{
-    param(
-        $Version
-    )
-
-    $script:version = $Version
-}
-
-function Init
-{
+    $script:testDir = $null
+    $script:testNum = 0
     $script:packagesConfigPath = $null
     $script:version = $null
     $script:argument = $null
     $script:failed = $false
-}
 
-function ThenPackageInstalled
-{
-    param(
-        $Name,
-
-        $In
-    )
-
-    if( -not $In )
+    function GivenArgument
     {
-        $In = $TestDrive.FullName
+        param(
+            $Argument
+        )
+
+        $script:argument = $Argument
     }
-    else
+
+    function GivenFile
     {
-        $In = Join-Path -Path $TestDrive.FullName -ChildPath $In
+        param(
+            $Path,
+            $Content
+        )
+
+        $fullPath = Join-Path -Path $script:testDir -ChildPath $Path
+        New-Item -Path $fullPath -ItemType 'File' -Force
+        $Content | Set-Content -Path $fullPath
     }
-    It ('should install {0}' -f $Name) {
+
+    function GivenSolution
+    {
+        param(
+            $Name
+        )
+
+        $sourcePath = Join-Path -Path $PSScriptRoot -ChildPath ('Assemblies\{0}' -f $Name)
+        Copy-Item -Path (Join-Path -Path $sourcePath -ChildPath '*') -Destination $script:testDir -Recurse
+    }
+
+    function GivenPath
+    {
+        param(
+            $Path
+        )
+
+        $script:packagesConfigPath = $Path
+    }
+
+    function GivenVersion
+    {
+        param(
+            $Version
+        )
+
+        $script:version = $Version
+    }
+
+    function ThenPackageInstalled
+    {
+        param(
+            $Name,
+
+            $In
+        )
+
+        if( -not $In )
+        {
+            $In = $script:testDir
+        }
+        else
+        {
+            $In = Join-Path -Path $script:testDir -ChildPath $In
+        }
         Join-Path -Path $In -ChildPath ('packages\{0}' -f $Name) | Should -Exist
     }
-}
 
-function ThenPackageNotInstalled
-{
-    param(
-        $Name,
-
-        $In
-    )
-
-    if( -not $In )
+    function ThenPackageNotInstalled
     {
-        $In = $TestDrive.FullName
-    }
-    else
-    {
-        $In = Join-Path -Path $TestDrive.FullName -ChildPath $In
-    }
-    It ('should install {0}' -f $Name) {
+        param(
+            $Name,
+
+            $In
+        )
+
+        if( -not $In )
+        {
+            $In = $script:testDir
+        }
+        else
+        {
+            $In = Join-Path -Path $script:testDir -ChildPath $In
+        }
         Join-Path -Path $In -ChildPath ('packages\{0}' -f $Name) | Should -Not -Exist
     }
-}
 
-function WhenRestoringPackages
-{
-    [CmdletBinding()]
-    param(
-    )
-
-    $context = New-WhiskeyTestContext -ForDeveloper
-    $parameter = @{ }
-    if( $packagesConfigPath )
+    function WhenRestoringPackages
     {
-        $parameter['Path'] = $packagesConfigPath
-    }
+        [CmdletBinding()]
+        param(
+        )
 
-    if( $version )
-    {
-        $parameter['Version']  = $version
-    }
+        $context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testDir
+        $parameter = @{ }
+        if( $script:packagesConfigPath )
+        {
+            $parameter['Path'] = $script:packagesConfigPath
+        }
 
-    if( $argument )
-    {
-        $parameter['Argument'] = $argument
-    }
+        if( $script:version )
+        {
+            $parameter['Version']  = $script:version
+        }
 
-    try
-    {
-        Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'NuGetRestore'
-    }
-    catch
-    {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_
-    }
-}
+        if( $script:argument )
+        {
+            $parameter['Argument'] = $script:argument
+        }
 
-if( -not $IsWindows )
-{
-    Describe 'NuGetRestore.when run on non-Windows platform' {
-        Init
-        WhenRestoringPackages -ErrorAction SilentlyContinue
-        It ('should fail') {
-            $failed | Should -BeTrue
-            $Global:Error[0] | Should -Match 'Windows\ platform'
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'NuGetRestore'
+        }
+        catch
+        {
+            $script:failed = $true
+            Write-Error -ErrorRecord $_
         }
     }
-    return
 }
 
-Describe 'NuGetRestore.when restoring packages' {
-    Init
-    GivenFile 'packages.config' @'
+Describe 'NuGetRestore' {
+    BeforeEach {
+        $Global:Error.Clear()
+        $script:packagesConfigPath = $null
+        $script:version = $null
+        $script:argument = $null
+        $script:failed = $false
+        $script:testDir = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        New-Item -Path $script:testDir -ItemType Directory
+    }
+
+    if ((Get-Variable -Name 'IsWindows' -ErrorAction Ignore) -and -not $IsWindows)
+    {
+        It 'fails on non-Windows platform' {
+            WhenRestoringPackages -ErrorAction SilentlyContinue
+            $script:failed | Should -BeTrue
+            $Global:Error[0] | Should -Match 'Windows\ platform'
+        }
+        return
+    }
+
+    It 'restores packages' {
+        GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-  <package id="jQuery" version="3.1.1" targetFramework="net46" />
-  <package id="NLog" version="4.3.10" targetFramework="net46" />
+<package id="jQuery" version="3.1.1" targetFramework="net46" />
+<package id="NLog" version="4.3.10" targetFramework="net46" />
 </packages>
 '@
-    GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-    GivenPath 'packages.config'
-    WhenRestoringPackages
-    ThenPackageInstalled 'NuGet.CommandLine.*'
-    ThenPackageInstalled 'jQuery.3.1.1'
-    ThenPackageInstalled 'NLog.4.3.10'
-}
+        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+        GivenPath 'packages.config'
+        WhenRestoringPackages
+        ThenPackageInstalled 'NuGet.CommandLine.*'
+        ThenPackageInstalled 'jQuery.3.1.1'
+        ThenPackageInstalled 'NLog.4.3.10'
+    }
 
-Describe 'NuGetRestore.when restoring solution' {
-    Init 
-    GivenSolution 'NUnit2PassingTest'
-    GivenPath 'NUnit2PassingTest.sln'
-    WhenRestoringPackages
-    ThenPackageInstalled 'NuGet.CommandLine.*'
-    ThenPackageInstalled 'NUnit.2.6.4'
-}
+    It 'restores solution' {
+        GivenSolution 'NUnit2PassingTest'
+        GivenPath 'NUnit2PassingTest.sln'
+        WhenRestoringPackages
+        ThenPackageInstalled 'NuGet.CommandLine.*'
+        ThenPackageInstalled 'NUnit.2.6.4'
+    }
 
-Describe 'NuGetRestore.when restoring multiple paths' {
-    Init
-    GivenFile 'subproject\packages.config' @'
+    It 'restores multiple paths' {
+        GivenFile 'subproject\packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-  <package id="jQuery" version="3.1.1" targetFramework="net46" />
-  <package id="NLog" version="4.3.10" targetFramework="net46" />
+<package id="jQuery" version="3.1.1" targetFramework="net46" />
+<package id="NLog" version="4.3.10" targetFramework="net46" />
 </packages>
 '@
-    GivenSolution 'NUnit2PassingTest'
-    GivenPath 'subproject\packages.config','NUnit2PassingTest.sln'
-    GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-    WhenRestoringPackages
-    ThenPackageInstalled 'NuGet.CommandLine.*'
-    ThenPackageInstalled 'jQuery.3.1.1' 
-    ThenPackageInstalled 'NLog.4.3.10' 
-    ThenPackageInstalled 'NUnit.2.6.4'
-}
+        GivenSolution 'NUnit2PassingTest'
+        GivenPath 'subproject\packages.config','NUnit2PassingTest.sln'
+        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+        WhenRestoringPackages
+        ThenPackageInstalled 'NuGet.CommandLine.*'
+        ThenPackageInstalled 'jQuery.3.1.1'
+        ThenPackageInstalled 'NLog.4.3.10'
+        ThenPackageInstalled 'NUnit.2.6.4'
+    }
 
-Describe 'NuGetRestore.when pinning version of NuGet' {
-    Init
-    GivenFile 'packages.config' @'
+    It 'uses custom version of NuGet' {
+        GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-  <package id="jQuery" version="3.1.1" targetFramework="net46" />
+<package id="jQuery" version="3.1.1" targetFramework="net46" />
 </packages>
 '@
-    GivenPath 'packages.config'
-    GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-    GivenVersion '3.5.0'
-    WhenRestoringPackages
-    ThenPackageInstalled 'NuGet.CommandLine.3.5.0'
-    ThenPackageInstalled 'jQuery.3.1.1'
+        GivenPath 'packages.config'
+        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+        GivenVersion '3.5.0'
+        WhenRestoringPackages
+        ThenPackageInstalled 'NuGet.CommandLine.3.5.0'
+        ThenPackageInstalled 'jQuery.3.1.1'
+    }
 }

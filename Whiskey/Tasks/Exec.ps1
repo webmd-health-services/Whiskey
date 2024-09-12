@@ -1,148 +1,184 @@
 function Invoke-WhiskeyExec
 {
     [CmdletBinding()]
-    [Whiskey.Task('Exec',SupportsClean,SupportsInitialize)]
+    [Whiskey.Task('Exec', SupportsClean, SupportsInitialize, DefaultParameterName='Command')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [String] $Path,
+
+        [String[]] $Argument,
+
+        [String] $Command,
+
+        [String[]] $SuccessExitCode
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if( $TaskParameter.ContainsKey('') )
+    if ($Command)
     {
-        $regExMatches = Select-String -InputObject $TaskParameter[''] -Pattern '([^\s"'']+)|("[^"]*")|(''[^'']*'')' -AllMatches
-        $defaultProperty = @($regExMatches.Matches.Groups | Where-Object { $_.Name -ne '0' -and $_.Success -eq $true } | Select-Object -ExpandProperty 'Value')
+        $regExMatches = Select-String -InputObject $Command -Pattern '([^\s"'']+)|("[^"]*")|(''[^'']*'')' -AllMatches
+        [String[]]$cmdTokens =
+            $regExMatches.Matches.Groups |
+            Where-Object 'Name' -NE '0' |
+            Where-Object 'Success' -EQ $true |
+            Select-Object -ExpandProperty 'Value'
 
-        $TaskParameter['Path'] = $defaultProperty[0]
-        if( $defaultProperty.Count -gt 1 )
+        $Path = $cmdTokens | Select-Object -First 1
+        if ($cmdTokens.Count -gt 1)
         {
-            $TaskParameter['Argument'] = $defaultProperty[1..($defaultProperty.Count - 1)] | ForEach-Object { $_.Trim("'",'"') }
+            $Argument = $cmdTokens | Select-Object -Skip 1 | ForEach-Object { $_.Trim("'",'"') }
         }
     }
 
-    $path = $TaskParameter['Path']
-    if ( -not $path )
+    if (-not $Path)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property "Path" is mandatory. It should be the Path to the executable you want the Exec task to run, e.g.
+        $msg = 'Property "Command" or "Path" is mandatory. Command should be the command to run, with arguments. ' +
+               'Path should be the Path to an executable you want the Exec task to run along with arguments given ' +
+               'with the Argument parameter, e.g.
 
-            Build:
-            - Exec:
-                Path: cmd.exe
+    Build:
+    - cmd.exe /c echo ''HELLO WORLD''
+    - Exec: cmd.exe /c echo ''HELLO WORLD''
+    - Exec:
+        Command: cmd.exe /C echo ''HELLO WORLD''
+    - Exec:
+        Path: cmd.exe
+        Argument: [ ''/c'', ''echo "HELLO WORLD"'' ]
 
-        ')
+    '
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
-    $path = & {
-                    if( [IO.Path]::IsPathRooted($path) )
-                    {
-                        $path
-                    }
-                    else 
-                    {
-                        Join-Path -Path (Get-Location).Path -ChildPath $path
-                        Join-Path -Path $TaskContext.BuildRoot -ChildPath $path
-                    }
+    $resolvedPath = $Path
+    $cmd = Get-Command -Name $resolvedPath -CommandType Application -ErrorAction Ignore
+    if (-not $cmd)
+    {
+        $resolvedPath = ''
+    }
+
+    if (-not $resolvedPath)
+    {
+        $resolvedPath =
+            & {
+                if( [IO.Path]::IsPathRooted($Path) )
+                {
+                    $Path
+                }
+                else
+                {
+                    Join-Path -Path (Get-Location).Path -ChildPath $Path
+                    Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
+                }
             } |
-            Where-Object { Test-Path -path $_ -PathType Leaf } |
+            Where-Object { Test-Path -Path $_ -PathType Leaf } |
             Select-Object -First 1 |
             Resolve-Path |
             Select-Object -ExpandProperty 'ProviderPath'
-
-    if( -not $path )
-    {
-        $path = $TaskParameter['Path']
-        if( -not (Get-Command -Name $path -CommandType Application -ErrorAction Ignore) )
-        {
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Executable "{0}" does not exist. We checked if the executable is at that path on the file system and if it is in your PATH environment variable.' -f $path)
-            return
-        }
     }
 
-    if( ($path | Measure-Object).Count -gt 1 )
+    if (-not $resolvedPath)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Unable to run executable "{0}": it contains wildcards and resolves to the following files: "{1}".' -f $TaskParameter['Path'],($path -join '","'))
+        $msg = "Executable ""${Path}"" does not exist. We checked if the executable is at that path on the file " +
+                'system and if it is in your PATH environment variable.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
-    Write-WhiskeyCommand -Context $TaskContext -Path $path -ArgumentList $TaskParameter['Argument']
-
-    # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately terminates the build. Full stop.
-    & $path $TaskParameter['Argument']
-    $exitCode = $LASTEXITCODE
-
-    $successExitCodes = $TaskParameter['SuccessExitCode']
-    if( -not $successExitCodes )
+    if( ($resolvedPath | Measure-Object).Count -gt 1 )
     {
-        $successExitCodes = '0'
+        $msg = "Unable to run executable ""${Path}"": it contains wildcards and resolves to the following files: " +
+               """$($Path -join '","')""."
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+        return
     }
 
-    foreach( $successExitCode in $successExitCodes )
+    Write-WhiskeyVerbose -Context $TaskContext -Message "${Path} -> ${resolvedPath}"
+
+    Write-WhiskeyCommand -Context $TaskContext -Path $resolvedPath -ArgumentList $Argument -NoIndent
+
+    # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately
+    # terminates the build. Full stop.
+    & $resolvedPath $Argument
+    $exitCode = $LASTEXITCODE
+
+    if (-not $SuccessExitCode)
     {
-        if( $successExitCode -match '^(\d+)$' )
+        $SuccessExitCode = '0'
+    }
+
+    foreach ($_successExitCode in $SuccessExitCode )
+    {
+        if ( $_successExitCode -match '^(\d+)$')
         {
-            if( $exitCode -eq [int]$Matches[0] )
+            if ($exitCode -eq [int]$Matches[0])
             {
                 Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} = {1}' -f $exitCode,$Matches[0])
                 return
             }
         }
 
-        if( $successExitCode -match '^(<|<=|>=|>)\s*(\d+)$' )
+        if ($_successExitCode -match '^(<|<=|>=|>)\s*(\d+)$')
         {
             $operator = $Matches[1]
-            $successExitCode = [int]$Matches[2]
+            $_successExitCode = [int]$Matches[2]
             switch( $operator )
             {
                 '<'
                 {
-                    if( $exitCode -lt $successExitCode )
+                    if( $exitCode -lt $_successExitCode )
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} < {1}' -f $exitCode,$successExitCode)
+                        $msg = "Exit Code ${exitCode} < ${_successExitCode}"
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                         return
                     }
                 }
                 '<='
                 {
-                    if( $exitCode -le $successExitCode )
+                    if( $exitCode -le $_successExitCode )
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} <= {1}' -f $exitCode,$successExitCode)
+                        $msg = "Exit Code ${exitCode} <= ${_successExitCode}"
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                         return
                     }
                 }
                 '>'
                 {
-                    if( $exitCode -gt $successExitCode )
+                    if( $exitCode -gt $_successExitCode )
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} > {1}' -f $exitCode,$successExitCode)
+                        $msg = "Exit Code ${exitCode} > ${_successExitCode}"
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                         return
                     }
                 }
                 '>='
                 {
-                    if( $exitCode -ge $successExitCode )
+                    if( $exitCode -ge $_successExitCode )
                     {
-                        Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} >= {1}' -f $exitCode,$successExitCode)
+                        $msg = "Exit Code ${exitCode} >= ${_successExitCode}"
+                        Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                         return
                     }
                 }
             }
         }
 
-        if( $successExitCode -match '^(\d+)\.\.(\d+)$' )
+        if ($_successExitCode -match '^(\d+)\.\.(\d+)$')
         {
             if( $exitCode -ge [int]$Matches[1] -and $exitCode -le [int]$Matches[2] )
             {
-                Write-WhiskeyVerbose -Context $TaskContext -Message ('Exit Code {0} <= {1} <= {2}' -f $Matches[1],$exitCode,$Matches[2])
+                $msg = "Exit Code $($Matches[1]) <= ${exitCode} <= $($Matches[2])"
+                Write-WhiskeyVerbose -Context $TaskContext -Message $msg
                 return
             }
         }
     }
 
-    Stop-WhiskeyTask -TaskContext $TaskContext -Message ('"{0}" returned with an exit code of "{1}". View the build output to see why the executable''s process failed.' -F $TaskParameter['Path'],$exitCode)
+    $msg = """${resolvedPath}"" returned with an exit code of ""${exitCode}"". View the build output to see why the " +
+           'executable''s process failed.'
+    Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
 }

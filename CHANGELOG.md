@@ -3,6 +3,91 @@
 
 # Whiskey Changelog
 
+## 0.62.0
+
+### Added
+
+#### Support for Raw Commands as Build Tasks
+
+You can now have raw executable commands in your whiskey.yml files. Instead of:
+
+```yaml
+Build
+- Exec:
+    Path: cmd
+    Argument: [ '/C', 'echo "Hello, World!"' ]
+```
+
+you can now:
+
+```yaml
+Build:
+- cmd /C echo "Hello, World!"
+```
+
+If you want to use/set global properties on the command, the `Exec` task name is still required, but Whiskey now
+supports a simplified syntax. Instead of:
+
+```yaml
+Build:
+- Exec:
+    Path: cmd
+    Argument: ['/C' 'echo "Hello, World!"' ]
+    WorkingDirectory: subdir
+```
+
+you can now:
+
+```yaml
+Build:
+- Exec: cmd /C echo "Hello, World!"
+  WorkingDirectory: subdir
+```
+
+Note that when using this simplified syntax, the `Exec` task name ***must*** be the first item in the task's YAML map.
+
+#### Simplified Syntax for Simple PowerShell/Version Tasks
+
+This syntactic sugar also applies to the `PowerShell` and `Version` tasks. Instead of:
+
+
+```yaml
+Build:
+- PowerShell:
+    ScriptBlock: prism install
+- Version:
+    Version: 1.2.3
+```
+
+You can now:
+
+```yaml
+Build:
+- PowerShell: prism install
+- Version: 1.2.3
+```
+
+Task authors can get support for this syntax for these tasks by using the new `DefaultPropertyName` property on their
+task's `Task` attribute:
+
+```powershell
+function Invoke-MyTask
+{
+  [CmdletBinding()]
+  [Whiskey.Task('MyTask', DefaultParameterName='MyProperty')]
+  param(
+    [String] $MyProperty
+  )
+}
+```
+
+which will let users call your task like this:
+
+```yaml
+Build:
+- MyTask: MyPropertyValue
+```
+
 ## 0.61.0
 
 > Released 12 June 2024

@@ -15,6 +15,8 @@ namespace Whiskey
 
         public string CommandName { get; set; }
 
+        public string DefaultParameterName { get; set; }
+
         public string Name { get; private set; }
 
         public bool Obsolete { get; set; }

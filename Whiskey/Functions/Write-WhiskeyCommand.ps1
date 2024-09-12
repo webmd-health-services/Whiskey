@@ -7,7 +7,9 @@ function Write-WhiskeyCommand
 
         [String] $Path,
 
-        [Object[]] $ArgumentList
+        [Object[]] $ArgumentList,
+
+        [switch] $NoIndent
     )
 
     Set-StrictMode -Version 'Latest'
@@ -38,7 +40,7 @@ function Write-WhiskeyCommand
             }
         }
 
-    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ')
+    Write-WhiskeyInfo -Context $Context -Message ($logArgumentList -join ' ') -NoIndent:$NoIndent
     Write-WhiskeyVerbose -Context $Context -Message $Path
     $argumentPrefix = '  '
     foreach( $argument in $ArgumentList )
