@@ -5,7 +5,60 @@
 
 ## 0.62.0
 
+### Upgrade Instructions
+
+This version makes major changes to the way Whiskey prefers to integrate with Node.js. If you use the local version of
+Node.js that Whiskey installs, add an `InstallNode` task to your whiskey.yml file before running any Node-related
+tasks/commands. This will make sure Node.js is installed and in your PATH.
+
+```yaml
+- InstallNode
+```
+
+See the [InstallNode](https://github.com/webmd-health-services/Whiskey/wiki/InstallNode-Task) documentation for more
+information.
+
+The `Npm` and `NodeLicenseChecker` tasks are now obsolete. Replace them with raw `npm` commands. Tasks like this:
+
+```yaml
+- Npm:
+    Command: install
+```
+
+should be changed to:
+
+```yaml
+- npm install
+```
+
+Replace usages of the `NodeLicenseChecker` task with commands to install then run the license checker:
+
+```yaml
+- npm install license-checker -g
+- license-checker
+```
+
 ### Added
+
+#### InstallNode Task
+
+The `InstallNode` task now looks up the Node.js version to install from a ".node-version" file, if a version isn't given
+with the task's `Version` property. The ".node-version" file is is expected to be in the build root. If that file
+doesn't exist, that task looks for a `whiskey.node` property in the "package.json" file in the build root. The path to
+the "package.json" file to use can be customized with the new `PackageJsonPath` property. If neither file exists, the
+task will install the latest LTS version of Node.js. The task supports partial version numbers, e.g. `16`, `16.20`, and
+`16.20.2` would all install Node.js version "16.20.2".
+
+Wherever Node.js is installed, the `InstallNode` task now adds the install directory to the current build process's
+`PATH` environment variable. By default, the task installs into a ".node" directory in the build root. Use the `Path`
+task property to change the directory.
+
+The task now supports pinning NPM to a specific version. Use the `NpmVersion` task property or by
+specifying a `whiskey.npm` property in the "package.json" file. Partial version numbers are supported.
+
+The task now supports changing the CPU architecture of the Node.js package to download via the `Cpu` property. This
+should match the architecture/CPU portion of the Node.js package, which is currently the last part, e.g.
+"node-VERSION-OS-CPU.extension".
 
 #### Support for Raw Commands as Build Tasks
 
@@ -87,6 +140,31 @@ which will let users call your task like this:
 Build:
 - MyTask: MyPropertyValue
 ```
+
+### Deprecated
+
+The `Npm` and `NodeLicenseChecker` tasks. Replace usages with raw `npm` commands . In order for that to work, however,
+you will either need to install a global version of Node.js whose commands are available in your build's `PATH` or use
+Whiskey's `InstallNode` task, which will install a private version of Node.js for your build and adds it to your build's
+`PATH`. We recommend using [Volta](https://volta.sh/) as a global Node.js version manager because it supports
+side-by-side versions of Node.js and automatic installation.
+
+For task authors, automatically installing Node and node modules. Remove usages of `[Whiskey.RequiresTool('Node')]` and
+`[Whiskey.RequiresNodeModule]` attributes from your tasks. Instead of requiring Whiskey to install Node.js, add
+Whiskey's `InstallNode` task to the build. To get a node module installed, add `npm install MODULE -g` commands to the
+build.
+
+All `Whiskey.Requires*` task attributes will eventually be deprecated and removed in favor of build tasks.
+
+### Removed
+
+The `Force` parameter on the `InstallNode` task. The task now will automatically re-install Node.js if it isn't at the
+expected version.
+
+The `InstallNode` task no longer uses the `engines.node` property in the "package.json" file to determine what version
+of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
+".node-version" file in the build root. If that file doesn't exist, it uses the `whiskey.node` property in the
+"package.json" file. Otherwise, it installs the latest LTS version.
 
 ## 0.61.0
 

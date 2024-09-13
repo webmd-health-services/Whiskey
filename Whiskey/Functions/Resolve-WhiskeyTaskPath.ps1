@@ -9,23 +9,31 @@ function Resolve-WhiskeyTaskPath
     The `Resolve-WhiskeyTaskPath` function validates and resolves paths provided by users to actual paths. It:
 
     * ensures the paths exist (use the `AllowNonexistent` switch to allow paths that don't exist).
-    * ensures the paths exist under the build root (use the `AllowOutsideBuildRoot` switch to allow paths to escape the build root).
+    * ensures the paths exist under the build root (use the `AllowOutsideBuildRoot` switch to allow paths to escape the
+      build root).
     * can ensure the user provides at least one value (use the `Mandatory` switch).
-    * can ensure the user only provides one path or one path that resolves to a single path (use the `OnlySinglePath` switch).
-    * can ensure that the user provides a path to a file or directory (pass the type you want to the `PathType` parameter).
-    * can create the paths the user passed in (use the `Create` switch, the `AllowNonexistent` switch, and the `PathType` parameters).
+    * can ensure the user only provides one path or one path that resolves to a single path (use the `OnlySinglePath`
+      switch).
+    * can ensure that the user provides a path to a file or directory (pass the type you want to the `PathType`
+      parameter).
+    * can create the paths the user passed in (use the `Create` switch, the `AllowNonexistent` switch, and the
+      `PathType` parameters).
 
     Wildcards are accepted for all paths and are resolved to actual paths.
 
     Paths are resolved relative to the current working directory, which for a Whiskey task is the build root.
 
-    You must pass the name of the property whose path you're resolving to the `ProperytName` parameter. This is so Whiskey can write friendly error messages to the user.
+    You must pass the name of the property whose path you're resolving to the `ProperytName` parameter. This is so
+    Whiskey can write friendly error messages to the user.
 
     The resolved, relative paths are returned.
 
-    If paths don't exist, Whiskey will stop and fail the current build. To allow paths to not exist, use the `AllowNonexistent` switch. 
+    If paths don't exist, Whiskey will stop and fail the current build. To allow paths to not exist, use the
+    `AllowNonexistent` switch.
 
-    You can use glob patterns (e.g. `**`) to find files. Pass your patterns to the `Path` parameter and use the `UseGlob` switch. The function installs and uses the [Glob](https://www.powershellgallery.com/packages/Glob) PowerShell module to resolve the patterns to files.
+    You can use glob patterns (e.g. `**`) to find files. Pass your patterns to the `Path` parameter and use the
+    `UseGlob` switch. The function installs and uses the [Glob](https://www.powershellgallery.com/packages/Glob)
+    PowerShell module to resolve the patterns to files.
 
     .LINK
     https://www.powershellgallery.com/packages/Glob
@@ -54,7 +62,7 @@ function Resolve-WhiskeyTaskPath
     $path | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path' -PathType 'Directory'
 
     Demonstrates how to ensure that the user has passed paths to only directories.
-    
+
     .EXAMPLE
     $path | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path' -AllowNonexistent
 
@@ -63,12 +71,15 @@ function Resolve-WhiskeyTaskPath
     .EXAMPLE
     $path | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path' -Create -AllowNonexistent -PathType File
 
-    Demonstrates how to get Whiskey to create any non-existent items whose path the user passes. In this example, Whiskey will create files. To create directories, pass `Directory` to the PathType parameter. You *must* use `Create`, `AllowNonexistent`, and `PathType` parameters together.
+    Demonstrates how to get Whiskey to create any non-existent items whose path the user passes. In this example,
+    Whiskey will create files. To create directories, pass `Directory` to the PathType parameter. You *must* use
+    `Create`, `AllowNonexistent`, and `PathType` parameters together.
 
     .EXAMPLE
     $path | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path' -AllowOutsideBuildRoot
 
-    Demonstrates how to allow the user to pass paths to items that are outside the build root. Be very careful using this switch as it could allow attackers to use your task to do nefarious things to servers.
+    Demonstrates how to allow the user to pass paths to items that are outside the build root. Be very careful using
+    this switch as it could allow attackers to use your task to do nefarious things to servers.
     #>
     [CmdletBinding(DefaultParameterSetName='FromParameters')]
     param(
@@ -218,17 +229,17 @@ function Resolve-WhiskeyTaskPath
                         # P/Invoke to call into Windows shlwapi.
                         $relativePathBuilder = New-Object System.Text.StringBuilder 260
                         $converted = [Whiskey.Path]::PathRelativePathTo( $relativePathBuilder, $currentDir, [IO.FileAttributes]::Directory, $resolvedPath, [IO.FileAttributes]::Normal )
-                        if( $converted ) 
-                        { 
-                            $relativePath = $relativePathBuilder.ToString() 
-                        } 
+                        if( $converted )
+                        {
+                            $relativePath = $relativePathBuilder.ToString()
+                        }
                         else
                         {
                             $relativePath = $resolvedPath
                         }
                     }
                 }
-                
+
                 # Files/directories that begin with a period don't get the .\ or ./ prefix put on them.
                 if( -not $relativePath.StartsWith($insideCurrentDirPrefix) -and -not $relativePath.StartsWith($outsideCurrentDirPrefix) )
                 {
@@ -259,13 +270,13 @@ function Resolve-WhiskeyTaskPath
                                  -Message ('{0} is mandatory.' -f $PropertyName)
                 return
             }
-            return     
+            return
         }
 
         $result = $Path
         $resolvedPaths = $null
-        
-        # Normalize the directory separators, otherwise, if a path begins with '\', on Linux (and probably macOS), 
+
+        # Normalize the directory separators, otherwise, if a path begins with '\', on Linux (and probably macOS),
         # `IsPathRooted` doesn't think the path is rooted.
         $normalizedPath = $result | Convert-WhiskeyPathDirectorySeparator
 
@@ -304,7 +315,7 @@ function Resolve-WhiskeyTaskPath
                 $resolvedPaths = Get-Item -Path $normalizedPath -Force | Select-Object -ExpandProperty 'FullName'
             }
 
-            if( -not $resolvedPaths ) 
+            if( -not $resolvedPaths )
             {
                 if( -not $AllowNonexistent )
                 {
@@ -321,7 +332,7 @@ function Resolve-WhiskeyTaskPath
                     return
                 }
             }
-            
+
             if( -not $AllowOutsideBuildRoot )
             {
                 $fsCaseSensitive = -not (Test-Path -Path ($TaskContext.BuildRoot.FullName.ToUpperInvariant()))
@@ -330,7 +341,7 @@ function Resolve-WhiskeyTaskPath
                 {
                     $comparer = [System.StringComparison]::Ordinal
                 }
-                
+
                 $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
                 $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
 
@@ -348,7 +359,7 @@ function Resolve-WhiskeyTaskPath
                 }
             }
 
-            $expectedPathType = $PathType  
+            $expectedPathType = $PathType
             if( $expectedPathType -and -not $AllowNonexistent )
             {
                 $itemType = 'Leaf'
@@ -391,7 +402,7 @@ Found {0} paths that should resolve to a {1}, but don''t:
                     Write-WhiskeyError -Message ('The ValidatePath attribute on the "{0}" task''s "{1}" property has Create set to true but the attribute doesn''t specify a value for the PathType property. This is a task authoring error. The task''s author must update this ValidatePath attribute to either remove its Create property (so Whiskey doesn''t try to create non-existent items) or add a PathType property and set its value to either "File" or "Directory" (so Whiskey knows what kind of item to create).' -f $TaskContext.TaskName,$CmdParameter.Name) -ErrorAction Stop
                     return
                 }
-                
+
                 foreach( $item in $resolvedPaths )
                 {
                     if( (Test-Path -Path $item) )
@@ -428,7 +439,7 @@ Found {0} paths that should resolve to a {1}, but don''t:
         foreach( $globPath in ($globPaths | Select-Object -Skip 1) )
         {
             Write-WhiskeyDebug -Context $TaskContext -Message ($messageFormat -f $globPath)
-        } 
+        }
 
         # Detect the case-sensitivity of the current directory so we can do a case-sensitive search if current directory
         # is on a case-sensitive file system.
@@ -450,7 +461,7 @@ Found {0} paths that should resolve to a {1}, but don''t:
             }
             $childName = Split-Path -Leaf  -Path $childPath
         }
-        
+
         $caseSensitivePath = [Text.StringBuilder]::New((Join-Path -Path $parentPath -ChildPath $childName))
         for( $idx = $caseSensitivePath.Length - 1; $idx -ge 0; --$idx )
         {
@@ -473,7 +484,7 @@ Found {0} paths that should resolve to a {1}, but don''t:
         }
         $caseSensitive = -not (Test-Path -Path $caseSensitivePath.ToString())
         # We only want to hit the file system once, since globs are pretty greedy.
-        $resolvedPaths = 
+        $resolvedPaths =
             Find-GlobFile -Path $currentDir -Include $globPaths -Exclude $Exclude -Force -CaseSensitive:$caseSensitive |
             Select-Object -ExpandProperty 'FullName'
 
@@ -497,7 +508,7 @@ Found {0} paths that should resolve to a {1}, but don''t:
             }
             return
         }
-        
+
         Resolve-WRelativePath -Path $resolvedPaths -DebugPrefix $prefix
     }
 }

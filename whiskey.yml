@@ -105,7 +105,6 @@ Build:
                 Run:
                     Path:
                     - Test\Invoke-WhiskeyBuild.Tests.ps1
-                    - Test\Install-WhiskeyNode.Tests.ps1
                     - Test\Install-WhiskeyPowerShellModule.Tests.ps1
                     - Test\Install-WhiskeyTool.Tests.ps1
                     - Test\PowerShell.Tests.ps1
@@ -141,7 +140,6 @@ Build:
                     - "*/Test/GetPowerShellModule.Tests.ps1"
                     - "*/Test/Install-WhiskeyDotNetSdk.Tests.ps1"
                     - "*/Test/Install-WhiskeyDotNetTool.Tests.ps1"
-                    - "*/Test/Install-WhiskeyNode.Tests.ps1"
                     - "*/Test/Install-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Install-WhiskeyTool.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyBuild.Tests.ps1"
@@ -176,7 +174,6 @@ Build:
                     - "*/Test/Import-Whiskey.ps1.Tests.ps1"
                     - "*/Test/Import-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Import-WhiskeyYaml.Tests.ps1"
-                    - "*/Test/Install-WhiskeyNode.Tests.ps1"
                     - "*/Test/Install-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyDotNetCommand.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyNpmCommand.Tests.ps1"
@@ -286,7 +283,6 @@ Build:
                 Run:
                     Path:
                     - Test\Install-WhiskeyDotNetTool.Tests.ps1
-                    - Test\Install-WhiskeyNode.Tests.ps1
                     - Test\Install-WhiskeyPowerShellModule.Tests.ps1
         - Pester4:
             Script:
@@ -371,7 +367,6 @@ Build:
                     - "*\\Test\\Find-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\GetPowerShellModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
-                    - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
@@ -415,7 +410,6 @@ Build:
                     - "*\\Test\\Import-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Import-WhiskeyYaml.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyDotNetSdk.Tests.ps1"
-                    - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyDotNetCommand.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyNpmCommand.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyPipelineTask.Tests.ps1"

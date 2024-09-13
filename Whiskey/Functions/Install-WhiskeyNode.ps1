@@ -17,13 +17,17 @@ function Install-WhiskeyNode
 
         # The version of Node to install. If not provided, will use the version defined in the package.json file. If
         # that isn't supplied, will install the latest LTS version.
-        [String] $Version
+        [String] $Version,
+
+        [String] $NodeDirectoryName = '.node'
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath -ErrorAction Ignore
+    $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath `
+                                        -NodeDirectoryName $NodeDirectoryName `
+                                        -ErrorAction Ignore
 
     if( $InCleanMode )
     {
@@ -40,7 +44,10 @@ function Install-WhiskeyNode
     $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
     if( $Version )
     {
-        $nodeVersionToInstall = $nodeVersions | Where-Object { $_.version -like 'v{0}' -f $Version } | Select-Object -First 1
+        $nodeVersionToInstall =
+            $nodeVersions |
+            Where-Object { $_.version -like 'v{0}' -f $Version } |
+            Select-Object -First 1
         if( -not $nodeVersionToInstall )
         {
             throw ('Node v{0} does not exist.' -f $Version)
@@ -103,8 +110,7 @@ function Install-WhiskeyNode
         $installNode = $true
     }
 
-    $nodeDirectoryName = '.node'
-    $nodeRoot = Join-Path -Path $InstallRootPath -ChildPath $nodeDirectoryName
+    $nodeRoot = Join-Path -Path $InstallRootPath -ChildPath $NodeDirectoryName
 
     $platform = 'win'
     $packageExtension = 'zip'
@@ -203,10 +209,10 @@ function Install-WhiskeyNode
             $timer = [Diagnostics.Stopwatch]::StartNew()
             $exists = $false
             $lastError = $null
-            Write-WhiskeyDebug "Renaming ""$($outputRoot)"" -> ""$($nodeDirectoryName)""."
+            Write-WhiskeyDebug "Renaming ""$($outputRoot)"" -> ""${NodeDirectoryName}""."
             do
             {
-                Rename-Item -Path $outputRoot -NewName $nodeDirectoryName -ErrorAction SilentlyContinue
+                Rename-Item -Path $outputRoot -NewName $NodeDirectoryName -ErrorAction SilentlyContinue
                 $exists = Test-Path -Path $nodeRoot -PathType Container
 
                 if( $exists )
@@ -226,7 +232,7 @@ function Install-WhiskeyNode
             if( -not $exists )
             {
                 $msg = "Failed to install Node to ""$($nodeRoot)"" because renaming directory " +
-                       """$($outputDirectoryName)"" to ""$($nodeDirectoryName)"" failed: $($lastError)"
+                       """$($outputDirectoryName)"" to ""${NodeDirectoryName}"" failed: $($lastError)"
                 Write-WhiskeyError -Message $msg
             }
 
@@ -247,7 +253,9 @@ function Install-WhiskeyNode
             }
         }
 
-        $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath -ErrorAction Stop
+        $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $InstallRootPath `
+                                            -NodeDirectoryName $NodeDirectoryName `
+                                            -ErrorAction Stop
     }
 
     $npmPath = Resolve-WhiskeyNodeModulePath -Name 'npm' -NodeRootPath $nodeRoot -ErrorAction Stop

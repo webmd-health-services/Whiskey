@@ -30,7 +30,9 @@ function Resolve-WhiskeyNodePath
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]
         # The path to the root of an Node package, as downloaded and expanded from the Node.js download page.
-        [String]$NodeRootPath
+        [String]$NodeRootPath,
+
+        [String] $NodeDirectoryName = '.node'
     )
 
     Set-StrictMode -Version 'Latest'
@@ -38,7 +40,7 @@ function Resolve-WhiskeyNodePath
 
     if( $PSCmdlet.ParameterSetName -eq 'FromBuildRoot' )
     {
-        return (Resolve-WhiskeyNodePath -NodeRootPath (Join-Path -Path $BuildRootPath -ChildPath '.node'))
+        return (Resolve-WhiskeyNodePath -NodeRootPath (Join-Path -Path $BuildRootPath -ChildPath $NodeDirectoryName))
     }
 
     $nodePath = & {
