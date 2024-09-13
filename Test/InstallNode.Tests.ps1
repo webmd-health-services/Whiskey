@@ -19,15 +19,15 @@ BeforeAll {
             [TimeSpan]$For
         )
 
-        if( $IsWindows )
+        if (-not (Test-Path -Path 'variable:IsWindows') -or $IsWindows )
         {
             $platformID = 'win'
         }
-        elseif( $IsLinux )
+        elseif ($IsLinux)
         {
             $platformID = 'linux'
         }
-        elseif( $IsMacOS )
+        elseif ($IsMacOS)
         {
             $platformID = 'darwin'
         }
@@ -152,16 +152,17 @@ BeforeAll {
         }
         $To = Join-Path -Path $script:context.BuildRoot -ChildPath $To
 
-        $nodeCmdName = 'node'
-        $npmCmdName = 'npm'
-        if ($IsWindows)
+        $nodeCmdName = Join-Path -Path 'bin' -ChildPath 'node'
+        $npmCmdName = Join-Path -Path 'bin' -ChildPath 'npm'
+        if (-not (Test-Path -Path 'variable:IsWindows') -or $IsWindows)
         {
             $nodeCmdName = 'node.exe'
             $npmCmdName = 'npm.cmd'
         }
         $nodePath = Join-Path -Path $To -ChildPath $nodeCmdName
+        $npmPath = Join-Path -Path $To -ChildPath $npmCmdName
 
-        $pathEnvVarRegex = "^$([regex]::Escape($To))$([IO.Path]::PathSeparator).+"
+        $pathEnvVarRegex = "^$([regex]::Escape(($nodePath | Split-Path -Parent)))$([IO.Path]::PathSeparator).+"
         if ($Not)
         {
             $nodePath | Should -Not -Exist
@@ -176,14 +177,17 @@ BeforeAll {
         }
 
         $env:PATH | Should -Match $pathEnvVarRegex
-        Get-Command -Name $nodeCmdName |
+
+        Get-Command -Name ($nodePath | Split-Path -Leaf) |
             Where-Object 'Source' -EQ $nodePath |
+            Should -Not -BeNullOrEmpty
+        Get-Command -Name ($npmPath | Split-Path -Leaf) |
+            Where-Object 'Source' -EQ $npmPath |
             Should -Not -BeNullOrEmpty
 
         if ($WithNpmAtVersion)
         {
-            & (Join-Path -Path $To -ChildPath $npmCmdName) '--version' |
-                Should -Be $WithNpmAtVersion
+            & $npmPath '--version' | Should -Be $WithNpmAtVersion
         }
     }
 
@@ -258,6 +262,18 @@ Describe 'InstallNode' {
         $script:fileCreatedTime = New-Object Collections.ArrayList
         $script:nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
         $Global:Error.Clear()
+    }
+
+    AfterEach {
+        $emptyPath = Join-Path -Path $TestDrive -ChildPath 'Empty'
+        if (-not (Test-Path -Path $emptyPath))
+        {
+            New-Item -Path $emptyPath -ItemType Directory
+        }
+        if (-not (Test-Path -Path 'variable:IsWindows') -or $IsWindows)
+        {
+            robocopy $emptyPath $script:testRoot /MIR
+        }
     }
 
     $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
@@ -353,7 +369,7 @@ Describe 'InstallNode' {
 
     It 'fails to download old version' {
         $oldVersion = '4.4.7'
-        if (-not $IsWindows)
+        if ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)
         {
             $oldVersion = '0.7.9'
         }
@@ -385,7 +401,7 @@ Describe 'InstallNode' {
 
     # These tests fail intermittently on the build server despite my best efforts. I'm going to say this functionality
     # works, so no need to run them regularlary, just when a developer runs them locally.
-    $skipAVTests = -not $IsWindows -or (Test-Path -Path 'env:WHS_CI')
+    $skipAVTests = (Test-Path -Path 'env:WHS_CI') -or ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)
     It 'handles aggressive anti-virus' -Skip:$skipAVTests -ForEach $latestNodeVersion {
         try
         {

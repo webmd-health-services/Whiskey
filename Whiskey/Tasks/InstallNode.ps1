@@ -352,8 +352,8 @@ function Install-Node
         return
     }
 
-    $nodeCmdName = 'node'
-    $npmCmdName = 'npm'
+    $nodeCmdName = Join-Path -Path 'bin' -ChildPath 'node'
+    $npmCmdName = Join-Path -Path 'bin' -ChildPath 'npm'
     if ($IsWindows)
     {
         $nodeCmdName = 'node.exe'
@@ -362,6 +362,7 @@ function Install-Node
 
     $installNode = $true
     $nodePath = Join-Path -Path $Path -ChildPath $nodeCmdName
+    $nodePath = [IO.Path]::GetFullPath($nodePath)
     if (Test-Path -Path $nodePath -PathType Leaf)
     {
         $currentNodeVersion = & $nodePath '--version'
@@ -371,9 +372,6 @@ function Install-Node
             $installNode = $false
         }
     }
-
-    $fullPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
-    $fullPath = [IO.Path]::GetFullPath($fullPath)
 
     if ($installNode)
     {
@@ -386,7 +384,9 @@ function Install-Node
         $msg = "Installing Node.js ${versionToInstall} to ""${Path}""${sourceMsg}."
         Write-WhiskeyInfo -Context $TaskContext -Message $msg
 
-        Install-NodeJsPackage -PackagePath $pkgPath -DestinationPath $fullPath
+        $installPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
+        $installPath = [IO.Path]::GetFullPath($installPath)
+        Install-NodeJsPackage -PackagePath $pkgPath -DestinationPath $installPath
     }
 
     if (-not (Test-Path -Path $nodePath -PathType Leaf))
@@ -395,10 +395,11 @@ function Install-Node
     }
 
     $pathItems = $env:Path -split ([regex]::Escape([IO.Path]::PathSeparator))
-    if ($pathItems -notcontains $fullPath)
+    $nodeDirPath = $nodePath | Split-Path -Parent
+    if ($pathItems -notcontains $nodeDirPath)
     {
-        Write-WhiskeyInfo -Context $TaskContext -Message "Adding ""${fullPath}"" to PATH environment variable."
-        $newPath = "${fullPath}$([IO.Path]::PathSeparator)${env:PATH}"
+        Write-WhiskeyInfo -Context $TaskContext -Message "Adding ""${nodeDirPath}"" to PATH environment variable."
+        $newPath = "${nodeDirPath}$([IO.Path]::PathSeparator)${env:PATH}"
         [Environment]::SetEnvironmentVariable('PATH', $newPath, [EnvironmentVariableTarget]::Process)
     }
 
