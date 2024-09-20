@@ -188,13 +188,13 @@ Build:
     It 'handles no task properties' {
         GivenWhiskeyYmlBuildFile @"
 Build:
-- PublishNodeModule
-- PublishNodeModule:
+- InstallNode
+- InstallNode:
 "@
-        Mock -CommandName 'Publish-WhiskeyNodeModule' -Verifiable -ModuleName 'Whiskey'
+        Mock -CommandName 'Install-Node' -Verifiable -ModuleName 'Whiskey'
         WhenRunningPipeline 'Build'
         ThenPipelineSucceeded
-        Assert-MockCalled -CommandName 'Publish-WhiskeyNodeModule' -ModuleName 'Whiskey' -Times 2
+        Assert-MockCalled -CommandName 'Install-Node' -ModuleName 'Whiskey' -Times 2
     }
 
     It 'passes default properties to task' {

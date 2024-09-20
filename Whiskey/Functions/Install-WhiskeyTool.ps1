@@ -11,7 +11,7 @@ function Install-WhiskeyTool
     modules are already installed globally and are listed in the PSModulePath environment variable, they will not be
     re-installed. A `DirectoryInfo` object for the downloaded tool's directory is returned.
 
-    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a 
+    `Install-WhiskeyTool` also installs tools that are needed by tasks. Tasks define the tools they need with a
     [Whiskey.RequiresTool()] attribute in the tasks function. Supported tools are 'Node', 'NodeModule', and 'DotNet'.
 
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so
@@ -115,7 +115,7 @@ function Install-WhiskeyTool
                 $msg = 'The "Install-WhiskeyTool" function''s "NuGetPackage" name parameter is obsolete. Use ' +
                     '[Whiskey.WhiskeyTool] attribute on your task instead.'
                 Write-Warning -Message $msg
-                    
+
                 Install-WhiskeyNuGetPackage -Name $NuGetPackageName -Version $Version -BuildRootPath $DownloadRoot
                 return
             }

@@ -1,7 +1,12 @@
 
 function Invoke-WhiskeyNpm
 {
-    [Whiskey.Task('Npm')]
+    [Whiskey.Task('Npm',
+        Obsolete,
+        ObsoleteMessage='The "Npm" task is obsolete and will be removed in a future version of Whiskey. Instead, ' +
+                        'install a global version of Node.js and add the npm commands to run to your whiskey.yml ' +
+                        'script. If you want to install a local copy of Node.js, use the "InstallNode" task, which ' +
+                        'will add Node.js commands to your build''s PATH environment variable.')]
     [Whiskey.RequiresTool('Node',PathParameterName='NodePath',VersionParameterName='NodeVersion')]
     [Whiskey.RequiresNodeModule('npm', PathParameterName='NpmPath', VersionParameterName='NpmVersion')]
     [CmdletBinding()]

@@ -5,7 +5,77 @@
 
 ## 0.62.0
 
+### Upgrade Instructions
+
+This version is the beginning of getting Whiskey out of the tool management business. Managing tools and toolsets makes
+Whiskey responsible for too much. The first step is deprecating all of Whiskey's tasks that manage a local Node.js
+instance. If you to continue to use the local version of Node.js that Whiskey installs, add an `InstallNode` task to
+your whiskey.yml file before running any Node-related tasks/commands. This will make sure Node.js is installed and in
+your PATH.
+
+```yaml
+- InstallNode
+```
+
+See the [InstallNode](https://github.com/webmd-health-services/Whiskey/wiki/InstallNode-Task) documentation for more
+information.
+
+The `Npm`, `NodeLicenseChecker`, and `PublishNodeModule` tasks are now obsolete. Replace them with raw `npm` commands,
+e.g.
+
+```yaml
+- npm install
+```
+
+Replace usages of the `NodeLicenseChecker` task with commands to install then run the license checker:
+
+```yaml
+- npm install license-checker -g
+- license-checker
+```
+
+Replace usages of `PublishNodeModule` task with these commands:
+
+```yaml
+- npm version $(WHISKEY_SEMVER2_NO_BUILD_METADATA) --no-git-tag-version --allow-same-version
+- npm prune --produciton
+- npm publish
+```
+
+You'll need to make sure you have an ".npmrc" file in the current user's home directory configured with credentials in
+order for the `publish` task to work. To get you started, here is the template of the ".npmrc" file the task currently
+create a temporary ".npmrc" in the build root:
+
+```ini
+//REGISTRY_DOMAIN_NAME/REGISTRY_PATH:_password="BASE_64_ENCODED_PASSWORD"
+//REGISTRY_DOMAIN_NAME/REGISTRY_PATH:username=USERNAME
+//REGISTRY_DOMAIN_NAME/REGISTRY_PATH:email=EMAIL
+registry=REGISTRY_URL
+```
+
+YOu can also use the `npm login` or `npm adduser` commands, which by default will create a user-level ".npmrc" file.
+
 ### Added
+
+#### InstallNode Task
+
+The `InstallNode` task now looks up the Node.js version to install from a ".node-version" file, if a version isn't given
+with the task's `Version` property. The ".node-version" file is is expected to be in the build root. If that file
+doesn't exist, that task looks for a `whiskey.node` property in the "package.json" file in the build root. The path to
+the "package.json" file to use can be customized with the new `PackageJsonPath` property. If neither file exists, the
+task will install the latest LTS version of Node.js. The task supports partial version numbers, e.g. `16`, `16.20`, and
+`16.20.2` would all install Node.js version "16.20.2".
+
+Wherever Node.js is installed, the `InstallNode` task now adds the install directory to the current build process's
+`PATH` environment variable. By default, the task installs into a ".node" directory in the build root. Use the `Path`
+task property to change the directory.
+
+The task now supports pinning NPM to a specific version. Use the `NpmVersion` task property or by
+specifying a `whiskey.npm` property in the "package.json" file. Partial version numbers are supported.
+
+The task now supports changing the CPU architecture of the Node.js package to download via the `Cpu` property. This
+should match the architecture/CPU portion of the Node.js package, which is currently the last part, e.g.
+"node-VERSION-OS-CPU.extension".
 
 #### Support for Raw Commands as Build Tasks
 
@@ -87,6 +157,31 @@ which will let users call your task like this:
 Build:
 - MyTask: MyPropertyValue
 ```
+
+### Deprecated
+
+The `Npm`, `NodeLicenseChecker`, and `PublishNodeModule` tasks. Replace usages with raw `npm` commands . In order for
+that to work, however, you will either need to install a global version of Node.js whose commands are available in your
+build's `PATH` or use Whiskey's `InstallNode` task, which will install a private version of Node.js for your build and
+adds it to your build's `PATH`. We recommend using [Volta](https://volta.sh/) as a global Node.js version manager
+because it supports side-by-side versions of Node.js and automatic installation.
+
+For task authors, automatically installing Node and node modules is deprecated. Remove usages of
+`[Whiskey.RequiresTool('Node')]` and `[Whiskey.RequiresNodeModule]` attributes from your tasks. Instead of requiring
+Whiskey to install Node.js, add Whiskey's `InstallNode` task to the build. To get a node module installed, add `npm
+install MODULE -g` commands to the build.
+
+All `Whiskey.Requires*` task attributes will eventually be deprecated and removed in favor of build tasks.
+
+### Removed
+
+The `Force` parameter on the `InstallNode` task. The task now will automatically re-install Node.js if it isn't at the
+expected version.
+
+The `InstallNode` task no longer uses the `engines.node` property in the "package.json" file to determine what version
+of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
+".node-version" file in the build root. If that file doesn't exist, it uses the `whiskey.node` property in the
+"package.json" file. Otherwise, it installs the latest LTS version.
 
 ## 0.61.0
 
