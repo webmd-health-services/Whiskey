@@ -53,7 +53,7 @@ create a temporary ".npmrc" in the build root:
 registry=REGISTRY_URL
 ```
 
-YOu can also use the `npm login` or `npm adduser` commands, which by default will create a user-level ".npmrc" file.
+You can also use the `npm login` or `npm adduser` commands, which by default will create a user-level ".npmrc" file.
 
 ### Added
 
@@ -172,6 +172,8 @@ Whiskey to install Node.js, add Whiskey's `InstallNode` task to the build. To ge
 install MODULE -g` commands to the build.
 
 All `Whiskey.Requires*` task attributes will eventually be deprecated and removed in favor of build tasks.
+
+The `PublishBitbucketServerTag` task is deprecated and will be removed in a future version of Whiskey.
 
 ### Removed
 
