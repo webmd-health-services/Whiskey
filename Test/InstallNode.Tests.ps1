@@ -240,7 +240,7 @@ BeforeAll {
 
         Invoke-WhiskeyTask -TaskContext $context `
                            -Parameter $parameters `
-                           -Name 'InstallNode'
+                           -Name 'InstallNodeJs'
     }
 
     function ThenNodeFolderDidNotChange
@@ -255,7 +255,7 @@ AfterAll {
     $env:Path = ($env:Path -split $pathSeparator | Where-Object { Test-Path -Path $_ }) -join $pathSeparator
 }
 
-Describe 'InstallNode' {
+Describe 'InstallNodeJs' {
     BeforeEach {
         $script:testRoot = New-WhiskeyTestRoot
         $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot

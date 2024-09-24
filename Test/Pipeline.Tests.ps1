@@ -188,8 +188,8 @@ Build:
     It 'handles no task properties' {
         GivenWhiskeyYmlBuildFile @"
 Build:
-- InstallNode
-- InstallNode:
+- InstallNodeJs
+- InstallNodeJs:
 "@
         Mock -CommandName 'Install-Node' -Verifiable -ModuleName 'Whiskey'
         WhenRunningPipeline 'Build'

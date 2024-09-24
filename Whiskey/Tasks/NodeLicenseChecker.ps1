@@ -7,8 +7,8 @@ function Invoke-WhiskeyNodeLicenseChecker
         ObsoleteMessage='The "NodeLicenseChecker" task is obsolete and will be removed in a future version of ' +
                         'Whiskey. Instead, install a global version of Node.js and add commands to your whiskey.yml ' +
                         'script to install and run the license checker. If you want to install a local copy of ' +
-                        'Node.js, use the "InstallNode" task, which will add Node.js commands to your build''s PATH ' +
-                        'environment variable.')]
+                        'Node.js, use the "InstallNodeJs" task, which will add Node.js commands to your build''s ' +
+                        'PATH environment variable.')]
     [Whiskey.RequiresTool('Node', PathParameterName='NodePath', VersionParameterName='NodeVersion')]
     [Whiskey.RequiresNodeModule('license-checker', PathParameterName='LicenseCheckerPath')]
     param(

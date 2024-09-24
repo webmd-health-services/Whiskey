@@ -1,6 +1,6 @@
 function Install-Node
 {
-    [Whiskey.Task('InstallNode')]
+    [Whiskey.Task('InstallNodeJs')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
