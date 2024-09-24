@@ -3,6 +3,7 @@
 Set-StrictMode -Version 'Latest'
 
 BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
@@ -24,7 +25,7 @@ BeforeAll {
     $script:releaseId = $null
     $script:apiKeyID = $null
     $script:apiKey = $null
-    $script:uri = $null
+    $script:url = $null
     $script:packageName = $null
     $script:startAtStage = $null
     $script:skipDeploy = $null
@@ -63,9 +64,9 @@ BeforeAll {
         $script:releaseId = $null
     }
 
-    function GivenNoUri
+    function GivenNoUrl
     {
-        $script:uri = $null
+        $script:url = $null
     }
 
     function GivenProperty
@@ -144,9 +145,9 @@ BeforeAll {
             Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
         }
 
-        if( $uri )
+        if( $url )
         {
-            $taskParameter['Uri'] = $uri
+            $taskParameter['Url'] = $url
         }
 
         if( $packageName )
@@ -206,7 +207,7 @@ BeforeAll {
             [String]$ForApplication,
 
             [Parameter(Mandatory)]
-            [String]$AtUri,
+            [String]$AtUrl,
 
             [Parameter(Mandatory)]
             [String]$UsingApiKey,
@@ -219,8 +220,8 @@ BeforeAll {
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
         Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Release.id -eq $releaseId }
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Application -eq $ForApplication }
-        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
-        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUri }
+        Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
+        Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
         Assert-MockCalled -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
         Assert-MockCalled -CommandName 'New-BMPackage' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
 
@@ -249,7 +250,7 @@ BeforeAll {
     {
         param(
             [Parameter(Mandatory)]
-            [String]$AtUri,
+            [String]$AtUrl,
 
             [Parameter(Mandatory)]
             [String]$UsingApiKey,
@@ -271,7 +272,7 @@ BeforeAll {
             Assert-MockCalled @assertMockArgs -ParameterFilter { $Stage -eq '' }
         }
 
-        Assert-MockCalled @assertMockArgs -ParameterFilter { $Session.Uri -eq $AtUri }
+        Assert-MockCalled @assertMockArgs -ParameterFilter { $Session.Uri -eq $AtUrl }
         Assert-MockCalled @assertMockArgs -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
         # Pester 5 doesn't set preference variables, so until https://github.com/pester/Pester/issues/2255 is fixed,
         # this needs to be left commented out.
@@ -318,7 +319,7 @@ Describe 'PublishBuildMasterPackage' {
         $script:version = '9.8.3-rc.1+build.deadbee'
         $script:appName = $defaultAppName
         $script:releaseName = 'release'
-        $script:uri = 'https://buildmaster.example.com'
+        $script:url = 'https://buildmaster.example.com'
         $script:apiKeyID = $defaultApiKeyID
         $script:apiKey = $defaultApiKey
         $script:releaseId = $defaultReleaseId
@@ -341,10 +342,10 @@ Describe 'PublishBuildMasterPackage' {
         ThenCreatedPackage '9.8.3' `
                            -InRelease 'release' `
                            -ForApplication 'application' `
-                           -AtUri 'https://buildmaster.example.com' `
+                           -AtUrl 'https://buildmaster.example.com' `
                            -UsingApiKey 'fubarsnafu' `
                            -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+        ThenPackageDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
     }
 
     It 'should publish named package' {
@@ -352,8 +353,8 @@ Describe 'PublishBuildMasterPackage' {
         GivenPackageName $packageNameOverride
         GivenProperty $packageVariable
         WhenCreatingPackage
-        ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+        ThenCreatedPackage $packageNameOverride -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
     }
 
     It 'should to a specific stage' {
@@ -361,15 +362,15 @@ Describe 'PublishBuildMasterPackage' {
         GivenStartAtStage $releaseStage
         GivenProperty $packageVariable
         WhenCreatingPackage
-        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenPackageDeployed -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
+        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenPackageDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
     }
 
     It 'should publish without starting deploy' {
         GivenSkipDeploy
         GivenProperty $packageVariable
         WhenCreatingPackage
-        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUri 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        ThenCreatedPackage '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
         ThenPackageNotDeployed
     }
 
@@ -394,11 +395,11 @@ Describe 'PublishBuildMasterPackage' {
         ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
     }
 
-    It 'should require Uri property' {
-        GivenNoUri
+    It 'requires Url property' {
+        GivenNoUrl
         WhenCreatingPackage -ErrorAction SilentlyContinue
         ThenPackageNotCreated
-        ThenTaskFails ('\bUri\b.*\bmandatory\b')
+        ThenTaskFails ('\bUrl\b.*\bmandatory\b')
     }
 
     It 'should require ApiKeyID property' {

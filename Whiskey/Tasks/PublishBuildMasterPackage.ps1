@@ -3,13 +3,18 @@ function Publish-WhiskeyBuildMasterPackage
 {
     [CmdletBinding()]
     [Whiskey.Task('PublishBuildMasterPackage')]
-    [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',Version='0.6.*',VersionParameterName='BuildMasterAutomationVersion')]
+    [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',
+        Version='0.6.*',
+        VersionParameterName='BuildMasterAutomationVersion')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
         [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [hashtable]$TaskParameter,
+
+        [Alias('Uri')]
+        [Uri] $Url
     )
 
     Set-StrictMode -Version 'Latest'
@@ -29,10 +34,11 @@ function Publish-WhiskeyBuildMasterPackage
         return
     }
 
-    $buildmasterUri = $TaskParameter['Uri']
-    if( -not $buildmasterUri )
+    if (-not $Url)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Uri'' is mandatory. It must be set to the BuildMaster URI where the package should be published.')
+        $msg = "Property ""Url"" is mandatory. It must be set to the BuildMaster URL where the package should be " +
+               'published.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
@@ -44,7 +50,7 @@ function Publish-WhiskeyBuildMasterPackage
     }
 
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $TaskParameter['ApiKeyID'] -PropertyName 'ApiKeyID'
-    $buildMasterSession = New-BMSession -Uri $TaskParameter['Uri'] -ApiKey $apiKey
+    $buildMasterSession = New-BMSession -Uri $Url -ApiKey $apiKey
 
     $version = $TaskContext.Version.SemVer2
 

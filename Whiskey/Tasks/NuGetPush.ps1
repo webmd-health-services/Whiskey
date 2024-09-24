@@ -15,7 +15,11 @@ function Publish-WhiskeyNuGetPackage
         [Whiskey.Tasks.ValidatePath(PathType='File')]
         [String[]]$Path,
 
-        [String] $NuGetPath
+        [String] $NuGetPath,
+
+        [Parameter(Mandatory)]
+        [Alias('Uri')]
+        [Uri] $Url
     )
 
     Set-StrictMode -Version 'Latest'
@@ -43,18 +47,6 @@ function Publish-WhiskeyNuGetPackage
                     }
                 }
 
-    $source = $TaskParameter['Uri']
-    if( -not $source )
-    {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''Uri'' is mandatory. It should be the URI where NuGet packages should be published, e.g.
-
-    Build:
-    - PublishNuGetPackage:
-        Uri: https://nuget.org
-    ')
-        return
-    }
-
     $apiKeyID = $TaskParameter['ApiKeyID']
     if( -not $apiKeyID )
     {
@@ -67,7 +59,7 @@ function Publish-WhiskeyNuGetPackage
 
 Use the `Add-WhiskeyApiKey` function to add the API key to the build.
 
-            ' -f $source)
+            ' -f $Url)
         return
     }
     $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
@@ -87,7 +79,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         $packageFilename -match '(\d+\.\d+\.\d+(?:-[0-9a-z]+)?)'
         $packageVersion = $Matches[1]
 
-        $packageUri = '{0}/package/{1}/{2}' -f $source,$packageName,$packageVersion
+        $packageUri = "${Url}/package/${packageName}/${packageVersion}"
 
         # Make sure this version doesn't exist.
         $packageExists = $false
@@ -152,7 +144,7 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
         }
 
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $packagePath -Url $source -ApiKey $apiKey -NuGetPath $NuGetPath
+        Invoke-WhiskeyNuGetPush -Path $packagePath -Url $Url -ApiKey $apiKey -NuGetPath $NuGetPath
 
         if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
         {

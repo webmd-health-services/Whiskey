@@ -2,6 +2,7 @@
 function Publish-WhiskeyPowerShellModule
 {
     [Whiskey.Task('PublishPowerShellModule')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -18,7 +19,6 @@ function Publish-WhiskeyPowerShellModule
         [Alias('RepositoryUri')]
         [String] $RepositoryLocation,
 
-        [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
         [String] $CredentialID,
 
         [String] $ApiKeyID
