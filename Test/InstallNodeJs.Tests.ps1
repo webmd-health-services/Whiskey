@@ -68,6 +68,17 @@ BeforeAll {
 "@))
     }
 
+    function GivenPackageJsonFile
+    {
+        param(
+            [String] $WithContent = '{}'
+        )
+
+        $pkgJsonPath = Join-path -Path $script:testRoot -ChildPath 'package.json'
+        $WithContent | Set-Content -Path $pkgJsonPath
+        return $pkgJsonPath
+    }
+
     function Lock-File
     {
         param(
@@ -193,6 +204,7 @@ BeforeAll {
 
     function WhenInstallingNode
     {
+        [CmdletBinding()]
         param(
             [String] $Version,
 
@@ -286,77 +298,81 @@ Describe 'InstallNodeJs' {
         ForEach-Object { $_.Substring(1) }
 
     It 'installs latest lts by default' -ForEach $latestNodeVersion {
-        WhenInstallingNode
+        GivenPackageJsonFile
+        WhenInstallingNode -InformationVariable 'infoMsgs'
         ThenNode -Installed -AtVersion $_
+        $infoMsgs | Where-Object { $_ -match 'the latest active LTS version' } | Should -Not -BeNullOrEmpty
     }
 
-    # Use an old version of Node.js that isn't going to have any new versions so we can hard-code the expected version.
+    # Use a version of Node.js that isn't going to have any new versions so we can hard-code the expected versions.
     $testCases = @(
-        @{ 'node' = '16'; 'npm' = '9' },
-        @{ 'node' = '16.20'; 'npm' = '9.9' },
-        @{ 'node' = '16.20.2'; 'npm' = '9.9.3' }
-    )
+            @{ 'node' = '16'      ; 'npm' = '9'     ; },
+            @{ 'node' = '16.20'   ; 'npm' = '9.9'   ; },
+            @{ 'node' = '16.20.2' ; 'npm' = '9.9.3' ; }
+        ) |
+        ForEach-Object {
+            $_['expectedNode'] = '16.20.2';
+            $_['expectedNpm'] = '9.9.3';
+            $_['defaultNpm'] = '8.19.4';
+            $_ | Write-Output
+        }
+    $majorOnlyTestCase = $testCases[0]
+    $majorMinorPatchTestCase = $testCases[2]
 
     Context 'using version from whiskey.yml file' {
         It 'installs Node.js using version <node> and NPM using version <npm>' -ForEach $testCases {
             WhenInstallingNode -Version $node -NpmVersion $npm
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
         }
 
-        It 'does not upgrade NPM' -ForEach ($testCases[0]) {
+        It 'does not upgrade NPM' -ForEach $majorOnlyTestCase {
             WhenInstallingNode -Version $node
-            ThenNode -Installed -AtVersion $node -WithNpmAtVersion '8.19.4'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
         }
 
-        It 'supports v prefix'  -ForEach ($testCases[0]) {
+        It 'supports v prefix'  -ForEach $majorOnlyTestCase {
             WhenInstallingNode -Version "v${node}" -NpmVersion "v${npm}"
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
         }
     }
 
-    Context 'using version from package.json file' {
+    Context 'using version from packageJson file' {
         It 'installs Node.js using version <node> and NPM using version <npm>' -ForEach $testCases {
-            $pkgJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
-            @"
+            $pkgJsonPath = GivenPackageJsonFile -WithContent @"
 {
     "whiskey": {
         "node": "${node}",
         "npm": "${npm}"
     }
 }
-"@ | Set-Content -Path $pkgJsonPath
-
+"@
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
         }
 
-        It 'does not upgrade NPM' {
-            $pkgJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
-            @"
+        It 'does not upgrade NPM' -ForEach $majorMinorPatchTestCase {
+            $pkgJsonPath = GivenPackageJsonFile -WithContent @"
 {
     "whiskey": {
         "node": "16.20.2"
     }
 }
-"@ | Set-Content -Path $pkgJsonPath
-
+"@
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
         }
 
-        It 'supports v prefix' -ForEach $testCases[0] {
-            $pkgJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
-            @"
+        It 'supports v prefix' -ForEach $majorOnlyTestCase {
+            $pkgJsonPath = GivenPackageJsonFile @"
 {
     "whiskey": {
         "node": "v${node}",
         "npm": "v${npm}"
     }
 }
-"@ | Set-Content -Path $pkgJsonPath
-
+"@
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
         }
     }
 
@@ -365,14 +381,14 @@ Describe 'InstallNodeJs' {
             $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
             $node | Set-Content -Path $nodeVersionPath
             WhenInstallingNode
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
         }
 
-        It 'supports v prefix' -ForEach $testCases[0] {
+        It 'supports v prefix' -ForEach $majorOnlyTestCase {
             $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
             "v${node}" | Set-Content -Path $nodeVersionPath
             WhenInstallingNode
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
         }
     }
 
@@ -400,7 +416,7 @@ Describe 'InstallNodeJs' {
         {
             $oldVersion = '0.7.9'
         }
-        { WhenInstallingNode -Version $oldVersion } | Should -Throw "Failed to download Node v$($oldVersion)*"
+        { WhenInstallingNode -Version $oldVersion } | Should -Throw "*Failed to download Node v$($oldVersion)*"
         ThenNode -Not -Installed
         $Global:Error | Select-Object -First 1 | Should -Match 'NotFound'
     }
@@ -434,7 +450,7 @@ Describe 'InstallNodeJs' {
         {
             $latestNodeVersion = $_
             GivenAntiVirusLockingFiles -ForVersion $latestNodeVersion -For '00:00:05'
-            WhenInstallingNode
+            { WhenInstallingNode } | Should -Not -Throw
             ThenNode -Installed -AtVersion $latestNodeVersion
         }
         finally
@@ -449,7 +465,7 @@ Describe 'InstallNodeJs' {
         {
             $latestNodeVersion = $_
             GivenAntiVirusLockingFiles -ForVersion $latestNodeVersion -For '00:00:20'
-            WhenInstallingNode
+            { WhenInstallingNode } | Should -Throw '*failed to install Node.js*'
             ThenNode -Not -Installed
             $Global:Error | Should -Match 'because renaming'
         }
@@ -458,5 +474,23 @@ Describe 'InstallNodeJs' {
             Get-Job | Stop-Job
             Get-Job | Remove-Job -Force
         }
+    }
+
+    It 'sources NodeJs and NPM versions from different files' -ForEach $majorOnlyTestCase {
+        $pkgJsonPath = GivenPackageJsonFile -WithContent @"
+{
+    "whiskey": {
+        "node": "${node}"
+    }
+}
+"@
+        WhenInstallingNode -PackageJsonPath $pkgJsonPath -NpmVersion $npm -InformationVariable 'infoMsgs'
+        ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
+        $infoMsgs |
+            Where-Object { $_ -match "installing npm.* read from file.*whiskey\.yml" } |
+            Should -Not -BeNullOrEmpty
+        $infoMsgs |
+            Where-Object { $_ -match "installing Node\.js.* read from file.*package.json" } |
+            Should -Not -BeNullOrEmpty
     }
 }
