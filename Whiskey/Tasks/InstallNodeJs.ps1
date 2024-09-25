@@ -346,6 +346,7 @@ function Install-Node
         $sourceMsg = " (version read from file ${source})"
     }
 
+    $Version = $Version -replace '^v',''
     $versionToInstall = Resolve-NodeJsVersion -Version $Version
     if (-not $versionToInstall)
     {

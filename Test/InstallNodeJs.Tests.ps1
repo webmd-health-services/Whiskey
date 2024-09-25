@@ -303,9 +303,14 @@ Describe 'InstallNodeJs' {
             ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
         }
 
-        It 'does not upgrade NPM' {
-            WhenInstallingNode -Version '16.20.2'
-            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
+        It 'does not upgrade NPM' -ForEach ($testCases[0]) {
+            WhenInstallingNode -Version $node
+            ThenNode -Installed -AtVersion $node -WithNpmAtVersion '8.19.4'
+        }
+
+        It 'supports v prefix'  -ForEach ($testCases[0]) {
+            WhenInstallingNode -Version "v${node}" -NpmVersion "v${npm}"
+            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
         }
     }
 
@@ -338,12 +343,34 @@ Describe 'InstallNodeJs' {
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
             ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
         }
+
+        It 'supports v prefix' -ForEach $testCases[0] {
+            $pkgJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
+            @"
+{
+    "whiskey": {
+        "node": "v${node}",
+        "npm": "v${npm}"
+    }
+}
+"@ | Set-Content -Path $pkgJsonPath
+
+            WhenInstallingNode -PackageJsonPath $pkgJsonPath
+            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '9.9.3'
+        }
     }
 
     Context 'using version from .node-version file' {
         It 'installs Node.js using version <node>' -ForEach $testCases {
             $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
             $node | Set-Content -Path $nodeVersionPath
+            WhenInstallingNode
+            ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
+        }
+
+        It 'supports v prefix' -ForEach $testCases[0] {
+            $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
+            "v${node}" | Set-Content -Path $nodeVersionPath
             WhenInstallingNode
             ThenNode -Installed -AtVersion '16.20.2' -WithNpmAtVersion '8.19.4'
         }
