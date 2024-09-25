@@ -3,6 +3,8 @@
 Set-StrictMode -Version 'Latest'
 
 BeforeAll {
+    Set-StrictMode -Version 'Latest'
+
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     $script:testRoot = $null
@@ -12,6 +14,7 @@ BeforeAll {
     $script:successExitCode = $null
     $script:workingDirectory = $null
     $script:defaultProperty = $null
+    $script:context = $null
 
     function Get-BuildRoot
     {
@@ -101,50 +104,53 @@ exit $ExitCode
         $script:defaultProperty = $Property
     }
 
-    function WhenRunningExecutable
+    function WhenRunningExecTask
     {
         [CmdletBinding()]
         param(
-            [switch]$InCleanMode,
+            [switch] $InCleanMode,
 
-            [switch]$InInitializeMode
+            [switch] $InInitMode,
+
+            [hashtable] $WithProperties = @{}
         )
-
-        $TaskParameter = @{}
 
         if( $script:path )
         {
-            $TaskParameter['Path'] = $script:path
+            $WithProperties['Path'] = $script:path
         }
 
         if ( $script:argument )
         {
-            $TaskParameter['Argument'] = $script:argument
+            $WithProperties['Argument'] = $script:argument
         }
 
         if ( $script:workingDirectory )
         {
-            $TaskParameter['WorkingDirectory'] = $script:workingDirectory
+            $WithProperties['WorkingDirectory'] = $script:workingDirectory
         }
 
         if ( $script:successExitCode )
         {
-            $TaskParameter['SuccessExitCode'] = $script:successExitCode
+            $WithProperties['SuccessExitCode'] = $script:successExitCode
         }
 
         if ( $script:defaultProperty )
         {
-            $TaskParameter[''] = $script:defaultProperty
+            $WithProperties[''] = $script:defaultProperty
         }
 
-        $context = New-WhiskeyTestContext -ForDeveloper `
-                                          -ForBuildRoot (Get-BuildRoot) `
-                                          -InCleanMode:$InCleanMode `
-                                          -InInitMode:$InInitializeMode
+        if ($InCleanMode -or $InInitMode)
+        {
+            $script:context = New-WhiskeyTestContext -ForDeveloper `
+                                                     -ForBuildRoot $script:context.BuildRoot `
+                                                     -InCleanMode:$InCleanMode `
+                                                     -InInitMode:$InInitMode
+        }
 
         try
         {
-            Invoke-WhiskeyTask -TaskContext $context -Parameter $TaskParameter -Name 'Exec'
+            Invoke-WhiskeyTask -TaskContext $context -Parameter $WithProperties -Name 'Exec'
         }
         catch
         {
@@ -233,12 +239,15 @@ Describe 'Exec' {
         $script:defaultProperty = $null
 
         $script:testRoot = New-WhiskeyTestRoot
+
+        $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot (Get-BuildRoot)
+
     }
 
     It 'runs executable without arguments' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -248,7 +257,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenArgument 'Arg1'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed 'Arg1'
         ThenTaskSuccess
@@ -258,7 +267,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenArgument 'Arg1','Arg2'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed 'Arg1','Arg2'
         ThenTaskSuccess
@@ -267,27 +276,27 @@ Describe 'Exec' {
     It 'should use values from default task' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenTaskDefaultProperty '.\exec.ps1 Arg1 Arg2 "Arg 3" ''Arg 4'''
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed 'Arg1', 'Arg2', 'Arg 3', 'Arg 4'
         ThenTaskSuccess
     }
 
     It 'should fail' {
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage '"Path" is mandatory.'
     }
 
     It 'should fail' {
         GivenPath 'nonexistent.exe'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage 'Executable "nonexistent.exe" does not exist.'
     }
 
     It 'should still run command' {
         GivenPowerShellFile 'e x e c.ps1' '0'
         GivenPath 'e x e c.ps1'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenRanInWorkingDirectory '.'
         ThenTaskSuccess
@@ -297,7 +306,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '123'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '123'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -307,7 +316,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '42'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '0','1','123'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -317,7 +326,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '123'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '120..130'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -327,7 +336,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '133'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '120..130'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -337,7 +346,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '500'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>=500'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -347,7 +356,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '85'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>=500'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -357,7 +366,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '9'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<= 9'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -367,7 +376,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '10'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<= 9'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -377,7 +386,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '91'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>90'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -387,7 +396,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '90'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '>90'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -397,7 +406,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '89'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<90'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskSuccess
@@ -407,7 +416,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '90'
         GivenPath 'exec.ps1'
         GivenSuccessExitCode '<90'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenExecutableRan
         ThenSpecifiedArgumentsWerePassed
         ThenTaskFailedWithMessage 'View the build output to see why the executable''s process failed.'
@@ -418,7 +427,7 @@ Describe 'Exec' {
         GivenPowerShellFile 'workdir\exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenWorkingDirectory 'workdir'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenExecutableRan
         ThenRanInWorkingDirectory
         ThenTaskSuccess
@@ -429,14 +438,14 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
         GivenWorkingDirectory 'badworkdir'
-        WhenRunningExecutable -ErrorAction SilentlyContinue
+        WhenRunningExecTask -ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage 'Build.+WorkingDirectory.+does not exist.'
     }
 
     It 'should run command' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
-        WhenRunningExecutable -InCleanMode
+        WhenRunningExecTask -InCleanMode
         ThenTaskSuccess
         ThenExecutableRan
     }
@@ -444,7 +453,7 @@ Describe 'Exec' {
     It 'should run command' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenPath 'exec.ps1'
-        WhenRunningExecutable -InInitializeMode
+        WhenRunningExecTask -InInitMode
         ThenTaskSuccess
         ThenExecutableRan
     }
@@ -453,15 +462,26 @@ Describe 'Exec' {
         GivenPowerShellFile 'exec1.ps1' '1'
         GivenPowerShellFile 'exec2.ps1' '2'
         GivenPath 'exec*.ps1'
-        WhenRunningExecutable #-ErrorAction SilentlyContinue
+        WhenRunningExecTask #-ErrorAction SilentlyContinue
         ThenTaskFailedWithMessage ([regex]::Escape('contains wildcards and resolves to the following files'))
     }
 
     It 'allows single-line syntax' {
         GivenPowerShellFile 'exec.ps1' '0'
         GivenTaskDefaultProperty 'exec.ps1 0'
-        WhenRunningExecutable
+        WhenRunningExecTask
         ThenTaskSuccess
         ThenExecutableRan
+    }
+
+    # Discovered in issue where `npm intall rimraf -g` got exeuted as `npm "install rimraf -g"` because PowerShell
+    # resolved the npm command to npm.ps1, which got introduced in Node.js 22.
+    It 'handles when command is a PowerShell script' {
+        Invoke-WhiskeyTask -TaskContext $script:context -Name 'InstallNodeJs' -Parameter @{ Version = '22' }
+        $npmCmd = Get-Command -Name 'npm'
+        $npmCmd | Should -Not -BeNullOrEmpty
+        $npmCmd.Source | Split-Path -Leaf | Should -Be 'npm.ps1'
+        WhenRunningExecTask -WithProperties @{ 'Command' = 'npm install rimraf -g' }
+        JOin-Path -Path $script:context.BuildRoot -ChildPath '.node\node_modules\rimraf' | Should -Exist
     }
 }
