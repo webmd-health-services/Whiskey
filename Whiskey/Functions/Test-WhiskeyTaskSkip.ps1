@@ -24,242 +24,286 @@ function Test-WhiskeyTaskSkip
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    if ($Properties['OnlyBy'] -and $Properties['ExceptBy'])
+    if ($Properties.Count -eq 0)
     {
-        $msg = 'This task defines both "OnlyBy" and "ExceptBy" properties. Only one of these can be used. Please ' +
-               'remove one or both of these properties and re-run your build.'
-        Stop-WhiskeyTask -TaskContext $Context -Message $msg
-        return
+        return $false
     }
-    elseif ($Properties['OnlyBy'])
+
+    function Test-RunBy
     {
-        [Whiskey.RunBy]$onlyBy = [Whiskey.RunBy]::Developer
-        if (-not ([Enum]::TryParse($Properties['OnlyBy'], [ref]$onlyBy)))
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [String] $DesiredValue,
+
+            [Parameter(Mandatory)]
+            [String] $PropertyName
+        )
+
+        [Whiskey.RunBy] $runBy = [Whiskey.RunBy]::Developer
+        if (-not ([Enum]::TryParse($DesiredValue, [ref]$runBy)))
         {
-            $msg = "invalid value: ""$($Properties['OnlyBy'])"". Valid values are " +
-                  """$([Enum]::GetValues([Whiskey.RunBy]) -join '", "')"")."
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyBy' -Message $msg
+            $valuesList = [Enum]::GetValues([Whiskey.RunBy]) -join '", "'
+            $msg = "invalid value ""${DesiredValue}"". Valid values are ""${valuesList}""."
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName $PropertyName -Message $msg
             return
         }
 
-        if ($onlyBy -ne $Context.RunBy)
-        {
-            $msg = "OnlyBy.${onlyBy} -ne Build.RunBy.$($Context.RunBy)"
-            Write-WhiskeyVerbose -Context $Context -Message $msg
-            return $true
-        }
+        return $runBy -eq $Context.RunBy
     }
-    elseif ($Properties['ExceptBy'])
+
+    function Test-RunMode
     {
-        [Whiskey.RunBy]$exceptBy = [Whiskey.RunBy]::Developer
-        if (-not ([Enum]::TryParse($Properties['ExceptBy'], [ref]$exceptBy)))
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [String] $DesiredValue,
+
+            [Parameter(Mandatory)]
+            [String] $PropertyName
+        )
+
+        [Whiskey.RunMode] $runMode = [Whiskey.RunMode]::Initialize
+        if (-not ([Enum]::TryParse($DesiredValue, [ref]$runMode)))
         {
-            $runByValuesList = [Enum]::GetValues([Whiskey.RunBy]) -join '", "'
-            $msg = "invalid value: ""$($Properties['ExceptBy'])"". Valid values are ""${runByValuesList}""."
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptBy' -Message $msg
+            $valuesList = [Enum]::GetValues([Whiskey.RunMode]) -join '", "'
+            $msg = "invalid value ""${DesiredValue}"". Valid values are ""${valuesList}""."
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName $PropertyName -Message $msg
             return
         }
 
-        if ($exceptBy -eq $Context.RunBy)
-        {
-            Write-WhiskeyVerbose -Context $Context -Message "ExceptBy.${exceptBy} -eq Build.RunBy.$($Context.RunBy)"
-            return $true
-        }
+        return $runMode -eq $Context.RunMode
     }
 
-    $branch = $Context.BuildMetadata.ScmBranch
-
-    if ($Properties['OnlyOnBranch'] -and $Properties['ExceptOnBranch'])
+    function Test-Platform
     {
-        $msg = 'This task defines both OnlyOnBranch and ExceptOnBranch properties. Only one of these can be used. ' +
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [String] $DesiredValue,
+
+            [Parameter(Mandatory)]
+            [String] $PropertyName
+        )
+
+        [Whiskey.Platform] $platform = [Whiskey.Platform]::Unknown
+        if (-not ([Enum]::TryParse($DesiredValue, [ref]$platform)))
+        {
+            $validValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
+            $valuesList = $validValues -join '", "'
+            $msg = "invalid platform ""${DesiredValue}"". Valid values are ""${valuesList}""."
+            Stop-WhiskeyTask -TaskContext $Context -PropertyName $PropertyName -Message $msg
+            return
+        }
+
+        return $platform -eq $script:currentPlatform
+    }
+
+    function Assert-MutuallyExclusiveProperty
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [String[]] $PropertyName
+        )
+
+        foreach ($_propertyName in $PropertyName)
+        {
+            if (-not $Properties.ContainsKey($_propertyName))
+            {
+                return $false
+            }
+        }
+
+        $propertyNamesMsg = ($PropertyName | Select-Object -SkipLast 1) -join '", "'
+        $lastPropertyName = $PropertyName | Select-Object -Last 1
+
+        $msg = "Uses ""${propertyNamesMsg}"" and ""${lastPropertyName}"" properties. Only one of these can be used. " +
                'Please remove one or both of these properties and re-run your build.'
         Stop-WhiskeyTask -TaskContext $Context -Message $msg
-        return
-    }
-
-    if ($Properties['OnlyOnBranch'])
-    {
-        $runTask = $false
-        Write-WhiskeyVerbose -Context $Context -Message ('OnlyOnBranch')
-        foreach( $wildcard in $Properties['OnlyOnBranch'] )
-        {
-            if( $branch -like $wildcard )
-            {
-                $runTask = $true
-                Write-WhiskeyVerbose -Context $Context -Message "              ${branch}     -like  ${wildcard}"
-                break
-            }
-
-            Write-WhiskeyVerbose -Context $Context -Message     "              ${branch}  -notlike  ${wildcard}"
-        }
-
-        if( -not $runTask )
-        {
-            return $true
-        }
-    }
-
-    if( $Properties['ExceptOnBranch'] )
-    {
-        $runTask = $true
-        Write-WhiskeyVerbose -Context $Context -Message ('ExceptOnBranch')
-        foreach( $wildcard in $Properties['ExceptOnBranch'] )
-        {
-            if( $branch -like $wildcard )
-            {
-                $runTask = $false
-                Write-WhiskeyVerbose -Context $Context -Message "                ${branch}     -like  ${wildcard}"
-                break
-            }
-
-            Write-WhiskeyVerbose -Context $Context -Message     "                ${branch}  -notlike  ${wildcard}"
-        }
-        if( -not $runTask )
-        {
-            return $true
-        }
-    }
-
-    $modes = @( 'Clean', 'Initialize', 'Build' )
-    $modesDisplayList = $modes -join '", "'
-
-    $onlyDuring = $Properties['OnlyDuring']
-    $exceptDuring = $Properties['ExceptDuring']
-
-    $validPlatformValues = [Enum]::GetValues([Whiskey.Platform]) | Where-Object { $_ -notin @( 'Unknown', 'All' ) }
-    $platformsDisplayList = $validPlatformValues -join '", "'
-
-    if ($onlyDuring -and $exceptDuring)
-    {
-        $msg = 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually ' +
-               'exclusive, i.e. you may only specify one or the other.'
-        Stop-WhiskeyTask -TaskContext $Context -Message $msg
-        return
-    }
-    elseif ($onlyDuring -and ($onlyDuring -notin $modes))
-    {
-        $msg = "Property ""OnlyDuring"" has an invalid value: ""${onlyDuring}"". Valid values are: " +
-               """${modesDisplayList}""."
-        Stop-WhiskeyTask -TaskContext $Context -Message $msg
-        return
-    }
-    elseif ($exceptDuring -and ($exceptDuring -notin $modes))
-    {
-        $msg = "Property ""ExceptDuring"" has an invalid value: ""${exceptDuring}"". Valid values are: " +
-               """${modesDisplayList}""."
-        Stop-WhiskeyTask -TaskContext $Context -Message $msg
-        return
-    }
-
-    if ($onlyDuring -and ($Context.RunMode -ne $onlyDuring))
-    {
-        $msg = "OnlyDuring.${onlyDuring} -ne Build.RunMode.$($Context.RunMode)"
-        Write-WhiskeyVerbose -Context $Context -Message $msg
-        return $true
-    }
-    elseif ($exceptDuring -and ($Context.RunMode -eq $exceptDuring))
-    {
-        $msg = "ExceptDuring.${exceptDuring} -ne Build.RunMode.$($Context.RunMode)"
-        Write-WhiskeyVerbose -Context $Context -Message $msg
         return $true
     }
 
-    if ($Properties['IfExists'])
+    if ((Assert-MutuallyExclusiveProperty -PropertyName $script:exceptByPropertyName,$script:onlyByPropertyName) -or `
+        (Assert-MutuallyExclusiveProperty -PropertyName $script:exceptDuringPropertyName,$script:onlyDuringPropertyName) -or `
+        (Assert-MutuallyExclusiveProperty -PropertyName $script:exceptOnBranchPropertyName,$script:onlyOnBranchPropertyName) -or `
+        (Assert-MutuallyExclusiveProperty -PropertyName $script:exceptOnPlatformPropertyName,$script:onlyOnPlatformPropertyName))
     {
-        $exists = Test-Path -Path $Properties['IfExists']
-        if( -not $exists )
-        {
-            Write-WhiskeyVerbose -Context $Context -Message "IfExists  $($Properties['IfExists'])  not exists"
-            return $true
-        }
-        Write-WhiskeyVerbose -Context $Context -Message     "IfExists  $($Properties['IfExists'])      exists"
+        return
     }
 
-    if ($Properties['UnlessExists'])
+    $results = [Collections.ArrayList]::New()
+
+    try
     {
-        $exists = Test-Path -Path $Properties['UnlessExists']
-        if( $exists )
+        foreach ($propertyName in $script:skipPropertyNames)
         {
-            Write-WhiskeyVerbose -Context $Context -Message "UnlessExists  $($Properties['UnlessExists'])      exists"
-            return $true
+            if (-not $Properties.ContainsKey($propertyName))
+            {
+                continue
+            }
+
+            $conditions = $Properties[$propertyName]
+
+            $conditionInfo = [pscustomobject]@{
+                Name = $propertyName;
+                Condition = $conditions
+                State = $null;
+                RunTask = $true;
+            }
+
+            [void]$results.Add($conditionInfo)
+
+            $conditionValue = $null
+            $runTask = $true
+
+            switch ($propertyName)
+            {
+                $script:exceptByPropertyName
+                {
+                    $conditionValue = $Context.RunBy
+                    $runTask = -not (Test-RunBy -DesiredValue $conditions -PropertyName $propertyName)
+                }
+
+                $script:exceptDuringPropertyName
+                {
+                    $conditionValue = $Context.RunMode
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if (Test-RunMode -DesiredValue $condition -PropertyName $propertyName)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+
+                    $runTask = -not $foundMatch
+                }
+
+                $script:exceptOnBranchPropertyName
+                {
+                    $branchName = $conditionValue = $Context.BuildMetadata.ScmBranch
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if ($branchName -like $condition)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+                    $runTask = -not $foundMatch
+                }
+
+                $script:exceptOnPlatformPropertyName
+                {
+                    $conditionValue = $script:currentPlatform
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if (Test-Platform -DesiredValue $condition -PropertyName $propertyName)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+
+                    $runTask = -not $foundMatch
+                }
+
+                $script:ifExistsPropertyName
+                {
+                    $pathExists = Test-Path -Path $conditions
+
+                    $conditionValue = $pathExists
+
+                    $runTask = $pathExists
+                }
+
+                $script:onlyByPropertyName
+                {
+                    $conditionValue = $Context.RunBy
+                    $runTask = (Test-RunBy -DesiredValue $conditions -PropertyName $propertyName)
+                }
+
+                $script:onlyDuringPropertyName
+                {
+                    $conditionValue = $Context.RunMode
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if (Test-RunMode -DesiredValue $condition -PropertyName $propertyName)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+
+                    $runTask = $foundMatch
+                }
+
+                $script:onlyOnBranchPropertyName
+                {
+                    $branchName = $conditionValue = $Context.BuildMetadata.ScmBranch
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if ($branchName -like $condition)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+                    $runTask = $foundMatch
+                }
+
+                $script:onlyOnPlatformPropertyName
+                {
+                    $conditionValue = $script:currentPlatform
+
+                    $foundMatch = $false
+                    foreach ($condition in $conditions)
+                    {
+                        if (Test-Platform -DesiredValue $condition -PropertyName $propertyName)
+                        {
+                            $foundMatch = $true
+                            break
+                        }
+                    }
+
+                    $runTask = $foundMatch
+                }
+
+                $script:unlessExistsPropertyName
+                {
+                    $pathExists = Test-Path -Path $conditions
+
+                    $conditionValue = $pathExists
+
+                    $runTask = -not $pathExists
+                }
+
+            }
+
+            $conditionInfo.State = $conditionValue
+            $conditionInfo.RunTask = $runTask
+            if (-not $runTask)
+            {
+                # This function should indicate if the task should be *skipped*.
+                return $true
+            }
         }
-        Write-WhiskeyVerbose -Context $Context -Message     "UnlessExists  $($Properties['UnlessExists'])  not exists"
     }
-
-    if ($Properties['OnlyIfBuild'])
+    finally
     {
-        [Whiskey.BuildStatus] $buildStatus = [Whiskey.BuildStatus]::Succeeded
-        if (-not ([Enum]::TryParse($Properties['OnlyIfBuild'], [ref]$buildStatus)))
-        {
-            $buildStatusDisplayList = [Enum]::GetValues([Whiskey.BuildStatus]) -join '", "'
-            $msg = "invalid value: ""$($Properties['OnlyIfBuild'])"". Valid values are ""${buildStatusDisplayList}""."
-            Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyIfBuild' -Message $msg
-            return
-        }
-
-        if ($buildStatus -ne $Context.BuildStatus)
-        {
-            $msg = "OnlyIfBuild.${buildStatus} -ne Build.BuildStatus.$($Context.BuildStatus)"
-            Write-WhiskeyVerbose -Context $Context -Message $msg
-            return $true
-        }
-    }
-
-    if ($Properties['OnlyOnPlatform'])
-    {
-        $shouldSkip = $true
-        [Whiskey.Platform] $platform = [Whiskey.Platform]::Unknown
-        foreach( $item in $Properties['OnlyOnPlatform'] )
-        {
-            if (-not [Enum]::TryParse($item,[ref]$platform))
-            {
-                $msg = "Invalid platform ""${item}"". Valid values are ""${platformsDisplayList}""."
-                Stop-WhiskeyTask -TaskContext $Context -PropertyName 'OnlyOnPlatform' -Message
-                return
-            }
-
-            $platform = [Whiskey.Platform]$item
-            if ($CurrentPlatform.HasFlag($platform))
-            {
-                Write-WhiskeyVerbose -Context $Context -Message "OnlyOnPlatform    ${platform} -eq ${currentPlatform}"
-                $shouldSkip = $false
-                break
-            }
-            else
-            {
-                Write-WhiskeyVerbose -Context $Context -Message "OnlyOnPlatform  ! ${platform} -ne ${currentPlatform}"
-            }
-        }
-        return $shouldSkip
-    }
-
-
-    if ($Properties['ExceptOnPlatform'])
-    {
-        $shouldSkip = $false
-        [Whiskey.Platform]$platform = [Whiskey.Platform]::Unknown
-        foreach ($item in $Properties['ExceptOnPlatform'])
-        {
-            if (-not [Enum]::TryParse($item, [ref]$platform))
-            {
-                $msg = "Invalid platform ""${item}"". Valid values are ""${validPlatformValues}".""
-                Stop-WhiskeyTask -TaskContext $Context -PropertyName 'ExceptOnPlatform' -Message $msg
-                return
-            }
-
-            $platform = [Whiskey.Platform]$item
-            if ($CurrentPlatform.HasFlag($platform))
-            {
-                Write-WhiskeyVerbose -Context $Context -Message "ExceptOnPlatform  ! ${plaform} -eq ${currentPlatform}"
-                $shouldSkip = $true
-                break
-            }
-            else
-            {
-                Write-WhiskeyVerbose -Context $Context -Message "ExceptOnPlatform    ${plaform} -ne ${currentPlatform}"
-            }
-        }
-        return $shouldSkip
+        $msg = $results | Format-Table -AutoSize | Out-String
+        $msg -split '\r?\n' | Write-WhiskeyVerbose -Context $Context
     }
 
     return $false

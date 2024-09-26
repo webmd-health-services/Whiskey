@@ -480,8 +480,11 @@ Describe 'Exec' {
         Invoke-WhiskeyTask -TaskContext $script:context -Name 'InstallNodeJs' -Parameter @{ Version = '22' }
         $npmCmd = Get-Command -Name 'npm'
         $npmCmd | Should -Not -BeNullOrEmpty
-        $npmCmd.Source | Split-Path -Leaf | Should -Be 'npm.ps1'
-        WhenRunningExecTask -WithProperties @{ 'Command' = 'npm install rimraf -g' }
-        JOin-Path -Path $script:context.BuildRoot -ChildPath '.node\node_modules\rimraf' | Should -Exist
+        # Only run on platforms that ship with npm.ps1 *and* that resolves *.ps1 scripts as commands.
+        if (($npmCmd.Source | Split-Path -Leaf) -eq 'npm.ps1')
+        {
+            WhenRunningExecTask -WithProperties @{ 'Command' = 'npm install rimraf -g' }
+            Join-Path -Path $script:context.BuildRoot -ChildPath '.node\node_modules\rimraf' | Should -Exist
+        }
     }
 }
