@@ -7,7 +7,23 @@
 
 ### Upgrade Instructions
 
+#### General
+
 Rename usages of the `InstallNode` task to `InstallNodeJs`.
+
+#### Rename Common Properties
+
+Whiskey's built-in, common properties now begin with a period, `.`, and only Whiskey's built-in, common properties are
+allowed to begin with a period. Rename all of the following property names so they begin with a period: `Debug`,
+`ErrorAction`, `ExceptBy`, `ExceptDuring`, `ExceptOnBranch`, `ExceptOnPlatform`, `IfExists`, `InformationAction`,
+`OnlyBy`, `OnlyDuring`, `OnlyOnBranch`, `OnlyOnPlatform`, `OutVariable`, `UnlessExists`, `Verbose`, `WarningAction`,
+`WorkingDirectory`. Currently, Whiskey will warn if a property needs to get renamed, but a future version of Whiskey
+will remove the warning and unless a common property begins with a period, it will be parsed as a task property, not a
+common property.
+
+Task authors should re-write their tasks so that none of their task properties begin with a period.
+
+#### Whiskey No Longer Manages Node.js
 
 This version is the beginning of getting Whiskey out of the tool management business. Managing tools and toolsets makes
 Whiskey responsible for too much. The first step is deprecating all of Whiskey's tasks that manage a local Node.js
@@ -58,6 +74,10 @@ registry=REGISTRY_URL
 YOu can also use the `npm login` or `npm adduser` commands, which by default will create a user-level ".npmrc" file.
 
 ### Added
+
+### General
+
+Task output will now appear in the console when using the `.OutVariable` property.
 
 #### InstallNodeJs Task
 

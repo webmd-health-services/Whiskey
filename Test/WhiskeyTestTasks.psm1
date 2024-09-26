@@ -595,3 +595,14 @@ function GenerateOutputTask
 
     $Output
 }
+
+function GenerateOutpuTaskWithCmdletBinding
+{
+    [CmdletBinding()]
+    [Whiskey.Task('GenerateOutputTaskWithCmdletBinding')]
+    param(
+        [String]$Output
+    )
+
+    $Output
+}

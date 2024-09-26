@@ -136,7 +136,7 @@ BeforeAll {
 
         if( $InWorkingDirectory )
         {
-            $taskParameter['WorkingDirectory'] = $InWorkingDirectory
+            $taskParameter['.WorkingDirectory'] = $InWorkingDirectory
         }
 
         if( $NotLogging )

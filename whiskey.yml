@@ -2,7 +2,7 @@
 Build:
 - TaskDefaults:
     Pester4:
-        Verbose: false
+        .Verbose: false
         Version: 4.*
 
 - Version:
@@ -16,15 +16,15 @@ Build:
 
 # Update the AppVeyor build/version number.
 - Exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
-  OnlyBy: BuildServer
-  Debug: true
-  Verbose: true
+  .OnlyBy: BuildServer
+  .Debug: true
+  .Verbose: true
 
 - PowerShell: prism install | Format-Table -Auto
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
 - MergeFile:
-    OnlyBy: BuildServer
+    .OnlyBy: BuildServer
     Path:
     - Whiskey\Functions\*.ps1
     - Whiskey\Tasks\*.ps1
@@ -45,7 +45,7 @@ Build:
     Path: Whiskey
 
 - Exec: appveyor PushArtifact ".output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg" -DeploymentName PowerShellGallery
-  OnlyBy: BuildServer
+  .OnlyBy: BuildServer
 
 - Zip:
     ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
@@ -56,10 +56,10 @@ Build:
     - "*.orig"
 
 - Exec: appveyor PushArtifact ".output/Whiskey-$(WHISKEY_SEMVER2).zip" -DeploymentName GitHub
-  OnlyBy: BuildServer
+  .OnlyBy: BuildServer
 
 - Exec: appveyor PushArtifact 'Whiskey/build.ps1' -DeploymentName GitHub
-  OnlyBy: BuildServer
+  .OnlyBy: BuildServer
 
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
@@ -67,7 +67,7 @@ Build:
 # more than three queues doesn't help, sadly. (We have four because the first
 # queue only takes about 60 seconds and must be run separately.)
 - Parallel:
-    ExceptOnPlatform: Windows
+    .ExceptOnPlatform: Windows
     Timeout: 00:40:00
     Queues:
     - Tasks:
@@ -241,7 +241,7 @@ Build:
             - "Test/Uninstall-WhiskeyTool.Tests.ps1"
 
 - Parallel:
-    OnlyOnPlatform: Windows
+    .OnlyOnPlatform: Windows
     Timeout: 00:40:00
     Queues:
     - Tasks:
