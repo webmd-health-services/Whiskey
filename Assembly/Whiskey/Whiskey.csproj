@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="SemanticVersion" Version="2.1.0" />
-    <PackageReference Include="YamlDotNet" Version="11.2.1" />
+    <PackageReference Include="YamlDotNet" Version="13.7.1" />
   </ItemGroup>
-  
+
 </Project>
