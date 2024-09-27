@@ -82,13 +82,13 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
+                    - Test\DotNet.Tests.ps1
                     - Test\Install-WhiskeyDotNetTool.Tests.ps1
                     - Test\Invoke-WhiskeyTask.Tests.ps1
                     - Test\Parallel.Tests.ps1
                     - Test\Version.Tests.ps1
         - Pester4:
             Script:
-            - Test\DotNet.Tests.ps1
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
     - Tasks:
@@ -293,12 +293,12 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
+                    - Test\DotNet.Tests.ps1
                     - Test\Invoke-WhiskeyBuild.Tests.ps1
                     - Test\Invoke-WhiskeyTask.Tests.ps1
         - Pester4:
             Script:
             - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
-            - Test\DotNet.Tests.ps1
             - Test\GetPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
     - Tasks:
@@ -426,7 +426,6 @@ Build:
             - "Test\\ConvertFrom-WhiskeyContext.Tests.ps1"
             - "Test\\ConvertTo-WhiskeySemanticVersion.Tests.ps1"
             - "Test\\CopyFile.Tests.ps1"
-            - "Test\\DotNet.Tests.ps1"
             - "Test\\File.Tests.ps1"
             - "Test\\Get-MSBuild.Tests.ps1"
             - "Test\\Get-WhiskeyApiKey.Tests.ps1"
