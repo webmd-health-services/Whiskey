@@ -15,7 +15,7 @@ function Import-WhiskeyYaml
 
     if( $PSCmdlet.ParameterSetName -eq 'FromFile' )
     {
-        $Yaml = Get-Content -Path $Path -Raw 
+        $Yaml = Get-Content -Path $Path -Raw
     }
 
     $builder = New-Object 'YamlDotNet.Serialization.DeserializerBuilder'
@@ -44,13 +44,55 @@ function Import-WhiskeyYaml
     }
     if( -not $config )
     {
-        $config = @{} 
+        $config = @{}
     }
 
     if( $config -is [String] )
     {
         $config = @{ $config = '' }
     }
+
+    function ConvertTo-CaseInsensitiveObject
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory, ValueFromPipeline)]
+            [Object] $InputObject
+        )
+
+        process
+        {
+            if ($InputObject -is [Collections.IDictionary])
+            {
+                $hashtable = [ordered]@{}
+
+                Add-Member -InputObject $hashtable -Name 'ContainsKey' -MemberType ScriptMethod -Value {
+                    param(
+                        [String] $Key
+                    )
+
+                    return $this.Contains($Key)
+                }
+
+                foreach ($key in $InputObject.Keys)
+                {
+                    # Don't pipe! We don't want to enumerate values here.
+                    $hashtable[$key] = ConvertTo-CaseInsensitiveObject -InputObject $InputObject[$key]
+                }
+
+                return $hashtable
+            }
+
+            if ($InputObject -is [Collections.IList])
+            {
+                return $InputObject | ConvertTo-CaseInsensitiveObject
+            }
+
+            return $InputObject
+        }
+    }
+
+    $config = $config | ConvertTo-CaseInsensitiveObject
 
     return $config
 }

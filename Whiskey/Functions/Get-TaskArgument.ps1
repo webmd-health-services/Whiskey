@@ -19,6 +19,24 @@ function Get-TaskArgument
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    # Allow snake_case syntax for property names.
+    $propertyNames = $Property.Keys | ForEach-Object { $_ }
+    foreach ($propertyName in $propertyNames)
+    {
+        if ($propertyName -notmatch '_')
+        {
+            continue
+        }
+
+        $camelCasePropertyName = $propertyName -replace '_', ''
+        if ($Property.ContainsKey($camelCasePropertyName))
+        {
+            continue
+        }
+
+        $Property[$camelCasePropertyName] = $Property[$propertyName]
+    }
+
     # Parameters of the actual command.
     $cmdParameters =
         Get-Command -Name $Task.CommandName |

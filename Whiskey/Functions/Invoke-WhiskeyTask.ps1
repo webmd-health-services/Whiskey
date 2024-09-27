@@ -113,25 +113,32 @@ function Invoke-WhiskeyTask
 
     $knownTasks = Get-WhiskeyTask -Force
 
-    $task = $knownTasks | Where-Object { $_.Name -eq $Name }
+    $task = $null
+    $taskNames = @($Name, ($Name -replace '_'))
 
-    if (-not $task)
+    foreach ($taskName in $taskNames)
     {
-        $task = $knownTasks | Where-Object { $_.Aliases -contains $Name }
-        $taskCount = ($task | Measure-Object).Count
-        if ($taskCount -gt 1)
+        $task = $knownTasks | Where-Object 'Name' -EQ $taskName
+
+        if (-not $task)
         {
-            $msg = "Found ${taskCount} tasks with alias ""{Name}"". Please update to use one of these task names: " +
-                   "${whiskeyYmlDisplayPath} ($task | Select-Object -ExpandProperty 'Name') -join ', ')"
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
-            return
-        }
-        if( $task -and $task.WarnWhenUsingAlias )
-        {
-            $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
-                   """$()"" to use the task''s actual name, ""$($task.Name)"", instead " +
-                   'of the alias.'
-            Write-WhiskeyWarning -Context $TaskContext -Message $msg
+            $task = $knownTasks | Where-Object 'Aliases' -contains $taskName
+            $taskCount = ($task | Measure-Object).Count
+            if ($taskCount -gt 1)
+            {
+                $actualTaskNames = ($task | Select-Object -ExpandProperty 'Name') -join ', '
+                $msg = "Found ${taskCount} tasks with alias ""${taskName}"". Please update to use one of these task " +
+                       "names instead: ${actualTaskNames}."
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                return
+            }
+            if( $task -and $task.WarnWhenUsingAlias )
+            {
+                $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
+                       "${whiskeyYmlDisplayPath} to use the task''s actual name, ""$($task.Name)"", instead of the " +
+                       'alias.'
+                Write-WhiskeyWarning -Context $TaskContext -Message $msg
+            }
         }
     }
 
@@ -140,7 +147,6 @@ function Invoke-WhiskeyTask
         # By default, assume task is an executable command.
         $task = $knownTasks | Where-Object 'Name' -eq 'Exec'
         $Parameter[''] = $Name
-        $Name = 'Exec'
     }
 
     if (-not $task)
@@ -152,16 +158,21 @@ function Invoke-WhiskeyTask
         throw $msg
     }
 
+    # Use the official task name.
+    $Name = $task.Name
+
     $taskCount = ($task | Measure-Object).Count
     if( $taskCount -gt 1 )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Found {0} tasks named "{1}". We don''t know which one to use. Please make sure task names are unique.' -f $taskCount,$Name)
+        $msg = "Found ${taskCount} tasks named ""${Name}"". We don't know which one to use. Please make sure task " +
+               'names are unique.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
     if( $task.Obsolete )
     {
-        $message = 'The "{0}" task is obsolete and shouldn''t be used.' -f $Name
+        $message = "The ""${Name}"" task is obsolete and shouldn''t be used."
         if( $task.ObsoleteMessage )
         {
             $message = $task.ObsoleteMessage
@@ -171,15 +182,18 @@ function Invoke-WhiskeyTask
 
     if( -not $task.Platform.HasFlag($script:currentPlatform) )
     {
-        $msg = 'Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f `
-                    $Name,$task.Platform,$script:currentPlatform
+        $msg = "Unable to run task ""${Name}"" because it is only supported on the $($task.Platform) platform(s) and " +
+               "we're currently running on ${script:currentPlatform}."
         Write-WhiskeyError -Message $msg -ErrorAction Stop
         return
     }
 
-    if( $TaskContext.TaskDefaults.ContainsKey( $Name ) )
+    foreach ($taskName in $taskNames)
     {
-        Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
+        if ($TaskContext.TaskDefaults.ContainsKey($taskName))
+        {
+            Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$taskName] -TargetParameter $Parameter
+        }
     }
 
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
@@ -197,8 +211,49 @@ function Invoke-WhiskeyTask
 
     $allCommonPropertyNames = $psCommonParameterNames + $whiskeyCommonPropertyNames
 
+    $obsoleteCommonPropertyNames = @(
+        'ErrorAction'
+        'ExceptBy'
+        'ExceptDuring'
+        'ExceptOnBranch'
+        'ExceptOnPlatform'
+        'IfExists'
+        'InformationAction'
+        'OnlyBy'
+        'OnlyDuring'
+        'OnlyOnBranch'
+        'OnlyOnPlatform'
+        'OutVariable'
+        'UnlessExists'
+        'WarningAction'
+        'WorkingDirectory'
+    )
+
+    # Normalize common property names. TODO: remove once ready to make this a backwards-incompatible change.
+    foreach ($propertyName in $obsoleteCommonPropertyNames)
+    {
+        if (-not $Parameter.ContainsKey($propertyName))
+        {
+            $propertyName = ".${propertyName}"
+            if (-not $Parameter.ContainsKey($propertyName))
+            {
+                continue
+            }
+        }
+
+        $newPropertyName =
+            $allCommonPropertyNames | Where-Object { ($_ -replace '[._]', '') -eq ($propertyName -replace '[._]') }
+
+        $msg = "Built-in, common task property ${propertyName} renamed to ${newPropertyName}. Please rename the " +
+               "${Name} task's ${propertyName} property to ${newPropertyName} in ${whiskeyYmlDisplayPath}."
+        Write-WhiskeyWarning -Context $TaskContext -Message $msg
+
+        $Parameter[$newPropertyName] = $Parameter[$propertyName]
+        [void]$Parameter.Remove($propertyName)
+    }
+
     # Only common properties are allowed to start with a period. Warn users if we find a non-common property that begins
-    # with a period.
+    # with a period. TODO: make this an error when ready to make this a backwards-incompatible change.
     foreach ($propertyName in $Parameter.Keys)
     {
         if (-not $propertyName.StartsWith('.'))
@@ -213,25 +268,8 @@ function Invoke-WhiskeyTask
 
         $msg = "Property ""${propertyName}"" on task ${Name} begins with a period character. Only Whiskey's " +
                'built-in, common task properties can begin with a period. Please remove the period character from ' +
-               "property's name in ${whiskeyYmlDisplayPath}."
+               "the property's name in ${whiskeyYmlDisplayPath}."
         Write-WhiskeyWarning -Context $TaskContext -Message $msg
-    }
-
-    # Normalize common properties to ensure they begin with a period.
-    foreach ($propertyName in $allCommonPropertyNames)
-    {
-        $oldPropertyName = $propertyName.Substring(1)
-        if (-not $Parameter.ContainsKey($oldPropertyName))
-        {
-            continue
-        }
-
-        $msg = "Built-in, common task property names must now begin with a period character. Please update the " +
-               "${Name} task's ${oldPropertyName} property in ${whiskeyYmlDisplayPath}."
-        Write-WhiskeyWarning -Context $TaskContext -Message $msg
-
-        $Parameter[$propertyName] = $Parameter[$oldPropertyName]
-        [void]$Parameter.Remove($oldPropertyName)
     }
 
     [hashtable]$taskProperties = $Parameter.Clone()
@@ -249,6 +287,14 @@ function Invoke-WhiskeyTask
     }
 
     # Convert the common property names that are natively supported by PowerShell into their PowerShell names.
+    $psPropToParamMap = @{
+        $script:debugPropertyName = 'Debug'
+        $script:errorActionPropertyName = 'ErrorAction'
+        $script:informationActionPropertyName = 'InformationAction'
+        $script:outVariablePropertyName = 'OutVariable'
+        $script:verbosePropertyName = 'Verbose'
+        $script:warningActionPropertyName = 'WarningAction'
+    }
     foreach ($propertyName in $psCommonParameterNames)
     {
         if (-not $taskProperties.ContainsKey($propertyName))
@@ -256,7 +302,16 @@ function Invoke-WhiskeyTask
             continue
         }
 
-        $psParameterName = $propertyName.Substring(1)
+        if (-not $psPropToParamMap.ContainsKey($propertyName))
+        {
+            $msg = "Failed to execute task ${Name} because we found a common property, ${propertyName}, that doesn't " +
+                   'map to a known PowerShell common property. This is a Whiskey development problem.'
+            Write-WhiskeyError -Message $TaskContext -Message $msg
+            continue
+        }
+
+        $psParameterName = $psPropToParamMap[$propertyName]
+
         $taskProperties[$psParameterName] = $taskProperties[$propertyName]
         [void]$taskProperties.Remove($propertyName)
     }
@@ -345,7 +400,7 @@ function Invoke-WhiskeyTask
 
             # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a
             # build to hang, so let's set it to Continue so users can see debug output.
-            if( $taskArgs['Debug'] )
+            if ($taskArgs['Debug'])
             {
                 $DebugPreference = 'Continue'
                 $taskArgs.Remove('Debug')

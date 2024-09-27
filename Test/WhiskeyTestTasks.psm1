@@ -606,3 +606,18 @@ function GenerateOutpuTaskWithCmdletBinding
 
     $Output
 }
+
+function NamedAndTaskParameter
+{
+    [Whiskey.Task('NamedAndTaskParameter')]
+    [CmdletBinding()]
+    param(
+        [hashtable] $TaskParameter,
+
+        [String] $NameOne,
+
+        [String] $NameTwo
+    )
+
+    $script:lastTaskBoundParameters = $PSBoundParameters
+}

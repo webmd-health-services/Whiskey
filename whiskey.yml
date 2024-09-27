@@ -1,79 +1,78 @@
 
 Build:
-- TaskDefaults:
-    Pester4:
-        .Verbose: false
-        Version: 4.*
+- task_defaults:
+    pester4:
+        .verbose: false
+        version: 4.*
 
-- Version:
-    Path: Whiskey\Whiskey.psd1
-    PowerShellModuleName: Whiskey
-    Prerelease:
+- version:
+    path: Whiskey\Whiskey.psd1
+    powershell_module_name: Whiskey
+    prerelease:
     - main: ""
     - master: ""
     - "*": rc1
-    IncrementPrereleaseVersion: true
+    increment_prerelease_version: true
 
 # Update the AppVeyor build/version number.
-- Exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
-  .OnlyBy: BuildServer
-  .Debug: true
-  .Verbose: true
+- exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
+  .only_by: BuildServer
+  .debug: true
+  .verbose: true
 
-- PowerShell: prism install | Format-Table -Auto
+- powershell: prism install | Format-Table -Auto
 
 # Dot-sourcing a lot of files when importing a module varys from expensive to really expensive. Merge them into the module manifest.
-- MergeFile:
-    .OnlyBy: BuildServer
-    Path:
+- merge_file:
+    .only_by: BuildServer
+    path:
     - Whiskey\Functions\*.ps1
     - Whiskey\Tasks\*.ps1
-    DestinationPath:
+    destination_path:
     - Whiskey\Whiskey.psm1
-    TextSeparator: "$(NewLine)$(NewLine)"
-    DeleteSourceFiles: true
+    text_separator: "$(NewLine)$(NewLine)"
+    delete_source_files: true
 
-- CopyFile:
-    Path:
+- copy_file:
+    path:
     - CHANGELOG.md
     - README.md
-    DestinationDirectory: Whiskey
+    destination_directory: Whiskey
 
 # PublishPowerShellModule should come *before* we create the ZIP file so that the ZIP file contains a module manifest
 # that has prerelease metadata in it, if needed (which gets added by PublishPowerShellModule).
-- PublishPowerShellModule:
-    Path: Whiskey
+- publish_powershell_module:
+    path: Whiskey
 
-- Exec: appveyor PushArtifact ".output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg" -DeploymentName PowerShellGallery
-  .OnlyBy: BuildServer
+- exec: appveyor PushArtifact ".output/Whiskey.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg" -DeploymentName PowerShellGallery
+  .only_by: BuildServer
 
-- Zip:
-    ArchivePath: .output\Whiskey-$(WHISKEY_SEMVER2).zip
-    Path:
+- zip:
+    archive_path: .output\Whiskey-$(WHISKEY_SEMVER2).zip
+    path:
     - Whiskey
-    Exclude:
+    exclude:
     - "*.pdb"
     - "*.orig"
 
-- Exec: appveyor PushArtifact ".output/Whiskey-$(WHISKEY_SEMVER2).zip" -DeploymentName GitHub
-  .OnlyBy: BuildServer
+- exec: appveyor PushArtifact ".output/Whiskey-$(WHISKEY_SEMVER2).zip" -DeploymentName GitHub
+  .only_by: BuildServer
 
-- Exec: appveyor PushArtifact 'Whiskey/build.ps1' -DeploymentName GitHub
-  .OnlyBy: BuildServer
+- exec: appveyor PushArtifact 'Whiskey/build.ps1' -DeploymentName GitHub
+  .only_by: BuildServer
 
 # Testing performance is different between Linux and Windows so we run tests
 # a little differently. Running things in parallel is actually a little slower
 # on Linux (at least under AppVeyor), so we run fewer background jobs. Having
 # more than three queues doesn't help, sadly. (We have four because the first
 # queue only takes about 60 seconds and must be run separately.)
-- Parallel:
-    .ExceptOnPlatform: Windows
-    Timeout: 00:40:00
-    Queues:
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+- parallel:
+    .except_on_platform: Windows
+    timeout: 00:40:00
+    queues:
+    - tasks:
+        - pester:
+            configuraiton:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-one.xml
@@ -87,14 +86,13 @@ Build:
                     - Test\Invoke-WhiskeyTask.Tests.ps1
                     - Test\Parallel.Tests.ps1
                     - Test\Version.Tests.ps1
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - Test\Install-WhiskeyDotNetSdk.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-two.xml
@@ -108,16 +106,15 @@ Build:
                     - Test\Install-WhiskeyTool.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
-        - Pester4:
+        - pester4:
             Script:
             - Test\GetPowerShellModule.Tests.ps1
             - Test\MergeFile.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
             - Test\Zip.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-three.xml
@@ -194,8 +191,8 @@ Build:
                     - "*/Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyTool.Tests.ps1"
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - "Test/Add-WhiskeyApiKey.Tests.ps1"
             - "Test/Add-WhiskeyTaskDefault.Tests.ps1"
             - "Test/AppVeyorWaitForBuildJobs.Tests.ps1"
@@ -240,19 +237,18 @@ Build:
             - "Test/Uninstall-WhiskeyPowerShellModule.Tests.ps1"
             - "Test/Uninstall-WhiskeyTool.Tests.ps1"
 
-- Parallel:
-    .OnlyOnPlatform: Windows
-    Timeout: 00:40:00
-    Queues:
-    - Tasks:
+- parallel:
+    .only_on_platform: Windows
+    timeout: 00:40:00
+    queues:
+    - tasks:
         # Important that MSBuild task comes *before* NUnit tests. NUnit tests set version numbers in AssemblyInfo.cs files.
         # These three tests must be in the same queue.
         # TODO: Once the NUnit2 and NUnit3 tasks are refactored to not depend on MSBuild tests output, re-balance
         # Windows test queues. This queue takes the longest so all other queues are optimized to take about this
         # long.
-        - Pester:
-            AsJob: true
-            Configuration:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-four.xml
@@ -264,10 +260,9 @@ Build:
                     - Test\MSBuild.Tests.ps1
                     - Test\NUnit2.Tests.ps1
                     - Test\NUnit3.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-five.xml
@@ -278,13 +273,12 @@ Build:
                     Path:
                     - Test\Install-WhiskeyDotNetTool.Tests.ps1
                     - Test\Install-WhiskeyPowerShellModule.Tests.ps1
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - Test\AppVeyorWaitForBuildJobs.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-six.xml
@@ -296,15 +290,14 @@ Build:
                     - Test\DotNet.Tests.ps1
                     - Test\Invoke-WhiskeyBuild.Tests.ps1
                     - Test\Invoke-WhiskeyTask.Tests.ps1
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
             - Test\GetPowerShellModule.Tests.ps1
             - Test\Install-WhiskeyNodeModule.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-seven.xml
@@ -316,10 +309,9 @@ Build:
                     - Test\Install-WhiskeyTool.Tests.ps1
                     - Test\Parallel.Tests.ps1
                     - Test\Pester.Tests.ps1
-    - Tasks:
-        - Pester:
-            AsJob: true
-            Configuration:
+    - tasks:
+        - pester:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-eight.xml
@@ -331,18 +323,18 @@ Build:
                     - Test\Version.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - Test\MergeFile.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
             - Test\Resolve-WhiskeyNodePath.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
             - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
             - Test\Zip.Tests.ps1
-    - Tasks:
-        - Pester:
+    - tasks:
+        - pester:
             AsJob: true
-            Configuration:
+            configuration:
                 TestResult:
                     Enabled: true
                     OutputPath: .output\pester5-nine.xml
@@ -418,8 +410,8 @@ Build:
                     - "*\\Test\\TaskDefaults.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyTool.Tests.ps1"
-        - Pester4:
-            Script:
+        - pester4:
+            script:
             - "Test\\Add-WhiskeyApiKey.Tests.ps1"
             - "Test\\Add-WhiskeyTaskDefault.Tests.ps1"
             - "Test\\Convert-WhiskeyPathDirectorySeparator.Tests.ps1"
@@ -460,8 +452,8 @@ Build:
             - "Test\\Uninstall-WhiskeyPowerShellModule.Tests.ps1"
             - "Test\\Uninstall-WhiskeyTool.Tests.ps1"
 
-- PowerShell:
-    Path: Format-PesterResult.ps1
-    Argument:
+- powershell:
+    path: Format-PesterResult.ps1
+    argument:
         Path: ./.output/pester*.xml
         QueueDuration: "00:10:00"
