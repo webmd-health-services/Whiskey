@@ -303,7 +303,7 @@ function Test-WhiskeyTaskSkip
     finally
     {
         $msg = $results | Format-Table -AutoSize | Out-String
-        $msg -split '\r?\n' | Write-WhiskeyVerbose -Context $Context -Verbose
+        $msg -split '\r?\n' | Write-WhiskeyVerbose -Context $Context
     }
 
     return $false
