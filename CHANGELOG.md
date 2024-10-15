@@ -10,6 +10,7 @@
 #### General
 
 Rename usages of the `InstallNode` task to `InstallNodeJs`.
+Rename usages of `PublishBitbucketServerTag` tasks's `Uri` property to `Url`.
 
 #### Rename Common Properties
 
@@ -199,8 +200,8 @@ install MODULE -g` commands to the build.
 
 All `Whiskey.Requires*` task attributes will eventually be deprecated and removed in favor of build tasks.
 
-The `Uri` property name on the `NuGetPush` and `PublishBuildMasterPackage` tasks. Use the `Url` property instead. The
-`Uri` property will be removed in a future version of Whiskey.
+The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `PublishBuildMasterPackage` tasks. Use the
+`Url` property instead. The `Uri` property will be removed in a future version of Whiskey.
 
 ### Removed
 

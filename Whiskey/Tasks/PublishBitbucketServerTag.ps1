@@ -5,12 +5,19 @@ function Publish-WhiskeyBBServerTag
     [Whiskey.Task('PublishBitbucketServerTag')]
     [Whiskey.RequiresPowerShellModule('BitbucketServerAutomation', Version='0.9.*',
         VersionParameterName='BitbucketServerAutomationVersion')]
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidUsingPlainTextForPassword', '')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
 
-        [Parameter(Mandatory)]
-        [hashtable]$TaskParameter
+        [Alias('Uri')]
+        [Uri] $Url,
+
+        [String] $CredentialID,
+
+        [String] $ProjectKey,
+
+        [String] $RepositoryKey
     )
 
     Set-StrictMode -Version 'Latest'
@@ -19,7 +26,7 @@ function Publish-WhiskeyBBServerTag
     $exampleTask = 'Publish:
         - PublishBitbucketServerTag:
             CredentialID: BitbucketServerCredential
-            Uri: https://bitbucketserver.example.com'
+            Url: https://bitbucketserver.example.com'
 
     if( $TaskContext.BuildMetadata.IsPullRequest )
     {
@@ -28,64 +35,73 @@ function Publish-WhiskeyBBServerTag
         return
     }
 
-    if( -not $TaskParameter['CredentialID'] )
+    if (-not $CredentialID)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message "Property 'CredentialID' is mandatory. It should be the ID of the credential to use when connecting to Bitbucket Server:
+        $msg = 'Property "CredentialID" is mandatory. It should be the ID of the credential to use when connecting ' +
+               "to Bitbucket Server:
 
-        $exampleTask
+        ${exampleTask}
 
         Use the `Add-WhiskeyCredential` function to add credentials to the build.
         "
+
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
-    if( -not $TaskParameter['Uri'] )
+    if (-not $Url)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message "Property 'Uri' is mandatory. It should be the URL to the instance of Bitbucket Server where the tag should be created:
+        $msg = 'Property "Url" is mandatory. It should be the URL to the instance of Bitbucket Server where the ' +
+               "tag should be created:
 
-        $exampleTask
+        ${exampleTask}
         "
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
     $commitHash = $TaskContext.BuildMetadata.ScmCommitID
     if( -not $commitHash )
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ('Unable to identify a valid commit to tag. Are you sure you''re running under a build server?')
+        $msg = 'Unable to identify a valid commit to tag. Are you sure you''re running under a build server?'
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message $msg
         return
     }
 
-    if( $TaskParameter['ProjectKey'] -and $TaskParameter['RepositoryKey'] )
+    if ($ProjectKey -and $RepositoryKey)
     {
-        $projectKey = $TaskParameter['ProjectKey']
-        $repoKey = $TaskParameter['RepositoryKey']
+        $projectKey = $ProjectKey
+        $repoKey = $RepositoryKey
     }
-    elseif( $TaskContext.BuildMetadata.ScmUri -and $TaskContext.BuildMetadata.ScmUri.Segments )
+    elseif ($TaskContext.BuildMetadata.ScmUri -and $TaskContext.BuildMetadata.ScmUri.Segments)
     {
-        $uri = [Uri]$TaskContext.BuildMetadata.ScmUri
-        $projectKey = $uri.Segments[-2].Trim('/')
-        $repoKey = $uri.Segments[-1] -replace '\.git$',''
+        $scmUrl = [Uri]$TaskContext.BuildMetadata.ScmUri
+        $projectKey = $scmUrl.Segments[-2].Trim('/')
+        $repoKey = $scmUrl.Segments[-1] -replace '\.git$',''
     }
     else
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message ("Unable to determine the repository where we should create the tag. Either create a `GIT_URL` environment variable that is the URI used to clone your repository, or add your repository''s project and repository keys as `ProjectKey` and `RepositoryKey` properties, respectively, on this task:
-
-        Publish:
-        - PublishBitbucketServerTag:
-            CredentialID: $($TaskParameter['CredentialID'])
-            Uri: $($TaskParameter['Uri'])
-            ProjectKey: PROJECT_KEY
-            RepositoryKey: REPOSITORY_KEY
-       ")
+        $msg = 'Unable to determine the repository where we should create the tag. Either create a `GIT_URL` ' +
+               'environment variable that is the URL used to clone your repository, or add your repository''s ' +
+               'project and repository keys as `ProjectKey` and `RepositoryKey` properties, respectively, on this ' +
+               "task:
+" + '  ' + "
+    Publish:
+    - PublishBitbucketServerTag:
+        CredentialID: ${CredentialID}
+        Url: ${Url}
+        ProjectKey: PROJECT_KEY
+        RepositoryKey: REPOSITORY_KEY
+        "
+        Stop-WhiskeyTask -TaskContext $TaskContext -PropertyDescription '' -Message $msg
         return
     }
 
-    $credentialID = $TaskParameter['CredentialID']
-    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $credentialID -PropertyName 'CredentialID'
-    $connection = New-BBServerConnection -Credential $credential -Uri $TaskParameter['Uri']
+    $credential = Get-WhiskeyCredential -Context $TaskContext -ID $CredentialID -PropertyName 'CredentialID'
+    $connection = New-BBServerConnection -Credential $credential -Uri $Url
     $tag = $TaskContext.Version.SemVer2NoBuildMetadata
     $msg = "Tagging commit ""$($commitHash)"" with ""$($tag)"" in Bitbucket Server ""$($projectKey)"" project's " +
-           """$($repoKey)"" repository at $($TaskParameter['Uri'])."
+           """$($repoKey)"" repository at ${Url}."
     Write-WhiskeyInfo $msg
     New-BBServerTag -Connection $connection `
                     -ProjectKey $projectKey `
