@@ -308,11 +308,11 @@ Describe 'InstallNodeJs' {
     $testCases = @(
             @{ 'node' = '16'      ; 'npm' = '9'     ; },
             @{ 'node' = '16.20'   ; 'npm' = '9.9'   ; },
-            @{ 'node' = '16.20.2' ; 'npm' = '9.9.3' ; }
+            @{ 'node' = '16.20.2' ; 'npm' = '9.9.4' ; }
         ) |
         ForEach-Object {
             $_['expectedNode'] = '16.20.2';
-            $_['expectedNpm'] = '9.9.3';
+            $_['expectedNpm'] = '9.9.4';
             $_['defaultNpm'] = '8.19.4';
             $_ | Write-Output
         }
