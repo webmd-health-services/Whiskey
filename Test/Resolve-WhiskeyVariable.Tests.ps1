@@ -26,10 +26,10 @@ BeforeAll {
     {
         param(
             $Name,
-            $Value
+            $WithValue
         )
 
-        Add-WhiskeyVariable -Context $script:context -Name $Name -Value $Value
+        Add-WhiskeyVariable -Context $script:context -Name $Name -Value $WithValue
     }
 
     function ThenErrorIs
@@ -128,18 +128,20 @@ BeforeAll {
             $Value,
 
             [Parameter(ParameterSetName='ByName')]
-            $ByName
+            $ByName,
+
+            [hashtable] $WithArgs = @{}
         )
 
         $Global:Error.Clear()
 
         if( $PSCmdlet.ParameterSetName -eq 'ByPipeline' )
         {
-            $script:result = $Value | Resolve-WhiskeyVariable -Context $script:context
+            $script:result = $Value | Resolve-WhiskeyVariable -Context $script:context @WithArgs
         }
         else
         {
-            $script:result = Resolve-WhiskeyVariable -Context $script:context -Name $ByName
+            $script:result = Resolve-WhiskeyVariable -Context $script:context -Name $ByName @WithArgs
         }
 
     }
@@ -193,6 +195,20 @@ Describe 'Resolve-WhiskeyVariable' {
         GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '005'
         WhenResolving @{ 'Key1' = '$(ResolveWhiskeyVariable)'; 'Key2' = 'no variable'; 'Key3' = '4' }
         ThenValueIs @{ 'Key1' = '005'; 'Key2' = 'no variable'; 'Key3' = '4' }
+    }
+
+    It 'resolves only included properties' {
+        GivenVariable 'Var071' -WithValue 'Value071'
+        WhenResolving @{ 'ReplaceMe1' = '$(Var071)' ; 'ReplaceMe2' = '$(Var071)' ; 'IgnoreMe' = '$(Var071)' } `
+                      -WithArgs @{ Include = 'ReplaceMe1','ReplaceMe2' }
+        ThenValueIs @{ 'ReplaceMe1' = 'Value071' ; 'ReplaceMe2' = 'Value071' ; 'IgnoreMe' = '$(Var071)' }
+    }
+
+    It 'resolves only non-excluded properties' {
+        GivenVariable 'Var072' -WithValue 'Value072'
+        WhenResolving @{ 'ReplaceMe' = '$(Var072)' ; 'IgnoreMe1' = '$(Var072)' ; 'IgnoreMe2' = '$(Var072)' } `
+                      -WithArgs @{ Exclude = 'IgnoreMe1','IgnoreMe2' }
+        ThenValueIs @{ 'ReplaceMe' = 'Value072' ; 'IgnoreMe1' = '$(Var072)' ; 'IgnoreMe2' = '$(Var072)' }
     }
 
     It 'resolve values in array nested in a hashtable' {

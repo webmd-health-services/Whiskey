@@ -80,6 +80,8 @@ YOu can also use the `npm login` or `npm adduser` commands, which by default wil
 
 Task output will now appear in the console when using the `.OutVariable` property.
 
+If a task has conditions, variable evaluation on the task's properties only happen if the task runs.
+
 #### InstallNodeJs Task
 
 The `InstallNodeJs` task now looks up the Node.js version to install from a ".node-version" file, if a version isn't

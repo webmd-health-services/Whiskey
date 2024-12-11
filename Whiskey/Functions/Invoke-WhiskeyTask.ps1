@@ -182,8 +182,6 @@ function Invoke-WhiskeyTask
         Merge-Parameter -SourceParameter $TaskContext.TaskDefaults[$Name] -TargetParameter $Parameter
     }
 
-    Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
-
     $psCommonParameterNames = @(
         $script:debugPropertyName,
         $script:errorActionPropertyName,
@@ -267,11 +265,21 @@ function Invoke-WhiskeyTask
     [IO.Directory]::SetCurrentDirectory($TaskContext.BuildRoot)
     try
     {
+        # Resolve variable values on conditional properties *only*.
+        Resolve-WhiskeyVariable -Context $TaskContext -InputObject $commonProperties -Include $script:skipPropertyNames |
+            Out-Null
+
         if( Test-WhiskeyTaskSkip -Context $TaskContext -Properties $commonProperties)
         {
             $result = 'SKIPPED'
             return
         }
+
+        Resolve-WhiskeyVariable -Context $TaskContext -InputObject $commonProperties -Exclude $script:skipPropertyNames |
+            Out-Null
+
+        # Now that we know we're going to run, resolve variable values on all other properties.
+        Resolve-WhiskeyVariable -Context $TaskContext -InputObject $taskProperties | Out-Null
 
         $inCleanMode = $TaskContext.ShouldClean
         if( $inCleanMode )
@@ -309,11 +317,11 @@ function Invoke-WhiskeyTask
         try
         {
             $workingDirectory = $TaskContext.BuildRoot
-            if( $Parameter[$script:workingDirectoryPropertyName] )
+            if( $commonProperties[$script:workingDirectoryPropertyName] )
             {
                 # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
                 $workingDirectory =
-                    $Parameter[$script:workingDirectoryPropertyName] |
+                    $commonProperties[$script:workingDirectoryPropertyName] |
                     Resolve-WhiskeyTaskPath -TaskContext $TaskContext `
                                             -PropertyName $script:workingDirectoryPropertyName `
                                             -Mandatory `
@@ -351,7 +359,7 @@ function Invoke-WhiskeyTask
                 $taskArgs.Remove('Debug')
             }
 
-            $outVarName = $Parameter[$script:outVariablePropertyName]
+            $outVarName = $taskProperties['OutVariable']
 
             # If the task doesn't have the [CmdletBinding()] parameter, fake it with Tee-Object.
             if ($outVarName -and -not $taskArgs.ContainsKey('OutVariable'))
